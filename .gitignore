@@ -33,3 +33,5 @@ node_modules/
 
 # Environment files
 *.log
+/lambdas/layers/python/
+/cdk.out/
