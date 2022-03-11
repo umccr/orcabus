@@ -3,7 +3,7 @@ install:
 	npm install -g aws-cdk@2.15.0
 	
 	brew tap aws/tap
-	brew install aws-sam-cli@1.40.1
+	brew reinstall aws-sam-cli
 build:
 #   Build lambda Layer
 	for dir in $(shell find ./lambdas/layers -maxdepth 1 -mindepth 1 -type d -exec basename {} \;); do ./lambdas/layers/create_layer_package.sh $$dir; done
