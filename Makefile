@@ -1,3 +1,9 @@
+install:
+	pip install -r requirements.txt       # pulls in CDKv2 `aws-cdk-lib` and `construct` libs
+	npm install -g aws-cdk@2.15.0
+	
+	brew tap aws/tap
+	brew install aws-sam-cli@1.40.1
 build:
 #   Build lambda Layer
 	for dir in $(shell find ./lambdas/layers -maxdepth 1 -mindepth 1 -type d -exec basename {} \;); do ./lambdas/layers/create_layer_package.sh $$dir; done
