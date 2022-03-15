@@ -18,7 +18,13 @@ rm -rf ${PKG_DIR} && mkdir -p ${PKG_DIR}
 cp -R ${LAYER_DIR}/ ${PKG_DIR}/
 
 # install the python libraries (without dependencies)
-docker run --rm -v ${SCRIPT_PATH}/python:/foo -w /foo lambci/lambda:build-python3.8 pip install -r requirements.txt --no-deps -t ./
+docker run \
+  --platform=linux/x86-64 \
+  --rm \
+  -v ${SCRIPT_PATH}/python:/foo \
+  -w /foo \
+  public.ecr.aws/sam/build-python3.8 \
+  pip install -r requirements.txt --no-deps -t ./
 
 # clean the lib directory
 rm -rf ${PKG_DIR}/*.dist-info
