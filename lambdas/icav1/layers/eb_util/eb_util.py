@@ -2,6 +2,7 @@ import os
 import boto3
 import time
 import json
+import datetime
 from enum import Enum
 
 event_bus = boto3.client('events')
@@ -120,3 +121,15 @@ def send_event_to_bus_schema(event_source: EventSource,
 
 def emit_event(event) -> dict:
     return event_bus.put_events(Entries=[event])
+
+
+def get_datetimestamp():
+    return f'{get_datestamp()}_{get_timestamp()}'
+
+
+def get_timestamp():
+    return '{:%H%M%S}'.format(datetime.datetime.now())
+
+
+def get_datestamp():
+    return '{:%Y%m%d}'.format(datetime.datetime.now())
