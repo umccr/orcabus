@@ -4,7 +4,7 @@ import time
 import json
 from enum import Enum
 
-event_bus = boto3.client('events')
+event_bus = boto3.client("events")
 event_bus_name = os.environ.get("EVENT_BUS_NAME")
 
 # TODO: split across multiple util modules?
@@ -24,15 +24,15 @@ class WorkflowType(Enum):
 
 
 class BusEventKey(Enum):
-    DETAIL_TYPE = 'detail-type'
-    DETAIL = 'detail'
-    ID = 'id'
-    version = 'version'
-    SOURCE = 'source'
-    ACCOUNT = 'account'
-    time = 'time'
-    region = 'region'
-    resources = 'resources'
+    DETAIL_TYPE = "detail-type"
+    DETAIL = "detail"
+    ID = "id"
+    version = "version"
+    SOURCE = "source"
+    ACCOUNT = "account"
+    time = "time"
+    region = "region"
+    resources = "resources"
 
     def __str__(self):
         return self.value
@@ -75,20 +75,20 @@ class EventType(Enum):
         return f"{type(self).__name__}.{self}"
 
 
-def send_event_to_bus(event_source: EventSource,
-                      event_type: EventType,
-                      event_payload) -> dict:
+def send_event_to_bus(
+    event_source: EventSource, event_type: EventType, event_payload
+) -> dict:
 
     # TODO: figure out best timestamp handling
     response = event_bus.put_events(
         Entries=[
             {
-                'Time': time.time(),
-                'Source': event_source.value,
-                'Resources': [],
-                'DetailType': event_type.value,
-                'Detail': json.dumps(event_payload),
-                'EventBusName': event_bus_name
+                "Time": time.time(),
+                "Source": event_source.value,
+                "Resources": [],
+                "DetailType": event_type.value,
+                "Detail": json.dumps(event_payload),
+                "EventBusName": event_bus_name,
             },
         ]
     )
@@ -96,21 +96,21 @@ def send_event_to_bus(event_source: EventSource,
     return response
 
 
-def send_event_to_bus_schema(event_source: EventSource,
-                             event_type: EventType,
-                             event_payload) -> dict:
+def send_event_to_bus_schema(
+    event_source: EventSource, event_type: EventType, event_payload
+) -> dict:
 
     # TODO: figure out best timestamp handling
     # TODO: use default str encoding with json.dumps or use model specific marshaller?
     response = event_bus.put_events(
         Entries=[
             {
-                'Time': time.time(),
-                'Source': event_source.value,
-                'Resources': [],
-                'DetailType': event_type.value,
-                'Detail': json.dumps(event_payload.to_dict(), default=str),
-                'EventBusName': event_bus_name
+                "Time": time.time(),
+                "Source": event_source.value,
+                "Resources": [],
+                "DetailType": event_type.value,
+                "Detail": json.dumps(event_payload.to_dict(), default=str),
+                "EventBusName": event_bus_name,
             },
         ]
     )

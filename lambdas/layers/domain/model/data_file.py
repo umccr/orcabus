@@ -1,7 +1,4 @@
-
-
 class DataFile:
-
     def __init__(self, name, url):
         self.name = name
         self.type = ""

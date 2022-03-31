@@ -13,13 +13,11 @@ def handler(event, context):
 
     print("converting SQS-ENS-GDS event into Data Portal GDS event")
 
-    object_key = event.get('object_key', "test-file.txt")
-    payload = {
-        "volume": "test-volume",
-        "name": object_key
-    }
+    object_key = event.get("object_key", "test-file.txt")
+    payload = {"volume": "test-volume", "name": object_key}
 
     util.send_event_to_bus(
         event_type=util.EventType.FSC,
         event_source=util.EventSource.GDS,
-        event_payload=payload)
+        event_payload=payload,
+    )

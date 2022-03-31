@@ -64,28 +64,26 @@ def submit_dragen_wgs_qc_requests(libraries: list):
     # TODO: make sure that's not blocking other runs (i.e. a single WF failure should not prevent others)
     for lib in libraries:
         if lib.type == "WGS":  # TODO:
-            wfr_event = wfr.Event(
-                library_id=lib.library_id
-            )
+            wfr_event = wfr.Event(library_id=lib.library_id)
             logger.info(f"Emitting DRAGEN_WGS_QC event with payload {wfr_event}")
             util.send_event_to_bus_schema(
                 event_source=util.EventSource.ORCHESTRATOR,
                 event_type=util.EventType.DRAGEN_WGS_QC,
-                event_payload=wfr_event)
+                event_payload=wfr_event,
+            )
 
 
 def submit_dragen_tso_ctdna_requests(libraries: list):
     # TODO: make sure that's not blocking other runs (i.e. a single WF failure should not prevent others)
     for lib in libraries:
         if lib.type == "TSO":  # TODO:
-            wfr_event = wfr.Event(
-                library_id=lib.library_id
-            )
+            wfr_event = wfr.Event(library_id=lib.library_id)
             logger.info(f"Emitting DRAGEN_TSO_CTDNA event with payload {wfr_event}")
             util.send_event_to_bus_schema(
                 event_source=util.EventSource.ORCHESTRATOR,
                 event_type=util.EventType.DRAGEN_TSO_CTDNA,
-                event_payload=wfr_event)
+                event_payload=wfr_event,
+            )
 
 
 def handle_bcl_convert_event(event):
@@ -118,7 +116,9 @@ def is_dragen_wgs_qc_event(event):
     payload = event.get(util.BusEventKey.DETAIL.value)
     if not payload:
         raise ValueError("No event payload!")
-    return payload.get("workflow_run_name").startswith(util.WorkflowType.DRAGEN_WGS_QC.value)
+    return payload.get("workflow_run_name").startswith(
+        util.WorkflowType.DRAGEN_WGS_QC.value
+    )
 
 
 def get_lib_id_from_wrsc_event(event: wrsc.Event) -> str:
@@ -134,18 +134,19 @@ def handle_dragen_wgs_qc_event(event):
     wrsc_event: wrsc.Event = wrsc.Marshaller.unmarshall(payload, typeName=wrsc.Event)
 
     if wrsc_event.status == "Succeeded":
-        logger.info(f"{util.EventType.DRAGEN_WGS_QC.value} workflow succeeded! Proceeding to T/N.")
+        logger.info(
+            f"{util.EventType.DRAGEN_WGS_QC.value} workflow succeeded! Proceeding to T/N."
+        )
         # only progress some libraries to mock T/N case
         lib_id = get_lib_id_from_wrsc_event(wrsc_event)
         if lib_id in ["L210001", "L210003"]:
-            wfr_event = wfr.Event(
-                library_id=lib_id
-            )
+            wfr_event = wfr.Event(library_id=lib_id)
             logger.info(f"Emitting DRAGEN_WGS_QC event with payload {wfr_event}")
             util.send_event_to_bus_schema(
                 event_source=util.EventSource.ORCHESTRATOR,
                 event_type=util.EventType.DRAGEN_WGS_SOMATIC,
-                event_payload=wfr_event)
+                event_payload=wfr_event,
+            )
     else:
         # ignore other status for now
         logger.info(f"Received unsupported workflow status: {wrsc_event.status}")
@@ -155,7 +156,9 @@ def is_dragen_wgs_somatic_event(event):
     payload = event.get(util.BusEventKey.DETAIL.value)
     if not payload:
         raise ValueError("No event payload!")
-    return payload.get("workflow_run_name").startswith(util.WorkflowType.DRAGEN_WGS_SOMATIC.value)
+    return payload.get("workflow_run_name").startswith(
+        util.WorkflowType.DRAGEN_WGS_SOMATIC.value
+    )
 
 
 def handle_dragen_wgs_somatic_event(event):
@@ -167,7 +170,9 @@ def handle_dragen_wgs_somatic_event(event):
     wrsc_event: wrsc.Event = wrsc.Marshaller.unmarshall(payload, typeName=wrsc.Event)
 
     if wrsc_event.status == "Succeeded":
-        logger.info(f"{util.EventType.DRAGEN_WGS_SOMATIC} workflow succeeded! Analysis results available.")
+        logger.info(
+            f"{util.EventType.DRAGEN_WGS_SOMATIC} workflow succeeded! Analysis results available."
+        )
     else:
         # ignore other status for now
         logger.info(f"Received unsupported workflow status: {wrsc_event.status}")
@@ -187,5 +192,6 @@ def handle_srsc_event(event):
         util.send_event_to_bus(
             event_source=util.EventSource.ORCHESTRATOR,
             event_type=util.EventType.SRSC,
-            event_payload=payload)
+            event_payload=payload,
+        )
     # ignore other SequenceRunStateChange events

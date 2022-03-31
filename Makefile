@@ -1,7 +1,7 @@
 install:
 	pip install -r requirements.txt       # pulls in CDKv2 `aws-cdk-lib` and `construct` libs
 	npm install -g aws-cdk
-	
+
 	brew tap aws/tap
 	brew reinstall aws-sam-cli
 build:

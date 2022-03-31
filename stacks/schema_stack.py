@@ -3,7 +3,6 @@ from constructs import Construct
 from aws_cdk import (
     Stack,
     aws_eventschemas as schemas,
-
 )
 
 
@@ -14,21 +13,24 @@ def get_schema_json_as_dict(file: str) -> dict:
 
 
 class SchemaStack(Stack):
-    
+
     namespace = None
     registry = None
 
-    def __init__(self, scope: Construct, construct_id: str, props: dict, **kwargs) -> None:
+    def __init__(
+        self, scope: Construct, construct_id: str, props: dict, **kwargs
+    ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        self.namespace = props['namespace']
+        self.namespace = props["namespace"]
 
         registry_name = f"{self.namespace}SchemaRegistry"
         self.registry = schemas.CfnRegistry(
             scope=self,
             id=registry_name,
             registry_name=registry_name,
-            description="Schema registry for the UMCCR Data Portal Event Bus")
+            description="Schema registry for the UMCCR Data Portal Event Bus",
+        )
 
         # TODO: investigate use of custom event schema
         # According to the API (https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_PutEvents.html)
@@ -53,4 +55,5 @@ class SchemaStack(Stack):
             description=f"Schema representing a {name}",
             type="OpenApi3",
             registry_name=self.registry.attr_registry_name,
-            content=json.dumps(get_schema_json_as_dict(f"schema/{name}.json")))
+            content=json.dumps(get_schema_json_as_dict(f"schema/{name}.json")),
+        )

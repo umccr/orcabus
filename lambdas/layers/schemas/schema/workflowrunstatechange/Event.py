@@ -5,24 +5,26 @@ import re  # noqa: F401
 import six
 from enum import Enum
 
+
 class Event(object):
 
-
     _types = {
-        'workflow_run_id': 'str',
-        'workflow_run_name': 'str',
-        'status': 'str',
-        'timestamp': 'datetime'
+        "workflow_run_id": "str",
+        "workflow_run_name": "str",
+        "status": "str",
+        "timestamp": "datetime",
     }
 
     _attribute_map = {
-        'workflow_run_id': 'workflow_run_id',
-        'workflow_run_name': 'workflow_run_name',
-        'status': 'status',
-        'timestamp': 'timestamp'
+        "workflow_run_id": "workflow_run_id",
+        "workflow_run_name": "workflow_run_name",
+        "status": "status",
+        "timestamp": "timestamp",
     }
 
-    def __init__(self, workflow_run_id=None, workflow_run_name=None, status=None, timestamp=None):  # noqa: E501
+    def __init__(
+        self, workflow_run_id=None, workflow_run_name=None, status=None, timestamp=None
+    ):  # noqa: E501
         self._workflow_run_id = None
         self._workflow_run_name = None
         self._status = None
@@ -33,7 +35,6 @@ class Event(object):
         self.status = status
         self.timestamp = timestamp
 
-
     @property
     def workflow_run_id(self):
 
@@ -42,9 +43,7 @@ class Event(object):
     @workflow_run_id.setter
     def workflow_run_id(self, workflow_run_id):
 
-
         self._workflow_run_id = workflow_run_id
-
 
     @property
     def workflow_run_name(self):
@@ -54,9 +53,7 @@ class Event(object):
     @workflow_run_name.setter
     def workflow_run_name(self, workflow_run_name):
 
-
         self._workflow_run_name = workflow_run_name
-
 
     @property
     def status(self):
@@ -66,9 +63,7 @@ class Event(object):
     @status.setter
     def status(self, status):
 
-
         self._status = status
-
 
     @property
     def timestamp(self):
@@ -78,7 +73,6 @@ class Event(object):
     @timestamp.setter
     def timestamp(self, timestamp):
 
-
         self._timestamp = timestamp
 
     def to_dict(self):
@@ -87,18 +81,20 @@ class Event(object):
         for attr, _ in six.iteritems(self._types):
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = list(
+                    map(lambda x: x.to_dict() if hasattr(x, "to_dict") else x, value)
+                )
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
-                result[attr] = dict(map(
-                    lambda item: (item[0], item[1].to_dict())
-                    if hasattr(item[1], "to_dict") else item,
-                    value.items()
-                ))
+                result[attr] = dict(
+                    map(
+                        lambda item: (item[0], item[1].to_dict())
+                        if hasattr(item[1], "to_dict")
+                        else item,
+                        value.items(),
+                    )
+                )
             else:
                 result[attr] = value
         if issubclass(Event, dict):
@@ -121,4 +117,3 @@ class Event(object):
 
     def __ne__(self, other):
         return not self == other
-

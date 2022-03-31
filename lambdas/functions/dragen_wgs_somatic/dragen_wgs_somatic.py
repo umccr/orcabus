@@ -23,7 +23,7 @@ def handler(event, context):
     workflow_input = {
         "library_id_normal": wfr_event.library_id,
         "library_id_tumor": "L210999",
-        "fastq_list_rows": {}
+        "fastq_list_rows": {},
     }
     logger.info(f"Created workflow input: {workflow_input}")
     wf_name = f"{util.WorkflowType.DRAGEN_WGS_SOMATIC}_workflow_{wfr_event.library_id}"
@@ -35,13 +35,16 @@ def handler(event, context):
         workflow_version="3.7.5-34afe2c",
         workflow_input=workflow_input,
         timestamp=datetime.utcnow(),
-        workflow_engine_parameters={}
+        workflow_engine_parameters={},
     )
 
-    logger.info(f"Emitting {util.EventType.WES_LAUNCH} request event: {wes_launch_request}")
+    logger.info(
+        f"Emitting {util.EventType.WES_LAUNCH} request event: {wes_launch_request}"
+    )
     util.send_event_to_bus_schema(
         event_type=util.EventType.WES_LAUNCH,
         event_source=util.EventSource.DRAGEN_WGS_SOMATIC,
-        event_payload=wes_launch_request)
+        event_payload=wes_launch_request,
+    )
 
     logger.info("All done.")
