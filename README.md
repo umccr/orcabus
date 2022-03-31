@@ -20,6 +20,11 @@ make run	# As in running lambdas locally
 make deploy
 ```
 
+## Pre-commit hooks
+
+We are using pre-commit hooks to check for any secret-key leaks and for linting purposes.
+Check [UMCCR wiki](https://github.com/umccr/wiki/blob/master/computing/dev-environment/git-hooks.md) for more information regarding pre-commit hooks.
+
 ## Current mock event handling
 
 The mock setup consists of two stacks:
