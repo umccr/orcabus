@@ -10,8 +10,8 @@ repos:
       - id: detect-private-key
       - id: end-of-file-fixer
       - id: trailing-whitespace
-#      - id: no-commit-to-branch
-#        args: [ --branch, main, --branch, master, --pattern, release/.* ]
+      - id: no-commit-to-branch
+        args: [ --branch, main, --branch, master, --pattern, release/.* ]
 
   - repo: https://github.com/psf/black
     rev: 22.3.0
