@@ -1,21 +1,24 @@
 repos:
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.1.0
     hooks:
       - id: check-added-large-files
       - id: check-json
       - id: check-yaml
-      - id: detect-aws-credentials
+#      - id: detect-aws-credentials
       - id: detect-private-key
       - id: end-of-file-fixer
       - id: trailing-whitespace
-      - id: no-commit-to-branch
-        args: [ --branch, main]
+#      - id: no-commit-to-branch
+#        args: [ --branch, main, --branch, master, --pattern, release/.* ]
+
   - repo: https://github.com/psf/black
     rev: 22.3.0
     hooks:
       - id: black
         language_version: python3.9
+
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.2.0
     hooks:

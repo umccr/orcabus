@@ -23,7 +23,7 @@ docker run \
   --rm \
   -v ${SCRIPT_PATH}/python:/foo \
   -w /foo \
-  public.ecr.aws/sam/build-python3.8 \
+  public.ecr.aws/sam/build-python3.9 \
   pip install -r requirements.txt --no-deps -t ./
 
 # clean the lib directory

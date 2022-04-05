@@ -29,7 +29,7 @@ class SchemaStack(Stack):
             scope=self,
             id=registry_name,
             registry_name=registry_name,
-            description="Schema registry for the UMCCR Data Portal Event Bus",
+            description="Schema registry for OrcaBus",
         )
 
         # TODO: investigate use of custom event schema

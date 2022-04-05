@@ -156,7 +156,7 @@ def handler(event, context):
     logger.info("Sending ENS event to ens_event_manager:")
     logger.info(json.dumps(ens_event))
     response = lambda_client.invoke(
-        FunctionName="UmccrEventBus_ens_event_manager",  # TODO: hardcoded for mock impl
+        FunctionName="OrcaBus_ens_event_manager",  # TODO: hardcoded for mock impl
         InvocationType="Event",
         Payload=json.dumps(ens_event),
     )

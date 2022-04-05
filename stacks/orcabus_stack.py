@@ -21,7 +21,7 @@ def camel_case_upper(string: str):
     return string
 
 
-class TheBusStack(Stack):
+class OrcaBusStack(Stack):
 
     namespace = None
 
@@ -35,14 +35,14 @@ class TheBusStack(Stack):
         ################################################################################
         # Event Bus
 
-        event_bus_name = "DataPortalEventBus"
+        event_bus_name = "OrcaBus"
         # TODO: change id, use namespace as basis
         event_bus = events.EventBus(
             scope=self, id="umccr_bus", event_bus_name=event_bus_name
         )
 
         # Creates GDS SQS queue for Illumina file events
-        # sqs_queue = sqs.Queue(scope=self, id="UmccrEventBusIcaEnsQueue")
+        # sqs_queue = sqs.Queue(scope=self, id="OrcaBusIcaEnsQueue")
         # sqs_queue.grant_send_messages(iam.AccountPrincipal('079623148045'))
 
         ################################################################################
@@ -203,7 +203,7 @@ class TheBusStack(Stack):
             id=id,
             function_name=function_name,
             handler=f"{name}.handler",
-            runtime=lmbda.Runtime.PYTHON_3_8,
+            runtime=lmbda.Runtime.PYTHON_3_9,
             code=lmbda.Code.from_asset(f"lambdas/functions/{name}"),
             environment=env,
             timeout=Duration.seconds(duration_seconds),
@@ -218,8 +218,8 @@ class TheBusStack(Stack):
             scope=scope,
             id=id,
             code=lmbda.Code.from_asset(f"lambdas/layers/{name}.zip"),
-            compatible_runtimes=[lmbda.Runtime.PYTHON_3_8],
-            description=f"Lambda layer {name} for python 3.8",
+            compatible_runtimes=[lmbda.Runtime.PYTHON_3_9],
+            description=f"Lambda layer {name} for python 3.9",
         )
 
     def create_event_rule(

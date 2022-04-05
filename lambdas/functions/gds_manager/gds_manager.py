@@ -11,7 +11,7 @@ def handler(event, context):
     print("Starting GDS event handler")
     print(f"Received event: {json.dumps(event)}")
 
-    print("converting SQS-ENS-GDS event into Data Portal GDS event")
+    print("converting SQS-ENS-GDS event into OrcaBus GDS event")
 
     object_key = event.get("object_key", "test-file.txt")
     payload = {"volume": "test-volume", "name": object_key}

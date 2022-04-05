@@ -45,7 +45,7 @@ def handle_wes_runs_event(event):
     ]  # TODO: check! should probably be 'updated'
     message_body = json.loads(event["body"])
 
-    # TODO: convert SQS/ENS event into corresponding Portal event
+    # TODO: convert SQS/ENS event into corresponding OrcaBus event
     event_status = message_body["EventType"]  # RunSucceeded
     event_time = message_body["Timestamp"]
     workflow_name = message_body["Name"]

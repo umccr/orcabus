@@ -1,29 +1,62 @@
-# UMCCR's Event Bus system
+# OrcaBus
 
-This is an attempt to overhaul a multiple-queues system with a unified event Bus, leveraging EventBridge instead of maintaining a web of individual SQS/SNS components.
-
-[CDKv2 (beta)][cdkv2-beta] is used here. Also, the recent integration of [SAM and CDK][sam-cdk].
+UMCCR Orchestration Bus that leverage AWS EventBridge as Event Bus to automate the BioInformatics Workflows Pipeline.
 
 ## Quickstart
 
-```
-# Pre-requisites:
-pip install -r requirements.txt       # pulls in CDKv2 `aws-cdk-lib` and `construct` libs
-npm install -g aws-cdk@2.0.0-rc.4
+### Pre-requisites
 
+```
 brew tap aws/tap
 brew install aws-sam-cli
 
-# Running and deploying:
-make build
-make run	# As in running lambdas locally
-make deploy
+sam --version
+SAM CLI, version 1.43.0
+
+npm install -g aws-cdk
+
+cdk version
+2.19.0 (build e0d3e62)
 ```
 
-## Pre-commit hooks
+### Pre-commit hooks
 
 We are using pre-commit hooks to check for any secret-key leaks and for linting purposes.
-Check [UMCCR wiki](https://github.com/umccr/wiki/blob/master/computing/dev-environment/git-hooks.md) for more information regarding pre-commit hooks.
+Check [UMCCR wiki](https://github.com/umccr/wiki/blob/master/computing/dev-environment/git-hooks.md) for details.
+
+```
+brew install pre-commit detect-secrets
+
+pre-commit --version
+pre-commit 2.18.1
+
+detect-secrets --version
+1.2.0
+```
+
+### Development
+
+- Create Python environment; we recommend conda or mamba.
+
+```
+conda create -n orcabus python=3.9
+conda activate orcabus
+
+python -V
+Python 3.9.12
+
+make install
+make check
+make run
+```
+
+### Build & Deploy
+
+```
+make build
+cdk diff
+make deploy
+```
 
 ## Current mock event handling
 
