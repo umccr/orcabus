@@ -5,6 +5,7 @@ import aws_cdk as cdk
 
 from stacks.orcabus_stack import OrcaBusStack
 from stacks.schema_stack import SchemaStack
+from stacks.ica_event_webhook_stack import WebhookStack
 
 account_id = os.environ.get("CDK_DEFAULT_ACCOUNT")
 aws_region = os.environ.get("CDK_DEFAULT_REGION")
@@ -28,7 +29,14 @@ SchemaStack(
 
 OrcaBusStack(
     scope=app,
-    construct_id=props["namespace"],
+    construct_id=f"{props['namespace']}MainStack",
+    props=props,
+    env=aws_env,
+)
+
+WebhookStack(
+    scope=app,
+    construct_id=f"{props['namespace']}WebhookStack",
     props=props,
     env=aws_env,
 )

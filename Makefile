@@ -8,6 +8,9 @@ check:
 run:
 	sam local invoke
 
+build_lambdas:
+	for dir in $(shell find ./lambdas/layers -maxdepth 1 -mindepth 1 -type d -exec basename {} \;); do ./lambdas/layers/create_layer_package.sh $$dir; done
+
 build:
 	for dir in $(shell find ./lambdas/layers -maxdepth 1 -mindepth 1 -type d -exec basename {} \;); do ./lambdas/layers/create_layer_package.sh $$dir; done
 	cdk synth
