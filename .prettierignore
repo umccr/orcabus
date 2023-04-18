@@ -1,0 +1,17 @@
+# See https://prettier.io/docs/en/ignore.html
+
+# Ignore artifacts:
+build
+coverage
+local_ignore
+bams
+vcfs
+
+# Ignore all HTML files:
+*.html
+
+.pre-commit-config.yaml
+buildspec.yml
+docker-compose.yml
+README.md
+start.sh

@@ -9,7 +9,7 @@ if test -z "$LAYER_NAME"; then
     exit 1
 fi
 
-# spcifiy the lib directory (according to AWS Lambda guidelines)
+# specify the lib directory (according to AWS Lambda guidelines)
 export PKG_DIR=$SCRIPT_DIR/"python"
 export LAYER_DIR=$SCRIPT_DIR/${LAYER_NAME}
 
