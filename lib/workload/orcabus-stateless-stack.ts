@@ -7,9 +7,16 @@ import { SecurityGroupConstruct } from './stateful/securitygroup/component';
 import { EventBusConstruct } from './stateful/eventbridge/component';
 import { LambdaLayerConstruct } from './stateless/layers/component';
 import { BclConvertConstruct } from './stateless/bcl_convert/component';
+import {MultiSchemaConstructProps, MultiSchemaConstruct} from "./stateless/schema/component";
+import {Props as SchemaRegistryProps} from "./stateful/schemaregistry/component";
+
+export interface OrcaBusStatelessConfig {
+  multiSchemaConstructProps: MultiSchemaConstructProps,
+}
+
 
 export class OrcaBusStatelessStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatelessConfig) {
     super(scope, id, props);
 
     // --- Constructs from Stateful stack or pre-existing resources
@@ -26,6 +33,9 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     ];
 
     const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', EventBusConstruct.MAIN_BUS);  // FIXME externalise config
+
+
+    new MultiSchemaConstruct(this, 'MultiSchema', props.multiSchemaConstructProps)
 
     // --- Create Stateless resources
 
