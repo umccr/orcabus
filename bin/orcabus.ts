@@ -23,7 +23,12 @@ const slConfig: OrcaBusStatelessConfig = {
       {
         schemaName: 'BclConvertWorkflowRequest',
         schemaDescription: 'Request event for BclConvertWorkflow',
-        schemaLocation: '../config/event_schemas/BclConvertWorkflowRequest.json'
+        schemaLocation: __dirname + '/../config/event_schemas/BclConvertWorkflowRequest.json'
+      },
+      {
+        schemaName: 'DragenWgsQcWorkflowRequest',
+        schemaDescription: 'Request event for DragenWgsQcWorkflowRequest',
+        schemaLocation: __dirname + '/../config/event_schemas/DragenWgsQcWorkflowRequest.json'
       }
     ]
   },

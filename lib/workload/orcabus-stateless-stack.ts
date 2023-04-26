@@ -23,16 +23,16 @@ export class OrcaBusStatelessStack extends cdk.Stack {
 
     const vpc = getVpc(this);
 
-    const securityGroups = [
-      aws_ec2.SecurityGroup.fromLookupByName(
-        this,
-        'BclConvertLambdaSg',
-        SecurityGroupConstruct.ORCABUS_LAMBDA_SECURITY_GROUP,  // FIXME externalise config
-        vpc,
-      ),
-    ];
+    // const securityGroups = [
+    //   aws_ec2.SecurityGroup.fromLookupByName(
+    //     this,
+    //     'BclConvertLambdaSg',
+    //     SecurityGroupConstruct.ORCABUS_LAMBDA_SECURITY_GROUP,  // FIXME externalise config
+    //     vpc,
+    //   ),
+    // ];
 
-    const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', EventBusConstruct.MAIN_BUS);  // FIXME externalise config
+    // const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', EventBusConstruct.MAIN_BUS);  // FIXME externalise config
 
 
     new MultiSchemaConstruct(this, 'MultiSchema', props.multiSchemaConstructProps)
@@ -44,9 +44,9 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     //  for each dir, create LambdaLayerConstruct
     //  optionally, a flag to say, whether to build the assert or, not
 
-    const lambdaLayerConstruct = new LambdaLayerConstruct(this, 'LambdaLayerConstruct');
-    const layers = [lambdaLayerConstruct.eb_util, lambdaLayerConstruct.schema];
+    // const lambdaLayerConstruct = new LambdaLayerConstruct(this, 'LambdaLayerConstruct');
+    // const layers = [lambdaLayerConstruct.eb_util, lambdaLayerConstruct.schema];
 
-    new BclConvertConstruct(this, 'BclConvertConstruct', { layers, securityGroups, vpc, mainBus });
+    // new BclConvertConstruct(this, 'BclConvertConstruct', { layers, securityGroups, vpc, mainBus });
   }
 }

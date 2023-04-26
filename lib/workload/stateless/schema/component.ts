@@ -7,8 +7,9 @@
 //  1. CfnRegistry is stateful resource or, we create as part of self mutating pipeline?
 //  2. then, we create these schema from JSON file more centrally into this registry
 
-import { aws_eventschemas as eventschemas } from 'aws-cdk-lib';
+import {aws_eventschemas as eventschemas} from 'aws-cdk-lib';
 import {Construct} from "constructs";
+import {readFileSync} from 'fs';
 
 export interface SchemaConstructProps {
   registryName: string
@@ -16,22 +17,20 @@ export interface SchemaConstructProps {
   schemaDescription: string,
   schemaLocation: string
 }
+
 export class SchemaConstruct extends Construct {
 
-    constructor(scope: Construct, id: string, cProps: SchemaConstructProps) {
+  constructor(scope: Construct, id: string, cProps: SchemaConstructProps) {
     super(scope, id);
     this.createConstruct(cProps);
-    console.log(this.node.tryGetContext())
   }
 
   private createConstruct(cProps: SchemaConstructProps) {
 
-    // import * as content from cProps.schemaLocation;
-    console.log(cProps.schemaLocation)
+    const content: string = this.getSchemaContent(cProps.schemaLocation)
 
-    const cfnSchema = new eventschemas.CfnSchema(this, cProps.schemaName, {
-      content: "", // content,
-      // content=json.dumps(get_schema_json_as_dict(f"schema/{name}.json")),
+    new eventschemas.CfnSchema(this, cProps.schemaName, {
+      content: content,
       registryName: cProps.registryName,
       type: 'OpenApi3',
 
@@ -41,13 +40,17 @@ export class SchemaConstruct extends Construct {
     });
   }
 
+  private getSchemaContent(loc: string): string {
+    return readFileSync(loc, 'utf-8');
+  }
+
 }
 
 
 interface SchemaProps {
-    schemaName: string,
-    schemaDescription: string,
-    schemaLocation: string
+  schemaName: string,
+  schemaDescription: string,
+  schemaLocation: string
 }
 
 export interface MultiSchemaConstructProps {
