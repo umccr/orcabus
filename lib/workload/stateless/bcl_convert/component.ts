@@ -5,16 +5,17 @@ import { ISecurityGroup, IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { IEventBus, Rule } from 'aws-cdk-lib/aws-events';
 import { ILayerVersion } from 'aws-cdk-lib/aws-lambda';
 
-export interface Props {
+export interface BclConvertProps {
   layers: ILayerVersion[],
   securityGroups: ISecurityGroup[],
   vpc: IVpc,
   mainBus: IEventBus,
+  functionName: string,
 }
 
 export class BclConvertConstruct extends Construct {
 
-  constructor(scope: Construct, id: string, props: Props) {
+  constructor(scope: Construct, id: string, props: BclConvertProps) {
     super(scope, id);
 
     const bclConvertLambda = new aws_lambda.Function(this, 'BclConvertFunction', {
@@ -27,7 +28,7 @@ export class BclConvertConstruct extends Construct {
       },
       securityGroups: props.securityGroups,
       layers: props.layers,
-      functionName: 'OrcaBus_bcl_convert',    // FIXME externalise config
+      functionName: props.functionName,
       environment: {
         EVENT_BUS_NAME: props.mainBus.eventBusName,
       },

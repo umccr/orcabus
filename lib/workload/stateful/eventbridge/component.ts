@@ -2,28 +2,32 @@ import { Construct } from 'constructs';
 import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Duration, Stack } from 'aws-cdk-lib';
 
+export interface EventBusProps {
+  eventBusName: string,
+  archiveName: string,
+  archiveDescription: string,
+  archiveRetention: number,
+}
+
 export class EventBusConstruct extends Construct {
 
-  public static readonly MAIN_BUS: string = 'OrcaBusMain';  // FIXME externalise config
-  public static readonly MAIN_BUS_ARCHIVE: string = 'OrcaBusMainArchive';
-
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, props: EventBusProps) {
     super(scope, id);
-    this.createMainBus();
+    this.createMainBus(props);
   }
 
-  private createMainBus() {
-    const mainBus = new EventBus(this, EventBusConstruct.MAIN_BUS, {
-      eventBusName: EventBusConstruct.MAIN_BUS,
+  private createMainBus(props: EventBusProps) {
+    const mainBus = new EventBus(this, props.eventBusName, {
+      eventBusName: props.eventBusName,
     });
 
-    mainBus.archive(EventBusConstruct.MAIN_BUS_ARCHIVE, {
-      archiveName: EventBusConstruct.MAIN_BUS_ARCHIVE,
-      description: 'OrcaBus main event bus archive',
+    mainBus.archive(props.archiveName, {
+      archiveName: props.archiveName,
+      description: props.archiveDescription,
       eventPattern: {
         account: [Stack.of(this).account],
       },
-      retention: Duration.days(365),
+      retention: Duration.days(props.archiveRetention),
     });
   }
 }

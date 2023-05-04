@@ -3,32 +3,36 @@ import { aws_ec2, aws_rds, RemovalPolicy } from 'aws-cdk-lib';
 import { AuroraPostgresEngineVersion, Credentials } from 'aws-cdk-lib/aws-rds';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 
-export interface Props {
-  vpc: IVpc;
+export interface DatabaseProps {
+  clusterIdentifier: string,
+  defaultDatabaseName: string,
+  version: AuroraPostgresEngineVersion,
+  parameterGroupName: string,
+  username: string
 }
 
 export class DatabaseConstruct extends Construct {
-  private cluster: aws_rds.ServerlessCluster;
 
-  constructor(scope: Construct, id: string, props: Props) {
+  constructor(scope: Construct, id: string, vpc: IVpc, props: DatabaseProps) {
     super(scope, id);
 
-    const secret = new aws_rds.DatabaseSecret(this, 'AuroraSecret', {
-      username: 'admin',
+    const secret = new aws_rds.DatabaseSecret(this, id + 'Secret', {
+      // username: 'admin',
+      username: props.username,
     });
 
-    this.cluster = new aws_rds.ServerlessCluster(this, 'OrcaBus', {
-      vpc: props.vpc,
+    new aws_rds.ServerlessCluster(this, id + 'Cluster', {
+      vpc: vpc,
       vpcSubnets: {
         subnetType: aws_ec2.SubnetType.PRIVATE_ISOLATED,
       },
       engine: aws_rds.DatabaseClusterEngine.auroraPostgres({
-        version: AuroraPostgresEngineVersion.VER_14_6,
+        version: props.version,
       }),
       parameterGroup: aws_rds.ParameterGroup.fromParameterGroupName(
         this,
-        'ParameterGroup',
-        'default.aurora-postgresql14',
+        id + 'ParameterGroup',
+        props.parameterGroupName,
       ),
       removalPolicy: RemovalPolicy.DESTROY,
       scaling: {
@@ -37,8 +41,8 @@ export class DatabaseConstruct extends Construct {
         maxCapacity: aws_rds.AuroraCapacityUnit.ACU_2,
       },
       credentials: Credentials.fromSecret(secret),
-      clusterIdentifier: 'orcabus-db',
-      defaultDatabaseName: 'orcabus',
+      clusterIdentifier: props.clusterIdentifier,
+      defaultDatabaseName: props.defaultDatabaseName,
     });
   }
 }
