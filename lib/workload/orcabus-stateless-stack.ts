@@ -6,16 +6,17 @@ import { getVpc } from './stateful/vpc/component';
 import { LambdaLayerConstruct } from './stateless/layers/component';
 import { BclConvertConstruct, BclConvertProps } from './stateless/bcl_convert/component';
 import { MultiSchemaConstruct, MultiSchemaConstructProps } from './stateless/schema/component';
-import { OrcaBusStatefulConfig } from './orcabus-stateful-stack';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps,
+  eventBusName: string,
+  lambdaSecurityGroupName: string,
   bclConvertFunctionName: string,
 }
 
 
 export class OrcaBusStatelessStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatelessConfig & OrcaBusStatefulConfig) {
+  constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatelessConfig) {
     super(scope, id, props);
 
     // --- Constructs from Stateful stack or pre-existing resources
@@ -26,12 +27,12 @@ export class OrcaBusStatelessStack extends cdk.Stack {
       aws_ec2.SecurityGroup.fromLookupByName(
         this,
         'LambdaSecurityGroup',
-        props.securityGroupProps.securityGroupName,
+        props.lambdaSecurityGroupName,
         vpc,
       ),
     ];
 
-    const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.eventBusProps.eventBusName);
+    const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.eventBusName);
 
     // --- Create Stateless resources
 

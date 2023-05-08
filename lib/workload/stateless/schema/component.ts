@@ -6,7 +6,8 @@ export interface SchemaConstructProps {
   registryName: string
   schemaName: string,
   schemaDescription: string,
-  schemaLocation: string
+  schemaLocation: string,
+  schemaType: string,
 }
 
 export class SchemaConstruct extends Construct {
@@ -23,7 +24,7 @@ export class SchemaConstruct extends Construct {
     new eventschemas.CfnSchema(this, props.schemaName, {
       content: content,
       registryName: props.registryName,
-      type: 'OpenApi3',
+      type: props.schemaType,
 
       // the properties below are optional
       description: props.schemaDescription,
@@ -41,7 +42,8 @@ export class SchemaConstruct extends Construct {
 interface SchemaProps {
   schemaName: string,
   schemaDescription: string,
-  schemaLocation: string
+  schemaLocation: string,
+  schemaType: string
 }
 
 export interface MultiSchemaConstructProps {
@@ -64,6 +66,7 @@ export class MultiSchemaConstruct extends Construct {
         schemaName: s.schemaName,
         schemaDescription: s.schemaDescription,
         schemaLocation: s.schemaLocation,
+        schemaType: s.schemaType,
         registryName: props.registryName,
       });
     });
