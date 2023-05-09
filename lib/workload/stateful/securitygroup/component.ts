@@ -3,12 +3,11 @@ import { IVpc, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { aws_ec2 } from 'aws-cdk-lib';
 
 export interface SecurityGroupProps {
-  securityGroupName: string,
-  securityGroupDescription: string,
+  securityGroupName: string;
+  securityGroupDescription: string;
 }
 
 export class SecurityGroupConstruct extends Construct {
-
   constructor(scope: Construct, id: string, vpc: IVpc, props: SecurityGroupProps) {
     super(scope, id);
 
@@ -17,6 +16,10 @@ export class SecurityGroupConstruct extends Construct {
       vpc: vpc,
       allowAllOutbound: true,
     });
-    lambdaSecurityGroup.addIngressRule(lambdaSecurityGroup, aws_ec2.Port.allTraffic(), props.securityGroupDescription);
+    lambdaSecurityGroup.addIngressRule(
+      lambdaSecurityGroup,
+      aws_ec2.Port.allTraffic(),
+      props.securityGroupDescription
+    );
   }
 }

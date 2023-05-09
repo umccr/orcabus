@@ -7,14 +7,13 @@ import { SecurityGroupConstruct, SecurityGroupProps } from './stateful/securityg
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './stateful/schemaregistry/component';
 
 export interface OrcaBusStatefulConfig {
-  schemaRegistryProps: SchemaRegistryProps,
-  eventBusProps: EventBusProps,
-  databaseProps: DatabaseProps,
+  schemaRegistryProps: SchemaRegistryProps;
+  eventBusProps: EventBusProps;
+  databaseProps: DatabaseProps;
   securityGroupProps: SecurityGroupProps;
 }
 
 export class OrcaBusStatefulStack extends cdk.Stack {
-
   constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatefulConfig) {
     super(scope, id, props);
 
@@ -26,7 +25,12 @@ export class OrcaBusStatefulStack extends cdk.Stack {
 
     new EventBusConstruct(this, 'OrcaBusEventBusConstruct', props.eventBusProps);
     new DatabaseConstruct(this, 'OrcaBusDatabaseConstruct', vpc, props.databaseProps);
-    new SecurityGroupConstruct(this, 'OrcaBusSecurityGroupConstruct', vpc, props.securityGroupProps);
+    new SecurityGroupConstruct(
+      this,
+      'OrcaBusSecurityGroupConstruct',
+      vpc,
+      props.securityGroupProps
+    );
     new SchemaRegistryConstruct(this, 'SchemaRegistryConstruct', props.schemaRegistryProps);
   }
 }

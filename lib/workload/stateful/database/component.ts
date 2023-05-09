@@ -4,15 +4,14 @@ import { AuroraPostgresEngineVersion, Credentials } from 'aws-cdk-lib/aws-rds';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 
 export interface DatabaseProps {
-  clusterIdentifier: string,
-  defaultDatabaseName: string,
-  version: AuroraPostgresEngineVersion,
-  parameterGroupName: string,
-  username: string
+  clusterIdentifier: string;
+  defaultDatabaseName: string;
+  version: AuroraPostgresEngineVersion;
+  parameterGroupName: string;
+  username: string;
 }
 
 export class DatabaseConstruct extends Construct {
-
   constructor(scope: Construct, id: string, vpc: IVpc, props: DatabaseProps) {
     super(scope, id);
 
@@ -32,7 +31,7 @@ export class DatabaseConstruct extends Construct {
       parameterGroup: aws_rds.ParameterGroup.fromParameterGroupName(
         this,
         id + 'ParameterGroup',
-        props.parameterGroupName,
+        props.parameterGroupName
       ),
       removalPolicy: RemovalPolicy.DESTROY,
       scaling: {

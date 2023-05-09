@@ -9,7 +9,7 @@ export class LambdaLayerConstruct extends Construct {
 
   constructor(scope: Construct, id: string) {
     super(scope, id);
-    this._eb_util = this.createLambdaLayer('eb_util');  // FIXME refactor, externalise the deps dir, see todo in orcabus-stateless-stack.ts
+    this._eb_util = this.createLambdaLayer('eb_util'); // FIXME refactor, externalise the deps dir, see todo in orcabus-stateless-stack.ts
     this._schema = this.createLambdaLayer('schema');
 
     this._all.push(this._eb_util);

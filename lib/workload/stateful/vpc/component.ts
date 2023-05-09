@@ -4,7 +4,7 @@ import { Construct } from 'constructs';
 export function getVpc(scope: Construct) {
   const vpcName = 'main-vpc';
   const vpcTags = {
-    'Stack': 'networking',
+    Stack: 'networking',
   };
 
   return aws_ec2.Vpc.fromLookup(scope, 'MainVpc', {
