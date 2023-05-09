@@ -1,13 +1,16 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
-import { EventBusConstruct } from './stateful/eventbridge/component';
-import { DatabaseConstruct } from './stateful/database/component';
-import { SecurityGroupConstruct } from './stateful/securitygroup/component';
-import { SchemaRegistryConstruct, Props as SchemaRegistryProps } from './stateful/schemaregistry/component';
+import { EventBusConstruct, EventBusProps } from './stateful/eventbridge/component';
+import { DatabaseConstruct, DatabaseProps } from './stateful/database/component';
+import { SecurityGroupConstruct, SecurityGroupProps } from './stateful/securitygroup/component';
+import { SchemaRegistryConstruct, SchemaRegistryProps } from './stateful/schemaregistry/component';
 
 export interface OrcaBusStatefulConfig {
   schemaRegistryProps: SchemaRegistryProps,
+  eventBusProps: EventBusProps,
+  databaseProps: DatabaseProps,
+  securityGroupProps: SecurityGroupProps;
 }
 
 export class OrcaBusStatefulStack extends cdk.Stack {
@@ -21,9 +24,9 @@ export class OrcaBusStatefulStack extends cdk.Stack {
 
     // --- Create Stateful resources
 
-    new EventBusConstruct(this, 'OrcaBusEventBusConstruct');
-    new DatabaseConstruct(this, 'OrcaBusDatabaseConstruct', { vpc: vpc });
-    new SecurityGroupConstruct(this, 'OrcaBusSecurityGroupConstruct', { vpc: vpc });
-    new SchemaRegistryConstruct(this, 'SchemaRegistryConstruct', props.schemaRegistryProps)
+    new EventBusConstruct(this, 'OrcaBusEventBusConstruct', props.eventBusProps);
+    new DatabaseConstruct(this, 'OrcaBusDatabaseConstruct', vpc, props.databaseProps);
+    new SecurityGroupConstruct(this, 'OrcaBusSecurityGroupConstruct', vpc, props.securityGroupProps);
+    new SchemaRegistryConstruct(this, 'SchemaRegistryConstruct', props.schemaRegistryProps);
   }
 }

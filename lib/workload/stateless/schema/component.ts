@@ -1,42 +1,34 @@
-// TODO create a CDK Construct
-//  that create AWS resources such as
-//  aws_eventschemas.CfnRegistry  (this is L1) -- check whether we have L2 construct, etc..
-//  then, create each schema and add into this registry
-
-// TODO discussions:
-//  1. CfnRegistry is stateful resource or, we create as part of self mutating pipeline?
-//  2. then, we create these schema from JSON file more centrally into this registry
-
-import {aws_eventschemas as eventschemas} from 'aws-cdk-lib';
-import {Construct} from "constructs";
-import {readFileSync} from 'fs';
+import { aws_eventschemas as eventschemas } from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import { readFileSync } from 'fs';
 
 export interface SchemaConstructProps {
   registryName: string
   schemaName: string,
   schemaDescription: string,
-  schemaLocation: string
+  schemaLocation: string,
+  schemaType: string,
 }
 
 export class SchemaConstruct extends Construct {
 
-  constructor(scope: Construct, id: string, cProps: SchemaConstructProps) {
+  constructor(scope: Construct, id: string, props: SchemaConstructProps) {
     super(scope, id);
-    this.createConstruct(cProps);
+    this.createConstruct(props);
   }
 
-  private createConstruct(cProps: SchemaConstructProps) {
+  private createConstruct(props: SchemaConstructProps) {
 
-    const content: string = this.getSchemaContent(cProps.schemaLocation)
+    const content: string = this.getSchemaContent(props.schemaLocation);
 
-    new eventschemas.CfnSchema(this, cProps.schemaName, {
+    new eventschemas.CfnSchema(this, props.schemaName, {
       content: content,
-      registryName: cProps.registryName,
-      type: 'OpenApi3',
+      registryName: props.registryName,
+      type: props.schemaType,
 
       // the properties below are optional
-      description: cProps.schemaDescription,
-      schemaName: cProps.schemaName
+      description: props.schemaDescription,
+      schemaName: props.schemaName,
     });
   }
 
@@ -50,7 +42,8 @@ export class SchemaConstruct extends Construct {
 interface SchemaProps {
   schemaName: string,
   schemaDescription: string,
-  schemaLocation: string
+  schemaLocation: string,
+  schemaType: string
 }
 
 export interface MultiSchemaConstructProps {
@@ -73,10 +66,9 @@ export class MultiSchemaConstruct extends Construct {
         schemaName: s.schemaName,
         schemaDescription: s.schemaDescription,
         schemaLocation: s.schemaLocation,
-        registryName: props.registryName
-      })
+        schemaType: s.schemaType,
+        registryName: props.registryName,
+      });
     });
-
   }
-
 }

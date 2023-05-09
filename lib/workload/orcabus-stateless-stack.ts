@@ -3,15 +3,15 @@ import { aws_ec2 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { EventBus } from 'aws-cdk-lib/aws-events';
 import { getVpc } from './stateful/vpc/component';
-import { SecurityGroupConstruct } from './stateful/securitygroup/component';
-import { EventBusConstruct } from './stateful/eventbridge/component';
 import { LambdaLayerConstruct } from './stateless/layers/component';
-import { BclConvertConstruct } from './stateless/bcl_convert/component';
-import {MultiSchemaConstructProps, MultiSchemaConstruct} from "./stateless/schema/component";
-import {Props as SchemaRegistryProps} from "./stateful/schemaregistry/component";
+import { BclConvertConstruct, BclConvertProps } from './stateless/bcl_convert/component';
+import { MultiSchemaConstruct, MultiSchemaConstructProps } from './stateless/schema/component';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps,
+  eventBusName: string,
+  lambdaSecurityGroupName: string,
+  bclConvertFunctionName: string,
 }
 
 
@@ -23,30 +23,36 @@ export class OrcaBusStatelessStack extends cdk.Stack {
 
     const vpc = getVpc(this);
 
-    // const securityGroups = [
-    //   aws_ec2.SecurityGroup.fromLookupByName(
-    //     this,
-    //     'BclConvertLambdaSg',
-    //     SecurityGroupConstruct.ORCABUS_LAMBDA_SECURITY_GROUP,  // FIXME externalise config
-    //     vpc,
-    //   ),
-    // ];
+    const securityGroups = [
+      aws_ec2.SecurityGroup.fromLookupByName(
+        this,
+        'LambdaSecurityGroup',
+        props.lambdaSecurityGroupName,
+        vpc,
+      ),
+    ];
 
-    // const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', EventBusConstruct.MAIN_BUS);  // FIXME externalise config
-
-
-    new MultiSchemaConstruct(this, 'MultiSchema', props.multiSchemaConstructProps)
+    const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.eventBusName);
 
     // --- Create Stateless resources
+
+    new MultiSchemaConstruct(this, 'MultiSchema', props.multiSchemaConstructProps);
 
     // TODO
     //  here is our layer deps dirs
     //  for each dir, create LambdaLayerConstruct
     //  optionally, a flag to say, whether to build the assert or, not
 
-    // const lambdaLayerConstruct = new LambdaLayerConstruct(this, 'LambdaLayerConstruct');
-    // const layers = [lambdaLayerConstruct.eb_util, lambdaLayerConstruct.schema];
+    const lambdaLayerConstruct = new LambdaLayerConstruct(this, 'LambdaLayerConstruct');
+    const layers = [lambdaLayerConstruct.eb_util, lambdaLayerConstruct.schema];
 
-    // new BclConvertConstruct(this, 'BclConvertConstruct', { layers, securityGroups, vpc, mainBus });
+    const bclConvertProps: BclConvertProps = {
+      mainBus: mainBus,
+      layers: layers,
+      securityGroups: securityGroups,
+      vpc: vpc,
+      functionName: props.bclConvertFunctionName,
+    };
+    new BclConvertConstruct(this, 'BclConvertConstruct', bclConvertProps);
   }
 }
