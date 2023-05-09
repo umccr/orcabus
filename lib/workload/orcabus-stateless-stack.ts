@@ -8,12 +8,11 @@ import { BclConvertConstruct, BclConvertProps } from './stateless/bcl_convert/co
 import { MultiSchemaConstruct, MultiSchemaConstructProps } from './stateless/schema/component';
 
 export interface OrcaBusStatelessConfig {
-  multiSchemaConstructProps: MultiSchemaConstructProps,
-  eventBusName: string,
-  lambdaSecurityGroupName: string,
-  bclConvertFunctionName: string,
+  multiSchemaConstructProps: MultiSchemaConstructProps;
+  eventBusName: string;
+  lambdaSecurityGroupName: string;
+  bclConvertFunctionName: string;
 }
-
 
 export class OrcaBusStatelessStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatelessConfig) {
@@ -28,7 +27,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
         this,
         'LambdaSecurityGroup',
         props.lambdaSecurityGroupName,
-        vpc,
+        vpc
       ),
     ];
 

@@ -6,15 +6,14 @@ import { IEventBus, Rule } from 'aws-cdk-lib/aws-events';
 import { ILayerVersion } from 'aws-cdk-lib/aws-lambda';
 
 export interface BclConvertProps {
-  layers: ILayerVersion[],
-  securityGroups: ISecurityGroup[],
-  vpc: IVpc,
-  mainBus: IEventBus,
-  functionName: string,
+  layers: ILayerVersion[];
+  securityGroups: ISecurityGroup[];
+  vpc: IVpc;
+  mainBus: IEventBus;
+  functionName: string;
 }
 
 export class BclConvertConstruct extends Construct {
-
   constructor(scope: Construct, id: string, props: BclConvertProps) {
     super(scope, id);
 
@@ -48,7 +47,7 @@ export class BclConvertConstruct extends Construct {
 
     bclConvertEventRule.addTarget(new aws_events_targets.LambdaFunction(bclConvertLambda));
     bclConvertEventRule.addEventPattern({
-      source: ['ORCHESTRATOR'],  // FIXME how to impl? how to share a "code construct" between TS and Py... One way is jsii
+      source: ['ORCHESTRATOR'], // FIXME how to impl? how to share a "code construct" between TS and Py... One way is jsii
       detailType: ['SequenceRunStateChange'],
     });
   }

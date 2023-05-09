@@ -2,9 +2,9 @@ import { OrcaBusStatefulConfig } from '../lib/workload/orcabus-stateful-stack';
 import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
 
-const regName: string = 'OrcaBusSchemaRegistry';
-const eventBusName: string = 'OrcaBusMain';
-const lambdaSecurityGroupName: string = 'OrcaBusLambdaSecurityGroup';
+const regName = 'OrcaBusSchemaRegistry';
+const eventBusName = 'OrcaBusMain';
+const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
 
 export const orcaBusStatefulConfig: OrcaBusStatefulConfig = {
   schemaRegistryProps: {

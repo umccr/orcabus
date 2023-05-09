@@ -3,14 +3,13 @@ import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Duration, Stack } from 'aws-cdk-lib';
 
 export interface EventBusProps {
-  eventBusName: string,
-  archiveName: string,
-  archiveDescription: string,
-  archiveRetention: number,
+  eventBusName: string;
+  archiveName: string;
+  archiveDescription: string;
+  archiveRetention: number;
 }
 
 export class EventBusConstruct extends Construct {
-
   constructor(scope: Construct, id: string, props: EventBusProps) {
     super(scope, id);
     this.createMainBus(props);
