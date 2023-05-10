@@ -1,9 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
-import { aws_ec2 } from 'aws-cdk-lib';
+import { aws_ec2, aws_lambda } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { EventBus } from 'aws-cdk-lib/aws-events';
 import { getVpc } from './stateful/vpc/component';
-import { LambdaLayerConstruct } from './stateless/layers/component';
+import { LambdaLayerConstruct, LambdaLayerProps } from './stateless/layers/component';
 import { BclConvertConstruct, BclConvertProps } from './stateless/bcl_convert/component';
 import { MultiSchemaConstruct, MultiSchemaConstructProps } from './stateless/schema/component';
 
@@ -11,6 +11,7 @@ export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
   eventBusName: string;
   lambdaSecurityGroupName: string;
+  lambdaRuntimePythonVersion: aws_lambda.Runtime;
   bclConvertFunctionName: string;
 }
 
@@ -42,7 +43,14 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     //  for each dir, create LambdaLayerConstruct
     //  optionally, a flag to say, whether to build the assert or, not
 
-    const lambdaLayerConstruct = new LambdaLayerConstruct(this, 'LambdaLayerConstruct');
+    const lambdaLayerProps: LambdaLayerProps = {
+      lambdaRuntimePythonVersion: props.lambdaRuntimePythonVersion,
+    };
+    const lambdaLayerConstruct = new LambdaLayerConstruct(
+      this,
+      'LambdaLayerConstruct',
+      lambdaLayerProps
+    );
     const layers = [lambdaLayerConstruct.eb_util, lambdaLayerConstruct.schema];
 
     const bclConvertProps: BclConvertProps = {
@@ -51,6 +59,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
       securityGroups: securityGroups,
       vpc: vpc,
       functionName: props.bclConvertFunctionName,
+      lambdaRuntimePythonVersion: props.lambdaRuntimePythonVersion,
     };
     new BclConvertConstruct(this, 'BclConvertConstruct', bclConvertProps);
   }

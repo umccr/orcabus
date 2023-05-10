@@ -2,15 +2,19 @@ import { Construct } from 'constructs';
 import { aws_lambda } from 'aws-cdk-lib';
 import * as path from 'path';
 
+export interface LambdaLayerProps {
+  lambdaRuntimePythonVersion: aws_lambda.Runtime;
+}
+
 export class LambdaLayerConstruct extends Construct {
   private readonly _eb_util: aws_lambda.LayerVersion;
   private readonly _schema: aws_lambda.LayerVersion;
   private _all: aws_lambda.LayerVersion[] = [];
 
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, props: LambdaLayerProps) {
     super(scope, id);
-    this._eb_util = this.createLambdaLayer('eb_util'); // FIXME refactor, externalise the deps dir, see todo in orcabus-stateless-stack.ts
-    this._schema = this.createLambdaLayer('schema');
+    this._eb_util = this.createLambdaLayer('eb_util', props); // FIXME refactor, externalise the deps dir, see todo in orcabus-stateless-stack.ts
+    this._schema = this.createLambdaLayer('schema', props);
 
     this._all.push(this._eb_util);
     this._all.push(this._schema);
@@ -21,11 +25,11 @@ export class LambdaLayerConstruct extends Construct {
     //  See https://github.com/umccr/infrastructure/blob/2a1d47c485d11f8a4a9bf0d2cd865f8450164876/cdk/apps/htsget/htsget/goserver.py#L374
   }
 
-  private createLambdaLayer(name: string) {
+  private createLambdaLayer(name: string, props: LambdaLayerProps) {
     return new aws_lambda.LayerVersion(this, 'OrcaBus_' + name + '_LayerVersion', {
       code: aws_lambda.Code.fromAsset(path.join(__dirname, name + '.zip')),
-      compatibleRuntimes: [aws_lambda.Runtime.PYTHON_3_9],
-      description: 'Lambda layer ' + name + ' for Python 3.9',
+      compatibleRuntimes: [props.lambdaRuntimePythonVersion],
+      description: 'Lambda layer ' + name + ' for ' + props.lambdaRuntimePythonVersion.name,
     });
   }
 

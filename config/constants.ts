@@ -1,6 +1,7 @@
 import { OrcaBusStatefulConfig } from '../lib/workload/orcabus-stateful-stack';
 import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
+import { aws_lambda } from 'aws-cdk-lib';
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
@@ -50,5 +51,6 @@ export const orcaBusStatelessConfig: OrcaBusStatelessConfig = {
   },
   eventBusName: eventBusName,
   lambdaSecurityGroupName: lambdaSecurityGroupName,
+  lambdaRuntimePythonVersion: aws_lambda.Runtime.PYTHON_3_10,
   bclConvertFunctionName: 'orcabus_bcl_convert',
 };

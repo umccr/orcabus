@@ -11,6 +11,7 @@ export interface BclConvertProps {
   vpc: IVpc;
   mainBus: IEventBus;
   functionName: string;
+  lambdaRuntimePythonVersion: aws_lambda.Runtime;
 }
 
 export class BclConvertConstruct extends Construct {
@@ -18,7 +19,7 @@ export class BclConvertConstruct extends Construct {
     super(scope, id);
 
     const bclConvertLambda = new aws_lambda.Function(this, 'BclConvertFunction', {
-      runtime: aws_lambda.Runtime.PYTHON_3_9,
+      runtime: props.lambdaRuntimePythonVersion,
       code: aws_lambda.Code.fromAsset(path.join(__dirname, 'runtime/')),
       handler: 'handler',
       vpc: props.vpc,
