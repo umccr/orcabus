@@ -17,10 +17,6 @@ python -V
 
 node -v
 >v16.15.0
-
-npm i -g yarn
-yarn --version
->1.22.19
 ```
 
 ### TL;DR
@@ -33,20 +29,30 @@ make check
 make test
 make build
 
-npx cdk list
-npx cdk synth OrcaBusStatefulStack
-npx cdk diff OrcaBusStatefulStack
-npx cdk deploy OrcaBusStatefulStack
+yarn cdk list
+yarn cdk synth OrcaBusStatefulStack
+yarn cdk diff OrcaBusStatefulStack
+yarn cdk deploy OrcaBusStatefulStack
 
-npx cdk synth
-npx cdk diff
-npx cdk deploy --all
+yarn cdk synth
+yarn cdk diff
+yarn cdk deploy --all
 ```
 
 ### Lint
 
 - Run lint: `yarn lint`
-- Fix lint issue: `yarn lint --fix`
+- Fix lint issue: `yarn lint-fix`
+
+### Code Formatting
+
+TypeScript
+- Run prettier: `yarn prettier`
+- Fix prettier issue: `yarn prettier-fix`
+
+Python
+- Run black: `yarn black`
+- Fix black issue: `yarn black-fix`
 
 ### Audit
 

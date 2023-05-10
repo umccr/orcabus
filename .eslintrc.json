@@ -28,6 +28,5 @@
   "rules": {
     "prettier/prettier": "error"
   },
-  "settings": {
-  }
+  "settings": {}
 }
