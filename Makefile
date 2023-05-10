@@ -9,6 +9,7 @@ install:
 check:
 	@yarn audit
 	@yarn lint
+	@yarn prettier
 	@pre-commit run --all-files
 
 test:

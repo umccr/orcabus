@@ -44,7 +44,6 @@ class Marshaller:
 
     @classmethod
     def unmarshall(cls, data, typeName):
-
         if data is None:
             return None
 

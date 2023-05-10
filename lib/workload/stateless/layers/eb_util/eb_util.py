@@ -78,7 +78,6 @@ class EventType(Enum):
 def send_event_to_bus(
     event_source: EventSource, event_type: EventType, event_payload
 ) -> dict:
-
     # TODO: figure out best timestamp handling
     response = event_bus.put_events(
         Entries=[
@@ -99,7 +98,6 @@ def send_event_to_bus(
 def send_event_to_bus_schema(
     event_source: EventSource, event_type: EventType, event_payload
 ) -> dict:
-
     # TODO: figure out best timestamp handling
     # TODO: use default str encoding with json.dumps or use model specific marshaller?
     response = event_bus.put_events(

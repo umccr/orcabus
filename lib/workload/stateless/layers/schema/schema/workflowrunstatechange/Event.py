@@ -7,7 +7,6 @@ from enum import Enum
 
 
 class Event(object):
-
     _types = {
         "workflow_run_id": "str",
         "workflow_run_name": "str",
@@ -37,42 +36,34 @@ class Event(object):
 
     @property
     def workflow_run_id(self):
-
         return self._workflow_run_id
 
     @workflow_run_id.setter
     def workflow_run_id(self, workflow_run_id):
-
         self._workflow_run_id = workflow_run_id
 
     @property
     def workflow_run_name(self):
-
         return self._workflow_run_name
 
     @workflow_run_name.setter
     def workflow_run_name(self, workflow_run_name):
-
         self._workflow_run_name = workflow_run_name
 
     @property
     def status(self):
-
         return self._status
 
     @status.setter
     def status(self, status):
-
         self._status = status
 
     @property
     def timestamp(self):
-
         return self._timestamp
 
     @timestamp.setter
     def timestamp(self, timestamp):
-
         self._timestamp = timestamp
 
     def to_dict(self):

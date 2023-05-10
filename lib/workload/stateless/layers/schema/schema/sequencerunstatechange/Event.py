@@ -7,7 +7,6 @@ from enum import Enum
 
 
 class Event(object):
-
     _types = {
         "sequence_run_id": "str",
         "sequence_run_name": "str",
@@ -51,62 +50,50 @@ class Event(object):
 
     @property
     def sequence_run_id(self):
-
         return self._sequence_run_id
 
     @sequence_run_id.setter
     def sequence_run_id(self, sequence_run_id):
-
         self._sequence_run_id = sequence_run_id
 
     @property
     def sequence_run_name(self):
-
         return self._sequence_run_name
 
     @sequence_run_name.setter
     def sequence_run_name(self, sequence_run_name):
-
         self._sequence_run_name = sequence_run_name
 
     @property
     def gds_volume_name(self):
-
         return self._gds_volume_name
 
     @gds_volume_name.setter
     def gds_volume_name(self, gds_volume_name):
-
         self._gds_volume_name = gds_volume_name
 
     @property
     def gds_folder_path(self):
-
         return self._gds_folder_path
 
     @gds_folder_path.setter
     def gds_folder_path(self, gds_folder_path):
-
         self._gds_folder_path = gds_folder_path
 
     @property
     def status(self):
-
         return self._status
 
     @status.setter
     def status(self, status):
-
         self._status = status
 
     @property
     def timestamp(self):
-
         return self._timestamp
 
     @timestamp.setter
     def timestamp(self, timestamp):
-
         self._timestamp = timestamp
 
     def to_dict(self):
