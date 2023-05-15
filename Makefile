@@ -1,4 +1,4 @@
-.PHONY: test
+.PHONY: test deep scan
 
 install:
 	@yarn install
@@ -11,6 +11,12 @@ check:
 	@yarn lint
 	@yarn prettier
 	@pre-commit run --all-files
+
+scan:
+	@trufflehog --debug --only-verified git file://./ --since-commit main --branch HEAD --fail
+
+deep: scan
+	@ggshield secret scan repo .
 
 test:
 	@yarn test
