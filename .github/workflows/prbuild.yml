@@ -1,0 +1,58 @@
+name: Pull Request Build
+
+on:
+  pull_request:
+    branches:
+      - main
+
+# Actions Used (please keep this documented here as added)
+#  https://github.com/actions/setup-python#usage
+#  https://github.com/marketplace/actions/trufflehog-oss
+
+jobs:
+  build:
+    # Default access (restricted) - https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+    permissions:
+      contents: read
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10']
+
+    steps:
+      - name: Print toolchain versions
+        run: |
+          node -v
+          python3 -V
+          make --version
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@v3.34.0
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          make install
+
+      - name: Lint and code formatting
+        run: |
+          make check
+
+      - name: Run test suite
+        run: |
+          make test
