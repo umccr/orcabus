@@ -1,5 +1,5 @@
 import { OrcaBusStatefulConfig } from '../lib/workload/orcabus-stateful-stack';
-import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
+import { AuroraMysqlEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
 import { aws_lambda } from 'aws-cdk-lib';
 
@@ -21,8 +21,8 @@ export const orcaBusStatefulConfig: OrcaBusStatefulConfig = {
   databaseProps: {
     clusterIdentifier: 'orcabus-db',
     defaultDatabaseName: 'orcabus',
-    version: AuroraPostgresEngineVersion.VER_14_6,
-    parameterGroupName: 'default.aurora-postgresql14',
+    version: AuroraMysqlEngineVersion.VER_3_02_2,
+    parameterGroupName: 'default.aurora-mysql8.0',
     username: 'admin',
   },
   securityGroupProps: {

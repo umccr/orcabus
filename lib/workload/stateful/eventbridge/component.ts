@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
-import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Duration, Stack } from 'aws-cdk-lib';
+import * as events from 'aws-cdk-lib/aws-events';
 
 export interface EventBusProps {
   eventBusName: string;
@@ -10,13 +10,15 @@ export interface EventBusProps {
 }
 
 export class EventBusConstruct extends Construct {
+  readonly mainBus: events.EventBus;
+
   constructor(scope: Construct, id: string, props: EventBusProps) {
     super(scope, id);
-    this.createMainBus(props);
+    this.mainBus = this.createMainBus(props);
   }
 
   private createMainBus(props: EventBusProps) {
-    const mainBus = new EventBus(this, props.eventBusName, {
+    const mainBus = new events.EventBus(this, props.eventBusName, {
       eventBusName: props.eventBusName,
     });
 
@@ -28,5 +30,7 @@ export class EventBusConstruct extends Construct {
       },
       retention: Duration.days(props.archiveRetention),
     });
+
+    return mainBus;
   }
 }
