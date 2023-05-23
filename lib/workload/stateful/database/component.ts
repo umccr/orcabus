@@ -11,12 +11,20 @@ export interface DatabaseProps {
   username: string;
 }
 
+interface DatabaseConstructProps extends DatabaseProps {
+  allowDbIngressRule?: {
+    peer: ec2.IPeer;
+    description?: string;
+  }[];
+}
+
 export class DatabaseConstruct extends Construct {
   readonly dbSecurityGroup: ec2.SecurityGroup;
   readonly dbCluster: rds.DatabaseCluster;
 
-  constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: DatabaseProps) {
+  constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: DatabaseConstructProps) {
     super(scope, id);
+    const dbPort = 3306;
 
     const secret = new rds.DatabaseSecret(this, id + 'Secret', {
       username: props.username,
@@ -27,10 +35,18 @@ export class DatabaseConstruct extends Construct {
       allowAllOutbound: true,
     });
 
+    if (props.allowDbIngressRule) {
+      for (const i in props.allowDbIngressRule) {
+        const sgProps = props.allowDbIngressRule[i];
+        this.dbSecurityGroup.addIngressRule(sgProps.peer, ec2.Port.tcp(3306), sgProps.description);
+      }
+    }
+
     this.dbCluster = new rds.DatabaseCluster(this, id + 'Cluster', {
       engine: rds.DatabaseClusterEngine.auroraMysql({
         version: props.version,
       }),
+      port: dbPort,
       instances: 1,
       instanceProps: {
         vpc: vpc,

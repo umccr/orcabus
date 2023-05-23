@@ -14,12 +14,12 @@ const props: cdk.StackProps = {
   },
 };
 
-const orcaBusStatefulStack = new OrcaBusStatefulStack(app, 'OrcaBusStatefulStack', {
+new OrcaBusStatefulStack(app, 'OrcaBusStatefulStack', {
   ...props,
   ...orcaBusStatefulConfig,
 });
 
-const orcaBusStatelessStack = new OrcaBusStatelessStack(app, 'OrcaBusStatelessStack', {
+new OrcaBusStatelessStack(app, 'OrcaBusStatelessStack', {
   ...props,
   ...orcaBusStatelessConfig,
 });

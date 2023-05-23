@@ -5,29 +5,22 @@ export interface SecurityGroupProps {
   securityGroupName: string;
   securityGroupDescription: string;
 }
-export interface SecurityGroupConstructProps extends SecurityGroupProps {
-  dbSecurityGroup: ec2.SecurityGroup;
-}
+
 export class SecurityGroupConstruct extends Construct {
-  constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: SecurityGroupConstructProps) {
+  readonly lambdaSecurityGroup: ec2.SecurityGroup;
+
+  constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: SecurityGroupProps) {
     super(scope, id);
 
-    const lambdaSecurityGroup = new ec2.SecurityGroup(this, id + 'LambdaSecurityGroup', {
+    this.lambdaSecurityGroup = new ec2.SecurityGroup(this, id + 'LambdaSecurityGroup', {
       securityGroupName: props.securityGroupName,
       vpc: vpc,
       allowAllOutbound: true,
     });
-    lambdaSecurityGroup.addIngressRule(
-      lambdaSecurityGroup,
+    this.lambdaSecurityGroup.addIngressRule(
+      this.lambdaSecurityGroup,
       ec2.Port.allTraffic(),
       props.securityGroupDescription
-    );
-
-    // Adding lambda ingress rule for database SG
-    props.dbSecurityGroup.addIngressRule(
-      lambdaSecurityGroup,
-      ec2.Port.tcp(3306),
-      'allow lambda SecurityGroup'
     );
   }
 }

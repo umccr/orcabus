@@ -29,15 +29,17 @@ export class OrcaBusStatefulStack extends cdk.Stack {
     // --- Create Stateful resources
 
     this.eventBus = new EventBusConstruct(this, 'OrcaBusEventBusConstruct', props.eventBusProps);
-    this.database = new DatabaseConstruct(
+    this.securityGroup = new SecurityGroupConstruct(
       this,
-      'OrcaBusDatabaseConstruct',
+      'OrcaBusSecurityGroupConstruct',
       vpc,
-      props.databaseProps
+      props.securityGroupProps
     );
-    this.securityGroup = new SecurityGroupConstruct(this, 'OrcaBusSecurityGroupConstruct', vpc, {
-      ...props.securityGroupProps,
-      dbSecurityGroup: this.database.dbSecurityGroup,
+    this.database = new DatabaseConstruct(this, 'OrcaBusDatabaseConstruct', vpc, {
+      ...props.databaseProps,
+      allowDbIngressRule: [
+        { peer: this.securityGroup.lambdaSecurityGroup, description: 'allow lambda SecurityGroup' },
+      ],
     });
     this.schemaRegistry = new SchemaRegistryConstruct(
       this,
