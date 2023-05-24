@@ -14,6 +14,11 @@ export interface OrcaBusStatefulConfig {
 }
 
 export class OrcaBusStatefulStack extends cdk.Stack {
+  readonly eventBus: EventBusConstruct;
+  readonly database: DatabaseConstruct;
+  readonly securityGroup: SecurityGroupConstruct;
+  readonly schemaRegistry: SchemaRegistryConstruct;
+
   constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatefulConfig) {
     super(scope, id, props);
 
@@ -23,14 +28,23 @@ export class OrcaBusStatefulStack extends cdk.Stack {
 
     // --- Create Stateful resources
 
-    new EventBusConstruct(this, 'OrcaBusEventBusConstruct', props.eventBusProps);
-    new DatabaseConstruct(this, 'OrcaBusDatabaseConstruct', vpc, props.databaseProps);
-    new SecurityGroupConstruct(
+    this.eventBus = new EventBusConstruct(this, 'OrcaBusEventBusConstruct', props.eventBusProps);
+    this.securityGroup = new SecurityGroupConstruct(
       this,
       'OrcaBusSecurityGroupConstruct',
       vpc,
       props.securityGroupProps
     );
-    new SchemaRegistryConstruct(this, 'SchemaRegistryConstruct', props.schemaRegistryProps);
+    this.database = new DatabaseConstruct(this, 'OrcaBusDatabaseConstruct', vpc, {
+      ...props.databaseProps,
+      allowDbSGIngressRule: [
+        { peer: this.securityGroup.lambdaSecurityGroup, description: 'allow lambda SecurityGroup' },
+      ],
+    });
+    this.schemaRegistry = new SchemaRegistryConstruct(
+      this,
+      'SchemaRegistryConstruct',
+      props.schemaRegistryProps
+    );
   }
 }
