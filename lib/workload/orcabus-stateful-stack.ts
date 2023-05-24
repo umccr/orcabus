@@ -37,7 +37,7 @@ export class OrcaBusStatefulStack extends cdk.Stack {
     );
     this.database = new DatabaseConstruct(this, 'OrcaBusDatabaseConstruct', vpc, {
       ...props.databaseProps,
-      allowDbIngressRule: [
+      allowDbSGIngressRule: [
         { peer: this.securityGroup.lambdaSecurityGroup, description: 'allow lambda SecurityGroup' },
       ],
     });

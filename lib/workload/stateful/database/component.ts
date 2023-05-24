@@ -12,7 +12,7 @@ export interface DatabaseProps {
 }
 
 interface DatabaseConstructProps extends DatabaseProps {
-  allowDbIngressRule?: {
+  allowDbSGIngressRule?: {
     peer: ec2.IPeer;
     description?: string;
   }[];
@@ -35,10 +35,14 @@ export class DatabaseConstruct extends Construct {
       allowAllOutbound: true,
     });
 
-    if (props.allowDbIngressRule) {
-      for (const i in props.allowDbIngressRule) {
-        const sgProps = props.allowDbIngressRule[i];
-        this.dbSecurityGroup.addIngressRule(sgProps.peer, ec2.Port.tcp(3306), sgProps.description);
+    if (props.allowDbSGIngressRule) {
+      for (const i in props.allowDbSGIngressRule) {
+        const sgProps = props.allowDbSGIngressRule[i];
+        this.dbSecurityGroup.addIngressRule(
+          sgProps.peer,
+          ec2.Port.tcp(dbPort),
+          sgProps.description
+        );
       }
     }
 
