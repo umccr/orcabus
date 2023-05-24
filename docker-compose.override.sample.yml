@@ -1,0 +1,25 @@
+# NOTE:
+# This is your totally optional local override and docker-compose.override.yml is gitignore-d
+#
+# Usage:
+#   cp docker-compose.override.sample.yml docker-compose.override.yml
+#   docker compose up -d
+#
+# This makes phpMyAdmin at: http://localhost:8181  (u/p: root) for MySQL
+
+version: '3.1'
+
+services:
+
+#  db:
+#    image: mysql:8
+#    volumes:
+#      - ./data/mysql:/var/lib/mysql
+
+#  phpmyadmin:
+#    image: phpmyadmin
+#    restart: always
+#    ports:
+#      - 8181:80
+#    environment:
+#      - PMA_ARBITRARY=1

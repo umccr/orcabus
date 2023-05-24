@@ -1,0 +1,7 @@
+aws-xray-sdk==2.12.0
+boto3==1.26.115
+Django==4.2.1
+django-environ==0.10.0
+pymysql==1.0.3
+libica==2.2.1
+libumccr==0.3.0

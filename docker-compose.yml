@@ -1,0 +1,116 @@
+# NOTE:
+# If you update image version, make sure to update in docker-compose.ci.yml as well
+
+version: '3.1'
+
+services:
+
+  db:
+    image: public.ecr.aws/docker/library/mysql:8
+    container_name: orcabus_db
+    command: |
+      --default-authentication-plugin=mysql_native_password
+      --max_allowed_packet=1G
+      --net-read-timeout=90
+      --net-write-timeout=180
+    restart: always
+    ports:
+      - "3306:3306"
+      - "33060:33060"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=orcabus
+      - MYSQL_USER=orcabus
+      - MYSQL_PASSWORD=orcabus
+
+  localstack:
+    image: public.ecr.aws/localstack/localstack:0.14
+    container_name: orcabus_localstack
+    ports:
+      - "4566:4566"
+      - "4572:4572"
+      - "4576:4576"
+      - "8383:8080"
+    environment:
+      - DEFAULT_REGION=ap-southeast-2
+      - SERVICES=sqs,s3,eventbridge,lambda
+      - DEBUG=false
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - HOST_TMP_FOLDER=${TMPDIR}
+    volumes:
+      - "${TMPDIR:-/tmp/localstack}:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  haproxy:
+    image: public.ecr.aws/docker/library/haproxy:2.4
+    container_name: orcabus_haproxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+
+  wes:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_wes
+    command: mock -d -h 0.0.0.0 "/openapi/wes.json"
+    restart: always
+    ports:
+      - "4010:4010"
+    volumes:
+      - ./openapi:/openapi
+
+  tes:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_tes
+    command: mock -d -h 0.0.0.0 "/openapi/tes.json"
+    restart: always
+    ports:
+      - "4011:4010"
+    volumes:
+      - ./openapi:/openapi
+
+  gds:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_gds
+    command: mock -d -h 0.0.0.0 "/openapi/gds.json"
+    restart: always
+    ports:
+      - "4012:4010"
+    volumes:
+      - ./openapi:/openapi
+
+  ens:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_ens
+    command: mock -d -h 0.0.0.0 "/openapi/ens.json"
+    restart: always
+    ports:
+      - "4013:4010"
+    volumes:
+      - ./openapi:/openapi
+
+  console:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_console
+    command: mock -d -h 0.0.0.0 "/openapi/console.json"
+    restart: always
+    ports:
+      - "4014:4010"
+    volumes:
+      - ./openapi:/openapi
+
+  v2:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_ica_v2
+    command: mock -d -h 0.0.0.0 "/openapi/openapi_public.yaml"
+    restart: always
+    ports:
+      - "4015:4010"
+    volumes:
+      - ./openapi:/openapi

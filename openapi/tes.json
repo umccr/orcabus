@@ -1,0 +1,2631 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Task Execution Service",
+    "version": "v1"
+  },
+  "host": "aps2.platform.illumina.com",
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/v1/tasks": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Get a list of tasks",
+        "description": "Gets a list of tasks accessible by the current tenant ID.",
+        "operationId": "listTasks",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "names",
+            "description": "Name: Optional parameter to filter the returned list. Case-Sensitive",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "acls",
+            "description": "Name: Optional parameter to filter the returned list. Case-Sensitive",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "description": "Optional parameter to define the page size returned. Valid inputs range from 1-1000.",
+            "type": "integer",
+            "format": "int32",
+            "default": 10
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "Sort: Optional parameter to set the sort of the returned list. Valid fields include: name, timeCreated, timeModified.\r\nThe sort can be specified as asc or desc. (Default: asc.)",
+            "type": "string",
+            "default": "timeCreated asc"
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "description": "pageToken: Optional parameter for navigation after initial listing. Valid values include firstPageToken,\r\nnextPageToken, and previousPageToken (provided in the list response)",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskSummaryPagedItems"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Create a Task",
+        "description": "Creates a task. Returns the ID associated with the new task. Also returns the task version ID associated with the new task, if provided. Substitutions can be defined in the following format: \"{{string}}\", and specified at launch time.",
+        "operationId": "createTask",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/CreateTaskRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Task"
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{taskId}": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Get the details of a Task",
+        "description": "Gets the details of a Task for a given task ID.",
+        "operationId": "getTask",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "taskId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskSummary"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Update an existing task.",
+        "description": "Updates the task with a given ID. The task's name, description can be updated. The task's name must remain unique.",
+        "operationId": "updateTask",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "taskId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Details of the task to be updated.",
+            "schema": {
+              "$ref": "#/definitions/UpdateTaskRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Task"
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/runs": {
+      "get": {
+        "tags": [
+          "Task Runs"
+        ],
+        "summary": "Get a list of task runs",
+        "description": "Get a list of task runs accessible by the current tenant ID.",
+        "operationId": "listTaskRuns",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "Sort: Optional parameter to set the sort of the returned list. Valid fields include: name, status, timeCreated, timeModified.\r\nThe sort can be specified as asc or desc. (Default: asc.)",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "names",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "versions",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "acls",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "description": "Optional parameter to define the page size returned. Valid inputs range from 1-1000.",
+            "type": "integer",
+            "format": "int32",
+            "default": 10
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "description": "pageToken: Optional parameter for navigation after initial listing. Valid values include firstPageToken,\r\nnextPageToken, and previousPageToken (provided in the list response)",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskRunSummaryPagedItems"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Task Runs"
+        ],
+        "summary": "Create and launch a task run",
+        "description": "Creates and launches a task run. Returns the ID and status associated with the new task run.",
+        "operationId": "createTaskRun",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/CreateTaskRunRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskRun"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/runs/{runId}": {
+      "get": {
+        "tags": [
+          "Task Runs"
+        ],
+        "summary": "Get the status of a task run",
+        "description": "Gets the status of a task run for a given task run ID.",
+        "operationId": "getTaskRun",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskRun"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/runs/{runId}:abort": {
+      "put": {
+        "tags": [
+          "Task Runs"
+        ],
+        "summary": "Abort a task run",
+        "description": "Aborts a task run for a given task run ID. The task run is required to have a status of \"Pending\" or \"Running\".",
+        "operationId": "abortTaskRun",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskRunSummary"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/runs/{runId}:heartbeat": {
+      "post": {
+        "tags": [
+          "Task Runs"
+        ],
+        "summary": "Heartbeat for a task run",
+        "description": "Heartbeat a task run for a given task run ID. This notifies TES that a task run is executing.",
+        "operationId": "heartbeatTaskRun",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/HeartbeatTaskRunRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskRunHeartbeat"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{taskId}/versions": {
+      "get": {
+        "tags": [
+          "Task Versions"
+        ],
+        "summary": "Get a list of versions",
+        "description": "Gets a list of task versions within the given task accessible by the current tenant ID.",
+        "operationId": "listTaskVersions",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "taskId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "Sort: Optional parameter to set the sort of the returned list. Valid fields include: name, version, timeCreated, timeModified.\r\nThe sort can be specified as asc or desc. (Default: asc.)",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "versions",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "ids",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "acls",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "description": "Optional parameter to define the page size returned. Valid inputs range from 1-1000.",
+            "type": "integer",
+            "format": "int32",
+            "default": 10
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "description": "pageToken: Optional parameter for navigation after initial listing. Valid values include firstPageToken,\r\nnextPageToken, and previousPageToken (provided in the list response)",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskVersionSummaryPagedItems"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Task Versions"
+        ],
+        "summary": "Create a task version",
+        "description": "Creates a new task version within an existing task. Returns the ID associated with the new task version. Substitutions can be defined in the following format: \"{{string}}\", and specified at launch time.",
+        "operationId": "createTaskVersion",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "taskId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/CreateTaskVersionRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskVersion"
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{taskId}/versions/{versionId}": {
+      "get": {
+        "tags": [
+          "Task Versions"
+        ],
+        "summary": "Get the details of a task version",
+        "description": "Gets details of a task version for a given task version ID.",
+        "operationId": "getTaskVersion",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "taskId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskVersion"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Task Versions"
+        ],
+        "summary": "Update task version properties",
+        "description": "Update details of a task version for a given task version ID.",
+        "operationId": "updateTaskVersion",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "taskId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/UpdateTaskVersionRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskVersion"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{taskId}/versions/{versionId}:launch": {
+      "post": {
+        "tags": [
+          "Task Versions"
+        ],
+        "summary": "Launch a task version",
+        "description": "Launches a task version for a given task version ID. Returns the ID associated with the new task run. Substitutions defined in the task version must be specified.",
+        "operationId": "launchTaskRun",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "taskId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "description": "",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/LaunchTaskRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TaskRun"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Server Error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Credentials": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      }
+    },
+    "Image": {
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name of url for Docker Image",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Version of image as defined in repository",
+          "type": "string"
+        },
+        "digest": {
+          "description": "Version of image as defined in repository",
+          "type": "string"
+        },
+        "credentials": {
+          "$ref": "#/definitions/Credentials"
+        }
+      }
+    },
+    "InputMountMappingWithCreds": {
+      "type": "object",
+      "properties": {
+        "storageProvider": {
+          "type": "string"
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "path": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "urn": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "type": {
+          "default": "File",
+          "type": "string"
+        }
+      }
+    },
+    "MountMappingWithCreds": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "urn": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "storageProvider": {
+          "type": "string"
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "serviceUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "SystemFiles": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "urn": {
+          "type": "string"
+        },
+        "storageProvider": {
+          "type": "string"
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Resources": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string"
+        },
+        "cpuCores": {
+          "format": "double",
+          "type": "number"
+        },
+        "memoryGb": {
+          "format": "double",
+          "type": "number"
+        },
+        "hardware": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tier": {
+          "type": "string"
+        }
+      }
+    },
+    "InputStreamSettings": {
+      "type": "object",
+      "properties": {
+        "accessPattern": {
+          "default": "sequential",
+          "type": "string"
+        },
+        "cacheSizeGB": {
+          "format": "int32",
+          "default": 50,
+          "maximum": 10000,
+          "minimum": 50,
+          "type": "integer"
+        },
+        "blockSizeMB": {
+          "format": "double",
+          "default": 32,
+          "maximum": 1024,
+          "minimum": 0,
+          "type": "number"
+        },
+        "prefetchBlocks": {
+          "format": "int32",
+          "default": 32,
+          "maximum": 64,
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    },
+    "Environment": {
+      "type": "object",
+      "properties": {
+        "variables": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "resources": {
+          "$ref": "#/definitions/Resources"
+        },
+        "inputStreamSettings": {
+          "$ref": "#/definitions/InputStreamSettings"
+        }
+      }
+    },
+    "Execution": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "$ref": "#/definitions/Image"
+        },
+        "command": {
+          "type": "string"
+        },
+        "args": {
+          "description": "Argument to run specified task",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "inputs": {
+          "description": "Path (Inputs) - Path to mount file at valid Url\r\nURL (Inputs) - Url of file mounted at specified path",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InputMountMappingWithCreds"
+          }
+        },
+        "outputs": {
+          "description": "Path (Outputs) - Path where files will be output to valid Url\r\nURL (Outputs) - Url of folder with files from the path will be uploaded",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MountMappingWithCreds"
+          }
+        },
+        "systemFiles": {
+          "$ref": "#/definitions/SystemFiles"
+        },
+        "environment": {
+          "$ref": "#/definitions/Environment"
+        },
+        "workingDirectory": {
+          "type": "string"
+        },
+        "retryLimit": {
+          "format": "int32",
+          "default": 3,
+          "type": "integer"
+        },
+        "retryCount": {
+          "format": "int32",
+          "default": 0,
+          "type": "integer"
+        }
+      }
+    },
+    "TaskVersionSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Global identifier for object",
+          "type": "string"
+        },
+        "href": {
+          "description": "Href of the object",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subTenantId": {
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User who created the object",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was created in TES",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User who updated the object",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was modified in TES",
+          "type": "string"
+        }
+      }
+    },
+    "TaskRunLogs": {
+      "type": "object",
+      "properties": {
+        "startTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "endTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "errorDetails": {
+          "type": "string"
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "stderr": {
+          "type": "string"
+        }
+      }
+    },
+    "TaskRun": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Global identifier for object",
+          "type": "string"
+        },
+        "href": {
+          "description": "Href of the object",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "status": {
+          "default": "Pending",
+          "type": "string"
+        },
+        "statusDetails": {
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "typeOfResource": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "sizeOfResource": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "tierOfResource": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "execution": {
+          "$ref": "#/definitions/Execution"
+        },
+        "taskVersionSummary": {
+          "$ref": "#/definitions/TaskVersionSummary"
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskRunLogs"
+          }
+        },
+        "executionRawJson": {
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subTenantId": {
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User who created the object",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was created in TES",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User who updated the object",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was modified in TES",
+          "type": "string"
+        }
+      }
+    },
+    "ClusterSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Global identifier for object",
+          "type": "string"
+        },
+        "href": {
+          "description": "Href of the object",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "svcAcctUId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "taskRuns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskRun"
+          }
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subTenantId": {
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User who created the object",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was created in TES",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User who updated the object",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was modified in TES",
+          "type": "string"
+        }
+      }
+    },
+    "ClusterSummaryPagedItems": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ClusterSummary"
+          }
+        },
+        "itemCount": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "firstPageToken": {
+          "type": "string"
+        },
+        "nextPageToken": {
+          "type": "string"
+        },
+        "prevPageToken": {
+          "type": "string"
+        },
+        "lastPageToken": {
+          "type": "string"
+        },
+        "totalItemCount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "totalPageCount": {
+          "format": "int64",
+          "type": "integer"
+        }
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "CreateClusterRequest": {
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "svcAcctUId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Cluster": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Global identifier for object",
+          "type": "string"
+        },
+        "href": {
+          "description": "Href of the object",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "svcAcctUId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "taskRuns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskRun"
+          }
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subTenantId": {
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User who created the object",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was created in TES",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User who updated the object",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was modified in TES",
+          "type": "string"
+        }
+      }
+    },
+    "UpdateClusterRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "User-defined name of the cluster",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "svcAcctUId": {
+          "description": "Service account user id to be associated with the cluster",
+          "type": "string"
+        },
+        "status": {
+          "description": "User-defined status of the cluster",
+          "type": "string"
+        },
+        "type": {
+          "description": "User-defined type of the cluster",
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CheckOutQueuedTaskRunRequest": {
+      "type": "object",
+      "properties": {
+        "computeType": {
+          "description": "Type of the compute requested (Fpga and NonFpga)",
+          "enum": [
+            "Fpga",
+            "NonFpga"
+          ],
+          "type": "string"
+        }
+      }
+    },
+    "AgentTaskRun": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Global identifier for object",
+          "type": "string"
+        },
+        "href": {
+          "description": "Href of the object",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "nonce": {
+          "type": "string"
+        },
+        "encryptionKey": {
+          "type": "string"
+        },
+        "inputManifestUrl": {
+          "type": "string"
+        },
+        "outputManifestUrl": {
+          "type": "string"
+        },
+        "heartbeatManifestUrl": {
+          "type": "string"
+        },
+        "outputTokenManifestUrl": {
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "status": {
+          "default": "Pending",
+          "type": "string"
+        },
+        "statusDetails": {
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "typeOfResource": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "sizeOfResource": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "tierOfResource": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "execution": {
+          "$ref": "#/definitions/Execution"
+        },
+        "taskVersionSummary": {
+          "$ref": "#/definitions/TaskVersionSummary"
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskRunLogs"
+          }
+        },
+        "executionRawJson": {
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subTenantId": {
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User who created the object",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was created in TES",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User who updated the object",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was modified in TES",
+          "type": "string"
+        }
+      }
+    },
+    "TaskRunSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Global identifier for object",
+          "type": "string"
+        },
+        "href": {
+          "description": "Href of the object",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "status": {
+          "default": "Pending",
+          "type": "string"
+        },
+        "statusDetails": {
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "typeOfResource": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "sizeOfResource": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "tierOfResource": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "taskVersionSummary": {
+          "$ref": "#/definitions/TaskVersionSummary"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subTenantId": {
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User who created the object",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was created in TES",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User who updated the object",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was modified in TES",
+          "type": "string"
+        }
+      }
+    },
+    "TaskRunSummaryPagedItems": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskRunSummary"
+          }
+        },
+        "itemCount": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "firstPageToken": {
+          "type": "string"
+        },
+        "nextPageToken": {
+          "type": "string"
+        },
+        "prevPageToken": {
+          "type": "string"
+        },
+        "lastPageToken": {
+          "type": "string"
+        },
+        "totalItemCount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "totalPageCount": {
+          "format": "int64",
+          "type": "integer"
+        }
+      }
+    },
+    "UpdateTaskRunStateRequest": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "description": "New TaskRun status to be updated",
+          "enum": [
+            "CheckedOut",
+            "Runnable",
+            "Running",
+            "Finalizing",
+            "Completed",
+            "FailedRestartable",
+            "Failed",
+            "Aborted",
+            "TimedOut"
+          ],
+          "type": "string"
+        },
+        "statusDetails": {
+          "description": "Description of the event that triggered the state change",
+          "type": "string"
+        },
+        "startTime": {
+          "format": "date-time",
+          "description": "TaskRun execution start time",
+          "type": "string"
+        },
+        "completionTime": {
+          "format": "date-time",
+          "description": "TaskRun execution completion time",
+          "type": "string"
+        }
+      }
+    },
+    "TaskSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Global identifier for object",
+          "type": "string"
+        },
+        "href": {
+          "description": "Href of the object",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subTenantId": {
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User who created the object",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was created in TES",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User who updated the object",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was modified in TES",
+          "type": "string"
+        }
+      }
+    },
+    "TaskSummaryPagedItems": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskSummary"
+          }
+        },
+        "itemCount": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "firstPageToken": {
+          "type": "string"
+        },
+        "nextPageToken": {
+          "type": "string"
+        },
+        "prevPageToken": {
+          "type": "string"
+        },
+        "lastPageToken": {
+          "type": "string"
+        },
+        "totalItemCount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "totalPageCount": {
+          "format": "int64",
+          "type": "integer"
+        }
+      }
+    },
+    "CreateTaskVersionRequest": {
+      "required": [
+        "version"
+      ],
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "User-defined version of task version",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "description": "User-defined description of task version",
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "execution": {
+          "$ref": "#/definitions/Execution"
+        },
+        "acl": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CreateTaskRequest": {
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "User-defined name of the task",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "description": "User-defined description of the task",
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "taskVersions": {
+          "description": "List of task versions",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CreateTaskVersionRequest"
+          }
+        }
+      }
+    },
+    "TaskVersion": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Global identifier for object",
+          "type": "string"
+        },
+        "href": {
+          "description": "Href of the object",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "execution": {
+          "$ref": "#/definitions/Execution"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subTenantId": {
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User who created the object",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was created in TES",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User who updated the object",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was modified in TES",
+          "type": "string"
+        }
+      }
+    },
+    "Task": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Global identifier for object",
+          "type": "string"
+        },
+        "href": {
+          "description": "Href of the object",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "taskVersions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskVersion"
+          }
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subTenantId": {
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User who created the object",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was created in TES",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User who updated the object",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Date and Time (in UTC) when object was modified in TES",
+          "type": "string"
+        }
+      }
+    },
+    "UpdateTaskRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "User-defined name of the task",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "description": "User-defined description of the task",
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CreateTaskRunRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "User-defined name of the task run",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "description": "User-defined description of the task run",
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "execution": {
+          "$ref": "#/definitions/Execution"
+        }
+      }
+    },
+    "ContainerStateWaiting": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "ContainerStateRunning": {
+      "type": "object",
+      "properties": {
+        "startedAt": {
+          "format": "date-time",
+          "type": "string"
+        }
+      }
+    },
+    "ContainerStateTerminated": {
+      "type": "object",
+      "properties": {
+        "exitCode": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "signal": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "startedAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "finishedAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "containerID": {
+          "type": "string"
+        }
+      }
+    },
+    "ContainerState": {
+      "type": "object",
+      "properties": {
+        "waiting": {
+          "$ref": "#/definitions/ContainerStateWaiting"
+        },
+        "running": {
+          "$ref": "#/definitions/ContainerStateRunning"
+        },
+        "terminated": {
+          "$ref": "#/definitions/ContainerStateTerminated"
+        }
+      }
+    },
+    "ContainerStatus": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/ContainerState"
+        }
+      }
+    },
+    "HeartbeatTaskRunRequest": {
+      "type": "object",
+      "properties": {
+        "lastHeartbeat": {
+          "description": "LastHeartbeat",
+          "type": "boolean"
+        },
+        "podName": {
+          "type": "string"
+        },
+        "podUID": {
+          "type": "string"
+        },
+        "podHardwareDetails": {
+          "type": "string"
+        },
+        "jobRetryCount": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "nonce": {
+          "type": "string"
+        },
+        "containerStatus": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ContainerStatus"
+          }
+        }
+      }
+    },
+    "TaskRunHeartbeat": {
+      "type": "object",
+      "properties": {
+        "jwt": {
+          "type": "string"
+        }
+      }
+    },
+    "TaskVersionSummaryPagedItems": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskVersionSummary"
+          }
+        },
+        "itemCount": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "firstPageToken": {
+          "type": "string"
+        },
+        "nextPageToken": {
+          "type": "string"
+        },
+        "prevPageToken": {
+          "type": "string"
+        },
+        "lastPageToken": {
+          "type": "string"
+        },
+        "totalItemCount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "totalPageCount": {
+          "format": "int64",
+          "type": "integer"
+        }
+      }
+    },
+    "UpdateTaskVersionRequest": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "User-defined version of task version",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "description": "User-defined description of task version",
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "execution": {
+          "$ref": "#/definitions/Execution"
+        },
+        "acl": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "LaunchTaskRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "User-defined name for the task run, if not specified version string of task version will be used",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "description": "User-defined description for the task run, if not specified task version description will be used",
+          "maxLength": 4096,
+          "minLength": 0,
+          "type": "string"
+        },
+        "arguments": {
+          "description": "Arguments to launch a task run",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "acl": {
+          "description": "Access Control List",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+    }
+  },
+  "security": [
+    {
+      "Bearer": [ ]
+    }
+  ]
+}

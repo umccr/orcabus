@@ -1,0 +1,2814 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Workflow Execution Service",
+    "version": "v1"
+  },
+  "host": "aps2.platform.illumina.com",
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/v1/workflows": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Get a list of workflows",
+        "description": "Gets a list of workflows.",
+        "operationId": "listWorkflows",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenantId",
+            "description": "ID of the tenant",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "categories",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "description": "Comma-separated list of properties to include in the response",
+            "type": "array",
+            "items": {
+              "enum": [
+                "totalItemCount"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "description": "Number of items to include in a page. Value must be an integer between 1 and 1000. Only one of pageSize or pageToken can be specified.",
+            "type": "integer",
+            "format": "int32",
+            "default": 10
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "description": "Page offset descriptor. Valid page tokens are included in the response. Only one of pageSize or pageToken can be specified.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "Specifies the order to include list items as \"_{fieldName}_ [asc|desc]\". The second field is optional and specifies the sort direction (\"asc\" for ascending or \"desc\" for descending).",
+            "type": "string",
+            "default": "timeCreated asc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged list of workflows.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowList"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Create a workflow",
+        "description": "Creates a new workflow and version (if provided).",
+        "operationId": "createWorkflow",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/CreateWorkflowRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Details of the newly created workflow.",
+            "schema": {
+              "$ref": "#/definitions/Workflow"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "A conflict was found. Ensure the workflow name is unique.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflowId}": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Get the details of a workflow",
+        "description": "Gets the details of a workflow with a given ID.",
+        "operationId": "getWorkflow",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflowId",
+            "description": "ID of the workflow",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Details of the workflow.",
+            "schema": {
+              "$ref": "#/definitions/Workflow"
+            }
+          },
+          "404": {
+            "description": "The workflow with the specified ID was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Update an existing workflow",
+        "description": "Updates the workflow with a given ID.",
+        "operationId": "updateWorkflow",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflowId",
+            "description": "ID of the workflow",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/UpdateWorkflowRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns updated workflow.",
+            "schema": {
+              "$ref": "#/definitions/Workflow"
+            }
+          },
+          "404": {
+            "description": "The workflow with the specified ID was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "A conflict was found. Ensure the workflow name is unique.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs": {
+      "get": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Get a list of workflow runs",
+        "description": "Gets a list of workflow runs.",
+        "operationId": "listWorkflowRuns",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "type": "array",
+            "items": {
+              "enum": [
+                "aborted",
+                "aborting",
+                "failed",
+                "new",
+                "running",
+                "submitted",
+                "succeeded",
+                "timedOut"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenantId",
+            "description": "ID of the tenant",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "description": "Comma-separated list of properties to include in the response",
+            "type": "array",
+            "items": {
+              "enum": [
+                "totalItemCount"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "description": "Number of items to include in a page. Value must be an integer between 1 and 1000. Only one of pageSize or pageToken can be specified.",
+            "type": "integer",
+            "format": "int32",
+            "default": 10
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "description": "Page offset descriptor. Valid page tokens are included in the response. Only one of pageSize or pageToken can be specified.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "Specifies the order to include list items as \"_{fieldName}_ [asc|desc]\". The second field is optional and specifies the sort direction (\"asc\" for ascending or \"desc\" for descending).",
+            "type": "string",
+            "default": "timeCreated asc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged list of workflow runs that the user has access to.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowRunList"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{runId}": {
+      "get": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Get the details of a workflow run",
+        "description": "Gets the details of a workflow run with a given ID.",
+        "operationId": "getWorkflowRun",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "description": "ID of the workflow run",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "description": "Comma-separated list of properties to include in the response",
+            "type": "array",
+            "items": {
+              "enum": [
+                "definition",
+                "engineParameters"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Details of the workflow run.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowRun"
+            }
+          },
+          "404": {
+            "description": "The workflow run with the specified ID was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{runId}:abort": {
+      "put": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Abort a workflow run",
+        "description": "Aborts the workflow run with a given ID.",
+        "operationId": "abortWorkflowRun",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "description": "ID of the workflow run",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "description": "Comma-separated list of properties to include in the response",
+            "type": "array",
+            "items": {
+              "enum": [
+                "definition",
+                "engineParameters"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/AbortWorkflowRunRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Details of the aborted workflow run.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowRun"
+            }
+          },
+          "404": {
+            "description": "The workflow run with the specified ID was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{runId}/history": {
+      "get": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Get a list of workflow run history events",
+        "description": "Gets a list of history events for a workflow run with a given ID.",
+        "operationId": "listWorkflowRunHistory",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "description": "ID of the workflow run",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "type": "string",
+            "default": "eventId asc"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "description": "Comma-separated list of properties to include in the response",
+            "type": "array",
+            "items": {
+              "enum": [
+                "totalItemCount"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "description": "Number of items to include in a page. Value must be an integer between 1 and 1000. Only one of pageSize or pageToken can be specified.",
+            "type": "integer",
+            "format": "int32",
+            "default": 10
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "description": "Page offset descriptor. Valid page tokens are included in the response. Only one of pageSize or pageToken can be specified.",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged list of workflow run history events.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowRunHistoryEventList"
+            }
+          },
+          "404": {
+            "description": "The workflow run with the specified ID was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/signals/{signalId}": {
+      "get": {
+        "tags": [
+          "Workflow Signals"
+        ],
+        "summary": "Get the details of a workflow signal",
+        "description": "Gets the details of a workflow signal with a given ID.",
+        "operationId": "getSignal",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signalId",
+            "description": "ID of the workflow signal",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Details of the workflow signal.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowSignal"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "The signal with the specified ID was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/signals": {
+      "get": {
+        "tags": [
+          "Workflow Signals"
+        ],
+        "summary": "Get a list of workflow signals",
+        "description": "Gets a list of workflow signals.",
+        "operationId": "listSignals",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenantId",
+            "description": "ID of the tenant",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "description": "Comma-separated list of properties to include in the response",
+            "type": "array",
+            "items": {
+              "enum": [
+                "totalItemCount"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "description": "Number of items to include in a page. Value must be an integer between 1 and 1000. Only one of pageSize or pageToken can be specified.",
+            "type": "integer",
+            "format": "int32",
+            "default": 10
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "description": "Page offset descriptor. Valid page tokens are included in the response. Only one of pageSize or pageToken can be specified.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "Specifies the order to include list items as \"_{fieldName}_ [asc|desc]\". The second field is optional and specifies the sort direction (\"asc\" for ascending or \"desc\" for descending).",
+            "type": "string",
+            "default": "timeCreated asc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged list of workflow signals that the user has access to.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowSignalList"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/signals/{signalId}:succeed": {
+      "patch": {
+        "tags": [
+          "Workflow Signals"
+        ],
+        "summary": "Succeed a workflow signal",
+        "description": "Responds to a pending workflow signal with a successful result.",
+        "operationId": "succeedSignal",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signalId",
+            "description": "ID of the workflow signal",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/SucceedWorkflowSignalRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the succeeded signal.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowSignal"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "The signal with the specified ID was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "The workflow signal is no longer active.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/signals/{signalId}:fail": {
+      "patch": {
+        "tags": [
+          "Workflow Signals"
+        ],
+        "summary": "Fail a workflow signal",
+        "description": "Responds to a pending workflow signal with a failure result.",
+        "operationId": "failSignal",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signalId",
+            "description": "ID of the workflow signal",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/FailWorkflowSignalRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the failed signal.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowSignal"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "The signal with the specified ID was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "The workflow signal is no longer active.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflowId}/versions/{versionName}": {
+      "get": {
+        "tags": [
+          "Workflow Versions"
+        ],
+        "summary": "Get the details of a workflow version",
+        "description": "Gets the details for a workflow version with a given workflow ID and version name.",
+        "operationId": "getWorkflowVersion",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflowId",
+            "description": "ID of the workflow",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "versionName",
+            "description": "Name of the workflow version",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Details of the workflow version.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowVersion"
+            }
+          },
+          "404": {
+            "description": "The workflow ID or version name was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Workflow Versions"
+        ],
+        "summary": "Update an existing workflow version",
+        "description": "Updates an existing workflow version. Note: The Version, Definition, and Status cannot be changed simultaneously. Only one of these can be changed per API call.",
+        "operationId": "updateWorkflowVersion",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflowId",
+            "description": "ID of the workflow",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "versionName",
+            "description": "Name of the workflow version",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/UpdateWorkflowVersionRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Details of the created workflow run.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowVersion"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "A conflict was found. Ensure the workflow version name is unique.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "The workflow ID or version name was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflowId}/versions": {
+      "get": {
+        "tags": [
+          "Workflow Versions"
+        ],
+        "summary": "Get a list of workflow versions",
+        "description": "Gets a list of workflow versions with a given workflow ID.",
+        "operationId": "listWorkflowVersions",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflowId",
+            "description": "ID of the workflow",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "description": "Comma-separated list of properties to include in the response",
+            "type": "array",
+            "items": {
+              "enum": [
+                "totalItemCount"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "description": "Number of items to include in a page. Value must be an integer between 1 and 1000. Only one of pageSize or pageToken can be specified.",
+            "type": "integer",
+            "format": "int32",
+            "default": 10
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "description": "Page offset descriptor. Valid page tokens are included in the response. Only one of pageSize or pageToken can be specified.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "Specifies the order to include list items as \"_{fieldName}_ [asc|desc]\". The second field is optional and specifies the sort direction (\"asc\" for ascending or \"desc\" for descending).",
+            "type": "string",
+            "default": "timeCreated asc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged list of workflow versions that the user has access to.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowVersionList"
+            }
+          },
+          "404": {
+            "description": "The workflow with the specified ID was not found.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Workflow Versions"
+        ],
+        "summary": "Create a new workflow version",
+        "description": "Creates a new workflow version with a given workflow ID.",
+        "operationId": "createWorkflowVersion",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflowId",
+            "description": "ID of the workflow",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/CreateWorkflowVersionRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Details of the created workflow version.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowVersion"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "A conflict was found. Ensure the workflow version name is unique.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/versions": {
+      "get": {
+        "tags": [
+          "Workflow Versions"
+        ],
+        "summary": "Get a list of all workflow versions",
+        "description": "Gets a list of workflow versions across all workflows.",
+        "operationId": "listAllWorkflowVersions",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenantId",
+            "description": "ID of the tenant",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "description": "Comma-separated list of properties to include in the response",
+            "type": "array",
+            "items": {
+              "enum": [
+                "totalItemCount"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "description": "Number of items to include in a page. Value must be an integer between 1 and 1000. Only one of pageSize or pageToken can be specified.",
+            "type": "integer",
+            "format": "int32",
+            "default": 10
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "description": "Page offset descriptor. Valid page tokens are included in the response. Only one of pageSize or pageToken can be specified.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "Specifies the order to include list items as \"_{fieldName}_ [asc|desc]\". The second field is optional and specifies the sort direction (\"asc\" for ascending or \"desc\" for descending).",
+            "type": "string",
+            "default": "timeCreated asc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged list of workflow versions across all workflows.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowVersionList"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflowId}/versions/{versionName}:launch": {
+      "post": {
+        "tags": [
+          "Workflow Versions"
+        ],
+        "summary": "Launch a workflow version",
+        "description": "Launches a workflow version with a given workflow ID and version name.",
+        "operationId": "launchWorkflowVersion",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflowId",
+            "description": "ID of the workflow",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "versionName",
+            "description": "Name of the workflow version",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "description": "Comma-separated list of properties to include in the response",
+            "type": "array",
+            "items": {
+              "enum": [
+                "definition",
+                "engineParameters"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/LaunchWorkflowVersionRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Details of the created workflow run.",
+            "schema": {
+              "$ref": "#/definitions/WorkflowRun"
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Permission denied.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AbortWorkflowRunRequest": {
+      "description": "Abort a workflow run",
+      "required": [
+        "error"
+      ],
+      "type": "object",
+      "properties": {
+        "error": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "cause": {
+          "maxLength": 32768,
+          "minLength": 0,
+          "type": "string"
+        }
+      }
+    },
+    "CreateWorkflowRequest": {
+      "description": "Create a workflow and optional version",
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "organization": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "workflowVersion": {
+          "$ref": "#/definitions/CreateWorkflowVersionRequest"
+        },
+        "toolClass": {
+          "enum": [
+            "workflow",
+            "commandLineTool"
+          ],
+          "type": "string"
+        },
+        "acl": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CreateWorkflowVersionRequest": {
+      "description": "Create a new workflow version under an existing workflow root",
+      "required": [
+        "version"
+      ],
+      "type": "object",
+      "properties": {
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "language": {
+          "$ref": "#/definitions/WorkflowLanguage"
+        },
+        "definition": { },
+        "acl": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "description": "Published Status of the workflow version",
+          "enum": [
+            "draft",
+            "released",
+            "obsolete"
+          ],
+          "type": "string"
+        }
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": { }
+        }
+      }
+    },
+    "FailWorkflowSignalRequest": {
+      "description": "Fail workflow signal request",
+      "required": [
+        "error"
+      ],
+      "type": "object",
+      "properties": {
+        "error": {
+          "description": "Externally provided Error of a signalling action.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "cause": {
+          "description": "Externally provided Cause of a failed signalling action.",
+          "type": "string"
+        }
+      }
+    },
+    "LaunchWorkflowVersionRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name of the workflow run",
+          "maxLength": 255,
+          "minLength": 0,
+          "pattern": "^(?![wW][fF][rR]\\..*)(^[0-9a-zA-Z-_\\.]*$)",
+          "type": "string"
+        },
+        "input": {
+          "description": "Input for the launched workflow run. Must resolve to a JSON object."
+        },
+        "engineParameters": {
+          "description": "Runtime options for launching workflows (currently only used for Airflow     and otherwise ignored). Must resolve to a JSON object."
+        }
+      }
+    },
+    "SucceedWorkflowSignalRequest": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "description": "External result of a successful signal. Must resolve to a JSON value."
+        }
+      }
+    },
+    "UpdateWorkflowRequest": {
+      "description": "Update an existing workflow",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "organization": {
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "UpdateWorkflowVersionRequest": {
+      "description": "Update a workflow version definition using patch semantics",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "language": {
+          "$ref": "#/definitions/WorkflowLanguage"
+        },
+        "definition": { },
+        "acl": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "description": "New Status for workflow version",
+          "enum": [
+            "draft",
+            "released",
+            "obsolete"
+          ],
+          "type": "string"
+        }
+      }
+    },
+    "Workflow": {
+      "description": "Details of a workflow",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique resource ID",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "href": {
+          "format": "uri",
+          "description": "HREF to the resource",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the workflow",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "organization": {
+          "description": "Organization associated with the workflow",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the workflow",
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "toolClass": {
+          "description": "Workflow type",
+          "type": "string"
+        },
+        "categories": {
+          "description": "Categories of the workflow (Limit Max Size : 10)",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdByClientId": {
+          "description": "Client ID of the Origin Request",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was created",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was modified",
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User that created the resource",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User that modified the resource",
+          "type": "string"
+        },
+        "tenantId": {
+          "description": "Tenant ID the resource belongs to",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access control list of the resource",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "WorkflowArgument": {
+      "description": "Argument definition",
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name of the argument key",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "string"
+        },
+        "value": {
+          "description": "A simple string value for the argument. Cannot provide both Value and Json at the same time.",
+          "type": "string"
+        },
+        "json": {
+          "description": "A JSON value for the argument. Cannot provide both Value and Json at the same time."
+        },
+        "options": {
+          "description": "Comma separated list of options for the argument: Required, Overridable, Writable, Json, Optional, ReadOnly, Final\r\nSome combinations of options are considered errors, like Required/Optional, Overridable/Final, Writable/ReadOnly, etc.",
+          "type": "string"
+        }
+      }
+    },
+    "WorkflowCompact": {
+      "description": "Compact details of a workflow",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique resource ID",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "href": {
+          "format": "uri",
+          "description": "HREF to the resource",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the workflow",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "organization": {
+          "description": "Organization associated with the workflow",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the workflow",
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "toolClass": {
+          "description": "Workflow type",
+          "type": "string"
+        },
+        "categories": {
+          "description": "Categories of the workflow (Limit Max Size : 10)",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdByClientId": {
+          "description": "Client ID of the Origin Request",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was created",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was modified",
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User that created the resource",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User that modified the resource",
+          "type": "string"
+        },
+        "tenantId": {
+          "description": "Tenant ID the resource belongs to",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access control list of the resource",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "WorkflowConnection": {
+      "description": "Defines a connection that can be used in a workflow definition to perform actions",
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "string"
+        },
+        "type": {
+          "description": "Type of the connection: PlatformJwt, ApiBearerToken, AwsCredentials, ApiCustomAuthentication, BsshOAuthV2",
+          "type": "string"
+        },
+        "host": {
+          "format": "uri",
+          "description": "For API based connections, the Host part of the API endpoint",
+          "maxLength": 1024,
+          "minLength": 0,
+          "type": "string",
+          "example": "https://api.myhost.com/v1/"
+        },
+        "hostValidationRegex": {
+          "description": "Regex that hosts associated with this connection must meet (when host override by each run is allowed)",
+          "maxLength": 100,
+          "minLength": 0,
+          "type": "string"
+        },
+        "credentials": {
+          "description": "Credentials associated with the connection. Format depends on type of connection.",
+          "type": "string"
+        },
+        "options": {
+          "description": "Comma separated list of options associated with the connection: CredentialsRequired, AllowCredentialsOverride, AutoDisableCredentialsAfterUse, AllowHostOverride",
+          "type": "string"
+        },
+        "autoDisableUrl": {
+          "format": "uri",
+          "description": "Relative URL (relative to Host) to call in order to disable the credentials",
+          "maxLength": 1024,
+          "minLength": 0,
+          "type": "string"
+        },
+        "autoDisableHttpMethod": {
+          "description": "Http method to use to disable the credentials. Must be POST, PUT or DELETE",
+          "maxLength": 10,
+          "minLength": 0,
+          "type": "string"
+        }
+      }
+    },
+    "WorkflowLanguage": {
+      "description": "Language details about a workflow version",
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The name of the workflow language",
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "description": "The version of the workflow language, if any",
+          "type": "string"
+        }
+      }
+    },
+    "WorkflowList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "description": "Items in paged list",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowCompact"
+          }
+        },
+        "itemCount": {
+          "format": "int32",
+          "description": "Number of items included in the page",
+          "type": "integer"
+        },
+        "firstPageToken": {
+          "description": "PageToken for first paged list",
+          "type": "string"
+        },
+        "nextPageToken": {
+          "description": "PageToken for the next paged list",
+          "type": "string",
+          "x-faker": {
+            "helpers.arrayElement": [["page1", ""]]
+          }
+        },
+        "prevPageToken": {
+          "description": "PageToken for the previous paged list",
+          "type": "string"
+        },
+        "lastPageToken": {
+          "description": "PageToken for the last paged list. Only included when totalItemCount is listed",
+          "type": "string"
+        },
+        "totalItemCount": {
+          "format": "int64",
+          "description": "Total number of items in all pages. Only included when requested",
+          "type": "integer"
+        },
+        "totalPageCount": {
+          "format": "int64",
+          "description": "Total number of pages. Only included when totalItemCount is listed",
+          "type": "integer"
+        }
+      }
+    },
+    "WorkflowRun": {
+      "description": "Details of a workflow run",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique resource ID",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "href": {
+          "format": "uri",
+          "description": "HREF to the resource",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the workflow run",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "timeStarted": {
+          "format": "date-time",
+          "description": "The time (in UTC) the workflow run started",
+          "type": "string"
+        },
+        "timeStopped": {
+          "format": "date-time",
+          "description": "The time (in UTC) the Workflow Run stopped",
+          "type": "string"
+        },
+        "status": {
+          "description": "Workflow run status",
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "statusSummary": {
+          "description": "Workflow run status summary",
+          "type": "string"
+        },
+        "error": {
+          "description": "Error for a failed workflow run",
+          "type": "string"
+        },
+        "errorCause": {
+          "description": "Error cause for a failed workflow run",
+          "type": "string"
+        },
+        "workflowVersion": {
+          "$ref": "#/definitions/WorkflowVersionCompact"
+        },
+        "createdByClientId": {
+          "description": "Client ID of the Origin Request",
+          "type": "string"
+        },
+        "input": {
+          "description": "Input to workflow run, as JSON"
+        },
+        "output": {
+          "description": "Output from workflow run, as JSON"
+        },
+        "definition": {
+          "description": "Definition of the workflow version",
+          "type": "string"
+        },
+        "engineParameters": {
+          "description": "Workflow Engine Parameters",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was created",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was modified",
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User that created the resource",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User that modified the resource",
+          "type": "string"
+        },
+        "tenantId": {
+          "description": "Tenant ID the resource belongs to",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access control list of the resource",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "WorkflowRunCompact": {
+      "description": "Compact details of a workflow run",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique resource ID",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "href": {
+          "format": "uri",
+          "description": "HREF to the resource",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the workflow run",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "timeStarted": {
+          "format": "date-time",
+          "description": "The time (in UTC) the workflow run started",
+          "type": "string"
+        },
+        "timeStopped": {
+          "format": "date-time",
+          "description": "The time (in UTC) the Workflow Run stopped",
+          "type": "string"
+        },
+        "status": {
+          "description": "Workflow run status",
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "statusSummary": {
+          "description": "Workflow run status summary",
+          "type": "string"
+        },
+        "error": {
+          "description": "Error for a failed workflow run",
+          "type": "string"
+        },
+        "errorCause": {
+          "description": "Error cause for a failed workflow run",
+          "type": "string"
+        },
+        "workflowVersion": {
+          "$ref": "#/definitions/WorkflowVersionCompact"
+        },
+        "createdByClientId": {
+          "description": "Client ID of the Origin Request",
+          "type": "string"
+        },
+        "engineParameters": {
+          "description": "Workflow Engine Parameters",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was created",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was modified",
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User that created the resource",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User that modified the resource",
+          "type": "string"
+        },
+        "tenantId": {
+          "description": "Tenant ID the resource belongs to",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access control list of the resource",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "WorkflowRunHistoryEvent": {
+      "description": "Information about a specific event in the workflow run history",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name of the event, such as the name of the step/task for state-level events and run name for run-level events",
+          "type": "string"
+        },
+        "eventId": {
+          "format": "int64",
+          "description": "Identifier for the history event, if any",
+          "type": "integer"
+        },
+        "previousEventId": {
+          "format": "int64",
+          "description": "Identifier for any previous history event (if available)",
+          "type": "integer"
+        },
+        "eventType": {
+          "description": "Type of history event. The associated details entry will be populated based on the type of event.",
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "description": "Timestamp for the history event",
+          "type": "string"
+        },
+        "eventDetails": {
+          "description": "Details for history event"
+        }
+      }
+    },
+    "WorkflowRunHistoryEventList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "description": "Items in paged list",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowRunHistoryEvent"
+          }
+        },
+        "itemCount": {
+          "format": "int32",
+          "description": "Number of items included in the page",
+          "type": "integer"
+        },
+        "firstPageToken": {
+          "description": "PageToken for first paged list",
+          "type": "string"
+        },
+        "nextPageToken": {
+          "description": "PageToken for the next paged list",
+          "type": "string",
+          "x-faker": {
+            "helpers.arrayElement": [["page1", ""]]
+          }
+        },
+        "prevPageToken": {
+          "description": "PageToken for the previous paged list",
+          "type": "string"
+        },
+        "lastPageToken": {
+          "description": "PageToken for the last paged list. Only included when totalItemCount is listed",
+          "type": "string"
+        },
+        "totalItemCount": {
+          "format": "int64",
+          "description": "Total number of items in all pages. Only included when requested",
+          "type": "integer"
+        },
+        "totalPageCount": {
+          "format": "int64",
+          "description": "Total number of pages. Only included when totalItemCount is listed",
+          "type": "integer"
+        }
+      }
+    },
+    "WorkflowRunList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "description": "Items in paged list",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowRunCompact"
+          }
+        },
+        "itemCount": {
+          "format": "int32",
+          "description": "Number of items included in the page",
+          "type": "integer"
+        },
+        "firstPageToken": {
+          "description": "PageToken for first paged list",
+          "type": "string"
+        },
+        "nextPageToken": {
+          "description": "PageToken for the next paged list",
+          "type": "string",
+          "x-faker": {
+            "helpers.arrayElement": [["page1", ""]]
+          }
+        },
+        "prevPageToken": {
+          "description": "PageToken for the previous paged list",
+          "type": "string"
+        },
+        "lastPageToken": {
+          "description": "PageToken for the last paged list. Only included when totalItemCount is listed",
+          "type": "string"
+        },
+        "totalItemCount": {
+          "format": "int64",
+          "description": "Total number of items in all pages. Only included when requested",
+          "type": "integer"
+        },
+        "totalPageCount": {
+          "format": "int64",
+          "description": "Total number of pages. Only included when totalItemCount is listed",
+          "type": "integer"
+        }
+      }
+    },
+    "WorkflowSignal": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique resource ID",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "href": {
+          "format": "uri",
+          "description": "HREF to the resource",
+          "type": "string"
+        },
+        "sendHeartbeatHref": {
+          "format": "uri",
+          "description": "HREF to send a heartbeat to a workflow signal",
+          "type": "string"
+        },
+        "sendSuccessResponseHref": {
+          "format": "uri",
+          "description": "HREF to succeed a workflow signal",
+          "type": "string"
+        },
+        "sendFailureResponseHref": {
+          "format": "uri",
+          "description": "HREF to fail a workflow signal",
+          "type": "string"
+        },
+        "name": {
+          "description": "Unique name of the signal",
+          "type": "string"
+        },
+        "status": {
+          "description": "Current status of the signal",
+          "type": "string"
+        },
+        "type": {
+          "description": "User-defined type associated with the signal",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the signal",
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "inputs": {
+          "description": "Inputs defined by the originating WaitForSignal state, in JSON."
+        },
+        "workflowRun": {
+          "$ref": "#/definitions/WorkflowRunCompact"
+        },
+        "timeoutSeconds": {
+          "format": "int32",
+          "description": "Signal timeout in seconds. The Signal will timeout if a heartbeat, succeed or fail is not received in this time interval.",
+          "type": "integer"
+        },
+        "result": {
+          "description": "The result of a successful signalling action in JSON."
+        },
+        "error": {
+          "description": "The error of a failed signal.",
+          "type": "string"
+        },
+        "errorCause": {
+          "description": "The error cause of a failed signal.",
+          "type": "string"
+        },
+        "createdByClientId": {
+          "description": "Client ID of the Origin Request",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was created",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was modified",
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User that created the resource",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User that modified the resource",
+          "type": "string"
+        },
+        "tenantId": {
+          "description": "Tenant ID the resource belongs to",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access control list of the resource",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "WorkflowSignalCompact": {
+      "description": "Compact details of a signal",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique resource ID",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "href": {
+          "format": "uri",
+          "description": "HREF to the resource",
+          "type": "string"
+        },
+        "sendHeartbeatHref": {
+          "format": "uri",
+          "description": "HREF to send a heartbeat to a workflow signal",
+          "type": "string"
+        },
+        "sendSuccessResponseHref": {
+          "format": "uri",
+          "description": "HREF to succeed a workflow signal",
+          "type": "string"
+        },
+        "sendFailureResponseHref": {
+          "format": "uri",
+          "description": "HREF to fail a workflow signal",
+          "type": "string"
+        },
+        "name": {
+          "description": "Unique name of the signal",
+          "type": "string"
+        },
+        "status": {
+          "description": "Current status of the signal",
+          "type": "string"
+        },
+        "type": {
+          "description": "User-defined type associated with the signal",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the signal",
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "inputs": {
+          "description": "Inputs defined by the originating WaitForSignal state, in JSON."
+        },
+        "workflowRun": {
+          "$ref": "#/definitions/WorkflowRunCompact"
+        },
+        "timeoutSeconds": {
+          "format": "int32",
+          "description": "Signal timeout in seconds. The Signal will timeout if a heartbeat, succeed or fail is not received in this time interval.",
+          "type": "integer"
+        },
+        "result": {
+          "description": "The result of a successful signalling action in JSON."
+        },
+        "error": {
+          "description": "The error of a failed signal.",
+          "type": "string"
+        },
+        "errorCause": {
+          "description": "The error cause of a failed signal.",
+          "type": "string"
+        },
+        "createdByClientId": {
+          "description": "Client ID of the Origin Request",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was created",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was modified",
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User that created the resource",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User that modified the resource",
+          "type": "string"
+        },
+        "tenantId": {
+          "description": "Tenant ID the resource belongs to",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access control list of the resource",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "WorkflowSignalList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "description": "Items in paged list",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowSignalCompact"
+          }
+        },
+        "itemCount": {
+          "format": "int32",
+          "description": "Number of items included in the page",
+          "type": "integer"
+        },
+        "firstPageToken": {
+          "description": "PageToken for first paged list",
+          "type": "string"
+        },
+        "nextPageToken": {
+          "description": "PageToken for the next paged list",
+          "type": "string",
+          "x-faker": {
+            "helpers.arrayElement": [["page1", ""]]
+          }
+        },
+        "prevPageToken": {
+          "description": "PageToken for the previous paged list",
+          "type": "string"
+        },
+        "lastPageToken": {
+          "description": "PageToken for the last paged list. Only included when totalItemCount is listed",
+          "type": "string"
+        },
+        "totalItemCount": {
+          "format": "int64",
+          "description": "Total number of items in all pages. Only included when requested",
+          "type": "integer"
+        },
+        "totalPageCount": {
+          "format": "int64",
+          "description": "Total number of pages. Only included when totalItemCount is listed",
+          "type": "integer"
+        }
+      }
+    },
+    "WorkflowVersion": {
+      "description": "Details of a Workflow version definition",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique resource ID",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "href": {
+          "format": "uri",
+          "description": "HREF to the resource",
+          "type": "string"
+        },
+        "version": {
+          "description": "Name of the workflow version",
+          "maxLength": 40,
+          "minLength": 0,
+          "type": "string"
+        },
+        "category": {
+          "description": "Category of the workflow version",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the workflow version",
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "language": {
+          "$ref": "#/definitions/WorkflowLanguage"
+        },
+        "status": {
+          "description": "Published Status of the workflow version",
+          "type": "string"
+        },
+        "createdByClientId": {
+          "description": "Client ID of the Origin Request",
+          "type": "string"
+        },
+        "definition": {
+          "description": "Definition of the workflow version",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was created",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was modified",
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User that created the resource",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User that modified the resource",
+          "type": "string"
+        },
+        "tenantId": {
+          "description": "Tenant ID the resource belongs to",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access control list of the resource",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "WorkflowVersionCompact": {
+      "description": "Compact details of a Workflow version definition",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique resource ID",
+          "type": "string"
+        },
+        "urn": {
+          "description": "URN of the resource",
+          "type": "string"
+        },
+        "href": {
+          "format": "uri",
+          "description": "HREF to the resource",
+          "type": "string"
+        },
+        "version": {
+          "description": "Name of the workflow version",
+          "maxLength": 40,
+          "minLength": 0,
+          "type": "string"
+        },
+        "category": {
+          "description": "Category of the workflow version",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the workflow version",
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "language": {
+          "$ref": "#/definitions/WorkflowLanguage"
+        },
+        "status": {
+          "description": "Published Status of the workflow version",
+          "type": "string"
+        },
+        "createdByClientId": {
+          "description": "Client ID of the Origin Request",
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was created",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "description": "Time (in UTC) the resource was modified",
+          "type": "string"
+        },
+        "createdBy": {
+          "description": "User that created the resource",
+          "type": "string"
+        },
+        "modifiedBy": {
+          "description": "User that modified the resource",
+          "type": "string"
+        },
+        "tenantId": {
+          "description": "Tenant ID the resource belongs to",
+          "maxLength": 255,
+          "minLength": 0,
+          "type": "string"
+        },
+        "acl": {
+          "description": "Access control list of the resource",
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "WorkflowVersionList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "description": "Items in paged list",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowVersionCompact"
+          }
+        },
+        "itemCount": {
+          "format": "int32",
+          "description": "Number of items included in the page",
+          "type": "integer"
+        },
+        "firstPageToken": {
+          "description": "PageToken for first paged list",
+          "type": "string"
+        },
+        "nextPageToken": {
+          "description": "PageToken for the next paged list",
+          "type": "string",
+          "x-faker": {
+            "helpers.arrayElement": [["page1", ""]]
+          }
+        },
+        "prevPageToken": {
+          "description": "PageToken for the previous paged list",
+          "type": "string"
+        },
+        "lastPageToken": {
+          "description": "PageToken for the last paged list. Only included when totalItemCount is listed",
+          "type": "string"
+        },
+        "totalItemCount": {
+          "format": "int64",
+          "description": "Total number of items in all pages. Only included when requested",
+          "type": "integer"
+        },
+        "totalPageCount": {
+          "format": "int64",
+          "description": "Total number of pages. Only included when totalItemCount is listed",
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+    }
+  },
+  "security": [
+    {
+      "Bearer": [ ]
+    }
+  ]
+}
