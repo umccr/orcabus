@@ -26,7 +26,6 @@ export class PipelineStack extends cdk.Stack {
       }),
       commands: ['yarn install --frozen-lockfile', 'make build', 'yarn cdk synth -v'],
       primaryOutputDirectory: 'cdk.out',
-      env: {},
       rolePolicyStatements: [
         new PolicyStatement({
           actions: ['sts:AssumeRole'],
@@ -52,11 +51,18 @@ export class PipelineStack extends cdk.Stack {
       dockerEnabledForSelfMutation: true,
     });
 
-    const betaStage = new OrcaBusDeploymentStage(this, 'BetaDeployment', {
-      account: getEnvironmentConfig('beta')?.accountId,
-    });
+    pipeline.addStage(
+      new OrcaBusDeploymentStage(this, 'BetaDeployment', {
+        account: getEnvironmentConfig('beta')?.accountId,
+      })
+    );
 
-    pipeline.addStage(betaStage);
+    // pipeline.addStage(
+    //   new OrcaBusDeploymentStage(this, 'GammaDeployment', {
+    //     account: getEnvironmentConfig('gamma')?.accountId,
+    //   }),
+    //   { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+    // );
   }
 }
 

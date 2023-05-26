@@ -69,6 +69,13 @@ export const getEnvironmentConfig = (
         accountId: '843407916570',
       };
 
+    case 'gamma':
+      return {
+        name: 'beta',
+        // TODO: Change this (currently onboarding account)
+        accountId: '702956374523',
+      };
+
     default:
       return null;
   }
