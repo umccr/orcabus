@@ -54,3 +54,22 @@ export const orcaBusStatelessConfig: OrcaBusStatelessConfig = {
   lambdaRuntimePythonVersion: aws_lambda.Runtime.PYTHON_3_10,
   bclConvertFunctionName: 'orcabus_bcl_convert',
 };
+
+interface EnvironmentConfig {
+  name: string;
+  accountId: string;
+}
+export const getEnvironmentConfig = (
+  accountName: 'beta' | 'gamma' | 'prod'
+): EnvironmentConfig | null => {
+  switch (accountName) {
+    case 'beta':
+      return {
+        name: 'beta',
+        accountId: '843407916570',
+      };
+
+    default:
+      return null;
+  }
+};

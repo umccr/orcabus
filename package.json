@@ -9,11 +9,11 @@
     "type": "git"
   },
   "license": "MIT",
-  "bin": "bin/orcabus.js",
+  "bin": "bin/pipeline.js",
   "scripts": {
-    "test": "jest",
+    "test": "tsc && jest",
     "cdk": "cdk",
-    "build": "tsc",
+    "build": "cdk synth -q",
     "watch": "tsc -w",
     "clean": "tsc --build --clean",
     "audit": "yarn npm audit",
