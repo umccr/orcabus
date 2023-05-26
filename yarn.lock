@@ -3804,7 +3804,7 @@ __metadata:
     ts-node: ^10.9.1
     typescript: ^5.0.4
   bin:
-    orcabus: bin/orcabus.js
+    orcabus: bin/pipeline.js
   languageName: unknown
   linkType: soft
 
