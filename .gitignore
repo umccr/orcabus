@@ -1,6 +1,9 @@
 # Distribution / packaging
 .Python
 
+# Put stuffs here for your local dev specific purpose
+.local/
+
 develop-eggs/
 eggs/
 .eggs/
@@ -41,3 +44,5 @@ cdk.context.json
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+*.sqlite3

@@ -1,11 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
-import { aws_ec2, aws_lambda } from 'aws-cdk-lib';
+import { aws_lambda } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { EventBus } from 'aws-cdk-lib/aws-events';
 import { getVpc } from './stateful/vpc/component';
-import { LambdaLayerConstruct, LambdaLayerProps } from './stateless/layers/component';
-import { BclConvertConstruct, BclConvertProps } from './stateless/bcl_convert/component';
-import { MultiSchemaConstruct, MultiSchemaConstructProps } from './stateless/schema/component';
+import { MultiSchemaConstructProps } from './stateless/schema/component';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
@@ -16,51 +14,34 @@ export interface OrcaBusStatelessConfig {
 }
 
 export class OrcaBusStatelessStack extends cdk.Stack {
+  private vpc: IVpc;
   constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatelessConfig) {
     super(scope, id, props);
 
     // --- Constructs from Stateful stack or pre-existing resources
 
-    const vpc = getVpc(this);
+    this.vpc = getVpc(this);
 
-    const securityGroups = [
-      aws_ec2.SecurityGroup.fromLookupByName(
-        this,
-        'LambdaSecurityGroup',
-        props.lambdaSecurityGroupName,
-        vpc
-      ),
-    ];
+    // const securityGroups = [
+    //   aws_ec2.SecurityGroup.fromLookupByName(
+    //     this,
+    //     'LambdaSecurityGroup',
+    //     props.lambdaSecurityGroupName,
+    //     vpc
+    //   ),
+    // ];
 
-    const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.eventBusName);
+    // const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.eventBusName);
 
     // --- Create Stateless resources
 
-    new MultiSchemaConstruct(this, 'MultiSchema', props.multiSchemaConstructProps);
+    // new MultiSchemaConstruct(this, 'MultiSchema', props.multiSchemaConstructProps);
 
-    // TODO
-    //  here is our layer deps dirs
-    //  for each dir, create LambdaLayerConstruct
-    //  optionally, a flag to say, whether to build the assert or, not
+    // hook microservice construct components here
+    this.createSequenceRunManager();
+  }
 
-    const lambdaLayerProps: LambdaLayerProps = {
-      lambdaRuntimePythonVersion: props.lambdaRuntimePythonVersion,
-    };
-    const lambdaLayerConstruct = new LambdaLayerConstruct(
-      this,
-      'LambdaLayerConstruct',
-      lambdaLayerProps
-    );
-    const layers = [lambdaLayerConstruct.eb_util, lambdaLayerConstruct.schema];
-
-    const bclConvertProps: BclConvertProps = {
-      mainBus: mainBus,
-      layers: layers,
-      securityGroups: securityGroups,
-      vpc: vpc,
-      functionName: props.bclConvertFunctionName,
-      lambdaRuntimePythonVersion: props.lambdaRuntimePythonVersion,
-    };
-    new BclConvertConstruct(this, 'BclConvertConstruct', bclConvertProps);
+  private createSequenceRunManager() {
+    // TODO new SequenceRunManagerConstruct()
   }
 }

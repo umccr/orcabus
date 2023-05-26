@@ -3,3 +3,5 @@ pre-commit
 detect-secrets
 black
 ggshield
+django_extensions==3.2.1
+drf_yasg==1.21.5
