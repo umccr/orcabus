@@ -3,7 +3,7 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { OrcaBusStatelessStack } from '../lib/workload/orcabus-stateless-stack';
 import { OrcaBusStatefulStack } from '../lib/workload/orcabus-stateful-stack';
-import { orcaBusStatefulConfig, orcaBusStatelessConfig } from '../config/constants';
+import { getEnvironmentConfig } from '../config/constants';
 
 const app = new cdk.App();
 
@@ -14,12 +14,12 @@ const props: cdk.StackProps = {
   },
 };
 
-new OrcaBusStatefulStack(app, 'OrcaBusStatefulStack', {
-  ...props,
-  ...orcaBusStatefulConfig,
-});
+// new OrcaBusStatefulStack(app, 'OrcaBusStatefulStack', {
+//   ...props,
+//   ...orcaBusStatefulConfig,
+// });
 
-new OrcaBusStatelessStack(app, 'OrcaBusStatelessStack', {
-  ...props,
-  ...orcaBusStatelessConfig,
-});
+// new OrcaBusStatelessStack(app, 'OrcaBusStatelessStack', {
+//   ...props,
+//   ...orcaBusStatelessConfig,
+// });

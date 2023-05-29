@@ -7,7 +7,7 @@ const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
 const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
 
-export const orcaBusStatefulConfig: OrcaBusStatefulConfig = {
+const orcaBusStatefulConfig = {
   schemaRegistryProps: {
     registryName: regName,
     description: 'Registry for OrcaBus Events',
@@ -31,7 +31,7 @@ export const orcaBusStatefulConfig: OrcaBusStatefulConfig = {
   },
 };
 
-export const orcaBusStatelessConfig: OrcaBusStatelessConfig = {
+const orcaBusStatelessConfig = {
   multiSchemaConstructProps: {
     registryName: regName,
     schemas: [
@@ -58,6 +58,10 @@ export const orcaBusStatelessConfig: OrcaBusStatelessConfig = {
 interface EnvironmentConfig {
   name: string;
   accountId: string;
+  stackProps: {
+    orcaBusStatefulConfig: OrcaBusStatefulConfig;
+    orcaBusStatelessConfig: OrcaBusStatelessConfig;
+  };
 }
 export const getEnvironmentConfig = (
   accountName: 'beta' | 'gamma' | 'prod'
@@ -67,13 +71,83 @@ export const getEnvironmentConfig = (
       return {
         name: 'beta',
         accountId: '843407916570',
+        stackProps: {
+          orcaBusStatefulConfig: {
+            schemaRegistryProps: {
+              ...orcaBusStatefulConfig.schemaRegistryProps,
+            },
+
+            eventBusProps: {
+              ...orcaBusStatefulConfig.eventBusProps,
+            },
+            databaseProps: {
+              ...orcaBusStatefulConfig.databaseProps,
+              numberOfInstance: 1,
+              minACU: 0.5,
+              maxACU: 1,
+            },
+            securityGroupProps: {
+              ...orcaBusStatefulConfig.securityGroupProps,
+            },
+          },
+          orcaBusStatelessConfig: orcaBusStatelessConfig,
+        },
       };
 
     case 'gamma':
       return {
-        name: 'beta',
+        name: 'gamma',
         // TODO: Change this (currently onboarding account)
         accountId: '702956374523',
+        stackProps: {
+          orcaBusStatefulConfig: {
+            schemaRegistryProps: {
+              ...orcaBusStatefulConfig.schemaRegistryProps,
+            },
+
+            eventBusProps: {
+              ...orcaBusStatefulConfig.eventBusProps,
+            },
+            databaseProps: {
+              ...orcaBusStatefulConfig.databaseProps,
+              numberOfInstance: 1,
+              minACU: 0.5,
+              maxACU: 1,
+            },
+            securityGroupProps: {
+              ...orcaBusStatefulConfig.securityGroupProps,
+            },
+          },
+          orcaBusStatelessConfig: orcaBusStatelessConfig,
+        },
+      };
+
+    case 'prod':
+      return {
+        name: 'prod',
+        // TODO: Change this to proper account
+        accountId: '123456789',
+        stackProps: {
+          orcaBusStatefulConfig: {
+            schemaRegistryProps: {
+              ...orcaBusStatefulConfig.schemaRegistryProps,
+            },
+
+            eventBusProps: {
+              ...orcaBusStatefulConfig.eventBusProps,
+            },
+            databaseProps: {
+              ...orcaBusStatefulConfig.databaseProps,
+              numberOfInstance: 1,
+              minACU: 2,
+              maxACU: 4,
+            },
+            securityGroupProps: {
+              ...orcaBusStatefulConfig.securityGroupProps,
+            },
+          },
+          orcaBusStatelessConfig: orcaBusStatelessConfig,
+        },
       };
 
     default:

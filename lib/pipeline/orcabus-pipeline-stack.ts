@@ -3,13 +3,9 @@ import * as cdk from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as pipelines from 'aws-cdk-lib/pipelines';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
-// import { OrcaBusStatelessStack } from '../workload/orcabus-stateless-stack';
-import { OrcaBusStatefulStack } from '../workload/orcabus-stateful-stack';
-import {
-  getEnvironmentConfig,
-  orcaBusStatefulConfig,
-  orcaBusStatelessConfig,
-} from '../../config/constants';
+import { OrcaBusStatelessConfig, OrcaBusStatelessStack } from '../workload/orcabus-stateless-stack';
+import { OrcaBusStatefulConfig, OrcaBusStatefulStack } from '../workload/orcabus-stateful-stack';
+import { getEnvironmentConfig } from '../../config/constants';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 export class PipelineStack extends cdk.Stack {
@@ -20,8 +16,7 @@ export class PipelineStack extends cdk.Stack {
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
-      // TODO: Change branch
-      input: pipelines.CodePipelineSource.connection('umccr/orcabus', 'cdk-pipeline', {
+      input: pipelines.CodePipelineSource.connection('umccr/orcabus', 'main', {
         connectionArn: codeStarArn,
       }),
       commands: ['yarn install --frozen-lockfile', 'make build', 'yarn cdk synth -v'],
@@ -42,7 +37,6 @@ export class PipelineStack extends cdk.Stack {
     const pipeline = new pipelines.CodePipeline(this, 'Pipeline', {
       synth: synthAction,
       crossAccountKeys: true,
-      selfMutation: false, //TODO: Remove this
       codeBuildDefaults: {
         buildEnvironment: {
           buildImage: codebuild.LinuxBuildImage.STANDARD_6_0,
@@ -51,26 +45,51 @@ export class PipelineStack extends cdk.Stack {
       dockerEnabledForSelfMutation: true,
     });
 
-    pipeline.addStage(
-      new OrcaBusDeploymentStage(this, 'BetaDeployment', {
-        account: getEnvironmentConfig('beta')?.accountId,
-      })
-    );
+    const betaConfig = getEnvironmentConfig('beta');
+    if (betaConfig) {
+      pipeline.addStage(
+        new OrcaBusDeploymentStage(this, 'BetaDeployment', betaConfig.stackProps, {
+          account: getEnvironmentConfig('beta')?.accountId,
+        })
+      );
+    }
 
-    pipeline.addStage(
-      new OrcaBusDeploymentStage(this, 'GammaDeployment', {
-        account: getEnvironmentConfig('gamma')?.accountId,
-      }),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
-    );
+    const gammaConfig = getEnvironmentConfig('gamma');
+    if (gammaConfig) {
+      pipeline.addStage(
+        new OrcaBusDeploymentStage(this, 'GammaDeployment', gammaConfig.stackProps, {
+          account: gammaConfig?.accountId,
+        }),
+        { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
+      );
+    }
+
+    // TODO: Enable if it is ready for deployment
+    // const prodConfig = getEnvironmentConfig('prod');
+    // if (prodConfig) {
+    //   pipeline.addStage(
+    //     new OrcaBusDeploymentStage(this, 'prodDeployment', prodConfig.stackProps, {
+    //       account: gammaConfig?.accountId,
+    //     }),
+    //     { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+    //   );
+    // }
   }
 }
 
 class OrcaBusDeploymentStage extends cdk.Stage {
-  constructor(scope: Construct, environmentName: string, env?: cdk.Environment) {
+  constructor(
+    scope: Construct,
+    environmentName: string,
+    stackProps: {
+      orcaBusStatefulConfig: OrcaBusStatefulConfig;
+      orcaBusStatelessConfig: OrcaBusStatelessConfig;
+    },
+    env?: cdk.Environment
+  ) {
     super(scope, environmentName, { env: { account: env?.account, region: 'ap-southeast-2' } });
 
-    new OrcaBusStatefulStack(this, 'OrcaBusStatefulStack', orcaBusStatefulConfig);
-    // new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', orcaBusStatelessConfig);
+    new OrcaBusStatefulStack(this, 'OrcaBusStatefulStack', stackProps.orcaBusStatefulConfig);
+    new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', stackProps.orcaBusStatelessConfig);
   }
 }

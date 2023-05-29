@@ -6,12 +6,12 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 export interface DatabaseProps {
   clusterIdentifier: string;
   defaultDatabaseName: string;
-  version: rds.AuroraMysqlEngineVersion;
   parameterGroupName: string;
   username: string;
-}
-
-interface DatabaseConstructProps extends DatabaseProps {
+  version: rds.AuroraMysqlEngineVersion;
+  numberOfInstance: number;
+  minACU: number;
+  maxACU: number;
   allowDbSGIngressRule?: {
     peer: ec2.IPeer;
     description?: string;
@@ -22,7 +22,7 @@ export class DatabaseConstruct extends Construct {
   readonly dbSecurityGroup: ec2.SecurityGroup;
   readonly dbCluster: rds.DatabaseCluster;
 
-  constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: DatabaseConstructProps) {
+  constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: DatabaseProps) {
     super(scope, id);
     const dbPort = 3306;
 
@@ -51,7 +51,7 @@ export class DatabaseConstruct extends Construct {
         version: props.version,
       }),
       port: dbPort,
-      instances: 1,
+      instances: props.numberOfInstance,
       instanceProps: {
         vpc: vpc,
         vpcSubnets: {
@@ -76,8 +76,8 @@ export class DatabaseConstruct extends Construct {
       visit(node) {
         if (node instanceof rds.CfnDBCluster) {
           node.serverlessV2ScalingConfiguration = {
-            minCapacity: 0.5,
-            maxCapacity: 1,
+            minCapacity: props.minACU,
+            maxCapacity: props.maxACU,
           };
         }
       },
