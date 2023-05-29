@@ -57,12 +57,12 @@ export class PipelineStack extends cdk.Stack {
       })
     );
 
-    // pipeline.addStage(
-    //   new OrcaBusDeploymentStage(this, 'GammaDeployment', {
-    //     account: getEnvironmentConfig('gamma')?.accountId,
-    //   }),
-    //   { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
-    // );
+    pipeline.addStage(
+      new OrcaBusDeploymentStage(this, 'GammaDeployment', {
+        account: getEnvironmentConfig('gamma')?.accountId,
+      }),
+      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+    );
   }
 }
 
