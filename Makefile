@@ -18,6 +18,9 @@ scan:
 deep: scan
 	@ggshield secret scan repo .
 
+baseline:
+	@detect-secrets scan --exclude-files '^(yarn.lock|.yarn/|.local/|openapi/)' > .secrets.baseline
+
 test:
 	@yarn test
 	# @pytest
@@ -28,3 +31,18 @@ build:
 clean:
 	@yarn clean
 	@for zf in $(shell find ./lib/workload/stateless/layers -maxdepth 1 -mindepth 1 -type f -iname '*.zip'); do rm -v $$zf; done
+
+up:
+	@docker compose up -d
+
+down:
+	@docker compose down
+
+stop:
+	@docker compose down
+
+ps:
+	@docker compose ps
+
+mysql:
+	@docker exec -it orcabus_db mysql -h 0.0.0.0 -D orcabus -u root -proot

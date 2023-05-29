@@ -4,30 +4,76 @@ UMCCR Orchestration Bus that leverage AWS EventBridge as Event Bus to automate t
 
 ## Development
 
+_Heads up: Polyglot programming environment. We shorten some trivial steps into `Makefile` target. You may deduce step-by-step from `Makefile`, if any._
+
 ### Toolchain
 
 ```
 docker --version
->Docker version 23.0.5
+Docker version 24.0.1, build 680212238b
 
 conda create -n orcabus python=3.10
 conda activate orcabus
 python -V
->Python 3.10.10
+Python 3.10.11
 
 node -v
->v16.15.0
+v18.16.0
+
+npm i -g yarn
+yarn -v
+3.5.1
 ```
 
-### TL;DR
+### MySQL
 
-_Heads up: Polyglot programming environment. So we wrap couple of different tool trivial steps into Makefile target as one-go shortcut! You may deduce step-by-step from Makefile, if any._
+```
+make up
+make ps
+make mysql
+mysql> show databases;
+mysql> use orcabus;
+mysql> show tables;
+mysql> \q
+```
+
+### Creating Microservice
+
+Two high level tasks. As follows.
+
+#### 1. Bootstrap using Skel Profile
+
+- [DJANGO_API.md](docs/developer/DJANGO_API.md)
+- [DJANGO_PROC.md](docs/developer/DJANGO_PROC.md)
+
+#### 2. Infrastructure as Code for microservice
+
+- Encourage to use CDK as much as possible.
+- You could write one CDK construct from scratch. However, prefer use Construct Library whenever possible.
+- In the order of preference; please browse and make use of Construct patterns from the following.
+  1. https://docs.aws.amazon.com/solutions/latest/constructs/welcome.html
+  2. https://serverlessland.com
+  3. https://constructs.dev
+- Please check existing microservice implementations for reference.
+
+For example, to use https://docs.aws.amazon.com/solutions/latest/constructs/aws-cognito-apigateway-lambda.html
+
+- At project root, execute as follows:
+```
+yarn add @aws-solutions-constructs/aws-cognito-apigateway-lambda
+```
+
+- Or, to remove:
+```
+yarn remove @aws-solutions-constructs/aws-cognito-apigateway-lambda
+```
+
+### CDK
 
 ```
 make install
 make check
 make test
-make build
 
 yarn cdk list
 yarn cdk synth OrcaBusStatefulStack
@@ -51,8 +97,8 @@ TypeScript
 - Fix prettier issue: `yarn prettier-fix`
 
 Python
-- Run black: `yarn black`
-- Fix black issue: `yarn black-fix`
+- Run code formatter: `yarn black`
+- Fix code format issue: `yarn black-fix`
 
 ### Audit
 

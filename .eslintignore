@@ -10,6 +10,8 @@ coverage/
 .pre-commit-config.yaml
 buildspec.yml
 docker-compose.yml
+docker-compose.ci.yml
+docker-compose.override.sample.yml
 README.md
 
 cdk.out/
@@ -22,3 +24,8 @@ cdk.context.json
 tsconfig.json
 
 config/event_schemas/
+
+.local/
+skel/
+docs/
+openapi/

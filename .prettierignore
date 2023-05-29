@@ -22,3 +22,11 @@ cdk.context.json
 tsconfig.json
 
 config/event_schemas/
+
+.local/
+skel/
+docs/
+openapi/
+docker-compose.yml
+docker-compose.ci.yml
+docker-compose.override.sample.yml

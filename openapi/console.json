@@ -1,0 +1,966 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Developer Console Service",
+    "version": "v1"
+  },
+  "host": "aps2.platform.illumina.com",
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/v1/accounts/{accountId}": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Get requested account id info require authorization Bearer token",
+        "description": "Get requested account id info",
+        "operationId": "getAccount",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The account information returned successfully",
+            "schema": {
+              "$ref": "#/definitions/AccountResponse"
+            }
+          },
+          "401": {
+            "description": "The provided token is unauthorized."
+          },
+          "403": {
+            "description": "You do not have permission to access this resource."
+          },
+          "404": {
+            "description": "The resource was not found at the given path."
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator."
+          }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Returns the health status for all services.",
+        "description": "Returns the health status for all services.",
+        "operationId": "serviceHealth",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Health check succeeded",
+            "schema": {
+              "$ref": "#/definitions/SystemHealthResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get a list of available projects. Requires user authorization Bearer token.",
+        "description": "Get a list of available projects",
+        "operationId": "listProjects",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "pageToken",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projects returned successfully",
+            "schema": {
+              "$ref": "#/definitions/ProjectPagedItems"
+            }
+          },
+          "400": {
+            "description": "The provided page token is invalid.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "The provided access token is unauthorized.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/regions": {
+      "get": {
+        "tags": [
+          "Regions"
+        ],
+        "summary": "Get a list of available regions",
+        "description": "Get a list of available regions",
+        "operationId": "listRegions",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "instrumentType",
+            "description": "Instrument type",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "description": "Instrument version",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Regions found and returned successfully.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Region"
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator."
+          }
+        }
+      }
+    },
+    "/v1/tokens": {
+      "post": {
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Creates a JWT token to call IAP services.",
+        "description": "This endpoint creates a JWT token to call IAP services. Authorization can be a Bearer psToken,  Basic Base64 encoded username:password or Basic with apiKey.",
+        "operationId": "createToken",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "description": "Api Key can be passed in header to generate a JWT.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "clientId",
+            "description": "Optionally pass client Id from calling app to set as authorized party on JWT.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "api_key",
+            "description": "OBSOLETE: api key should now be passed as as an X-API-Key header.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "Optionally pass the domain name you are logging into",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "data",
+            "description": "Data is a custom meta data field that will be applied to the session field in the JWT payload.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "scopes",
+            "description": "Scopes can be passed in during token generation to limit the token to particular scopes.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cwid",
+            "description": "Set the current workgroup on the token. Used for aligning resources to a workgroup.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "cid",
+            "description": "Set the current context on the token. Used for aligning resources to a context.",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "returnSessionToken",
+            "description": "By default, this endpoint returns a JWT token. You can specify returnSessionToken=true to get an Illumina psToken instead.",
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The Token is created successfully.",
+            "schema": {
+              "$ref": "#/definitions/TokenResponse"
+            }
+          },
+          "400": {
+            "description": "An invalid or missing input parameter will result in a bad request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "The acting identity cannot be authenticated and authorized.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "The acting identity is not authorized to subscribe to the given event type or deliver to the given delivery target.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Revokes an access token.",
+        "description": "This endpoint revokes the access token that is passed in.",
+        "operationId": "revokeToken",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Access token request accepts either a psToken or a JWT in the access_token field in the body of the request.",
+            "schema": {
+              "$ref": "#/definitions/AccessTokenRequest"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Succeeded and the token has been revoked."
+          },
+          "400": {
+            "description": "An invalid or missing input parameter will result in a bad request.\"",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/tokens:refresh": {
+      "post": {
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Refresh session psToken.",
+        "description": "This endpoint extends the session for the psToken.",
+        "operationId": "refreshToken",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Access token request accepts a psToken in the access_token field in the body of the request.",
+            "schema": {
+              "$ref": "#/definitions/AccessTokenRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The Token was refreshed successfully.",
+            "schema": {
+              "$ref": "#/definitions/TokenResponse"
+            }
+          },
+          "400": {
+            "description": "An invalid or missing input parameter will result in a bad request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "The token is no longer able to be refreshed.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/tokens/details": {
+      "get": {
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Get current tokens info require authorization Bearer token",
+        "description": "Get token details",
+        "operationId": "getTokenDetails",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Token details returned successfully",
+            "schema": {
+              "$ref": "#/definitions/TokenDetailResponse"
+            }
+          },
+          "401": {
+            "description": "The token provided is unauthorized."
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator."
+          }
+        }
+      }
+    },
+    "/v1/usages": {
+      "get": {
+        "tags": [
+          "Usages"
+        ],
+        "summary": "Get current tenant's usage detail by period.  Default returns current period usage data. ",
+        "description": "This endpoint provides the ability for the user to get the aggregated usage data",
+        "operationId": "getUsage",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "periods",
+            "type": "integer",
+            "format": "int32",
+            "maximum": 6,
+            "minimum": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The usages are returned successfully.",
+            "schema": {
+              "$ref": "#/definitions/UsageResponse"
+            }
+          },
+          "400": {
+            "description": "An invalid or missing input parameter will result in a bad request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "The acting identity cannot be authenticated and authorized.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "The acting identity is not authorized to subscribe to the given event type or deliver to the given delivery target.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/usages/details": {
+      "get": {
+        "tags": [
+          "Usages"
+        ],
+        "summary": "Get current tenant's usage detail by period.  Default returns current period usage data. ",
+        "description": "This endpoint provides the billing details for specified period id. Summarize each compute usage and daily gds usage",
+        "operationId": "getUsageDetails",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "periodId",
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The usages are returned successfully.",
+            "schema": {
+              "$ref": "#/definitions/UsageResponse"
+            }
+          },
+          "400": {
+            "description": "An invalid or missing input parameter will result in a bad request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "The acting identity cannot be authenticated and authorized.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "The acting identity is not authorized to subscribe to the given event type or deliver to the given delivery target.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/usages/periods": {
+      "get": {
+        "tags": [
+          "Usages"
+        ],
+        "summary": "Get periods detail info ",
+        "description": "This endpoint provides the periods details",
+        "operationId": "getUsagePeriods",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "type": "integer",
+            "format": "int32",
+            "default": 26
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The periods are returned successfully.",
+            "schema": {
+              "$ref": "#/definitions/UsageResponse"
+            }
+          },
+          "400": {
+            "description": "An invalid or missing input parameter will result in a bad request.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "The acting identity cannot be authenticated and authorized.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "The acting identity is not authorized to subscribe to the given event type or deliver to the given delivery target.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator.",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v1/workgroups": {
+      "get": {
+        "tags": [
+          "Workgroups"
+        ],
+        "summary": "Get a list of available workgroups. Requires session token (psToken) authorization Bearer token",
+        "description": "Get a list of available workgroups",
+        "operationId": "listWorkgroups",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Workgroups returned successfully",
+            "schema": {
+              "$ref": "#/definitions/WorkgroupResponse"
+            }
+          },
+          "401": {
+            "description": "The provided session token is unauthorized."
+          },
+          "default": {
+            "description": "Unexpected issue. Please try your request again. If problem persists, please contact the system administrator."
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Domain": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "AccountResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "domain": {
+          "$ref": "#/definitions/Domain"
+        }
+      }
+    },
+    "HealthCheckStatuses": {
+      "format": "int32",
+      "description": "Health status",
+      "enum": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "type": "integer"
+    },
+    "ServiceHealthResponse": {
+      "description": "Describes the individual health of all services in the platform",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name of the service",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/HealthCheckStatuses"
+        },
+        "version": {
+          "description": "Current version for the deployed service",
+          "type": "string"
+        }
+      }
+    },
+    "SystemHealthResponse": {
+      "description": "The overall health of the platform",
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/HealthCheckStatuses"
+        },
+        "details": {
+          "description": "Service health details",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ServiceHealthResponse"
+          }
+        }
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "Project": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "urn": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "timeCreated": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "timeModified": {
+          "format": "date-time",
+          "type": "string"
+        }
+      }
+    },
+    "ProjectPagedItems": {
+      "description": "Paged list response",
+      "type": "object",
+      "properties": {
+        "items": {
+          "description": "Items in paged list",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Project"
+          }
+        },
+        "itemCount": {
+          "format": "int32",
+          "description": "Number of items included in the page",
+          "type": "integer"
+        },
+        "firstPageToken": {
+          "description": "PageToken for first paged list",
+          "type": "string"
+        },
+        "nextPageToken": {
+          "description": "PageToken for the next paged list",
+          "type": "string"
+        },
+        "prevPageToken": {
+          "description": "PageToken for the previous paged list",
+          "type": "string"
+        },
+        "lastPageToken": {
+          "description": "PageToken for the last paged list. Only included when totalItemCount is listed",
+          "type": "string"
+        },
+        "totalItemCount": {
+          "format": "int64",
+          "description": "Total number of items in all pages. Only included when requested",
+          "type": "integer"
+        },
+        "totalPageCount": {
+          "format": "int64",
+          "description": "Total number of pages. Only included when totalItemCount is listed",
+          "type": "integer"
+        }
+      }
+    },
+    "Region": {
+      "description": "Resource representing environment details",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name of the environment",
+          "type": "string"
+        },
+        "displayName": {
+          "description": "Display name for the environment",
+          "type": "string"
+        },
+        "baseUrl": {
+          "description": "BaseUrl for the environment",
+          "type": "string"
+        },
+        "isEnabled": {
+          "description": "True if the environment is enabled",
+          "type": "boolean"
+        }
+      }
+    },
+    "TokenResponse": {
+      "description": "Response payload for token create",
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "description": "The returned token is either a psToken or a JWT token depending on the context of the call.",
+          "type": "string"
+        },
+        "token_type": {
+          "description": "The type of token requested.",
+          "type": "string"
+        }
+      }
+    },
+    "AccessTokenRequest": {
+      "description": "Access token passed into an api request",
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "description": "This is either a psToken or a JWT token depending on the context of the call.",
+          "type": "string"
+        }
+      }
+    },
+    "Workgroup": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "TokenDetailResponse": {
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "currentWorkgroup": {
+          "$ref": "#/definitions/Workgroup"
+        },
+        "tid": {
+          "type": "string"
+        },
+        "acls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "domain": {
+          "$ref": "#/definitions/Domain"
+        }
+      }
+    },
+    "ProductUsage": {
+      "required": [
+        "amount",
+        "type",
+        "unit"
+      ],
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "amount": {
+          "format": "double",
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "iCredit": {
+          "format": "double",
+          "type": "number"
+        }
+      }
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "fullName": {
+          "type": "string"
+        },
+        "userName": {
+          "type": "string"
+        },
+        "domain": {
+          "$ref": "#/definitions/Domain"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "UserAggregatedUsage": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/User"
+        },
+        "iCredit": {
+          "format": "double",
+          "type": "number"
+        },
+        "usages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProductUsage"
+          }
+        }
+      }
+    },
+    "PeriodUsageSummary": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "end": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "iCredit": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "totalUsages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProductUsage"
+          }
+        },
+        "userAggregatedUsages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserAggregatedUsage"
+          }
+        }
+      }
+    },
+    "UsageResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PeriodUsageSummary"
+          }
+        }
+      }
+    },
+    "WorkgroupResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Workgroup"
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "Authorization header using Bearer scheme with token. Example: \"Bearer {token}\""
+    },
+    "Basic": {
+      "type": "basic",
+      "description": "Basic Authorization"
+    }
+  },
+  "security": [
+    {
+      "Bearer": [ ]
+    },
+    {
+      "Basic": [ ]
+    }
+  ]
+}
