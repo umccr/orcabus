@@ -14,11 +14,12 @@ export class PipelineStack extends cdk.Stack {
 
     // A connection where the pipeline get its source code
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
+    const sourceFile = pipelines.CodePipelineSource.connection('umccr/orcabus', 'main', {
+      connectionArn: codeStarArn,
+    });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
-      input: pipelines.CodePipelineSource.connection('umccr/orcabus', 'main', {
-        connectionArn: codeStarArn,
-      }),
+      input: sourceFile,
       commands: ['yarn install --frozen-lockfile', 'make build', 'yarn cdk synth -v'],
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
@@ -33,6 +34,7 @@ export class PipelineStack extends cdk.Stack {
         }),
       ],
     });
+    synthAction.addStepDependency(new OrcaBusTestStep('OrcaBusUnitTest', { source: sourceFile }));
 
     const pipeline = new pipelines.CodePipeline(this, 'Pipeline', {
       synth: synthAction,
@@ -45,35 +47,40 @@ export class PipelineStack extends cdk.Stack {
       dockerEnabledForSelfMutation: true,
     });
 
+    /**
+     * Deployment to Beta (Dev) account
+     */
     const betaConfig = getEnvironmentConfig('beta');
-    if (betaConfig) {
-      pipeline.addStage(
-        new OrcaBusDeploymentStage(this, 'BetaDeployment', betaConfig.stackProps, {
-          account: getEnvironmentConfig('beta')?.accountId,
-        })
-      );
-    }
+    if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
+    pipeline.addStage(
+      new OrcaBusDeploymentStage(this, 'BetaDeployment', betaConfig.stackProps, {
+        account: betaConfig.accountId,
+      })
+    );
 
+    /**
+     * Deployment to Gamma (Staging) account
+     */
     const gammaConfig = getEnvironmentConfig('gamma');
-    if (gammaConfig) {
-      pipeline.addStage(
-        new OrcaBusDeploymentStage(this, 'GammaDeployment', gammaConfig.stackProps, {
-          account: gammaConfig?.accountId,
-        }),
-        { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
-      );
-    }
+    if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
+    pipeline.addStage(
+      new OrcaBusDeploymentStage(this, 'GammaDeployment', gammaConfig.stackProps, {
+        account: gammaConfig.accountId,
+      }),
+      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
+    );
 
-    // TODO: Enable if it is ready for deployment
+    /**
+     * Deployment to Prod account (DISABLED)
+     */
     // const prodConfig = getEnvironmentConfig('prod');
-    // if (prodConfig) {
-    //   pipeline.addStage(
-    //     new OrcaBusDeploymentStage(this, 'prodDeployment', prodConfig.stackProps, {
-    //       account: gammaConfig?.accountId,
-    //     }),
-    //     { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
-    //   );
-    // }
+    // if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
+    // pipeline.addStage(
+    //   new OrcaBusDeploymentStage(this, 'prodDeployment', prodConfig.stackProps, {
+    //     account: gammaConfig?.accountId,
+    //   }),
+    //   { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+    // );
   }
 }
 
@@ -91,5 +98,24 @@ class OrcaBusDeploymentStage extends cdk.Stage {
 
     new OrcaBusStatefulStack(this, 'OrcaBusStatefulStack', stackProps.orcaBusStatefulConfig);
     new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', stackProps.orcaBusStatelessConfig);
+  }
+}
+
+interface OrcaBusTestStepProps {
+  source: pipelines.CodePipelineSource;
+}
+class OrcaBusTestStep extends pipelines.CodeBuildStep {
+  constructor(id: string, props: OrcaBusTestStepProps) {
+    const stepProps: pipelines.CodeBuildStepProps = {
+      input: props.source,
+      commands: [
+        'conda create -n orcabus python=3.10',
+        'conda activate orcabus',
+        'make install',
+        'make check',
+        'make test',
+      ],
+    };
+    super(id, stepProps);
   }
 }
