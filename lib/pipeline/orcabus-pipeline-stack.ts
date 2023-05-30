@@ -14,7 +14,8 @@ export class PipelineStack extends cdk.Stack {
 
     // A connection where the pipeline get its source code
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
-    const sourceFile = pipelines.CodePipelineSource.connection('umccr/orcabus', 'main', {
+    // TODO change branch
+    const sourceFile = pipelines.CodePipelineSource.connection('umccr/orcabus', 'cdk-pipeline', {
       connectionArn: codeStarArn,
     });
 
@@ -38,6 +39,8 @@ export class PipelineStack extends cdk.Stack {
 
     const pipeline = new pipelines.CodePipeline(this, 'Pipeline', {
       synth: synthAction,
+      // TODO CHANGE
+      selfMutation: false,
       crossAccountKeys: true,
       codeBuildDefaults: {
         buildEnvironment: {
@@ -67,7 +70,8 @@ export class PipelineStack extends cdk.Stack {
       new OrcaBusDeploymentStage(this, 'GammaDeployment', gammaConfig.stackProps, {
         account: gammaConfig.accountId,
       }),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
+      // TODO: Change name manual apprival step
+      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
     );
 
     /**
@@ -97,7 +101,7 @@ class OrcaBusDeploymentStage extends cdk.Stage {
     super(scope, environmentName, { env: { account: env?.account, region: 'ap-southeast-2' } });
 
     new OrcaBusStatefulStack(this, 'OrcaBusStatefulStack', stackProps.orcaBusStatefulConfig);
-    new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', stackProps.orcaBusStatelessConfig);
+    // new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', stackProps.orcaBusStatelessConfig);
   }
 }
 

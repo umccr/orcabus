@@ -24,6 +24,6 @@ test('Test SchemaRegistry Creation', () => {
   const template = Template.fromStack(stack);
 
   template.hasResourceProperties('AWS::EC2::SecurityGroup', {
-    GroupName: 'OrcaBusLambdaSecurityGroup',
+    GroaupName: 'OrcaBusLambdaSecurityGroup',
   });
 });

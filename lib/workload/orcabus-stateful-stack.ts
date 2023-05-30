@@ -24,23 +24,23 @@ export class OrcaBusStatefulStack extends cdk.Stack {
 
     // --- Constructs pre-existing resources
 
-    const vpc = getVpc(this);
+    // const vpc = getVpc(this);
 
-    // --- Create Stateful resources
+    // // --- Create Stateful resources
 
-    this.eventBus = new EventBusConstruct(this, 'OrcaBusEventBusConstruct', props.eventBusProps);
-    this.securityGroup = new SecurityGroupConstruct(
-      this,
-      'OrcaBusSecurityGroupConstruct',
-      vpc,
-      props.securityGroupProps
-    );
-    this.database = new DatabaseConstruct(this, 'OrcaBusDatabaseConstruct', vpc, {
-      ...props.databaseProps,
-      allowDbSGIngressRule: [
-        { peer: this.securityGroup.lambdaSecurityGroup, description: 'allow lambda SecurityGroup' },
-      ],
-    });
+    // this.eventBus = new EventBusConstruct(this, 'OrcaBusEventBusConstruct', props.eventBusProps);
+    // this.securityGroup = new SecurityGroupConstruct(
+    //   this,
+    //   'OrcaBusSecurityGroupConstruct',
+    //   vpc,
+    //   props.securityGroupProps
+    // );
+    // this.database = new DatabaseConstruct(this, 'OrcaBusDatabaseConstruct', vpc, {
+    //   ...props.databaseProps,
+    //   allowDbSGIngressRule: [
+    //     { peer: this.securityGroup.lambdaSecurityGroup, description: 'allow lambda SecurityGroup' },
+    //   ],
+    // });
     this.schemaRegistry = new SchemaRegistryConstruct(
       this,
       'SchemaRegistryConstruct',
