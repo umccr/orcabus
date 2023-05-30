@@ -8,7 +8,7 @@ let stack: cdk.Stack;
 let vpc: ec2.Vpc;
 
 const constructConfig = getEnvironmentConfig('beta');
-expect(constructConfig).toBeTruthy();
+if (!constructConfig) throw new Error('No construct config for the test');
 
 beforeEach(() => {
   stack = new cdk.Stack();
@@ -19,7 +19,7 @@ beforeEach(() => {
 
 test('Test SchemaRegistry Creation', () => {
   new SecurityGroupConstruct(stack, 'TestSGConstruct', vpc, {
-    ...constructConfig!.stackProps.orcaBusStatefulConfig.securityGroupProps,
+    ...constructConfig.stackProps.orcaBusStatefulConfig.securityGroupProps,
   });
   const template = Template.fromStack(stack);
 

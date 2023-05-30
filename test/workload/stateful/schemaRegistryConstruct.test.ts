@@ -6,7 +6,7 @@ import { SchemaRegistryConstruct } from '../../../lib/workload/stateful/schemare
 let stack: cdk.Stack;
 
 const constructConfig = getEnvironmentConfig('beta');
-expect(constructConfig).toBeTruthy();
+if (!constructConfig) throw new Error('No construct config for the test');
 
 beforeEach(() => {
   stack = new cdk.Stack();
@@ -14,7 +14,7 @@ beforeEach(() => {
 
 test('Test SchemaRegistry Creation', () => {
   new SchemaRegistryConstruct(stack, 'TestSchemaRegistryConstruct', {
-    ...constructConfig!.stackProps.orcaBusStatefulConfig.schemaRegistryProps,
+    ...constructConfig.stackProps.orcaBusStatefulConfig.schemaRegistryProps,
   });
   const template = Template.fromStack(stack);
 

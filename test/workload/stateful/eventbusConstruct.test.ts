@@ -6,7 +6,7 @@ import { EventBusConstruct } from '../../../lib/workload/stateful/eventbridge/co
 let stack: cdk.Stack;
 
 const constructConfig = getEnvironmentConfig('beta');
-expect(constructConfig).toBeTruthy();
+if (!constructConfig) throw new Error('No construct config for the test');
 
 beforeEach(() => {
   stack = new cdk.Stack();
@@ -14,7 +14,7 @@ beforeEach(() => {
 
 test('Test EventBus Creation', () => {
   new EventBusConstruct(stack, 'TestEventBusConstruct', {
-    ...constructConfig!.stackProps.orcaBusStatefulConfig.eventBusProps,
+    ...constructConfig.stackProps.orcaBusStatefulConfig.eventBusProps,
   });
   const template = Template.fromStack(stack);
 

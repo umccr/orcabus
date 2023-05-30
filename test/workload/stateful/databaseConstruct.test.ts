@@ -8,6 +8,8 @@ let stack: cdk.Stack;
 let vpc: ec2.Vpc;
 
 const constructConfig = getEnvironmentConfig('beta');
+if (!constructConfig) throw new Error('No construct config for the test');
+
 expect(constructConfig).toBeTruthy();
 
 beforeEach(() => {
@@ -19,7 +21,7 @@ beforeEach(() => {
 
 test('Test DBCluster created props', () => {
   new DatabaseConstruct(stack, 'TestDatabaseConstruct', vpc, {
-    ...constructConfig!.stackProps.orcaBusStatefulConfig.databaseProps,
+    ...constructConfig.stackProps.orcaBusStatefulConfig.databaseProps,
   });
   const template = Template.fromStack(stack);
 
@@ -42,7 +44,7 @@ test('Test other SG Allow Ingress to DB SG', () => {
   const sgLogicalId = stack.getLogicalId(allowedSG.node.defaultChild as ec2.CfnSecurityGroup);
 
   new DatabaseConstruct(stack, 'TestDatabaseConstruct', vpc, {
-    ...constructConfig!.stackProps.orcaBusStatefulConfig.databaseProps,
+    ...constructConfig.stackProps.orcaBusStatefulConfig.databaseProps,
     allowDbSGIngressRule: [{ peer: allowedSG, description: 'Allowed SG DB Ingress' }],
   });
   const template = Template.fromStack(stack);
