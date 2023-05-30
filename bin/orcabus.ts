@@ -6,7 +6,6 @@ import { OrcaBusStatefulStack } from '../lib/workload/orcabus-stateful-stack';
 import { getEnvironmentConfig } from '../config/constants';
 
 const app = new cdk.App();
-
 const props: cdk.StackProps = {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
@@ -14,12 +13,15 @@ const props: cdk.StackProps = {
   },
 };
 
-// new OrcaBusStatefulStack(app, 'OrcaBusStatefulStack', {
-//   ...props,
-//   ...orcaBusStatefulConfig,
-// });
+const config = getEnvironmentConfig('beta');
+if (!config) throw new Error('No Config');
 
-// new OrcaBusStatelessStack(app, 'OrcaBusStatelessStack', {
-//   ...props,
-//   ...orcaBusStatelessConfig,
-// });
+new OrcaBusStatefulStack(app, 'OrcaBusStatefulStack', {
+  ...config.stackProps.orcaBusStatefulConfig,
+  ...props,
+});
+
+new OrcaBusStatelessStack(app, 'OrcaBusStatelessStack', {
+  ...config.stackProps.orcaBusStatelessConfig,
+  ...props,
+});
