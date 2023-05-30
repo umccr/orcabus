@@ -14,8 +14,7 @@ export class PipelineStack extends cdk.Stack {
 
     // A connection where the pipeline get its source code
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
-    // TODO change branch
-    const sourceFile = pipelines.CodePipelineSource.connection('umccr/orcabus', 'cdk-pipeline', {
+    const sourceFile = pipelines.CodePipelineSource.connection('umccr/orcabus', 'main', {
       connectionArn: codeStarArn,
     });
 
@@ -39,8 +38,7 @@ export class PipelineStack extends cdk.Stack {
 
     const pipeline = new pipelines.CodePipeline(this, 'Pipeline', {
       synth: synthAction,
-      // TODO CHANGE
-      selfMutation: false,
+      selfMutation: true,
       crossAccountKeys: true,
       codeBuildDefaults: {
         buildEnvironment: {
@@ -70,8 +68,7 @@ export class PipelineStack extends cdk.Stack {
       new OrcaBusDeploymentStage(this, 'GammaDeployment', gammaConfig.stackProps, {
         account: gammaConfig.accountId,
       }),
-      // TODO: Change name manual apprival step
-      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
     );
 
     /**
@@ -112,13 +109,29 @@ class OrcaBusTestStep extends pipelines.CodeBuildStep {
   constructor(id: string, props: OrcaBusTestStepProps) {
     const stepProps: pipelines.CodeBuildStepProps = {
       input: props.source,
-      commands: [
-        'conda create -n orcabus python=3.10',
-        'conda activate orcabus',
-        'make install',
-        'make check',
-        'make test',
-      ],
+      commands: [],
+      partialBuildSpec: codebuild.BuildSpec.fromObject({
+        env: {
+          shell: 'bash',
+        },
+        phases: {
+          install: {
+            commands: [
+              'wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py310_23.3.1-0-Linux-x86_64.sh',
+              'bash Miniconda3-py310_23.3.1-0-Linux-x86_64.sh -b',
+              'export PATH=/root/miniconda3/bin:$PATH',
+              'conda init bash',
+              'source activate',
+              'conda create -q -n orcabus python=3.10',
+              'conda run -n orcabus yarn install',
+            ],
+          },
+          build: {
+            commands: ['conda run -n orcabus make test'],
+          },
+        },
+        version: '0.2',
+      }),
     };
     super(id, stepProps);
   }

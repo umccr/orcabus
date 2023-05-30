@@ -97,8 +97,8 @@ export const getEnvironmentConfig = (
     case 'gamma':
       return {
         name: 'gamma',
-        // TODO: Change this (currently onboarding account)
-        accountId: '702956374523',
+        // TODO: Change this Account Number
+        accountId: '1234567',
         stackProps: {
           orcaBusStatefulConfig: {
             schemaRegistryProps: {
@@ -125,7 +125,7 @@ export const getEnvironmentConfig = (
     case 'prod':
       return {
         name: 'prod',
-        // TODO: Change this to proper account
+        // TODO: Change this account number
         accountId: '123456789',
         stackProps: {
           orcaBusStatefulConfig: {
