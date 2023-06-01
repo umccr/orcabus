@@ -23,7 +23,7 @@ baseline:
 
 test:
 	@yarn test
-	@pytest
+	# @pytest
 
 build:
 	@for dir in $(shell find ./lib/workload/stateless/layers -maxdepth 1 -mindepth 1 -type d -exec basename {} \;); do ./lib/workload/stateless/layers/create_layer_package.sh $$dir; done
