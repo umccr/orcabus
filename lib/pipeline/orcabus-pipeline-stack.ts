@@ -20,7 +20,7 @@ export class PipelineStack extends cdk.Stack {
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
       input: sourceFile,
-      commands: ['yarn install --frozen-lockfile', 'make build', 'yarn cdk synth -v'],
+      commands: ['yarn install --frozen-lockfile', 'yarn cdk synth -v'],
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
         new PolicyStatement({

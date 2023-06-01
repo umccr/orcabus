@@ -13,6 +13,7 @@
   "scripts": {
     "test": "tsc && jest",
     "cdk": "cdk",
+    "orcabus": "cdk --app 'npx ts-node --prefer-ts-exts bin/orcabus.ts'",
     "build": "cdk synth -q",
     "watch": "tsc -w",
     "clean": "tsc --build --clean",
