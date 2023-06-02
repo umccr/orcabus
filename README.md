@@ -6,6 +6,10 @@ UMCCR Orchestration Bus that leverage AWS EventBridge as Event Bus to automate t
 
 _Heads up: Polyglot programming environment. We shorten some trivial steps into `Makefile` target. You may deduce step-by-step from `Makefile`, if any._
 
+### Typography
+
+When possible, please use either `OrcaBus` (camel case) or `orcabus` (all lower case).
+
 ### Toolchain
 
 ```
@@ -68,7 +72,9 @@ yarn add @aws-solutions-constructs/aws-cognito-apigateway-lambda
 yarn remove @aws-solutions-constructs/aws-cognito-apigateway-lambda
 ```
 
-### CDK
+### Automation
+
+_aka CDK Pipeline or CI-CD through CodePipeline in Toolchain Account_
 
 ```
 make install
@@ -76,13 +82,35 @@ make check
 make test
 
 yarn cdk list
-yarn cdk synth OrcaBusStatefulStack
-yarn cdk diff OrcaBusStatefulStack
-yarn cdk deploy OrcaBusStatefulStack
+
+yarn cdk synth <StackName>
+yarn cdk diff <StackName>
+yarn cdk deploy <StackName>
 
 yarn cdk synth
 yarn cdk diff
 yarn cdk deploy --all
+```
+
+### Manual
+
+_this is manual deploy to an isolated specific DEV account_
+
+```
+export AWS_PROFILE=dev
+
+make install
+make check
+make test
+
+yarn orcabus --help
+
+yarn orcabus list
+yarn orcabus synth OrcaBusStatefulStack
+yarn orcabus diff OrcaBusStatefulStack
+yarn orcabus deploy OrcaBusStatefulStack
+yarn orcabus deploy --all
+yarn orcabus destroy --all
 ```
 
 ### Lint

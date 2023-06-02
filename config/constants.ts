@@ -70,7 +70,7 @@ export const getEnvironmentConfig = (
     case 'beta':
       return {
         name: 'beta',
-        accountId: '843407916570',
+        accountId: '843407916570', // umccr_development
         stackProps: {
           orcaBusStatefulConfig: {
             schemaRegistryProps: {
@@ -97,8 +97,7 @@ export const getEnvironmentConfig = (
     case 'gamma':
       return {
         name: 'gamma',
-        // TODO: Change this Account Number
-        accountId: '1234567',
+        accountId: '455634345446', // umccr_staging
         stackProps: {
           orcaBusStatefulConfig: {
             schemaRegistryProps: {
@@ -125,8 +124,7 @@ export const getEnvironmentConfig = (
     case 'prod':
       return {
         name: 'prod',
-        // TODO: Change this account number
-        accountId: '123456789',
+        accountId: '472057503814', // umccr_production
         stackProps: {
           orcaBusStatefulConfig: {
             schemaRegistryProps: {
@@ -139,8 +137,8 @@ export const getEnvironmentConfig = (
             databaseProps: {
               ...orcaBusStatefulConfig.databaseProps,
               numberOfInstance: 1,
-              minACU: 2,
-              maxACU: 4,
+              minACU: 0.5,
+              maxACU: 1,
             },
             securityGroupProps: {
               ...orcaBusStatefulConfig.securityGroupProps,
