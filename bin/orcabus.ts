@@ -19,7 +19,8 @@ const props: cdk.StackProps = {
     region: process.env.CDK_DEFAULT_REGION,
   },
   tags: {
-    'umccr.org:stack': 'orcabus',
+    'umccr-org:Stack': 'OrcaBusSandboxApp',
+    'umccr-org:Product': 'OrcaBus',
   },
 };
 

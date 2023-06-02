@@ -15,6 +15,7 @@ new PipelineStack(app, `OrcaBusPipeline`, {
     region: AWS_TOOLCHAIN_REGION,
   },
   tags: {
-    'umccr.org:stack': 'orcabus',
+    'umccr-org:Stack': 'OrcaBusPipelineApp',
+    'umccr-org:Product': 'OrcaBus',
   },
 });
