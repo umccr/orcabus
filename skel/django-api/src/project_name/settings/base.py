@@ -17,7 +17,10 @@ DEBUG = os.getenv("DJANGO_DEBUG", True)
 
 ALLOWED_HOSTS = ["*"]
 
+DB_PREFIX = "{{project_name}}_"
+
 INSTALLED_APPS = [
+    "django_database_prefix",
     "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",

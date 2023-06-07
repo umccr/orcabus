@@ -15,7 +15,11 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", uuid.uuid4())
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", True)
 
+DB_PREFIX = "{{project_name}}_"
+
 INSTALLED_APPS = [
+    "django_database_prefix",
+    "django.contrib.contenttypes",
     "{{project_name}}",
     "aws_xray_sdk.ext.django",
 ]
