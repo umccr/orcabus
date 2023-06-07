@@ -29,10 +29,10 @@ make install
 ### Model
 
 ```
-cd lib/workload/stateless/hello_proc_manager/src
-
 (make sure db is up)
-docker ps
+make up && make ps
+
+cd lib/workload/stateless/hello_proc_manager/src
 
 python manage.py inspectdb
 python manage.py showmigrations

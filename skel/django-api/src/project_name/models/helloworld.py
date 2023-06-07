@@ -1,11 +1,13 @@
 from django.db import models
 
+from {{project_name}}.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 
-class HelloWorldManager(models.Manager):
+
+class HelloWorldManager(OrcaBusBaseManager):
     pass
 
 
-class HelloWorld(models.Model):
+class HelloWorld(OrcaBusBaseModel):
     id = models.BigAutoField(primary_key=True)
     text = models.CharField(max_length=255)
 
