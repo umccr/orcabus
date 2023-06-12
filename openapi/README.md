@@ -1,5 +1,6 @@
 # Orcabus microservices OpenAPI client definitions
 
-APIs are drafted on Postman and then converted to OpenAPI definitions for codegen.
+Each language implementation should make sure to expose an `api-docs` and `swagger-ui` url routes that expose the APIs for a given microservice, i.e:
 
-Export postman collections and run the shell script to re-generate definitions using [this converter](https://joolfe.github.io/postman-to-openapi/).
+http://localhost:8080/swagger-ui/
+http://localhost:8080/api-docs/filemanager.json
