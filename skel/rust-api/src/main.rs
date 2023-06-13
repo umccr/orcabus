@@ -2,7 +2,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 
 use axum::{routing, Router, Server};
 use hyper::Error;
-use rust_api::filemanager;
+use rust_api::file;
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
     Modify, OpenApi,
@@ -28,14 +28,14 @@ async fn main() -> Result<(), Error> {
     #[derive(OpenApi)]
     #[openapi(
         paths(
-            filemanager::search,
+            file::search,
         ),
         components(
-            schemas(filemanager::FileManager, filemanager::FileManagerError)
+            schemas(file::File, file::FileError)
         ),
         modifiers(&SecurityAddon),
         tags(
-            (name = "filemanager", description = "File manager API")
+            (name = "File", description = "File manager API")
         )
     )]
     struct ApiDoc;
@@ -49,15 +49,15 @@ async fn main() -> Result<(), Error> {
             if let Some(components) = openapi.components.as_mut() {
                 components.add_security_scheme(
                     "api_key",
-                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("filemanager_apikey"))),
+                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("File_apikey"))),
                 )
             }
         }
     }
 
     let app = Router::new()
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/filemanager.json", ApiDoc::openapi()))
-        .route("/filemanager/", routing::get(filemanager::search))
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/File.json", ApiDoc::openapi()))
+        .route("/file/", routing::get(file::search))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))

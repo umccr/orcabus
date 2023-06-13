@@ -3,24 +3,26 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use tracing::{ info };
-//type Store = Mutex<Vec<FileManager>>;
+//type Store = Mutex<Vec<File>>;
 // TODO: SQLx is the store backend, through db.rs
 
 /// Item to do.
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
-pub struct FileManager {
+pub struct File {
     id: i32,
     #[schema(example = "foo.bam")]
     name: String,
+    size: u64,
+    hash: String
 }
 
-/// Filemanager operation errors
+/// File operation errors
 #[derive(Serialize, Deserialize, ToSchema)]
-pub enum FileManagerError {
+pub enum FileError {
     /// File not found by id.
     #[schema(example = "id = 1")]
     NotFound(String),
-    /// Filemanager operation unauthorized
+    /// File operation unauthorized
     #[schema(example = "missing api key")]
     Unauthorized(String),
 }
@@ -34,18 +36,20 @@ pub struct FileQuery {
 /// Search files
 #[utoipa::path(
     get,
-    path = "/filemanager/",
+    path = "/File/",
     params(
         FileQuery
     ),
     responses(
-        (status = 200, description = "List matching objects", body = [FileManager])
+        (status = 200, description = "List matching objects", body = [File])
     )
 )]
-pub async fn search(query: Query<FileQuery>) -> Json<Vec<FileManager>> {
+pub async fn search(query: Query<FileQuery>) -> Json<Vec<File>> {
     info!("searching {:?}", query);
-    Json(vec![FileManager {
+    Json(vec![File {
         id: 1,
         name: query.value.clone(),
+        size: 1,
+        hash: "Moo".to_string()
     }])
 }
