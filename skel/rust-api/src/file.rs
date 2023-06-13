@@ -36,7 +36,7 @@ pub struct FileQuery {
 /// Search files
 #[utoipa::path(
     get,
-    path = "/File/",
+    path = "/file/",
     params(
         FileQuery
     ),

@@ -56,7 +56,7 @@ async fn main() -> Result<(), Error> {
     }
 
     let app = Router::new()
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/File.json", ApiDoc::openapi()))
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/filemanager.json", ApiDoc::openapi()))
         .route("/file/", routing::get(file::search))
         .layer(
             TraceLayer::new_for_http()
