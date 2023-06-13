@@ -14,14 +14,17 @@ use sqlx::mysql::MySqlPool;
 //     // time_archived: chrono::DateTime<chrono::Utc>,
 // }
 
-pub async fn query() -> sqlx::mysql::MySqlRow {
-    let pool = MySqlPool::connect("mysql://orcabus:orcabus@localhost/orcabus").await;
+pub async fn query() -> Result<(), sqlx::Error> {
+    let pool = MySqlPool::connect("mysql://orcabus:orcabus@localhost/orcabus").await?;
+    
+    sqlx::migrate!("./migrations").run(&pool).await?;
+    
     let res = sqlx::query("SELECT path FROM orcabus.data_portal_gdsfile")
-        .fetch_one(&pool.unwrap())
-        .await;
+        .fetch_one(&pool)
+        .await?;
 
     dbg!(&res);
-    res.unwrap()
+    Ok(())
 }
 
 // #[tokio::main]
