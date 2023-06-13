@@ -53,64 +53,75 @@ services:
     image: stoplight/prism:4
     platform: linux/amd64
     container_name: orcabus_wes
-    command: mock -d -h 0.0.0.0 "/openapi/wes.json"
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v1/wes.json"
     restart: always
     ports:
       - "4010:4010"
     volumes:
-      - ./openapi:/openapi
+      - ./openapi/ica:/openapi/ica
 
   tes:
     image: stoplight/prism:4
     platform: linux/amd64
     container_name: orcabus_tes
-    command: mock -d -h 0.0.0.0 "/openapi/tes.json"
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v1/tes.json"
     restart: always
     ports:
       - "4011:4010"
     volumes:
-      - ./openapi:/openapi
+      - ./openapi/ica:/openapi/ica
 
   gds:
     image: stoplight/prism:4
     platform: linux/amd64
     container_name: orcabus_gds
-    command: mock -d -h 0.0.0.0 "/openapi/gds.json"
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v1/gds.json"
     restart: always
     ports:
       - "4012:4010"
     volumes:
-      - ./openapi:/openapi
+      - ./openapi/ica:/openapi/ica
 
   ens:
     image: stoplight/prism:4
     platform: linux/amd64
     container_name: orcabus_ens
-    command: mock -d -h 0.0.0.0 "/openapi/ens.json"
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v1/ens.json"
     restart: always
     ports:
       - "4013:4010"
     volumes:
-      - ./openapi:/openapi
+      - ./openapi/ica:/openapi/ica
 
   console:
     image: stoplight/prism:4
     platform: linux/amd64
     container_name: orcabus_console
-    command: mock -d -h 0.0.0.0 "/openapi/console.json"
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v1/console.json"
     restart: always
     ports:
       - "4014:4010"
     volumes:
-      - ./openapi:/openapi
+      - ./openapi/ica:/openapi/ica
 
   v2:
     image: stoplight/prism:4
     platform: linux/amd64
     container_name: orcabus_ica_v2
-    command: mock -d -h 0.0.0.0 "/openapi/openapi_public.yaml"
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v2/openapi_public.yaml"
     restart: always
     ports:
       - "4015:4010"
     volumes:
-      - ./openapi:/openapi
+      - ./openapi/ica:/openapi/ica
+
+  filemanager:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_filemanager
+    command: mock -d -h 0.0.0.0 "/openapi/orcabus/filemanager.json"
+    restart: always
+    ports:
+      - "4016:4010"
+    volumes:
+      - ./openapi/orcabus:/openapi/orcabus
