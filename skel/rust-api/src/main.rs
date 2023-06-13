@@ -11,19 +11,20 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use tower_http::trace::{self, TraceLayer};
 use tracing::{ info, Level };
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+//use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    // tracing_subscriber::fmt()
-    //     .with_target(false)
-    //     //.compact()
-    //     .json()
-    //     .init();
-
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
+    tracing_subscriber::fmt()
+        .with_target(false)
+        .compact()
+        //.json()
         .init();
+
+    // // TRACE
+    // tracing_subscriber::registry()
+    //     .with(tracing_subscriber::fmt::layer())
+    //     .init();
 
     #[derive(OpenApi)]
     #[openapi(
@@ -54,6 +55,9 @@ async fn main() -> Result<(), Error> {
             }
         }
     }
+
+    let db_result = rust_api::db::query().await;
+    dbg!(&db_result);
 
     let app = Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/filemanager.json", ApiDoc::openapi()))

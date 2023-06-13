@@ -18,7 +18,7 @@ For development edit and compile loop, use the [`cargo-watch`](https://crates.io
 
 ```
 $ cargo install cargo-watch     # if not installed previously
-$ cargo watch -c -w src -x run
+$ cargo watch -c -w src -x run  # Watches "src" dir, eXecutes "cargo run"
 
    Compiling rust-api v0.1.0 (/Users/rvalls/dev/umccr/orcabus/skel/rust-api)
     Finished dev [unoptimized + debuginfo] target(s) in 1.74s
@@ -33,3 +33,14 @@ $ curl localhost:8080/file/moo.bam
 ```
 
 And to access the builtin Swagger playground, visit http://localhost:8080/swagger-ui/ on your browser.
+
+# Database
+
+Since this microservice is reliant on (meta)data present on the former "Data Portal" database, we'll have to load those tables in on the `orcabus_db` container and inner MySQL DB like so:
+
+```bash
+aws s3 cp s3://<data-portal-dev-bucket>/data_portal.sql.gz data/
+docker cp data/data_portal.sql.gz orcabus_db:/
+docker exec -i -e MYSQL_PWD=orcabus orcabus_db mysql -u orcabus -e "DROP DATABASE IF EXISTS orcabus; CREATE DATABASE IF NOT EXISTS orcabus;"
+docker exec -i -e MYSQL_PWD=orcabus orcabus_db /bin/bash -c 'zcat data_portal.sql.gz | mysql -uorcabus orcabus'
+```
