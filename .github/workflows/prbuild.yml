@@ -45,6 +45,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Set up compose stack
+        run: |
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+
       - name: Install dependencies
         run: |
           make install
@@ -56,3 +60,7 @@ jobs:
       - name: Run test suite
         run: |
           make test
+
+      - name: Tear down compose stack
+        run: |
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml down
