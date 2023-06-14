@@ -23,7 +23,7 @@ baseline:
 
 test:
 	@yarn test
-	@pytest
+	@(cd lib/workload/stateless/sequence_run_manager/src && python manage.py test)
 
 clean:
 	@yarn clean

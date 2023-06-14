@@ -1,0 +1,12 @@
+aws-xray-sdk==2.12.0
+boto3==1.26.115
+Django==4.2.1
+djangorestframework==3.14.0
+django-cors-headers==4.0.0
+django-environ==0.10.0
+django-database-prefix==0.1.0
+pymysql==1.0.3
+Werkzeug==2.3.4
+libica==2.2.1
+libumccr==0.3.0
+serverless-wsgi==3.0.2
