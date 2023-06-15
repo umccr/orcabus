@@ -1,16 +1,6 @@
-# OpenAPI
+# Orcabus microservices OpenAPI client definitions
 
-This directory contains OpenAPI/Swagger JSON files. They are generated/obtained as follows.
+Each language implementation should make sure to expose an `api-docs` and `swagger-ui` url routes that expose the APIs for a given microservice, i.e:
 
-## ICA
-
-Sync of https://github.com/umccr-illumina/libica/tree/dev/swagger
-
-```
-wget https://raw.githubusercontent.com/umccr-illumina/libica/dev/swagger/console.json -O console.json
-wget https://raw.githubusercontent.com/umccr-illumina/libica/dev/swagger/ens.json -O ens.json
-wget https://raw.githubusercontent.com/umccr-illumina/libica/dev/swagger/gds.json -O gds.json
-wget https://raw.githubusercontent.com/umccr-illumina/libica/dev/swagger/tes.json -O tes.json
-wget https://raw.githubusercontent.com/umccr-illumina/libica/dev/swagger/wes.json -O wes.json
-wget https://raw.githubusercontent.com/umccr-illumina/libica/main/swagger/openapi_public.yaml -O openapi_public.yaml
-```
+http://localhost:8080/swagger-ui/
+http://localhost:8080/api-docs/filemanager.json

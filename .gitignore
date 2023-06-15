@@ -46,3 +46,7 @@ cdk.context.json
 !.yarn/versions
 
 *.sqlite3
+
+# SQL dumps, data, etc...
+
+data/
