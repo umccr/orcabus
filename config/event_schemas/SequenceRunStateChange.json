@@ -2,33 +2,108 @@
   "openapi": "3.0.0",
   "info": {
     "version": "1.0.0",
-    "title": "Event"
+    "title": "SequenceRunStateChange"
   },
   "paths": {},
   "components": {
     "schemas": {
-      "Event": {
+      "AWSEvent": {
         "type": "object",
-        "required": ["sequence_run_id", "sequence_run_name", "gds_volume_name", "gds_folder_path", "status", "timestamp"],
+        "required": [
+          "detail-type",
+          "resources",
+          "detail",
+          "id",
+          "source",
+          "time",
+          "region",
+          "version",
+          "account"
+        ],
+        "x-amazon-events-detail-type": "Sequence Run State Change",
+        "x-amazon-events-source": "orcabus.srm",
         "properties": {
-          "sequence_run_id": {
+          "detail": {
+            "$ref": "#/components/schemas/SequenceRunStateChange"
+          },
+          "account": {
             "type": "string"
           },
-          "sequence_run_name": {
+          "detail-type": {
             "type": "string"
           },
-          "gds_volume_name": {
+          "id": {
             "type": "string"
           },
-          "gds_folder_path": {
+          "region": {
+            "type": "string"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "SequenceRunStateChange": {
+        "type": "object",
+        "required": [
+          "instrument_run_id",
+          "run_volume_name",
+          "run_folder_path",
+          "run_data_uri",
+          "status",
+          "start_time"
+        ],
+        "properties": {
+          "instrument_run_id": {
+            "type": "string"
+          },
+          "run_volume_name": {
+            "type": "string"
+          },
+          "run_folder_path": {
+            "type": "string"
+          },
+          "run_data_uri": {
             "type": "string"
           },
           "status": {
             "type": "string"
           },
-          "timestamp": {
+          "start_time": {
             "type": "string",
             "format": "date-time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reagent_barcode": {
+            "type": "string"
+          },
+          "flowcell_barcode": {
+            "type": "string"
+          },
+          "sample_sheet_name": {
+            "type": "string"
+          },
+          "sequence_run_id": {
+            "type": "string"
+          },
+          "sequence_run_name": {
+            "type": "string"
           }
         }
       }
