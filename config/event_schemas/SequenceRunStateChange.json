@@ -11,14 +11,10 @@
         "type": "object",
         "required": [
           "detail-type",
-          "resources",
           "detail",
           "id",
           "source",
-          "time",
-          "region",
-          "version",
-          "account"
+          "time"
         ],
         "x-amazon-events-detail-type": "Sequence Run State Change",
         "x-amazon-events-source": "orcabus.srm",
@@ -59,14 +55,13 @@
       "SequenceRunStateChange": {
         "type": "object",
         "required": [
-          "instrument_run_id",
-          "run_volume_name",
-          "run_folder_path",
-          "run_data_uri",
-          "status",
-          "start_time"
+          "id",
+          "instrument_run_id"
         ],
         "properties": {
+          "id": {
+            "type": "integer"
+          },
           "instrument_run_id": {
             "type": "string"
           },

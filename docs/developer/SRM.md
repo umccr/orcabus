@@ -6,6 +6,21 @@ Namespace: orcabus.srm
 
 ## How to run SRM locally
 
+### Ready Check
+
+- Make sure you have activated conda environment and setup dev toolchain
+- At project root, preform:
+```
+(you may create a dedicated conda env for SRM or use existing one)
+conda activate orcabus
+make install
+
+(make sure db is up)
+make up && make ps
+```
+
+### Running
+
 ```
 cd lib/workload/stateless/sequence_run_manager/src
 ```
