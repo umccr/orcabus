@@ -11,7 +11,6 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use tower_http::trace::{self, TraceLayer};
 use tracing::{ info, Level };
-//use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -19,11 +18,6 @@ async fn main() -> Result<(), Error> {
         .with_target(false)
         .compact()
         .init();
-
-    // // TRACE
-    // tracing_subscriber::registry()
-    //     .with(tracing_subscriber::fmt::layer())
-    //     .init();
 
     let db_result = rust_api::db::query().await;
     dbg!(&db_result);
