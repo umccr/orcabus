@@ -3,11 +3,8 @@
 
 Convenience AWS lambda handler for Django database migration command hook
 """
-import os
 
 from django.core.management import execute_from_command_line
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', '{{project_name}}.settings.base')
 
 
 def handler(event, context) -> str:
