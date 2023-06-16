@@ -12,6 +12,7 @@
         "required": [
           "detail-type",
           "detail",
+          "id",
           "source",
           "time"
         ],
