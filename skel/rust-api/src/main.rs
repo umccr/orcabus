@@ -3,6 +3,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 use axum::{routing, Router, Server};
 use hyper::Error;
 
+use rust_api::env;
 use rust_api::file;
 use rust_api::security::ApiDoc;
 
@@ -18,6 +19,9 @@ async fn main() -> Result<(), Error> {
         .with_target(false)
         .compact()
         .init();
+    
+    // prod or dev
+    env::load_env();
 
     let db_result = rust_api::db::query().await;
     dbg!(&db_result);

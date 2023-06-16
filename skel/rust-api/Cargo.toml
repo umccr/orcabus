@@ -20,3 +20,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tower = "0.4"
 tower-http = { version = "0.4", features = ["trace"] }
 chrono = { version = "0.4", features = ["serde"] }
+dotenvy = "0.15"

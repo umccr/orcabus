@@ -1305,6 +1305,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "chrono",
+ "dotenvy",
  "hyper",
  "lambda_http",
  "lambda_runtime",

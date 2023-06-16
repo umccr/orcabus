@@ -1,3 +1,4 @@
+use std::env;
 use sqlx::mysql::MySqlPool;
 
 // TODO: To be used by sqlx::query_as(), leveraging Rust's
@@ -15,7 +16,9 @@ use sqlx::mysql::MySqlPool;
 // }
 
 pub async fn query() -> Result<(), sqlx::Error> {
-    let pool = MySqlPool::connect("mysql://orcabus:orcabus@localhost/orcabus").await?;
+    // TODO: Move this at "class" level instead of method level
+    let db_url = env::var("DATABASE_URL");
+    let pool = MySqlPool::connect(db_url.unwrap_or_default().as_str()).await?;
     
     sqlx::migrate!("./migrations").run(&pool).await?;
     
@@ -26,8 +29,3 @@ pub async fn query() -> Result<(), sqlx::Error> {
     dbg!(&res);
     Ok(())
 }
-
-// #[tokio::main]
-// async fn main() {
-//     query();
-// }
