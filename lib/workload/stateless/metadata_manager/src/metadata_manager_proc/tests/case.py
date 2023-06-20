@@ -6,7 +6,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-class HelloProcUnitTestCase(TestCase):
+class MetadataProcUnitTestCase(TestCase):
     def setUp(self) -> None:
         # some code construct that share across all test cases under lims package
         # pass for now
@@ -18,5 +18,5 @@ class HelloProcUnitTestCase(TestCase):
         pass
 
 
-class HelloProcIntegrationTestCase(TestCase):
+class MetadataIntegrationTestCase(TestCase):
     pass

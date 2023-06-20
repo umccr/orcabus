@@ -1,4 +1,5 @@
 import logging
+import time
 
 from django.test import TestCase
 from django.core.exceptions import ObjectDoesNotExist
@@ -53,6 +54,32 @@ class MetadataModelTests(TestCase):
             logger.debug(
                 f"ObjectDoesNotExist exception raised which is the expected outcome"
             )
+
+    def test_get_metadata_from_modified_library(self):
+        """
+        python manage.py test metadata_manager.tests.test_models.MetadataModelTests.test_get_metadata_from_modified_library
+        """
+        logger.info("Testing get query for modified metadata")
+
+        mock_metadata_1 = Metadata()
+        mock_metadata_1.library_id = "L001"
+        mock_metadata_1.project_name = "brwn-project"  # spelling error
+        mock_metadata_1.save()
+
+        time.sleep(1)  # Some buffer time to simulate different timestamp entries
+
+        mock_metadata_2 = Metadata()
+        mock_metadata_2.library_id = "L001"
+        mock_metadata_2.project_name = "brown-project"
+        mock_metadata_2.save()
+
+        query_metadata = Metadata.objects.get_by_keyword(library_id="L001")
+        self.assertEqual(len(query_metadata), 1, "Expect 1 metadata returned")
+
+        correct_metadata = query_metadata[0]
+        self.assertEqual(
+            correct_metadata.project_name, "brown-project", "Expect 1 metadata returned"
+        )
 
     # NOT YET IMPLEMENT
 
