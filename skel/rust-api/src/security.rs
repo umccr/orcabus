@@ -2,7 +2,7 @@ use crate::file;
 
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
-    Modify,OpenApi
+    Modify, OpenApi,
 };
 
 pub struct SecurityAddon;

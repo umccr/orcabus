@@ -4,7 +4,7 @@ use std::{
 };
 
 use dotenvy;
-use tracing::{info, error};
+use tracing::{error, info};
 
 #[derive(PartialEq)]
 pub enum AppEnv {

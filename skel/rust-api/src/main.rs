@@ -11,7 +11,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use tower_http::trace::{self, TraceLayer};
-use tracing::{ info, Level };
+use tracing::{info, Level};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -19,7 +19,7 @@ async fn main() -> Result<(), Error> {
         .with_target(false)
         .compact()
         .init();
-    
+
     // prod or dev
     env::load_env();
 
