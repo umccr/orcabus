@@ -4,12 +4,13 @@ from django.db.models import Q
 from django.test import TestCase
 
 from metadata_manager.models.base import OrcaBusBaseManager, OrcaBusBaseModel
+from metadata_manager.tests.case import MetadataUnitTestCase
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-class OrcaBusBaseManagerTestCase(TestCase):
+class OrcaBusBaseManagerTestCase(MetadataUnitTestCase):
     def setUp(self) -> None:
         pass
 

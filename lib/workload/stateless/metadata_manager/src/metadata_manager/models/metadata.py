@@ -95,6 +95,12 @@ def remove_not_sequenced(qs: QuerySet) -> QuerySet:
 
 
 def filter_only_latest_library_id(qs: QuerySet) -> QuerySet:
+    """
+    This function will reduce the QuerySet to only show the latest library_id in record
+
+    :param qs: Initial QuerySet
+    :return: The filtered QuerySet
+    """
     qs = qs.filter(
         id__in=qs.values("library_id")
         .annotate(
@@ -112,79 +118,43 @@ def filter_only_latest_library_id(qs: QuerySet) -> QuerySet:
 
 class MetadataManager(OrcaBusBaseManager):
     def get_by_keyword(self, **kwargs) -> QuerySet:
+        """
+        Get QuerySet based on given keyword to filter the result.
+
+        E.g. get_by_keyword(library_id="L001", library_id="L002"), this will
+        filter the querySet to show matched on library_id "L001" and "L002"
+
+        :param show_history: The option to show history on the specific library_id
+        :param sequenced: The option to filter only for sequenced metadata
+        :return qs: A filtered django QuerySet from the Metadata Model
+        """
         qs: QuerySet = super().get_queryset()
 
-        qs = self.get_model_fields_query(qs, **kwargs)
+        # If history of the db is NOT requested filter the rest
+        show_history = kwargs.pop("show_history", False)
+        if not show_history:
+            # GroupBy "library_id" and return the latest in record
+            qs = filter_only_latest_library_id(qs)
 
-        # GroupBy "library_id" and return the latest in record
-        qs = filter_only_latest_library_id(qs)
-
-        # if only records for sequenced libs are requested, remove the ones that are not
+        # If only records for sequenced libs are requested, remove the ones that are not
         sequenced = kwargs.pop("sequenced", False)
         if sequenced:
             qs = remove_not_sequenced(qs)
 
+        # Filter with any other keywords
+        qs = self.get_model_fields_query(qs, **kwargs)
+
         return qs
 
-    # TODO: Will enforce to use 'get_by_keyword' function instead
-    # def get_by_keyword_in(self, **kwargs) -> QuerySet:
-    #     qs: QuerySet = self.all()
-    #
-    #     subjects = kwargs.get('subjects', None)
-    #     if subjects:
-    #         qs = qs.filter(subject_id__in=subjects)
-    #
-    #     samples = kwargs.get('samples', None)
-    #     if samples:
-    #         qs = qs.filter(sample_id__in=samples)
-    #
-    #     libraries = kwargs.get('libraries', None)
-    #     if libraries:
-    #         qs = qs.filter(library_id__in=libraries)
-    #
-    #     phenotypes = kwargs.get('phenotypes', None)
-    #     if phenotypes:
-    #         qs = qs.filter(phenotype__in=phenotypes)
-    #
-    #     types = kwargs.get('types', None)
-    #     if types:
-    #         qs = qs.filter(type__in=types)
-    #
-    #     workflows = kwargs.get('workflows', None)
-    #     if workflows:
-    #         qs = qs.filter(workflow__in=workflows)
-    #
-    #     project_names = kwargs.get('project_names', None)
-    #     if project_names:
-    #         qs = qs.filter(project_name__in=project_names)
-    #
-    #     project_owners = kwargs.get('project_owners', None)
-    #     if project_owners:
-    #         qs = qs.filter(project_owner__in=project_owners)
-    #
-    #     # sequenced = kwargs.get('sequenced', False)
-    #     # if sequenced:
-    #     #     qs = remove_not_sequenced(qs)
-    #
-    #     return qs
+    def get_single(self, **kwargs):
+        """
+        Typically this is the same as the default Django `.get` function,
+        but it will do a distinct filter to pick the latest library_id in record
+        """
+        qs: QuerySet = super().get_queryset()
+        qs = filter_only_latest_library_id(qs)
 
-    # TODO: Consider to deprecate this
-    # def get_by_sample_library_name(self, sample_library_name, sequenced: bool = False) -> QuerySet:
-    #     """
-    #     Here we project (or annotate) virtual attribute called "sample_library_name" which is using database built-in
-    #     concat function of two existing columns sample_id and library_id.
-    #
-    #     :param sample_library_name:
-    #     :param sequenced: Boolean to indicate whether to only return metadata for sequenced libraries
-    #     :return: QuerySet
-    #     """
-    #     qs: QuerySet = self.annotate(sample_library_name=Concat('sample_id', Value('_'), 'library_id'))
-    #     qs = qs.filter(sample_library_name__iexact=sample_library_name)
-    #
-    #     # if sequenced:
-    #     #     qs = remove_not_sequenced(qs)
-    #
-    #     return qs
+        return qs.get(**kwargs)
 
     def get_by_aggregate_count(self, field):
         return self.values(field).annotate(count=Count(field)).order_by(field)
@@ -200,6 +170,8 @@ class MetadataManager(OrcaBusBaseManager):
 class Metadata(OrcaBusBaseModel):
     """
     Models a row in the lab tracking sheet data. Fields are the columns.
+
+    This will store all records (including changes at given timestamp) in the database.
     """
 
     # Portal internal auto incremental PK ID. Scheme may change as need be and may rebuild thereof.
@@ -211,7 +183,7 @@ class Metadata(OrcaBusBaseModel):
     #  do we want to store clarity-generated lib id, and what do we want to call it?
     # external_library_id = models.CharField(max_length=255)
 
-    timestamp = models.DateTimeField(auto_now_add=True, editable=False)
+    timestamp = models.DateTimeField(editable=False)
 
     library_id = models.CharField(max_length=255)
     sample_name = models.CharField(max_length=255, null=True, blank=True)
@@ -243,12 +215,12 @@ class Metadata(OrcaBusBaseModel):
                     "library_id",
                     "sample_id",
                 ],
-                name="library_id and sample_id be unique at a given timestamp",
+                name="library_id and sample_id must be unique at a given timestamp",
             )
         ]
 
     def __str__(self):
-        return f"""id={self.id}, library_id={self.library_id}, sample_id={self.sample_id}, subject_id={self.subject_id},  created={self.timestamp}"""
+        return f"""id={self.id}, library_id={self.library_id}, sample_id={self.sample_id}, subject_id={self.subject_id},  timestamp={self.timestamp}"""
 
     @classmethod
     def get_table_name(cls):

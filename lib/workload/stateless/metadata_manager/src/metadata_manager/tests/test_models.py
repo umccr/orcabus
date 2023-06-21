@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import logging
 import time
 
@@ -5,6 +6,7 @@ from django.test import TestCase
 from django.core.exceptions import ObjectDoesNotExist
 
 from metadata_manager.models.metadata import Metadata
+from metadata_manager.tests.case import MetadataUnitTestCase
 from metadata_manager.tests.factories import (
     MetadataFactory,
     TumorMetadataFactory,
@@ -16,7 +18,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-class MetadataModelTests(TestCase):
+class MetadataModelTests(MetadataUnitTestCase):
     def test_save_metadata(self):
         """
         python manage.py test metadata_manager.tests.test_models.MetadataModelTests.test_save_metadata
@@ -24,6 +26,7 @@ class MetadataModelTests(TestCase):
         logger.info("Testing creating a new metadata object")
 
         mock_metadata = Metadata()
+        mock_metadata.timestamp = datetime.now(tz=timezone.utc)
         mock_metadata.save()
 
         self.assertEqual(1, Metadata.objects.count())
@@ -63,22 +66,21 @@ class MetadataModelTests(TestCase):
 
         mock_metadata_1 = Metadata()
         mock_metadata_1.library_id = "L001"
-        mock_metadata_1.project_name = "brwn-project"  # spelling error
+        mock_metadata_1.timestamp = datetime.now(tz=timezone.utc)
+        mock_metadata_1.project_name = "brwn-project"  # name typos
         mock_metadata_1.save()
 
         time.sleep(1)  # Some buffer time to simulate different timestamp entries
 
         mock_metadata_2 = Metadata()
         mock_metadata_2.library_id = "L001"
+        mock_metadata_2.timestamp = datetime.now(tz=timezone.utc)
         mock_metadata_2.project_name = "brown-project"
         mock_metadata_2.save()
 
-        query_metadata = Metadata.objects.get_by_keyword(library_id="L001")
-        self.assertEqual(len(query_metadata), 1, "Expect 1 metadata returned")
-
-        correct_metadata = query_metadata[0]
+        metadata = Metadata.objects.get_single(library_id="L001")
         self.assertEqual(
-            correct_metadata.project_name, "brown-project", "Expect 1 metadata returned"
+            metadata.project_name, "brown-project", "Expect 1 metadata returned"
         )
 
     # NOT YET IMPLEMENT

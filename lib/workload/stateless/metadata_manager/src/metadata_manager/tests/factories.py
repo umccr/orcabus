@@ -63,6 +63,7 @@ class MetadataFactory(factory.django.DjangoModelFactory):
     workflow = "clinical"
     coverage = "40.0"
     truseqindex = "A09"
+    timestamp = datetime.now(tz=timezone.utc)
 
 
 class TumorMetadataFactory(factory.django.DjangoModelFactory):

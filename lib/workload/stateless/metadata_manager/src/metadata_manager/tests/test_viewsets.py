@@ -3,13 +3,14 @@ import logging
 from django.test import TestCase
 
 from metadata_manager.models.metadata import Metadata
+from metadata_manager.tests.case import MetadataUnitTestCase
 from metadata_manager.tests.factories import MetadataFactory, TestConstant
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-class MetadataViewSetTestCase(TestCase):
+class MetadataViewSetTestCase(MetadataUnitTestCase):
     def setUp(self):
         logger.debug("Create mock metadata")
         MetadataFactory()
@@ -18,7 +19,7 @@ class MetadataViewSetTestCase(TestCase):
         """
         python manage.py test metadata_manager.tests.test_viewsets.MetadataViewSetTestCase.test_get_api
         """
-        logger.info("Test if GET requests return the specific requested library")
+        logger.info("Test if GET requests return the specific requested library\n")
 
         response = self.client.get("/metadata/")
         self.assertEqual(response.status_code, 200, "Ok status response is expected")
