@@ -11,7 +11,6 @@ lambda_runtime = "0.8.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sqlx = { version = "0.6", features = ["mysql", "runtime-tokio-rustls", "chrono"] }
-#ormx = "0.10"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 utoipa = { version = "3", features = ["axum_extras"] }
 utoipa-swagger-ui = { version = "3", features = ["axum"] }
@@ -20,3 +19,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tower = "0.4"
 tower-http = { version = "0.4", features = ["trace"] }
 chrono = { version = "0.4", features = ["serde"] }
+dotenvy = "0.15"
