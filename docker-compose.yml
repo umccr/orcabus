@@ -1,6 +1,6 @@
 # NOTE:
 # If you update image version, make sure to update in docker-compose.ci.yml as well as
-# also do update GHA caches step in caches.yml
+# also do update GHA caches step in prbuild.yml
 
 version: '3.1'
 
