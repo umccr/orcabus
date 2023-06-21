@@ -1,79 +1,45 @@
-name: Reusable CI dependency container images caching workflow
+name: CI dependency container images caching reusable workflow
 
 on:
   workflow_call:
-    inputs:
-      config-path:
-        required: false
-        type: string
 
 # Actions Used (please keep this documented here as added)
+#  https://github.com/marketplace/actions/checkout
 #  https://github.com/marketplace/actions/cache
 
 jobs:
   triage:
     runs-on: ubuntu-latest
     steps:
-      # Localstack
-      - name: Restore Localstack Image Cache if it exists
-        id: cache-docker-localstack
-        uses: actions/cache@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
         with:
-          path: ci/cache/docker/localstack
-          key: cache-docker-localstack-2.1
+          fetch-depth: 0
 
-      - name: Update Localstack Image Cache if cache miss
-        if: steps.cache-docker-localstack.outputs.cache-hit != 'true'
-        run: docker pull public.ecr.aws/localstack/localstack:2.1 && mkdir -p ci/cache/docker/localstack && docker image save public.ecr.aws/localstack/localstack:2.1 --output ./ci/cache/docker/localstack/localstack-2.1.tar
-
-      - name: Use Localstack Image Cache if cache hit
-        if: steps.cache-docker-localstack.outputs.cache-hit == 'true'
-        run: docker image load --input ./ci/cache/docker/localstack/localstack-2.1.tar
-
-      # MySQL
-      - name: Restore MySQL Image Cache if it exists
-        id: cache-docker-mysql
-        uses: actions/cache@v3
+      - name: Localstack
+        uses: ./.github/actions/cache-image
         with:
-          path: ci/cache/docker/mysql
-          key: cache-docker-mysql-8
+          prefix: localstack
+          image_version: 2.1
+          image: public.ecr.aws/localstack/localstack
 
-      - name: Update MySQL Image Cache if cache miss
-        if: steps.cache-docker-mysql.outputs.cache-hit != 'true'
-        run: docker pull public.ecr.aws/docker/library/mysql:8 && mkdir -p ci/cache/docker/mysql && docker image save public.ecr.aws/docker/library/mysql:8 --output ./ci/cache/docker/mysql/mysql-8.tar
-
-      - name: Use MySQL Image Cache if cache hit
-        if: steps.cache-docker-mysql.outputs.cache-hit == 'true'
-        run: docker image load --input ./ci/cache/docker/mysql/mysql-8.tar
-
-      # HAProxy
-      - name: Restore HAProxy Image Cache if it exists
-        id: cache-docker-haproxy
-        uses: actions/cache@v3
+      - name: MySQL
+        uses: ./.github/actions/cache-image
         with:
-          path: ci/cache/docker/haproxy
-          key: cache-docker-haproxy-2.4
+          prefix: mysql
+          image_version: 8
+          image: public.ecr.aws/docker/library/mysql
 
-      - name: Update HAProxy Image Cache if cache miss
-        if: steps.cache-docker-haproxy.outputs.cache-hit != 'true'
-        run: docker pull public.ecr.aws/docker/library/haproxy:2.4 && mkdir -p ci/cache/docker/haproxy && docker image save public.ecr.aws/docker/library/haproxy:2.4 --output ./ci/cache/docker/haproxy/haproxy-2.4.tar
-
-      - name: Use HAProxy Image Cache if cache hit
-        if: steps.cache-docker-haproxy.outputs.cache-hit == 'true'
-        run: docker image load --input ./ci/cache/docker/haproxy/haproxy-2.4.tar
-
-      # Prism
-      - name: Restore Prism Image Cache if it exists
-        id: cache-docker-prism
-        uses: actions/cache@v3
+      - name: HAProxy
+        uses: ./.github/actions/cache-image
         with:
-          path: ci/cache/docker/prism
-          key: cache-docker-prism-4
+          prefix: haproxy
+          image_version: 2.4
+          image: public.ecr.aws/docker/library/haproxy
 
-      - name: Update Prism Image Cache if cache miss
-        if: steps.cache-docker-prism.outputs.cache-hit != 'true'
-        run: docker pull quay.io/victorskl/prism:4 && mkdir -p ci/cache/docker/prism && docker image save quay.io/victorskl/prism:4 --output ./ci/cache/docker/prism/prism-4.tar
-
-      - name: Use Prism Image Cache if cache hit
-        if: steps.cache-docker-prism.outputs.cache-hit == 'true'
-        run: docker image load --input ./ci/cache/docker/prism/prism-4.tar
+      - name: Prism
+        uses: ./.github/actions/cache-image
+        with:
+          prefix: prism
+          image_version: 4
+          image: quay.io/victorskl/prism
