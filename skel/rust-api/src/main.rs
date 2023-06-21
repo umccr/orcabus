@@ -23,10 +23,11 @@ async fn main() -> Result<(), Error> {
     // prod or dev
     env::load_env();
 
-    let db_result = rust_api::db::query().await;
+    let db_result = rust_api::db::s3_query_something().await;
     dbg!(&db_result);
 
     let app = Router::new()
+        // TODO: Have this swagger/openapi path enabled via (non-default?) feature flag
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/filemanager.json", ApiDoc::openapi()))
         .route("/file/", routing::get(file::search))
         .layer(
