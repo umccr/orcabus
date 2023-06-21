@@ -6,10 +6,14 @@ on:
       - main
 
 # Actions Used (please keep this documented here as added)
-#  https://github.com/actions/setup-python#usage
+#  https://github.com/marketplace/actions/checkout
+#  https://github.com/marketplace/actions/setup-python
 #  https://github.com/marketplace/actions/trufflehog-oss
 
 jobs:
+  call-ci-caches-workflow:
+    uses: ./.github/workflows/caches.yml
+
   build:
     # Default access (restricted) - https://docs.github.com/en/actions/security-guides/automatic-token-authentication
     permissions:
@@ -40,14 +44,14 @@ jobs:
           head: HEAD
           extra_args: --debug --only-verified
 
+      - name: Set up compose stack
+        run: |
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Set up compose stack
-        run: |
-          docker-compose -f docker-compose.yml -f docker-compose.ci.yml up -d
 
       - name: Install dependencies
         run: |
