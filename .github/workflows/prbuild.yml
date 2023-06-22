@@ -6,8 +6,11 @@ on:
       - main
 
 # Actions Used (please keep this documented here as added)
-#  https://github.com/actions/setup-python#usage
+#  https://github.com/marketplace/actions/checkout
+#  https://github.com/marketplace/actions/setup-python
 #  https://github.com/marketplace/actions/trufflehog-oss
+#  https://github.com/marketplace/actions/checkout
+#  https://github.com/marketplace/actions/cache
 
 jobs:
   build:
@@ -40,14 +43,45 @@ jobs:
           head: HEAD
           extra_args: --debug --only-verified
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - name: Localstack
+        uses: ./.github/actions/cache-image
         with:
-          python-version: ${{ matrix.python-version }}
+          prefix: localstack
+          image_version: 2.1
+          image: public.ecr.aws/localstack/localstack
+
+      - name: MySQL
+        uses: ./.github/actions/cache-image
+        with:
+          prefix: mysql
+          image_version: 8
+          image: public.ecr.aws/docker/library/mysql
+
+      - name: HAProxy
+        uses: ./.github/actions/cache-image
+        with:
+          prefix: haproxy
+          image_version: 2.4
+          image: public.ecr.aws/docker/library/haproxy
+
+      - name: Prism
+        uses: ./.github/actions/cache-image
+        with:
+          prefix: prism
+          image_version: 4
+          image: quay.io/victorskl/prism
+
+      - name: List container images
+        run: docker images
 
       - name: Set up compose stack
         run: |
           docker-compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |

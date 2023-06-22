@@ -1,0 +1,31 @@
+name: Container image caching composite action
+description: Container image caching composite action
+inputs:
+  prefix:
+    required: true
+    description: 'Prefix e.g. `localstack`'
+  image_version:
+    required: true
+    description: 'Container image version e.g. `2.1` when `localstack:2.1`'
+  image:
+    required: true
+    description: 'Container image (full path) e.g. `public.ecr.aws/localstack/localstack`'
+runs:
+  using: 'composite'
+  steps:
+    - name: Restore ${{ inputs.prefix }} Image Cache if it exists
+      id: cache-docker-image
+      uses: actions/cache@v3
+      with:
+        path: ci/cache/docker/${{ inputs.prefix }}
+        key: cache-docker-${{ inputs.prefix }}-${{ inputs.image_version }}
+
+    - name: Update ${{ inputs.prefix }} Image Cache if cache miss
+      shell: bash
+      if: steps.cache-docker-image.outputs.cache-hit != 'true'
+      run: docker pull ${{ inputs.image }}:${{ inputs.image_version }} && mkdir -p ci/cache/docker/${{ inputs.prefix }} && docker image save ${{ inputs.image }}:${{ inputs.image_version }} --output ./ci/cache/docker/${{ inputs.prefix }}/${{ inputs.prefix }}-${{ inputs.image_version }}.tar
+
+    - name: Use ${{ inputs.prefix }} Image Cache if cache hit
+      shell: bash
+      if: steps.cache-docker-image.outputs.cache-hit == 'true'
+      run: docker image load --input ./ci/cache/docker/${{ inputs.prefix }}/${{ inputs.prefix }}-${{ inputs.image_version }}.tar
