@@ -1,6 +1,8 @@
+import os
+
 from libumccr import libjson
-from libumccr.aws import libssm
-from mockito import when
+from libumccr.aws import libssm, libeb
+from mockito import when, verify
 
 from sequence_run_manager.models.sequence import Sequence
 from sequence_run_manager.tests.factories import TestConstant
@@ -8,7 +10,7 @@ from sequence_run_manager_proc.lambdas import bssh_event
 from sequence_run_manager_proc.tests.case import logger, SequenceRunProcUnitTestCase
 
 
-def _sqs_bssh_event_message():
+def sqs_bssh_event_message():
     mock_instrument_run_id = TestConstant.instrument_run_id.value
     mock_sequence_run_id = "r.ACGTlKjDgEy099ioQOeOWg"
     mock_sequence_run_name = mock_instrument_run_id
@@ -88,6 +90,12 @@ class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
     def setUp(self) -> None:
         super(BSSHEventUnitTests, self).setUp()
 
+        os.environ["EVENT_BUS_NAME"] = "default"
+
+    def tearDown(self) -> None:
+        super(BSSHEventUnitTests, self).tearDown()
+        del os.environ["EVENT_BUS_NAME"]
+
     def test_unsupported_ens_event_type(self):
         """
         python manage.py test sequence_run_manager_proc.tests.test_bssh_event.BSSHEventUnitTests.test_unsupported_ens_event_type
@@ -126,14 +134,15 @@ class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
         """
         when(libssm).get_ssm_param(...).thenReturn(libjson.dumps([]))
 
-        _ = bssh_event.sqs_handler(_sqs_bssh_event_message(), None)
+        _ = bssh_event.sqs_handler(sqs_bssh_event_message(), None)
 
         qs = Sequence.objects.filter(
             instrument_run_id=TestConstant.instrument_run_id.value
         )
         seq = qs.get()
+        logger.info(f"Found SequenceRun record from db: {seq}")
         self.assertEqual(1, qs.count())
-        logger.info(f"Asserted found SequenceRun record from db: {seq}")
+        verify(libeb, times=1).eb_client(...)  # event should fire
 
     def test_sqs_handler_emergency_stop(self):
         """
@@ -143,13 +152,12 @@ class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
             libjson.dumps([TestConstant.instrument_run_id.value])
         )
 
-        resp = bssh_event.sqs_handler(_sqs_bssh_event_message(), None)
+        _ = bssh_event.sqs_handler(sqs_bssh_event_message(), None)
 
         qs = Sequence.objects.filter(
             instrument_run_id=TestConstant.instrument_run_id.value
         )
         sqr = qs.get()
+        logger.info(f"Found SequenceRun record from db: {sqr}")
         self.assertEqual(1, qs.count())
-        logger.info(f"Asserted found SequenceRun record from db: {sqr}")
-
-        self.assertIn("emergency stop", resp["message"])
+        verify(libeb, times=0).eb_client(...)  # event should not fire
