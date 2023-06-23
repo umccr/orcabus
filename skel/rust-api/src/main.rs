@@ -22,7 +22,7 @@ use tracing::{info, Level};
 ///    its associated metadata. A file should have a metadata id.
 /// 5. Making sure the workflow run id is present and associated with any given file.
 /// 6. Audit: Keep records for deleted objects even after the actual data is deleted.
-/// 7. Audit: Keep owner of the file.
+/// 7. Audit: Record file ownership (on create, no chain of custody functionality needed).
 /// 
 /// All files have an external, public, file UUID so that they can be uniquely identified in our whole 
 /// microservices environment.
