@@ -1,0 +1,3 @@
+{
+    "rust-analyzer.linkedProjects": ["lib/workload/stateless/filemanager/Cargo.toml"] //, "skel/rust-api/Cargo.toml"]
+}
