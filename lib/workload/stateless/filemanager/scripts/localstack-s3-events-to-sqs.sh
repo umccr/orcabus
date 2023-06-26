@@ -21,7 +21,7 @@ aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name $FILE_EVE
 
 echo "########### ARN for upload file event SQS ###########"
 FILE_EVENT_SQS_ARN=$(aws --endpoint-url=http://localhost:4566 sqs get-queue-attributes \
-                  --attribute-name QueueArn --queue-url=http://localhost:4566/000000000000/"$FILE_EVENT_SQS" \
+                  --attribute-name QueueArn --queue-url=http://localhost:4566/000000000000/$FILE_EVENT_SQS \
                   |  sed 's/"QueueArn"/\n"QueueArn"/g' | grep '"QueueArn"' | awk -F '"QueueArn":' '{print $2}' | tr -d '"' | xargs)
 
 echo "########### Creating file event SQS ###########"
