@@ -1,8 +1,12 @@
-use std::env;
-
-use sqlx::{mysql::MySqlPool, FromRow};
+use sqlx::QueryBuilder;
+use sqlx::{mysql::MySqlPool, MySql, FromRow};
+use crate::error::Result;
+use crate::error::Error::DbClientError;
 
 use crate::file::FileAdapter;
+use crate::file::Attributes;
+use crate::file::File;
+use crate::events::EventMessage;
 
 // #[derive(Debug, FromRow)]
 // struct GDS {
@@ -16,60 +20,101 @@ use crate::file::FileAdapter;
 //     // time_archived: chrono::DateTime<chrono::Utc>,
 // }
 
-#[derive(Debug, FromRow)]
-pub struct S3 {
-    pub id: i64,            // TODO: Should be unsigned?
-    pub bucket: String,
-    pub key: String,
-    pub size: i64,          // TODO: Another type than unsigned int for size?
-    pub last_modified_date: chrono::DateTime<chrono::Utc>,
-    pub etag: String,
-    pub unique_hash: String,
+#[derive(Debug)]
+pub struct DbClient {
+    url: String,
 }
 
-impl FileAdapter for S3 {
-    fn find(&self, query: Attributes) -> Result<Vec<File>> {
-        // Ok(vec![File { 
-        //     id: self.id,
+impl DbClient {
+    pub fn new(url: String) -> Self {
+        Self {
+            url
+        }
+    }
 
-        // }])
+    pub async fn with_default_client() -> Result<Self> {
+        Ok(Self {
+            url: std::env::var("DATABASE_URL").map_err(|err| DbClientError(err.to_string()))?
+        })
+    }
+
+    pub async fn ingest_s3_event(&self, event: EventMessage) -> Result<u64> {
+        let pool: sqlx::Pool<sqlx::MySql> = MySqlPool::connect(&self.url).await?;
+
+        let s3 = event.records.iter().map(|record| {
+            S3 {
+                id: 0,
+                bucket: record.bucket.name.clone(),
+                object_key: record.object.key.clone(),
+                size: record.object.size,
+                e_tag: record.object.e_tag.clone(),
+            }
+        });
+
+
+        let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
+            "INSERT INTO s3(bucket, object_key, size, e_tag) "
+        );
+        
+        query_builder.push_values(s3, |mut b, s3| {
+            b.push_bind(s3.bucket)
+                .push_bind(s3.object_key)
+                .push_bind(s3.size)
+                .push_bind(s3.e_tag);
+        });
+        
+        let res = query_builder.build().execute(&pool).await?.last_insert_id();
+
+        Ok(res)
+    }
+
+
+    pub async fn s3_query_something(&self, _name: String) -> Result<Vec<S3>> {
+        let pool: sqlx::Pool<sqlx::MySql> = MySqlPool::connect(&self.url).await?;
+
+        let key = "foo";
+        let objects = sqlx::query_as!(
+            S3,
+            "
+            SELECT id, bucket, object_key, size, e_tag
+            FROM s3
+            WHERE object_key = ?
+            LIMIT 10;
+            ",
+            key
+        )
+        .fetch_all(&pool)
+        .await?;
+
+        Ok(objects)
+    }
+
+    pub async fn plain_query(&self) -> Result<()> {
+        let pool = MySqlPool::connect(&self.url).await?;
+    
+        sqlx::migrate!("./migrations").run(&pool).await?;
+    
+        let res = sqlx::query("SELECT path FROM orcabus.data_portal_gdsfile LIMIT 10")
+            .fetch_one(&pool)
+            .await?;
+    
+        dbg!(&res);
+        Ok(())
     }
 }
 
-pub async fn s3_query_something(name: String) -> Result<Vec<S3>, sqlx::Error> {
-    // TODO: Move this at "class" level instead of method level
-    let db_url = env::var("DATABASE_URL");
-    let pool = MySqlPool::connect(db_url.unwrap_or_default().as_str()).await?;
-
-    let key = "foo";
-    let objects = sqlx::query_as!(
-        S3,
-        "
-        SELECT  data_portal_s3object.id, data_portal_s3object.bucket, data_portal_s3object.key, \
-                data_portal_s3object.size, data_portal_s3object.last_modified_date, data_portal_s3object.unique_hash
-        FROM data_portal_s3object
-        WHERE data_portal_s3object.key = ?
-        LIMIT 10;
-        ",
-        key
-    )
-    .fetch_all(&pool)
-    .await?;
-
-    Ok(objects)
+#[derive(Debug, FromRow)]
+pub struct S3 {
+    pub id: i64,            // TODO: Should this be unsigned for auto (positive) increment?
+    pub bucket: String,
+    pub object_key: String,
+    pub size: i32,          // TODO: Ditto above, another type than unsigned int for size?
+    // pub last_modified_date: NaiveDateTime,
+    pub e_tag: String,
 }
 
-pub async fn plain_query() -> Result<(), sqlx::Error> {
-    // TODO: Move this at "class" level instead of method level
-    let db_url = env::var("DATABASE_URL");
-    let pool = MySqlPool::connect(db_url.unwrap_or_default().as_str()).await?;
-
-    sqlx::migrate!("./migrations").run(&pool).await?;
-
-    let res = sqlx::query("SELECT path FROM orcabus.data_portal_gdsfile LIMIT 10")
-        .fetch_one(&pool)
-        .await?;
-
-    dbg!(&res);
-    Ok(())
+impl FileAdapter for S3 {
+    fn find(&self, _query: Attributes) -> Result<Vec<File>> {
+        todo!()
+    }
 }

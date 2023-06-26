@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use axum::{extract::Query, Json};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -73,9 +71,10 @@ pub enum FileError {
         (status = 200, description = "List matching objects", body = [File])
     )
 )]
-pub async fn search(query: Query<File>) -> Result<Json<Vec<File>>, Box<dyn Error>> {
+
+pub async fn search(query: Query<File>) -> Json<Vec<File>> {
     info!("searching {:?}", query.name);
-    let res = crate::db::s3_query_something(query.name.clone()).await?;
+    // let _res = crate::db::s3_query_something(query.name.clone()).await.unwrap();
 
     Json(vec![File {
         id: 1,
