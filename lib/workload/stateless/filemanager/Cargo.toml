@@ -24,3 +24,7 @@ dotenvy = "0.15"
 testfixtures = { version = "0.1.2", features = ["mysql"] }
 thiserror = "1.0"
 async-trait = "0.1"
+
+# AWS
+aws-sdk-sqs = "0.28"
+aws-config = "0.55"
