@@ -3,15 +3,16 @@ use std::net::{Ipv4Addr, SocketAddr};
 use axum::{routing, Router, Server};
 use hyper::Error;
 
-use rust_api::env;
-use rust_api::file;
-use rust_api::security::ApiDoc;
+use filemanager::env;
+use filemanager::file;
+use filemanager::security::ApiDoc;
 
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
+use filemanager::events::SQSClient;
 
 /// FileManager keeps track of files from many storage backend. The FileManager is responsible for:
 /// 
@@ -37,8 +38,11 @@ async fn main() -> Result<(), Error> {
     // prod or dev
     env::load_env();
 
-    let db_result = rust_api::db::s3_query_something().await;
-    dbg!(&db_result);
+    // let db_result = filemanager::db::s3_query_something("Marko".to_string()).await;
+    // dbg!(&db_result);
+
+    let sqs_client = SQSClient::with_default_client().await.unwrap();
+    sqs_client.receive().await.unwrap();
 
     let app = Router::new()
         // TODO: Have this swagger/openapi path enabled via (non-default?) feature flag
