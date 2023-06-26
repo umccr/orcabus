@@ -19,3 +19,25 @@ $ curl localhost:8080/file/moo.bam
 ```
 
 And to access the builtin Swagger playground, visit http://localhost:8080/swagger-ui/ on your browser.
+
+## Development
+
+For local(stack) development:
+
+```sh
+pip install awscli-local
+```
+
+That allows one to interact with the S3 bucket events like so:
+
+```sh
+awslocal sqs list-queues
+{
+    "QueueUrls": [
+        "http://localhost:4566/000000000000/filemanager_s3_events"
+    ]
+}
+awslocal s3 cp ~/tmp/xilinx.jed s3://filemanager/
+aws --endpoint-url=http://localhost:4566/_aws/sqs/messages sqs receive-message \
+  --queue-url=http://queue.localhost.localstack.cloud:4566/000000000000/filemanager_s3_events
+```
