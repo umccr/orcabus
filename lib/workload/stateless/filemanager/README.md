@@ -9,7 +9,7 @@ $ cargo watch -c -w src -x run
    Compiling rust-api v0.1.0 (/Users/rvalls/dev/umccr/orcabus/skel/rust-api)
     Finished dev [unoptimized + debuginfo] target(s) in 1.74s
      Running `target/debug/rust-api`
-2023-06-13T00:56:41.621002Z  INFO rust_api: listening on 0.0.0.0:8080
+2023-06-13T00:56:41.621002Z  INFO filemanager: listening on 0.0.0.0:8080
 ```
 
 Then:
@@ -31,6 +31,7 @@ pip install awscli-local
 That allows one to interact with the S3 bucket events like so:
 
 ```sh
+$ ./lib/workload/stateless/filemanager/localstack-s3-events-to-sqs.sh # Setup up the whole S3-SQS event registering
 $ export AWS_REGION=ap-southeast-2
 $ awslocal sqs list-queues
 {
