@@ -10,12 +10,12 @@ use filemanager::security::ApiDoc;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+use filemanager::events::SQSClient;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
-use filemanager::events::SQSClient;
 
 /// FileManager keeps track of files from many storage backend. The FileManager is responsible for:
-/// 
+///
 /// 1. Listening and ingesting file creation events from the different storage backends.
 /// 2. Querying on file attributes such as name, type of file, creation date, etc...
 /// 3. Interfacing with htsget-rs for the biological-specific file formats: CRAM, BAM, VCF, BCF...
@@ -24,8 +24,8 @@ use filemanager::events::SQSClient;
 /// 5. Making sure the workflow run id is present and associated with any given file.
 /// 6. Audit: Keep records for deleted objects even after the actual data is deleted.
 /// 7. Audit: Record file ownership (on create, no chain of custody functionality needed).
-/// 
-/// All files have an external, public, file UUID so that they can be uniquely identified in our whole 
+///
+/// All files have an external, public, file UUID so that they can be uniquely identified in our whole
 /// microservices environment.
 
 #[tokio::main]

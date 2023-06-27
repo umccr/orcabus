@@ -10,7 +10,7 @@ use tracing::info;
 
 /// Converts generic file attributes into concrete storage backend ones
 pub trait FileAdapter {
-    // /// Find 
+    // /// Find
     // fn find(&self, query: Query, attr: Option<Attributes>) -> Result<File>;
 
     /// Filter by subjects, name, phenotype, etc...
@@ -22,13 +22,13 @@ pub trait FileAdapter {
 pub enum Attributes {
     Name(String),
     SubjectId(String),
-    Phenotype(Phenotype)
+    Phenotype(Phenotype),
 }
 
 #[derive(Debug)]
 pub enum Phenotype {
     Tumor,
-    Normal
+    Normal,
 }
 
 /// Item to do.
