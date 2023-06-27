@@ -4,6 +4,7 @@ create table s3 (
     bucket varchar(255) not null,
     `key` varchar(1024) not null,
     size int not null,
-    -- last_modified_date datetime not null,
-    e_tag varchar(255) not null
+    e_tag varchar(255) not null,
+    last_modified_date datetime default null,
+    storage_class enum('DeepArchive', 'Glacier', 'GlacierIr', 'IntelligentTiering', 'OnezoneIa', 'Outposts', 'ReducedRedundancy', 'Snow', 'Standard', 'StandardIa') default null
 );

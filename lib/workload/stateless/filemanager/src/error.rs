@@ -24,6 +24,10 @@ pub enum Error {
     SQSDeserializeError(String),
     #[error("Db client error: `{0}`")]
     DbClientError(String),
+    #[error("S3 object not found: `{0}`")]
+    S3ObjectNotFound(String),
+    #[error("S3 error: `{0}`")]
+    S3Error(String),
 }
 
 impl From<sqlx::Error> for Error {

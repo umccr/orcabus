@@ -55,6 +55,13 @@ upload: ../../../tmp/xilinx.jed to s3://filemanager/xilinx.jed
 }
 ```
 
+To purge the localstack s3 bucket and SQS queues:
+
+```bash
+% awslocal s3 rm --recursive s3://filemanager
+% awslocal sqs purge-queue --queue-url http://localhost:4566/000000000000/filemanager_s3_events
+```
+
 ### Database
 
 Handy shortcut for database interaction, check `docs/developer/RUST_API.md` for more detailed ops:

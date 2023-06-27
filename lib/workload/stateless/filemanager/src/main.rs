@@ -41,8 +41,10 @@ async fn main() -> Result<(), Error> {
     // let db_result = filemanager::db::s3_query_something("Marko".to_string()).await;
     // dbg!(&db_result);
 
+
     let sqs_client = SQSClient::with_default_client().await.unwrap();
     sqs_client.receive().await.unwrap();
+
 
     let app = Router::new()
         // TODO: Have this swagger/openapi path enabled via (non-default?) feature flag

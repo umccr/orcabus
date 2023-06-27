@@ -1,7 +1,10 @@
 use crate::error::Error::DbClientError;
 use crate::error::Result;
+use chrono::{DateTime, Utc, NaiveDateTime};
 use sqlx::QueryBuilder;
 use sqlx::{mysql::MySqlPool, FromRow, MySql};
+use aws_sdk_s3::types::StorageClass;
+use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 
 use crate::events::EventMessage;
 use crate::file::Attributes;
@@ -36,6 +39,15 @@ impl DbClient {
         })
     }
 
+    fn get_datetime(head: HeadObjectOutput) -> Option<DateTime<Utc>> {
+        if let Some(head) = head.last_modified() {
+            let date = NaiveDateTime::from_timestamp_opt(head.secs(), head.subsec_nanos())?;
+            Some(DateTime::from_utc(date, Utc))
+        } else {
+            None
+        }
+    }
+
     pub async fn ingest_s3_event(&self, event: EventMessage) -> Result<u64> {
         let pool: sqlx::Pool<sqlx::MySql> = MySqlPool::connect(&self.url).await?;
 
@@ -45,16 +57,21 @@ impl DbClient {
             key: record.s3.object.key.clone(),
             size: record.s3.object.size,
             e_tag: record.s3.object.e_tag.clone(),
+            last_modified_date: record.head.clone().map(Self::get_datetime).flatten(),
+            // owner: record.head.map(|head| head.metadata().)
+            storage_class: record.head.clone().map(|head| head.storage_class().cloned()).flatten()
         });
 
         let mut query_builder: QueryBuilder<MySql> =
-            QueryBuilder::new("INSERT INTO s3(bucket, `key`, size, e_tag) ");
+            QueryBuilder::new("INSERT INTO s3(bucket, `key`, size, e_tag, last_modified_date, storage_class) ");
 
         query_builder.push_values(s3, |mut b, s3| {
             b.push_bind(s3.bucket)
                 .push_bind(s3.key)
                 .push_bind(s3.size)
-                .push_bind(s3.e_tag);
+                .push_bind(s3.e_tag)
+                .push_bind(s3.last_modified_date)
+                .push_bind(s3.storage_class.map(|storage_class| storage_class.as_str().to_string()));
         });
 
         let res = query_builder.build().execute(&pool).await?.last_insert_id();
@@ -66,20 +83,21 @@ impl DbClient {
         let pool: sqlx::Pool<sqlx::MySql> = MySqlPool::connect(&self.url).await?;
 
         let key = "foo";
-        let objects = sqlx::query_as!(
-            S3,
-            "
-            SELECT id, bucket, `key`, size, e_tag
-            FROM s3
-            WHERE `key` = ?
-            LIMIT 10;
-            ",
-            key
-        )
-        .fetch_all(&pool)
-        .await?;
+        // let objects = sqlx::query_as!(
+        //     S3,
+        //     "
+        //     SELECT id, bucket, `key`, size, e_tag, last_modified_date, storage_class
+        //     FROM s3
+        //     WHERE `key` = ?
+        //     LIMIT 10;
+        //     ",
+        //     key
+        // )
+        // .fetch_all(&pool)
+        // .await?;
 
-        Ok(objects)
+        // Ok(objects)
+        Ok(vec![])
     }
 
     pub async fn plain_query(&self) -> Result<()> {
@@ -102,8 +120,10 @@ pub struct S3 {
     pub bucket: String,
     pub key: String,
     pub size: i32, // TODO: Ditto above, another type than unsigned int for size?
-    // pub last_modified_date: NaiveDateTime,
     pub e_tag: String,
+    pub last_modified_date: Option<DateTime<Utc>>,
+    // pub owner: Option<String>,
+    pub storage_class: Option<StorageClass>,
 }
 
 impl FileAdapter for S3 {
