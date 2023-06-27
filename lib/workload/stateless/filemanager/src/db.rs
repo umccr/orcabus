@@ -48,7 +48,7 @@ impl DbClient {
         });
 
         let mut query_builder: QueryBuilder<MySql> =
-            QueryBuilder::new("INSERT INTO s3(bucket, key, size, e_tag) ");
+            QueryBuilder::new("INSERT INTO s3(bucket, `key`, size, e_tag) ");
 
         query_builder.push_values(s3, |mut b, s3| {
             b.push_bind(s3.bucket)
