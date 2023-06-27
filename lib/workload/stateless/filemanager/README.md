@@ -54,3 +54,11 @@ upload: ../../../tmp/xilinx.jed to s3://filemanager/xilinx.jed
     ]
 }
 ```
+
+### Database
+
+Handy shortcut for database interaction, check `docs/developer/RUST_API.md` for more detailed ops:
+
+```bash
+docker exec -it orcabus_db mysql -h 0.0.0.0 -D orcabus -u root -proot
+```

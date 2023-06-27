@@ -44,21 +44,21 @@ impl DbClient {
         let s3 = event.records.iter().map(|record| {
             S3 {
                 id: 0,
-                bucket: record.bucket.name.clone(),
-                object_key: record.object.key.clone(),
-                size: record.object.size,
-                e_tag: record.object.e_tag.clone(),
+                bucket: record.s3.bucket.name.clone(),
+                key: record.s3.object.key.clone(),
+                size: record.s3.object.size,
+                e_tag: record.s3.object.e_tag.clone(),
             }
         });
 
 
         let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
-            "INSERT INTO s3(bucket, object_key, size, e_tag) "
+            "INSERT INTO s3(bucket, key, size, e_tag) "
         );
         
         query_builder.push_values(s3, |mut b, s3| {
             b.push_bind(s3.bucket)
-                .push_bind(s3.object_key)
+                .push_bind(s3.key)
                 .push_bind(s3.size)
                 .push_bind(s3.e_tag);
         });
@@ -76,9 +76,9 @@ impl DbClient {
         let objects = sqlx::query_as!(
             S3,
             "
-            SELECT id, bucket, object_key, size, e_tag
+            SELECT id, bucket, `key`, size, e_tag
             FROM s3
-            WHERE object_key = ?
+            WHERE `key` = ?
             LIMIT 10;
             ",
             key
@@ -107,7 +107,7 @@ impl DbClient {
 pub struct S3 {
     pub id: i64,            // TODO: Should this be unsigned for auto (positive) increment?
     pub bucket: String,
-    pub object_key: String,
+    pub key: String,
     pub size: i32,          // TODO: Ditto above, another type than unsigned int for size?
     // pub last_modified_date: NaiveDateTime,
     pub e_tag: String,
