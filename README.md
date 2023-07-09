@@ -12,6 +12,8 @@ When possible, please use either `OrcaBus` (camel case) or `orcabus` (all lower 
 
 ### Toolchain
 
+_Setting up baseline toolchain_
+
 ```
 docker --version
 Docker version 24.0.1, build 680212238b
@@ -29,7 +31,66 @@ yarn -v
 3.5.1
 ```
 
-### MySQL
+### Mocking
+
+* Apart from internal APIs within OrcaBus, it also depends on some external systems. 
+* These key external platform APIs are mocked through Docker compose stack as follows.
+
+#### ICA
+
+* See [docs/ICA/ICA_MOCK.md](docs/ICA/ICA_MOCK.md)
+
+#### AWS
+
+```
+make up
+make ps
+```
+
+```
+make install    (or)    pip install awscli-local
+```
+
+```
+which awslocal
+```
+
+```
+awslocal s3 mb s3://my-test-bucket
+awslocal s3 ls
+```
+
+```
+awslocal events create-event-bus --name MockBus
+awslocal events list-event-buses
+```
+
+```
+awslocal sqs create-queue --queue-name MockStdQueue
+awslocal sqs list-queues
+```
+
+```
+awslocal stepfunctions create-state-machine \
+        --name "WaitMachine" \
+        --definition '{
+        "StartAt": "WaitExecution",
+        "States": {
+            "WaitExecution": {
+            "Type": "Wait",
+            "Seconds": 3,
+            "End": true
+            }
+        }
+        }' \
+        --role-arn "arn:aws:iam::000000000000:role/stepfunctions-role"
+```
+
+```
+awslocal stepfunctions list-state-machines
+```
+
+#### MySQL
 
 ```
 make up
@@ -49,6 +110,7 @@ Two high level tasks. As follows.
 
 - [DJANGO_API.md](docs/developer/DJANGO_API.md)
 - [DJANGO_PROC.md](docs/developer/DJANGO_PROC.md)
+- [RUST_API.md](docs/developer/RUST_API.md)
 
 #### 2. Infrastructure as Code for microservice
 

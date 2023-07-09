@@ -45,6 +45,45 @@ docker exec -i -e MYSQL_PWD=orcabus orcabus_db mysql -u orcabus -e "DROP DATABAS
 docker exec -i -e MYSQL_PWD=orcabus orcabus_db /bin/bash -c 'zcat data_portal.sql.gz | mysql -uorcabus orcabus'
 ```
 
+One off mysql SQL commands can be interactively launched, i.e (assuming `make up` command has succeeded and database container(s) are up and running):
+
+```bash
+docker exec -it orcabus_db mysql -h 0.0.0.0 -D orcabus -u root -proot
+mysql> show tables;
++----------------------------------+
+| Tables_in_orcabus                |
++----------------------------------+
+| data_portal_gdsfile              |
+| data_portal_s3lims               |
+| data_portal_s3object             |
+(...)
+mysql> describe orcabus.data_portal_gdsfile;
++----------------+--------------+------+-----+---------+----------------+
+| Field          | Type         | Null | Key | Default | Extra          |
++----------------+--------------+------+-----+---------+----------------+
+| id             | bigint       | NO   | PRI | NULL    | auto_increment |
+| file_id        | varchar(255) | NO   |     | NULL    |                |
+| name           | longtext     | NO   |     | NULL    |                |
+(...)
+| presigned_url  | longtext     | YES  |     | NULL    |                |
+| unique_hash    | varchar(64)  | NO   | UNI | NULL    |                |
++----------------+--------------+------+-----+---------+----------------+
+22 rows in set (0.00 sec)
+
+mysql> describe orcabus.data_portal_s3object;
++--------------------+--------------+------+-----+---------+----------------+
+| Field              | Type         | Null | Key | Default | Extra          |
++--------------------+--------------+------+-----+---------+----------------+
+| id                 | bigint       | NO   | PRI | NULL    | auto_increment |
+| bucket             | varchar(255) | NO   |     | NULL    |                |
+| key                | longtext     | NO   |     | NULL    |                |
+| size               | bigint       | NO   |     | NULL    |                |
+| last_modified_date | datetime(6)  | NO   |     | NULL    |                |
+| e_tag              | varchar(255) | NO   |     | NULL    |                |
+| unique_hash        | varchar(64)  | NO   | UNI | NULL    |                |
++--------------------+--------------+------+-----+---------+----------------+
+```
+
 # Rust learning
 
 While at first Rust can seem intimidating (as a language), there's plenty of materials online that can help you get up to speed with this microservice codebase, check this out:

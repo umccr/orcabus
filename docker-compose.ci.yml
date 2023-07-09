@@ -13,7 +13,7 @@ services:
     image: public.ecr.aws/docker/library/mysql:8
 
   localstack:
-    image: public.ecr.aws/localstack/localstack:0.14
+    image: public.ecr.aws/localstack/localstack:2.1
 
   haproxy:
     image: public.ecr.aws/docker/library/haproxy:2.4
@@ -34,4 +34,7 @@ services:
     image: quay.io/victorskl/prism:4
 
   v2:
+    image: quay.io/victorskl/prism:4
+
+  filemanager:
     image: quay.io/victorskl/prism:4

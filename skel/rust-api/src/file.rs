@@ -2,7 +2,7 @@ use axum::{extract::Query, Json};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use tracing::{ info };
+use tracing::info;
 //type Store = Mutex<Vec<File>>;
 // TODO: SQLx is the store backend, through db.rs
 
@@ -13,7 +13,7 @@ pub struct File {
     #[schema(example = "foo.bam")]
     name: String,
     size: u64,
-    hash: String
+    hash: String,
 }
 
 /// File operation errors
@@ -30,7 +30,7 @@ pub enum FileError {
 /// Search query
 // #[derive(Debug, Deserialize, IntoParams)]
 // pub struct FileQuery {
-//     id: 
+//     id:
 //     name: String,
 // }
 
@@ -52,6 +52,6 @@ pub async fn search(query: Query<File>) -> Json<Vec<File>> {
         id: 1,
         name: query.name.clone(),
         size: 1,
-        hash: "Moo".to_string()
+        hash: "Moo".to_string(),
     }])
 }
