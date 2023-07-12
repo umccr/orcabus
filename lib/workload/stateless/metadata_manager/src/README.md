@@ -17,8 +17,10 @@ Create a virtual environment and install the `requirements-dev.txt`
 
 ### Testing
 
+Follow the readme file in the root of the directory to create a MYSQL local database.
+
 Go this directory
-`cd lib/workload/stateless/metadata_manager/src`
+`cd lib/workload/stateless/library_manager/src`
 
 And use the makefile to start testing
 `make test`

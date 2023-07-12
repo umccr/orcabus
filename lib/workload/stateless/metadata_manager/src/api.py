@@ -5,7 +5,7 @@
 # """
 # import serverless_wsgi
 #
-# from metadata_manager.wsgi import metadata_manager
+# from library_manager.wsgi import library_manager
 #
 #
 # def handler(event, context):
