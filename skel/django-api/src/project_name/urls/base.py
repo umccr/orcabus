@@ -7,7 +7,6 @@ router = OptionalSlashDefaultRouter()
 router.register(r'hello', HelloWorldViewSet, basename='hello')
 
 urlpatterns = [
-    path('iam/', include(router.urls)),
     path('', include(router.urls)),
 ]
 
