@@ -12,7 +12,7 @@ import getAppSettings from './bootstrap/settings';
   const app = new App(dc);
 
   // Setting/registering server routes
-  const server = await app.setupServer();
+  const server = await app.setupServer(dc);
 
   server.listen({ host: appSettings.host, port: appSettings.port }, (err, address) => {
     if (err) {

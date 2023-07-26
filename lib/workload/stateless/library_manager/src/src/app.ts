@@ -1,10 +1,12 @@
 import Fastify, { FastifyBaseLogger, FastifyInstance } from 'fastify';
-
+import e from '../dbschema/edgeql-js';
 import { DependencyContainer } from 'tsyringe';
+import { internalRoutes } from './api/routes/internal-routes';
+import insertScenario1 from './test-data/scenario-1';
+import { Client } from 'edgedb';
 
 export class App {
   public readonly server: FastifyInstance;
-
   /**
    * @param dc
    */
@@ -21,16 +23,17 @@ export class App {
     });
   }
 
-  public async setupServer(): Promise<FastifyInstance> {
+  public async setupServer(dc: DependencyContainer): Promise<FastifyInstance> {
     // register global fastify plugins
     // {
     // }
+    const edgeDbClient = dc.resolve<Client>('Database');
+    await e.delete(e.metadata.MetadataIdentifiable).run(edgeDbClient);
+    await insertScenario1(dc);
 
     // Register Fastify routing
     {
-      this.server.get('/ping', async (request, reply) => {
-        return 'pong\n';
-      });
+      this.server.register(internalRoutes);
     }
 
     return this.server;
