@@ -28,7 +28,11 @@ export class App {
     // {
     // }
     const edgeDbClient = dc.resolve<Client>('Database');
-    await e.delete(e.metadata.MetadataIdentifiable).run(edgeDbClient);
+
+    await e.delete(e.metadata.Patient).run(edgeDbClient);
+    await e.delete(e.metadata.Sample).run(edgeDbClient);
+    await e.delete(e.metadata.Library).run(edgeDbClient);
+
     await insertScenario1(dc);
 
     // Register Fastify routing

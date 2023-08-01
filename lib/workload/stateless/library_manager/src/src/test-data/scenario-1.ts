@@ -9,81 +9,64 @@ export default async function insertScenario1(dc: DependencyContainer) {
 
   logger.info('inserting scenario 1');
   await e
-    .insert(e.metadata.Experiment, {
-      identifier: 'Exper1',
-      type: 'WTS',
-      patients: e.set(
-        e.insert(e.metadata.Patient, {
-          identifier: 'SUBIDA',
-          externalIdentifiers: e.array([
-            e.tuple({ system: 'externalSubjectId', value: 'EXTSUBIDA' }),
-          ]),
-          samples: e.insert(e.metadata.Sample, {
-            identifier: 'SAMIDA',
-            externalIdentifiers: e.array([
-              e.tuple({ system: 'externalSampleId', value: 'SAMIDA-EXTSAMA' }),
-            ]),
+    .insert(e.metadata.Patient, {
+      identifier: 'SUBIDA',
+      externalIdentifiers: e.array([e.tuple({ system: 'externalSubjectId', value: 'EXTSUBIDA' })]),
+      samples: e.insert(e.metadata.Sample, {
+        identifier: 'SAMIDA',
+        externalIdentifiers: e.array([
+          e.tuple({ system: 'externalSampleId', value: 'SAMIDA-EXTSAMA' }),
+        ]),
+        source: 'FFPE',
+        libraries: e.set(
+          e.insert(e.metadata.Library, {
             assay: 'NebRNA',
             phenotype: 'tumor',
-            projectName: 'Alice',
-            projectOwner: 'ALICE',
-            source: 'FFPE',
-            libraries: e.set(
-              e.insert(e.metadata.Library, {
-                workflow: 'clinical',
-                identifier: 'LIB01',
-                coverage: 6.0,
-                overrideCycles: 'Y151;I8;I8;Y151',
-                quality: 'poor',
-                runNumber: 'P30',
-              }),
-              e.insert(e.metadata.Library, {
-                workflow: 'clinical',
-                identifier: 'LIB04',
-                coverage: 6.0,
-                overrideCycles: 'Y151;I8;I8;Y151',
-                quality: 'poor',
-                runNumber: 'P30',
-              })
-            ),
+            workflow: 'clinical',
+            identifier: 'LIB01',
+            coverage: 6.0,
+            quality: 'poor',
           }),
-        }),
-        e.insert(e.metadata.Patient, {
-          identifier: 'SUBIDB',
-          externalIdentifiers: e.array([
-            e.tuple({ system: 'externalSubjectId', value: 'EXTSUBIDB' }),
-          ]),
-          samples: e.insert(e.metadata.Sample, {
-            identifier: 'SAMIDB',
-            externalIdentifiers: e.array([
-              e.tuple({ system: 'externalSampleId', value: 'EXTSAMB' }),
-            ]),
+          e.insert(e.metadata.Library, {
             assay: 'NebRNA',
             phenotype: 'tumor',
-            projectName: 'FAKE',
-            projectOwner: 'Bob',
-            source: 'FFPE',
-            libraries: e.set(
-              e.insert(e.metadata.Library, {
-                workflow: 'clinical',
-                identifier: 'LIB02',
-                coverage: 6.0,
-                overrideCycles: 'Y151;I8;I8;Y151',
-                quality: 'poor',
-                runNumber: 'P30',
-              }),
-              e.insert(e.metadata.Library, {
-                workflow: 'clinical',
-                identifier: 'LIB03',
-                coverage: 6.0,
-                overrideCycles: 'Y151;I8;I8;Y151',
-                quality: 'poor',
-                runNumber: 'P30',
-              })
-            ),
+            workflow: 'clinical',
+            identifier: 'LIB04',
+            coverage: 6.0,
+            quality: 'poor',
+          })
+        ),
+      }),
+    })
+    .run(edgeDbClient);
+
+  await e
+    .insert(e.metadata.Patient, {
+      identifier: 'SUBIDB',
+      externalIdentifiers: e.array([e.tuple({ system: 'externalSubjectId', value: 'EXTSUBIDB' })]),
+      samples: e.insert(e.metadata.Sample, {
+        identifier: 'SAMIDB',
+        externalIdentifiers: e.array([e.tuple({ system: 'externalSampleId', value: 'EXTSAMB' })]),
+        source: 'FFPE',
+        libraries: e.set(
+          e.insert(e.metadata.Library, {
+            phenotype: 'tumor',
+            workflow: 'clinical',
+            identifier: 'LIB02',
+            coverage: 6.0,
+            assay: 'NebRNA',
+            quality: 'poor',
           }),
-        })
-      ),
+          e.insert(e.metadata.Library, {
+            phenotype: 'tumor',
+            workflow: 'clinical',
+            identifier: 'LIB03',
+            coverage: 6.0,
+            assay: 'NebRNA',
+            quality: 'poor',
+          })
+        ),
+      }),
     })
     .run(edgeDbClient);
 }

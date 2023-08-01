@@ -1,41 +1,10 @@
 
 module metadata {
-
-    abstract type MetadataLoggable {
-        # This will only copy the id of the `new` object and so changes is not recorded.
-        # Might just do a normal copy from the application logic to the logs.
-        # Will revisit this - Wil
-
-        # trigger log_update after update for each do (
-        #     insert log::Metadata {
-        #         action := "UPDATE",
-        #         object := __new__,
-        #         detail := <json>(select __new__{**}),
-        #         updatedTime := datetime_of_statement()
-        #     }
-        # );
-
-        # trigger log_delete after delete for each do (
-        #     insert log::Metadata {
-        #         action := 'DELETE',
-        #         updatedTime := datetime_of_statement()
-        #     }
-        # );
-
-        # trigger log_insert after insert for each do (
-        #     insert log::Metadata {
-        #         action := 'INSERT',
-        #         object := __new__,
-        #         detail := <json>(select __new__{**}),
-        #         updatedTime := datetime_of_statement()
-        #     }
-        # );
-    }
-
+    
     scalar type Phenotype extending enum<'normal', 'tumor', 'negative-control'>;
-    scalar type Quality extending enum<'veryPoor', 'poor', 'good', 'borderline'>;
-    scalar type WorkflowTypes extending enum<'clinical','research','qc','control','bcl','manual'>;
-    scalar type ExperimentTypes extending enum<
+    scalar type Quality extending enum<'very-poor', 'poor', 'good', 'borderline'>;
+    scalar type WorkflowTypes extending enum<'clinical', 'research', 'qc', 'control', 'bcl', 'manual'>;
+    scalar type LibraryTypes extending enum<
         '10X',
         'ctDNA',
         'ctTSO',
@@ -57,33 +26,35 @@ module metadata {
         externalIdentifiers: array<tuple<system: str, value: str>>;
     }
 
-    type Library extending MetadataIdentifiable{
+    type Library extending MetadataIdentifiable {
+        phenotype: Phenotype;
         workflow: WorkflowTypes;
         quality: Quality;
+        type: LibraryTypes;
+        assay: str;
         coverage: float32;
-        truseqindex: str;
-        overrideCycles: str;
-        runNumber: str;
+
+        # The backlink to samples
+        multi link samples_ := .<libraries[is Sample];
+        # The backlink to patients
+        multi link patients_ := .<libraries[is Sample].<samples[is Patient];
     }
 
     type Sample extending MetadataIdentifiable {
-        phenotype: Phenotype;
         source: str;
-        assay: str;
-        projectOwner: str;
-        projectName: str;
+        multi libraries: Library {
+            on target delete allow
+        };
 
-        multi libraries: Library;
+        # The backlink to patients
+        multi link patients_ := .<samples[is Patient];
+
     }
 
     type Patient extending MetadataIdentifiable {
-        multi samples: Sample;
-    }
-
-    type Experiment extending MetadataIdentifiable {
-        type: ExperimentTypes;
-
-        multi patients: Patient;
+        multi samples: Sample {
+            on target delete allow
+        };
     }
 
 }

@@ -135,3 +135,5 @@ dist
 #.pnp.*
 
 dbschema/edgeql-js
+dbschema/queries.*
+dbschema/interfaces.ts
