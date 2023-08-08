@@ -37,7 +37,7 @@ module metadata {
         # The backlink to samples
         multi link samples_ := .<libraries[is Sample];
         # The backlink to patients
-        multi link patients_ := .<libraries[is Sample].<samples[is Patient];
+        multi link subjects_ := .<libraries[is Sample].<samples[is Subject];
     }
 
     type Sample extending MetadataIdentifiable {
@@ -47,11 +47,11 @@ module metadata {
         };
 
         # The backlink to patients
-        multi link patients_ := .<samples[is Patient];
+        multi link subjects_ := .<samples[is Subject];
 
     }
 
-    type Patient extending MetadataIdentifiable {
+    type Subject extending MetadataIdentifiable {
         multi samples: Sample {
             on target delete allow
         };

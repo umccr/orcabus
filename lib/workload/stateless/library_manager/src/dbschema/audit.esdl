@@ -1,7 +1,9 @@
 module audit {
 
+  # NOTE: TODO How to query deleted library??
+
   # ActionType definition
-  # Ref: http://hl7.org/fhir/audit-event-action
+  # Ref: http://hl7.org/fhir/audit-even t-action
   scalar type ActionType extending enum<'C', 'R', 'U', 'D', 'E'>;
 
   # ActionOutcome definition
@@ -10,12 +12,13 @@ module audit {
 
   abstract type AuditEvent {
     required actionCategory: ActionType;
+    required actionOutcome: ActionOutcome;
 
     # a string describing the action but with no details i.e. "Google metadata sync"
     # any details will appear later in the details JSON
     required actionDescription: str;
 
-    # when this audit record has been made (should be close to occurredDateTime!)
+    # when this audit record has been made (should be close to occurredDateTime)
     required recordedDateTime: datetime {
       default := datetime_current();
       readonly := true;
@@ -24,6 +27,7 @@ module audit {
       default := datetime_current();
     }
     required occurredDuration: duration {
+      readonly := true;
       rewrite insert, update using (
         select __subject__.occurredDateTime - __subject__.recordedDateTime
       )
@@ -35,7 +39,6 @@ module audit {
       rewrite insert, update using (datetime_of_statement())
     }
 
-    required actionOutcome: ActionOutcome;
 
     # bespoke JSON with details of the event
     details: json;
