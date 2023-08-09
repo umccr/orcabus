@@ -1,11 +1,16 @@
-import { Client, Duration, createClient } from 'edgedb';
-import * as tsyringe from 'tsyringe';
-import { SSMClient } from '@aws-sdk/client-ssm';
-import { instanceCachingFactory } from 'tsyringe';
-import pino, { Logger } from 'pino';
+import 'reflect-metadata';
 
-export async function createDependencyContainer() {
-  const dc = tsyringe.container.createChildContainer();
+import { container, instanceCachingFactory } from 'tsyringe';
+import { Client, Duration, createClient } from 'edgedb';
+import { Logger, pino } from 'pino';
+import { SSMClient } from '@aws-sdk/client-ssm';
+
+export function registerTypes() {
+  const dc = container.createChildContainer();
+
+  dc.register<Record<string, string>>('Settings', {
+    useValue: {},
+  });
 
   dc.register<Client>('Database', {
     // https://www.edgedb.com/docs/clients/js/driver#configuring-clients

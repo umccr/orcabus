@@ -23,7 +23,7 @@ module metadata {
         required identifier: str {
             constraint exclusive on (str_lower(__subject__));
         };
-        externalIdentifiers: array<tuple<system: str, value: str>>;
+        externalIdentifiers: json;
     }
 
     type Library extending MetadataIdentifiable {
@@ -34,25 +34,25 @@ module metadata {
         assay: str;
         coverage: float32;
 
-        # The backlink to samples
-        multi link samples_ := .<libraries[is Sample];
+        # The backlink to specimens
+        multi link specimens_ := .<libraries[is Specimen];
         # The backlink to patients
-        multi link subjects_ := .<libraries[is Sample].<samples[is Subject];
+        multi link subjects_ := .<libraries[is Specimen].<specimens[is Subject];
     }
 
-    type Sample extending MetadataIdentifiable {
+    type Specimen extending MetadataIdentifiable {
         source: str;
         multi libraries: Library {
             on target delete allow
         };
 
         # The backlink to patients
-        multi link subjects_ := .<samples[is Subject];
+        multi link subjects_ := .<specimens[is Subject];
 
     }
 
     type Subject extending MetadataIdentifiable {
-        multi samples: Sample {
+        multi specimens: Specimen {
             on target delete allow
         };
     }

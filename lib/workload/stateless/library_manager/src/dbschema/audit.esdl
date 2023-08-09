@@ -27,7 +27,6 @@ module audit {
       default := datetime_current();
     }
     required occurredDuration: duration {
-      readonly := true;
       rewrite insert, update using (
         select __subject__.occurredDateTime - __subject__.recordedDateTime
       )

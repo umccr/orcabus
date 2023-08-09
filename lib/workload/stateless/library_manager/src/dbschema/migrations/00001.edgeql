@@ -1,33 +1,8 @@
-CREATE MIGRATION m17xfniduooadnu5z2ws7karmivnhmlexiat4ezkld7ialnjvsvh2a
+CREATE MIGRATION m14vf3waihiiikrgj7qq2562gluv6lkccinx7brmt5gfz4lubk7vca
     ONTO initial
 {
   CREATE MODULE audit IF NOT EXISTS;
   CREATE MODULE metadata IF NOT EXISTS;
-  CREATE ABSTRACT TYPE metadata::MetadataIdentifiable {
-      CREATE PROPERTY externalIdentifiers: array<tuple<system: std::str, value: std::str>>;
-      CREATE REQUIRED PROPERTY identifier: std::str {
-          CREATE CONSTRAINT std::exclusive ON (std::str_lower(__subject__));
-      };
-  };
-  CREATE SCALAR TYPE metadata::LibraryTypes EXTENDING enum<`10X`, ctDNA, ctTSO, exome, Metagenm, MethylSeq, other, `TSO-DNA`, `TSO-RNA`, WGS, WTS, BiModal>;
-  CREATE SCALAR TYPE metadata::Phenotype EXTENDING enum<normal, tumor, `negative-control`>;
-  CREATE SCALAR TYPE metadata::Quality EXTENDING enum<`very-poor`, poor, good, borderline>;
-  CREATE SCALAR TYPE metadata::WorkflowTypes EXTENDING enum<clinical, research, qc, control, bcl, manual>;
-  CREATE TYPE metadata::Library EXTENDING metadata::MetadataIdentifiable {
-      CREATE PROPERTY assay: std::str;
-      CREATE PROPERTY coverage: std::float32;
-      CREATE PROPERTY phenotype: metadata::Phenotype;
-      CREATE PROPERTY quality: metadata::Quality;
-      CREATE PROPERTY type: metadata::LibraryTypes;
-      CREATE PROPERTY workflow: metadata::WorkflowTypes;
-  };
-  CREATE TYPE metadata::Sample EXTENDING metadata::MetadataIdentifiable {
-      CREATE MULTI LINK libraries: metadata::Library;
-      CREATE PROPERTY source: std::str;
-  };
-  CREATE TYPE metadata::Patient EXTENDING metadata::MetadataIdentifiable {
-      CREATE MULTI LINK samples: metadata::Sample;
-  };
   CREATE SCALAR TYPE audit::ActionOutcome EXTENDING enum<fatal, error, warning, information, success>;
   CREATE SCALAR TYPE audit::ActionType EXTENDING enum<C, R, U, D, E>;
   CREATE ABSTRACT TYPE audit::AuditEvent {
@@ -66,4 +41,42 @@ CREATE MIGRATION m17xfniduooadnu5z2ws7karmivnhmlexiat4ezkld7ialnjvsvh2a
       };
   };
   CREATE TYPE audit::SystemAuditEvent EXTENDING audit::AuditEvent;
+  CREATE ABSTRACT TYPE metadata::MetadataIdentifiable {
+      CREATE PROPERTY externalIdentifiers: std::json;
+      CREATE REQUIRED PROPERTY identifier: std::str {
+          CREATE CONSTRAINT std::exclusive ON (std::str_lower(__subject__));
+      };
+  };
+  CREATE SCALAR TYPE metadata::LibraryTypes EXTENDING enum<`10X`, ctDNA, ctTSO, exome, Metagenm, MethylSeq, other, `TSO-DNA`, `TSO-RNA`, WGS, WTS, BiModal>;
+  CREATE SCALAR TYPE metadata::Phenotype EXTENDING enum<normal, tumor, `negative-control`>;
+  CREATE SCALAR TYPE metadata::Quality EXTENDING enum<`very-poor`, poor, good, borderline>;
+  CREATE SCALAR TYPE metadata::WorkflowTypes EXTENDING enum<clinical, research, qc, control, bcl, manual>;
+  CREATE TYPE metadata::Library EXTENDING metadata::MetadataIdentifiable {
+      CREATE PROPERTY assay: std::str;
+      CREATE PROPERTY coverage: std::float32;
+      CREATE PROPERTY phenotype: metadata::Phenotype;
+      CREATE PROPERTY quality: metadata::Quality;
+      CREATE PROPERTY type: metadata::LibraryTypes;
+      CREATE PROPERTY workflow: metadata::WorkflowTypes;
+  };
+  CREATE TYPE metadata::Specimen EXTENDING metadata::MetadataIdentifiable {
+      CREATE MULTI LINK libraries: metadata::Library {
+          ON TARGET DELETE ALLOW;
+      };
+      CREATE PROPERTY source: std::str;
+  };
+  ALTER TYPE metadata::Library {
+      CREATE MULTI LINK specimens_ := (.<libraries[IS metadata::Specimen]);
+  };
+  CREATE TYPE metadata::Subject EXTENDING metadata::MetadataIdentifiable {
+      CREATE MULTI LINK specimens: metadata::Specimen {
+          ON TARGET DELETE ALLOW;
+      };
+  };
+  ALTER TYPE metadata::Library {
+      CREATE MULTI LINK subjects_ := (.<libraries[IS metadata::Specimen].<specimens[IS metadata::Subject]);
+  };
+  ALTER TYPE metadata::Specimen {
+      CREATE MULTI LINK subjects_ := (.<specimens[IS metadata::Subject]);
+  };
 };

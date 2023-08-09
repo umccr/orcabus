@@ -29,8 +29,9 @@ export class App {
     // }
     const edgeDbClient = dc.resolve<Client>('Database');
 
-    await e.delete(e.metadata.Patient).run(edgeDbClient);
-    await e.delete(e.metadata.Sample).run(edgeDbClient);
+    // WARNING: THIS IS DEV MODE
+    await e.delete(e.metadata.Subject).run(edgeDbClient);
+    await e.delete(e.metadata.Specimen).run(edgeDbClient);
     await e.delete(e.metadata.Library).run(edgeDbClient);
 
     await insertScenario1(dc);
