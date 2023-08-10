@@ -7,7 +7,6 @@ import { JWT } from 'google-auth-library';
 import { GetParameterCommand, SSMClient } from '@aws-sdk/client-ssm';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import {
-  insertLibraryQuery,
   selectLibraryByIdQuery,
   selectSpecimenByIdQuery,
   selectSubjectByIdQuery,
@@ -17,7 +16,7 @@ import { systemAuditEventPattern } from '../helpers/audit-helper';
 import { Transaction } from 'edgedb/dist/transaction';
 import {
   insertSpecimenRecord,
-  isSpecimenPropsNeedUpdate,
+  isSpecimenPropsChange,
   updateSpecimenRecord,
 } from '../helpers/metadata/specimen-helper';
 import { LibraryType, insertLibraryRecord } from '../helpers/metadata/library-helper';
@@ -163,10 +162,11 @@ export class MetadataGoogleService {
         }
       );
     }
+    console.log('the specimen', specimen);
 
     // Check if specimen is the same with what we had in record and update if not
     if (
-      isSpecimenPropsNeedUpdate(
+      isSpecimenPropsChange(
         {
           identifier: props.identifier,
           externalIdentifiers: <Record<string, string>>specimen.externalIdentifiers,
@@ -190,7 +190,7 @@ export class MetadataGoogleService {
       );
     }
 
-    // TODO: Check if it links to the correct person or change it
+    // TODO: Check if it links to the correct person or change it if it is not
   }
 
   protected async syncLibrary(props: LibraryType) {
@@ -214,7 +214,7 @@ export class MetadataGoogleService {
 
     // // Check if specimen is the same with what we had in record and update if not
     // if (
-    //   isSpecimenPropsNeedUpdate(
+    //   isSpecimenRecordNeedUpdate(
     //     {
     //       identifier: props.identifier,
     //       externalIdentifiers: <Record<string, string>>specimen.externalIdentifiers,
@@ -274,7 +274,8 @@ export class MetadataGoogleService {
           quality: <metadata.Quality>rec.Quality ? <metadata.Quality>rec.Quality : null,
           type: <metadata.LibraryTypes>rec.Type ? <metadata.LibraryTypes>rec.Type : null,
           assay: rec.Assay ? rec.Assay : null,
-          coverage: rec['Coverage (X)'] ? <number>parseFloat(rec['Coverage (X)']) : null,
+          coverage: rec['Coverage (X)'] ? rec['Coverage (X)'] : null,
+          specimenId: rec.SampleID ? rec.SampleID : undefined,
         });
       }
     }

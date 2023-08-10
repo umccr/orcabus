@@ -32,12 +32,10 @@ module metadata {
         quality: Quality;
         type: LibraryTypes;
         assay: str;
-        coverage: float32;
+        coverage: decimal;
 
         # The backlink to specimens
-        multi link specimens_ := .<libraries[is Specimen];
-        # The backlink to patients
-        multi link subjects_ := .<libraries[is Specimen].<specimens[is Subject];
+        single link specimen: Specimen;
     }
 
     type Specimen extending MetadataIdentifiable {
@@ -47,8 +45,7 @@ module metadata {
         };
 
         # The backlink to patients
-        multi link subjects_ := .<specimens[is Subject];
-
+        multi link subject_ := .<specimens[is Subject];
     }
 
     type Subject extending MetadataIdentifiable {

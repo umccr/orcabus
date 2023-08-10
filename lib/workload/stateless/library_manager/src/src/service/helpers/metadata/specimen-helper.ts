@@ -12,7 +12,7 @@ export type SpecimenType = MetadataIdentifiableType & {
   source: string | null;
 };
 
-export const isSpecimenPropsNeedUpdate = (dbValue: SpecimenType, newValue: SpecimenType) => {
+export const isSpecimenPropsChange = (dbValue: SpecimenType, newValue: SpecimenType) => {
   const old = {
     exId: dbValue.externalIdentifiers,
     source: dbValue.source,
@@ -24,6 +24,8 @@ export const isSpecimenPropsNeedUpdate = (dbValue: SpecimenType, newValue: Speci
 
   return !isEqual(old, new_);
 };
+
+// export const isSpecimenSubjectLinkChange = () => {libraryId};
 
 export const insertSpecimenRecord = async (tx: Transaction, props: SpecimenType) => {
   await insertSpecimenQuery(tx, {

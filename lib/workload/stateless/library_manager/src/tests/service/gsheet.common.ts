@@ -41,7 +41,7 @@ export const METADATA_GOOGLE_OBJ = [
     Assay: 'NebRNA',
     OverrideCycles: 'Y151;I8;I8;Y151',
     Workflow: 'clinical',
-    'Coverage (X)': '6.0',
+    'Coverage (X)': '6.3',
     'TruSeq Index, unless stated': 'Neb2-G07',
     'Run#': 'P30',
     Comments: '',

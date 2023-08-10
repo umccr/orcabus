@@ -7,6 +7,6 @@ select (
     quality := <optional Quality>$quality,
     type := <optional LibraryTypes>$type,
     assay := <optional str>$assay,
-    coverage := <optional float32>$coverage
+    coverage := <optional decimal>$coverage
   }
 ){ * }

@@ -18,7 +18,7 @@ export const systemAuditEventPattern = async <T>(
   actionCategory: ActionType = 'E',
   actionDescription: string,
   transFunc: (tx: Transaction) => Promise<T>
-): Promise<T> => {
+) => {
   const auditEventId = await startSystemAuditEvent(edgeDbClient, actionCategory, actionDescription);
 
   try {
@@ -26,15 +26,12 @@ export const systemAuditEventPattern = async <T>(
       return await transFunc(tx);
     });
     await completeSystemAuditEvent(edgeDbClient, auditEventId, 'success', new Date(), transResult);
-    return transResult;
   } catch (error) {
     const errorString = error instanceof Error ? error.message : String(error);
 
     await completeSystemAuditEvent(edgeDbClient, auditEventId, 'error', new Date(), {
       error: errorString,
     });
-
-    throw error;
   }
 };
 
