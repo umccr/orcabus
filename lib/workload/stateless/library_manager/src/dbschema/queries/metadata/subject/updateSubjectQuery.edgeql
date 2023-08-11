@@ -1,7 +1,12 @@
 select assert_single((
   update metadata::Subject
-  filter .identifier = <str>$subjectId
+  filter 
+    .orcaBusId = <optional str>$orcaBusId
   set {
-    externalIdentifiers := <optional json>$externalIdentifiers
+    internalId := <optional str>$internalId ?? .internalId,
+    externalId := <optional str>$externalId ?? .externalId
   }
-)){ * }
+)){ 
+  *,
+  specimenIds := .specimens.orcaBusId
+}

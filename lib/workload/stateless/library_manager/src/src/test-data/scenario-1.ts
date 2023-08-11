@@ -11,10 +11,10 @@ export default async function insertScenario1(dc: DependencyContainer) {
   // await e
   //   .insert(e.metadata.Patient, {
   //     identifier: 'SUBIDA',
-  //     externalIdentifiers: e.array([e.tuple({ system: 'externalSubjectId', value: 'EXTSUBIDA' })]),
+  //     externalId: e.array([e.tuple({ system: 'externalSubjectId', value: 'EXTSUBIDA' })]),
   //     samples: e.insert(e.metadata.Sample, {
   //       identifier: 'SAMIDA',
-  //       externalIdentifiers: e.array([
+  //       externalId: e.array([
   //         e.tuple({ system: 'externalSampleId', value: 'SAMIDA-EXTSAMA' }),
   //       ]),
   //       source: 'FFPE',
@@ -43,10 +43,10 @@ export default async function insertScenario1(dc: DependencyContainer) {
   // await e
   //   .insert(e.metadata.Patient, {
   //     identifier: 'SUBIDB',
-  //     externalIdentifiers: e.array([e.tuple({ system: 'externalSubjectId', value: 'EXTSUBIDB' })]),
+  //     externalId: e.array([e.tuple({ system: 'externalSubjectId', value: 'EXTSUBIDB' })]),
   //     samples: e.insert(e.metadata.Sample, {
   //       identifier: 'SAMIDB',
-  //       externalIdentifiers: e.array([e.tuple({ system: 'externalSampleId', value: 'EXTSAMB' })]),
+  //       externalId: e.array([e.tuple({ system: 'externalSampleId', value: 'EXTSAMB' })]),
   //       source: 'FFPE',
   //       libraries: e.set(
   //         e.insert(e.metadata.Library, {

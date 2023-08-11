@@ -1,58 +1,49 @@
-import {
-  insertSpecimenQuery,
-  linkSpecimenWithSubject,
-  updateSpecimenQuery,
-} from '../../../../dbschema/queries';
+import { insertSpecimenQuery, updateSpecimenQuery } from '../../../../dbschema/queries';
 import { Transaction } from 'edgedb/dist/transaction';
 import { MetadataIdentifiableType } from './metadata-helper';
 import { isEqual } from 'lodash';
 
 export type SpecimenType = MetadataIdentifiableType & {
-  subjectId?: string | null;
+  subjectOrcaBusId?: string | null;
   source: string | null;
 };
 
-export const isSpecimenPropsChange = (dbValue: SpecimenType, newValue: SpecimenType) => {
+export const isSpecimenPropsChange = (
+  dbValue: Partial<SpecimenType>,
+  newValue: Partial<SpecimenType>
+) => {
   const old = {
-    exId: dbValue.externalIdentifiers,
+    inId: dbValue.internalId,
+    exId: dbValue.externalId,
     source: dbValue.source,
+    subjectOrcaBusId: dbValue.subjectOrcaBusId,
   };
   const new_ = {
-    exId: newValue.externalIdentifiers,
+    inId: newValue.internalId,
+    exId: newValue.externalId,
     source: newValue.source,
+    subjectOrcaBusId: newValue.subjectOrcaBusId,
   };
 
   return !isEqual(old, new_);
 };
 
-// export const isSpecimenSubjectLinkChange = () => {libraryId};
-
 export const insertSpecimenRecord = async (tx: Transaction, props: SpecimenType) => {
-  await insertSpecimenQuery(tx, {
-    specimenId: props.identifier,
-    externalIdentifiers: props.externalIdentifiers,
+  return await insertSpecimenQuery(tx, {
+    orcaBusId: props.orcaBusId,
+    internalId: props.internalId,
+    externalId: props.externalId,
     source: props.source,
+    subjectOrcaBusId: props.subjectOrcaBusId,
   });
-  if (props.subjectId) {
-    await linkSpecimenWithSubject(tx, {
-      subjectId: props.subjectId,
-      specimenId: props.identifier,
-    });
-  }
-  return props;
 };
+
 export const updateSpecimenRecord = async (tx: Transaction, props: SpecimenType) => {
-  // TODO: Concern could raise to update linked that has been link previously
-  await updateSpecimenQuery(tx, {
-    specimenId: props.identifier,
-    externalIdentifiers: props.externalIdentifiers,
+  return await updateSpecimenQuery(tx, {
+    orcaBusId: props.orcaBusId,
+    internalId: props.internalId,
+    externalId: props.externalId,
     source: props.source,
+    subjectOrcaBusId: props.subjectOrcaBusId,
   });
-  if (props.subjectId) {
-    await linkSpecimenWithSubject(tx, {
-      subjectId: props.subjectId,
-      specimenId: props.identifier,
-    });
-  }
-  return props;
 };

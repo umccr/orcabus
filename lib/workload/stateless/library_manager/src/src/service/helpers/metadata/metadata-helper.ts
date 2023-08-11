@@ -1,4 +1,5 @@
 export type MetadataIdentifiableType = {
-  identifier: string;
-  externalIdentifiers?: Record<string, string> | null;
+  orcaBusId: string;
+  internalId: string;
+  externalId?: string | null;
 };

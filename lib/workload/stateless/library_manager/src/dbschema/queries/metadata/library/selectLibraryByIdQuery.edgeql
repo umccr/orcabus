@@ -1,4 +1,7 @@
 select assert_single((
-  select metadata::Library{ ** }
-  filter .identifier = <str>$libraryId
+  select metadata::Library{ 
+    *,
+    specimenId := .specimen.internalId 
+  }
+  filter .internalId = <str>$libraryId
 ))

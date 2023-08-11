@@ -19,7 +19,8 @@
     "pino-pretty": "^10.1.0",
     "reflect-metadata": "^0.1.13",
     "ts-node": "^10.9.1",
-    "tsyringe": "^4.8.0"
+    "tsyringe": "^4.8.0",
+    "ulid": "^2.3.0"
   },
   "devDependencies": {
     "@edgedb/generate": "^0.3.1",

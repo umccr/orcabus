@@ -1,7 +1,9 @@
 select assert_single((
   select metadata::Specimen{ 
     *,
-    subjectId := .subject_.identifier
+    subjectId := .subject.orcaBusId,
+    libraryIds := .libraries.orcaBusId
   }
-  filter .identifier = <str>$specimenId
+  filter
+      .internalId = <optional str>$internalId
 ))

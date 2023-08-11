@@ -1,6 +1,7 @@
 select (
   insert metadata::Subject {
-    identifier := <str>$subjectId,
-    externalIdentifiers := <optional json>$externalIdentifiers
+    orcaBusId := <str>$orcaBusId,
+    internalId := <str>$internalId,
+    externalId := <optional str>$externalId
   }
 ){ * }

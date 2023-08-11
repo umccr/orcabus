@@ -20,10 +20,13 @@ module metadata {
     >;
 
     abstract type MetadataIdentifiable {
-        required identifier: str {
+        required orcaBusId: str {
             constraint exclusive on (str_lower(__subject__));
         };
-        externalIdentifiers: json;
+        required internalId: str {
+            constraint exclusive on (str_lower(__subject__));
+        };
+        externalId: str;
     }
 
     type Library extending MetadataIdentifiable {
@@ -34,24 +37,28 @@ module metadata {
         assay: str;
         coverage: decimal;
 
-        # The backlink to specimens
-        single link specimen: Specimen;
+        single link specimen: Specimen {
+            on target delete allow
+        };
+
     }
 
     type Specimen extending MetadataIdentifiable {
         source: str;
-        multi libraries: Library {
+
+        # Defining this to link to a single subject where it is possible to be multiple
+        # If from GSheet, how to tell if this specimen change subject OR addition to current one
+        single subject: Subject {
             on target delete allow
         };
 
-        # The backlink to patients
-        multi link subject_ := .<specimens[is Subject];
+        # The backlink to all libraries that are connected
+        multi link libraries := .<specimen[is Library];
     }
 
     type Subject extending MetadataIdentifiable {
-        multi specimens: Specimen {
-            on target delete allow
-        };
+        # The backlink to the specimens that are connected
+        multi link specimens := .<subject[is Specimen];
     }
 
 }

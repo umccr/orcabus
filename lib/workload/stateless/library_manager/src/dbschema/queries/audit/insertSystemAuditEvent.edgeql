@@ -9,5 +9,5 @@ insert SystemAuditEvent {
   occurredDateTime := <optional datetime>$occurredDateTime ?? datetime_current(),
   details := <optional json>$details ?? {},
   inProgress := <optional bool>$inProgress ?? false
-  
+
 };

@@ -1,4 +1,5 @@
 import { Client } from 'edgedb';
+import { ulid } from 'ulid';
 import { metadata } from '../../../dbschema/interfaces';
 import { isEqual } from 'lodash';
 import { inject, injectable } from 'tsyringe';
@@ -11,7 +12,11 @@ import {
   selectSpecimenByIdQuery,
   selectSubjectByIdQuery,
 } from '../../../dbschema/queries';
-import { insertSubjectRecord, updateSubjectRecord } from '../helpers/metadata/subject-helper';
+import {
+  hasSubjectRecordChange,
+  insertSubjectRecord,
+  updateSubjectRecord,
+} from '../helpers/metadata/subject-helper';
 import { systemAuditEventPattern } from '../helpers/audit-helper';
 import { Transaction } from 'edgedb/dist/transaction';
 import {
@@ -19,7 +24,12 @@ import {
   isSpecimenPropsChange,
   updateSpecimenRecord,
 } from '../helpers/metadata/specimen-helper';
-import { LibraryType, insertLibraryRecord } from '../helpers/metadata/library-helper';
+import {
+  LibraryType,
+  insertLibraryRecord,
+  isLibraryRecordNeedUpdate,
+  updateLibraryRecord,
+} from '../helpers/metadata/library-helper';
 
 const GDRIVE_SERVICE_ACCOUNT = '/umccr/google/drive/lims_service_account_json';
 const TRACKING_SHEET_ID = '/umccr/google/drive/tracking_sheet_id';
@@ -54,10 +64,6 @@ export class MetadataGoogleService {
     @inject('Logger') private readonly logger: Logger,
     @inject('SSMClient') private readonly ssmClient: SSMClient
   ) {}
-
-  private convertExIdToDbFormat(exId: string | null) {
-    return exId ? { externalSubjectId: exId } : undefined;
-  }
 
   private async getParameterValue(parameterString: string) {
     const input = {
@@ -95,11 +101,9 @@ export class MetadataGoogleService {
     );
   }
 
-  protected async syncSubject(props: { identifier: string; externalIdentifiers: string | null }) {
-    const convertedExId = this.convertExIdToDbFormat(props.externalIdentifiers);
-
+  protected async syncSubject(props: { internalId: string; externalId: string | null }) {
     const subject = await selectSubjectByIdQuery(this.edgeDbClient, {
-      subjectId: props.identifier,
+      internalId: props.internalId,
     });
 
     // If subject does not exist => insert one
@@ -107,11 +111,12 @@ export class MetadataGoogleService {
       return systemAuditEventPattern(
         this.edgeDbClient,
         'C',
-        `Insert new subject record: ${props.identifier}`,
+        `Insert new subject record: ${props.internalId}`,
         async (tx: Transaction) => {
           const r = await insertSubjectRecord(tx, {
-            identifier: props.identifier,
-            externalIdentifiers: convertedExId,
+            orcaBusId: `sbj.${ulid()}`,
+            internalId: props.internalId,
+            externalId: props.externalId,
           });
           return r;
         }
@@ -119,126 +124,143 @@ export class MetadataGoogleService {
     }
 
     // Check if there it is the same with what we had in record and update if not
-    if (!isEqual(convertedExId, subject.externalIdentifiers)) {
+    if (hasSubjectRecordChange(subject, props)) {
       return systemAuditEventPattern(
         this.edgeDbClient,
         'U',
-        `Update existing subject record: ${props.identifier}`,
+        `Update existing subject record: ${props.internalId}`,
         async (tx: Transaction) => {
           const r = await updateSubjectRecord(tx, {
-            identifier: props.identifier,
-            externalIdentifiers: convertedExId,
+            orcaBusId: subject.orcaBusId,
+            internalId: props.internalId,
+            externalId: props.externalId,
           });
           return r;
         }
       );
     }
+    return subject;
   }
 
   protected async syncSpecimen(props: {
-    identifier: string;
-    externalIdentifiers: string | null;
-    subjectId: string | null;
+    internalId: string;
+    externalId: string | null;
+    subjectOrcaBusId?: string;
     source: string | null;
   }) {
-    const convertedExId = this.convertExIdToDbFormat(props.externalIdentifiers);
     const specimen = await selectSpecimenByIdQuery(this.edgeDbClient, {
-      specimenId: props.identifier,
+      internalId: props.internalId,
     });
+
     // If subject does not exist => insert one
     if (!specimen) {
       return systemAuditEventPattern(
         this.edgeDbClient,
         'C',
-        `Insert new specimen record: ${props.identifier}`,
+        `Insert new specimen record: ${props.internalId}`,
         async (tx: Transaction) => {
           const r = await insertSpecimenRecord(tx, {
-            identifier: props.identifier,
-            externalIdentifiers: convertedExId,
-            subjectId: props.subjectId,
+            orcaBusId: `spc.${ulid()}`,
+            internalId: props.internalId,
+            externalId: props.externalId,
+            subjectOrcaBusId: props.subjectOrcaBusId,
             source: props.source,
           });
           return r;
         }
       );
     }
-    console.log('the specimen', specimen);
 
     // Check if specimen is the same with what we had in record and update if not
     if (
       isSpecimenPropsChange(
         {
-          identifier: props.identifier,
-          externalIdentifiers: <Record<string, string>>specimen.externalIdentifiers,
+          internalId: specimen.internalId,
+          externalId: specimen.externalId,
           source: specimen.source,
+          subjectOrcaBusId: specimen.subjectId,
         },
-        { ...props, externalIdentifiers: convertedExId }
+        { ...props }
       )
     ) {
       return systemAuditEventPattern(
         this.edgeDbClient,
         'U',
-        `Update existing specimen record: ${props.identifier}`,
+        `Update existing specimen record: ${props.internalId}`,
         async (tx: Transaction) => {
           const r = await updateSpecimenRecord(tx, {
-            identifier: props.identifier,
-            externalIdentifiers: convertedExId,
+            orcaBusId: specimen.orcaBusId,
+            internalId: props.internalId,
+            externalId: props.externalId,
             source: props.source,
+            subjectOrcaBusId: props.subjectOrcaBusId,
           });
           return r;
         }
       );
     }
-
-    // TODO: Check if it links to the correct person or change it if it is not
+    return specimen;
   }
 
-  protected async syncLibrary(props: LibraryType) {
+  protected async syncLibrary(props: {
+    internalId: string;
+    phenotype: metadata.Phenotype | null;
+    workflow: metadata.WorkflowTypes | null;
+    quality: metadata.Quality | null;
+    type: metadata.LibraryTypes | null;
+    assay: string | null;
+    coverage: string | null;
+    specimenId?: string;
+  }) {
     const library = await selectLibraryByIdQuery(this.edgeDbClient, {
-      libraryId: props.identifier,
+      libraryId: props.internalId,
     });
     // If library does not exist => insert one
     if (!library) {
       return systemAuditEventPattern(
         this.edgeDbClient,
         'C',
-        `Insert new library record: ${props.identifier}`,
+        `Insert new library record: ${props.internalId}`,
         async (tx: Transaction) => {
           const r = await insertLibraryRecord(tx, {
-            ...props,
+            orcaBusId: `lib.${ulid()}`,
+            internalId: props.internalId,
+            phenotype: props.phenotype,
+            workflow: props.workflow,
+            quality: props.quality,
+            type: props.type,
+            assay: props.assay,
+            coverage: props.coverage,
+            specimenOrcaBusId: props.specimenId,
           });
           return r;
         }
       );
     }
 
-    // // Check if specimen is the same with what we had in record and update if not
-    // if (
-    //   isSpecimenRecordNeedUpdate(
-    //     {
-    //       identifier: props.identifier,
-    //       externalIdentifiers: <Record<string, string>>specimen.externalIdentifiers,
-    //       source: specimen.source,
-    //     },
-    //     { ...props, externalIdentifiers: convertedExId }
-    //   )
-    // ) {
-    //   return systemAuditEventPattern(
-    //     this.edgeDbClient,
-    //     'U',
-    //     `Update existing specimen record: ${props.identifier}`,
-    //     async (tx: Transaction) => {
-    //       const r = await updateSpecimenRecord(tx, {
-    //         identifier: props.identifier,
-    //         externalIdentifiers: convertedExId,
-    //         source: props.source,
-    //       });
-    //       return r;
-    //     }
-    //   );
-    // }
-
-    // TODO: Check if it links to the correct person or change it
+    // Check if specimen is the same with what we had in record and update if not
+    if (isLibraryRecordNeedUpdate(library, props)) {
+      return systemAuditEventPattern(
+        this.edgeDbClient,
+        'U',
+        `Update existing specimen record: ${props.internalId}`,
+        async (tx: Transaction) => {
+          const r = await updateLibraryRecord(tx, {
+            orcaBusId: library.orcaBusId,
+            internalId: props.internalId,
+            phenotype: props.phenotype,
+            workflow: props.workflow,
+            quality: props.quality,
+            type: props.type,
+            assay: props.assay,
+            coverage: props.coverage,
+            specimenOrcaBusId: props.specimenId,
+          });
+          return r;
+        }
+      );
+    }
+    return library;
   }
 
   public async syncGoogleMetadataRecords(
@@ -246,27 +268,27 @@ export class MetadataGoogleService {
   ) {
     for (const rec of sheetRecords) {
       // Sync subject
-      if (rec.SubjectID) {
-        await this.syncSubject({
-          identifier: rec.SubjectID,
-          externalIdentifiers: rec.ExternalSubjectID ?? null,
-        });
-      }
+      const subject = rec.SubjectID
+        ? await this.syncSubject({
+            internalId: rec.SubjectID,
+            externalId: rec.ExternalSubjectID ?? null,
+          })
+        : undefined;
 
       // Sync Sample
-      if (rec.SampleID) {
-        await this.syncSpecimen({
-          identifier: rec.SampleID,
-          externalIdentifiers: rec.ExternalSampleID ?? null,
-          subjectId: rec.SubjectID ?? null,
-          source: rec.Source ?? null,
-        });
-      }
+      const sample = rec.SampleID
+        ? await this.syncSpecimen({
+            internalId: rec.SampleID,
+            externalId: rec.ExternalSampleID ?? null,
+            subjectOrcaBusId: subject?.orcaBusId,
+            source: rec.Source ?? null,
+          })
+        : undefined;
 
       // Sync Library
       if (rec.LibraryID) {
         await this.syncLibrary({
-          identifier: rec.LibraryID,
+          internalId: rec.LibraryID,
           phenotype: <metadata.Phenotype>rec.Phenotype ? <metadata.Phenotype>rec.Phenotype : null,
           workflow: <metadata.WorkflowTypes>rec.Workflow
             ? <metadata.WorkflowTypes>rec.Workflow
@@ -275,7 +297,7 @@ export class MetadataGoogleService {
           type: <metadata.LibraryTypes>rec.Type ? <metadata.LibraryTypes>rec.Type : null,
           assay: rec.Assay ? rec.Assay : null,
           coverage: rec['Coverage (X)'] ? rec['Coverage (X)'] : null,
-          specimenId: rec.SampleID ? rec.SampleID : undefined,
+          specimenId: sample?.orcaBusId,
         });
       }
     }
