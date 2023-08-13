@@ -6,13 +6,14 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::error::Result;
 
+use crate::error::Error::NotFound;
 use tracing::info;
 //type Store = Mutex<Vec<File>>;
 // TODO: SQLx is the store backend, through db.rs
 
 /// Converts generic file attributes into concrete storage backend ones
 pub trait FileAdapter {
-    // /// Find 
+    // /// Find
     // fn find(&self, query: Query, attr: Option<Attributes>) -> Result<File>;
 
     /// Filter by subjects, name, phenotype, etc...
@@ -24,13 +25,13 @@ pub trait FileAdapter {
 pub enum Attributes {
     Name(String),
     SubjectId(String),
-    Phenotype(Phenotype)
+    Phenotype(Phenotype),
 }
 
 #[derive(Debug)]
 pub enum Phenotype {
     Tumor,
-    Normal
+    Normal,
 }
 
 /// Item to do.
@@ -73,14 +74,16 @@ pub enum FileError {
         (status = 200, description = "List matching objects", body = [File])
     )
 )]
-pub async fn search(query: Query<File>) -> Result<Json<Vec<File>>, Box<dyn Error>> {
+pub async fn search(query: Query<File>) -> Result<Json<Vec<File>>> {
     info!("searching {:?}", query.name);
-    let res = crate::db::s3_query_something(query.name.clone()).await?;
+    let res = crate::db::s3_query_something(query.name.clone())
+        .await
+        .map_err(|e| NotFound(e.to_string()))?;
 
-    Json(vec![File {
+    Ok(Json(vec![File {
         id: 1,
         name: query.name.clone(),
         size: 1,
         hash: "Moo".to_string(),
-    }])
+    }]))
 }

@@ -1,8 +1,10 @@
 use std::env;
+use std::error::Error;
 
+use crate::error;
 use sqlx::{mysql::MySqlPool, FromRow};
 
-use crate::file::FileAdapter;
+use crate::file::{Attributes, File, FileAdapter};
 
 // #[derive(Debug, FromRow)]
 // struct GDS {
@@ -18,18 +20,19 @@ use crate::file::FileAdapter;
 
 #[derive(Debug, FromRow)]
 pub struct S3 {
-    pub id: i64,            // TODO: Should be unsigned?
+    pub id: i64, // TODO: Should be unsigned?
     pub bucket: String,
     pub key: String,
-    pub size: i64,          // TODO: Another type than unsigned int for size?
+    pub size: i64, // TODO: Another type than unsigned int for size?
     pub last_modified_date: chrono::DateTime<chrono::Utc>,
     pub etag: String,
     pub unique_hash: String,
 }
 
 impl FileAdapter for S3 {
-    fn find(&self, query: Attributes) -> Result<Vec<File>> {
-        // Ok(vec![File { 
+    fn find(&self, query: Attributes) -> error::Result<Vec<File>> {
+        todo!();
+        // Ok(vec![File {
         //     id: self.id,
 
         // }])
@@ -41,22 +44,23 @@ pub async fn s3_query_something(name: String) -> Result<Vec<S3>, sqlx::Error> {
     let db_url = env::var("DATABASE_URL");
     let pool = MySqlPool::connect(db_url.unwrap_or_default().as_str()).await?;
 
-    let key = "foo";
-    let objects = sqlx::query_as!(
-        S3,
-        "
-        SELECT  data_portal_s3object.id, data_portal_s3object.bucket, data_portal_s3object.key, \
-                data_portal_s3object.size, data_portal_s3object.last_modified_date, data_portal_s3object.unique_hash
-        FROM data_portal_s3object
-        WHERE data_portal_s3object.key = ?
-        LIMIT 10;
-        ",
-        key
-    )
-    .fetch_all(&pool)
-    .await?;
-
-    Ok(objects)
+    todo!();
+    // let key = "foo";
+    // let objects = sqlx::query_as!(
+    //     S3,
+    //     "
+    //     SELECT  data_portal_s3object.id, data_portal_s3object.bucket, data_portal_s3object.key, \
+    //             data_portal_s3object.size, data_portal_s3object.last_modified_date, data_portal_s3object.unique_hash
+    //     FROM data_portal_s3object
+    //     WHERE data_portal_s3object.key = ?
+    //     LIMIT 10;
+    //     ",
+    //     key
+    // )
+    // .fetch_all(&pool)
+    // .await?;
+    //
+    // Ok(objects)
 }
 
 pub async fn plain_query() -> Result<(), sqlx::Error> {
