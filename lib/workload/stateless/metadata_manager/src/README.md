@@ -29,6 +29,12 @@ To install the dependency of this project
 yarn
 ```
 
+Setup the database
+```
+yarn init-db
+yarn migrate-db
+```
+
 #### Build
 ```yarn edgetypes```
 

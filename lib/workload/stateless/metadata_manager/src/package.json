@@ -4,6 +4,8 @@
   "scripts": {
     "watch": "NODE_ENV=development nodemon src/index.ts",
     "typecheck": "tsc -p tsconfig.json",
+    "init-db": "edgedb project init",
+    "migrate-db": "edgedb migration create || true && edgedb migrate",
     "start": "NODE_ENV=development ts-node src/index.ts",
     "//edgetypes": "Generates Typescript classes that match the schema of the *current* project EdgeDb",
     "edgetypes": "generate queries --file && generate edgeql-js && generate interfaces",
