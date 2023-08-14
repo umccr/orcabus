@@ -1,4 +1,4 @@
-CREATE MIGRATION m14vf3waihiiikrgj7qq2562gluv6lkccinx7brmt5gfz4lubk7vca
+CREATE MIGRATION m1gwyr7syw4wgds4mz3jflyrnljxi6r64jzvd6ccko6olwo3erqj4a
     ONTO initial
 {
   CREATE MODULE audit IF NOT EXISTS;
@@ -42,8 +42,11 @@ CREATE MIGRATION m14vf3waihiiikrgj7qq2562gluv6lkccinx7brmt5gfz4lubk7vca
   };
   CREATE TYPE audit::SystemAuditEvent EXTENDING audit::AuditEvent;
   CREATE ABSTRACT TYPE metadata::MetadataIdentifiable {
-      CREATE PROPERTY externalIdentifiers: std::json;
-      CREATE REQUIRED PROPERTY identifier: std::str {
+      CREATE PROPERTY externalId: std::str;
+      CREATE REQUIRED PROPERTY internalId: std::str {
+          CREATE CONSTRAINT std::exclusive ON (std::str_lower(__subject__));
+      };
+      CREATE REQUIRED PROPERTY orcaBusId: std::str {
           CREATE CONSTRAINT std::exclusive ON (std::str_lower(__subject__));
       };
   };
@@ -53,30 +56,30 @@ CREATE MIGRATION m14vf3waihiiikrgj7qq2562gluv6lkccinx7brmt5gfz4lubk7vca
   CREATE SCALAR TYPE metadata::WorkflowTypes EXTENDING enum<clinical, research, qc, control, bcl, manual>;
   CREATE TYPE metadata::Library EXTENDING metadata::MetadataIdentifiable {
       CREATE PROPERTY assay: std::str;
-      CREATE PROPERTY coverage: std::float32;
+      CREATE PROPERTY coverage: std::decimal;
       CREATE PROPERTY phenotype: metadata::Phenotype;
       CREATE PROPERTY quality: metadata::Quality;
       CREATE PROPERTY type: metadata::LibraryTypes;
       CREATE PROPERTY workflow: metadata::WorkflowTypes;
   };
   CREATE TYPE metadata::Specimen EXTENDING metadata::MetadataIdentifiable {
-      CREATE MULTI LINK libraries: metadata::Library {
-          ON TARGET DELETE ALLOW;
-      };
       CREATE PROPERTY source: std::str;
   };
   ALTER TYPE metadata::Library {
-      CREATE MULTI LINK specimens_ := (.<libraries[IS metadata::Specimen]);
-  };
-  CREATE TYPE metadata::Subject EXTENDING metadata::MetadataIdentifiable {
-      CREATE MULTI LINK specimens: metadata::Specimen {
+      CREATE SINGLE LINK specimen: metadata::Specimen {
           ON TARGET DELETE ALLOW;
       };
   };
-  ALTER TYPE metadata::Library {
-      CREATE MULTI LINK subjects_ := (.<libraries[IS metadata::Specimen].<specimens[IS metadata::Subject]);
-  };
   ALTER TYPE metadata::Specimen {
-      CREATE MULTI LINK subjects_ := (.<specimens[IS metadata::Subject]);
+      CREATE MULTI LINK libraries := (.<specimen[IS metadata::Library]);
+  };
+  CREATE TYPE metadata::Subject EXTENDING metadata::MetadataIdentifiable;
+  ALTER TYPE metadata::Specimen {
+      CREATE SINGLE LINK subject: metadata::Subject {
+          ON TARGET DELETE ALLOW;
+      };
+  };
+  ALTER TYPE metadata::Subject {
+      CREATE MULTI LINK specimens := (.<subject[IS metadata::Specimen]);
   };
 };

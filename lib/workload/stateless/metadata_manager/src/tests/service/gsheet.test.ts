@@ -3,6 +3,7 @@ import { MetadataGoogleService } from '../../src/service/loader-method/googleShe
 import { METADATA_GOOGLE_OBJ } from './gsheet.common';
 import { Client } from 'edgedb';
 import { resetDb } from './utils';
+import { isEqual } from 'lodash';
 
 const testContainer = registerTypes();
 let edgeDbClient: Client;

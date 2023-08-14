@@ -1,7 +1,6 @@
 import { Client } from 'edgedb';
 import { ulid } from 'ulid';
 import { metadata } from '../../../dbschema/interfaces';
-import { isEqual } from 'lodash';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from 'pino';
 import { JWT } from 'google-auth-library';
@@ -94,8 +93,9 @@ export class MetadataGoogleService {
     await doc.loadInfo();
 
     const sheet = doc.sheetsByTitle[sheetTitle];
-    const rows = await sheet.getRows();
+    if (!sheet) throw new Error(`No sheet found with title: ${sheetTitle}`);
 
+    const rows = await sheet.getRows();
     return rows.map(
       (row) => <Record<GoogleMetadataTrackingHeader, string | undefined>>row.toObject()
     );
@@ -303,6 +303,18 @@ export class MetadataGoogleService {
     }
   }
 
-  // async downloadGoogleSpreadsheet() {}
+  public async downloadGoogleMetadata() {
+    let year = YEAR_START;
+    for (;;) {
+      try {
+        // TODO: Deal with deletion!!!
+        const metadata_object = await this.getSheetObject(year.toString());
+        this.syncGoogleMetadataRecords(metadata_object);
+        year += 1;
+      } catch (error) {
+        break;
+      }
+    }
+  }
 }
 // What if a person is half filling and value not completed yet?
