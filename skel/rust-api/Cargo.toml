@@ -27,3 +27,4 @@ async-trait = "0.1"
 # S3 Dependencies
 aws-config = "0.56"
 aws-sdk-s3 = "0.29"
+aws-sdk-sqs = "0.29"

@@ -1,12 +1,12 @@
 use crate::error::Error::DbClientError;
 use crate::error::Result;
-use chrono::{DateTime, Utc, NaiveDateTime};
+use crate::events::s3::EventMessage;
+use aws_sdk_s3::operation::head_object::HeadObjectOutput;
+use aws_sdk_s3::types::StorageClass;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::QueryBuilder;
 use sqlx::{mysql::MySqlPool, FromRow, MySql};
-use aws_sdk_s3::types::StorageClass;
-use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 
-use crate::events::EventMessage;
 use crate::file::Attributes;
 use crate::file::File;
 use crate::file::FileAdapter;
@@ -59,11 +59,16 @@ impl DbClient {
             e_tag: record.s3.object.e_tag.clone(),
             last_modified_date: record.head.clone().map(Self::get_datetime).flatten(),
             // owner: record.head.map(|head| head.metadata().)
-            storage_class: record.head.clone().map(|head| head.storage_class().cloned()).flatten()
+            storage_class: record
+                .head
+                .clone()
+                .map(|head| head.storage_class().cloned())
+                .flatten(),
         });
 
-        let mut query_builder: QueryBuilder<MySql> =
-            QueryBuilder::new("INSERT INTO s3(bucket, `key`, size, e_tag, last_modified_date, storage_class) ");
+        let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
+            "INSERT INTO s3(bucket, `key`, size, e_tag, last_modified_date, storage_class) ",
+        );
 
         query_builder.push_values(s3, |mut b, s3| {
             b.push_bind(s3.bucket)
@@ -71,7 +76,10 @@ impl DbClient {
                 .push_bind(s3.size)
                 .push_bind(s3.e_tag)
                 .push_bind(s3.last_modified_date)
-                .push_bind(s3.storage_class.map(|storage_class| storage_class.as_str().to_string()));
+                .push_bind(
+                    s3.storage_class
+                        .map(|storage_class| storage_class.as_str().to_string()),
+                );
         });
 
         let res = query_builder.build().execute(&pool).await?.last_insert_id();

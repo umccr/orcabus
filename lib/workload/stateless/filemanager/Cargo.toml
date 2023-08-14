@@ -25,9 +25,9 @@ thiserror = "1.0"
 async-trait = "0.1"
 
 # AWS
-aws-sdk-sqs = "0.28"
-aws-config = "0.55"
-aws-sdk-s3 = "0.28"
+aws-sdk-sqs = "0.29"
+aws-config = "0.56"
+aws-sdk-s3 = "0.29"
 futures = "0.3.28"
 #lambda_http = "0.8.0"
 #lambda_runtime = "0.8.0"

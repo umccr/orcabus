@@ -1,16 +1,18 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
 use axum::{routing, Router, Server};
+use futures::future::join_all;
 use hyper::Error;
 
-use filemanager::env;
 use filemanager::file;
 use filemanager::security::ApiDoc;
+use filemanager::{env, error};
 
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use filemanager::events::SQSClient;
+use filemanager::db::DbClient;
+use filemanager::events::s3::Receiver;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
 
@@ -41,10 +43,15 @@ async fn main() -> Result<(), Error> {
     // let db_result = filemanager::db::s3_query_something("Marko".to_string()).await;
     // dbg!(&db_result);
 
+    let sqs_client = Receiver::with_default_client().await.unwrap();
 
-    let sqs_client = SQSClient::with_default_client().await.unwrap();
-    sqs_client.receive().await.unwrap();
+    let events = sqs_client.receive().await.unwrap();
+    println!("{:?}", events);
 
+    let database = DbClient::with_default_client().await.unwrap();
+    for event in events {
+        database.ingest_s3_event(event).await.unwrap();
+    }
 
     let app = Router::new()
         // TODO: Have this swagger/openapi path enabled via (non-default?) feature flag

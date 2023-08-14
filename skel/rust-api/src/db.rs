@@ -18,6 +18,17 @@ use crate::file::{Attributes, File, FileAdapter};
 //     // time_archived: chrono::DateTime<chrono::Utc>,
 // }
 
+#[derive(Debug, FromRow)]
+pub struct S3 {
+    pub id: i64, // TODO: Should be unsigned?
+    pub bucket: String,
+    pub key: String,
+    pub size: i64, // TODO: Another type than unsigned int for size?
+    pub last_modified_date: chrono::DateTime<chrono::Utc>,
+    pub etag: String,
+    pub unique_hash: String,
+}
+
 impl FileAdapter for S3 {
     fn find(&self, query: Attributes) -> error::Result<Vec<File>> {
         todo!();
