@@ -1,12 +1,11 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
 use axum::{routing, Router, Server};
-use futures::future::join_all;
 use hyper::Error;
 
 use filemanager::file;
 use filemanager::security::ApiDoc;
-use filemanager::{env, error};
+use filemanager::env;
 
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;

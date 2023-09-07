@@ -1,0 +1,21 @@
+[package]
+name = "filemanager-http-axum"
+description = "This crate is a locally running instance of the filemanager api"
+version = "0.1.0"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+axum = "0.6"
+hyper = { version = "0.14", features = ["full"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+utoipa = { version = "3", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "3", features = ["axum"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tower = "0.4"
+tower-http = { version = "0.4", features = ["trace"] }
+futures = "0.3.28"
+
+filemanager = { path = "../filemanager" }
