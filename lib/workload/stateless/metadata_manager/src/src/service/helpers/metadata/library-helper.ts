@@ -14,7 +14,7 @@ export type LibraryType = MetadataIdentifiableType & {
   specimenOrcaBusId?: string;
 };
 
-export const isLibraryRecordNeedUpdate = (
+export const isLibraryIdentical = (
   dbValue: Partial<LibraryType>,
   newValue: Partial<LibraryType>
 ) => {

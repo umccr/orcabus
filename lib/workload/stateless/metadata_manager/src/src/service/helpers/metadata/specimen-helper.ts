@@ -8,7 +8,7 @@ export type SpecimenType = MetadataIdentifiableType & {
   source: string | null;
 };
 
-export const isSpecimenPropsChange = (
+export const isSpecimenIdentical = (
   dbValue: Partial<SpecimenType>,
   newValue: Partial<SpecimenType>
 ) => {

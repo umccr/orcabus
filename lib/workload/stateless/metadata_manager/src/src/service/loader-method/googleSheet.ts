@@ -12,7 +12,7 @@ import {
   selectSubjectByIdQuery,
 } from '../../../dbschema/queries';
 import {
-  hasSubjectRecordChange,
+  isSubjectIdentical,
   insertSubjectRecord,
   updateSubjectRecord,
 } from '../helpers/metadata/subject-helper';
@@ -20,13 +20,13 @@ import { systemAuditEventPattern } from '../helpers/audit-helper';
 import { Transaction } from 'edgedb/dist/transaction';
 import {
   insertSpecimenRecord,
-  isSpecimenPropsChange,
+  isSpecimenIdentical,
   updateSpecimenRecord,
 } from '../helpers/metadata/specimen-helper';
 import {
   LibraryType,
   insertLibraryRecord,
-  isLibraryRecordNeedUpdate,
+  isLibraryIdentical,
   updateLibraryRecord,
 } from '../helpers/metadata/library-helper';
 
@@ -73,6 +73,11 @@ export class MetadataGoogleService {
     return (await this.ssmClient.send(command)).Parameter?.Value;
   }
 
+  /**
+   * Get SpreadSheet values from Google Drive
+   * @param sheetTitle
+   * @returns
+   */
   public async getSheetObject(
     sheetTitle: string
   ): Promise<Record<GoogleMetadataTrackingHeader, string | undefined>[]> {
@@ -101,6 +106,11 @@ export class MetadataGoogleService {
     );
   }
 
+  /**
+   * Insert or Update for the subject specified in the properties
+   * @param props
+   * @returns
+   */
   protected async syncSubject(props: { internalId: string; externalId: string | null }) {
     const subject = await selectSubjectByIdQuery(this.edgeDbClient, {
       internalId: props.internalId,
@@ -124,7 +134,7 @@ export class MetadataGoogleService {
     }
 
     // Check if there it is the same with what we had in record and update if not
-    if (hasSubjectRecordChange(subject, props)) {
+    if (isSubjectIdentical(subject, props)) {
       return systemAuditEventPattern(
         this.edgeDbClient,
         'U',
@@ -142,6 +152,11 @@ export class MetadataGoogleService {
     return subject;
   }
 
+  /**
+   * Insert or Update for the specimen specified in the properties
+   * @param props
+   * @returns
+   */
   protected async syncSpecimen(props: {
     internalId: string;
     externalId: string | null;
@@ -173,7 +188,7 @@ export class MetadataGoogleService {
 
     // Check if specimen is the same with what we had in record and update if not
     if (
-      isSpecimenPropsChange(
+      isSpecimenIdentical(
         {
           internalId: specimen.internalId,
           externalId: specimen.externalId,
@@ -202,6 +217,11 @@ export class MetadataGoogleService {
     return specimen;
   }
 
+  /**
+   * Insert or Update for the library specified in the properties
+   * @param props
+   * @returns
+   */
   protected async syncLibrary(props: {
     internalId: string;
     phenotype: metadata.Phenotype | null;
@@ -239,7 +259,7 @@ export class MetadataGoogleService {
     }
 
     // Check if specimen is the same with what we had in record and update if not
-    if (isLibraryRecordNeedUpdate(library, props)) {
+    if (isLibraryIdentical(library, props)) {
       return systemAuditEventPattern(
         this.edgeDbClient,
         'U',
@@ -263,6 +283,12 @@ export class MetadataGoogleService {
     return library;
   }
 
+  /**
+   * Sync Google Metadata record
+   *
+   * NOTE (in DEV): Does not handle deletion (from gsheet) and if record is half filled.
+   * @param sheetRecords
+   */
   public async syncGoogleMetadataRecords(
     sheetRecords: Record<GoogleMetadataTrackingHeader, string | undefined>[]
   ) {
@@ -317,4 +343,3 @@ export class MetadataGoogleService {
     }
   }
 }
-// What if a person is half filling and value not completed yet?

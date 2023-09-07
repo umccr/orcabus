@@ -5,7 +5,7 @@ import { isEqual } from 'lodash';
 
 export type SubjectType = MetadataIdentifiableType;
 
-export const hasSubjectRecordChange = (dbValue: SubjectType, newValue: Partial<SubjectType>) => {
+export const isSubjectIdentical = (dbValue: SubjectType, newValue: Partial<SubjectType>) => {
   const old = {
     exId: dbValue.externalId,
     inId: dbValue.internalId,
