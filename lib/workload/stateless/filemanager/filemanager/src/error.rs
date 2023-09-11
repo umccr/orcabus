@@ -28,6 +28,8 @@ pub enum Error {
     S3ObjectNotFound(String),
     #[error("S3 error: `{0}`")]
     S3Error(String),
+    #[error("Config error: `{0}`")]
+    ConfigError(String),
 }
 
 impl From<sqlx::Error> for Error {

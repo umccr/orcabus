@@ -1,8 +1,9 @@
-//! This module handles ingesting storage events into the file manager database.
+//! This module handles converting storage events into database objects
 //!
 
-pub mod s3;
+pub mod aws;
 
+use serde::{Deserialize, Serialize};
 use crate::file::File;
 
 /// Convert into a file struct which can be inserted into the database.
@@ -17,5 +18,5 @@ pub trait ReceiveFiles {
 
 /// The type of ingester.
 pub enum Receiver {
-    S3(s3::Receiver),
+    S3(aws::sqs::SQS),
 }

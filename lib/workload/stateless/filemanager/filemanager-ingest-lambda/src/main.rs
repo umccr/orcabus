@@ -1,16 +1,11 @@
 use aws_lambda_events::event::sqs::SqsEventObj;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use serde::{Deserialize, Serialize};
-
-/// Object that you send to SQS and plan to process on the function.
-#[derive(Deserialize, Serialize)]
-struct Data {
-    todo: String,
-}
+use filemanager::events::aws::S3EventMessage;
 
 /// This is the main body for the function.
 /// You can use the data sent into SQS here.
-async fn function_handler(event: LambdaEvent<SqsEventObj<Data>>) -> Result<(), Error> {
+async fn function_handler(event: LambdaEvent<SqsEventObj<S3EventMessage>>) -> Result<(), Error> {
     todo!();
 }
 

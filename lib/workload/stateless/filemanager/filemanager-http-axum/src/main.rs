@@ -10,8 +10,8 @@ use filemanager::env;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use filemanager::db::DbClient;
-use filemanager::events::s3::Receiver;
+use filemanager::r#mod::DbClient;
+use filemanager::events::aws::Receiver;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
 

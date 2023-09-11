@@ -1,15 +1,36 @@
+pub mod aws;
+
 use crate::error::Error::DbClientError;
 use crate::error::Result;
-use crate::events::s3::EventMessage;
+use crate::events::aws::S3EventMessage;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::types::StorageClass;
 use chrono::{DateTime, NaiveDateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::QueryBuilder;
 use sqlx::{mysql::MySqlPool, FromRow, MySql};
+use utoipa::{IntoParams, ToSchema};
 
 use crate::file::Attributes;
 use crate::file::File;
 use crate::file::FileAdapter;
+
+/// This matches the database object schema. Missing fields will be filled in/calculated.
+#[derive(Debug, ToSchema, IntoParams, Clone)]
+pub struct Object {
+    pub bucket: String,
+    pub key: String,
+    pub size: u64,
+    pub e_tag: String,
+    pub last_modified_date: Option<DateTime<Utc>>,
+    pub portal_run_id: String,
+    pub cloud_object: Option<CloudObject>,
+}
+
+#[derive(Debug, Clone)]
+pub enum CloudObject {
+    S3(aws::CloudObject)
+}
 
 // #[derive(Debug, FromRow)]
 // struct GDS {
@@ -48,7 +69,7 @@ impl DbClient {
         }
     }
 
-    pub async fn ingest_s3_event(&self, event: EventMessage) -> Result<u64> {
+    pub async fn ingest_s3_event(&self, event: S3EventMessage) -> Result<u64> {
         let pool: sqlx::Pool<sqlx::MySql> = MySqlPool::connect(&self.url).await?;
 
         let s3 = event.records.iter().map(|record| S3 {
@@ -67,7 +88,7 @@ impl DbClient {
         });
 
         let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
-            "INSERT INTO s3(bucket, `key`, size, e_tag, last_modified_date, storage_class) ",
+            "INSERT INTO aws(bucket, `key`, size, e_tag, last_modified_date, storage_class) ",
         );
 
         query_builder.push_values(s3, |mut b, s3| {
@@ -95,7 +116,7 @@ impl DbClient {
         //     S3,
         //     "
         //     SELECT id, bucket, `key`, size, e_tag, last_modified_date, storage_class
-        //     FROM s3
+        //     FROM aws
         //     WHERE `key` = ?
         //     LIMIT 10;
         //     ",

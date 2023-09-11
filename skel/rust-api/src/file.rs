@@ -9,7 +9,7 @@ use crate::error::Result;
 use crate::error::Error::NotFound;
 use tracing::info;
 //type Store = Mutex<Vec<File>>;
-// TODO: SQLx is the store backend, through db.rs
+// TODO: SQLx is the store backend, through mod.rs
 
 /// Converts generic file attributes into concrete storage backend ones
 pub trait FileAdapter {
