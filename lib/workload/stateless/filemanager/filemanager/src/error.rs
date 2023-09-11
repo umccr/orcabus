@@ -21,7 +21,7 @@ pub enum Error {
     #[error("SQS message receive error: `{0}`")]
     SQSReceiveError(String),
     #[error("deserialization error: `{0}`")]
-    SQSDeserializeError(String),
+    DeserializeError(String),
     #[error("Db client error: `{0}`")]
     DbClientError(String),
     #[error("S3 object not found: `{0}`")]

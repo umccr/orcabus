@@ -68,41 +68,4 @@ impl S3 {
             None
         }
     }
-
-    pub async fn ingest_s3_events(&self, events: Vec<S3EventMessage>) -> Result<Vec<Object>> {
-        join_all(events.into_iter().map(|event| async move {
-            join_all(event.records.into_iter().map(|record| async move {
-                let S3Record {
-                    bucket, object
-                } = record.s3;
-
-                let BucketRecord {
-                    name: bucket
-                } = bucket;
-
-                let ObjectRecord {
-                    key, size, e_tag
-                } = object;
-
-                let head = self
-                    .s3_head(&key, &bucket)
-                    .await?;
-
-                Ok(Object {
-                    bucket,
-                    key,
-                    size: size as u64,
-                    e_tag,
-                    last_modified_date: head.as_ref().map(|head| Self::convert_datetime(head.last_modified)).flatten(),
-                    // Todo
-                    portal_run_id: "".to_string(),
-                    cloud_object: head.map(|head| {
-                        S3CloudObject(CloudObject {
-                            storage_class: head.storage_class,
-                        })
-                    }),
-                })
-            })).await
-        })).await.into_iter().flatten().collect()
-    }
 }

@@ -1,9 +1,10 @@
 use aws_sdk_sqs::Client;
 use futures::future::join_all;
+use futures::FutureExt;
 use tracing::trace;
-use crate::error::Error::{ConfigError, DbClientError, SQSDeserializeError, SQSReceiveError};
+use crate::error::Error::{ConfigError, DbClientError, DeserializeError, SQSReceiveError};
 use crate::error::Result;
-use crate::events::aws::S3EventMessage;
+use crate::events::aws::{FlatS3EventMessages, S3EventMessage};
 
 #[derive(Debug)]
 pub struct SQS {
@@ -35,7 +36,7 @@ impl SQS {
     }
 
     // TODO: Two possible event types, should be handled differently: PUT and DELETE
-    pub async fn receive(&self) -> Result<Vec<S3EventMessage>> {
+    pub async fn receive(&self) -> Result<FlatS3EventMessages> {
         let rcv_message_output = self
             .sqs_client
             .receive_message()
@@ -44,7 +45,7 @@ impl SQS {
             .await
             .map_err(|err| SQSReceiveError(err.into_service_error().to_string()))?;
 
-        join_all(
+        Ok(join_all(
             rcv_message_output
                 .messages
                 .unwrap_or_default()
@@ -54,7 +55,7 @@ impl SQS {
 
                     if let Some(body) = message.body() {
                         serde_json::from_str(body)
-                            .map_err(|err| SQSDeserializeError(err.to_string()))
+                            .map_err(|err| DeserializeError(err.to_string()))
                     } else {
                         Err(SQSReceiveError("No body in SQS message".to_string()))
                     }
@@ -62,6 +63,7 @@ impl SQS {
         )
             .await
             .into_iter()
-            .collect::<Result<Vec<S3EventMessage>>>()
+            .collect::<Result<Vec<FlatS3EventMessages>>>()?
+            .into())
     }
 }
