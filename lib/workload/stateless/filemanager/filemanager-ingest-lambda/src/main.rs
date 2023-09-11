@@ -1,7 +1,7 @@
 use aws_lambda_events::event::sqs::SqsEventObj;
+use filemanager::events::aws::S3EventMessage;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use serde::{Deserialize, Serialize};
-use filemanager::events::aws::S3EventMessage;
 
 /// This is the main body for the function.
 /// You can use the data sent into SQS here.

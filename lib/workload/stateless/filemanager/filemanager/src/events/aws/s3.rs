@@ -1,7 +1,3 @@
-use aws_sdk_s3::Client;
-use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
-use chrono::{DateTime, NaiveDateTime, Utc};
-use futures::future::join_all;
 use crate::database::aws::CloudObject;
 use crate::database::CloudObject::S3 as S3CloudObject;
 use crate::database::Object;
@@ -9,6 +5,10 @@ use crate::error::Error::{ConfigError, S3Error};
 use crate::error::Result;
 use crate::events::aws::{BucketRecord, ObjectRecord, S3EventMessage, S3Record};
 use crate::file::File;
+use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
+use aws_sdk_s3::Client;
+use chrono::{DateTime, NaiveDateTime, Utc};
+use futures::future::join_all;
 
 #[derive(Debug)]
 pub struct S3 {
@@ -17,9 +17,7 @@ pub struct S3 {
 
 impl S3 {
     pub fn new(s3_client: Client) -> Self {
-        Self {
-            s3_client,
-        }
+        Self { s3_client }
     }
 
     pub async fn with_default_client() -> Result<Self> {
@@ -60,7 +58,9 @@ impl S3 {
         }
     }
 
-    fn convert_datetime(datetime: Option<aws_sdk_s3::primitives::DateTime>) -> Option<DateTime<Utc>> {
+    fn convert_datetime(
+        datetime: Option<aws_sdk_s3::primitives::DateTime>,
+    ) -> Option<DateTime<Utc>> {
         if let Some(head) = datetime {
             let date = NaiveDateTime::from_timestamp_opt(head.secs(), head.subsec_nanos())?;
             Some(DateTime::from_naive_utc_and_offset(date, Utc))

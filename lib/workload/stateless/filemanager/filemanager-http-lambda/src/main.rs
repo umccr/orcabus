@@ -1,11 +1,8 @@
-use lambda_http::{
-    run,
-    Error,
-};
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
+use lambda_http::{run, Error};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

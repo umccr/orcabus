@@ -3,8 +3,8 @@
 
 pub mod aws;
 
-use serde::{Deserialize, Serialize};
 use crate::file::File;
+use serde::{Deserialize, Serialize};
 
 /// Convert into a file struct which can be inserted into the database.
 pub trait IntoFile {

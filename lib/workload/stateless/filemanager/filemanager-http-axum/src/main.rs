@@ -3,15 +3,15 @@ use std::net::{Ipv4Addr, SocketAddr};
 use axum::{routing, Router, Server};
 use hyper::Error;
 
+use filemanager::env;
 use filemanager::file;
 use filemanager::security::ApiDoc;
-use filemanager::env;
 
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use filemanager::r#mod::DbClient;
 use filemanager::events::aws::Receiver;
+use filemanager::r#mod::DbClient;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
 

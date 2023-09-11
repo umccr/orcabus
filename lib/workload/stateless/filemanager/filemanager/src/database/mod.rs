@@ -29,7 +29,7 @@ pub struct Object {
 
 #[derive(Debug, Clone)]
 pub enum CloudObject {
-    S3(aws::CloudObject)
+    S3(aws::CloudObject),
 }
 
 // #[derive(Debug, FromRow)]
