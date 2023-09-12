@@ -3,20 +3,11 @@
 
 pub mod aws;
 
-use crate::file::File;
-use serde::{Deserialize, Serialize};
+use crate::events::aws::FlatS3EventMessages;
 
-/// Convert into a file struct which can be inserted into the database.
-pub trait IntoFile {
-    fn into_file(self) -> File;
-}
-
-/// Ingest files from a storage backend.
-pub trait ReceiveFiles {
-    fn receive_files(&self) -> Vec<File>;
-}
-
-/// The type of ingester.
-pub enum Receiver {
-    S3(aws::sqs::SQS),
+/// The type of event.
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum EventType {
+    S3(FlatS3EventMessages),
 }

@@ -34,7 +34,7 @@ impl S3 {
     }
 
     /// Gets some S3 metadata from HEAD such as (creation/archival) timestamps and statuses
-    pub async fn s3_head(&self, key: &str, bucket: &str) -> Result<Option<HeadObjectOutput>> {
+    pub async fn head(&self, key: &str, bucket: &str) -> Result<Option<HeadObjectOutput>> {
         let head = self
             .s3_client
             .head_object()
@@ -58,7 +58,7 @@ impl S3 {
         }
     }
 
-    fn convert_datetime(
+    pub fn convert_datetime(
         datetime: Option<aws_sdk_s3::primitives::DateTime>,
     ) -> Option<DateTime<Utc>> {
         if let Some(head) = datetime {
