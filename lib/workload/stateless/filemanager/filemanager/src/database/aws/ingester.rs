@@ -4,7 +4,7 @@ use futures::StreamExt;
 use sqlx::{Executor, Postgres, QueryBuilder};
 use uuid::Uuid;
 use crate::database::DbClient;
-use crate::events::aws::{EventType, FlatS3EventMessage, FlatS3EventMessages};
+use crate::events::aws::{EventType, FlatS3EventMessage, FlatS3EventMessages, TransposedS3EventMessages};
 use crate::events::aws::s3::S3;
 use crate::error::Result;
 
@@ -31,22 +31,9 @@ impl Ingester {
     }
 
     pub async fn ingest_events(&self, events: FlatS3EventMessages) -> Result<()> {
-        let mut query_builder_object: QueryBuilder<Postgres> = QueryBuilder::new(
-            "INSERT INTO object (object_id, bucket, key, size, hash, created_date, last_modified_date, deleted_date, portal_run_id) ",
-        );
-        let mut query_builder_s3_object: QueryBuilder<Postgres> = QueryBuilder::new(
-            "INSERT INTO s3_object (object_id, storage_class) ",
-        );
+        let transposed_events = TransposedS3EventMessages::from(events);
 
-        let mut update_object: QueryBuilder<Postgres> = QueryBuilder::new(
-            r#"
-                update object
-                  set deleted_date = data.new_value
-                  from
-                    (select unnest(?) as key, unnest(?) as new_value) as data
-                  where "table".key = data.key;
-            "#,
-        );
+        transposed_events.event_times.into_iter().group
 
         let mut events = join_all(events.into_inner().into_iter().map(|event| async move {
             let head = self.s3.head(&event.key, &event.bucket).await?;

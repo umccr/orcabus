@@ -45,12 +45,12 @@ impl SQS {
             .await
             .map_err(|err| SQSReceiveError(err.into_service_error().to_string()))?;
 
-        let event_messages: FlatS3EventMessages = join_all(
+        let event_messages: FlatS3EventMessages =
             rcv_message_output
                 .messages
                 .unwrap_or_default()
                 .into_iter()
-                .map(|message| async move {
+                .map(|message| {
                     trace!(message = ?message, "got the message");
 
                     if let Some(body) = message.body() {
@@ -58,10 +58,7 @@ impl SQS {
                     } else {
                         Err(SQSReceiveError("No body in SQS message".to_string()))
                     }
-                }),
-        )
-        .await
-        .into_iter()
+                })
         .collect::<Result<Vec<FlatS3EventMessages>>>()?
         .into();
 

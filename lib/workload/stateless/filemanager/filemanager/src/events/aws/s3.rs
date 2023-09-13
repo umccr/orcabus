@@ -3,7 +3,7 @@ use crate::database::CloudObject::S3 as S3CloudObject;
 use crate::database::Object;
 use crate::error::Error::{ConfigError, S3Error};
 use crate::error::Result;
-use crate::events::aws::{BucketRecord, ObjectRecord, S3EventMessage, S3Record};
+use crate::events::aws::{BucketRecord, FlatS3EventMessage, FlatS3EventMessages, ObjectRecord, S3EventMessage, S3Record};
 use crate::file::File;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::Client;
@@ -67,5 +67,20 @@ impl S3 {
         } else {
             None
         }
+    }
+
+    pub async fn update_events(&self, events: FlatS3EventMessages) -> Result<FlatS3EventMessage> {
+        join_all(events.into_inner().into_iter().map(|event| async move {
+            let HeadObjectOutput {
+                storage_class,
+                last_modified,
+                ..
+            } = self.head(&event.key, &event.bucket).await?;
+
+            let event = event.with_storage_class(storage_class);
+            let event = event.with_last_modified_date(Self::convert_datetime(last_modified));
+
+            Ok(event)
+        })).await.into_iter().collect()
     }
 }
