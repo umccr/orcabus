@@ -5,6 +5,8 @@ use chrono::{DateTime, ParseError, Utc};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashSet};
+use aws_sdk_s3::operation::head_object::HeadObjectOutput;
+use uuid::Uuid;
 
 pub mod s3;
 pub mod sqs;
@@ -92,16 +94,34 @@ impl PartialOrd for FlatS3EventMessage {
     }
 }
 
+/// An S3 event type.
+pub enum EventType {
+    ObjectCreated,
+    ObjectRemoved,
+    Other,
+}
+
 /// A flattened AWS S3 record
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct FlatS3EventMessage {
+    pub object_id: Uuid,
     pub event_time: DateTime<Utc>,
-    pub event_name: String,
+    pub event_type: EventType,
     pub bucket: String,
     pub key: String,
     pub size: i32,
     pub e_tag: String,
     pub sequencer: Option<String>,
+    pub portal_run_id: String,
+    pub head: Option<HeadObjectOutput>
+}
+
+impl FlatS3EventMessage {
+    /// Update the head.
+    pub fn with_head(mut self, head: Option<HeadObjectOutput>) -> Self {
+        self.head = head;
+        self
+    }
 }
 
 /// The basic AWS S3 Event.
@@ -142,6 +162,19 @@ pub struct ObjectRecord {
     pub sequencer: Option<String>,
 }
 
+impl Record {
+    /// Parses the event name into an event type.
+    pub fn parse_event_type(&self) -> EventType {
+        if self.event_name.contains("ObjectCreated") {
+            EventType::ObjectCreated
+        } else if self.event_name.contains("ObjectRemoved") {
+            EventType::ObjectRemoved
+        } else {
+            EventType::Other
+        }
+    }
+}
+
 impl TryFrom<S3EventMessage> for FlatS3EventMessages {
     type Error = Error;
 
@@ -151,10 +184,12 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                 .records
                 .into_iter()
                 .map(|record| {
+                    let event_type = record.parse_event_type();
+
                     let Record {
                         event_time,
-                        event_name,
                         s3,
+                        ..
                     } = record;
 
                     let S3Record { bucket, object } = s3;
@@ -168,16 +203,24 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                         sequencer,
                     } = object;
 
+                    let event_time = event_time
+                        .parse()
+                        .map_err(|err: ParseError| DeserializeError(err.to_string()))?;
+                    let object_id = Uuid::new_v4();
+                    let portal_run_id = event_time.format("%Y%m%d").to_string() + &object_id[..8];
+
                     Ok(FlatS3EventMessage {
-                        event_time: event_time
-                            .parse()
-                            .map_err(|err: ParseError| DeserializeError(err.to_string()))?,
-                        event_name,
+                        object_id,
+                        event_time,
+                        event_type,
                         bucket,
                         key,
                         size,
                         e_tag,
                         sequencer,
+                        portal_run_id,
+                        // Head is optionally fetched later.
+                        head: None,
                     })
                 })
                 .collect::<Result<Vec<FlatS3EventMessage>>>()?,
