@@ -1,9 +1,9 @@
 //! This module handles converting storage events into database objects
 //!
 
-pub mod aws;
+pub mod s3;
 
-use crate::events::aws::Events;
+use crate::events::s3::Events;
 use crate::error::Result;
 
 /// This trait processes raw events into a common type that can easily be consumed by the database.

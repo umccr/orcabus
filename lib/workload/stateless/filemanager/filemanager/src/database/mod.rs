@@ -1,4 +1,4 @@
-pub mod aws;
+pub mod s3;
 
 use crate::error::Error::DbClientError;
 use crate::error::Result;

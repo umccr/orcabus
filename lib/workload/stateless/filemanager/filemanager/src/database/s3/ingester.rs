@@ -4,8 +4,8 @@ use futures::StreamExt;
 use sqlx::{Executor, Postgres, query_file, QueryBuilder};
 use uuid::Uuid;
 use crate::database::DbClient;
-use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, TransposedS3EventMessages};
-use crate::events::aws::s3::S3;
+use crate::events::s3::{Events, FlatS3EventMessage, FlatS3EventMessages, TransposedS3EventMessages};
+use crate::events::s3::s3::S3;
 use crate::error::Result;
 
 /// An ingester for S3 events.
@@ -48,11 +48,11 @@ impl Ingester {
             last_modified_dates
         } = object_created;
 
-        query_file!("queries/ingester/insert_objects.sql", object_ids, buckets, keys, sizes, e_tags, event_times, last_modified_dates, vec![None; object_ids.len()], portal_run_ids)
+        query_file!("../database/queries/ingester/insert_objects.sql", object_ids, buckets, keys, sizes, e_tags, event_times, last_modified_dates, vec![None; object_ids.len()], portal_run_ids)
             .execute(&mut self.db.pool)
             .await?;
 
-        query_file!("queries/ingester/aws/insert_s3_objects.sql", object_ids, storage_classes)
+        query_file!("../database/queries/ingester/aws/insert_s3_objects.sql", object_ids, storage_classes)
             .execute(&mut self.db.pool)
             .await?;
 
@@ -70,7 +70,7 @@ impl Ingester {
             last_modified_dates
         } = object_removed;
 
-        query_file!("queries/update_deleted.sql", keys, buckets, event_times)
+        query_file!("../database/queries/update_deleted.sql", keys, buckets, event_times)
             .execute(&mut self.db.pool)
             .await?;
 

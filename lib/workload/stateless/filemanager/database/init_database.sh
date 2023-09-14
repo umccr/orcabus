@@ -1,3 +1,3 @@
 #!/bin/bash
 
-createdb filemanager
+createdb "$@" filemanager

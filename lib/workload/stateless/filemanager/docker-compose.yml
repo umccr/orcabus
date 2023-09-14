@@ -1,0 +1,16 @@
+# NOTE:
+# If you update image version, make sure to update in docker-compose.ci.yml as well
+
+version: '3.1'
+
+services:
+  db:
+    build: database
+    container_name: filemanager_db
+    restart: always
+    environment:
+      - POSTGRES_DATABASE=filemanager
+      - POSTGRES_USER=filemanager
+      - POSTGRES_PASSWORD=filemanager
+    ports:
+      - "5432:5432"
