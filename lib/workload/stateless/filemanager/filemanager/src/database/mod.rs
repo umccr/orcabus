@@ -12,23 +12,23 @@ use utoipa::{IntoParams, ToSchema};
 use crate::file::Attributes;
 use crate::file::File;
 use crate::file::FileAdapter;
+//
+// /// This matches the database object schema. Missing fields will be filled in/calculated.
+// #[derive(Debug, ToSchema, IntoParams, Clone)]
+// pub struct Object {
+//     pub bucket: String,
+//     pub key: String,
+//     pub size: u64,
+//     pub e_tag: String,
+//     pub last_modified_date: Option<DateTime<Utc>>,
+//     pub portal_run_id: String,
+//     pub cloud_object: Option<CloudObject>,
+// }
 
-/// This matches the database object schema. Missing fields will be filled in/calculated.
-#[derive(Debug, ToSchema, IntoParams, Clone)]
-pub struct Object {
-    pub bucket: String,
-    pub key: String,
-    pub size: u64,
-    pub e_tag: String,
-    pub last_modified_date: Option<DateTime<Utc>>,
-    pub portal_run_id: String,
-    pub cloud_object: Option<CloudObject>,
-}
-
-#[derive(Debug, Clone)]
-pub enum CloudObject {
-    S3(aws::CloudObject),
-}
+// #[derive(Debug, Clone)]
+// pub enum CloudObject {
+//     S3(aws::CloudObject),
+// }
 
 // #[derive(Debug, FromRow)]
 // struct GDS {

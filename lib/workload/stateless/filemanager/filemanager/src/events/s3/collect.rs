@@ -1,8 +1,8 @@
-use crate::events::aws::s3::S3;
+use crate::events::s3::s3::S3;
 use crate::error::Result;
-use crate::events::aws::sqs::SQS;
+use crate::events::s3::sqs::SQS;
 use crate::events::{Collect, EventType};
-use crate::events::aws::{Events, FlatS3EventMessages};
+use crate::events::s3::{Events, FlatS3EventMessages};
 
 #[derive(Debug)]
 pub struct Collecter {

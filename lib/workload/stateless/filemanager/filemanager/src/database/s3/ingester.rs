@@ -1,10 +1,12 @@
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
+use chrono::DateTime;
+use chrono::Utc;
 use futures::future::join_all;
 use futures::StreamExt;
-use sqlx::{Executor, Postgres, query_file, QueryBuilder};
+use sqlx::{Executor, Postgres, query, query_file, QueryBuilder};
 use uuid::Uuid;
 use crate::database::DbClient;
-use crate::events::s3::{Events, FlatS3EventMessage, FlatS3EventMessages, TransposedS3EventMessages};
+use crate::events::s3::{Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages};
 use crate::events::s3::s3::S3;
 use crate::error::Result;
 
@@ -37,42 +39,44 @@ impl Ingester {
         let TransposedS3EventMessages {
             object_ids,
             event_times,
-            event_names,
             buckets,
             keys,
             sizes,
             e_tags,
-            sequencers,
             portal_run_ids,
             storage_classes,
-            last_modified_dates
+            last_modified_dates,
+            ..
         } = object_created;
 
-        query_file!("../database/queries/ingester/insert_objects.sql", object_ids, buckets, keys, sizes, e_tags, event_times, last_modified_dates, vec![None; object_ids.len()], portal_run_ids)
-            .execute(&mut self.db.pool)
-            .await?;
+        query_file!("../database/queries/ingester/insert_objects.sql",
+            &object_ids,
+            &buckets,
+            &keys,
+            &sizes,
+            &e_tags,
+            &event_times,
+            &last_modified_dates as &[Option<DateTime<Utc>>],
+            &portal_run_ids
+        ).execute(&self.db.pool).await?;
 
-        query_file!("../database/queries/ingester/aws/insert_s3_objects.sql", object_ids, storage_classes)
-            .execute(&mut self.db.pool)
-            .await?;
+        query_file!("../database/queries/ingester/aws/insert_s3_objects.sql",
+            &object_ids,
+            &storage_classes as &[Option<StorageClass>]
+        ).execute(&self.db.pool).await?;
 
         let TransposedS3EventMessages {
-            object_ids,
             event_times,
-            event_names,
             buckets,
             keys,
-            sizes,
-            e_tags,
-            sequencers,
-            portal_run_ids,
-            storage_classes,
-            last_modified_dates
+            ..
         } = object_removed;
 
-        query_file!("../database/queries/update_deleted.sql", keys, buckets, event_times)
-            .execute(&mut self.db.pool)
-            .await?;
+        query_file!("../database/queries/ingester/update_deleted.sql",
+            &keys,
+            &buckets,
+            &event_times
+        ).execute(&self.db.pool).await?;
 
         Ok(())
     }

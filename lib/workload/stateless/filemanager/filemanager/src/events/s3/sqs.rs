@@ -1,6 +1,6 @@
 use crate::error::Error::{ConfigError, DbClientError, DeserializeError, SQSReceiveError};
 use crate::error::Result;
-use crate::events::aws::{FlatS3EventMessages, S3EventMessage};
+use crate::events::s3::{FlatS3EventMessages, S3EventMessage};
 use aws_sdk_sqs::Client;
 use futures::future::join_all;
 use futures::FutureExt;

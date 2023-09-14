@@ -11,7 +11,7 @@ axum = "0.6"
 hyper = { version = "0.14", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "chrono"] }
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 utoipa = { version = "3", features = ["axum_extras"] }
 utoipa-swagger-ui = { version = "3", features = ["axum"] }

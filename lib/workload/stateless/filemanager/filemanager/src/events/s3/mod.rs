@@ -6,15 +6,55 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashSet};
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
-use aws_sdk_s3::types::StorageClass;
+use aws_sdk_s3::types::StorageClass as AwsStorageClass;
+use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use uuid::Uuid;
 
 pub mod s3;
 pub mod sqs;
 pub mod collect;
 
+#[derive(Debug, Eq, PartialEq, sqlx::Type)]
+#[sqlx(type_name = "storage_class")]
+pub enum StorageClass {
+    DeepArchive,
+    Glacier,
+    GlacierIr,
+    IntelligentTiering,
+    OnezoneIa,
+    Outposts,
+    ReducedRedundancy,
+    Snow,
+    Standard,
+    StandardIa,
+}
+
+impl PgHasArrayType for StorageClass {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("_storage_class")
+    }
+}
+
+impl StorageClass {
+    pub fn from_aws(storage_class: AwsStorageClass) -> Option<Self> {
+        match storage_class {
+            AwsStorageClass::DeepArchive => Some(Self::DeepArchive),
+            AwsStorageClass::Glacier => Some(Self::Glacier),
+            AwsStorageClass::GlacierIr => Some(Self::GlacierIr),
+            AwsStorageClass::IntelligentTiering => Some(Self::IntelligentTiering),
+            AwsStorageClass::OnezoneIa => Some(Self::OnezoneIa),
+            AwsStorageClass::Outposts => Some(Self::Outposts),
+            AwsStorageClass::ReducedRedundancy => Some(Self::ReducedRedundancy),
+            AwsStorageClass::Snow => Some(Self::Snow),
+            AwsStorageClass::Standard => Some(Self::Standard),
+            AwsStorageClass::StandardIa => Some(Self::StandardIa),
+            _ => None,
+        }
+    }
+}
+
 /// AWS S3 events with fields transposed
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Default)]
+#[derive(Debug, Eq, PartialEq, Default)]
 pub struct TransposedS3EventMessages {
     pub object_ids: Vec<Uuid>,
     pub event_times: Vec<DateTime<Utc>>,
@@ -82,7 +122,7 @@ impl From<FlatS3EventMessages> for TransposedS3EventMessages {
         let messages = messages.into_inner();
         let capacity = messages.len();
 
-        messages.into_inner().into_iter().fold(TransposedS3EventMessages::with_capacity(capacity), |mut acc, message| {
+        messages.into_iter().fold(TransposedS3EventMessages::with_capacity(capacity), |mut acc, message| {
             acc.push(message);
             acc
         })
@@ -90,10 +130,11 @@ impl From<FlatS3EventMessages> for TransposedS3EventMessages {
 }
 
 /// Group by event types.
+#[derive(Debug)]
 pub struct Events {
-    object_created: TransposedS3EventMessages,
-    object_removed: TransposedS3EventMessages,
-    other: TransposedS3EventMessages
+    pub object_created: TransposedS3EventMessages,
+    pub object_removed: TransposedS3EventMessages,
+    pub other: TransposedS3EventMessages
 }
 
 impl From<FlatS3EventMessages> for Events {
@@ -120,7 +161,7 @@ impl From<FlatS3EventMessages> for Events {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Default)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Default)]
 #[serde(try_from = "S3EventMessage")]
 /// Flattened AWS S3 events
 pub struct FlatS3EventMessages(pub Vec<FlatS3EventMessage>);
@@ -204,7 +245,7 @@ impl PartialOrd for FlatS3EventMessage {
 }
 
 /// A flattened AWS S3 record
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct FlatS3EventMessage {
     pub object_id: Uuid,
     pub event_time: DateTime<Utc>,
@@ -297,11 +338,12 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                         sequencer,
                     } = object;
 
-                    let event_time = event_time
+                    let event_time: DateTime<Utc> = event_time
                         .parse()
                         .map_err(|err: ParseError| DeserializeError(err.to_string()))?;
+
                     let object_id = Uuid::new_v4();
-                    let portal_run_id = event_time.format("%Y%m%d").to_string() + &object_id[..8];
+                    let portal_run_id = event_time.format("%Y%m%d").to_string() + &object_id.to_string()[..8];
 
                     Ok(FlatS3EventMessage {
                         object_id,
