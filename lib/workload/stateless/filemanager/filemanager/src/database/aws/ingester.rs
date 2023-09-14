@@ -1,15 +1,12 @@
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use futures::future::join_all;
 use futures::StreamExt;
-use sqlx::{Executor, Postgres, QueryBuilder};
+use sqlx::{Executor, Postgres, query_file, QueryBuilder};
 use uuid::Uuid;
 use crate::database::DbClient;
-use crate::events::aws::{EventType, FlatS3EventMessage, FlatS3EventMessages, TransposedS3EventMessages};
+use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, TransposedS3EventMessages};
 use crate::events::aws::s3::S3;
 use crate::error::Result;
-
-/// Postgres prepared statement bind limit.
-const BIND_LIMIT: usize = 65535;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
@@ -26,94 +23,56 @@ impl Ingester {
     pub async fn new_with_defaults() -> Result<Self> {
         Ok(Self {
             db: DbClient::new_with_defaults().await?,
-            s3: S3::with_default_client().await?
+            s3: S3::with_defaults().await?
         })
     }
 
-    pub async fn ingest_events(&self, events: FlatS3EventMessages) -> Result<()> {
-        let transposed_events = TransposedS3EventMessages::from(events);
+    pub async fn ingest_events(&mut self, events: Events) -> Result<()> {
+        let Events {
+            object_created,
+            object_removed,
+            ..
+        } = events;
 
-        transposed_events.event_times.into_iter().group
+        let TransposedS3EventMessages {
+            object_ids,
+            event_times,
+            event_names,
+            buckets,
+            keys,
+            sizes,
+            e_tags,
+            sequencers,
+            portal_run_ids,
+            storage_classes,
+            last_modified_dates
+        } = object_created;
 
-        let mut events = join_all(events.into_inner().into_iter().map(|event| async move {
-            let head = self.s3.head(&event.key, &event.bucket).await?;
-            let uuid = Uuid::new_v4();
+        query_file!("queries/ingester/insert_objects.sql", object_ids, buckets, keys, sizes, e_tags, event_times, last_modified_dates, vec![None; object_ids.len()], portal_run_ids)
+            .execute(&mut self.db.pool)
+            .await?;
 
-            Ok((event, head, uuid))
-        })).await.into_iter().collect::<Result<Vec<_>>>()?.into_iter().peekable();
+        query_file!("queries/ingester/aws/insert_s3_objects.sql", object_ids, storage_classes)
+            .execute(&mut self.db.pool)
+            .await?;
 
-        while let Some(_) = events.peek() {
-            events.take(BIND_LIMIT / 4).for_each(|(event, head, uuid)| {
-                if let EventType::ObjectCreated = event.event_type {
-                    let last_modified = head.map(|head| S3::convert_datetime(head.last_modified().cloned())).flatten().unwrap_or(event.event_time.clone());
-                    let portal_run_id = event.event_time.format("%Y%m%d").to_string() + &uuid[..8];
-                    query_builder_object.push_bind(uuid.to_string())
-                        .push_bind(event.bucket)
-                        .push_bind(event.key)
-                        .push_bind(event.size)
-                        .push_bind(event.e_tag)
-                        .push_bind(event.event_time)
-                        .push_bind(last_modified)
-                        .push_bind(None)
-                        .push_bind(portal_run_id);
-                }
+        let TransposedS3EventMessages {
+            object_ids,
+            event_times,
+            event_names,
+            buckets,
+            keys,
+            sizes,
+            e_tags,
+            sequencers,
+            portal_run_ids,
+            storage_classes,
+            last_modified_dates
+        } = object_removed;
 
-                if let EventType::ObjectRemoved = event.event_type {
-
-                }
-            });
-
-            query_builder_object.push_values(events.take(BIND_LIMIT / 4), |mut b, (event, head, uuid)| {
-                if let EventType::ObjectCreated = event.event_type {
-                    let last_modified = head.map(|head| S3::convert_datetime(head.last_modified().cloned())).flatten().unwrap_or(event.event_time.clone());
-                    let portal_run_id = event.event_time.format("%Y%m%d").to_string() + &uuid[..8];
-                    b.push_bind(uuid.to_string())
-                        .push_bind(event.bucket)
-                        .push_bind(event.key)
-                        .push_bind(event.size)
-                        .push_bind(event.e_tag)
-                        .push_bind(event.event_time)
-                        .push_bind(last_modified)
-                        .push_bind(None)
-                        .push_bind(portal_run_id);
-                }
-
-                if let EventType::ObjectRemoved = event.event_type {
-
-                }
-
-
-                if let Some(head) = head {
-                    b.push_bind(uuid.to_string())
-                        .push_bind(event.bucket)
-                        .push_bind(event.key)
-                        .push_bind(event.size)
-                        .push_bind(event.e_tag)
-                        .push_bind(head.cr));
-                }
-
-                b.push_bind(uuid.to_string())
-                    .push_bind(event.bucket)
-                    .push_bind(event.key)
-                    .push_bind(event.size)
-                    .push_bind(event.e_tag)
-                    .push_bind());
-            });
-        }
-
-        events.take(BIND_LIMIT / 4)
-
-        query_builder_object.ta
-
-        for event in events.into_inner() {
-            let head = self.s3.head(&event.key, &event.bucket).await?;
-            let uuid = Uuid::new_v4();
-
-            query_builder_object.push()
-            todo!();
-
-
-        }
+        query_file!("queries/update_deleted.sql", keys, buckets, event_times)
+            .execute(&mut self.db.pool)
+            .await?;
 
         Ok(())
     }

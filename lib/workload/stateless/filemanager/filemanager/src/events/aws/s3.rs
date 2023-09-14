@@ -20,7 +20,7 @@ impl S3 {
         Self { s3_client }
     }
 
-    pub async fn with_default_client() -> Result<Self> {
+    pub async fn with_defaults() -> Result<Self> {
         let config = aws_config::from_env()
             .endpoint_url(
                 std::env::var("ENDPOINT_URL").map_err(|err| ConfigError(err.to_string()))?,

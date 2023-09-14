@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 pub mod s3;
 pub mod sqs;
+pub mod collect;
 
 /// AWS S3 events with fields transposed
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Default)]
@@ -89,13 +90,13 @@ impl From<FlatS3EventMessages> for TransposedS3EventMessages {
 }
 
 /// Group by event types.
-pub struct GroupByEventType {
-    object_created: FlatS3EventMessages,
-    object_removed: FlatS3EventMessages,
-    other: FlatS3EventMessages
+pub struct Events {
+    object_created: TransposedS3EventMessages,
+    object_removed: TransposedS3EventMessages,
+    other: TransposedS3EventMessages
 }
 
-impl From<FlatS3EventMessages> for GroupByEventType {
+impl From<FlatS3EventMessages> for Events {
     fn from(messages: FlatS3EventMessages) -> Self {
         let mut object_created = FlatS3EventMessages::default();
         let mut object_removed = FlatS3EventMessages::default();
@@ -112,9 +113,9 @@ impl From<FlatS3EventMessages> for GroupByEventType {
         });
 
         Self {
-            object_created,
-            object_removed,
-            other
+            object_created: TransposedS3EventMessages::from(object_created),
+            object_removed: TransposedS3EventMessages::from(object_removed),
+            other: TransposedS3EventMessages::from(other)
         }
     }
 }
