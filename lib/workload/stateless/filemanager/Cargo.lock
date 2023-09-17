@@ -1328,6 +1328,7 @@ dependencies = [
  "filemanager",
  "lambda_runtime",
  "serde",
+ "serde_json",
  "tokio 1.32.0",
  "tracing",
  "tracing-subscriber",
