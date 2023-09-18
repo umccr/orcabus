@@ -4,6 +4,8 @@ use crate::database::DbClient;
 use crate::error::Result;
 use crate::events::s3::s3::S3;
 use crate::events::s3::{Events, TransposedS3EventMessages};
+use chrono::{DateTime, Utc};
+use crate::events::s3::StorageClass;
 
 /// An ingester for S3 events.
 #[derive(Debug)]

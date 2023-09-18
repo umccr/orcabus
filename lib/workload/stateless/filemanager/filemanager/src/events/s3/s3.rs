@@ -18,10 +18,15 @@ impl S3 {
     }
 
     pub async fn with_defaults() -> Result<Self> {
-        let config = aws_config::from_env()
-            .endpoint_url(
-                std::env::var("ENDPOINT_URL").map_err(|err| ConfigError(err.to_string()))?,
-            )
+        let config = aws_config::from_env();
+
+        let config = if let Ok(endpoint) = std::env::var("ENDPOINT_URL") {
+            config.endpoint_url(endpoint)
+        } else {
+            config
+        };
+
+        let config = config
             .load()
             .await;
 
