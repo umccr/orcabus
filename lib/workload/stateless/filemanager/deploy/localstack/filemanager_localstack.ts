@@ -13,6 +13,7 @@ const STACK_DESCRIPTION = "A stack deploying filemanager to dev.";
 const app = new cdk.App();
 new FilemanagerStack(app, STACK_NAME, {
     database_url: process.env.DATABASE_URL ?? throwExpression("DATABASE_URL should not be undefined for localstack development"),
+    endpoint_url: process.env.ENDPOINT_URL ?? throwExpression("ENDPOINT_URL should not be undefined for localstack development"),
     stack_name: STACK_NAME
 }, {
     stackName: STACK_NAME,

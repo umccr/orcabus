@@ -1,6 +1,6 @@
 use aws_lambda_events::sqs::SqsEvent;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-use tracing::trace;
+use tracing::{info, trace};
 
 use filemanager::database::s3::ingester::Ingester;
 use filemanager::events::s3::s3::S3;
@@ -41,6 +41,7 @@ async fn event_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt()
+        .json()
         .with_target(false)
         .without_time()
         .init();

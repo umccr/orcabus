@@ -8,9 +8,11 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import * as lambdaDestinations from "aws-cdk-lib/aws-lambda-destinations";
 import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
+import {CfnBucket} from "aws-cdk-lib/aws-s3";
 
 interface Settings {
     database_url: string,
+    endpoint_url: string,
     stack_name: string,
 }
 
@@ -38,8 +40,23 @@ export class FilemanagerStack extends Stack {
             removalPolicy: RemovalPolicy.RETAIN,
         });
 
-        testBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(queue));
-        testBucket.addEventNotification(s3.EventType.OBJECT_REMOVED, new s3n.SqsDestination(queue));
+        // Workaround for localstack, see https://github.com/localstack/localstack/issues/3468.
+        const cfnBucket = testBucket.node.defaultChild as CfnBucket;
+        cfnBucket.notificationConfiguration = {
+            queueConfigurations: [
+                {
+                    event: "s3:ObjectCreated:*",
+                    queue: queue.queueArn
+                },
+                {
+                    event: "s3:ObjectRemoved:*",
+                    queue: queue.queueArn
+                }
+            ]
+        };
+
+        // testBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(queue));
+        // testBucket.addEventNotification(s3.EventType.OBJECT_REMOVED, new s3n.SqsDestination(queue));
 
         lambdaRole.addManagedPolicy(
             iam.ManagedPolicy.fromAwsManagedPolicyName(
@@ -47,13 +64,19 @@ export class FilemanagerStack extends Stack {
             ),
         );
 
+        const s3BucketPolicy = new iam.PolicyStatement({
+            actions: ["s3:List*", "s3:Get*"],
+            resources: ["arn:aws:s3:::*"],
+        });
+        lambdaRole.addToPolicy(s3BucketPolicy);
+
         const deadLetterQueue = new sqs.Queue(this, id + 'DeadLetterQueue');
         const deadLetterQueueDestination = new lambdaDestinations.SqsDestination(deadLetterQueue);
 
         CargoSettings.WORKSPACE_DIR = "../";
         CargoSettings.BUILD_INDIVIDUALLY = true;
 
-        let filemanagerLambda = new RustFunction(this, id + "Function", {
+        let filemanagerLambda = new RustFunction(this, id + "IngestLambdaFunction", {
             package: "filemanager-ingest-lambda",
             target: "aarch64-unknown-linux-gnu",
 
@@ -61,7 +84,9 @@ export class FilemanagerStack extends Stack {
             timeout: Duration.seconds(28),
             environment: {
                 DATABASE_URL: settings.database_url,
-                RUST_LOG: "info,filemanager=trace",
+                ENDPOINT_URL: settings.endpoint_url,
+                SQS_QUEUE_URL: queue.queueUrl,
+                RUST_LOG: "info,filemanager=trace,filemanager_http_lambda=trace",
             },
             buildEnvironment: {
                 RUSTFLAGS: "-C target-cpu=neoverse-n1",

@@ -2,6 +2,7 @@ use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::Client;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::future::join_all;
+use tracing::trace;
 
 use crate::error::Error::{ConfigError, S3Error};
 use crate::error::Result;

@@ -22,6 +22,7 @@ async fn event_handler(_: LambdaEvent<()>) -> Result<(), Error> {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt()
+        .json()
         .with_target(false)
         .without_time()
         .init();
