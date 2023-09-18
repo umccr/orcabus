@@ -1,10 +1,9 @@
+use aws_sdk_sqs::Client;
+use tracing::trace;
+
 use crate::error::Error::{ConfigError, DbClientError, DeserializeError, SQSReceiveError};
 use crate::error::Result;
-use crate::events::s3::{FlatS3EventMessages, S3EventMessage};
-use aws_sdk_sqs::Client;
-use futures::future::join_all;
-use futures::FutureExt;
-use tracing::trace;
+use crate::events::s3::FlatS3EventMessages;
 
 #[derive(Debug)]
 pub struct SQS {
@@ -45,22 +44,21 @@ impl SQS {
             .await
             .map_err(|err| SQSReceiveError(err.into_service_error().to_string()))?;
 
-        let event_messages: FlatS3EventMessages =
-            rcv_message_output
-                .messages
-                .unwrap_or_default()
-                .into_iter()
-                .map(|message| {
-                    trace!(message = ?message, "got the message");
+        let event_messages: FlatS3EventMessages = rcv_message_output
+            .messages
+            .unwrap_or_default()
+            .into_iter()
+            .map(|message| {
+                trace!(message = ?message, "got the message");
 
-                    if let Some(body) = message.body() {
-                        serde_json::from_str(body).map_err(|err| DeserializeError(err.to_string()))
-                    } else {
-                        Err(SQSReceiveError("No body in SQS message".to_string()))
-                    }
-                })
-        .collect::<Result<Vec<FlatS3EventMessages>>>()?
-        .into();
+                if let Some(body) = message.body() {
+                    serde_json::from_str(body).map_err(|err| DeserializeError(err.to_string()))
+                } else {
+                    Err(SQSReceiveError("No body in SQS message".to_string()))
+                }
+            })
+            .collect::<Result<Vec<FlatS3EventMessages>>>()?
+            .into();
 
         Ok(event_messages.sort_and_dedup())
     }

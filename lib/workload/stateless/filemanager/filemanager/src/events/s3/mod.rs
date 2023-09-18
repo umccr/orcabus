@@ -1,18 +1,18 @@
-use crate::error::Error;
-use crate::error::Error::DeserializeError;
-use crate::error::Result;
+use std::cmp::Ordering;
+
+use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use chrono::{DateTime, ParseError, Utc};
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashSet};
-use aws_sdk_s3::operation::head_object::HeadObjectOutput;
-use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use uuid::Uuid;
 
+use crate::error::Error;
+use crate::error::Error::DeserializeError;
+use crate::error::Result;
+
+pub mod collect;
 pub mod s3;
 pub mod sqs;
-pub mod collect;
 
 #[derive(Debug, Eq, PartialEq, sqlx::Type)]
 #[sqlx(type_name = "storage_class")]
@@ -66,7 +66,7 @@ pub struct TransposedS3EventMessages {
     pub sequencers: Vec<Option<String>>,
     pub portal_run_ids: Vec<String>,
     pub storage_classes: Vec<Option<StorageClass>>,
-    pub last_modified_dates: Vec<Option<DateTime<Utc>>>
+    pub last_modified_dates: Vec<Option<DateTime<Utc>>>,
 }
 
 impl TransposedS3EventMessages {
@@ -83,7 +83,7 @@ impl TransposedS3EventMessages {
             sequencers: Vec::with_capacity(capacity),
             portal_run_ids: Vec::with_capacity(capacity),
             storage_classes: Vec::with_capacity(capacity),
-            last_modified_dates: Vec::with_capacity(capacity)
+            last_modified_dates: Vec::with_capacity(capacity),
         }
     }
 
@@ -122,10 +122,13 @@ impl From<FlatS3EventMessages> for TransposedS3EventMessages {
         let messages = messages.into_inner();
         let capacity = messages.len();
 
-        messages.into_iter().fold(TransposedS3EventMessages::with_capacity(capacity), |mut acc, message| {
-            acc.push(message);
-            acc
-        })
+        messages.into_iter().fold(
+            TransposedS3EventMessages::with_capacity(capacity),
+            |mut acc, message| {
+                acc.push(message);
+                acc
+            },
+        )
     }
 }
 
@@ -134,7 +137,7 @@ impl From<FlatS3EventMessages> for TransposedS3EventMessages {
 pub struct Events {
     pub object_created: TransposedS3EventMessages,
     pub object_removed: TransposedS3EventMessages,
-    pub other: TransposedS3EventMessages
+    pub other: TransposedS3EventMessages,
 }
 
 impl From<FlatS3EventMessages> for Events {
@@ -156,7 +159,7 @@ impl From<FlatS3EventMessages> for Events {
         Self {
             object_created: TransposedS3EventMessages::from(object_created),
             object_removed: TransposedS3EventMessages::from(object_removed),
-            other: TransposedS3EventMessages::from(other)
+            other: TransposedS3EventMessages::from(other),
         }
     }
 }
@@ -197,7 +200,7 @@ impl Ord for FlatS3EventMessage {
         {
             if self.bucket == other.bucket && self.key == other.key {
                 return (
-                    &self.sequencer,
+                    self_sequencer,
                     &self.event_time,
                     &self.event_name,
                     &self.bucket,
@@ -206,7 +209,7 @@ impl Ord for FlatS3EventMessage {
                     &self.e_tag,
                 )
                     .cmp(&(
-                        &other.sequencer,
+                        other_sequencer,
                         &other.event_time,
                         &other.event_name,
                         &other.bucket,
@@ -257,7 +260,7 @@ pub struct FlatS3EventMessage {
     pub sequencer: Option<String>,
     pub portal_run_id: String,
     pub storage_class: Option<StorageClass>,
-    pub last_modified_date: Option<DateTime<Utc>>
+    pub last_modified_date: Option<DateTime<Utc>>,
 }
 
 impl FlatS3EventMessage {
@@ -343,7 +346,8 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                         .map_err(|err: ParseError| DeserializeError(err.to_string()))?;
 
                     let object_id = Uuid::new_v4();
-                    let portal_run_id = event_time.format("%Y%m%d").to_string() + &object_id.to_string()[..8];
+                    let portal_run_id =
+                        event_time.format("%Y%m%d").to_string() + &object_id.to_string()[..8];
 
                     Ok(FlatS3EventMessage {
                         object_id,
@@ -357,7 +361,7 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                         portal_run_id,
                         // Head field are optionally fetched later.
                         storage_class: None,
-                        last_modified_date: None
+                        last_modified_date: None,
                     })
                 })
                 .collect::<Result<Vec<FlatS3EventMessage>>>()?,
@@ -367,12 +371,6 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
 
 impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
     fn from(messages: Vec<FlatS3EventMessages>) -> Self {
-        FlatS3EventMessages(
-            messages
-                .into_iter()
-                .map(|message| message.0)
-                .flatten()
-                .collect(),
-        )
+        FlatS3EventMessages(messages.into_iter().flat_map(|message| message.0).collect())
     }
 }

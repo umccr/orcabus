@@ -3,7 +3,6 @@ resolver = "2"
 
 members = [
     "filemanager",
-    "filemanager-http-axum",
     "filemanager-http-lambda",
     "filemanager-ingest-lambda",
 ]

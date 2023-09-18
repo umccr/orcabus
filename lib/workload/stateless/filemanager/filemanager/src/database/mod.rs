@@ -1,13 +1,9 @@
-pub mod s3;
+use sqlx::PgPool;
 
 use crate::error::Error::DbClientError;
 use crate::error::Result;
-use aws_sdk_s3::types::StorageClass;
-use chrono::{DateTime, NaiveDateTime, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
-use sqlx::FromRow;
-use utoipa::{IntoParams, ToSchema};
+
+pub mod s3;
 
 #[derive(Debug)]
 pub struct DbClient {
@@ -23,7 +19,7 @@ impl DbClient {
         let url = std::env::var("DATABASE_URL").map_err(|err| DbClientError(err.to_string()))?;
 
         Ok(Self {
-            pool: PgPool::connect(&url).await?
+            pool: PgPool::connect(&url).await?,
         })
     }
 

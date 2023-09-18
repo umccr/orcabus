@@ -1290,23 +1290,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "filemanager-http-axum"
-version = "0.1.0"
-dependencies = [
- "axum",
- "filemanager",
- "futures 0.3.28",
- "hyper",
- "tokio 1.32.0",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "utoipa",
- "utoipa-swagger-ui",
-]
-
-[[package]]
 name = "filemanager-http-lambda"
 version = "0.1.0"
 dependencies = [

@@ -1,8 +1,7 @@
-use crate::events::s3::s3::S3;
 use crate::error::Result;
-use crate::events::s3::sqs::SQS;
-use crate::events::{Collect, EventType};
+use crate::events::s3::s3::S3;
 use crate::events::s3::{Events, FlatS3EventMessages};
+use crate::events::{Collect, EventType};
 
 #[derive(Debug)]
 pub struct Collecter {
@@ -18,7 +17,7 @@ impl Collecter {
     pub async fn with_defaults(raw_events: FlatS3EventMessages) -> Result<Self> {
         Ok(Self {
             s3: S3::with_defaults().await?,
-            raw_events
+            raw_events,
         })
     }
 }

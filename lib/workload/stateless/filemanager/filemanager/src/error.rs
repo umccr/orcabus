@@ -1,5 +1,6 @@
-use sqlx::migrate::MigrateError;
 use std::result;
+
+use sqlx::migrate::MigrateError;
 use thiserror::Error;
 
 pub type Result<T> = result::Result<T, Error>;

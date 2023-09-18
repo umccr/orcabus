@@ -1,11 +1,11 @@
-use crate::database::s3::CloudObject;
-use crate::error::Error::{ConfigError, S3Error};
-use crate::error::Result;
-use crate::events::s3::{BucketRecord, FlatS3EventMessage, FlatS3EventMessages, ObjectRecord, S3EventMessage, S3Record, StorageClass};
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::Client;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::future::join_all;
+
+use crate::error::Error::{ConfigError, S3Error};
+use crate::error::Result;
+use crate::events::s3::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 
 #[derive(Debug)]
 pub struct S3 {
@@ -67,19 +67,25 @@ impl S3 {
     }
 
     pub async fn update_events(&self, events: FlatS3EventMessages) -> Result<FlatS3EventMessages> {
-        Ok(FlatS3EventMessages(join_all(events.into_inner().into_iter().map(|mut event| async move {
-            if let Some(head) = self.head(&event.key, &event.bucket).await? {
-                let HeadObjectOutput {
-                    storage_class,
-                    last_modified,
-                    ..
-                } = head;
+        Ok(FlatS3EventMessages(
+            join_all(events.into_inner().into_iter().map(|mut event| async move {
+                if let Some(head) = self.head(&event.key, &event.bucket).await? {
+                    let HeadObjectOutput {
+                        storage_class,
+                        last_modified,
+                        ..
+                    } = head;
 
-                event = event.with_storage_class(storage_class.map(|class| StorageClass::from_aws(class)).flatten());
-                event = event.with_last_modified_date(Self::convert_datetime(last_modified));
-            }
+                    event =
+                        event.with_storage_class(storage_class.and_then(StorageClass::from_aws));
+                    event = event.with_last_modified_date(Self::convert_datetime(last_modified));
+                }
 
-            Ok(event)
-        })).await.into_iter().collect::<Result<Vec<FlatS3EventMessage>>>()?))
+                Ok(event)
+            }))
+            .await
+            .into_iter()
+            .collect::<Result<Vec<FlatS3EventMessage>>>()?,
+        ))
     }
 }
