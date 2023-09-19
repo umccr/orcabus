@@ -11,7 +11,6 @@ check:
 	@yarn lint
 	@yarn prettier
 	@pre-commit run --all-files
-2
 	@trufflehog --debug --only-verified git file://./ --since-commit main --branch HEAD --fail
 
 deep: scan
