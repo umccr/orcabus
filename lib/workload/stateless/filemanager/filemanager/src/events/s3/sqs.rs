@@ -1,4 +1,5 @@
-use aws_sdk_sqs::Client;
+use std::env;
+use aws_sdk_sqs::{Client, config};
 use tracing::trace;
 
 use crate::error::Error::{ConfigError, DbClientError, DeserializeError, SQSReceiveError};
@@ -20,20 +21,16 @@ impl SQS {
     }
 
     pub async fn with_default_client() -> Result<Self> {
-        let config = aws_config::from_env();
+        let config = aws_config::from_env().load().await;
+        let mut config = config::Builder::from(&config);
 
-        let config = if let Ok(endpoint) = std::env::var("ENDPOINT_URL") {
-            config.endpoint_url(endpoint)
-        } else {
-            config
-        };
-
-        let config = config
-            .load()
-            .await;
+        if let Ok(endpoint) = env::var("ENDPOINT_URL") {
+            trace!("Using endpoint {}", endpoint);
+            config = config.endpoint_url(endpoint);
+        }
 
         Ok(Self {
-            sqs_client: Client::new(&config),
+            sqs_client: Client::from_conf(config.build()),
             sqs_url: std::env::var("SQS_QUEUE_URL")
                 .map_err(|err| DbClientError(err.to_string()))?,
         })

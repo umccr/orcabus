@@ -13,6 +13,7 @@ import {CfnBucket} from "aws-cdk-lib/aws-s3";
 interface Settings {
     database_url: string,
     endpoint_url: string,
+    force_path_style: boolean,
     stack_name: string,
 }
 
@@ -85,13 +86,13 @@ export class FilemanagerStack extends Stack {
             environment: {
                 DATABASE_URL: settings.database_url,
                 ENDPOINT_URL: settings.endpoint_url,
+                FORCE_PATH_STYLE: settings.force_path_style.toString(),
                 SQS_QUEUE_URL: queue.queueUrl,
-                RUST_LOG: "info,filemanager=trace,filemanager_http_lambda=trace",
+                RUST_LOG: "info,filemanager_ingest_lambda=trace,filemanager=trace",
             },
             buildEnvironment: {
+                // Todo get this to build debug rather than release for local dev.
                 RUSTFLAGS: "-C target-cpu=neoverse-n1",
-                CARGO_PROFILE_RELEASE_LTO: "true",
-                CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "1",
             },
             architecture: Architecture.ARM_64,
             role: lambdaRole,

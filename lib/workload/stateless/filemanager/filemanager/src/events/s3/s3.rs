@@ -1,8 +1,11 @@
+use std::env;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
-use aws_sdk_s3::Client;
+use aws_sdk_s3::{Client, config};
+use axum::routing::trace;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::future::join_all;
 use tracing::trace;
+use tracing_subscriber::fmt::format;
 
 use crate::error::Error::{ConfigError, S3Error};
 use crate::error::Result;
@@ -19,25 +22,30 @@ impl S3 {
     }
 
     pub async fn with_defaults() -> Result<Self> {
-        let config = aws_config::from_env();
+        let config = aws_config::from_env().load().await;
+        let mut config = config::Builder::from(&config);
 
-        let config = if let Ok(endpoint) = std::env::var("ENDPOINT_URL") {
-            config.endpoint_url(endpoint)
-        } else {
-            config
-        };
+        if let Ok(endpoint) = env::var("ENDPOINT_URL") {
+            trace!("Using endpoint {}", endpoint);
+            config = config.endpoint_url(endpoint);
+        }
 
-        let config = config
-            .load()
-            .await;
-
+        if let Ok(path_style) = env::var("FORCE_PATH_STYLE") {
+            if let Ok(path_style) = path_style.parse::<bool>() {
+                config = config.force_path_style(path_style);
+            }
+        }
+        
         Ok(Self {
-            s3_client: Client::new(&config),
+            s3_client: Client::from_conf(config.build())
         })
     }
 
     /// Gets some S3 metadata from HEAD such as (creation/archival) timestamps and statuses
     pub async fn head(&self, key: &str, bucket: &str) -> Result<Option<HeadObjectOutput>> {
+        let buckets = self.s3_client.list_buckets().send().await;
+        trace!(buckets = ?buckets, "buckets");
+
         let head = self
             .s3_client
             .head_object()
@@ -75,6 +83,8 @@ impl S3 {
     pub async fn update_events(&self, events: FlatS3EventMessages) -> Result<FlatS3EventMessages> {
         Ok(FlatS3EventMessages(
             join_all(events.into_inner().into_iter().map(|mut event| async move {
+                trace!(key = ?event.key, bucket = ?event.bucket, "updating event");
+
                 if let Some(head) = self.head(&event.key, &event.bucket).await? {
                     let HeadObjectOutput {
                         storage_class,

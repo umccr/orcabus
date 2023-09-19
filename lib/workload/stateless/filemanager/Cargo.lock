@@ -1010,6 +1010,8 @@ dependencies = [
 name = "filemanager-ingest-lambda"
 version = "0.1.0"
 dependencies = [
+ "aws-config",
+ "aws-sdk-sts",
  "aws_lambda_events",
  "filemanager",
  "lambda_runtime",

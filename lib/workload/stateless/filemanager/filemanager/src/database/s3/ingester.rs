@@ -1,11 +1,15 @@
+use std::arch::asm;
 use sqlx::query_file;
 
-use crate::database::DbClient;
+use crate::database::{DbClient, Ingest};
 use crate::error::Result;
 use crate::events::s3::s3::S3;
 use crate::events::s3::{Events, TransposedS3EventMessages};
 use chrono::{DateTime, Utc};
+use crate::events::EventType;
 use crate::events::s3::StorageClass;
+use async_trait::async_trait;
+use tracing::trace;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
@@ -26,13 +30,14 @@ impl Ingester {
         })
     }
 
-    pub async fn ingest_events(&mut self, events: Events) -> Result<()> {
+    pub async fn ingest_s3_events(&mut self, events: Events) -> Result<()> {
         let Events {
             object_created,
             object_removed,
             ..
         } = events;
 
+        trace!(object_created = ?object_created, "ingesting object created events");
         let TransposedS3EventMessages {
             object_ids,
             event_times,
@@ -68,6 +73,7 @@ impl Ingester {
         .execute(&self.db.pool)
         .await?;
 
+        trace!(object_removed = ?object_removed, "ingesting object removed events");
         let TransposedS3EventMessages {
             event_times,
             buckets,
@@ -85,5 +91,14 @@ impl Ingester {
         .await?;
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl Ingest for Ingester {
+    async fn ingest(&mut self, events: EventType) -> Result<()> {
+        match events {
+            EventType::S3(events) => self.ingest_s3_events(events).await,
+        }
     }
 }

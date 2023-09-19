@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::events::s3::s3::S3;
 use crate::events::s3::{Events, FlatS3EventMessages};
 use crate::events::{Collect, EventType};
+use async_trait::async_trait;
 
 #[derive(Debug)]
 pub struct Collecter {
@@ -22,8 +23,11 @@ impl Collecter {
     }
 }
 
+#[async_trait]
 impl Collect for Collecter {
-    fn collect(self) -> Result<EventType> {
-        Ok(EventType::S3(Events::from(self.raw_events)))
+    async fn collect(self) -> Result<EventType> {
+        let events = self.s3.update_events(self.raw_events).await?;
+
+        Ok(EventType::S3(Events::from(events)))
     }
 }

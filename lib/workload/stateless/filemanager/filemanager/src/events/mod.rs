@@ -3,13 +3,15 @@
 
 use crate::error::Result;
 use crate::events::s3::Events;
+use async_trait::async_trait;
 
 pub mod s3;
 
 /// This trait processes raw events into a common type that can easily be consumed by the database.
+#[async_trait]
 pub trait Collect {
     /// Collect into events.
-    fn collect(self) -> Result<EventType>;
+    async fn collect(self) -> Result<EventType>;
 }
 
 /// The type of event.
