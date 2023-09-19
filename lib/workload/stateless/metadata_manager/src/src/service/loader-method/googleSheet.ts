@@ -24,7 +24,6 @@ import {
   updateSpecimenRecord,
 } from '../helpers/metadata/specimen-helper';
 import {
-  LibraryType,
   insertLibraryRecord,
   isLibraryIdentical,
   updateLibraryRecord,

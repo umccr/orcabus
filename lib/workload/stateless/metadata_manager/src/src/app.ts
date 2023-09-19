@@ -18,7 +18,9 @@ export class App {
     // inject a copy of the Elsa settings and a custom child DI container into every Fastify request
     this.server.decorateRequest('container', null);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     this.server.addHook('onRequest', async (req, reply) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (req as any).container = this.dc;
     });
   }

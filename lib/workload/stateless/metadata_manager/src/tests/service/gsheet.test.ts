@@ -1,12 +1,7 @@
 import e from '../../dbschema/edgeql-js';
 import { registerTypes } from './test-dependency.common';
 import { MetadataGoogleService } from '../../src/service/loader-method/googleSheet';
-import {
-  METADATA_GOOGLE_OBJ,
-  METADATA_REC_1,
-  METADATA_REC_2,
-  METADATA_REC_4,
-} from './gsheet.common';
+import { METADATA_GOOGLE_OBJ, METADATA_REC_1, METADATA_REC_4 } from './gsheet.common';
 import { Client } from 'edgedb';
 import { resetDb } from './utils';
 

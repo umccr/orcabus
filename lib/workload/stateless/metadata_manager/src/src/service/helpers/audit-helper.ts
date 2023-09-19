@@ -18,7 +18,7 @@ export const systemAuditEventPattern = async <T>(
   actionCategory: ActionType = 'E',
   actionDescription: string,
   transFunc: (tx: Transaction) => Promise<T>
-): Promise<T | undefined> => {
+): Promise<T | void> => {
   const auditEventId = await startSystemAuditEvent(edgeDbClient, actionCategory, actionDescription);
 
   try {
@@ -51,6 +51,7 @@ export const startSystemAuditEvent = async (
   executor: Executor,
   actionCategory: ActionType,
   actionDescription: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   details: any = { errorMessage: 'Audit entry not completed' },
   inProgress = true,
   actionOutcome: ActionOutcomeType = 'error'
@@ -80,6 +81,7 @@ export const completeSystemAuditEvent = async (
   auditEventId: string,
   outcome: ActionOutcomeType,
   endDate: Date,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   details: any
 ): Promise<void> => {
   await updateSystemAuditEvent(executor, {
