@@ -22,7 +22,7 @@ baseline:
 	@detect-secrets scan --exclude-files '^(yarn.lock|.yarn/|.local/|openapi/)' > .secrets.baseline
 
 build:
-	@(cd lib/workload/stateless/metadata_manager/src && yarn edgetypes)
+	@(cd lib/workload/stateless/metadata_manager/src && yarn && yarn edgetypes)
 
 test:
 	@yarn test
