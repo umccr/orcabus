@@ -1,26 +1,46 @@
+# Metadata manager
 
-# Development
+The `MetadataManager` is one of the microservice within the UMCCR OrcaBus that manages the metadata records used for the
+BioInformatics pipelines. The service will be responsible to make records to stay up to date and able to sync records
+from multiple sources.
 
-### Install
-Create a virtual environment and install the `requirements-dev.txt`
+## Development
 
-1. Make virtual environment 
-   
-   `python -mvenv .venv`
-2. Activate the environment
+### Git Checkout
+As this microservice is part of a monorepo from the main OrcaBus project, the process Git Flow process
+will follow on the root of this project.
 
-   `source .venv/bin/activate`
-3. Install the dependency
+### Development
 
-   `make install`
+#### Setup
+
+Change the terminal directory from the OrcaBus root to this directory:
+
+```
+cd lib/workload/stateless/metadata_manager/src
+```
+
+Requirement for this project:
+  - nodejs
+  - edgedb (see <https://www.edgedb.com/install>)
+
+To install the dependency of this project
+```
+yarn
+```
+
+Setup the database
+```
+yarn init-db
+yarn migrate-db
+```
+
+#### Build
+```yarn edgetypes```
 
 
-### Testing
+### Run
+```yarn watch```
 
-Follow the readme file in the root of the directory to create a MYSQL local database.
-
-Go this directory
-`cd lib/workload/stateless/library_manager/src`
-
-And use the makefile to start testing
-`make test`
+#### Testing
+```yarn test```
