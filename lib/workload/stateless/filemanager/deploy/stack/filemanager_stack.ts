@@ -91,8 +91,16 @@ export class FilemanagerStack extends Stack {
                 RUST_LOG: "info,filemanager_ingest_lambda=trace,filemanager=trace",
             },
             buildEnvironment: {
-                // Todo get this to build debug rather than release for local dev.
-                RUSTFLAGS: "-C target-cpu=neoverse-n1",
+                // Override release profile to match defaults for dev builds.
+                CARGO_PROFILE_RELEASE_OPT_LEVEL: "0",
+                CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS: "true",
+                CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS: "true",
+                CARGO_PROFILE_RELEASE_PANIC: "unwind",
+                CARGO_PROFILE_RELEASE_INCREMENTAL: "true",
+                CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "256",
+
+                // Additionally speed up builds by removing debug info. Please enable this if required.
+                CARGO_PROFILE_RELEASE_DEBUG: "false",
             },
             architecture: Architecture.ARM_64,
             role: lambdaRole,
