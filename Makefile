@@ -21,9 +21,6 @@ deep: scan
 baseline:
 	@detect-secrets scan --exclude-files '^(yarn.lock|.yarn/|.local/|openapi/)' > .secrets.baseline
 
-build:
-	@(cd lib/workload/stateless/metadata_manager/src && yarn && yarn edgetypes)
-
 test:
 	@yarn test
 	@(cd lib/workload/stateless/sequence_run_manager/src && python manage.py test)

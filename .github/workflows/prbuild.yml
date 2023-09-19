@@ -87,10 +87,6 @@ jobs:
         run: |
           make install
 
-      - name: Build code
-        run: |
-          make build
-
       - name: Lint and code formatting
         run: |
           make check

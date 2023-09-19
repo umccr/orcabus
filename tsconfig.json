@@ -25,10 +25,11 @@
     "typeRoots": [
       "./node_modules/@types"
     ],
-    "skipLibCheck": true
+    "skipLibCheck": true,
   },
   "exclude": [
     "node_modules",
-    "cdk.out"
+    "cdk.out",
+    "lib/workload/stateless/metadata_manager"
   ]
 }
