@@ -1,4 +1,4 @@
-import { insertLibraryQuery } from '../../../../dbschema/queries';
+import { insertLibraryQuery, updateLibraryQuery } from '../../../../dbschema/queries';
 import { Transaction } from 'edgedb/dist/transaction';
 import { MetadataIdentifiableType } from './metadata-helper';
 import { metadata } from '../../../../dbschema/interfaces';
@@ -61,7 +61,7 @@ export const insertLibraryRecord = async (tx: Transaction, props: LibraryType) =
 };
 
 export const updateLibraryRecord = async (tx: Transaction, props: LibraryType) => {
-  await insertLibraryQuery(tx, {
+  await updateLibraryQuery(tx, {
     orcaBusId: props.orcaBusId,
     internalId: props.internalId,
     phenotype: props.phenotype,

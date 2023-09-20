@@ -3,8 +3,8 @@ select assert_single((
   filter 
     .orcaBusId = <optional str>$orcaBusId
   set {
-    internalId := <optional str>$internalId ?? .internalId,
-    externalId := <optional str>$externalId ?? .externalId
+    internalId := <optional str>$internalId,
+    externalId := <optional str>$externalId
   }
 )){ 
   *,

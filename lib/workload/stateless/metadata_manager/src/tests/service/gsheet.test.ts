@@ -21,7 +21,7 @@ describe('sync metadata from google spreadsheet', () => {
   });
 
   it('libraries with the same specimen', async () => {
-    await gService.syncGoogleMetadataRecords([METADATA_REC_1, METADATA_REC_4]);
+    await gService.upsertGoogleMetadataRecords([METADATA_REC_1, METADATA_REC_4]);
 
     const libraries = await e
       .select(e.metadata.Library, () => ({
@@ -50,7 +50,7 @@ describe('sync metadata from google spreadsheet', () => {
   });
 
   it('libraries with both the same specimen and subject', async () => {
-    await gService.syncGoogleMetadataRecords([METADATA_REC_1, METADATA_REC_4]);
+    await gService.upsertGoogleMetadataRecords([METADATA_REC_1, METADATA_REC_4]);
 
     const specimens = await e
       .select(e.metadata.Specimen, () => ({
@@ -70,7 +70,7 @@ describe('sync metadata from google spreadsheet', () => {
   });
 
   it('test insert and update works', async () => {
-    await gService.syncGoogleMetadataRecords(METADATA_GOOGLE_OBJ);
+    await gService.upsertGoogleMetadataRecords(METADATA_GOOGLE_OBJ);
 
     const libraries = await e
       .select(e.metadata.Library, () => ({ ...e.metadata.Library['*'] }))

@@ -8,5 +8,5 @@ export default async function insertScenario1(dc: DependencyContainer) {
   const gService = dc.resolve(MetadataGoogleService);
 
   logger.info('inserting scenario 1');
-  await gService.syncGoogleMetadataRecords(METADATA_GOOGLE_OBJ);
+  await gService.upsertGoogleMetadataRecords(METADATA_GOOGLE_OBJ);
 }

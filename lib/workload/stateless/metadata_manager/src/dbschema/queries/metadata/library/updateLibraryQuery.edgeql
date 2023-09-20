@@ -4,14 +4,14 @@ select assert_single((
   filter 
     .orcaBusId = <optional str>$orcaBusId
   set {
-    internalId := <optional str>$internalId ?? .internalId,
+    internalId := <optional str>$internalId,
 
-    phenotype := <optional Phenotype>$phenotype ?? .phenotype,
-    workflow := <optional WorkflowTypes>$workflow ?? .workflow,
-    quality := <optional Quality>$quality ?? .quality,
-    type := <optional LibraryTypes>$type ?? .type,
-    assay := <optional str>$assay ?? .assay,
-    coverage := <optional decimal>$coverage ?? .coverage,
+    phenotype := <optional Phenotype>$phenotype,
+    workflow := <optional WorkflowTypes>$workflow,
+    quality := <optional Quality>$quality,
+    type := <optional LibraryTypes>$type,
+    assay := <optional str>$assay,
+    coverage := <optional decimal>$coverage,
 
     specimen := (
       select assert_single((

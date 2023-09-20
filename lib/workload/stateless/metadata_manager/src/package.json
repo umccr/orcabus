@@ -18,6 +18,7 @@
     "google-auth-library": "^9.0.0",
     "google-spreadsheet": "^4.0.2",
     "lodash": "^4.17.21",
+    "pino": "^8.15.1",
     "pino-pretty": "^10.1.0",
     "reflect-metadata": "^0.1.13",
     "ts-node": "^10.9.1",

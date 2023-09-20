@@ -1,0 +1,3 @@
+select metadata::Library{
+  *
+}

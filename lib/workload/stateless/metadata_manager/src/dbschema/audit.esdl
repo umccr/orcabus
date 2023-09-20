@@ -3,7 +3,7 @@ module audit {
   # NOTE: TODO How to query deleted library??
 
   # ActionType definition
-  # Ref: http://hl7.org/fhir/audit-even t-action
+  # Ref: http://hl7.org/fhir/audit-event-action
   scalar type ActionType extending enum<'C', 'R', 'U', 'D', 'E'>;
 
   # ActionOutcome definition

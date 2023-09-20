@@ -7,9 +7,15 @@ import { JWT } from 'google-auth-library';
 import { GetParameterCommand, SSMClient } from '@aws-sdk/client-ssm';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import {
-  selectLibraryByIdQuery,
-  selectSpecimenByIdQuery,
-  selectSubjectByIdQuery,
+  deleteLibraryByOrcaBusId,
+  deleteSpecimenByOrcaBusId,
+  deleteSubjectByOrcaBusId,
+  selectAllLibraryQuery,
+  selectAllSpecimenQuery,
+  selectAllSubjectQuery,
+  selectLibraryByInternalIdQuery,
+  selectSpecimenByInternalIdQuery,
+  selectSubjectByInternalIdQuery,
 } from '../../../dbschema/queries';
 import {
   isSubjectIdentical,
@@ -110,20 +116,21 @@ export class MetadataGoogleService {
    * @param props
    * @returns
    */
-  protected async syncSubject(props: { internalId: string; externalId: string | null }) {
-    const subject = await selectSubjectByIdQuery(this.edgeDbClient, {
+  protected async upsertSubject(props: { internalId: string; externalId: string | null }) {
+    const subject = await selectSubjectByInternalIdQuery(this.edgeDbClient, {
       internalId: props.internalId,
     });
 
     // If subject does not exist => insert one
     if (!subject) {
+      const assignedOrcaBusId = `sbj.${ulid()}`;
       return systemAuditEventPattern(
         this.edgeDbClient,
         'C',
-        `Insert new subject record: ${props.internalId}`,
+        `Insert new subject record: ${assignedOrcaBusId}`,
         async (tx: Transaction) => {
           const r = await insertSubjectRecord(tx, {
-            orcaBusId: `sbj.${ulid()}`,
+            orcaBusId: assignedOrcaBusId,
             internalId: props.internalId,
             externalId: props.externalId,
           });
@@ -137,7 +144,7 @@ export class MetadataGoogleService {
       return systemAuditEventPattern(
         this.edgeDbClient,
         'U',
-        `Update existing subject record: ${props.internalId}`,
+        `Update existing subject record: ${subject.orcaBusId}`,
         async (tx: Transaction) => {
           const r = await updateSubjectRecord(tx, {
             orcaBusId: subject.orcaBusId,
@@ -152,29 +159,59 @@ export class MetadataGoogleService {
   }
 
   /**
+   * Check the current records and deletes it if no longer exist in source data
+   * @param sourceData The source truth of data
+   * @returns
+   */
+  protected async checkAndRemoveSubject(
+    sourceData: Record<GoogleMetadataTrackingHeader, string | undefined>[]
+  ) {
+    const allExistingSubject = await selectAllSubjectQuery(this.edgeDbClient);
+    for (const s of allExistingSubject) {
+      const isExist = !!sourceData.find((source) => source.SubjectID == s.internalId);
+
+      if (!isExist) {
+        return systemAuditEventPattern(
+          this.edgeDbClient,
+          'D',
+          `Delete subject record: ${s.orcaBusId}`,
+          async (tx: Transaction) => {
+            const r = await deleteSubjectByOrcaBusId(tx, {
+              orcaBusId: s.orcaBusId,
+            });
+            return r;
+          }
+        );
+      }
+    }
+  }
+
+  /**
    * Insert or Update for the specimen specified in the properties
    * @param props
    * @returns
    */
-  protected async syncSpecimen(props: {
+  protected async upsertSpecimen(props: {
     internalId: string;
     externalId: string | null;
     subjectOrcaBusId?: string;
     source: string | null;
   }) {
-    const specimen = await selectSpecimenByIdQuery(this.edgeDbClient, {
+    const specimen = await selectSpecimenByInternalIdQuery(this.edgeDbClient, {
       internalId: props.internalId,
     });
 
     // If subject does not exist => insert one
     if (!specimen) {
+      const assignedOrcaBusId = `spc.${ulid()}`;
+
       return systemAuditEventPattern(
         this.edgeDbClient,
         'C',
-        `Insert new specimen record: ${props.internalId}`,
+        `Insert new specimen record: ${assignedOrcaBusId}`,
         async (tx: Transaction) => {
           const r = await insertSpecimenRecord(tx, {
-            orcaBusId: `spc.${ulid()}`,
+            orcaBusId: assignedOrcaBusId,
             internalId: props.internalId,
             externalId: props.externalId,
             subjectOrcaBusId: props.subjectOrcaBusId,
@@ -200,7 +237,7 @@ export class MetadataGoogleService {
       return systemAuditEventPattern(
         this.edgeDbClient,
         'U',
-        `Update existing specimen record: ${props.internalId}`,
+        `Update existing specimen record: ${specimen.orcaBusId}`,
         async (tx: Transaction) => {
           const r = await updateSpecimenRecord(tx, {
             orcaBusId: specimen.orcaBusId,
@@ -217,11 +254,38 @@ export class MetadataGoogleService {
   }
 
   /**
+   * Check the current records and deletes it if no longer exist in source data
+   * @param sourceData The source truth of data
+   * @returns
+   */
+  protected async checkAndRemoveSpecimen(
+    sourceData: Record<GoogleMetadataTrackingHeader, string | undefined>[]
+  ) {
+    const allExistingSpc = await selectAllSpecimenQuery(this.edgeDbClient);
+    for (const s of allExistingSpc) {
+      const isExist = !!sourceData.find((source) => source.SampleID == s.internalId);
+
+      if (!isExist) {
+        return systemAuditEventPattern(
+          this.edgeDbClient,
+          'D',
+          `Delete specimen record: ${s.orcaBusId}`,
+          async (tx: Transaction) => {
+            const r = await deleteSpecimenByOrcaBusId(tx, {
+              orcaBusId: s.orcaBusId,
+            });
+            return r;
+          }
+        );
+      }
+    }
+  }
+  /**
    * Insert or Update for the library specified in the properties
    * @param props
    * @returns
    */
-  protected async syncLibrary(props: {
+  protected async upsertLibrary(props: {
     internalId: string;
     phenotype: metadata.Phenotype | null;
     workflow: metadata.WorkflowTypes | null;
@@ -231,18 +295,19 @@ export class MetadataGoogleService {
     coverage: string | null;
     specimenId?: string;
   }) {
-    const library = await selectLibraryByIdQuery(this.edgeDbClient, {
+    const library = await selectLibraryByInternalIdQuery(this.edgeDbClient, {
       libraryId: props.internalId,
     });
     // If library does not exist => insert one
     if (!library) {
+      const assignedOrcaBusId = `lib.${ulid()}`;
       return systemAuditEventPattern(
         this.edgeDbClient,
         'C',
-        `Insert new library record: ${props.internalId}`,
+        `Insert new library record: ${assignedOrcaBusId}`,
         async (tx: Transaction) => {
           const r = await insertLibraryRecord(tx, {
-            orcaBusId: `lib.${ulid()}`,
+            orcaBusId: assignedOrcaBusId,
             internalId: props.internalId,
             phenotype: props.phenotype,
             workflow: props.workflow,
@@ -262,7 +327,7 @@ export class MetadataGoogleService {
       return systemAuditEventPattern(
         this.edgeDbClient,
         'U',
-        `Update existing specimen record: ${props.internalId}`,
+        `Update existing specimen record: ${library.orcaBusId}`,
         async (tx: Transaction) => {
           const r = await updateLibraryRecord(tx, {
             orcaBusId: library.orcaBusId,
@@ -283,18 +348,44 @@ export class MetadataGoogleService {
   }
 
   /**
-   * Sync Google Metadata record
-   *
-   * NOTE (in DEV): Does not handle deletion (from gsheet) and if record is half filled.
+   * Check the current records and deletes it if no longer exist in source data
+   * @param sourceData The source truth of data
+   * @returns
+   */
+  protected async checkAndRemoveLibrary(
+    sourceData: Record<GoogleMetadataTrackingHeader, string | undefined>[]
+  ) {
+    const allExistingLib = await selectAllLibraryQuery(this.edgeDbClient);
+    for (const s of allExistingLib) {
+      const isExist = !!sourceData.find((source) => source.LibraryID == s.internalId);
+
+      if (!isExist) {
+        return systemAuditEventPattern(
+          this.edgeDbClient,
+          'D',
+          `Delete library record: ${s.orcaBusId}`,
+          async (tx: Transaction) => {
+            const r = await deleteLibraryByOrcaBusId(tx, {
+              orcaBusId: s.orcaBusId,
+            });
+            return r;
+          }
+        );
+      }
+    }
+  }
+
+  /**
+   * Update or Insert record based on the existing google metadata records
    * @param sheetRecords
    */
-  public async syncGoogleMetadataRecords(
+  public async upsertGoogleMetadataRecords(
     sheetRecords: Record<GoogleMetadataTrackingHeader, string | undefined>[]
   ) {
     for (const rec of sheetRecords) {
       // Sync subject
       const subject = rec.SubjectID
-        ? await this.syncSubject({
+        ? await this.upsertSubject({
             internalId: rec.SubjectID,
             externalId: rec.ExternalSubjectID ?? null,
           })
@@ -302,7 +393,7 @@ export class MetadataGoogleService {
 
       // Sync Sample
       const sample = rec.SampleID
-        ? await this.syncSpecimen({
+        ? await this.upsertSpecimen({
             internalId: rec.SampleID,
             externalId: rec.ExternalSampleID ?? null,
             subjectOrcaBusId: subject?.orcaBusId,
@@ -312,7 +403,7 @@ export class MetadataGoogleService {
 
       // Sync Library
       if (rec.LibraryID) {
-        await this.syncLibrary({
+        await this.upsertLibrary({
           internalId: rec.LibraryID,
           phenotype: <metadata.Phenotype>rec.Phenotype ? <metadata.Phenotype>rec.Phenotype : null,
           workflow: <metadata.WorkflowTypes>rec.Workflow
@@ -328,17 +419,37 @@ export class MetadataGoogleService {
     }
   }
 
-  public async downloadGoogleMetadata() {
+  /**
+   * Check and delete if record no longer exist from external parties across all metadata
+   * @param sheetRecords The data that the app relies on
+   */
+  public async removeDeletedGoogleMetadataRecords(
+    sheetRecords: Record<GoogleMetadataTrackingHeader, string | undefined>[]
+  ) {
+    await this.checkAndRemoveSubject(sheetRecords);
+
+    await this.checkAndRemoveSpecimen(sheetRecords);
+
+    await this.checkAndRemoveLibrary(sheetRecords);
+  }
+
+  public async downloadGoogleMetadata(): Promise<
+    Record<GoogleMetadataTrackingHeader, string | undefined>[]
+  > {
     let year = YEAR_START;
-    for (;;) {
+    let allRecords: Record<GoogleMetadataTrackingHeader, string | undefined>[] = [];
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
       try {
-        // TODO: Deal with deletion!!!
-        const metadata_object = await this.getSheetObject(year.toString());
-        this.syncGoogleMetadataRecords(metadata_object);
+        const yearlyMetadataObject = await this.getSheetObject(year.toString());
+        allRecords = [...allRecords, ...yearlyMetadataObject];
         year += 1;
       } catch (error) {
         break;
       }
     }
+
+    return allRecords;
   }
 }
