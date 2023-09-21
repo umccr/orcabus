@@ -38,7 +38,6 @@ module audit {
       rewrite insert, update using (datetime_of_statement())
     }
 
-
     # bespoke JSON with details of the event
     details: json;
 
