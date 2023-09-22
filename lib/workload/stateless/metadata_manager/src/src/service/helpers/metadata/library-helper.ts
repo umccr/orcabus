@@ -5,10 +5,10 @@ import { metadata } from '../../../../dbschema/interfaces';
 import { isEqual } from 'lodash';
 
 export type LibraryType = MetadataIdentifiableType & {
-  phenotype: metadata.Phenotype | null;
+  phenotype: string | null;
   workflow: metadata.WorkflowTypes | null;
-  quality: metadata.Quality | null;
-  type: metadata.LibraryTypes | null;
+  quality: string | null;
+  type: string | null;
   assay: string | null;
   coverage: string | null;
   specimenOrcaBusId?: string;

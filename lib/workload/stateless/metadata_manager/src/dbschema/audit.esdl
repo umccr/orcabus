@@ -1,3 +1,4 @@
+using extension graphql;
 module audit {
 
   # NOTE: TODO How to query deleted library??

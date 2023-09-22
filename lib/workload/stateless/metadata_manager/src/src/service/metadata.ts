@@ -184,11 +184,11 @@ export class MetadataService {
   protected async checkAndRemoveSpecimen(sourceInternalIdArray: string[]) {
     const allExistingSpc = await selectAllSpecimenQuery(this.edgeDbClient);
     for (const s of allExistingSpc) {
-      const shouldRetail = !!sourceInternalIdArray.find(
+      const shouldRetain = !!sourceInternalIdArray.find(
         (sourceInternalId) => sourceInternalId == s.internalId
       );
 
-      if (!shouldRetail) {
+      if (!shouldRetain) {
         await systemAuditEventPattern(
           this.edgeDbClient,
           'D',

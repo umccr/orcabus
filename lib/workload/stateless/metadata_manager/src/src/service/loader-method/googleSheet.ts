@@ -127,12 +127,12 @@ export class MetadataGoogleService {
       if (rec.LibraryID) {
         val.library = {
           internalId: rec.LibraryID,
-          phenotype: <metadata.Phenotype>rec.Phenotype ? <metadata.Phenotype>rec.Phenotype : null,
+          phenotype: rec.Phenotype ? rec.Phenotype : null,
           workflow: <metadata.WorkflowTypes>rec.Workflow
             ? <metadata.WorkflowTypes>rec.Workflow
             : null,
-          quality: <metadata.Quality>rec.Quality ? <metadata.Quality>rec.Quality : null,
-          type: <metadata.LibraryTypes>rec.Type ? <metadata.LibraryTypes>rec.Type : null,
+          quality: rec.Quality ? rec.Quality : null,
+          type: rec.Type ? rec.Type : null,
           assay: rec.Assay ? rec.Assay : null,
           coverage: rec['Coverage (X)'] ? rec['Coverage (X)'] : null,
         };
