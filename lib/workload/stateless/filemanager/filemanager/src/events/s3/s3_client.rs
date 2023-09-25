@@ -1,13 +1,12 @@
 use std::env;
+
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
-use aws_sdk_s3::{Client, config};
-use axum::routing::trace;
+use aws_sdk_s3::{config, Client};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::future::join_all;
 use tracing::trace;
-use tracing_subscriber::fmt::format;
 
-use crate::error::Error::{ConfigError, S3Error};
+use crate::error::Error::S3Error;
 use crate::error::Result;
 use crate::events::s3::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 
@@ -35,9 +34,9 @@ impl S3 {
                 config = config.force_path_style(path_style);
             }
         }
-        
+
         Ok(Self {
-            s3_client: Client::from_conf(config.build())
+            s3_client: Client::from_conf(config.build()),
         })
     }
 

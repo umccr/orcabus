@@ -1,8 +1,8 @@
+use async_trait::async_trait;
 use sqlx::PgPool;
 
 use crate::error::Error::DbClientError;
 use crate::error::Result;
-use async_trait::async_trait;
 use crate::events::EventType;
 
 pub mod s3;
@@ -34,5 +34,5 @@ impl DbClient {
 #[async_trait]
 pub trait Ingest {
     /// Ingest the events.
-    async fn ingest(&mut self, events: EventType)  -> Result<()>;
+    async fn ingest(&mut self, events: EventType) -> Result<()>;
 }

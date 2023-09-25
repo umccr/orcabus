@@ -11,8 +11,8 @@ use crate::error::Error::DeserializeError;
 use crate::error::Result;
 
 pub mod collect;
-pub mod s3;
-pub mod sqs;
+pub mod s3_client;
+pub mod sqs_client;
 
 #[derive(Debug, Eq, PartialEq, sqlx::Type)]
 #[sqlx(type_name = "storage_class")]

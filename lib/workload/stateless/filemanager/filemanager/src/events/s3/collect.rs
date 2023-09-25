@@ -1,8 +1,9 @@
+use async_trait::async_trait;
+
 use crate::error::Result;
-use crate::events::s3::s3::S3;
+use crate::events::s3::s3_client::S3;
 use crate::events::s3::{Events, FlatS3EventMessages};
 use crate::events::{Collect, EventType};
-use async_trait::async_trait;
 
 #[derive(Debug)]
 pub struct Collecter {

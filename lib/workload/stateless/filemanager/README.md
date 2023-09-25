@@ -2,21 +2,50 @@
 
 The filemanager ingests events from cloud storage like S3 and maintains a queryable table of objects.
 
-# Quickstart
+This project is split up into multiple crates in a workspace. For development, docker is used, which enables
+localstack and a postgres database.
 
-For development edit/compile looping:
+## Prerequisites
 
+- [Docker](https://docs.docker.com/get-docker/)
+- [Rust](https://www.rust-lang.org/tools/install)
+- [npm](https://www.npmjs.com/get-npm)
+- [awslocal](https://github.com/localstack/awscli-local)
+
+## Rust code development
+
+Start the postgres database and ensure that an `.env` file is set containing the `DATABASE_URL`, e.g. see [`.env.example`][env-example]:
+
+```sh
+docker compose up
 ```
+
+For development of the rust workspace:
+
+```sh
 $ cargo install cargo-watch     # if not installed previously
 $ cargo watch -c -w src -x run
-
-   Compiling rust-api v0.1.0 (/Users/rvalls/dev/umccr/orcabus/skel/rust-api)
-    Finished dev [unoptimized + debuginfo] target(s) in 1.74s
-     Running `target/debug/rust-api`
-2023-06-13T00:56:41.621002Z  INFO filemanager: listening on 0.0.0.0:8080
 ```
 
-## Development
+Test with:
+
+```sh
+cargo test --all-targets
+```
+
+Formatting and clippy:
+
+```sh
+cargo clippy --all-targets
+cargo fmt
+```
+
+[env-example]: .env.example
+
+## Localstack development
+
+Localstack enables deploying and testing AWS services locally. See the [deploy][deploy] directory
+for the cdk infrastructure code.
 
 For localstack testing and development:
 
@@ -28,22 +57,33 @@ Then deploy the cdk to localstack:
 
 ```sh
 cd deploy
+
+npm install
+
 npx cdklocal bootstrap
 npx cdklocal deploy
 ```
 
-Which allows creating events that are ingested:
+**WARNING**: it's possible that a profile called "default" in `~/.aws/config` could interfere with awslocal.
 
+This allows creating events that are ingested.
+
+First, push an object (in order to create a log group):q:
 ```sh
 awslocal s3api put-object --bucket filemanager-test-ingest --key test
-
-/bin/bash aws-get-filemanager-logs.sh -c awslocal > logs.txt
 ```
 
-### Database
+Then in a separate terminal:
+```sh
+./aws-get-filemanager-logs.sh -c awslocal
+```
 
-Handy shortcut for database interaction, check `docs/developer/RUST_API.md` for more detailed ops:
+[deploy]: ./deploy
+
+## Database
+
+A shortcut for connecting to the docker database:
 
 ```bash
-docker exec -it orcabus_db mysql -h 0.0.0.0 -D orcabus -u root -proot
+docker exec -it filemanager_db psql filemanager -U filemanager
 ```

@@ -15,17 +15,8 @@ function usage() {
 }
 
 function run_command() {
-  logs=$("$command" logs describe-log-groups --query logGroups[*].logGroupName | jq -r '.[]')
-  log_stream=$( \
-    "$command" logs describe-log-streams --log-group-name "$logs" --query logStreams[*].logStreamName \
-    | jq -r '.[]' \
-  )
-  lambda_log=$( \
-    "$command" logs get-log-events --log-group-name "$logs" --log-stream-name \
-    "$log_stream" \
-  )
-
-  echo "$lambda_log"
+  group_name=$("$command" logs describe-log-groups --query logGroups[*].logGroupName | jq -r '.[]')
+  "$command" logs tail "$group_name" --follow
 }
 
 command=""

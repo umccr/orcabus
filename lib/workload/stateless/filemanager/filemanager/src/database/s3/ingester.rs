@@ -1,32 +1,28 @@
-use std::arch::asm;
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use sqlx::query_file;
+use tracing::trace;
 
 use crate::database::{DbClient, Ingest};
 use crate::error::Result;
-use crate::events::s3::s3::S3;
-use crate::events::s3::{Events, TransposedS3EventMessages};
-use chrono::{DateTime, Utc};
-use crate::events::EventType;
 use crate::events::s3::StorageClass;
-use async_trait::async_trait;
-use tracing::trace;
+use crate::events::s3::{Events, TransposedS3EventMessages};
+use crate::events::EventType;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
 pub struct Ingester {
     db: DbClient,
-    s3: S3,
 }
 
 impl Ingester {
-    pub fn new(db: DbClient, s3: S3) -> Self {
-        Self { db, s3 }
+    pub fn new(db: DbClient) -> Self {
+        Self { db }
     }
 
     pub async fn new_with_defaults() -> Result<Self> {
         Ok(Self {
             db: DbClient::new_with_defaults().await?,
-            s3: S3::with_defaults().await?,
         })
     }
 

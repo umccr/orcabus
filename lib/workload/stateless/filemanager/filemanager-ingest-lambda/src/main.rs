@@ -1,17 +1,15 @@
 use aws_lambda_events::sqs::SqsEvent;
-use aws_sdk_sts::config;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-use tracing::{info, trace};
-use tracing_subscriber::{EnvFilter, fmt};
+use tracing::trace;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use filemanager::database::Ingest;
+use tracing_subscriber::{fmt, EnvFilter};
 
 use filemanager::database::s3::ingester::Ingester;
-use filemanager::events::Collect;
+use filemanager::database::Ingest;
 use filemanager::events::s3::collect::Collecter;
-use filemanager::events::s3::s3::S3;
 use filemanager::events::s3::FlatS3EventMessages;
+use filemanager::events::Collect;
 
 /// Handle SQS events.
 async fn event_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {

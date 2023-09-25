@@ -1,8 +1,9 @@
 use std::env;
-use aws_sdk_sqs::{Client, config};
+
+use aws_sdk_sqs::{config, Client};
 use tracing::trace;
 
-use crate::error::Error::{ConfigError, DbClientError, DeserializeError, SQSReceiveError};
+use crate::error::Error::{DbClientError, DeserializeError, SQSReceiveError};
 use crate::error::Result;
 use crate::events::s3::FlatS3EventMessages;
 
