@@ -23,8 +23,9 @@ export const gqlRoutes = async (fastify: FastifyInstance) => {
     proxyPayloads: false,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     preHandler: async (request: any, reply) => {
-      if (!request.body['query'].startsWith('query')) {
-        reply.code(400).send({ message: 'query contains invalid operation' });
+      // Reject graphql mutation request
+      if (request.body['query'].startsWith('mutation')) {
+        reply.code(400).send({ message: 'unable to support mutation through graphql' });
       }
     },
   });
