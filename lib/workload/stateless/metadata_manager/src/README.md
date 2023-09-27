@@ -1,6 +1,6 @@
 # Metadata manager
 
-The `MetadataManager` is one of the microservice within the UMCCR OrcaBus that manages the metadata records used for the
+The `MetadataManager` is one of the microservices within the UMCCR OrcaBus that manages the metadata records used for the
 BioInformatics pipelines. The service will be responsible to make records to stay up to date and able to sync records
 from multiple sources.
 
@@ -44,3 +44,6 @@ yarn migrate-db
 
 #### Testing
 ```yarn test```
+
+### Notes
+- If google records have multiple records, the last record will replace the first request.

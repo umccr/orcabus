@@ -4,6 +4,7 @@ import { DependencyContainer } from 'tsyringe';
 import { internalRoutes } from './api/routes/internal-routes';
 import insertScenario1 from './test-data/scenario-1';
 import { Client } from 'edgedb';
+import { gqlRoutes } from './api/routes/graphql-routes';
 
 export class App {
   public readonly server: FastifyInstance;
@@ -40,7 +41,13 @@ export class App {
 
     // Register Fastify routing
     {
-      this.server.register(internalRoutes);
+      this.server.register(internalRoutes, {
+        container: this.dc,
+      });
+      this.server.register(gqlRoutes, {
+        container: this.dc,
+        prefix: '/graphql',
+      });
     }
 
     return this.server;

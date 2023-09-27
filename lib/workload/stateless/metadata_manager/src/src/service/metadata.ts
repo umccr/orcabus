@@ -336,4 +336,16 @@ export class MetadataService {
     await this.checkAndRemoveSpecimen(internalIdArrays.specimen);
     await this.checkAndRemoveLibrary(internalIdArrays.library);
   }
+
+  public async getAllLibrary() {
+    return await selectAllLibraryQuery(this.edgeDbClient);
+  }
+
+  public async getAllSpecimen() {
+    return await selectAllSpecimenQuery(this.edgeDbClient);
+  }
+
+  public async getAllSubject() {
+    return await selectAllSubjectQuery(this.edgeDbClient);
+  }
 }

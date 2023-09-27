@@ -3,6 +3,8 @@ import * as tsyringe from 'tsyringe';
 import { SSMClient } from '@aws-sdk/client-ssm';
 import { instanceCachingFactory } from 'tsyringe';
 import pino, { Logger } from 'pino';
+import { MetadataService } from '../service/metadata';
+import { MetadataGoogleService } from '../service/loader-method/googleSheet';
 
 export async function createDependencyContainer() {
   const dc = tsyringe.container.createChildContainer();
@@ -27,6 +29,9 @@ export async function createDependencyContainer() {
   dc.register<SSMClient>('SSMClient', {
     useFactory: () => new SSMClient({}),
   });
+
+  dc.registerSingleton(MetadataService);
+  dc.registerSingleton(MetadataGoogleService);
 
   // Note: dependencies of class constructors must be injected manually when using esbuild.
   return dc;
