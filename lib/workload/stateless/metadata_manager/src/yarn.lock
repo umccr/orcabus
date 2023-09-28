@@ -1109,6 +1109,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fastify/aws-lambda@npm:^3.3.0":
+  version: 3.3.0
+  resolution: "@fastify/aws-lambda@npm:3.3.0"
+  checksum: 18d271f6d11f0e8eb4a6539be21b09a3174c27ded50a018413e0acce9fd1184af88da5b74e5f2b981a353b90a3f67e7eecb37495ea0869c67000d2b725ff0ce2
+  languageName: node
+  linkType: hard
+
 "@fastify/deepmerge@npm:^1.0.0":
   version: 1.3.0
   resolution: "@fastify/deepmerge@npm:1.3.0"
@@ -5639,6 +5646,7 @@ __metadata:
   dependencies:
     "@aws-sdk/client-ssm": ^3.382.0
     "@edgedb/generate": ^0.3.1
+    "@fastify/aws-lambda": ^3.3.0
     "@fastify/http-proxy": ^9.2.1
     "@types/jest": ^29.5.3
     "@types/lodash": ^4

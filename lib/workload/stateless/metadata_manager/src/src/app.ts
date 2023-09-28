@@ -1,9 +1,7 @@
 import Fastify, { FastifyBaseLogger, FastifyInstance } from 'fastify';
-import e from '../dbschema/edgeql-js';
 import { DependencyContainer } from 'tsyringe';
 import { internalRoutes } from './api/routes/internal-routes';
 import insertScenario1 from './test-data/scenario-1';
-import { Client } from 'edgedb';
 import { gqlRoutes } from './api/routes/graphql-routes';
 
 export class App {
@@ -30,14 +28,9 @@ export class App {
     // register global fastify plugins
     // {
     // }
-    const edgeDbClient = dc.resolve<Client>('Database');
-
-    // WARNING: THIS IS DEV MODE
-    await e.delete(e.metadata.Subject).run(edgeDbClient);
-    await e.delete(e.metadata.Specimen).run(edgeDbClient);
-    await e.delete(e.metadata.Library).run(edgeDbClient);
-
-    await insertScenario1(dc);
+    if (process.env.NODE_ENV === 'development') {
+      await insertScenario1(dc);
+    }
 
     // Register Fastify routing
     {
