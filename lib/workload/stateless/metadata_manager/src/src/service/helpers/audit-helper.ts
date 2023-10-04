@@ -18,7 +18,7 @@ export const systemAuditEventPattern = async <T>(
   actionCategory: ActionType = 'E',
   actionDescription: string,
   transFunc: (tx: Transaction) => Promise<T>
-): Promise<T | void> => {
+): Promise<T> => {
   const auditEventId = await startSystemAuditEvent(edgeDbClient, actionCategory, actionDescription);
 
   try {

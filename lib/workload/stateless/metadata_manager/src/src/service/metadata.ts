@@ -56,7 +56,7 @@ export class MetadataService {
     // If subject does not exist => insert one
     if (!subject) {
       const assignedOrcaBusId = `sbj.${ulid()}`;
-      return systemAuditEventPattern(
+      return await systemAuditEventPattern(
         this.edgeDbClient,
         'C',
         `Insert new subject record: ${assignedOrcaBusId}`,
@@ -72,7 +72,7 @@ export class MetadataService {
 
     // Check if there it is the same with what we had in record and update if not
     if (isSubjectIdentical(subject, props)) {
-      return systemAuditEventPattern(
+      return await systemAuditEventPattern(
         this.edgeDbClient,
         'U',
         `Update existing subject record: ${subject.orcaBusId}`,
@@ -134,7 +134,7 @@ export class MetadataService {
     if (!specimen) {
       const assignedOrcaBusId = `spc.${ulid()}`;
 
-      return systemAuditEventPattern(
+      return await systemAuditEventPattern(
         this.edgeDbClient,
         'C',
         `Insert new specimen record: ${assignedOrcaBusId}`,
@@ -160,7 +160,7 @@ export class MetadataService {
         { ...props }
       )
     ) {
-      return systemAuditEventPattern(
+      return await systemAuditEventPattern(
         this.edgeDbClient,
         'U',
         `Update existing specimen record: ${specimen.orcaBusId}`,
@@ -220,7 +220,7 @@ export class MetadataService {
     // If library does not exist => insert one
     if (!library) {
       const assignedOrcaBusId = `lib.${ulid()}`;
-      return systemAuditEventPattern(
+      return await systemAuditEventPattern(
         this.edgeDbClient,
         'C',
         `Insert new library record: ${assignedOrcaBusId}`,
@@ -236,7 +236,7 @@ export class MetadataService {
 
     // Check if specimen is the same with what we had in record and update if not
     if (isLibraryIdentical(library, props)) {
-      return systemAuditEventPattern(
+      return await systemAuditEventPattern(
         this.edgeDbClient,
         'U',
         `Update existing specimen record: ${library.orcaBusId}`,
