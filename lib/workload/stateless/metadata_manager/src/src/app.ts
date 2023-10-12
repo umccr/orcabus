@@ -25,9 +25,6 @@ export class App {
   }
 
   public async setupServer(dc: DependencyContainer): Promise<FastifyInstance> {
-    // register global fastify plugins
-    // {
-    // }
     if (process.env.NODE_ENV === 'development') {
       await insertScenario1(dc);
     }

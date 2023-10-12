@@ -5,14 +5,22 @@ import { instanceCachingFactory } from 'tsyringe';
 import pino, { Logger } from 'pino';
 import { MetadataService } from '../service/metadata';
 import { MetadataGoogleService } from '../service/loader-method/googleSheet';
+import { getSecretManagerWithLayerExtension } from '../utils';
 
 export async function createDependencyContainer() {
   const dc = tsyringe.container.createChildContainer();
 
+  // Get the edge-db password from SM
+  const edgeDbPassword = process.env.EDGEDB_SECRET_NAME
+    ? await getSecretManagerWithLayerExtension(process.env.EDGEDB_SECRET_NAME)
+    : undefined;
+
   dc.register<Client>('Database', {
     // https://www.edgedb.com/docs/clients/js/driver#configuring-clients
     useFactory: instanceCachingFactory(() =>
-      createClient().withConfig({
+      createClient({
+        password: edgeDbPassword,
+      }).withConfig({
         session_idle_transaction_timeout: Duration.from({ seconds: 60 }),
       })
     ),
