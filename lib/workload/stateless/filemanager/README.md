@@ -70,9 +70,7 @@ Then deploy the cdk to localstack:
 
 ```sh
 cd deploy
-
 npm install
-
 npx cdklocal bootstrap
 npx cdklocal deploy
 ```
