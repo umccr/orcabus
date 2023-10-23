@@ -21,8 +21,13 @@ use tracing::{info, Level};
 /// 1. Listening and ingesting (indexing) file creation events from the different storage backends.
 /// 2. Querying on file attributes such as name, type of file, creation date, etc...
 /// 3. Record file provenance (on create, on delete).
-/// 4. Record lifecycle status.
-/// 5. Checksumming of files is not a requirement at this stage.
+/// 4. Record object lifecycle status, i.e: Tier transition, backup to different storage, deletion.
+/// 5. Manage object identity, i.e: UUID, path, etc...
+/// 
+/// Non goals:
+/// 
+/// 1. Perform checksumming of files: Too computationally expensive for our file sizes.
+/// 2. Link objects/paths to metadata: That would tightly couple filemanager with metadata service.
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
