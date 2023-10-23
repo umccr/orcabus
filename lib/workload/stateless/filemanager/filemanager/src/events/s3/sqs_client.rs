@@ -7,6 +7,7 @@ use crate::error::Error::{DbClientError, DeserializeError, SQSReceiveError};
 use crate::error::Result;
 use crate::events::s3::FlatS3EventMessages;
 
+/// A wrapper around an SQS client.
 #[derive(Debug)]
 pub struct SQS {
     sqs_client: Client,
@@ -14,6 +15,7 @@ pub struct SQS {
 }
 
 impl SQS {
+    /// Create a new SQS client wrapper.
     pub fn new(sqs_client: Client, sqs_url: String) -> Self {
         Self {
             sqs_client,
@@ -21,6 +23,8 @@ impl SQS {
         }
     }
 
+
+    /// Create with a default SQS client.
     pub async fn with_default_client() -> Result<Self> {
         let config = aws_config::from_env().load().await;
         let mut config = config::Builder::from(&config);
@@ -37,7 +41,7 @@ impl SQS {
         })
     }
 
-    // TODO: Two possible event types, should be handled differently: PUT and DELETE
+    /// Manually call the receive function to retrieve events from the SQS queue.
     pub async fn receive(&self) -> Result<FlatS3EventMessages> {
         let rcv_message_output = self
             .sqs_client

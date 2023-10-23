@@ -5,6 +5,7 @@ use thiserror::Error;
 
 pub type Result<T> = result::Result<T, Error>;
 
+/// Error types for the filemanager.
 #[derive(Error, Debug)]
 pub enum Error {
     /// File not found by id.

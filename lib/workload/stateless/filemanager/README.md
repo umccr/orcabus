@@ -20,11 +20,24 @@ Start the postgres database and ensure that an `.env` file is set containing the
 docker compose up
 ```
 
-For development of the rust workspace:
+The filemanager uses sqlx to check if queries succeed against a database at compile time.
+A `.env` file ensures that the sqlx code can check queries at compile time by providing a `DATABASE_URL`.
+
+Filemanager uses docker to run a postgres database to track objects. This means that sqlx connects to the postgres server
+running inside the docker compose container. If there are additional postgres installations locally (outside of docker),
+this might interfere and complain about non-existing roles and users.
+
+For development of the rust workspace, build manually:
 
 ```sh
-$ cargo install cargo-watch     # if not installed previously
-$ cargo watch -c -w src -x run
+cargo build --all-targets --all-features
+```
+
+Or watch and automatically recompile changes:
+
+```sh
+cargo install cargo-watch     # if not installed previously
+cargo watch -c
 ```
 
 Test with:
@@ -68,7 +81,7 @@ npx cdklocal deploy
 
 This allows creating events that are ingested.
 
-First, push an object (in order to create a log group):q:
+First, push an object (in order to create a log group):
 ```sh
 awslocal s3api put-object --bucket filemanager-test-ingest --key test
 ```

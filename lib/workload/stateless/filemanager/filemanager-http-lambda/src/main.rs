@@ -10,7 +10,8 @@ use filemanager::events::s3::collect::Collecter;
 use filemanager::events::s3::sqs_client::SQS;
 use filemanager::events::Collect;
 
-/// Handle SQS events.
+/// Handle SQS events by manually calling the SQS receive function. This is meant
+/// to be run through something like API gateway to manually invoke ingestion.
 async fn event_handler(_: LambdaEvent<()>) -> Result<(), Error> {
     let sqs = SQS::with_default_client().await?;
     let events = sqs.receive().await?;

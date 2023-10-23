@@ -14,6 +14,7 @@ pub mod collect;
 pub mod s3_client;
 pub mod sqs_client;
 
+/// A wrapper around AWS storage types with sqlx support.
 #[derive(Debug, Eq, PartialEq, sqlx::Type)]
 #[sqlx(type_name = "storage_class")]
 pub enum StorageClass {
@@ -36,6 +37,7 @@ impl PgHasArrayType for StorageClass {
 }
 
 impl StorageClass {
+    /// Convert from the AWS storage class type to the filemanager storage class.
     pub fn from_aws(storage_class: AwsStorageClass) -> Option<Self> {
         match storage_class {
             AwsStorageClass::DeepArchive => Some(Self::DeepArchive),
@@ -164,9 +166,9 @@ impl From<FlatS3EventMessages> for Events {
     }
 }
 
+/// Flattened AWS S3 events
 #[derive(Debug, Deserialize, Eq, PartialEq, Default)]
 #[serde(try_from = "S3EventMessage")]
-/// Flattened AWS S3 events
 pub struct FlatS3EventMessages(pub Vec<FlatS3EventMessage>);
 
 impl FlatS3EventMessages {

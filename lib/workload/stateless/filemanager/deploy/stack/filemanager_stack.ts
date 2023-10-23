@@ -9,6 +9,9 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaDestinations from 'aws-cdk-lib/aws-lambda-destinations';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 
+/**
+ * Common settings for the filemanager stack.
+ */
 interface Settings {
   database_url: string;
   endpoint_url: string;

@@ -10,16 +10,19 @@ use crate::error::Error::S3Error;
 use crate::error::Result;
 use crate::events::s3::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 
+/// A wrapper around an s3 client.
 #[derive(Debug)]
 pub struct S3 {
     s3_client: Client,
 }
 
 impl S3 {
+    /// Create a new S3 client wrapper.
     pub fn new(s3_client: Client) -> Self {
         Self { s3_client }
     }
 
+    /// Create with a default S3 client.
     pub async fn with_defaults() -> Result<Self> {
         let config = aws_config::from_env().load().await;
         let mut config = config::Builder::from(&config);
@@ -68,6 +71,7 @@ impl S3 {
         }
     }
 
+    /// Converts an AWS datetime to a standard database format.
     pub fn convert_datetime(
         datetime: Option<aws_sdk_s3::primitives::DateTime>,
     ) -> Option<DateTime<Utc>> {
@@ -79,6 +83,7 @@ impl S3 {
         }
     }
 
+    /// Process events and add header and datetime fields.
     pub async fn update_events(&self, events: FlatS3EventMessages) -> Result<FlatS3EventMessages> {
         Ok(FlatS3EventMessages(
             join_all(events.into_inner().into_iter().map(|mut event| async move {

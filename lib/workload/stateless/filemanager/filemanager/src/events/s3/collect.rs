@@ -5,6 +5,7 @@ use crate::events::s3::s3_client::S3;
 use crate::events::s3::{Events, FlatS3EventMessages};
 use crate::events::{Collect, EventType};
 
+/// Collect raw events into the processed form which the database module accepts.
 #[derive(Debug)]
 pub struct Collecter {
     s3: S3,
@@ -12,10 +13,12 @@ pub struct Collecter {
 }
 
 impl Collecter {
+    /// Create a new collector.
     pub fn new(s3: S3, raw_events: FlatS3EventMessages) -> Self {
         Self { s3, raw_events }
     }
 
+    /// Create a new collector with a default S3 client.
     pub async fn with_defaults(raw_events: FlatS3EventMessages) -> Result<Self> {
         Ok(Self {
             s3: S3::with_defaults().await?,

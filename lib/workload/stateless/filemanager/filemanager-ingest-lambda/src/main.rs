@@ -11,7 +11,7 @@ use filemanager::events::s3::collect::Collecter;
 use filemanager::events::s3::FlatS3EventMessages;
 use filemanager::events::Collect;
 
-/// Handle SQS events.
+/// Handle SQS events that are passed directly to a lambda function.
 async fn event_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     trace!("received event: {:?}", event);
 

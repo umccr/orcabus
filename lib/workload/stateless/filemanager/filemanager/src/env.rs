@@ -6,9 +6,12 @@ use std::{
 use dotenvy;
 use tracing::{error, info};
 
+/// Controls environment.
 #[derive(PartialEq)]
 pub enum AppEnv {
+    /// Dev environment loads config from dotenv.
     Dev,
+    /// Prod environment doesn't load local dotenv config.
     Prod,
 }
 

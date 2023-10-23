@@ -16,16 +16,19 @@ pub struct Ingester {
 }
 
 impl Ingester {
+    /// Create a new ingester.
     pub fn new(db: DbClient) -> Self {
         Self { db }
     }
 
+    /// Create a new ingester with a default database client.
     pub async fn new_with_defaults() -> Result<Self> {
         Ok(Self {
             db: DbClient::new_with_defaults().await?,
         })
     }
 
+    /// Ingest the events into the database by calling the insert and update queries.
     pub async fn ingest_s3_events(&mut self, events: Events) -> Result<()> {
         let Events {
             object_created,
