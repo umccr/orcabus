@@ -6,7 +6,7 @@ django-cors-headers==4.1.0
 django-environ==0.10.0
 django-database-prefix==0.1.0
 pymysql==1.1.0
-Werkzeug==2.3.6
+Werkzeug==3.0.1
 libica==2.2.1
 libumccr==0.4.0rc1
 serverless-wsgi==3.0.2
