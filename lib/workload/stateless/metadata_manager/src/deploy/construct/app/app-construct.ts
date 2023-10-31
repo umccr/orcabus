@@ -3,15 +3,16 @@ import {
   aws_ec2 as ec2,
   aws_secretsmanager as secretsmanager,
   aws_lambda as lambda,
-  // aws_ssm as ssm,
   Duration,
 } from 'aws-cdk-lib';
 import * as path from 'path';
 import { Construct } from 'constructs';
 import { ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
+import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
+import { CorsHttpMethod, HttpApi, HttpMethod, HttpStage } from '@aws-cdk/aws-apigatewayv2-alpha';
+
 export interface appProps {
   edgedDb: {
-    databaseName: string;
     dsnNoPassword: string;
     secret: secretsmanager.ISecret;
     securityGroup: ISecurityGroup;
@@ -31,12 +32,17 @@ export class AppConstruct extends Construct {
 
     // There are 3 lambdas for this app
     // 1. To handle API calls (inc graphql endpoint)
-    // 2. To db with externalow  sources
-    // 3. To do some admin stuff at edgeDb instance (edgeDb mgiration)
+    // 2. To sync db with external sources (e.g. sync metadata with gsheet)
 
-    // Lambda would need to access Secret Manager to retrieve edgedb password
-    // thus need an outbound traffic from SG to do so
-    const outboundSG = new ec2.SecurityGroup(this, 'MembershipSecurityGroup', {
+    // edgedb env
+    const edgedbConnectionEnv = {
+      EDGEDB_DSN: props.edgedDb.dsnNoPassword,
+      EDGEDB_CLIENT_TLS_SECURITY: 'insecure',
+      METADATA_MANAGER_EDGEDB_SECRET_NAME: props.edgedDb.secret.secretName,
+    };
+    // Lambda would need to access Secret Manager to retrieve edgeDb password
+    // thus need an outbound traffic from SG to secret manager
+    const outboundSG = new ec2.SecurityGroup(this, 'OutboundSecurityGroup', {
       vpc: props.network.vpc,
       allowAllOutbound: true,
       description:
@@ -52,7 +58,7 @@ export class AppConstruct extends Construct {
 
     // lambda would need access to edgeDb secret manager password
     // environment variable in lambda does not integrate with value stored in secret
-    // but AWS have an extension for this by importing an existing AWS layer
+    // but AWS has an extension to fetch secret by importing AWS lambda layer
     // Ref: https://docs.aws.amazon.com/secretsmanager/latest/userguide/retrieving-secrets_lambda.html
     const awsSecretLambdaLayerExtension = lambda.LayerVersion.fromLayerVersionArn(
       this,
@@ -64,39 +70,21 @@ export class AppConstruct extends Construct {
       description: 'handles API query for Metadata Manager in OrcaBus',
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset(path.join(__dirname, '../../../asset/src.zip')),
-      handler: 'src/handler/migrate.handler',
+      handler: 'src/handler/server.handler',
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.seconds(30),
       layers: [dependencyLayer, awsSecretLambdaLayerExtension],
-      environment: {
-        EDGEDB_DATABASE: props.edgedDb.databaseName,
-        EDGEDB_DSN: props.edgedDb.dsnNoPassword,
-        EDGEDB_SECRET_NAME: props.edgedDb.secret.secretName,
-      },
+      environment: { ...edgedbConnectionEnv },
       securityGroups: [props.edgedDb.securityGroup, outboundSG],
       vpc: props.network.vpc,
     });
-
-    const migrationLambda = new lambda.Function(this, 'MigrationFunction', {
-      description: 'handles migration for Metadata Manager in OrcaBus',
-      runtime: lambda.Runtime.NODEJS_18_X,
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../../asset/src.zip')),
-      handler: 'src/handler/migrate.handler',
-      architecture: lambda.Architecture.ARM_64,
-      timeout: Duration.minutes(5),
-      layers: [dependencyLayer, awsSecretLambdaLayerExtension],
-      environment: {
-        EDGEDB_DATABASE: props.edgedDb.databaseName,
-        EDGEDB_DSN: props.edgedDb.dsnNoPassword,
-        EDGEDB_SECRET_NAME: props.edgedDb.secret.secretName,
-      },
-      securityGroups: [props.edgedDb.securityGroup, outboundSG],
-      vpc: props.network.vpc,
-    });
-
     // lambda would need access for edgeDb password secret for the connection
     props.edgedDb.secret.grantRead(apiLambda);
-    props.edgedDb.secret.grantRead(migrationLambda);
+
+    const apiLambdaIntegration = new HttpLambdaIntegration(
+      'metadataManagerApiIntegration',
+      apiLambda
+    );
 
     // // The app need access to gsheet which the secret is stored in the ssm parameter
     // // granting access to the secret here
@@ -108,11 +96,7 @@ export class AppConstruct extends Construct {
     //   architecture: lambda.Architecture.ARM_64,
     //   timeout: Duration.seconds(30),
     //   layers: [dependencyLayer, awsSecretLambdaLayerExtension],
-    //   environment: {
-    //     EDGEDB_DATABASE: props.edgedDb.databaseName,
-    //     EDGEDB_DSN: props.edgedDb.dsnNoPassword,
-    //     EDGEDB_SECRET_NAME: props.edgedDb.secret.secretName,
-    //   },
+    //   environment: { ...edgedbConnectionEnv },
     //   securityGroups: [props.edgedDb.securityGroup, outboundSG],
     //   vpc: props.network.vpc,
     // });
@@ -130,5 +114,26 @@ export class AppConstruct extends Construct {
     // );
     // trackingSheetCredSSM.grantRead(loaderLambda);
     // trackingSheetIdSSM.grantRead(loaderLambda);
+
+    const httpApi = new HttpApi(this, 'MetadataManagerOrcabusHttpApi', {
+      corsPreflight: {
+        allowHeaders: ['Authorization'],
+        allowMethods: [
+          CorsHttpMethod.GET,
+          CorsHttpMethod.HEAD,
+          CorsHttpMethod.OPTIONS,
+          CorsHttpMethod.POST,
+        ],
+        allowOrigins: ['*'], // TODO to get this allowed origins from config constant
+        maxAge: Duration.days(10),
+      },
+      description: 'API for orcabus metadata manager lambda',
+    });
+
+    httpApi.addRoutes({
+      integration: apiLambdaIntegration,
+      path: '/{proxy+}',
+      methods: [HttpMethod.ANY],
+    });
   }
 }

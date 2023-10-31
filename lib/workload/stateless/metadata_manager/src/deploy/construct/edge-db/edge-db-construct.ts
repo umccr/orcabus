@@ -78,32 +78,34 @@ export class EdgeDbConstruct extends Construct {
     const edgeDbPortString =
       props.edgeDbLoadBalancerProtocol.tcpPassthroughPort != 5656
         ? `:${props.edgeDbLoadBalancerProtocol.tcpPassthroughPort}`
-        : '';
+        : ':5656';
 
-    this._dsn = `edgedb://${props.edgeDbService.superUser}@${edgeDbLoadBalancer.dnsName}${edgeDbPortString}`;
+    const databaseName = `/${props.edgeDbService.databaseName}`;
+
+    this._dsn = `edgedb://${props.edgeDbService.superUser}@${edgeDbLoadBalancer.dnsName}${edgeDbPortString}${databaseName}`;
 
     new CfnOutput(this, 'EdgeDbDsnNoPasswordOrDatabase', {
       value: this._dsn,
     });
 
-    // only in development mode is the UI switched on and accessible
-    if (props.edgeDbLoadBalancerUi) {
-      const edgeDbLoadBalancerUi = new EdgeDbLoadBalancerUiConstruct(this, 'EdgeDbLoadBalancerUi', {
-        vpc: props.vpc,
-        service: edgeDbService.service,
-        servicePort: edgeDbService.servicePort,
-        serviceSecurityGroup: edgeDbService.securityGroup,
-        ...props.edgeDbLoadBalancerUi,
-      });
+    //   // only in development mode is the UI switched on and accessible
+    //   if (props.edgeDbLoadBalancerUi) {
+    //     const edgeDbLoadBalancerUi = new EdgeDbLoadBalancerUiConstruct(this, 'EdgeDbLoadBalancerUi', {
+    //       vpc: props.vpc,
+    //       service: edgeDbService.service,
+    //       servicePort: edgeDbService.servicePort,
+    //       serviceSecurityGroup: edgeDbService.securityGroup,
+    //       ...props.edgeDbLoadBalancerUi,
+    //     });
 
-      const tlsPortString =
-        props.edgeDbLoadBalancerUi.hostedPort != 443
-          ? `:${props.edgeDbLoadBalancerUi.hostedPort}`
-          : '';
-      new CfnOutput(this, 'EdgeDbUiUrl', {
-        value: `https://${edgeDbLoadBalancerUi.dnsName}${tlsPortString}/ui`,
-      });
-    }
+    //     const tlsPortString =
+    //       props.edgeDbLoadBalancerUi.hostedPort != 443
+    //         ? `:${props.edgeDbLoadBalancerUi.hostedPort}`
+    //         : '';
+    //     new CfnOutput(this, 'EdgeDbUiUrl', {
+    //       value: `https://${edgeDbLoadBalancerUi.dnsName}${tlsPortString}/ui`,
+    //     });
+    //   }
   }
 
   public get dsnForEnvironmentVariable(): string {

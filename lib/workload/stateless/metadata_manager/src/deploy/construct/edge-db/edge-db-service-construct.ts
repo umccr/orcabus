@@ -5,6 +5,7 @@ import {
   aws_logs as logs,
   Duration,
 } from 'aws-cdk-lib';
+import * as path from 'path';
 import { Construct } from 'constructs';
 import {
   CpuArchitecture,
@@ -24,19 +25,15 @@ import { ISecurityGroup, IVpc, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 export type EdgeDbServicePassthroughProps = {
   // the DSN of the Postgres db it will use for its store (the DSN must include base db user/pw)
   postgresDsn: string;
-
-  // the security group of the Postgres database
   postgresSecurityGroup: ISecurityGroup;
 
   // the settings for containers of the service
   desiredCount: number;
   cpu: number;
   memory: number;
-
-  // the edge db superuser name
   superUser: string;
-
-  // edge db version string for the docker image used for edge db e.g. "2.3"
+  databaseName: string;
+  // edge db version string for the docker image used for edge db e.g. "3.4"
   edgeDbVersion: string;
 
   // if present and true, enable the EdgeDb feature flag to switch on the UI
@@ -99,7 +96,7 @@ export class EdgeDbServiceConstruct extends Construct {
       memoryLimitMiB: props.memory,
       cpu: props.cpu,
       executionRole: executionRole,
-      family: 'edge-db-service-family',
+      family: 'orcabus-metadata-manager-edge-db',
     });
 
     const containerName = 'edge-db';
@@ -116,7 +113,8 @@ export class EdgeDbServiceConstruct extends Construct {
       // NLBs are comfortable using self-signed certs purely for traffic encryption
       // https://kevin.burke.dev/kevin/aws-alb-validation-tls-reply/
       // that way we can avoid needing to manage custom certs/cas
-      EDGEDB_SERVER_GENERATE_SELF_SIGNED_CERT: '1',
+      EDGEDB_SERVER_TLS_CERT_MODE: 'generate_self_signed',
+      EDGEDB_DATABASE: props.databaseName,
       // DO NOT ENABLE
       // EDGEDB_SERVER_DEFAULT_AUTH_METHOD: "Trust"
     };
@@ -129,8 +127,13 @@ export class EdgeDbServiceConstruct extends Construct {
     if (props.enableUiFeatureFlag) env.EDGEDB_SERVER_ADMIN_UI = 'enabled';
 
     taskDefinition.addContainer(containerName, {
-      // https://hub.docker.com/r/edgedb/edgedb/tags
-      image: ecs.ContainerImage.fromRegistry(`edgedb/edgedb:${props.edgeDbVersion}`),
+      image: ecs.ContainerImage.fromAsset(path.join(__dirname, '../../../'), {
+        file: 'deploy/construct/edge-db/Dockerfile',
+        exclude: ['deploy/cdk.out', 'deploy/asset', '.yarn'],
+        buildArgs: {
+          EDGEDB_VERSION: props.edgeDbVersion,
+        },
+      }),
       environment: env,
       secrets: secrets,
       logging: LogDrivers.awsLogs({
@@ -194,9 +197,11 @@ export class EdgeDbServiceConstruct extends Construct {
     });
     // the ingress is self-referential - only allowing traffic from itself to the edge port
     sg.addIngressRule(sg, ec2.Port.tcp(this.EDGE_DB_PORT));
-    // the egress is also self-referential - and allowing outbouynd traffic to anyone in the same
+    // the egress is also self-referential - and allowing outbound traffic to anyone in the same
     // group (the all-traffic is safe because the other resources are responsible for setting their
     // ingress rules to a set port0
+
+    sg.addIngressRule(sg, ec2.Port.tcp(80));
     sg.addEgressRule(sg, ec2.Port.allTraffic());
     return sg;
   }

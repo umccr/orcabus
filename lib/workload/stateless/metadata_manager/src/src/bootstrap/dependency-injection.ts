@@ -11,8 +11,8 @@ export async function createDependencyContainer() {
   const dc = tsyringe.container.createChildContainer();
 
   // Get the edge-db password from SM
-  const edgeDbPassword = process.env.EDGEDB_SECRET_NAME
-    ? await getSecretManagerWithLayerExtension(process.env.EDGEDB_SECRET_NAME)
+  const edgeDbPassword = process.env.METADATA_MANAGER_EDGEDB_SECRET_NAME
+    ? await getSecretManagerWithLayerExtension(process.env.METADATA_MANAGER_EDGEDB_SECRET_NAME)
     : undefined;
 
   dc.register<Client>('Database', {

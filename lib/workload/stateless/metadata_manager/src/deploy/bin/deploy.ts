@@ -22,9 +22,16 @@ new MetadataManagerStack(app, 'MetadataManagerStack', {
   network: {
     vpcName: 'main-vpc',
   },
+  edgeDb: {
+    secretPrefix: 'orcabusMetadataManager', // pragma: allowlist secret
+    version: '3.4',
+    makePubliclyReachable: {
+      urlPrefix: 'orcabus-metadata-manager-edge-db',
+    },
+  },
   // Ideally this should be reusable RDS across the orcabus microservices
   database: {
-    name: 'database',
+    name: 'orcabus',
     adminUser: 'orcabus_admin',
     enableMonitoring: {
       cloudwatchLogsExports: ['postgresql'],
@@ -33,12 +40,5 @@ new MetadataManagerStack(app, 'MetadataManagerStack', {
     },
     makePubliclyReachable: false,
     destroyOnRemove: true,
-  },
-  edgeDb: {
-    secretPrefix: 'orcabusMetadataManager', // pragma: allowlist secret
-    version: '3.2',
-    makePubliclyReachable: {
-      urlPrefix: 'orcabus-metadata-manager-edge-db',
-    },
   },
 });

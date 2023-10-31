@@ -80,13 +80,17 @@ export class MetadataManagerStack extends Stack {
       rdsDatabaseDisplayName: props.database.name,
       secretsPrefix: props.edgeDb.secretPrefix,
       edgeDbService: {
+        // Postgres Config
         postgresDsn: postgresDb.dsnWithTokens,
         postgresSecurityGroup: postgresDb.securityGroup,
+
+        // edge db Config
+        databaseName: 'orcabus',
+        superUser: 'orcabus_superuser',
+        edgeDbVersion: props.edgeDb.version,
         desiredCount: 1,
         cpu: props.edgeDb.cpu ?? 1024,
         memory: props.edgeDb.memoryLimitMiB ?? 2048,
-        superUser: 'orcabus_superuser',
-        edgeDbVersion: props.edgeDb.version,
         enableUiFeatureFlag: !!props.edgeDb.makePubliclyReachable,
       },
       edgeDbLoadBalancerProtocol: {
@@ -103,7 +107,6 @@ export class MetadataManagerStack extends Stack {
     });
     new AppConstruct(this, 'app', {
       edgedDb: {
-        databaseName: 'orcabus_edgedb',
         dsnNoPassword: edgeDb.dsnForEnvironmentVariable,
         secret: edgeDb.passwordSecret,
         securityGroup: edgeDb.securityGroup,

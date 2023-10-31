@@ -3,11 +3,10 @@ import 'reflect-metadata';
 import { App } from '../app';
 import { createDependencyContainer } from '../bootstrap/dependency-injection';
 // import getAppSettings from '../bootstrap/settings';
-
 import awsLambdaFastify, { PromiseHandler } from '@fastify/aws-lambda';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const handler = async (handler: PromiseHandler) => {
+export const handler = async (event: any, context: any) => {
   // const appSettings = getAppSettings();
 
   const dc = await createDependencyContainer();
@@ -16,5 +15,6 @@ export const handler = async (handler: PromiseHandler) => {
   // Setting/registering server routes
   const server = await app.setupServer(dc);
 
-  return awsLambdaFastify(server);
+  const proxy = awsLambdaFastify(server);
+  return proxy(event, context);
 };
