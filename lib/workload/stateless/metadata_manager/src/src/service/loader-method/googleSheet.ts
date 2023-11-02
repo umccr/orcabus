@@ -6,10 +6,7 @@ import { JWT } from 'google-auth-library';
 import { GetParameterCommand, SSMClient } from '@aws-sdk/client-ssm';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { MetadataRecords } from '../metadata';
-
-const GDRIVE_SERVICE_ACCOUNT = '/umccr/google/drive/lims_service_account_json';
-const TRACKING_SHEET_ID = '/umccr/google/drive/tracking_sheet_id';
-// const LIMS_SHEET_ID = '/umccr/google/drive/lims_sheet_id'; // DEPRECATE?
+import { getParameterDecryptedStoreWithLayerExtension } from '../../utils';
 
 // This will tell from which year the system should query the worksheet
 // The title of each sheet *SHOULD* be the year
@@ -34,22 +31,7 @@ type GoogleMetadataTrackingHeader =
 
 @injectable()
 export class MetadataGoogleService {
-  constructor(
-    @inject('Database') private readonly edgeDbClient: Client,
-    @inject('Settings') private readonly settings: Record<string, string>,
-    @inject('Logger') private readonly logger: Logger,
-    @inject('SSMClient') private readonly ssmClient: SSMClient
-  ) {}
-
-  private async getParameterValue(parameterString: string) {
-    const input = {
-      Name: parameterString,
-      WithDecryption: true,
-    };
-    const command = new GetParameterCommand(input);
-    return (await this.ssmClient.send(command)).Parameter?.Value;
-  }
-
+  constructor(@inject('Logger') private readonly logger: Logger) {}
   /**
    * Get SpreadSheet values from Google Drive
    * @param sheetTitle
@@ -58,13 +40,18 @@ export class MetadataGoogleService {
   public async getSheetObject(
     sheetTitle: string
   ): Promise<Record<GoogleMetadataTrackingHeader, string | undefined>[]> {
-    const googleAuthString = await this.getParameterValue(GDRIVE_SERVICE_ACCOUNT);
+    const googleAuthString = await getParameterDecryptedStoreWithLayerExtension(
+      process.env.GDRIVE_SERVICE_ACCOUNT_PARAMETER_NAME
+    );
     if (!googleAuthString) throw new Error('No GDrive credential found!');
 
-    const googleSheetId = await this.getParameterValue(TRACKING_SHEET_ID);
+    const googleSheetId = await getParameterDecryptedStoreWithLayerExtension(
+      process.env.TRACKING_SHEET_ID_PARAMETER_NAME
+    );
     if (!googleSheetId) throw new Error('No Google Sheet Id found!');
 
     const googleAuthJson = JSON.parse(googleAuthString);
+
     const jwt = new JWT({
       email: googleAuthJson.client_email,
       key: googleAuthJson.private_key,
@@ -78,6 +65,7 @@ export class MetadataGoogleService {
     if (!sheet) throw new Error(`No sheet found with title: ${sheetTitle}`);
 
     const rows = await sheet.getRows();
+
     return rows.map(
       (row) => <Record<GoogleMetadataTrackingHeader, string | undefined>>row.toObject()
     );
@@ -91,6 +79,8 @@ export class MetadataGoogleService {
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
+      this.logger.info(`Retrieving Google Metadata Tracking Sheet year: ${year}`);
+
       try {
         const yearlyMetadataObject = await this.getSheetObject(year.toString());
         allRecords = [...allRecords, ...yearlyMetadataObject];
@@ -106,6 +96,8 @@ export class MetadataGoogleService {
   public convertToMetadataRecord(
     googleRecArray: Record<GoogleMetadataTrackingHeader, string | undefined>[]
   ): MetadataRecords[] {
+    this.logger.info('Converting all retrieved metadata to a recognized file format');
+
     return googleRecArray.map((rec) => {
       const val: MetadataRecords = {};
 

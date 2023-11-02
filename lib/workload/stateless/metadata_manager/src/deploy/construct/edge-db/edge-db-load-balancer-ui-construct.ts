@@ -1,3 +1,6 @@
+// Currently the UI deployment is disabled
+// This setup will give access to the world and we don't want that
+
 import { aws_ec2 as ec2, Duration } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { FargateService } from 'aws-cdk-lib/aws-ecs';

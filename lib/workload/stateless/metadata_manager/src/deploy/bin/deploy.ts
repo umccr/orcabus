@@ -25,9 +25,6 @@ new MetadataManagerStack(app, 'MetadataManagerStack', {
   edgeDb: {
     secretPrefix: 'orcabusMetadataManager', // pragma: allowlist secret
     version: '3.4',
-    makePubliclyReachable: {
-      urlPrefix: 'orcabus-metadata-manager-edge-db',
-    },
   },
   // Ideally this should be reusable RDS across the orcabus microservices
   database: {
@@ -38,7 +35,5 @@ new MetadataManagerStack(app, 'MetadataManagerStack', {
       enablePerformanceInsights: true,
       monitoringInterval: cdk.Duration.seconds(60),
     },
-    makePubliclyReachable: false,
-    destroyOnRemove: true,
   },
 });

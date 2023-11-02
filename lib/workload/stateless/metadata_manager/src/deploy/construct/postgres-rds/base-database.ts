@@ -42,21 +42,10 @@ export abstract class BaseDatabase extends Construct {
    *
    * @param securityGroup
    * @param databasePort
-   * @param makePubliclyReachable
    * @protected
    */
-  protected applySecurityGroupRules(
-    securityGroup: ISecurityGroup,
-    databasePort: number,
-    makePubliclyReachable?: boolean
-  ) {
-    if (makePubliclyReachable) {
-      // we allow access from all the internet to the default db port
-      securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(databasePort));
-    } else {
-      // the db security group can only be connected to on the default db port and only from things ALSO IN THE SAME SECURITY GROUP
-      securityGroup.addIngressRule(securityGroup, ec2.Port.tcp(databasePort));
-    }
+  protected applySecurityGroupRules(securityGroup: ISecurityGroup, databasePort: number) {
+    securityGroup.addIngressRule(securityGroup, ec2.Port.tcp(databasePort));
     // our membership security group allows outgoing access to things in the SAME SECURITY GROUP
     // (we use allTraffic safely for egress here - as those other services will be responsible
     // for protected their incoming ports with their own ingress rules)

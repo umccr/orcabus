@@ -35,9 +35,7 @@ export class ServerlessBaseDatabase extends BaseDatabase {
       vpc: props.vpc,
       securityGroups: [this._securityGroup],
       vpcSubnets: {
-        subnetType: props.makePubliclyReachable
-          ? ec2.SubnetType.PUBLIC
-          : ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
       engine: rds.DatabaseClusterEngine.auroraPostgres({
         version: rds.AuroraPostgresEngineVersion.VER_14_7,
@@ -45,8 +43,9 @@ export class ServerlessBaseDatabase extends BaseDatabase {
       // the default database to create in the cluster - we insist on it being named otherwise no default db is made
       defaultDatabaseName: props.databaseName,
       credentials: rds.Credentials.fromSecret(props.secret),
-      // destroy on remove tells us we don't really care much about the data (demo instances etc)
-      removalPolicy: props.destroyOnRemove ? RemovalPolicy.DESTROY : RemovalPolicy.SNAPSHOT,
+      // The Db should come from orcaBus master, and if the Db is from this service, it is supposed to be for dev which
+      // should removed on destroy
+      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     // temporary fix to broken CDK constructs
@@ -78,15 +77,11 @@ export class ServerlessBaseDatabase extends BaseDatabase {
       dbInstanceClass: 'db.serverless',
       dbClusterIdentifier: this._cluster.clusterIdentifier,
       engine: 'aurora-postgresql',
-      publiclyAccessible: props.makePubliclyReachable,
+      publiclyAccessible: false,
       ...(enableMonitoring && { ...enableMonitoring }),
     });
 
-    this.applySecurityGroupRules(
-      this._securityGroup,
-      this._cluster.clusterEndpoint.port,
-      props.makePubliclyReachable
-    );
+    this.applySecurityGroupRules(this._securityGroup, this._cluster.clusterEndpoint.port);
 
     this._dsnWithTokens =
       `postgres://` +

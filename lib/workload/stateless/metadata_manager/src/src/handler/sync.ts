@@ -12,10 +12,12 @@ export const handler = async () => {
   const metadataService = dc.resolve(MetadataService);
 
   const downloadedMetadata = await metadataGoogleService.downloadGoogleMetadata();
+
   const convertedRecord = metadataGoogleService.convertToMetadataRecord(downloadedMetadata);
 
   // Some syncing
   await metadataService.upsertMetadataRecords(convertedRecord);
+
   await metadataService.removeDeletedMetadataRecords(convertedRecord);
 
   return {

@@ -71,6 +71,25 @@ export class EdgeDbLoadBalancerProtocolConstruct extends Construct {
       port: props.tcpPassthroughPort,
       protocol: Protocol.TCP,
     });
+
+    const tg = tcpListener.addTargets('TcpTargetGroup', {
+      port: props.servicePort,
+      protocol: Protocol.TCP,
+      targets: [props.service],
+      // the assumption is our code/db will handle reasonably quick shutdown of the
+      // service and just abort transactions etc (I mean, that's what a database is for)
+      deregistrationDelay: Duration.seconds(15),
+    });
+    // whilst all the IPs hitting us will be internal IPs - we prefer to be logging the actual IPs
+    // of the client rather than the NLB interface IPs
+    tg.setAttribute('preserve_client_ip.enabled', 'true');
+    tg.configureHealthCheck({
+      enabled: true,
+      interval: Duration.seconds(10),
+      timeout: Duration.seconds(5),
+      healthyThresholdCount: 2,
+      unhealthyThresholdCount: 2,
+    });
   }
 
   public get loadBalancer(): NetworkLoadBalancer {

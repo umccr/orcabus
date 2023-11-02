@@ -33,6 +33,7 @@ export type EdgeDbServicePassthroughProps = {
   memory: number;
   superUser: string;
   databaseName: string;
+
   // edge db version string for the docker image used for edge db e.g. "3.4"
   edgeDbVersion: string;
 

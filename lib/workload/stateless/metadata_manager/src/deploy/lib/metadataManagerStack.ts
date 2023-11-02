@@ -29,14 +29,6 @@ export interface EdgeDbCommon {
    * is what is assumed for edgedb connections
    */
   readonly dbPort?: number;
-
-  /**
-   * If present, will make the EdgeDb UI exposed publicly
-   */
-  readonly makePubliclyReachable?: {
-    urlPrefix: string;
-    uiPort?: number;
-  };
 }
 
 export interface MetadataManagerStackProps extends StackProps {
@@ -91,20 +83,12 @@ export class MetadataManagerStack extends Stack {
         desiredCount: 1,
         cpu: props.edgeDb.cpu ?? 1024,
         memory: props.edgeDb.memoryLimitMiB ?? 2048,
-        enableUiFeatureFlag: !!props.edgeDb.makePubliclyReachable,
       },
       edgeDbLoadBalancerProtocol: {
         tcpPassthroughPort: props.edgeDb.dbPort || 5656,
       },
-      // edgeDbLoadBalancerUi: props.edgeDb.makePubliclyReachable
-      //   ? {
-      //       hostedPort: props.edgeDb.makePubliclyReachable.uiPort ?? 443,
-      //       hostedPrefix: props.edgeDb.makePubliclyReachable.urlPrefix,
-      //       hostedCertificate: cert!,
-      //       hostedZone: hz!,
-      //     }
-      //   : undefined,
     });
+
     new AppConstruct(this, 'app', {
       edgedDb: {
         dsnNoPassword: edgeDb.dsnForEnvironmentVariable,
@@ -115,7 +99,5 @@ export class MetadataManagerStack extends Stack {
         vpc: vpc,
       },
     });
-
-    // TODO: Connect the lambdas in AppConstruct to an APIGateway
   }
 }

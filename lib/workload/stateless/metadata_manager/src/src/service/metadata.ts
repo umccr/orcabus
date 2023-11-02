@@ -32,6 +32,7 @@ import {
 } from '../../dbschema/queries';
 import { Transaction } from 'edgedb/dist/transaction';
 import { systemAuditEventPattern } from './helpers/audit-helper';
+import { Logger } from 'pino';
 
 export type MetadataRecords = {
   subject?: Omit<SubjectType, 'orcaBusId'>;
@@ -41,7 +42,10 @@ export type MetadataRecords = {
 
 @injectable()
 export class MetadataService {
-  constructor(@inject('Database') private readonly edgeDbClient: Client) {}
+  constructor(
+    @inject('Database') private readonly edgeDbClient: Client,
+    @inject('Logger') private readonly logger: Logger
+  ) {}
 
   /**
    * Update or Insert for the subject specified in the properties
@@ -285,6 +289,8 @@ export class MetadataService {
    * @param metadataRecords
    */
   public async upsertMetadataRecords(metadataRecords: MetadataRecords[]) {
+    this.logger.info(`Upsert for any new record that doesn't match or exist within the record`);
+
     for (const rec of metadataRecords) {
       // Subject
       const subject = rec.subject ? await this.upsertSubject(rec.subject) : undefined;
@@ -312,6 +318,7 @@ export class MetadataService {
    * @param metadataRecords the source of true data
    */
   public async removeDeletedMetadataRecords(metadataRecords: MetadataRecords[]) {
+    this.logger.info('Removing any existing record that does not exist in the current dataset');
     const internalIdArrays: { subject: string[]; specimen: string[]; library: string[] } = {
       subject: [],
       specimen: [],

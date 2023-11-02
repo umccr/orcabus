@@ -18,18 +18,6 @@ export interface PostgresCommon {
   readonly adminUser: string;
 
   /**
-   * If present and true, will set the database such that
-   * it will autodelete/autoremove when the stack is destroyed
-   */
-  readonly destroyOnRemove?: boolean;
-
-  /**
-   * If present and true, will place the database such that
-   * it can be reached from public IP addresses
-   */
-  readonly makePubliclyReachable?: boolean;
-
-  /**
    * If set will override the allocated storage for the db - otherwise
    * we will have this set to smallest database size allowed (20 Gib)
    */
@@ -87,11 +75,6 @@ export interface EdgeDbCommon {
    * is what is assumed for edgedb connections
    */
   readonly dbPort?: number;
-
-  /**0
-   * If present, will make the EdgeDb UI exposed publicly
-   */
-  readonly makePubliclyReachable?: EdgeDbPublic;
 }
 
 export interface EdgeDbPublic {

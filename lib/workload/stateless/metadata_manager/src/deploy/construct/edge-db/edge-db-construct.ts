@@ -6,10 +6,7 @@ import {
   EdgeDbLoadBalancerProtocolPassthroughProps,
 } from './edge-db-load-balancer-protocol-construct';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
-import {
-  EdgeDbLoadBalancerUiConstruct,
-  EdgeDbLoadBalancerUiPassthroughProps,
-} from './edge-db-load-balancer-ui-construct';
+import { EdgeDbLoadBalancerUiPassthroughProps } from './edge-db-load-balancer-ui-construct';
 import { ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 
 export interface EdgeDbProps {
@@ -88,7 +85,6 @@ export class EdgeDbConstruct extends Construct {
       value: this._dsn,
     });
 
-    //   // only in development mode is the UI switched on and accessible
     //   if (props.edgeDbLoadBalancerUi) {
     //     const edgeDbLoadBalancerUi = new EdgeDbLoadBalancerUiConstruct(this, 'EdgeDbLoadBalancerUi', {
     //       vpc: props.vpc,
