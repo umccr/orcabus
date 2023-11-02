@@ -1,6 +1,5 @@
 import { Client, Duration, createClient } from 'edgedb';
 import * as tsyringe from 'tsyringe';
-import { SSMClient } from '@aws-sdk/client-ssm';
 import { instanceCachingFactory } from 'tsyringe';
 import pino, { Logger } from 'pino';
 import { MetadataService } from '../service/metadata';
@@ -32,10 +31,6 @@ export async function createDependencyContainer() {
         target: 'pino-pretty',
       },
     }),
-  });
-
-  dc.register<SSMClient>('SSMClient', {
-    useFactory: () => new SSMClient({}),
   });
 
   dc.registerSingleton(MetadataService);

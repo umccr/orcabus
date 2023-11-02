@@ -53,7 +53,6 @@ export const startSystemAuditEvent = async (
   actionDescription: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   details: any = { errorMessage: 'Audit entry not completed' },
-  inProgress = true,
   actionOutcome: ActionOutcomeType = 'error'
 ): Promise<string> => {
   return (
@@ -62,7 +61,6 @@ export const startSystemAuditEvent = async (
       actionDescription,
       actionOutcome,
       details,
-      inProgress,
     })
   ).id;
 };
@@ -88,7 +86,5 @@ export const completeSystemAuditEvent = async (
     auditDbId: auditEventId,
     actionOutcome: outcome,
     details,
-    occurredDateTime: endDate,
-    inProgress: false,
   });
 };

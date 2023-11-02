@@ -15,7 +15,6 @@
     "build-migrate": "esbuild migrate.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/index.js"
   },
   "dependencies": {
-    "@aws-sdk/client-ssm": "^3.382.0",
     "@fastify/aws-lambda": "^3.3.0",
     "@fastify/http-proxy": "^9.2.1",
     "axios": "^1.5.1",

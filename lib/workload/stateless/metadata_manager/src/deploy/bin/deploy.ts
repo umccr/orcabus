@@ -26,6 +26,9 @@ new MetadataManagerStack(app, 'MetadataManagerStack', {
     secretPrefix: 'orcabusMetadataManager', // pragma: allowlist secret
     version: '3.4',
   },
+  appConfiguration: {
+    triggerLoadSchedule: cdk.aws_events.Schedule.cron({ hour: '1' }),
+  },
   // Ideally this should be reusable RDS across the orcabus microservices
   database: {
     name: 'orcabus',

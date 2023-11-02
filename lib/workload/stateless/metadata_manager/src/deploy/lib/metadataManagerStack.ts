@@ -5,7 +5,7 @@ import { Vpc } from 'aws-cdk-lib/aws-ec2';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { ServerlessBaseDatabase } from '../construct/postgres-rds/postgres-db-construct';
 import { PostgresCommon } from '../construct/postgres-rds/infrastructure-stack-database-props';
-import { AppConstruct } from '../construct/app/app-construct';
+import { AppConstruct, appConfigurationProps } from '../construct/app/app-construct';
 
 export interface EdgeDbCommon {
   secretPrefix: string;
@@ -37,6 +37,7 @@ export interface MetadataManagerStackProps extends StackProps {
   network: {
     vpcName: string;
   };
+  appConfiguration: appConfigurationProps;
 }
 
 export class MetadataManagerStack extends Stack {
@@ -98,6 +99,7 @@ export class MetadataManagerStack extends Stack {
       network: {
         vpc: vpc,
       },
+      configuration: props.appConfiguration,
     });
   }
 }

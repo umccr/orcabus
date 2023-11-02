@@ -3,7 +3,6 @@ import 'reflect-metadata';
 import { container, instanceCachingFactory } from 'tsyringe';
 import { Client, Duration, createClient } from 'edgedb';
 import { Logger, pino } from 'pino';
-import { SSMClient } from '@aws-sdk/client-ssm';
 
 export function registerTypes() {
   const dc = container.createChildContainer();
@@ -27,10 +26,6 @@ export function registerTypes() {
         target: 'pino-pretty',
       },
     }),
-  });
-
-  dc.register<SSMClient>('SSMClient', {
-    useFactory: () => new SSMClient({}),
   });
 
   // Note: dependencies of class constructors must be injected manually when using esbuild.

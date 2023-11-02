@@ -1,4 +1,4 @@
-CREATE MIGRATION m1yeshjmmmg2k6sw3jahas6todmhmhxzzor3ktnkondv6sp57bshka
+CREATE MIGRATION m13i46pa4ciguptomcgqyif6ruj5kx7fdy6xq6upnlhnby3vljuu2a
     ONTO initial
 {
   CREATE EXTENSION graphql VERSION '1.0';
@@ -11,15 +11,6 @@ CREATE MIGRATION m1yeshjmmmg2k6sw3jahas6todmhmhxzzor3ktnkondv6sp57bshka
       CREATE REQUIRED PROPERTY actionDescription: std::str;
       CREATE REQUIRED PROPERTY actionOutcome: audit::ActionOutcome;
       CREATE PROPERTY details: std::json;
-      CREATE REQUIRED PROPERTY inProgress: std::bool;
-      CREATE REQUIRED PROPERTY occurredDateTime: std::datetime {
-          SET default := (std::datetime_current());
-      };
-      CREATE REQUIRED PROPERTY occurredDuration: std::duration;
-      CREATE REQUIRED PROPERTY recordedDateTime: std::datetime {
-          SET default := (std::datetime_current());
-          SET readonly := true;
-      };
       CREATE REQUIRED PROPERTY updatedDateTime: std::datetime {
           CREATE REWRITE
               INSERT 
@@ -27,18 +18,6 @@ CREATE MIGRATION m1yeshjmmmg2k6sw3jahas6todmhmhxzzor3ktnkondv6sp57bshka
           CREATE REWRITE
               UPDATE 
               USING (std::datetime_of_statement());
-      };
-      ALTER PROPERTY occurredDuration {
-          CREATE REWRITE
-              INSERT 
-              USING (SELECT
-                  (__subject__.occurredDateTime - __subject__.recordedDateTime)
-              );
-          CREATE REWRITE
-              UPDATE 
-              USING (SELECT
-                  (__subject__.occurredDateTime - __subject__.recordedDateTime)
-              );
       };
   };
   CREATE TYPE audit::SystemAuditEvent EXTENDING audit::AuditEvent;

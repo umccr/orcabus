@@ -1,9 +1,7 @@
-import { Client } from 'edgedb';
 import { metadata } from '../../../dbschema/interfaces';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from 'pino';
 import { JWT } from 'google-auth-library';
-import { GetParameterCommand, SSMClient } from '@aws-sdk/client-ssm';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { MetadataRecords } from '../metadata';
 import { getParameterDecryptedStoreWithLayerExtension } from '../../utils';

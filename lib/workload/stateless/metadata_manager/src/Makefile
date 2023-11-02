@@ -1,6 +1,7 @@
 build:
 	@rm -rf asset
 	@mkdir -p asset
+	@yarn run edgetypes
 	@yarn run build-src
 	@cd dist && zip -r ../asset/src.zip .
 
