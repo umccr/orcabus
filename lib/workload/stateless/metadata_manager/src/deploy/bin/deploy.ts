@@ -27,7 +27,7 @@ new MetadataManagerStack(app, 'MetadataManagerStack', {
     version: '3.4',
   },
   appConfiguration: {
-    triggerLoadSchedule: cdk.aws_events.Schedule.cron({ hour: '1' }),
+    triggerLoadSchedule: cdk.aws_events.Schedule.cron({ minute: '0', hour: '1' }),
   },
   // Ideally this should be reusable RDS across the orcabus microservices
   database: {

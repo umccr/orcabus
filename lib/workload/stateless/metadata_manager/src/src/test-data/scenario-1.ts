@@ -14,5 +14,5 @@ export default async function insertScenario1(dc: DependencyContainer) {
   await blankDb(edgeDbClient);
 
   logger.info('inserting scenario 1');
-  metadataService.upsertMetadataRecords(METADATA_REC_ARR);
+  await metadataService.upsertMetadataRecords(METADATA_REC_ARR);
 }

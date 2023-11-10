@@ -44,7 +44,7 @@ export class EdgeDbLoadBalancerProtocolConstruct extends Construct {
       vpcSubnets: {
         subnetType: SubnetType.PRIVATE_WITH_EGRESS,
       },
-      // the edgedb can only be accessed internally for protocol access
+      // the edgeDb can only be accessed internally for protocol access
       internetFacing: false,
     });
 

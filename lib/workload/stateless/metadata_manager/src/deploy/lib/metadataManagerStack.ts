@@ -1,4 +1,4 @@
-import { Stack, StackProps } from 'aws-cdk-lib';
+import { Stack, StackProps, aws_ec2 as ec2 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { EdgeDbConstruct } from '../construct/edge-db/edge-db-construct';
 import { Vpc } from 'aws-cdk-lib/aws-ec2';
@@ -92,7 +92,7 @@ export class MetadataManagerStack extends Stack {
 
     new AppConstruct(this, 'app', {
       edgedDb: {
-        dsnNoPassword: edgeDb.dsnForEnvironmentVariable,
+        edgeDbConfiguration: edgeDb.edgeDbConnectionVariable,
         secret: edgeDb.passwordSecret,
         securityGroup: edgeDb.securityGroup,
       },

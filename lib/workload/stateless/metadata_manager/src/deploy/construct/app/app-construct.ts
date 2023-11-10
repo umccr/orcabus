@@ -13,10 +13,11 @@ import { Construct } from 'constructs';
 import { ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 import { CorsHttpMethod, HttpApi, HttpMethod } from '@aws-cdk/aws-apigatewayv2-alpha';
+import { EdgeDbConfigurationProps } from '../edge-db/edge-db-construct';
 
 export interface appProps {
   edgedDb: {
-    dsnNoPassword: string;
+    edgeDbConfiguration: EdgeDbConfigurationProps;
     secret: secretsmanager.ISecret;
     securityGroup: ISecurityGroup;
   };
@@ -39,9 +40,9 @@ export class AppConstruct extends Construct {
   constructor(scope: Construct, id: string, props: appProps) {
     super(scope, id);
 
-    // edgedb environment to make connection the edgedb instance
-    const edgedbConnectionEnv = {
-      EDGEDB_DSN: props.edgedDb.dsnNoPassword,
+    // edgeDb environment to make connection the edgeDb instance
+    const edgeDbConnectionEnv = {
+      ...props.edgedDb.edgeDbConfiguration,
       EDGEDB_CLIENT_TLS_SECURITY: 'insecure',
       METADATA_MANAGER_EDGEDB_SECRET_NAME: props.edgedDb.secret.secretName,
     };
@@ -97,7 +98,7 @@ export class AppConstruct extends Construct {
       timeout: Duration.seconds(300),
       layers: [dependencyLayer, awsSecretLambdaLayerExtension],
       environment: {
-        ...edgedbConnectionEnv,
+        ...edgeDbConnectionEnv,
         GDRIVE_SERVICE_ACCOUNT_PARAMETER_NAME: trackingSheetCredSSM.parameterName,
         TRACKING_SHEET_ID_PARAMETER_NAME: trackingSheetIdSSM.parameterName,
       },
@@ -124,7 +125,7 @@ export class AppConstruct extends Construct {
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.minutes(15),
       layers: [dependencyLayer, awsSecretLambdaLayerExtension],
-      environment: { ...edgedbConnectionEnv },
+      environment: { ...edgeDbConnectionEnv },
       securityGroups: [props.edgedDb.securityGroup, outboundSG],
       vpc: props.network.vpc,
     });
@@ -155,25 +156,25 @@ export class AppConstruct extends Construct {
       //   routeKey: HttpRouteKey.with('/{proxy+}'),
       // });
     } else {
-      // const httpApi = new HttpApi(this, 'MetadataManagerHttpApi', {
-      //   corsPreflight: {
-      //     allowHeaders: ['Authorization'],
-      //     allowMethods: [
-      //       CorsHttpMethod.GET,
-      //       CorsHttpMethod.HEAD,
-      //       CorsHttpMethod.OPTIONS,
-      //       CorsHttpMethod.POST,
-      //     ],
-      //     allowOrigins: ['*'], // TODO to get this allowed origins from config constant
-      //     maxAge: Duration.days(10),
-      //   },
-      //   description: 'API for orcabus metadata manager lambda',
-      // });
-      // httpApi.addRoutes({
-      //   integration: metadataApiLambdaIntegration,
-      //   path: '/{proxy+}',
-      //   methods: [HttpMethod.ANY],
-      // });
+      const httpApi = new HttpApi(this, 'MetadataManagerHttpApi', {
+        corsPreflight: {
+          allowHeaders: ['Authorization'],
+          allowMethods: [
+            CorsHttpMethod.GET,
+            CorsHttpMethod.HEAD,
+            CorsHttpMethod.OPTIONS,
+            CorsHttpMethod.POST,
+          ],
+          allowOrigins: ['*'], // TODO to get this allowed origins from config constant
+          maxAge: Duration.days(10),
+        },
+        description: 'API for orcabus metadata manager lambda',
+      });
+      httpApi.addRoutes({
+        integration: metadataApiLambdaIntegration,
+        path: '/{proxy+}',
+        methods: [HttpMethod.ANY],
+      });
     }
   }
 }

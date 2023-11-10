@@ -8,6 +8,7 @@ import awsLambdaFastify, { PromiseHandler } from '@fastify/aws-lambda';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const handler = async (event: any, context: any) => {
   // const appSettings = getAppSettings();
+  console.log('the event is:', event);
 
   const dc = await createDependencyContainer();
   const app = new App(dc);
