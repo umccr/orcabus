@@ -1,17 +1,119 @@
 # Metadata Manager for OrcaBus
 
+One of the microservices in the Orcabus handles all the metadata information.
 
-### Local development
+## Local development
 
 Requirement:
-- edgedb
-- yarn
 
-Installation : ```yarn install```
-Running locally: ```yarn run watch```
+- Docker
+- Node.js with Yarn
 
-### Build
-```yarn run build```
+```bash
+docker -v
+Docker version 20.10.12, build e91ed5707e
+
+node -v
+v20.9.0
+```
+
+### Installation
+
+To install dependency, yarn is needed for this purpose
+
+```bash
+npm i -g yarn
+```
+
+To install all dependencies, a make file is provided and can be done by:
+
+```bash
+make install
+```
+
+### Start
+
+Before starting the app server, the database needs to be initiated. The database used here is
+[EdgeDb](https://www.edgedb.com/) which is a graph-relational database that uses SQL as their underlying
+database. The configuration for this has been bundled up into a docker-compose and could be run as follows.
+
+```bash
+make up
+```
+
+
+To start the server up use the following command
+
+```bash
+make start
+```
+
+We could also start data by resetting and inserting some mock test data.
+
+```bash
+make start-scenario-1
+```
+
+This should run at localhost port 8080. Valid endpoints are as follows
+
+```bash
+
+http://localhost:8080/subject
+http://localhost:8080/library
+http://localhost:8080/specimen
+
+
+<!-- GraphQL -->
+http://localhost:8080/graphql/explore (UI)
+http://localhost:8080/graphql (Only for graphql POST method)
+```
+
+If you need to serve from existing metadata locally. You could copy and paste
+the `.xlsx` file into [./src/test-data/scenarios/metadata.xlsx](./src/test-data/scenarios/metadata.xlsx).
+Then to dump and reload with this metadata spreadsheet run the following:
+
+```bash
+make insert-scenario-2
+```
 
 ### Testing
-```yarn run test```
+
+```bash
+make test
+
+Test Suites: 2 passed, 2 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        36.073 s
+```
+
+### Build
+
+To build for deployment the following will generate assets that could be deployed to lambdas.
+For more details on the deployment [deploy-readme](./deploy/README.md).
+
+```bash
+make build 
+```
+
+### Development
+
+In the developing edgedb-cli is expected to be installed in the environment. See the [installation guide](https://www.edgedb.com/install#macos-homebrew) for details.
+
+Homebrew user:
+
+```curl
+brew tap edgedb/tap
+brew install edgedb-cli
+```
+
+Since the EdgeDb is running in a container, some EdgeDb commands will need to pass in their connection parameter
+to get connected with the container. Some make commands are added in the makefile for convenience.
+
+List available makefile command equivalent to edgedb-cli:
+
+- `make edgedb` (`edgedb`)- to run EdgeDb
+- `make edgedb-ui` (`edgedb ui`) - to open EdgeDb UI (username: `orcabus_admin`; password: `admin`) // pragma: allowlist secret
+- `make edgedb-migrate` (`edgedb migrate`) - to apply new migration
+- `make edgedb migration create` (`edgedb migration create`) - to create new migrations
+- `make edgetypes` - to make EdgeDb files (e.g. `*.edgeql`) recognizable by typescript
