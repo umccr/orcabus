@@ -2,6 +2,7 @@ import axios from 'axios';
 
 /**
  * Use the default lambda layer extension to query secret manager
+ * Ref: https://docs.aws.amazon.com/secretsmanager/latest/userguide/retrieving-secrets_lambda.html
  * @param secretManagerName The name of the secret or ARN
  * @returns
  */
@@ -19,6 +20,7 @@ export const getSecretManagerWithLayerExtension = async (secretManagerName: stri
 
 /**
  * Use the default lambda layer extension to query system parameter store (WITH decryption)
+ * Ref: https://docs.aws.amazon.com/systems-manager/latest/userguide/ps-integration-lambda-extensions.html
  * @param parameterStoreName The name of the parameterStore or ARN
  * @returns
  */

@@ -4,15 +4,13 @@
   "scripts": {
     "watch": "NODE_ENV=development nodemon src/index.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "init-db": "edgedb project init",
-    "migrate-db": "edgedb migration create || true && edgedb migrate",
     "start": "NODE_ENV=development ts-node src/index.ts",
+    "insert-scenario-1": "ts-node src/test-data/index.ts insert-scenario-1",
+    "insert-scenario-2": "ts-node src/test-data/index.ts insert-scenario-2",
     "//edgetypes": "Generates Typescript classes that match the schema of the *current* project EdgeDb",
     "edgetypes": "generate queries --file && generate edgeql-js && generate interfaces",
-    "test": "jest",
-    "prebuild": "rm -rf dist",
-    "build-src": "NODE_OPTIONS='--max-old-space-size=8192' tsc",
-    "build-migrate": "esbuild migrate.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/index.js"
+    "test": "jest --config=jest.config.js",
+    "build-src": "NODE_OPTIONS='--max-old-space-size=8192' tsc"
   },
   "dependencies": {
     "@fastify/aws-lambda": "^3.3.0",
@@ -28,7 +26,8 @@
     "reflect-metadata": "^0.1.13",
     "ts-node": "^10.9.1",
     "tsyringe": "^4.8.0",
-    "ulid": "^2.3.0"
+    "ulid": "^2.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@edgedb/generate": "^0.3.1",

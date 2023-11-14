@@ -1,4 +1,4 @@
-import { aws_ec2 as ec2, aws_secretsmanager as secretsmanager, CfnOutput } from 'aws-cdk-lib';
+import { aws_ec2 as ec2, aws_secretsmanager as secretsmanager } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { EdgeDbServiceConstruct, EdgeDbServicePassthroughProps } from './edge-db-service-construct';
 import {
@@ -6,7 +6,6 @@ import {
   EdgeDbLoadBalancerProtocolPassthroughProps,
 } from './edge-db-load-balancer-protocol-construct';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
-import { EdgeDbLoadBalancerUiPassthroughProps } from './edge-db-load-balancer-ui-construct';
 import { ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 
 export interface EdgeDbProps {
@@ -26,9 +25,6 @@ export interface EdgeDbProps {
 
   // the configuration of the internal network load balancer that provides EdgeDb protocol access
   edgeDbLoadBalancerProtocol: EdgeDbLoadBalancerProtocolPassthroughProps;
-
-  // if present, configures a public UI for the EdgeDb instance
-  edgeDbLoadBalancerUi?: EdgeDbLoadBalancerUiPassthroughProps;
 }
 
 export interface EdgeDbConfigurationProps {
@@ -88,24 +84,6 @@ export class EdgeDbConstruct extends Construct {
     );
 
     this.host = edgeDbLoadBalancer.dnsName;
-
-    //   if (props.edgeDbLoadBalancerUi) {
-    //     const edgeDbLoadBalancerUi = new EdgeDbLoadBalancerUiConstruct(this, 'EdgeDbLoadBalancerUi', {
-    //       vpc: props.vpc,
-    //       service: edgeDbService.service,
-    //       servicePort: edgeDbService.servicePort,
-    //       serviceSecurityGroup: edgeDbService.securityGroup,
-    //       ...props.edgeDbLoadBalancerUi,
-    //     });
-
-    //     const tlsPortString =
-    //       props.edgeDbLoadBalancerUi.hostedPort != 443
-    //         ? `:${props.edgeDbLoadBalancerUi.hostedPort}`
-    //         : '';
-    //     new CfnOutput(this, 'EdgeDbUiUrl', {
-    //       value: `https://${edgeDbLoadBalancerUi.dnsName}${tlsPortString}/ui`,
-    //     });
-    //   }
   }
 
   public get edgeDbConnectionVariable(): EdgeDbConfigurationProps {

@@ -40,7 +40,7 @@ module metadata {
         quality: str;
         type: str;
         assay: str;
-        coverage: decimal;
+        coverage: str;
 
         single link specimen: Specimen {
             on target delete allow

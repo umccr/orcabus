@@ -102,14 +102,14 @@ export class MetadataGoogleService {
       if (rec.SubjectID) {
         val.subject = {
           internalId: rec.SubjectID,
-          externalId: rec.ExternalSubjectID ?? null,
+          externalId: rec.ExternalSubjectID ? rec.ExternalSubjectID.toString() : null,
         };
       }
 
       if (rec.SampleID) {
         val.specimen = {
           internalId: rec.SampleID,
-          externalId: rec.ExternalSampleID ?? null,
+          externalId: rec.ExternalSampleID ? rec.ExternalSampleID.toString() : null,
           source: rec.Source ?? null,
         };
       }
@@ -124,7 +124,7 @@ export class MetadataGoogleService {
           quality: rec.Quality ? rec.Quality : null,
           type: rec.Type ? rec.Type : null,
           assay: rec.Assay ? rec.Assay : null,
-          coverage: rec['Coverage (X)'] ? rec['Coverage (X)'] : null,
+          coverage: rec['Coverage (X)'] ? rec['Coverage (X)'].toString() : null,
         };
       }
 

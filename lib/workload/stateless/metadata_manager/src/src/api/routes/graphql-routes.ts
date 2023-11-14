@@ -6,7 +6,7 @@ export const gqlRoutes = async (fastify: FastifyInstance) => {
     `https://` +
     `${process.env.EDGEDB_HOST ?? 'localhost'}` +
     `:` +
-    `${process.env.EDGEDB_PORT ?? 10715}` +
+    `${process.env.EDGEDB_PORT ?? 5656}` +
     `/db/` +
     `${process.env.EDGEDB_DATABASE ?? 'edgedb'}` +
     `/graphql`;
@@ -18,7 +18,8 @@ export const gqlRoutes = async (fastify: FastifyInstance) => {
     proxyPayloads: false,
     preHandler: async (request: FastifyRequest) => {
       // It seems that fastify don't like if content-length == 0 while the body is undefined
-      // Removing the 'content-length' to resolve issue
+      // (despite of a GET request) and load-balancer/API-Gateway adds this automatically
+      // So, removing the 'content-length' to resolve this
       if (request.headers['content-length']) {
         delete request.headers['content-length'];
       }
@@ -29,10 +30,10 @@ export const gqlRoutes = async (fastify: FastifyInstance) => {
     upstream: graphQLEndpoint,
     httpMethods: ['POST'],
     proxyPayloads: false,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    preHandler: async (request: any, reply) => {
-      // Reject graphql mutation request
-      if (request.body['query'].startsWith('mutation')) {
+    preHandler: async (request: FastifyRequest, reply) => {
+      // We wanted to reject any kind of mutation via the GraphQL endpoint
+      const body = request.body as Record<string, string> | undefined;
+      if (body.query?.includes('mutation')) {
         reply.code(400).send({ message: 'unable to support mutation through graphql' });
       }
     },

@@ -18,7 +18,7 @@ describe('metadata record from GoogleSheet tests', () => {
     expect(
       isEqual(convertedResultArr[0], {
         subject: { internalId: 'SUBIDA', externalId: 'EXTSUBIDA' },
-        specimen: { internalId: 'SAMIDA', externalId: '', source: 'FFPE' },
+        specimen: { internalId: 'SAMIDA', externalId: null, source: 'FFPE' },
         library: {
           internalId: 'LIB01',
           phenotype: null,

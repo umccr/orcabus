@@ -1,10 +1,10 @@
-// must be first and before any DI is used
+// 'reflect-metadata' must be beginning of the line and before any DI is used
 import 'reflect-metadata';
 import { createDependencyContainer } from '../bootstrap/dependency-injection';
 
 import { MetadataService } from '../service/metadata';
 import { MetadataGoogleService } from '../service/loader-method/googleSheet';
-import insertScenario1 from '../test-data/scenario-1';
+import insertScenario1 from '../test-data/scenarios/scenario-1';
 
 export const handler = async () => {
   const dc = await createDependencyContainer();

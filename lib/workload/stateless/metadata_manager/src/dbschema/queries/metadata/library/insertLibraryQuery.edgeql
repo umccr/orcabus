@@ -8,7 +8,7 @@ select (
     quality := <optional str>$quality,
     type := <optional str>$type,
     assay := <optional str>$assay,
-    coverage := <optional decimal>$coverage,
+    coverage := <optional str>$coverage,
 
     specimen := (
       select assert_single((

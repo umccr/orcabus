@@ -1,7 +1,6 @@
 import Fastify, { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import { DependencyContainer } from 'tsyringe';
 import { internalRoutes } from './api/routes/internal-routes';
-import insertScenario1 from './test-data/scenario-1';
 import { gqlRoutes } from './api/routes/graphql-routes';
 
 export class App {
@@ -24,21 +23,15 @@ export class App {
     });
   }
 
-  public async setupServer(dc: DependencyContainer): Promise<FastifyInstance> {
-    if (process.env.NODE_ENV === 'development') {
-      await insertScenario1(dc);
-    }
-
+  public async setupServer(): Promise<FastifyInstance> {
     // Register Fastify routing
-    {
-      this.server.register(internalRoutes, {
-        container: this.dc,
-      });
-      this.server.register(gqlRoutes, {
-        container: this.dc,
-        prefix: '/graphql',
-      });
-    }
+    this.server.register(internalRoutes, {
+      container: this.dc,
+    });
+    this.server.register(gqlRoutes, {
+      container: this.dc,
+      prefix: '/graphql',
+    });
 
     return this.server;
   }

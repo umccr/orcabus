@@ -125,8 +125,6 @@ export class EdgeDbServiceConstruct extends Construct {
       EDGEDB_SERVER_PASSWORD: ecs.Secret.fromSecretsManager(props.superUserSecret),
     };
 
-    if (props.enableUiFeatureFlag) env.EDGEDB_SERVER_ADMIN_UI = 'enabled';
-
     taskDefinition.addContainer(containerName, {
       image: ecs.ContainerImage.fromAsset(path.join(__dirname, '../../../'), {
         file: 'deploy/construct/edge-db/Dockerfile',

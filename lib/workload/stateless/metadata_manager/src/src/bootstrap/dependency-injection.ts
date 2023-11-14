@@ -18,7 +18,12 @@ export async function createDependencyContainer() {
     // https://www.edgedb.com/docs/clients/js/driver#configuring-clients
     useFactory: instanceCachingFactory(() =>
       createClient({
-        password: edgeDbPassword,
+        host: process.env.EDGEDB_HOST ?? 'localhost',
+        port: process.env.EDGEDB_PORT ? parseInt(process.env.EDGEDB_PORT) : 5656,
+        database: process.env.EDGEDB_DATABASE ?? 'edgedb',
+        tlsSecurity: 'insecure',
+        password: edgeDbPassword ?? 'admin',
+        user: process.env.EDGEDB_USER ?? 'orcabus_admin',
       }).withConfig({
         session_idle_transaction_timeout: Duration.from({ seconds: 60 }),
       })
@@ -36,6 +41,5 @@ export async function createDependencyContainer() {
   dc.registerSingleton(MetadataService);
   dc.registerSingleton(MetadataGoogleService);
 
-  // Note: dependencies of class constructors must be injected manually when using esbuild.
   return dc;
 }

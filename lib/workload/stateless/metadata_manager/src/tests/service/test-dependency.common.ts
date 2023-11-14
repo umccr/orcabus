@@ -14,7 +14,14 @@ export function registerTypes() {
   dc.register<Client>('Database', {
     // https://www.edgedb.com/docs/clients/js/driver#configuring-clients
     useFactory: instanceCachingFactory(() =>
-      createClient().withConfig({
+      createClient({
+        host: process.env.EDGEDB_HOST ?? 'localhost',
+        port: process.env.EDGEDB_PORT ? parseInt(process.env.EDGEDB_PORT) : 5656,
+        database: process.env.EDGEDB_DATABASE ?? 'edgedb',
+        tlsSecurity: 'insecure',
+        password: 'admin', // pragma: allowlist secret
+        user: process.env.EDGEDB_USER ?? 'orcabus_admin',
+      }).withConfig({
         session_idle_transaction_timeout: Duration.from({ seconds: 60 }),
       })
     ),
@@ -28,6 +35,5 @@ export function registerTypes() {
     }),
   });
 
-  // Note: dependencies of class constructors must be injected manually when using esbuild.
   return dc;
 }

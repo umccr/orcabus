@@ -1,4 +1,4 @@
-CREATE MIGRATION m13i46pa4ciguptomcgqyif6ruj5kx7fdy6xq6upnlhnby3vljuu2a
+CREATE MIGRATION m14icr2t2ykpgsskmquyvwoduwtjo7q7qbwfadvqsblckzhdhl7uqq
     ONTO initial
 {
   CREATE EXTENSION graphql VERSION '1.0';
@@ -33,7 +33,7 @@ CREATE MIGRATION m13i46pa4ciguptomcgqyif6ruj5kx7fdy6xq6upnlhnby3vljuu2a
   CREATE SCALAR TYPE metadata::WorkflowTypes EXTENDING enum<clinical, research, qc, control, bcl, manual>;
   CREATE TYPE metadata::Library EXTENDING metadata::MetadataIdentifiable {
       CREATE PROPERTY assay: std::str;
-      CREATE PROPERTY coverage: std::decimal;
+      CREATE PROPERTY coverage: std::str;
       CREATE PROPERTY phenotype: std::str;
       CREATE PROPERTY quality: std::str;
       CREATE PROPERTY type: std::str;
