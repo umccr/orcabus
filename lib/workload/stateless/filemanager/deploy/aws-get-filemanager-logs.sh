@@ -15,6 +15,12 @@ function usage() {
 }
 
 function run_command() {
+  # FIXME:
+  # Does not warn/fail properly when there are no log groups active
+  # % awslocal logs describe-log-groups
+  # {
+  #  "logGroups": []
+  # }
   group_name=$("$command" logs describe-log-groups --query logGroups[*].logGroupName | jq -r '.[]')
   "$command" logs tail "$group_name" --follow
 }
