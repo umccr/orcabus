@@ -1,6 +1,6 @@
 aws-xray-sdk==2.12.0
 boto3==1.28.0
-Django==4.2.3
+Django==4.2.7
 django-environ==0.10.0
 django-database-prefix==0.1.0
 pymysql==1.1.0
