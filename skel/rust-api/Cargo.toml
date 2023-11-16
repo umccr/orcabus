@@ -10,7 +10,7 @@ lambda_http = "0.8"
 lambda_runtime = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sqlx = { version = "0.7", features = ["mysql", "runtime-tokio-rustls", "chrono"] }
+sqlx = { version = "0.7", features = ["mysql", "runtime-tokio-rustls", "chrono", "macros"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 utoipa = { version = "4", features = ["axum_extras"] }
 utoipa-swagger-ui = { version = "4", features = ["axum"] }
@@ -25,6 +25,6 @@ thiserror = "1.0"
 async-trait = "0.1"
 
 # S3 Dependencies
-aws-config = "0.56"
-aws-sdk-s3 = "0.29"
-aws-sdk-sqs = "0.29"
+aws-config = "0.100"
+aws-sdk-s3 = "0.37"
+aws-sdk-sqs = "0.37"

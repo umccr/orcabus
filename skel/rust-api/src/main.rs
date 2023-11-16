@@ -1,7 +1,6 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
 use axum::{routing, Router, Server};
-use hyper::Error;
 
 use rust_api::env;
 use rust_api::file;
@@ -30,7 +29,7 @@ use tracing::{info, Level};
 /// 2. Link objects/paths to metadata: That would tightly couple filemanager with metadata service.
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() -> Result<(), hyper::Error> {
     tracing_subscriber::fmt()
         .with_target(false)
         .compact()
@@ -54,5 +53,12 @@ async fn main() -> Result<(), Error> {
 
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 8080));
     info!("listening on {}", address);
-    Server::bind(&address).serve(app.into_make_service()).await
+    let server = Server::bind(&address).serve(app.into_make_service());
+
+    // Run forever-ish...
+    if let Err(err) = server.await {
+        eprintln!("server error: {}", err);
+    }
+
+    Ok(())
 }
