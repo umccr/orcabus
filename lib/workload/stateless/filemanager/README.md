@@ -53,12 +53,12 @@ cargo clippy --all-targets
 cargo fmt
 ```
 
-[env-example]: .env.example
-
 ## Localstack development
 
 Localstack enables deploying and testing AWS services locally. See the [deploy][deploy] directory
 for the cdk infrastructure code.
+
+## Setup and deployment
 
 For localstack testing and development:
 
@@ -77,19 +77,26 @@ npx cdklocal deploy
 
 **WARNING**: it's possible that a profile called "default" in `~/.aws/config` could interfere with awslocal.
 
-This allows creating events that are ingested.
+**WARNING**: Make sure there's no pre-existing deployment with `npx cdklocal destroy`, otherwise your stack might fail to deploy with `CREATE FAILED`.
+
+## Ingestion test
+
+This allows creating synthetic events that are ingested and stored in filemanager's database.
+
+Here it is assumed that [`awslocal`](https://github.com/localstack/awscli-local) has been installed beforehand.
 
 First, push an object (in order to create a log group):
+
 ```sh
+awslocal s3 mb s3://filemanager-test-ingest
 awslocal s3api put-object --bucket filemanager-test-ingest --key test
 ```
 
 Then in a separate terminal:
-```sh
-./aws-get-filemanager-logs.sh -c awslocal
-```
 
-[deploy]: ./deploy
+```sh
+./deploy/aws-get-filemanager-logs.sh -c awslocal
+```
 
 ## Database
 
@@ -98,3 +105,6 @@ A shortcut for connecting to the docker database:
 ```bash
 docker exec -it filemanager_db psql filemanager -U filemanager
 ```
+
+[deploy]: ./deploy
+[env-example]: .env.example
