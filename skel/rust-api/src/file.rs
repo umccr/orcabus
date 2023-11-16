@@ -1,10 +1,38 @@
+use std::error::Error;
+
 use axum::{extract::Query, Json};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
+use crate::error::Result;
+
+use crate::error::Error::NotFound;
 use tracing::info;
 //type Store = Mutex<Vec<File>>;
-// TODO: SQLx is the store backend, through db.rs
+// TODO: SQLx is the store backend, through mod.rs
+
+/// Converts generic file attributes into concrete storage backend ones
+pub trait FileAdapter {
+    // /// Find
+    // fn find(&self, query: Query, attr: Option<Attributes>) -> Result<File>;
+
+    /// Filter by subjects, name, phenotype, etc...
+    fn find(&self, query: Attributes) -> Result<Vec<File>>;
+}
+
+/// Foreign constructs that inform the query
+#[derive(Debug)]
+pub enum Attributes {
+    Name(String),
+    SubjectId(String),
+    Phenotype(Phenotype),
+}
+
+#[derive(Debug)]
+pub enum Phenotype {
+    Tumor,
+    Normal,
+}
 
 /// Item to do.
 #[derive(Serialize, Deserialize, ToSchema, IntoParams, Clone)]
@@ -46,12 +74,16 @@ pub enum FileError {
         (status = 200, description = "List matching objects", body = [File])
     )
 )]
-pub async fn search(query: Query<File>) -> Json<Vec<File>> {
+pub async fn search(query: Query<File>) -> Result<Json<Vec<File>>> {
     info!("searching {:?}", query.name);
-    Json(vec![File {
+    let res = crate::db::s3_query_something(query.name.clone())
+        .await
+        .map_err(|e| NotFound(e.to_string()))?;
+
+    Ok(Json(vec![File {
         id: 1,
         name: query.name.clone(),
         size: 1,
         hash: "Moo".to_string(),
-    }])
+    }]))
 }

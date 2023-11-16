@@ -1,0 +1,7 @@
+- id: 1
+  bucket: umccr-primary-data-prod
+  key: VCCCPO
+  size: 0
+  last_modified_date: "2019-10-28 14:12:00.323000"
+  etag: d41d8cd98f00b204e9800998ecf8427e
+  unique_hash: 6f9f14dd32dc861997dcf9cf9fc95116aa204aba95925aeb7af7f7f71aa5413d
