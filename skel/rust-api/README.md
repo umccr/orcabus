@@ -1,6 +1,12 @@
 # Quickstart
 
-For development edit/compile looping:
+First and foremost, make sure you setup a `.env` file from the `.env.example` and tilt up the database server, otherwise this skel will fail to compile:
+
+```
+error: `DATABASE_URL` must be set
+```
+
+For development edit/compile looping `cargo watch` helps:
 
 ```
 $ cargo install cargo-watch     # if not installed previously
