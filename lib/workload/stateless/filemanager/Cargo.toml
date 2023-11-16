@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "filemanager",
+    "filemanager-http-lambda",
+    "filemanager-ingest-lambda",
+]
+
+[workspace.package]
+license = "MIT"
+edition = "2021"
+authors = ["Marko Malenic <mmalenic1@gmail.com", "Roman Valls Guimera <brainstorm@nopcode.org>"]

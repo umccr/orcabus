@@ -19,7 +19,6 @@ env/
 # IDE
 .idea
 .DS_Store
-.vscode
 
 # Environment files
 *.log
