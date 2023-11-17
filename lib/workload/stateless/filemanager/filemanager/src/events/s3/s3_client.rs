@@ -1,7 +1,8 @@
 use std::env;
 
+use aws_config::BehaviorVersion;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
-use aws_sdk_s3::{config, Client};
+use aws_sdk_s3::Client;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::future::join_all;
 use tracing::trace;
@@ -24,22 +25,23 @@ impl S3 {
 
     /// Create with a default S3 client.
     pub async fn with_defaults() -> Result<Self> {
-        let config = aws_config::from_env().load().await;
-        let mut config = config::Builder::from(&config);
+        let mut config = aws_config::defaults(BehaviorVersion::latest());
 
         if let Ok(endpoint) = env::var("ENDPOINT_URL") {
             trace!("Using endpoint {}", endpoint);
             config = config.endpoint_url(endpoint);
         }
 
-        if let Ok(path_style) = env::var("FORCE_PATH_STYLE") {
-            if let Ok(path_style) = path_style.parse::<bool>() {
-                config = config.force_path_style(path_style);
-            }
-        }
+        // TODO: path_style seems to have been deprecated?? Did we need this for something important?
+        //
+        // if let Ok(path_style) = env::var("FORCE_PATH_STYLE") {
+        //     if let Ok(path_style) = path_style.parse::<bool>() {
+        //         config = config.force_path_style(path_style);
+        //     }
+        // }
 
         Ok(Self {
-            s3_client: Client::from_conf(config.build()),
+            s3_client: Client::new(&config.load().await),
         })
     }
 
