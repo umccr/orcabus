@@ -33,9 +33,9 @@ Notes:
 
 - The `orcabusId` is constructed uniquely for ocabusId with the structure of prefixes either `spc.`, `lib.`, `sbj.`
   (for specimen, library, and subject, respectively) and followed by [ulid](https://github.com/ulid/spec) id.
-  
+
   e.g. `sbj.01HF6B4D6GHCYT3ZVF0S6087W3`
-- The audit event schema will record the generation of success/failed of a/an insertion/deletion.
+- The audit event schema will record the generation of success/failure of an insertion/deletion.
   
   ```curl
   select audit::AuditEvent {*} filter .id=<uuid>'04ec4232-82be-11ee-870c-6b78b11f565f';
@@ -52,7 +52,7 @@ Notes:
   ```
 
 
-## Local development
+## Local Deployment
 
 Requirement:
 
@@ -148,7 +148,7 @@ make build
 
 ### Development
 
-In the developing edgedb-cli is expected to be installed in the environment. See the [installation guide](https://www.edgedb.com/install#macos-homebrew) for details.
+edgedb-cli is expected to be installed in the dev environment. See the [installation guide](https://www.edgedb.com/install#macos-homebrew) for details.
 
 Homebrew user:
 
