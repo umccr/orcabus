@@ -78,7 +78,7 @@ export class FilemanagerStack extends Stack {
     CargoSettings.WORKSPACE_DIR = '../';
     CargoSettings.BUILD_INDIVIDUALLY = true;
 
-    let filemanagerLambda = new RustFunction(this, id + 'IngestLambdaFunction', {
+    const filemanagerLambda = new RustFunction(this, id + 'IngestLambdaFunction', {
       package: 'filemanager-ingest-lambda',
       target: 'aarch64-unknown-linux-gnu',
 
