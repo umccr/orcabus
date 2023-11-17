@@ -1,4 +1,4 @@
-use std::error::Error;
+//use std::error::Error;
 
 use axum::{extract::Query, Json};
 use serde::{Deserialize, Serialize};
@@ -76,7 +76,7 @@ pub enum FileError {
 )]
 pub async fn search(query: Query<File>) -> Result<Json<Vec<File>>> {
     info!("searching {:?}", query.name);
-    let res = crate::db::s3_query_something(query.name.clone())
+    let _res = crate::db::s3_query_something(query.name.clone())
         .await
         .map_err(|e| NotFound(e.to_string()))?;
 

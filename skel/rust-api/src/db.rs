@@ -1,5 +1,4 @@
 use std::env;
-use std::error::Error;
 
 use crate::error;
 use sqlx::{mysql::MySqlPool, FromRow};
@@ -30,7 +29,7 @@ pub struct S3 {
 }
 
 impl FileAdapter for S3 {
-    fn find(&self, query: Attributes) -> error::Result<Vec<File>> {
+    fn find(&self, _query: Attributes) -> error::Result<Vec<File>> {
         todo!();
         // Ok(vec![File {
         //     id: self.id,
@@ -39,10 +38,10 @@ impl FileAdapter for S3 {
     }
 }
 
-pub async fn s3_query_something(name: String) -> Result<Vec<S3>, sqlx::Error> {
+pub async fn s3_query_something(_name: String) -> Result<Vec<S3>, sqlx::Error> {
     // TODO: Move this at "class" level instead of method level
     let db_url = env::var("DATABASE_URL");
-    let pool = MySqlPool::connect(db_url.unwrap_or_default().as_str()).await?;
+    let _pool = MySqlPool::connect(db_url.unwrap_or_default().as_str()).await?;
 
     todo!();
     // let key = "foo";
