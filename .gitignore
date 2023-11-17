@@ -1,5 +1,6 @@
 # Distribution / packaging
 .Python
+package-lock.json
 
 # Put stuffs here for your local dev specific purpose
 .local/
