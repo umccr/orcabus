@@ -4,4 +4,6 @@ detect-secrets
 black
 ggshield
 django_extensions==3.2.3
+django_database_prefix
+cryptography==36.0.2 # https://stackoverflow.com/a/74705489/457116
 drf_yasg==1.21.5
