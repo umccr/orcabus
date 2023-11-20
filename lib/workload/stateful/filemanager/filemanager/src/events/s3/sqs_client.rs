@@ -1,6 +1,7 @@
 use std::env;
 
-use aws_sdk_sqs::{config, Client};
+use aws_config::BehaviorVersion;
+use aws_sdk_sqs::Client;
 use tracing::trace;
 
 use crate::error::Error::{DbClientError, DeserializeError, SQSReceiveError};
@@ -26,8 +27,7 @@ impl SQS {
 
     /// Create with a default SQS client.
     pub async fn with_default_client() -> Result<Self> {
-        let config = aws_config::from_env().load().await;
-        let mut config = config::Builder::from(&config);
+        let mut config = aws_config::defaults(BehaviorVersion::latest());
 
         if let Ok(endpoint) = env::var("ENDPOINT_URL") {
             trace!("Using endpoint {}", endpoint);
@@ -35,7 +35,7 @@ impl SQS {
         }
 
         Ok(Self {
-            sqs_client: Client::from_conf(config.build()),
+            sqs_client: Client::new(&config.load().await),
             sqs_url: std::env::var("SQS_QUEUE_URL")
                 .map_err(|err| DbClientError(err.to_string()))?,
         })

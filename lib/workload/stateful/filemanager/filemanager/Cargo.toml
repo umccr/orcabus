@@ -8,13 +8,13 @@ edition.workspace = true
 
 [dependencies]
 axum = "0.6"
-hyper = { version = "0.14", features = ["full"] }
+hyper = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio", "tls-rustls", "chrono", "uuid"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-utoipa = { version = "3", features = ["axum_extras"] }
-utoipa-swagger-ui = { version = "3", features = ["axum"] }
+utoipa = { version = "4", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "4", features = ["axum"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tower = "0.4"
@@ -26,9 +26,9 @@ async-trait = "0.1"
 uuid = { version = "1.4", features = ["v4"] }
 
 # AWS
-aws-sdk-sqs = "0.29"
-aws-config = "0.56"
-aws-sdk-s3 = "0.29"
-futures = "0.3.28"
+aws-sdk-sqs = "0.37"
+aws-config = "0.100"
+aws-sdk-s3 = "0.37"
+futures = "0.3"
 #lambda_http = "0.8.0"
 #lambda_runtime = "0.8.0"

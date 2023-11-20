@@ -2,8 +2,7 @@
 
 The filemanager ingests events from cloud storage like S3 and maintains a queryable table of objects.
 
-This project is split up into multiple crates in a workspace. For development, docker is used, which enables
-localstack and a postgres database.
+This project is split up into multiple crates in a workspace. For development, docker is used, which enables localstack and a postgres database.
 
 ## Prerequisites
 
@@ -21,7 +20,8 @@ docker compose up
 ```
 
 The filemanager uses sqlx to check if queries succeed against a database at compile time.
-A `.env` file ensures that the sqlx code can check queries at compile time by providing a `DATABASE_URL`.
+
+A `.env` file ensures that the sqlx code can check queries at compile time by providing a `DATABASE_URL`. If `.env` is not present and there's no active database running and ready to be connected to, this project will fail to compile at all (preventing unnecessary runtime errors).
 
 Filemanager uses docker to run a postgres database to track objects. This means that sqlx connects to the postgres server
 running inside the docker compose container. If there are additional postgres installations locally (outside of docker),
