@@ -13,7 +13,6 @@ new FilemanagerStack(
   STACK_NAME,
   {
     database_url: 'postgresql://filemanager:filemanager@db:5432/filemanager', // pragma: allowlist secret
-
     endpoint_url: 'http://localstack:4566',
     force_path_style: true,
     stack_name: STACK_NAME,
