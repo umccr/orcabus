@@ -30,7 +30,7 @@ this might interfere and complain about non-existing roles and users.
 For development of the rust workspace, install a build cache (sccache) and build manually:
 
 ```sh
-brew install sccache
+brew install sccache && export RUSTC_WRAPPER=`which sccache`
 cargo build --all-targets --all-features
 ```
 
