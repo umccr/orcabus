@@ -27,9 +27,10 @@ Filemanager uses docker to run a postgres database to track objects. This means 
 running inside the docker compose container. If there are additional postgres installations locally (outside of docker),
 this might interfere and complain about non-existing roles and users.
 
-For development of the rust workspace, build manually:
+For development of the rust workspace, install a build cache (sccache) and build manually:
 
 ```sh
+brew install sccache && export RUSTC_WRAPPER=`which sccache`
 cargo build --all-targets --all-features
 ```
 
