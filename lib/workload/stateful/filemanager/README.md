@@ -75,9 +75,20 @@ npx cdklocal bootstrap
 npx cdklocal deploy
 ```
 
-**WARNING**: it's possible that a profile called "default" in `~/.aws/config` could interfere with awslocal.
+It's possible that a profile called "default" in `~/.aws/config` could interfere with awslocal. A recommended `~/.aws/credentials` that works with localstack's dummy `0000000000` AWS account would look like this:
 
-**WARNING**: Make sure there's no pre-existing deployment with `npx cdklocal destroy`, otherwise your stack might fail to deploy with `CREATE FAILED`.
+```
+[default]
+aws_access_key_id = access_key
+aws_secret_access_key = secret_key
+```
+
+Make sure there's no pre-existing deployment with `npx cdklocal destroy`, otherwise your stack might fail to deploy with `CREATE FAILED`.
+Also, `cargo install sqlx-cli` tools to easy database migration helpers and perform migrations when needed:
+
+```shell
+cd database && sqlx migrate run
+```
 
 ## Ingestion test
 

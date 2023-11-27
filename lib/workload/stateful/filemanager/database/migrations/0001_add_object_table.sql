@@ -17,6 +17,6 @@ create table object (
     -- When this object was deleted, a null value means that the object has not yet been deleted.
     deleted_date timestamptz default null,
     -- The date of the object and its id combined.
-    portal_run_id varchar(255) not null,
+    portal_run_id varchar(255) not null
     -- provenance - history of all objects and how they move?
 );
