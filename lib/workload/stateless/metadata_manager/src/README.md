@@ -83,9 +83,11 @@ make install
 
 ### Start
 
-Before starting the app server, the database needs to be initiated. The database used here is
-[EdgeDb](https://www.edgedb.com/) which is a graph-relational database that uses SQL as their underlying
-database. The configuration for this has been bundled up into a docker-compose and could be run as follows.
+
+To start the database and server use the following make command. This will run the server and database in
+docker-compose. The server will run at port 8080. (http://localhost:8080).
+The database used here is [EdgeDb](https://www.edgedb.com/) which is a graph-relational database that uses SQL as their
+underlying database. The configuration for this has been bundled up into a docker-compose and could be run as follows.
 
 ```bash
 make up

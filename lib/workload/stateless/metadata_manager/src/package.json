@@ -1,6 +1,5 @@
 {
   "name": "src",
-  "packageManager": "yarn@3.5.1",
   "scripts": {
     "watch": "NODE_ENV=development nodemon src/index.ts",
     "typecheck": "tsc -p tsconfig.json",

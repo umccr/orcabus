@@ -34,7 +34,9 @@ export const gqlRoutes = async (fastify: FastifyInstance) => {
       // We wanted to reject any kind of mutation via the GraphQL endpoint
       const body = request.body as Record<string, string> | undefined;
       if (body.query?.includes('mutation')) {
-        reply.code(400).send({ message: 'unable to support mutation through graphql' });
+        reply
+          .code(400)
+          .send({ message: 'mutation is not supported through this graphql endpoint' });
       }
     },
   });

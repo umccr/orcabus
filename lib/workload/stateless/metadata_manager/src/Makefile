@@ -1,3 +1,5 @@
+EDGEDB_HOST ?= localhost
+
 # Installation
 install:
 	@yarn install
@@ -15,9 +17,9 @@ stop:
 # Build the app for deployment
 
 edgetypes:
-	@npx generate queries --target ts --file --dsn edgedb://orcabus_admin:admin@localhost:5656 --tls-security insecure # pragma: allowlist secret
-	@npx generate edgeql-js --target ts --output-dir dbschema/edgeql-js --dsn edgedb://orcabus_admin:admin@localhost:5656 --tls-security insecure # pragma: allowlist secret
-	@npx generate interfaces --file dbschema/interfaces.ts --dsn edgedb://orcabus_admin:admin@localhost:5656 --tls-security insecure # pragma: allowlist secret
+	@npx generate queries --target ts --file --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
+	@npx generate edgeql-js --target ts --output-dir dbschema/edgeql-js --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
+	@npx generate interfaces --file dbschema/interfaces.ts --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
 
 build: edgetypes
 	@rm -rf asset
@@ -48,10 +50,10 @@ insert-scenario-2:
 
 # Shortcut of edgedb cli
 edgedb:
-	@edgedb --dsn edgedb://orcabus_admin:admin@localhost:5656 --tls-security insecure # pragma: allowlist secret
+	@edgedb --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
 edgedb-ui:
-	@edgedb ui --dsn edgedb://orcabus_admin:admin@localhost:5656 --tls-security insecure --no-server-check # pragma: allowlist secret
+	@edgedb ui --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure --no-server-check # pragma: allowlist secret
 edgedb-migrate:
-	@edgedb migrate --dsn edgedb://orcabus_admin:admin@localhost:5656 --tls-security insecure # pragma: allowlist secret
+	@edgedb migrate --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
 edgedb-migration-create:
-	@edgedb migration create --dsn edgedb://orcabus_admin:admin@localhost:5656 --tls-security insecure # pragma: allowlist secret
+	@edgedb migration create --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret

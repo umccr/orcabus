@@ -1,5 +1,4 @@
 import {
-  RemovalPolicy,
   aws_ec2 as ec2,
   aws_secretsmanager as secretsmanager,
   aws_lambda as lambda,
@@ -56,28 +55,31 @@ export class AppConstruct extends Construct {
         'Security group that allows the app service to reach out over the network (e.g. secret manager)',
     });
 
-    // the layer for lambdas which usually be dependency across lambdas
-    const dependencyLayer = new lambda.LayerVersion(this, 'DependencyLayer', {
-      removalPolicy: RemovalPolicy.DESTROY,
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../../asset/dependency.zip')),
-      compatibleArchitectures: [lambda.Architecture.ARM_64],
+    // There are 2 lambdas for this app
+    // 1. To handle API calls (inc graphql endpoint)
+    // 2. To sync db with external sources (e.g. metadata in gsheet)
+
+    // (1) Lambda that handles API queries
+    const apiLambda = new lambda.DockerImageFunction(this, 'APILambda', {
+      description: 'handles API query for Metadata Manager in OrcaBus',
+      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '../../../'), {
+        file: 'deploy/construct/app/Dockerfile',
+        exclude: ['deploy/cdk.out', 'deploy/asset', '.yarn'],
+        cmd: ['src/handler/server.handler'],
+        buildArgs: {
+          AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? '',
+          AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ?? '',
+          AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN ?? '',
+        },
+      }),
+      architecture: lambda.Architecture.ARM_64,
+      timeout: Duration.minutes(15),
+      environment: { ...edgeDbConnectionEnv },
+      securityGroups: [props.edgedDb.securityGroup, outboundSG],
+      vpc: props.network.vpc,
     });
 
-    // lambda would need access to edgeDb secret manager password
-    // environment variable in lambda does not integrate with value stored in secret
-    // but AWS has an extension to fetch secret by importing AWS lambda layer
-    // Ref: https://docs.aws.amazon.com/secretsmanager/latest/userguide/retrieving-secrets_lambda.html
-    const awsSecretLambdaLayerExtension = lambda.LayerVersion.fromLayerVersionArn(
-      this,
-      'LambdaLayerSecretExtension',
-      'arn:aws:lambda:ap-southeast-2:665172237481:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11'
-    );
-
-    // There are 2 lambdas for this app
-    // 1. To sync db with external sources (e.g. metadata in gsheet)
-    // 2. To handle API calls (inc graphql endpoint)
-
-    // (1) Lambda that handles updates
+    // (2) Lambda that handles updates
     const trackingSheetCredSSM = ssm.StringParameter.fromSecureStringParameterAttributes(
       this,
       'GSheetCredSSM',
@@ -89,14 +91,20 @@ export class AppConstruct extends Construct {
       { parameterName: '/umccr/google/drive/tracking_sheet_id' }
     );
 
-    const loaderLambda = new lambda.Function(this, 'SyncFunction', {
+    const loaderLambda = new lambda.DockerImageFunction(this, 'loaderLambda', {
       description: 'handles loading metadata to the Metadata Manager',
-      runtime: lambda.Runtime.NODEJS_18_X,
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../../asset/src.zip')),
-      handler: 'src/handler/sync.handler',
+      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '../../../'), {
+        file: 'deploy/construct/app/Dockerfile',
+        exclude: ['deploy/cdk.out', 'deploy/asset', '.yarn'],
+        cmd: ['src/handler/sync.handler'],
+        buildArgs: {
+          AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? '',
+          AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ?? '',
+          AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN ?? '',
+        },
+      }),
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.seconds(300),
-      layers: [dependencyLayer, awsSecretLambdaLayerExtension],
       environment: {
         ...edgeDbConnectionEnv,
         GDRIVE_SERVICE_ACCOUNT_PARAMETER_NAME: trackingSheetCredSSM.parameterName,
@@ -114,20 +122,6 @@ export class AppConstruct extends Construct {
       description: 'this rule is to trigger the metadata load',
       schedule: props.configuration.triggerLoadSchedule,
       targets: [new targets.LambdaFunction(loaderLambda)],
-    });
-
-    // (2) Lambda that handles API queries
-    const apiLambda = new lambda.Function(this, 'ApiFunction', {
-      description: 'handles API query for Metadata Manager in OrcaBus',
-      runtime: lambda.Runtime.NODEJS_18_X,
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../../asset/src.zip')),
-      handler: 'src/handler/server.handler',
-      architecture: lambda.Architecture.ARM_64,
-      timeout: Duration.minutes(15),
-      layers: [dependencyLayer, awsSecretLambdaLayerExtension],
-      environment: { ...edgeDbConnectionEnv },
-      securityGroups: [props.edgedDb.securityGroup, outboundSG],
-      vpc: props.network.vpc,
     });
 
     // Both lambda would need access for edgeDb password secret for the connection
