@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 
 export AWS_ENDPOINT_URL=http://localhost:4566
 
