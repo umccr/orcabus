@@ -12,9 +12,7 @@ const description = 'MetadataManager for OrcaBus';
 
 const app = new cdk.App();
 new MetadataManagerStack(app, 'MetadataManagerStack', {
-  // deploy this infrastructure to dev
   env: {
-    account: '843407916570',
     region: 'ap-southeast-2',
   },
   tags: tags,
