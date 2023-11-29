@@ -70,10 +70,7 @@ docker compose up
 Then deploy the cdk to localstack:
 
 ```sh
-cd deploy
-npm install
-npx cdklocal bootstrap
-npx cdklocal deploy
+./scripts deploy.sh
 ```
 
 It's possible that a profile called "default" in `~/.aws/config` could interfere with awslocal. A recommended `~/.aws/credentials` that works with localstack's dummy `0000000000` AWS account would look like this:
@@ -84,35 +81,9 @@ aws_access_key_id = access_key
 aws_secret_access_key = secret_key
 ```
 
-Make sure there's no pre-existing deployment with `npx cdklocal destroy`, otherwise your stack might fail to deploy with `CREATE FAILED`.
-Also, `cargo install sqlx-cli` tools to easy database migration helpers and perform migrations when needed:
-
-```shell
-cd database && sqlx migrate run
-```
-
-## Ingestion test
-
-This allows creating synthetic events that are ingested and stored in filemanager's database.
-
-Here it is assumed that [`awslocal`](https://github.com/localstack/awscli-local) has been installed beforehand.
-
-First, push an object (in order to create a log group):
-
-```sh
-awslocal s3 mb s3://filemanager-test-ingest
-awslocal s3api put-object --bucket filemanager-test-ingest --key test
-```
-
-Then in a separate terminal:
-
-```sh
-./deploy/aws-get-filemanager-logs.sh -c awslocal
-```
-
 ## Database
 
-A shortcut for connecting to the docker database:
+A shortcut for connecting to the docker database and inspecting its contents:
 
 ```bash
 docker exec -it filemanager_db psql filemanager -U filemanager
