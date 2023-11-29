@@ -56,6 +56,7 @@ impl StorageClass {
 }
 
 /// AWS S3 events with fields transposed
+/// TODO: Document why we need those 'transposed'
 #[derive(Debug, Eq, PartialEq, Default)]
 pub struct TransposedS3EventMessages {
     pub object_ids: Vec<Uuid>,
@@ -73,6 +74,7 @@ pub struct TransposedS3EventMessages {
 
 impl TransposedS3EventMessages {
     /// Create a new transposed S3 event messages vector with the given capacity.
+    /// TODO: There was a S3 messaging spec about how long those fields are supposed to be?
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             object_ids: Vec::with_capacity(capacity),
@@ -283,7 +285,7 @@ impl FlatS3EventMessage {
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct S3EventMessage {
-    #[serde(rename = "Records")]
+    #[serde(rename = "records")]
     pub records: Vec<Record>,
 }
 
