@@ -1,23 +1,28 @@
-
+using extension graphql;
 module metadata {
     
-    scalar type Phenotype extending enum<'normal', 'tumor', 'negative-control'>;
-    scalar type Quality extending enum<'very-poor', 'poor', 'good', 'borderline'>;
     scalar type WorkflowTypes extending enum<'clinical', 'research', 'qc', 'control', 'bcl', 'manual'>;
-    scalar type LibraryTypes extending enum<
-        '10X',
-        'ctDNA',
-        'ctTSO',
-        'exome',
-        'Metagenm',
-        'MethylSeq',
-        'other',
-        'TSO-DNA',
-        'TSO-RNA',
-        'WGS',
-        'WTS',
-        'BiModal'
-    >;
+
+    # Apparently GraphQL has some trouble on setting enums that containin hyphens 
+    # and str startswith number
+    # Regex pattern accepted: /^[_a-zA-Z][_a-zA-Z0-9]*$/
+    # 
+    # scalar type Phenotype extending enum<'normal', 'tumor', 'negative-control'>;
+    # scalar type Quality extending enum<'very-poor', 'poor', 'good', 'borderline'>;
+    # scalar type LibraryTypes extending enum<
+    #     '10X',
+    #     'ctDNA',
+    #     'ctTSO',
+    #     'exome',
+    #     'Metagenm',
+    #     'MethylSeq',
+    #     'other',
+    #     'TSO-DNA',
+    #     'TSO-RNA',
+    #     'WGS',
+    #     'WTS',
+    #     'BiModal'
+    # >;
 
     abstract type MetadataIdentifiable {
         required orcaBusId: str {
@@ -30,12 +35,12 @@ module metadata {
     }
 
     type Library extending MetadataIdentifiable {
-        phenotype: Phenotype;
+        phenotype: str;
         workflow: WorkflowTypes;
-        quality: Quality;
-        type: LibraryTypes;
+        quality: str;
+        type: str;
         assay: str;
-        coverage: decimal;
+        coverage: str;
 
         single link specimen: Specimen {
             on target delete allow

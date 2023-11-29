@@ -137,3 +137,5 @@ dist
 dbschema/edgeql-js
 dbschema/queries.*
 dbschema/interfaces.ts
+
+asset/

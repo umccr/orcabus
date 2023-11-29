@@ -1,13 +1,22 @@
 import { FastifyInstance } from 'fastify';
 import { DependencyContainer } from 'tsyringe';
+import { MetadataService } from '../../service/metadata';
 
 export const internalRoutes = async (
   fastify: FastifyInstance,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _opts: { container: DependencyContainer }
+  opts: { container: DependencyContainer }
 ) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  fastify.get('/hello', async (request, reply) => {
-    return 'Hello World!\n';
+  const metadataService = opts.container.resolve(MetadataService);
+
+  fastify.get('/library', async () => {
+    return metadataService.getAllLibrary();
+  });
+
+  fastify.get('/specimen', async () => {
+    return metadataService.getAllSpecimen();
+  });
+
+  fastify.get('/subject', async () => {
+    return metadataService.getAllSubject();
   });
 };

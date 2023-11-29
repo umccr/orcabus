@@ -1,40 +1,13 @@
-import { Client } from 'edgedb';
-import { ulid } from 'ulid';
 import { metadata } from '../../../dbschema/interfaces';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from 'pino';
 import { JWT } from 'google-auth-library';
-import { GetParameterCommand, SSMClient } from '@aws-sdk/client-ssm';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
-import {
-  selectLibraryByIdQuery,
-  selectSpecimenByIdQuery,
-  selectSubjectByIdQuery,
-} from '../../../dbschema/queries';
-import {
-  isSubjectIdentical,
-  insertSubjectRecord,
-  updateSubjectRecord,
-} from '../helpers/metadata/subject-helper';
-import { systemAuditEventPattern } from '../helpers/audit-helper';
-import { Transaction } from 'edgedb/dist/transaction';
-import {
-  insertSpecimenRecord,
-  isSpecimenIdentical,
-  updateSpecimenRecord,
-} from '../helpers/metadata/specimen-helper';
-import {
-  insertLibraryRecord,
-  isLibraryIdentical,
-  updateLibraryRecord,
-} from '../helpers/metadata/library-helper';
-
-const GDRIVE_SERVICE_ACCOUNT = '/umccr/google/drive/lims_service_account_json';
-const TRACKING_SHEET_ID = '/umccr/google/drive/tracking_sheet_id';
-// const LIMS_SHEET_ID = '/umccr/google/drive/lims_sheet_id'; // DEPRECATE?
+import { MetadataRecords } from '../metadata';
+import { getParameterDecryptedStoreWithLayerExtension } from '../../utils';
 
 // This will tell from which year the system should query the worksheet
-// Note: The title of the sheet are supposed to be th year
+// The title of each sheet *SHOULD* be the year
 const YEAR_START = 2017;
 
 type GoogleMetadataTrackingHeader =
@@ -56,22 +29,7 @@ type GoogleMetadataTrackingHeader =
 
 @injectable()
 export class MetadataGoogleService {
-  constructor(
-    @inject('Database') private readonly edgeDbClient: Client,
-    @inject('Settings') private readonly settings: Record<string, string>,
-    @inject('Logger') private readonly logger: Logger,
-    @inject('SSMClient') private readonly ssmClient: SSMClient
-  ) {}
-
-  private async getParameterValue(parameterString: string) {
-    const input = {
-      Name: parameterString,
-      WithDecryption: true,
-    };
-    const command = new GetParameterCommand(input);
-    return (await this.ssmClient.send(command)).Parameter?.Value;
-  }
-
+  constructor(@inject('Logger') private readonly logger: Logger) {}
   /**
    * Get SpreadSheet values from Google Drive
    * @param sheetTitle
@@ -80,13 +38,18 @@ export class MetadataGoogleService {
   public async getSheetObject(
     sheetTitle: string
   ): Promise<Record<GoogleMetadataTrackingHeader, string | undefined>[]> {
-    const googleAuthString = await this.getParameterValue(GDRIVE_SERVICE_ACCOUNT);
+    const googleAuthString = await getParameterDecryptedStoreWithLayerExtension(
+      process.env.GDRIVE_SERVICE_ACCOUNT_PARAMETER_NAME
+    );
     if (!googleAuthString) throw new Error('No GDrive credential found!');
 
-    const googleSheetId = await this.getParameterValue(TRACKING_SHEET_ID);
+    const googleSheetId = await getParameterDecryptedStoreWithLayerExtension(
+      process.env.TRACKING_SHEET_ID_PARAMETER_NAME
+    );
     if (!googleSheetId) throw new Error('No Google Sheet Id found!');
 
     const googleAuthJson = JSON.parse(googleAuthString);
+
     const jwt = new JWT({
       email: googleAuthJson.client_email,
       key: googleAuthJson.private_key,
@@ -100,245 +63,72 @@ export class MetadataGoogleService {
     if (!sheet) throw new Error(`No sheet found with title: ${sheetTitle}`);
 
     const rows = await sheet.getRows();
+
     return rows.map(
       (row) => <Record<GoogleMetadataTrackingHeader, string | undefined>>row.toObject()
     );
   }
 
-  /**
-   * Insert or Update for the subject specified in the properties
-   * @param props
-   * @returns
-   */
-  protected async syncSubject(props: { internalId: string; externalId: string | null }) {
-    const subject = await selectSubjectByIdQuery(this.edgeDbClient, {
-      internalId: props.internalId,
-    });
-
-    // If subject does not exist => insert one
-    if (!subject) {
-      return systemAuditEventPattern(
-        this.edgeDbClient,
-        'C',
-        `Insert new subject record: ${props.internalId}`,
-        async (tx: Transaction) => {
-          const r = await insertSubjectRecord(tx, {
-            orcaBusId: `sbj.${ulid()}`,
-            internalId: props.internalId,
-            externalId: props.externalId,
-          });
-          return r;
-        }
-      );
-    }
-
-    // Check if there it is the same with what we had in record and update if not
-    if (isSubjectIdentical(subject, props)) {
-      return systemAuditEventPattern(
-        this.edgeDbClient,
-        'U',
-        `Update existing subject record: ${props.internalId}`,
-        async (tx: Transaction) => {
-          const r = await updateSubjectRecord(tx, {
-            orcaBusId: subject.orcaBusId,
-            internalId: props.internalId,
-            externalId: props.externalId,
-          });
-          return r;
-        }
-      );
-    }
-    return subject;
-  }
-
-  /**
-   * Insert or Update for the specimen specified in the properties
-   * @param props
-   * @returns
-   */
-  protected async syncSpecimen(props: {
-    internalId: string;
-    externalId: string | null;
-    subjectOrcaBusId?: string;
-    source: string | null;
-  }) {
-    const specimen = await selectSpecimenByIdQuery(this.edgeDbClient, {
-      internalId: props.internalId,
-    });
-
-    // If subject does not exist => insert one
-    if (!specimen) {
-      return systemAuditEventPattern(
-        this.edgeDbClient,
-        'C',
-        `Insert new specimen record: ${props.internalId}`,
-        async (tx: Transaction) => {
-          const r = await insertSpecimenRecord(tx, {
-            orcaBusId: `spc.${ulid()}`,
-            internalId: props.internalId,
-            externalId: props.externalId,
-            subjectOrcaBusId: props.subjectOrcaBusId,
-            source: props.source,
-          });
-          return r;
-        }
-      );
-    }
-
-    // Check if specimen is the same with what we had in record and update if not
-    if (
-      isSpecimenIdentical(
-        {
-          internalId: specimen.internalId,
-          externalId: specimen.externalId,
-          source: specimen.source,
-          subjectOrcaBusId: specimen.subjectId,
-        },
-        { ...props }
-      )
-    ) {
-      return systemAuditEventPattern(
-        this.edgeDbClient,
-        'U',
-        `Update existing specimen record: ${props.internalId}`,
-        async (tx: Transaction) => {
-          const r = await updateSpecimenRecord(tx, {
-            orcaBusId: specimen.orcaBusId,
-            internalId: props.internalId,
-            externalId: props.externalId,
-            source: props.source,
-            subjectOrcaBusId: props.subjectOrcaBusId,
-          });
-          return r;
-        }
-      );
-    }
-    return specimen;
-  }
-
-  /**
-   * Insert or Update for the library specified in the properties
-   * @param props
-   * @returns
-   */
-  protected async syncLibrary(props: {
-    internalId: string;
-    phenotype: metadata.Phenotype | null;
-    workflow: metadata.WorkflowTypes | null;
-    quality: metadata.Quality | null;
-    type: metadata.LibraryTypes | null;
-    assay: string | null;
-    coverage: string | null;
-    specimenId?: string;
-  }) {
-    const library = await selectLibraryByIdQuery(this.edgeDbClient, {
-      libraryId: props.internalId,
-    });
-    // If library does not exist => insert one
-    if (!library) {
-      return systemAuditEventPattern(
-        this.edgeDbClient,
-        'C',
-        `Insert new library record: ${props.internalId}`,
-        async (tx: Transaction) => {
-          const r = await insertLibraryRecord(tx, {
-            orcaBusId: `lib.${ulid()}`,
-            internalId: props.internalId,
-            phenotype: props.phenotype,
-            workflow: props.workflow,
-            quality: props.quality,
-            type: props.type,
-            assay: props.assay,
-            coverage: props.coverage,
-            specimenOrcaBusId: props.specimenId,
-          });
-          return r;
-        }
-      );
-    }
-
-    // Check if specimen is the same with what we had in record and update if not
-    if (isLibraryIdentical(library, props)) {
-      return systemAuditEventPattern(
-        this.edgeDbClient,
-        'U',
-        `Update existing specimen record: ${props.internalId}`,
-        async (tx: Transaction) => {
-          const r = await updateLibraryRecord(tx, {
-            orcaBusId: library.orcaBusId,
-            internalId: props.internalId,
-            phenotype: props.phenotype,
-            workflow: props.workflow,
-            quality: props.quality,
-            type: props.type,
-            assay: props.assay,
-            coverage: props.coverage,
-            specimenOrcaBusId: props.specimenId,
-          });
-          return r;
-        }
-      );
-    }
-    return library;
-  }
-
-  /**
-   * Sync Google Metadata record
-   *
-   * NOTE (in DEV): Does not handle deletion (from gsheet) and if record is half filled.
-   * @param sheetRecords
-   */
-  public async syncGoogleMetadataRecords(
-    sheetRecords: Record<GoogleMetadataTrackingHeader, string | undefined>[]
-  ) {
-    for (const rec of sheetRecords) {
-      // Sync subject
-      const subject = rec.SubjectID
-        ? await this.syncSubject({
-            internalId: rec.SubjectID,
-            externalId: rec.ExternalSubjectID ?? null,
-          })
-        : undefined;
-
-      // Sync Sample
-      const sample = rec.SampleID
-        ? await this.syncSpecimen({
-            internalId: rec.SampleID,
-            externalId: rec.ExternalSampleID ?? null,
-            subjectOrcaBusId: subject?.orcaBusId,
-            source: rec.Source ?? null,
-          })
-        : undefined;
-
-      // Sync Library
-      if (rec.LibraryID) {
-        await this.syncLibrary({
-          internalId: rec.LibraryID,
-          phenotype: <metadata.Phenotype>rec.Phenotype ? <metadata.Phenotype>rec.Phenotype : null,
-          workflow: <metadata.WorkflowTypes>rec.Workflow
-            ? <metadata.WorkflowTypes>rec.Workflow
-            : null,
-          quality: <metadata.Quality>rec.Quality ? <metadata.Quality>rec.Quality : null,
-          type: <metadata.LibraryTypes>rec.Type ? <metadata.LibraryTypes>rec.Type : null,
-          assay: rec.Assay ? rec.Assay : null,
-          coverage: rec['Coverage (X)'] ? rec['Coverage (X)'] : null,
-          specimenId: sample?.orcaBusId,
-        });
-      }
-    }
-  }
-
-  public async downloadGoogleMetadata() {
+  public async downloadGoogleMetadata(): Promise<
+    Record<GoogleMetadataTrackingHeader, string | undefined>[]
+  > {
     let year = YEAR_START;
-    for (;;) {
+    let allRecords: Record<GoogleMetadataTrackingHeader, string | undefined>[] = [];
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      this.logger.info(`Retrieving Google Metadata Tracking Sheet year: ${year}`);
+
       try {
-        // TODO: Deal with deletion!!!
-        const metadata_object = await this.getSheetObject(year.toString());
-        this.syncGoogleMetadataRecords(metadata_object);
+        const yearlyMetadataObject = await this.getSheetObject(year.toString());
+        allRecords = [...allRecords, ...yearlyMetadataObject];
         year += 1;
       } catch (error) {
         break;
       }
     }
+
+    return allRecords;
+  }
+
+  public convertToMetadataRecord(
+    googleRecArray: Record<GoogleMetadataTrackingHeader, string | undefined>[]
+  ): MetadataRecords[] {
+    this.logger.info('Converting all retrieved metadata to a recognized file format');
+
+    return googleRecArray.map((rec) => {
+      const val: MetadataRecords = {};
+
+      if (rec.SubjectID) {
+        val.subject = {
+          internalId: rec.SubjectID,
+          externalId: rec.ExternalSubjectID ? rec.ExternalSubjectID.toString() : null,
+        };
+      }
+
+      if (rec.SampleID) {
+        val.specimen = {
+          internalId: rec.SampleID,
+          externalId: rec.ExternalSampleID ? rec.ExternalSampleID.toString() : null,
+          source: rec.Source ?? null,
+        };
+      }
+
+      if (rec.LibraryID) {
+        val.library = {
+          internalId: rec.LibraryID,
+          phenotype: rec.Phenotype ? rec.Phenotype : null,
+          workflow: <metadata.WorkflowTypes>rec.Workflow
+            ? <metadata.WorkflowTypes>rec.Workflow
+            : null,
+          quality: rec.Quality ? rec.Quality : null,
+          type: rec.Type ? rec.Type : null,
+          assay: rec.Assay ? rec.Assay : null,
+          coverage: rec['Coverage (X)'] ? rec['Coverage (X)'].toString() : null,
+        };
+      }
+
+      return val;
+    });
   }
 }

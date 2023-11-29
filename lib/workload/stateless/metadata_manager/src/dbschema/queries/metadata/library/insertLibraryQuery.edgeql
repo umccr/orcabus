@@ -3,12 +3,12 @@ select (
   insert metadata::Library {
     orcaBusId := <str>$orcaBusId,
     internalId := <str>$internalId,
-    phenotype := <optional Phenotype>$phenotype,
+    phenotype := <optional str>$phenotype,
     workflow := <optional WorkflowTypes>$workflow,
-    quality := <optional Quality>$quality,
-    type := <optional LibraryTypes>$type,
+    quality := <optional str>$quality,
+    type := <optional str>$type,
     assay := <optional str>$assay,
-    coverage := <optional decimal>$coverage,
+    coverage := <optional str>$coverage,
 
     specimen := (
       select assert_single((

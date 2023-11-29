@@ -1,14 +1,14 @@
-import { insertLibraryQuery } from '../../../../dbschema/queries';
+import { insertLibraryQuery, updateLibraryQuery } from '../../../../dbschema/queries';
 import { Transaction } from 'edgedb/dist/transaction';
 import { MetadataIdentifiableType } from './metadata-helper';
 import { metadata } from '../../../../dbschema/interfaces';
 import { isEqual } from 'lodash';
 
 export type LibraryType = MetadataIdentifiableType & {
-  phenotype: metadata.Phenotype | null;
+  phenotype: string | null;
   workflow: metadata.WorkflowTypes | null;
-  quality: metadata.Quality | null;
-  type: metadata.LibraryTypes | null;
+  quality: string | null;
+  type: string | null;
   assay: string | null;
   coverage: string | null;
   specimenOrcaBusId?: string;
@@ -61,7 +61,7 @@ export const insertLibraryRecord = async (tx: Transaction, props: LibraryType) =
 };
 
 export const updateLibraryRecord = async (tx: Transaction, props: LibraryType) => {
-  await insertLibraryQuery(tx, {
+  await updateLibraryQuery(tx, {
     orcaBusId: props.orcaBusId,
     internalId: props.internalId,
     phenotype: props.phenotype,

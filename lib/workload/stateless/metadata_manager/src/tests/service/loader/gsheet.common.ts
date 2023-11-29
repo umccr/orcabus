@@ -1,4 +1,4 @@
-export const METADATA_REC_1 = {
+export const METADATA_GOOGLE_REC_1 = {
   LibraryID: 'LIB01',
   SampleName: 'SAMIDA-EXTSAMA',
   SampleID: 'SAMIDA',
@@ -24,7 +24,7 @@ export const METADATA_REC_1 = {
   'Sample_ID (SampleSheet)': 'SAMIDA_LIB01',
 };
 
-export const METADATA_REC_2 = {
+export const METADATA_GOOGLE_REC_2 = {
   LibraryID: 'LIB02',
   SampleName: 'SAMIDB-EXTSAMB',
   SampleID: 'SAMIDB',
@@ -50,7 +50,7 @@ export const METADATA_REC_2 = {
   'Sample_ID (SampleSheet)': 'SAMIDB_LIB02',
 };
 
-export const METADATA_REC_3 = {
+export const METADATA_GOOGLE_REC_3 = {
   LibraryID: 'LIB03',
   SampleName: 'SAMIDB-EXTSAMB',
   SampleID: 'SAMIDB',
@@ -76,7 +76,7 @@ export const METADATA_REC_3 = {
   'Sample_ID (SampleSheet)': 'SAMIDB_LIB03',
 };
 
-export const METADATA_REC_4 = {
+export const METADATA_GOOGLE_REC_4 = {
   LibraryID: 'LIB04',
   SampleName: 'SAMIDA-EXTSAMA',
   SampleID: 'SAMIDA',
@@ -102,4 +102,9 @@ export const METADATA_REC_4 = {
   'Sample_ID (SampleSheet)': 'SAMIDA_LIB01',
 };
 
-export const METADATA_GOOGLE_OBJ = [METADATA_REC_1, METADATA_REC_2, METADATA_REC_3, METADATA_REC_4];
+export const METADATA_GOOGLE_OBJ = [
+  METADATA_GOOGLE_REC_1,
+  METADATA_GOOGLE_REC_2,
+  METADATA_GOOGLE_REC_3,
+  METADATA_GOOGLE_REC_4,
+];
