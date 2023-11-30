@@ -34,13 +34,6 @@ brew install sccache && export RUSTC_WRAPPER=`which sccache`
 cargo build --all-targets --all-features
 ```
 
-Or watch and automatically recompile changes:
-
-```sh
-cargo install cargo-watch     # if not installed previously
-cargo watch -c
-```
-
 Test with:
 
 ```sh
@@ -54,32 +47,20 @@ cargo clippy --all-targets
 cargo fmt
 ```
 
-## Localstack development
+## Local development
 
 Localstack enables deploying and testing AWS services locally. See the [deploy][deploy] directory
 for the cdk infrastructure code.
 
-## Setup and deployment
-
-For localstack testing and development:
+In a nutshell, a filemanager developer only needs to run the following:
 
 ```sh
-docker compose up
+cargo install cargo-watch     # if not installed previously
+cargo watch -- ./scripts/deploy.sh
 ```
+To automatically recompile changes and re-deploy the changes.
 
-Then deploy the cdk to localstack:
-
-```sh
-./scripts deploy.sh
-```
-
-It's possible that a profile called "default" in `~/.aws/config` could interfere with awslocal. A recommended `~/.aws/credentials` that works with localstack's dummy `0000000000` AWS account would look like this:
-
-```
-[default]
-aws_access_key_id = access_key
-aws_secret_access_key = secret_key
-```
+Please don't use `scripts/deploy.sh` on production deployments, it is only meant for local development.
 
 ## Database
 
@@ -88,6 +69,8 @@ A shortcut for connecting to the docker database and inspecting its contents:
 ```bash
 docker exec -it filemanager_db psql filemanager -U filemanager
 ```
+
+Alternatively, just `brew install dbeaver-community` to easily browse the database contents.
 
 [deploy]: ./deploy
 [env-example]: .env.example
