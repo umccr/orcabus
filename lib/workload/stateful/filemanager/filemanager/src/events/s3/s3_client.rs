@@ -92,17 +92,20 @@ impl S3 {
                 trace!(key = ?event.key, bucket = ?event.bucket, "updating event");
 
                 if let Some(head) = self.head(&event.key, &event.bucket).await? {
+                    trace!("Before headoject storage/datetime mod");
                     let HeadObjectOutput {
                         storage_class,
                         last_modified,
                         ..
                     } = head;
-
+                    trace!("In the middle of updating event");
                     event =
                         event.with_storage_class(storage_class.and_then(StorageClass::from_aws));
                     event = event.with_last_modified_date(Self::convert_datetime(last_modified));
                 }
 
+                trace!(key = ?event.key, bucket = ?event.bucket, "event updated");
+ 
                 Ok(event)
             }))
             .await

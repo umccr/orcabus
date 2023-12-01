@@ -1,5 +1,7 @@
 use async_trait::async_trait;
 
+use tracing::trace;
+
 use crate::error::Result;
 use crate::events::s3::s3_client::S3;
 use crate::events::s3::{Events, FlatS3EventMessages};
@@ -20,6 +22,7 @@ impl Collecter {
 
     /// Create a new collector with a default S3 client.
     pub async fn with_defaults(raw_events: FlatS3EventMessages) -> Result<Self> {
+        trace!("Creating collector with defaults");
         Ok(Self {
             s3: S3::with_defaults().await?,
             raw_events,
@@ -30,8 +33,9 @@ impl Collecter {
 #[async_trait]
 impl Collect for Collecter {
     async fn collect(self) -> Result<EventType> {
+        trace!("Entering collect");
         let events = self.s3.update_events(self.raw_events).await?;
-
+        trace!("Victor #ftw");
         Ok(EventType::S3(Events::from(events)))
     }
 }

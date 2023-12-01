@@ -26,9 +26,9 @@ async-trait = "0.1"
 uuid = { version = "1.4", features = ["v4"] }
 
 # AWS
-aws-sdk-sqs = "0.37"
-aws-config = "0.100"
-aws-sdk-s3 = "0.37"
+aws-sdk-sqs = "1"
+aws-config = "1"
+aws-sdk-s3 = "1"
 futures = "0.3"
 #lambda_http = "0.8.0"
 #lambda_runtime = "0.8.0"
