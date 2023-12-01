@@ -31,6 +31,7 @@ For development of the rust workspace, install a build cache (sccache) and build
 
 ```sh
 brew install sccache && export RUSTC_WRAPPER=`which sccache`
+cargo install cargo-watch sqlx-cli
 cargo build --all-targets --all-features
 ```
 
@@ -55,8 +56,7 @@ for the cdk infrastructure code.
 In a nutshell, a filemanager developer only needs to run the following:
 
 ```sh
-cargo install cargo-watch     # if not installed previously
-cargo watch -- ./scripts/deploy.sh
+./scripts/watch.sh
 ```
 To automatically recompile changes and re-deploy the changes.
 
@@ -70,7 +70,7 @@ A shortcut for connecting to the docker database and inspecting its contents:
 docker exec -it filemanager_db psql filemanager -U filemanager
 ```
 
-Alternatively, just `brew install dbeaver-community` to easily browse the database contents.
+Alternatively, just `brew install dbeaver-community` to easily browse the database contents (or any other DB viewer you prefer).
 
 [deploy]: ./deploy
 [env-example]: .env.example
