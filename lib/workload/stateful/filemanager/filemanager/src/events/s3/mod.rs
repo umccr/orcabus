@@ -285,7 +285,7 @@ impl FlatS3EventMessage {
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct S3EventMessage {
-    #[serde(rename = "Records")]
+    #[serde(rename = "records")]
     pub records: Vec<Record>,
 }
 
