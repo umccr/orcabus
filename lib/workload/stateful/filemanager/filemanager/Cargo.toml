@@ -24,6 +24,8 @@ dotenvy = "0.15"
 thiserror = "1.0"
 async-trait = "0.1"
 uuid = { version = "1.4", features = ["v4"] }
+mockall = "0.12"
+mockall_double = "0.3"
 
 # AWS
 aws-sdk-sqs = "0.37"

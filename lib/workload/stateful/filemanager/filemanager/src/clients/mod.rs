@@ -1,6 +1,6 @@
 //! This module provides wrappers around the AWS SDK which allows mocking them for tests.
 //!
 
-mod config;
+pub mod config;
 pub mod s3;
-mod sqs;
+pub mod sqs;

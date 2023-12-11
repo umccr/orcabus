@@ -3,6 +3,7 @@ use aws_sdk_s3 as s3;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::operation::list_buckets::{ListBucketsError, ListBucketsOutput};
+use mockall::automock;
 use std::result;
 
 pub type Result<T, E> = result::Result<T, SdkError<E>>;
@@ -13,6 +14,7 @@ pub struct Client {
     inner: s3::Client,
 }
 
+#[automock]
 impl Client {
     /// Create a new S3 client.
     pub fn new(inner: s3::Client) -> Self {
@@ -32,8 +34,8 @@ impl Client {
     /// Execute the `HeadObject` operation.
     pub async fn head_object(
         &self,
-        key: impl Into<String>,
-        bucket: impl Into<String>,
+        key: &str,
+        bucket: &str,
     ) -> Result<HeadObjectOutput, HeadObjectError> {
         self.inner
             .head_object()
