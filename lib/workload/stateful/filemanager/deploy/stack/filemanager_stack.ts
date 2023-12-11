@@ -14,7 +14,7 @@ import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
  */
 interface Settings {
   database_url: string;
-  endpoint_url: string;
+  endpoint_url?: string;
   force_path_style: boolean;
   stack_name: string;
   buildEnvironment?: NodeJS.ProcessEnv;
@@ -85,7 +85,7 @@ export class FilemanagerStack extends Stack {
       timeout: Duration.seconds(28),
       environment: {
         DATABASE_URL: settings.database_url,
-        ENDPOINT_URL: settings.endpoint_url,
+        ...settings.endpoint_url && { ENDPOINT_URL: settings.endpoint_url },
         FORCE_PATH_STYLE: settings.force_path_style.toString(),
         SQS_QUEUE_URL: queue.queueUrl,
         RUST_LOG: 'info,filemanager_ingest_lambda=trace,filemanager=trace',
