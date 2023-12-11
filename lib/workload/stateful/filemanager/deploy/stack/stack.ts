@@ -4,7 +4,7 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { FilemanagerStack } from '../stack/filemanager_stack';
 
-export const STACK_NAME = 'FilemanagerLocalStack';
+export const STACK_NAME = 'FilemanagerStack';
 const STACK_DESCRIPTION = 'A stack deploying filemanager to dev.';
 
 const app = new cdk.App();
@@ -13,7 +13,8 @@ new FilemanagerStack(
   STACK_NAME,
   {
     database_url: 'postgresql://filemanager:filemanager@db:5432/filemanager', // pragma: allowlist secret
-    endpoint_url: 'http://localstack:4566',
+    //    endpoint_url: 'http://localstack:4566',
+    endpoint_url: '',
     force_path_style: true,
     stack_name: STACK_NAME,
     buildEnvironment: {
