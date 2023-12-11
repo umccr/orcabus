@@ -2,14 +2,13 @@
 
 The filemanager ingests events from cloud storage like S3 and maintains a queryable table of objects.
 
-This project is split up into multiple crates in a workspace. For development, docker is used, which enables localstack and a postgres database.
+This project is split up into multiple crates in a workspace. For development, docker is used, which enables a postgres database, the rest of the stack is developed against an AWS account.
 
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Rust](https://www.rust-lang.org/tools/install)
 - [npm](https://www.npmjs.com/get-npm)
-- [awslocal](https://github.com/localstack/awscli-local)
 
 ## Rust code development
 
@@ -52,17 +51,17 @@ cargo fmt
 
 ## Local development
 
-Localstack enables deploying and testing AWS services locally. See the [deploy][deploy] directory
-for the cdk infrastructure code.
+See the [deploy][deploy] directory for the cdk infrastructure code.
 
 In a nutshell, a filemanager developer only needs to run the following:
 
 ```sh
 ./scripts/watch.sh
 ```
+
 To automatically recompile changes and re-deploy the changes.
 
-Please don't use `scripts/deploy.sh` on production deployments, it is only meant for local development.
+Please don't use `scripts/deploy.sh` on production deployments, it is only meant for development.
 
 ## Database
 

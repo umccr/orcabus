@@ -88,23 +88,23 @@ impl S3 {
     /// Process events and add header and datetime fields.
     pub async fn update_events(&self, events: FlatS3EventMessages) -> Result<FlatS3EventMessages> {
         Ok(FlatS3EventMessages(
-            join_all(events.into_inner().into_iter().map(|mut event| async move {
+            join_all(events.into_inner().into_iter().map(|event| async move {
                 trace!(key = ?event.key, bucket = ?event.bucket, "updating event");
 
-                if let Some(head) = self.head(&event.key, &event.bucket).await? {
-                    trace!("Before headoject storage/datetime mod");
-                    let HeadObjectOutput {
-                        storage_class,
-                        last_modified,
-                        ..
-                    } = head;
-                    trace!("In the middle of updating event");
-                    event =
-                        event.with_storage_class(storage_class.and_then(StorageClass::from_aws));
-                    event = event.with_last_modified_date(Self::convert_datetime(last_modified));
-                }
+                // if let Some(head) = self.head(&event.key, &event.bucket).await? {
+                //     trace!("Before headoject storage/datetime mod");
+                //     let HeadObjectOutput {
+                //         storage_class,
+                //         last_modified,
+                //         ..
+                //     } = head;
+                //     trace!("In the middle of updating event");
+                //     event =
+                //         event.with_storage_class(storage_class.and_then(StorageClass::from_aws));
+                //     event = event.with_last_modified_date(Self::convert_datetime(last_modified));
+                // }
 
-                trace!(key = ?event.key, bucket = ?event.bucket, "event updated");
+                // trace!(key = ?event.key, bucket = ?event.bucket, "event updated");
  
                 Ok(event)
             }))

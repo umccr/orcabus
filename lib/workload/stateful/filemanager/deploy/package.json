@@ -2,7 +2,7 @@
   "name": "filemanager",
   "version": "0.1",
   "bin": {
-    "filemanager-localstack": "localstack/filemanager_localstack.js"
+    "filemanager-stack": "stack/filemanager_stack.js"
   },
   "scripts": {
     "build": "tsc",

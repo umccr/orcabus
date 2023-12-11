@@ -3,6 +3,7 @@ use lambda_runtime::{run, service_fn, LambdaEvent};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
+use tracing::trace;
 
 use filemanager::database::s3::ingester::Ingester;
 use filemanager::database::Ingest;
@@ -15,7 +16,8 @@ use filemanager::events::Collect;
 async fn event_handler(_: LambdaEvent<()>) -> Result<(), Error> {
     let sqs = SQS::with_default_client().await?;
     let events = sqs.receive().await?;
-
+    
+    trace!("On the filemanager-http-lambda, just before collecter");
     let events = Collecter::with_defaults(events).await?.collect().await?;
 
     let mut ingester = Ingester::new_with_defaults().await?;

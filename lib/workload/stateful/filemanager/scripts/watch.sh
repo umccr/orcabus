@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cargo watch --watch-when-idle -w *.toml -w *.rs -- ./scripts/deploy.sh
+cargo watch -w *.toml -w *.rs -- ./scripts/deploy.sh

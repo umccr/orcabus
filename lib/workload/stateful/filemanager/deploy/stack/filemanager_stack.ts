@@ -44,7 +44,6 @@ export class FilemanagerStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
     });
 
-    // Workaround for localstack, see https://github.com/localstack/localstack/issues/3468.
     const cfnBucket = testBucket.node.defaultChild as CfnBucket;
     cfnBucket.notificationConfiguration = {
       queueConfigurations: [

@@ -37,8 +37,5 @@ new FilemanagerStack(
     tags: {
       Stack: STACK_NAME,
     },
-    env: {
-      account: '000000000000',
-    },
   }
 );
