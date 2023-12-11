@@ -24,7 +24,6 @@ impl SQS {
         }
     }
 
-
     /// Create with a default SQS client.
     pub async fn with_default_client() -> Result<Self> {
         let mut config = aws_config::defaults(BehaviorVersion::latest());
