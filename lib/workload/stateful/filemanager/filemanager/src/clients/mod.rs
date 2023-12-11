@@ -3,3 +3,4 @@
 
 mod config;
 pub mod s3;
+mod sqs;
