@@ -111,8 +111,12 @@ pub(crate) mod tests {
     use crate::events::s3::collecter::Collecter;
     use crate::events::s3::tests::expected_flat_events;
     use crate::events::s3::StorageClass::Standard;
-    use aws_sdk_s3::primitives::DateTimeFormat;
+    use aws_sdk_s3::error::SdkError;
+    use aws_sdk_s3::primitives::{DateTimeFormat, SdkBody};
     use aws_sdk_s3::types;
+    use aws_sdk_s3::types::error::NotFound;
+    use aws_smithy_runtime_api::client::orchestrator::HttpResponse;
+    use aws_smithy_runtime_api::client::result::ServiceError;
     use chrono::{DateTime, Utc};
     use mockall::predicate::eq;
 
@@ -138,6 +142,30 @@ pub(crate) mod tests {
             .await
             .unwrap();
         assert_eq!(result, Some(expected_head_object()));
+    }
+
+    #[tokio::test]
+    async fn head_not_found() {
+        let mut collecter = test_collecter().await;
+
+        collecter
+            .client
+            .expect_head_object()
+            .with(eq("key"), eq("bucket"))
+            .times(1)
+            .returning(move |_, _| {
+                Err(SdkError::ServiceError(
+                    ServiceError::builder()
+                        .source(HeadObjectError::NotFound(NotFound::builder().build()))
+                        .raw(HttpResponse::new(404.try_into().unwrap(), SdkBody::empty()))
+                        .build(),
+                ))
+            });
+
+        let result = Collecter::head(&collecter.client, "key", "bucket")
+            .await
+            .unwrap();
+        assert!(result.is_none());
     }
 
     #[tokio::test]

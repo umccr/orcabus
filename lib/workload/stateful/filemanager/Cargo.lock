@@ -1360,6 +1360,7 @@ dependencies = [
  "aws-config 0.100.0",
  "aws-sdk-s3",
  "aws-sdk-sqs",
+ "aws-smithy-runtime-api 0.100.0",
  "axum",
  "chrono",
  "dotenvy",
