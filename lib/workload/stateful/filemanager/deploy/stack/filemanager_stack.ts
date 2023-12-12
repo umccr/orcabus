@@ -1,13 +1,15 @@
-import { Duration, RemovalPolicy, Stack, StackProps, Tags } from 'aws-cdk-lib';
+import { Fn, Duration, RemovalPolicy, Stack, StackProps, Tags, Environment } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { RustFunction, Settings as CargoSettings } from 'rust.aws-cdk-lambda';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as rds from 'aws-cdk-lib/aws-rds';
 import { CfnBucket } from 'aws-cdk-lib/aws-s3';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaDestinations from 'aws-cdk-lib/aws-lambda-destinations';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
 /**
  * Common settings for the filemanager stack.
@@ -15,7 +17,7 @@ import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 interface Settings {
   database_url: string;
   endpoint_url?: string;
-  force_path_style: boolean;
+  force_path_style: boolean; //FIXME: Does this refer to buckets? We cannot do this forever as AWS will move to domain style?
   stack_name: string;
   buildEnvironment?: NodeJS.ProcessEnv;
 }
@@ -24,7 +26,13 @@ interface Settings {
  * Stack used to deploy filemanager.
  */
 export class FilemanagerStack extends Stack {
-  constructor(scope: Construct, id: string, settings: Settings, props?: StackProps) {
+  constructor(
+    scope: Construct,
+    id: string,
+    env: Environment,
+    settings: Settings,
+    props?: StackProps
+  ) {
     super(scope, id, props);
 
     Tags.of(this).add('Stack', settings.stack_name);
@@ -85,7 +93,7 @@ export class FilemanagerStack extends Stack {
       timeout: Duration.seconds(28),
       environment: {
         DATABASE_URL: settings.database_url,
-        ...settings.endpoint_url && { ENDPOINT_URL: settings.endpoint_url },
+        ...(settings.endpoint_url && { ENDPOINT_URL: settings.endpoint_url }),
         FORCE_PATH_STYLE: settings.force_path_style.toString(),
         SQS_QUEUE_URL: queue.queueUrl,
         RUST_LOG: 'info,filemanager_ingest_lambda=trace,filemanager=trace',
@@ -99,6 +107,17 @@ export class FilemanagerStack extends Stack {
     const eventSource = new lambdaEventSources.SqsEventSource(queue);
     filemanagerLambda.addEventSource(eventSource);
 
-    // todo RDS instance.
+    // RDS
+    const vpc = ec2.Vpc.fromLookup(this, 'main-vpc', { isDefault: true });
+    new rds.DatabaseCluster(this, 'Database', {
+      engine: rds.DatabaseClusterEngine.auroraPostgres({
+        version: rds.AuroraPostgresEngineVersion.VER_15_3,
+      }),
+      serverlessV2MinCapacity: 0.5,
+      serverlessV2MaxCapacity: 3,
+      writer: rds.ClusterInstance.provisioned('writer'),
+      readers: [rds.ClusterInstance.serverlessV2('reader')],
+      vpc,
+    });
   }
 }
