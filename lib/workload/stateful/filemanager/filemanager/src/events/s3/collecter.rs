@@ -98,6 +98,8 @@ impl Collector {
 impl Collect for Collector {
     async fn collect(self) -> Result<EventType> {
         let (client, raw_events) = self.into_inner();
+        let raw_events = raw_events.sort_and_dedup();
+
         let events = Self::update_events(&client, raw_events).await?;
 
         Ok(EventType::S3(Events::from(events)))
@@ -108,6 +110,7 @@ impl Collect for Collector {
 mod tests {
     use crate::events::s3::collecter::Collector;
     use crate::events::s3::tests::example_flat_s3_events;
+    use crate::events::s3::StorageClass::Standard;
     use aws_sdk_s3::primitives::DateTimeFormat;
     use aws_sdk_s3::types;
     use chrono::{DateTime, Utc};
@@ -127,31 +130,86 @@ mod tests {
 
     #[tokio::test]
     async fn head() {
-        let mut collector = test_collector().await;
+        let mut collecter = test_collecter().await;
 
-        let expected_head = HeadObjectOutput::builder()
+        set_collecter_expectations(&mut collecter, 1);
+
+        let result = Collector::head(&collecter.client, "key", "bucket")
+            .await
+            .unwrap();
+        assert_eq!(result, Some(expected_head_object()));
+    }
+
+    #[tokio::test]
+    async fn update_events() {
+        let mut collecter = test_collecter().await;
+
+        let events = example_flat_s3_events().sort_and_dedup();
+
+        set_collecter_expectations(&mut collecter, 2);
+
+        let mut result = Collector::update_events(&collecter.client, events)
+            .await
+            .unwrap()
+            .into_inner()
+            .into_iter();
+
+        let first = result.next().unwrap();
+        assert_eq!(first.storage_class, Some(Standard));
+        assert_eq!(first.last_modified_date, Some(Default::default()));
+
+        let second = result.next().unwrap();
+        assert_eq!(second.storage_class, Some(Standard));
+        assert_eq!(second.last_modified_date, Some(Default::default()));
+    }
+
+    #[tokio::test]
+    async fn collect() {
+        let mut collecter = test_collecter().await;
+
+        set_collecter_expectations(&mut collecter, 2);
+
+        let result = collecter.collect().await.unwrap();
+
+        assert!(matches!(result, EventType::S3(_)));
+
+        match result {
+            EventType::S3(events) => {
+                assert_eq!(events.object_created.storage_classes[0], Some(Standard));
+                assert_eq!(
+                    events.object_created.last_modified_dates[0],
+                    Some(Default::default())
+                );
+
+                assert_eq!(events.object_removed.storage_classes[0], Some(Standard));
+                assert_eq!(
+                    events.object_removed.last_modified_dates[0],
+                    Some(Default::default())
+                );
+            }
+        }
+    }
+
+    fn set_collecter_expectations(collecter: &mut Collector, times: usize) {
+        collecter
+            .client
+            .expect_head_object()
+            .with(eq("key"), eq("bucket"))
+            .times(times)
+            .returning(move |_, _| Ok(expected_head_object()));
+    }
+
+    fn expected_head_object() -> HeadObjectOutput {
+        HeadObjectOutput::builder()
             .last_modified(
                 primitives::DateTime::from_str("1970-01-01T00:00:00Z", DateTimeFormat::DateTime)
                     .unwrap(),
             )
             .storage_class(types::StorageClass::Standard)
-            .build();
-        let expected_head_clone = expected_head.clone();
-
-        collector
-            .client
-            .expect_head_object()
-            .with(eq("key"), eq("bucket"))
-            .times(1)
-            .returning(move |_, _| Ok(expected_head.clone()));
-
-        let result = Collector::head(&collector.client, "key", "bucket")
-            .await
-            .unwrap();
-        assert_eq!(result, Some(expected_head_clone));
+            .build()
     }
 
-    async fn test_collector() -> Collector {
+    async fn test_collecter() -> Collector {
         Collector::new(Client::default(), example_flat_s3_events())
     }
 }

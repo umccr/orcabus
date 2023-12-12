@@ -69,7 +69,7 @@ impl CollectorBuilder {
             .collect::<Result<Vec<FlatS3EventMessages>>>()?
             .into();
 
-        Ok(event_messages.sort_and_dedup())
+        Ok(event_messages)
     }
 
     /// Build a collector by manually calling receive to obtain the raw events.
