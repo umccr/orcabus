@@ -91,6 +91,11 @@ impl Ingester {
 
         Ok(())
     }
+
+    /// Get a reference to the database client.
+    pub fn client(&self) -> &Client {
+        &self.client
+    }
 }
 
 #[async_trait]
@@ -106,6 +111,7 @@ impl Ingest for Ingester {
 mod tests {
     use crate::database::s3::ingester::Ingester;
     use crate::database::{Client, Ingest};
+    use crate::events::s3::tests::example_events;
     use crate::events::s3::{Events, StorageClass, TransposedS3EventMessages};
     use crate::events::EventType;
     use chrono::{DateTime, Utc};
@@ -127,23 +133,6 @@ mod tests {
             .unwrap();
 
         assert_created(result);
-    }
-
-    fn assert_created(result: PgRow) {
-        assert_eq!(Uuid::default(), result.get::<Uuid, _>("object_id"));
-        assert_eq!("bucket", result.get::<String, _>("bucket"));
-        assert_eq!("key", result.get::<String, _>("key"));
-        assert_eq!(0, result.get::<i32, _>("size"));
-        assert_eq!("e_tag", result.get::<String, _>("hash"));
-        assert_eq!(
-            DateTime::<Utc>::default(),
-            result.get::<DateTime<Utc>, _>("created_date")
-        );
-        assert_eq!(
-            DateTime::<Utc>::default(),
-            result.get::<DateTime<Utc>, _>("last_modified_date")
-        );
-        assert_eq!("portal_run_id", result.get::<String, _>("portal_run_id"));
     }
 
     #[sqlx::test(migrations = "../database/migrations")]
@@ -176,12 +165,35 @@ mod tests {
         assert_deleted(result);
     }
 
-    fn assert_deleted(result: PgRow) {
-        assert_eq!(Uuid::default(), result.get::<Uuid, _>("object_id"));
+    fn assert_created(result: PgRow) {
         assert_eq!("bucket", result.get::<String, _>("bucket"));
         assert_eq!("key", result.get::<String, _>("key"));
         assert_eq!(0, result.get::<i32, _>("size"));
-        assert_eq!("e_tag", result.get::<String, _>("hash"));
+        assert_eq!(
+            "e_tag",
+            result.get::<String, _>("d41d8cd98f00b204e9800998ecf8427e")
+        );
+        assert_eq!(
+            DateTime::<Utc>::default(),
+            result.get::<DateTime<Utc>, _>("created_date")
+        );
+        assert_eq!(
+            DateTime::<Utc>::default(),
+            result.get::<DateTime<Utc>, _>("last_modified_date")
+        );
+        assert!(result
+            .get::<String, _>("portal_run_id")
+            .starts_with("19700101"));
+    }
+
+    fn assert_deleted(result: PgRow) {
+        assert_eq!("bucket", result.get::<String, _>("bucket"));
+        assert_eq!("key", result.get::<String, _>("key"));
+        assert_eq!(0, result.get::<i32, _>("size"));
+        assert_eq!(
+            "e_tag",
+            result.get::<String, _>("d41d8cd98f00b204e9800998ecf8427e")
+        );
         assert_eq!(
             DateTime::<Utc>::default(),
             result.get::<DateTime<Utc>, _>("created_date")
@@ -194,32 +206,21 @@ mod tests {
             DateTime::<Utc>::default(),
             result.get::<DateTime<Utc>, _>("deleted_date")
         );
-        assert_eq!("portal_run_id", result.get::<String, _>("portal_run_id"));
+        assert!(result
+            .get::<String, _>("portal_run_id")
+            .starts_with("19700101"));
     }
 
     fn test_events() -> Events {
-        let object_created = TransposedS3EventMessages {
-            object_ids: vec![Uuid::default()],
-            event_times: vec![DateTime::default()],
-            event_names: vec!["ObjectCreated:Put".to_string()],
-            buckets: vec!["bucket".to_string()],
-            keys: vec!["key".to_string()],
-            sizes: vec![0],
-            e_tags: vec!["e_tag".to_string()],
-            sequencers: vec![Some("sequencer".to_string())],
-            portal_run_ids: vec!["portal_run_id".to_string()],
-            storage_classes: vec![Some(StorageClass::Standard)],
-            last_modified_dates: vec![Some(DateTime::default())],
-        };
+        let mut events = example_events();
 
-        let mut object_removed = object_created.clone();
-        object_removed.event_names = vec!["ObjectRemoved:Delete".to_string()];
+        events.object_created.last_modified_dates[0] = Some(DateTime::default());
+        events.object_created.storage_classes[0] = Some(StorageClass::Standard);
 
-        Events {
-            object_created,
-            object_removed,
-            other: Default::default(),
-        }
+        events.object_removed.last_modified_dates[0] = Some(DateTime::default());
+        events.object_removed.storage_classes[0] = Some(StorageClass::Standard);
+
+        events
     }
     fn test_ingester(pool: PgPool) -> Ingester {
         Ingester::new(Client::new(pool))

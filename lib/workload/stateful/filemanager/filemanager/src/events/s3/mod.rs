@@ -54,8 +54,9 @@ impl StorageClass {
     }
 }
 
-/// AWS S3 events with fields transposed
-/// TODO: Document why we need those 'transposed'
+/// AWS S3 events with fields transposed. Transposed events are used because this matches the
+/// unnest structure when inserting events into the database. This is convenient to do here so that
+/// the database structs do not have to perform this conversion.
 #[derive(Debug, Eq, PartialEq, Default, Clone)]
 pub struct TransposedS3EventMessages {
     pub object_ids: Vec<Uuid>,
@@ -284,7 +285,7 @@ impl FlatS3EventMessage {
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct S3EventMessage {
-    #[serde(rename = "records")]
+    #[serde(rename = "Records")]
     pub records: Vec<Record>,
 }
 
@@ -375,5 +376,211 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
 impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
     fn from(messages: Vec<FlatS3EventMessages>) -> Self {
         FlatS3EventMessages(messages.into_iter().flat_map(|message| message.0).collect())
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use crate::events::s3::{
+        Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage, TransposedS3EventMessages,
+    };
+    use chrono::{DateTime, Utc};
+    use serde_json::json;
+
+    #[test]
+    fn test_flat_events() {
+        let result = example_flat_s3_events();
+        let mut result = result.into_inner().into_iter();
+
+        let first = result.next().unwrap();
+        assert_flat_s3_event(first, "ObjectRemoved:Delete", "0055AED6DCD90281E6");
+
+        let second = result.next().unwrap();
+        assert_flat_s3_event(second, "ObjectCreated:Put", "0055AED6DCD90281E5");
+
+        let third = result.next().unwrap();
+        assert_flat_s3_event(third, "ObjectCreated:Put", "0055AED6DCD90281E5");
+    }
+
+    #[test]
+    fn test_sort_and_dedup() {
+        let result = example_flat_s3_events().sort_and_dedup();
+        let mut result = result.into_inner().into_iter();
+
+        let first = result.next().unwrap();
+        assert_flat_s3_event(first, "ObjectCreated:Put", "0055AED6DCD90281E5");
+
+        let second = result.next().unwrap();
+        assert_flat_s3_event(second, "ObjectRemoved:Delete", "0055AED6DCD90281E6");
+    }
+
+    fn assert_flat_s3_event(event: FlatS3EventMessage, event_name: &str, sequencer: &str) {
+        assert_eq!(event.event_time, DateTime::<Utc>::default());
+        assert_eq!(event.event_name, event_name);
+        assert_eq!(event.bucket, "bucket");
+        assert_eq!(event.key, "key");
+        assert_eq!(event.size, 0);
+        assert_eq!(event.e_tag, "d41d8cd98f00b204e9800998ecf8427e");
+        assert_eq!(event.sequencer, Some(sequencer.to_string()));
+        assert!(event.portal_run_id.starts_with("19700101"));
+        assert_eq!(event.storage_class, None);
+        assert_eq!(event.last_modified_date, None);
+    }
+
+    #[test]
+    fn test_events() {
+        let result = example_events();
+
+        assert_eq!(
+            result.object_created.event_times[0],
+            DateTime::<Utc>::default()
+        );
+        assert_eq!(result.object_created.event_names[0], "ObjectCreated:Put");
+        assert_eq!(result.object_created.buckets[0], "bucket");
+        assert_eq!(result.object_created.keys[0], "key");
+        assert_eq!(result.object_created.sizes[0], 0);
+        assert_eq!(
+            result.object_created.e_tags[0],
+            "d41d8cd98f00b204e9800998ecf8427e"
+        );
+        assert_eq!(
+            result.object_created.sequencers[0],
+            Some("0055AED6DCD90281E5".to_string())
+        );
+        assert!(result.object_created.portal_run_ids[0].starts_with("19700101"));
+        assert_eq!(result.object_created.storage_classes[0], None);
+        assert_eq!(result.object_created.last_modified_dates[0], None);
+
+        assert_eq!(
+            result.object_removed.event_times[0],
+            DateTime::<Utc>::default()
+        );
+        assert_eq!(result.object_removed.event_names[0], "ObjectRemoved:Delete");
+        assert_eq!(result.object_removed.buckets[0], "bucket");
+        assert_eq!(result.object_removed.keys[0], "key");
+        assert_eq!(result.object_removed.sizes[0], 0);
+        assert_eq!(
+            result.object_removed.e_tags[0],
+            "d41d8cd98f00b204e9800998ecf8427e"
+        );
+        assert_eq!(
+            result.object_removed.sequencers[0],
+            Some("0055AED6DCD90281E6".to_string())
+        );
+        assert!(result.object_removed.portal_run_ids[0].starts_with("19700101"));
+        assert_eq!(result.object_removed.storage_classes[0], None);
+        assert_eq!(result.object_removed.last_modified_dates[0], None);
+    }
+
+    pub(crate) fn example_flat_s3_events() -> FlatS3EventMessages {
+        let events: S3EventMessage = serde_json::from_str(&s3_event_record()).unwrap();
+        events.try_into().unwrap()
+    }
+
+    pub(crate) fn example_transposed_s3_events() -> TransposedS3EventMessages {
+        let events = example_flat_s3_events();
+        events.try_into().unwrap()
+    }
+
+    pub(crate) fn example_events() -> Events {
+        let events = example_flat_s3_events().sort_and_dedup();
+        events.try_into().unwrap()
+    }
+
+    fn s3_event_record() -> String {
+        let object = json!({
+            "eventVersion": "2.2",
+            "eventSource": "aws:s3",
+            "awsRegion": "us-west-2",
+            "userIdentity": {
+                "principalId": "123456789012"
+            },
+            "requestParameters": {
+                "sourceIPAddress": "127.0.0.1"
+            },
+            "responseElements": {
+            "x-amz-request-id": "C3D13FE58DE4C810",
+                "x-amz-id-2": "FMyUVURIY8/IgAtTv8xRjskZQpcIZ9KG4V5Wp6S7S/JRWeUWerMUE5JgHvANOjpD"
+            },
+            "s3": {
+                "s3SchemaVersion": "1.0",
+                "configurationId": "testConfigRule",
+                "bucket": {
+                   "name": "bucket",
+                   "ownerIdentity": {
+                      "principalId":"123456789012"
+                   },
+                   "arn": "arn:aws:s3:::bucket"
+                },
+                "object": {
+                   "key": "key",
+                   "size": 0,
+                   "eTag": "d41d8cd98f00b204e9800998ecf8427e",
+                   "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
+                   "sequencer": "0055AED6DCD90281E5"
+                }
+            },
+            "glacierEventData": {
+                "restoreEventData": {
+                   "lifecycleRestorationExpiryTime": "1970-01-01T00:00:00.000Z",
+                   "lifecycleRestoreStorageClass": "Standard"
+                }
+            }
+        });
+
+        let mut object_created = object.clone();
+        object_created["eventTime"] = json!("1970-01-01T00:00:00.000Z");
+        object_created["eventName"] = json!("ObjectCreated:Put");
+        object_created["s3"] = json!({
+            "s3SchemaVersion": "1.0",
+            "configurationId": "testConfigRule",
+            "bucket": {
+               "name": "bucket",
+               "ownerIdentity": {
+                  "principalId":"123456789012"
+               },
+               "arn": "arn:aws:s3:::bucket"
+            },
+            "object": {
+               "key": "key",
+               "size": 0,
+               "eTag": "d41d8cd98f00b204e9800998ecf8427e",
+               "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
+               "sequencer": "0055AED6DCD90281E5"
+            }
+        });
+
+        let object_created_duplicate = object_created.clone();
+
+        let mut object_removed = object;
+        object_removed["eventTime"] = json!("1970-01-01T00:00:00.000Z");
+        object_removed["eventName"] = json!("ObjectRemoved:Delete");
+        object_removed["s3"] = json!({
+            "s3SchemaVersion": "1.0",
+            "configurationId": "testConfigRule",
+            "bucket": {
+               "name": "bucket",
+               "ownerIdentity": {
+                  "principalId":"123456789012"
+               },
+               "arn": "arn:aws:s3:::bucket"
+            },
+            "object": {
+               "key": "key",
+               "size": 0,
+               "eTag": "d41d8cd98f00b204e9800998ecf8427e",
+               "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
+               "sequencer": "0055AED6DCD90281E6"
+            }
+        });
+
+        json!({
+           "Records": [
+                object_removed,
+                object_created,
+                object_created_duplicate,
+           ]
+        })
+        .to_string()
     }
 }
