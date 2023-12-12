@@ -26,8 +26,10 @@ pub enum Error {
     DeserializeError(String),
     #[error("Db client error: `{0}`")]
     DbClientError(String),
-    #[error("Missing SQS Url: `{0}`")]
+    #[error("Missing SQS URL: `{0}`")]
     MissingSQSUrl(String),
+    #[error("Missing database URL: `{0}`")]
+    MissingDatabaseUrl(String),
     #[error("S3 object not found: `{0}`")]
     S3ObjectNotFound(String),
     #[error("S3 error: `{0}`")]
