@@ -14,7 +14,7 @@ pub mod collecter;
 pub mod collector_builder;
 
 /// A wrapper around AWS storage types with sqlx support.
-#[derive(Debug, Eq, PartialEq, Clone, sqlx::Type)]
+#[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type)]
 #[sqlx(type_name = "storage_class")]
 pub enum StorageClass {
     DeepArchive,
@@ -197,6 +197,8 @@ impl FlatS3EventMessages {
 }
 
 impl Ord for FlatS3EventMessage {
+    /// Ordering is implemented so that the sequencer values are considered when the bucket and the
+    /// key are the same.
     fn cmp(&self, other: &Self) -> Ordering {
         // If the sequencer values are present and the bucket and key are the same.
         if let (Some(self_sequencer), Some(other_sequencer)) =
@@ -211,6 +213,8 @@ impl Ord for FlatS3EventMessage {
                     &self.key,
                     &self.size,
                     &self.e_tag,
+                    &self.storage_class,
+                    &self.last_modified_date,
                 )
                     .cmp(&(
                         other_sequencer,
@@ -220,6 +224,8 @@ impl Ord for FlatS3EventMessage {
                         &other.key,
                         &other.size,
                         &other.e_tag,
+                        &other.storage_class,
+                        &other.last_modified_date,
                     ));
             }
         }
@@ -232,6 +238,8 @@ impl Ord for FlatS3EventMessage {
             &self.size,
             &self.e_tag,
             &self.sequencer,
+            &self.storage_class,
+            &self.last_modified_date,
         )
             .cmp(&(
                 &other.event_time,
@@ -241,18 +249,37 @@ impl Ord for FlatS3EventMessage {
                 &other.size,
                 &other.e_tag,
                 &other.sequencer,
+                &other.storage_class,
+                &other.last_modified_date,
             ))
     }
 }
 
 impl PartialOrd for FlatS3EventMessage {
+    /// `FlatS3EventMessage`s have total ordering.
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
+impl PartialEq for FlatS3EventMessage {
+    /// Equality is implemented normally except the object_id and portal_run_id are ignored,
+    /// as these are newly derived for each event.
+    fn eq(&self, other: &Self) -> bool {
+        // Must be consistent with PartialOrd
+        self.event_time == other.event_time
+            && self.event_name == other.event_name
+            && self.bucket == other.bucket
+            && self.key == other.key
+            && self.size == other.size
+            && self.e_tag == other.e_tag
+            && self.storage_class == other.storage_class
+            && self.last_modified_date == other.last_modified_date
+    }
+}
+
 /// A flattened AWS S3 record
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq)]
 pub struct FlatS3EventMessage {
     pub object_id: Uuid,
     pub event_time: DateTime<Utc>,
@@ -381,9 +408,7 @@ impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::events::s3::{
-        Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage, TransposedS3EventMessages,
-    };
+    use crate::events::s3::{Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage};
     use chrono::{DateTime, Utc};
     use serde_json::json;
 
@@ -474,11 +499,6 @@ pub(crate) mod tests {
 
     pub(crate) fn example_flat_s3_events() -> FlatS3EventMessages {
         let events: S3EventMessage = serde_json::from_str(&s3_event_record()).unwrap();
-        events.try_into().unwrap()
-    }
-
-    pub(crate) fn example_transposed_s3_events() -> TransposedS3EventMessages {
-        let events = example_flat_s3_events();
         events.try_into().unwrap()
     }
 

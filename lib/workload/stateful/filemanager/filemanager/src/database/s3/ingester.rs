@@ -112,12 +112,11 @@ mod tests {
     use crate::database::s3::ingester::Ingester;
     use crate::database::{Client, Ingest};
     use crate::events::s3::tests::example_events;
-    use crate::events::s3::{Events, StorageClass, TransposedS3EventMessages};
+    use crate::events::s3::{Events, StorageClass};
     use crate::events::EventType;
     use chrono::{DateTime, Utc};
     use sqlx::postgres::PgRow;
     use sqlx::{PgPool, Row};
-    use uuid::Uuid;
 
     #[sqlx::test(migrations = "../database/migrations")]
     async fn ingest_object_created(pool: PgPool) {
@@ -170,8 +169,8 @@ mod tests {
         assert_eq!("key", result.get::<String, _>("key"));
         assert_eq!(0, result.get::<i32, _>("size"));
         assert_eq!(
-            "e_tag",
-            result.get::<String, _>("d41d8cd98f00b204e9800998ecf8427e")
+            "d41d8cd98f00b204e9800998ecf8427e",
+            result.get::<String, _>("hash")
         );
         assert_eq!(
             DateTime::<Utc>::default(),
@@ -191,8 +190,8 @@ mod tests {
         assert_eq!("key", result.get::<String, _>("key"));
         assert_eq!(0, result.get::<i32, _>("size"));
         assert_eq!(
-            "e_tag",
-            result.get::<String, _>("d41d8cd98f00b204e9800998ecf8427e")
+            "d41d8cd98f00b204e9800998ecf8427e",
+            result.get::<String, _>("hash")
         );
         assert_eq!(
             DateTime::<Utc>::default(),
