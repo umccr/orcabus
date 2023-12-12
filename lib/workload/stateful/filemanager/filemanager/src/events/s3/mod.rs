@@ -14,7 +14,7 @@ pub mod collecter;
 pub mod collector_builder;
 
 /// A wrapper around AWS storage types with sqlx support.
-#[derive(Debug, Eq, PartialEq, sqlx::Type)]
+#[derive(Debug, Eq, PartialEq, Clone, sqlx::Type)]
 #[sqlx(type_name = "storage_class")]
 pub enum StorageClass {
     DeepArchive,
@@ -56,7 +56,7 @@ impl StorageClass {
 
 /// AWS S3 events with fields transposed
 /// TODO: Document why we need those 'transposed'
-#[derive(Debug, Eq, PartialEq, Default)]
+#[derive(Debug, Eq, PartialEq, Default, Clone)]
 pub struct TransposedS3EventMessages {
     pub object_ids: Vec<Uuid>,
     pub event_times: Vec<DateTime<Utc>>,

@@ -17,8 +17,8 @@ pub struct Ingester {
 
 impl Ingester {
     /// Create a new ingester.
-    pub fn new(db: Client) -> Self {
-        Self { client: db }
+    pub fn new(client: Client) -> Self {
+        Self { client }
     }
 
     /// Create a new ingester with a default database client.
@@ -29,7 +29,7 @@ impl Ingester {
     }
 
     /// Ingest the events into the database by calling the insert and update queries.
-    pub async fn ingest_s3_events(&mut self, events: Events) -> Result<()> {
+    pub async fn ingest_events(&mut self, events: Events) -> Result<()> {
         let Events {
             object_created,
             object_removed,
@@ -97,7 +97,131 @@ impl Ingester {
 impl Ingest for Ingester {
     async fn ingest(&mut self, events: EventType) -> Result<()> {
         match events {
-            EventType::S3(events) => self.ingest_s3_events(events).await,
+            EventType::S3(events) => self.ingest_events(events).await,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::database::s3::ingester::Ingester;
+    use crate::database::{Client, Ingest};
+    use crate::events::s3::{Events, StorageClass, TransposedS3EventMessages};
+    use crate::events::EventType;
+    use chrono::{DateTime, Utc};
+    use sqlx::postgres::PgRow;
+    use sqlx::{PgPool, Row};
+    use uuid::Uuid;
+
+    #[sqlx::test(migrations = "../database/migrations")]
+    async fn ingest_object_created(pool: PgPool) {
+        let mut events = test_events();
+        events.object_removed = Default::default();
+
+        let mut ingester = test_ingester(pool);
+        ingester.ingest_events(events).await.unwrap();
+
+        let result = sqlx::query("select * from object")
+            .fetch_one(ingester.client.pool())
+            .await
+            .unwrap();
+
+        assert_created(result);
+    }
+
+    fn assert_created(result: PgRow) {
+        assert_eq!(Uuid::default(), result.get::<Uuid, _>("object_id"));
+        assert_eq!("bucket", result.get::<String, _>("bucket"));
+        assert_eq!("key", result.get::<String, _>("key"));
+        assert_eq!(0, result.get::<i32, _>("size"));
+        assert_eq!("e_tag", result.get::<String, _>("hash"));
+        assert_eq!(
+            DateTime::<Utc>::default(),
+            result.get::<DateTime<Utc>, _>("created_date")
+        );
+        assert_eq!(
+            DateTime::<Utc>::default(),
+            result.get::<DateTime<Utc>, _>("last_modified_date")
+        );
+        assert_eq!("portal_run_id", result.get::<String, _>("portal_run_id"));
+    }
+
+    #[sqlx::test(migrations = "../database/migrations")]
+    async fn ingest_object_removed(pool: PgPool) {
+        let events = test_events();
+
+        let mut ingester = test_ingester(pool);
+        ingester.ingest_events(events).await.unwrap();
+
+        let result = sqlx::query("select * from object")
+            .fetch_one(ingester.client.pool())
+            .await
+            .unwrap();
+
+        assert_deleted(result);
+    }
+
+    #[sqlx::test(migrations = "../database/migrations")]
+    async fn ingest(pool: PgPool) {
+        let events = test_events();
+
+        let mut ingester = test_ingester(pool);
+        ingester.ingest(EventType::S3(events)).await.unwrap();
+
+        let result = sqlx::query("select * from object")
+            .fetch_one(ingester.client.pool())
+            .await
+            .unwrap();
+
+        assert_deleted(result);
+    }
+
+    fn assert_deleted(result: PgRow) {
+        assert_eq!(Uuid::default(), result.get::<Uuid, _>("object_id"));
+        assert_eq!("bucket", result.get::<String, _>("bucket"));
+        assert_eq!("key", result.get::<String, _>("key"));
+        assert_eq!(0, result.get::<i32, _>("size"));
+        assert_eq!("e_tag", result.get::<String, _>("hash"));
+        assert_eq!(
+            DateTime::<Utc>::default(),
+            result.get::<DateTime<Utc>, _>("created_date")
+        );
+        assert_eq!(
+            DateTime::<Utc>::default(),
+            result.get::<DateTime<Utc>, _>("last_modified_date")
+        );
+        assert_eq!(
+            DateTime::<Utc>::default(),
+            result.get::<DateTime<Utc>, _>("deleted_date")
+        );
+        assert_eq!("portal_run_id", result.get::<String, _>("portal_run_id"));
+    }
+
+    fn test_events() -> Events {
+        let object_created = TransposedS3EventMessages {
+            object_ids: vec![Uuid::default()],
+            event_times: vec![DateTime::default()],
+            event_names: vec!["ObjectCreated:Put".to_string()],
+            buckets: vec!["bucket".to_string()],
+            keys: vec!["key".to_string()],
+            sizes: vec![0],
+            e_tags: vec!["e_tag".to_string()],
+            sequencers: vec![Some("sequencer".to_string())],
+            portal_run_ids: vec!["portal_run_id".to_string()],
+            storage_classes: vec![Some(StorageClass::Standard)],
+            last_modified_dates: vec![Some(DateTime::default())],
+        };
+
+        let mut object_removed = object_created.clone();
+        object_removed.event_names = vec!["ObjectRemoved:Delete".to_string()];
+
+        Events {
+            object_created,
+            object_removed,
+            other: Default::default(),
+        }
+    }
+    fn test_ingester(pool: PgPool) -> Ingester {
+        Ingester::new(Client::new(pool))
     }
 }
