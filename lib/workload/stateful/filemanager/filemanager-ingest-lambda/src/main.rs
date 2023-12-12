@@ -7,7 +7,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 use filemanager::database::s3::ingester::Ingester;
 use filemanager::database::Ingest;
-use filemanager::events::s3::collect::Collecter;
+use filemanager::events::s3::collector_builder::CollectorBuilder;
 use filemanager::events::s3::FlatS3EventMessages;
 use filemanager::events::Collect;
 
@@ -30,7 +30,11 @@ async fn event_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
 
     trace!("flattened events: {:?}", events);
 
-    let events = Collecter::with_defaults(events).await?.collect().await?;
+    let events = CollectorBuilder::default()
+        .build(events)
+        .await
+        .collect()
+        .await?;
 
     trace!("ingesting events: {:?}", events);
 

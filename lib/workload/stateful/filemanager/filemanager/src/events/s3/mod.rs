@@ -10,9 +10,8 @@ use crate::error::Error;
 use crate::error::Error::DeserializeError;
 use crate::error::Result;
 
-pub mod collect;
-pub mod s3_client;
-pub mod sqs_client;
+pub mod collecter;
+pub mod collector_builder;
 
 /// A wrapper around AWS storage types with sqlx support.
 #[derive(Debug, Eq, PartialEq, sqlx::Type)]

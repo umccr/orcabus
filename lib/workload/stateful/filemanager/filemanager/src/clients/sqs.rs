@@ -2,6 +2,7 @@ use crate::clients::config::Config;
 use aws_sdk_sqs as sqs;
 use aws_sdk_sqs::error::SdkError;
 use aws_sdk_sqs::operation::receive_message::{ReceiveMessageError, ReceiveMessageOutput};
+use aws_sdk_sqs::operation::send_message::{SendMessageError, SendMessageOutput};
 use mockall::automock;
 use std::result;
 
@@ -26,7 +27,22 @@ impl Client {
     }
 
     /// Execute the `ReceiveMessage` operation.
-    pub async fn receive_message(&self) -> Result<ReceiveMessageOutput, ReceiveMessageError> {
-        self.inner.receive_message().send().await
+    pub async fn receive_message(
+        &self,
+        queue_url: &str,
+    ) -> Result<ReceiveMessageOutput, ReceiveMessageError> {
+        self.inner
+            .receive_message()
+            .queue_url(queue_url)
+            .send()
+            .await
+    }
+
+    /// Execute the `SendMessage` operation.
+    pub async fn send_message(
+        &self,
+        queue_url: &str,
+    ) -> Result<SendMessageOutput, SendMessageError> {
+        self.inner.send_message().queue_url(queue_url).send().await
     }
 }
