@@ -1,28 +1,32 @@
-use crate::clients::{s3, sqs};
+#[double]
+use crate::clients::s3::Client as S3Client;
+#[double]
+use crate::clients::sqs::Client as SQSClient;
 use crate::error::Error::{DeserializeError, MissingSQSUrl, SQSReceiveError};
 use crate::error::Result;
 use crate::events::s3::collecter::Collector;
 use crate::events::s3::FlatS3EventMessages;
+use mockall_double::double;
 use std::env;
 use tracing::trace;
 
 /// Build an AWS collector struct.
 #[derive(Default, Debug)]
 pub struct CollectorBuilder {
-    s3_client: Option<s3::Client>,
-    sqs_client: Option<sqs::Client>,
+    s3_client: Option<S3Client>,
+    sqs_client: Option<SQSClient>,
     sqs_url: Option<String>,
 }
 
 impl CollectorBuilder {
     /// Build with the S3 client.
-    pub fn with_s3_client(mut self, client: s3::Client) -> Self {
+    pub fn with_s3_client(mut self, client: S3Client) -> Self {
         self.s3_client = Some(client);
         self
     }
 
     /// Build with the SQS client.
-    pub fn with_sqs_client(mut self, client: sqs::Client) -> Self {
+    pub fn with_sqs_client(mut self, client: SQSClient) -> Self {
         self.sqs_client = Some(client);
         self
     }
@@ -38,12 +42,12 @@ impl CollectorBuilder {
         if let Some(s3_client) = self.s3_client {
             Collector::new(s3_client, raw_events)
         } else {
-            Collector::new(s3::Client::default().await, raw_events)
+            Collector::new(S3Client::with_defaults().await, raw_events)
         }
     }
 
     /// Manually call the receive function to retrieve events from the SQS queue.
-    pub async fn receive(client: &sqs::Client, url: &str) -> Result<FlatS3EventMessages> {
+    pub async fn receive(client: &SQSClient, url: &str) -> Result<FlatS3EventMessages> {
         let message_output = client
             .receive_message(url)
             .await
@@ -82,7 +86,7 @@ impl CollectorBuilder {
             Ok(self.build(Self::receive(sqs_client, &url).await?).await)
         } else {
             Ok(self
-                .build(Self::receive(&sqs::Client::default().await, &url).await?)
+                .build(Self::receive(&SQSClient::with_defaults().await, &url).await?)
                 .await)
         }
     }

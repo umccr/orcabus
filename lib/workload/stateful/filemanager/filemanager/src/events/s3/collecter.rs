@@ -1,9 +1,12 @@
+#[double]
 use crate::clients::s3::Client;
 use crate::error::Error::S3Error;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
+use aws_sdk_s3::primitives;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::future::join_all;
+use mockall_double::double;
 use tracing::trace;
 
 use crate::error::Result;
@@ -29,9 +32,7 @@ impl Collector {
     }
 
     /// Converts an AWS datetime to a standard database format.
-    pub fn convert_datetime(
-        datetime: Option<aws_sdk_s3::primitives::DateTime>,
-    ) -> Option<DateTime<Utc>> {
+    pub fn convert_datetime(datetime: Option<primitives::DateTime>) -> Option<DateTime<Utc>> {
         if let Some(head) = datetime {
             let date = NaiveDateTime::from_timestamp_opt(head.secs(), head.subsec_nanos())?;
             Some(DateTime::from_naive_utc_and_offset(date, Utc))
@@ -100,5 +101,57 @@ impl Collect for Collector {
         let events = Self::update_events(&client, raw_events).await?;
 
         Ok(EventType::S3(Events::from(events)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::events::s3::collecter::Collector;
+    use crate::events::s3::tests::example_flat_s3_events;
+    use aws_sdk_s3::primitives::DateTimeFormat;
+    use aws_sdk_s3::types;
+    use chrono::{DateTime, Utc};
+    use mockall::predicate::eq;
+
+    use super::*;
+
+    #[test]
+    fn convert_datetime() {
+        let result = Collector::convert_datetime(Some(
+            primitives::DateTime::from_str("1970-01-01T00:00:00Z", DateTimeFormat::DateTime)
+                .unwrap(),
+        ));
+
+        assert_eq!(result, Some(DateTime::<Utc>::default()));
+    }
+
+    #[tokio::test]
+    async fn head() {
+        let mut collector = test_collector().await;
+
+        let expected_head = HeadObjectOutput::builder()
+            .last_modified(
+                primitives::DateTime::from_str("1970-01-01T00:00:00Z", DateTimeFormat::DateTime)
+                    .unwrap(),
+            )
+            .storage_class(types::StorageClass::Standard)
+            .build();
+        let expected_head_clone = expected_head.clone();
+
+        collector
+            .client
+            .expect_head_object()
+            .with(eq("key"), eq("bucket"))
+            .times(1)
+            .returning(move |_, _| Ok(expected_head.clone()));
+
+        let result = Collector::head(&collector.client, "key", "bucket")
+            .await
+            .unwrap();
+        assert_eq!(result, Some(expected_head_clone));
+    }
+
+    async fn test_collector() -> Collector {
+        Collector::new(Client::default(), example_flat_s3_events())
     }
 }

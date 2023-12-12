@@ -22,7 +22,7 @@ impl Ingester {
     }
 
     /// Create a new ingester with a default database client.
-    pub async fn default() -> Result<Self> {
+    pub async fn with_defaults() -> Result<Self> {
         Ok(Self {
             client: Client::default().await?,
         })

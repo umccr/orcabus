@@ -38,7 +38,7 @@ async fn event_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
 
     trace!("ingesting events: {:?}", events);
 
-    let mut ingester = Ingester::default().await?;
+    let mut ingester = Ingester::with_defaults().await?;
     trace!("ingester: {:?}", ingester);
     ingester.ingest(events).await?;
 

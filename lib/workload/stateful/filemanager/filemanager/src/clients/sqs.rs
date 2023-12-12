@@ -22,7 +22,7 @@ impl Client {
     }
 
     /// Create an SQS client with default config.
-    pub async fn default() -> Self {
+    pub async fn with_defaults() -> Self {
         Self::new(sqs::Client::new(&Config::default().load().await))
     }
 

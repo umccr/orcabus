@@ -22,7 +22,7 @@ impl Client {
     }
 
     /// Create an S3 client with default config.
-    pub async fn default() -> Self {
+    pub async fn with_defaults() -> Self {
         Self::new(s3::Client::new(&Config::default().load().await))
     }
 

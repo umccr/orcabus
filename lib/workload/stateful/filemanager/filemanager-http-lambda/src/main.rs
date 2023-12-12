@@ -18,7 +18,7 @@ async fn event_handler(_: LambdaEvent<()>) -> Result<(), Error> {
         .collect()
         .await?;
 
-    let mut ingester = Ingester::default().await?;
+    let mut ingester = Ingester::with_defaults().await?;
 
     ingester.ingest(events).await?;
 

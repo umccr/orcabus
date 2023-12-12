@@ -256,8 +256,8 @@ impl Ord for FlatS3EventMessage {
 }
 
 impl PartialOrd for FlatS3EventMessage {
-    /// `FlatS3EventMessage`s have total ordering.
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // Total ordering.
         Some(self.cmp(other))
     }
 }
