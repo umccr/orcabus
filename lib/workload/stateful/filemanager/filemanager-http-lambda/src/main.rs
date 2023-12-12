@@ -6,13 +6,13 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 use filemanager::database::s3::ingester::Ingester;
 use filemanager::database::Ingest;
-use filemanager::events::s3::collector_builder::CollectorBuilder;
+use filemanager::events::s3::collector_builder::CollecterBuilder;
 use filemanager::events::Collect;
 
 /// Handle SQS events by manually calling the SQS receive function. This is meant
 /// to be run through something like API gateway to manually invoke ingestion.
 async fn event_handler(_: LambdaEvent<()>) -> Result<(), Error> {
-    let events = CollectorBuilder::default()
+    let events = CollecterBuilder::default()
         .build_receive()
         .await?
         .collect()

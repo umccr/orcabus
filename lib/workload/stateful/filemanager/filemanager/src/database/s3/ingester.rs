@@ -111,7 +111,7 @@ impl Ingest for Ingester {
 mod tests {
     use crate::database::s3::ingester::Ingester;
     use crate::database::{Client, Ingest};
-    use crate::events::s3::tests::example_events;
+    use crate::events::s3::tests::expected_events;
     use crate::events::s3::{Events, StorageClass};
     use crate::events::EventType;
     use chrono::{DateTime, Utc};
@@ -211,7 +211,7 @@ mod tests {
     }
 
     fn test_events() -> Events {
-        let mut events = example_events();
+        let mut events = expected_events();
 
         events.object_created.last_modified_dates[0] = Some(DateTime::default());
         events.object_created.storage_classes[0] = Some(StorageClass::Standard);

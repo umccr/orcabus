@@ -15,12 +15,12 @@ use crate::events::{Collect, EventType};
 
 /// Collect raw events into the processed form which the database module accepts.
 #[derive(Debug)]
-pub struct Collector {
+pub struct Collecter {
     client: Client,
     raw_events: FlatS3EventMessages,
 }
 
-impl Collector {
+impl Collecter {
     /// Create a new collector.
     pub(crate) fn new(client: Client, raw_events: FlatS3EventMessages) -> Self {
         Self { client, raw_events }
@@ -95,7 +95,7 @@ impl Collector {
 }
 
 #[async_trait]
-impl Collect for Collector {
+impl Collect for Collecter {
     async fn collect(self) -> Result<EventType> {
         let (client, raw_events) = self.into_inner();
         let raw_events = raw_events.sort_and_dedup();
@@ -107,9 +107,9 @@ impl Collect for Collector {
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::events::s3::collecter::Collector;
-    use crate::events::s3::tests::example_flat_s3_events;
+pub(crate) mod tests {
+    use crate::events::s3::collecter::Collecter;
+    use crate::events::s3::tests::expected_flat_events;
     use crate::events::s3::StorageClass::Standard;
     use aws_sdk_s3::primitives::DateTimeFormat;
     use aws_sdk_s3::types;
@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn convert_datetime() {
-        let result = Collector::convert_datetime(Some(
+        let result = Collecter::convert_datetime(Some(
             primitives::DateTime::from_str("1970-01-01T00:00:00Z", DateTimeFormat::DateTime)
                 .unwrap(),
         ));
@@ -132,9 +132,9 @@ mod tests {
     async fn head() {
         let mut collecter = test_collecter().await;
 
-        set_collecter_expectations(&mut collecter, 1);
+        set_s3_client_expectations(&mut collecter.client, 1);
 
-        let result = Collector::head(&collecter.client, "key", "bucket")
+        let result = Collecter::head(&collecter.client, "key", "bucket")
             .await
             .unwrap();
         assert_eq!(result, Some(expected_head_object()));
@@ -144,11 +144,11 @@ mod tests {
     async fn update_events() {
         let mut collecter = test_collecter().await;
 
-        let events = example_flat_s3_events().sort_and_dedup();
+        let events = expected_flat_events().sort_and_dedup();
 
-        set_collecter_expectations(&mut collecter, 2);
+        set_s3_client_expectations(&mut collecter.client, 2);
 
-        let mut result = Collector::update_events(&collecter.client, events)
+        let mut result = Collecter::update_events(&collecter.client, events)
             .await
             .unwrap()
             .into_inner()
@@ -167,10 +167,14 @@ mod tests {
     async fn collect() {
         let mut collecter = test_collecter().await;
 
-        set_collecter_expectations(&mut collecter, 2);
+        set_s3_client_expectations(&mut collecter.client, 2);
 
         let result = collecter.collect().await.unwrap();
 
+        assert_collected_events(result);
+    }
+
+    pub(crate) fn assert_collected_events(result: EventType) {
         assert!(matches!(result, EventType::S3(_)));
 
         match result {
@@ -190,9 +194,8 @@ mod tests {
         }
     }
 
-    fn set_collecter_expectations(collecter: &mut Collector, times: usize) {
-        collecter
-            .client
+    pub(crate) fn set_s3_client_expectations(client: &mut Client, times: usize) {
+        client
             .expect_head_object()
             .with(eq("key"), eq("bucket"))
             .times(times)
@@ -209,7 +212,7 @@ mod tests {
             .build()
     }
 
-    async fn test_collecter() -> Collector {
-        Collector::new(Client::default(), example_flat_s3_events())
+    async fn test_collecter() -> Collecter {
+        Collecter::new(Client::default(), expected_flat_events())
     }
 }

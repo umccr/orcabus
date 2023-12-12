@@ -414,7 +414,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_flat_events() {
-        let result = example_flat_s3_events();
+        let result = expected_flat_events();
         let mut result = result.into_inner().into_iter();
 
         let first = result.next().unwrap();
@@ -429,7 +429,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_sort_and_dedup() {
-        let result = example_flat_s3_events().sort_and_dedup();
+        let result = expected_flat_events().sort_and_dedup();
         let mut result = result.into_inner().into_iter();
 
         let first = result.next().unwrap();
@@ -454,7 +454,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_events() {
-        let result = example_events();
+        let result = expected_events();
 
         assert_eq!(
             result.object_created.event_times[0],
@@ -497,17 +497,17 @@ pub(crate) mod tests {
         assert_eq!(result.object_removed.last_modified_dates[0], None);
     }
 
-    pub(crate) fn example_flat_s3_events() -> FlatS3EventMessages {
-        let events: S3EventMessage = serde_json::from_str(&s3_event_record()).unwrap();
+    pub(crate) fn expected_flat_events() -> FlatS3EventMessages {
+        let events: S3EventMessage = serde_json::from_str(&expected_event_record()).unwrap();
         events.try_into().unwrap()
     }
 
-    pub(crate) fn example_events() -> Events {
-        let events = example_flat_s3_events().sort_and_dedup();
+    pub(crate) fn expected_events() -> Events {
+        let events = expected_flat_events().sort_and_dedup();
         events.try_into().unwrap()
     }
 
-    fn s3_event_record() -> String {
+    pub(crate) fn expected_event_record() -> String {
         let object = json!({
             "eventVersion": "2.2",
             "eventSource": "aws:s3",

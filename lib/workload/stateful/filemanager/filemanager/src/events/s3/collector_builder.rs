@@ -4,7 +4,7 @@ use crate::clients::s3::Client as S3Client;
 use crate::clients::sqs::Client as SQSClient;
 use crate::error::Error::{DeserializeError, MissingSQSUrl, SQSReceiveError};
 use crate::error::Result;
-use crate::events::s3::collecter::Collector;
+use crate::events::s3::collecter::Collecter;
 use crate::events::s3::FlatS3EventMessages;
 use mockall_double::double;
 use std::env;
@@ -12,13 +12,13 @@ use tracing::trace;
 
 /// Build an AWS collector struct.
 #[derive(Default, Debug)]
-pub struct CollectorBuilder {
+pub struct CollecterBuilder {
     s3_client: Option<S3Client>,
     sqs_client: Option<SQSClient>,
     sqs_url: Option<String>,
 }
 
-impl CollectorBuilder {
+impl CollecterBuilder {
     /// Build with the S3 client.
     pub fn with_s3_client(mut self, client: S3Client) -> Self {
         self.s3_client = Some(client);
@@ -32,17 +32,17 @@ impl CollectorBuilder {
     }
 
     /// Build with the SQS url.
-    pub fn with_sqs_url(mut self, url: String) -> Self {
-        self.sqs_url = Some(url);
+    pub fn with_sqs_url(mut self, url: impl Into<String>) -> Self {
+        self.sqs_url = Some(url.into());
         self
     }
 
     /// Build a collector using the raw events.
-    pub async fn build(self, raw_events: FlatS3EventMessages) -> Collector {
+    pub async fn build(self, raw_events: FlatS3EventMessages) -> Collecter {
         if let Some(s3_client) = self.s3_client {
-            Collector::new(s3_client, raw_events)
+            Collecter::new(s3_client, raw_events)
         } else {
-            Collector::new(S3Client::with_defaults().await, raw_events)
+            Collecter::new(S3Client::with_defaults().await, raw_events)
         }
     }
 
@@ -73,7 +73,7 @@ impl CollectorBuilder {
     }
 
     /// Build a collector by manually calling receive to obtain the raw events.
-    pub async fn build_receive(mut self) -> Result<Collector> {
+    pub async fn build_receive(mut self) -> Result<Collecter> {
         let url = self.sqs_url.take();
         let url = if let Some(url) = url {
             url
@@ -89,5 +89,71 @@ impl CollectorBuilder {
                 .build(Self::receive(&SQSClient::with_defaults().await, &url).await?)
                 .await)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::events::s3::collecter::tests::{
+        assert_collected_events, set_s3_client_expectations,
+    };
+    use crate::events::s3::collector_builder::CollecterBuilder;
+    use crate::events::s3::tests::{expected_event_record, expected_flat_events};
+    use crate::events::Collect;
+    use aws_sdk_sqs::operation::receive_message::ReceiveMessageOutput;
+    use aws_sdk_sqs::types::builders::MessageBuilder;
+    use mockall::predicate::eq;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn receive() {
+        let mut sqs_client = SQSClient::default();
+
+        set_sqs_client_expectations(&mut sqs_client);
+
+        let events = CollecterBuilder::receive(&sqs_client, "url").await.unwrap();
+
+        assert_eq!(events, expected_flat_events());
+    }
+
+    #[tokio::test]
+    async fn build_receive() {
+        let mut sqs_client = SQSClient::default();
+        let mut s3_client = S3Client::default();
+
+        set_sqs_client_expectations(&mut sqs_client);
+        set_s3_client_expectations(&mut s3_client, 2);
+
+        let events = CollecterBuilder::default()
+            .with_sqs_client(sqs_client)
+            .with_s3_client(s3_client)
+            .with_sqs_url("url")
+            .build_receive()
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+
+        assert_collected_events(events);
+    }
+
+    fn set_sqs_client_expectations(sqs_client: &mut SQSClient) {
+        sqs_client
+            .expect_receive_message()
+            .with(eq("url"))
+            .times(1)
+            .returning(move |_| Ok(expected_receive_message()));
+    }
+
+    fn expected_receive_message() -> ReceiveMessageOutput {
+        ReceiveMessageOutput::builder()
+            .messages(
+                MessageBuilder::default()
+                    .body(expected_event_record())
+                    .build(),
+            )
+            .build()
     }
 }
