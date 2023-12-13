@@ -28,13 +28,7 @@ interface Settings {
  */
 export class FilemanagerStack extends Stack {
   constructor(scope: Construct, id: string, settings: Settings, props?: StackProps) {
-    super(scope, id, {
-      ...props,
-      env: {
-        account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
-        region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION,
-      },
-    });
+    super(scope, id, props);
 
     Tags.of(this).add('Stack', settings.stack_name);
 
@@ -110,21 +104,21 @@ export class FilemanagerStack extends Stack {
 
     // VPC
     //const vpc = ec2.Vpc.fromLookup(this, 'main-vpc', { isDefault: false });
-    const vpc = new ec2.Vpc(this, STACK_NAME + 'VPC', {
+    const vpc = new ec2.Vpc(this, 'vpc', {
       ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/24'),
       maxAzs: 99, // As many as there are available in the region
       natGateways: 1,
       subnetConfiguration: [
         {
-          name: STACK_NAME + 'ingress',
+          name: 'ingress',
           subnetType: ec2.SubnetType.PUBLIC,
         },
         {
-          name: STACK_NAME + 'Application' + 'IsolatedSubnet',
+          name: 'application',
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
         },
         {
-          name: STACK_NAME + 'Database' + 'IsolatedSubnet',
+          name: 'database',
           subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
         },
       ],
