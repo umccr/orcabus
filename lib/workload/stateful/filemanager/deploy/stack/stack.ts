@@ -12,10 +12,6 @@ new FilemanagerStack(
   app,
   STACK_NAME,
   {
-    account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION,
-  },
-  {
     database_url: 'postgresql://filemanager:filemanager@db:5432/filemanager', // pragma: allowlist secret
     force_path_style: true,
     stack_name: STACK_NAME,

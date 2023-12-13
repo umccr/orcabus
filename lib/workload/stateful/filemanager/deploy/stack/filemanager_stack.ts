@@ -1,4 +1,4 @@
-import { Fn, Duration, RemovalPolicy, Stack, StackProps, Tags, Environment } from 'aws-cdk-lib';
+import { Duration, RemovalPolicy, Stack, StackProps, Tags, Environment } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { RustFunction, Settings as CargoSettings } from 'rust.aws-cdk-lambda';
@@ -10,6 +10,7 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaDestinations from 'aws-cdk-lib/aws-lambda-destinations';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import { STACK_NAME } from './stack';
 
 /**
  * Common settings for the filemanager stack.
@@ -26,14 +27,14 @@ interface Settings {
  * Stack used to deploy filemanager.
  */
 export class FilemanagerStack extends Stack {
-  constructor(
-    scope: Construct,
-    id: string,
-    env: Environment,
-    settings: Settings,
-    props?: StackProps
-  ) {
-    super(scope, id, props);
+  constructor(scope: Construct, id: string, settings: Settings, props?: StackProps) {
+    super(scope, id, {
+      ...props,
+      env: {
+        account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
+        region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION,
+      },
+    });
 
     Tags.of(this).add('Stack', settings.stack_name);
 
@@ -107,16 +108,37 @@ export class FilemanagerStack extends Stack {
     const eventSource = new lambdaEventSources.SqsEventSource(queue);
     filemanagerLambda.addEventSource(eventSource);
 
+    // VPC
+    //const vpc = ec2.Vpc.fromLookup(this, 'main-vpc', { isDefault: false });
+    const vpc = new ec2.Vpc(this, STACK_NAME + 'VPC', {
+      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/24'),
+      maxAzs: 99, // As many as there are available in the region
+      natGateways: 1,
+      subnetConfiguration: [
+        {
+          name: STACK_NAME + 'ingress',
+          subnetType: ec2.SubnetType.PUBLIC,
+        },
+        {
+          name: STACK_NAME + 'Application' + 'IsolatedSubnet',
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        },
+        {
+          name: STACK_NAME + 'Database' + 'IsolatedSubnet',
+          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+        },
+      ],
+    });
+
     // RDS
-    const vpc = ec2.Vpc.fromLookup(this, 'main-vpc', { isDefault: true });
     new rds.DatabaseCluster(this, 'Database', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
         version: rds.AuroraPostgresEngineVersion.VER_15_3,
       }),
       serverlessV2MinCapacity: 0.5,
       serverlessV2MaxCapacity: 3,
-      writer: rds.ClusterInstance.provisioned('writer'),
-      readers: [rds.ClusterInstance.serverlessV2('reader')],
+      writer: rds.ClusterInstance.serverlessV2('writer'),
+      //readers: [rds.ClusterInstance.serverlessV2('reader')],
       vpc,
     });
   }
