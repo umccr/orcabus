@@ -26,6 +26,8 @@ async-trait = "0.1"
 uuid = { version = "1.4", features = ["v4"] }
 mockall = "0.12"
 mockall_double = "0.3"
+lambda_runtime = "0.8"
+aws_lambda_events = "0.10"
 
 # AWS
 aws-sdk-sqs = "0.37"

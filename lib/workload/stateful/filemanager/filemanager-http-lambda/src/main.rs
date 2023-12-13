@@ -4,26 +4,9 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use filemanager::database::aws::ingester::Ingester;
-use filemanager::database::Ingest;
-use filemanager::events::aws::collector_builder::CollecterBuilder;
-use filemanager::events::Collect;
-
-/// Handle SQS events by manually calling the SQS receive function. This is meant
-/// to be run through something like API gateway to manually invoke ingestion.
-async fn event_handler(_: LambdaEvent<()>) -> Result<(), Error> {
-    let events = CollecterBuilder::default()
-        .build_receive()
-        .await?
-        .collect()
-        .await?;
-
-    let mut ingester = Ingester::with_defaults().await?;
-
-    ingester.ingest(events).await?;
-
-    Ok(())
-}
+use filemanager::clients::aws::s3::Client as S3Client;
+use filemanager::clients::aws::sqs::Client as SQSClient;
+use filemanager::handlers::aws::receive_and_ingest;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -34,5 +17,13 @@ async fn main() -> Result<(), Error> {
         .with(env_filter)
         .init();
 
-    run(service_fn(event_handler)).await
+    run(service_fn(|_: LambdaEvent<()>| async move {
+        receive_and_ingest(
+            S3Client::with_defaults().await,
+            SQSClient::with_defaults().await,
+            None::<String>,
+        )
+        .await
+    }))
+    .await
 }
