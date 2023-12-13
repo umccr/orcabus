@@ -1,5 +1,6 @@
+use aws_lambda_events::sqs::SqsEvent;
 use filemanager::clients::aws::s3::Client;
-use lambda_runtime::{run, service_fn, Error};
+use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -15,8 +16,10 @@ async fn main() -> Result<(), Error> {
         .with(env_filter)
         .init();
 
-    run(service_fn(|event| async move {
-        ingest_event(event, Client::with_defaults().await).await
+    run(service_fn(|event: LambdaEvent<SqsEvent>| async move {
+        ingest_event(event.payload, Client::with_defaults().await, None).await?;
+
+        Ok::<(), Error>(())
     }))
     .await
 }

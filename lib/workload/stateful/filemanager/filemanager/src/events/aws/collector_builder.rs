@@ -98,7 +98,7 @@ impl CollecterBuilder {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use crate::events::aws::collecter::tests::{
         assert_collected_events, set_s3_client_expectations,
     };
@@ -144,7 +144,7 @@ mod tests {
         assert_collected_events(events);
     }
 
-    fn set_sqs_client_expectations(sqs_client: &mut SQSClient) {
+    pub(crate) fn set_sqs_client_expectations(sqs_client: &mut SQSClient) {
         sqs_client
             .expect_receive_message()
             .with(eq("url"))

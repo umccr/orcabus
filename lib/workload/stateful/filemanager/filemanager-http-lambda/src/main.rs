@@ -22,8 +22,11 @@ async fn main() -> Result<(), Error> {
             S3Client::with_defaults().await,
             SQSClient::with_defaults().await,
             None::<String>,
+            None,
         )
-        .await
+        .await?;
+
+        Ok::<(), Error>(())
     }))
     .await
 }

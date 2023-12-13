@@ -108,7 +108,7 @@ impl Ingest for Ingester {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use crate::database::aws::ingester::Ingester;
     use crate::database::{Client, Ingest};
     use crate::events::aws::tests::expected_events;
@@ -164,7 +164,7 @@ mod tests {
         assert_deleted(result);
     }
 
-    fn assert_created(result: PgRow) {
+    pub(crate) fn assert_created(result: PgRow) {
         assert_eq!("bucket", result.get::<String, _>("bucket"));
         assert_eq!("key", result.get::<String, _>("key"));
         assert_eq!(0, result.get::<i32, _>("size"));
@@ -185,7 +185,7 @@ mod tests {
             .starts_with("19700101"));
     }
 
-    fn assert_deleted(result: PgRow) {
+    pub(crate) fn assert_deleted(result: PgRow) {
         assert_eq!("bucket", result.get::<String, _>("bucket"));
         assert_eq!("key", result.get::<String, _>("key"));
         assert_eq!(0, result.get::<i32, _>("size"));

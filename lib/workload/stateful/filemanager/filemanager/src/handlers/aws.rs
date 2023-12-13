@@ -3,12 +3,12 @@ use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::database::aws::ingester::Ingester;
-use crate::database::Ingest;
+use crate::database::{Client, Ingest};
 use crate::events::aws::collector_builder::CollecterBuilder;
 use crate::events::aws::FlatS3EventMessages;
 use crate::events::Collect;
 use aws_lambda_events::sqs::SqsEvent;
-use lambda_runtime::{Error, LambdaEvent};
+use lambda_runtime::Error;
 use mockall_double::double;
 use tracing::trace;
 
@@ -18,7 +18,8 @@ pub async fn receive_and_ingest(
     s3_client: S3Client,
     sqs_client: SQSClient,
     sqs_url: Option<impl Into<String>>,
-) -> Result<(), Error> {
+    database_client: Option<Client>,
+) -> Result<Ingester, Error> {
     let events = CollecterBuilder::default()
         .with_s3_client(s3_client)
         .with_sqs_client(sqs_client)
@@ -28,19 +29,26 @@ pub async fn receive_and_ingest(
         .collect()
         .await?;
 
-    let mut ingester = Ingester::with_defaults().await?;
+    let mut ingester = if let Some(database_client) = database_client {
+        Ingester::new(database_client)
+    } else {
+        Ingester::with_defaults().await?
+    };
 
     ingester.ingest(events).await?;
 
-    Ok(())
+    Ok(ingester)
 }
 
-/// Handle SQS events that are passed directly to a lambda function via an LambdEvent.
-pub async fn ingest_event(event: LambdaEvent<SqsEvent>, s3_client: S3Client) -> Result<(), Error> {
+/// Handle SQS events that through an SqsEvent.
+pub async fn ingest_event(
+    event: SqsEvent,
+    s3_client: S3Client,
+    database_client: Option<Client>,
+) -> Result<Ingester, Error> {
     trace!("received event: {:?}", event);
 
     let events: FlatS3EventMessages = event
-        .payload
         .records
         .into_iter()
         .filter_map(|event| {
@@ -63,9 +71,71 @@ pub async fn ingest_event(event: LambdaEvent<SqsEvent>, s3_client: S3Client) -> 
 
     trace!("ingesting events: {:?}", events);
 
-    let mut ingester = Ingester::with_defaults().await?;
+    let mut ingester = if let Some(database_client) = database_client {
+        Ingester::new(database_client)
+    } else {
+        Ingester::with_defaults().await?
+    };
+
     trace!("ingester: {:?}", ingester);
     ingester.ingest(events).await?;
 
-    Ok(())
+    Ok(ingester)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::database::aws::ingester::tests::assert_deleted;
+    use crate::events::aws::collecter::tests::set_s3_client_expectations;
+    use crate::events::aws::collector_builder::tests::set_sqs_client_expectations;
+    use crate::events::aws::tests::expected_event_record;
+    use aws_lambda_events::sqs::SqsMessage;
+    use sqlx::PgPool;
+
+    #[sqlx::test(migrations = "../database/migrations")]
+    async fn test_receive_and_ingest(pool: PgPool) {
+        let mut sqs_client = SQSClient::default();
+        let mut s3_client = S3Client::default();
+
+        set_sqs_client_expectations(&mut sqs_client);
+        set_s3_client_expectations(&mut s3_client, 2);
+
+        let ingester =
+            receive_and_ingest(s3_client, sqs_client, Some("url"), Some(Client::new(pool)))
+                .await
+                .unwrap();
+
+        let result = sqlx::query("select * from object")
+            .fetch_one(ingester.client().pool())
+            .await
+            .unwrap();
+
+        assert_deleted(result);
+    }
+
+    #[sqlx::test(migrations = "../database/migrations")]
+    async fn test_ingest_event(pool: PgPool) {
+        let mut s3_client = S3Client::default();
+
+        set_s3_client_expectations(&mut s3_client, 2);
+
+        let event = SqsEvent {
+            records: vec![SqsMessage {
+                body: Some(expected_event_record()),
+                ..Default::default()
+            }],
+        };
+
+        let ingester = ingest_event(event, s3_client, Some(Client::new(pool)))
+            .await
+            .unwrap();
+
+        let result = sqlx::query("select * from object")
+            .fetch_one(ingester.client().pool())
+            .await
+            .unwrap();
+
+        assert_deleted(result);
+    }
 }
