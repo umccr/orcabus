@@ -1,5 +1,4 @@
-//! This module provides wrappers around the AWS SDK which allows mocking them for tests.
-//!
+//! Wrappers for AWS clients.
 
 // Suppress warning when using mock_all
 #![allow(dead_code)]

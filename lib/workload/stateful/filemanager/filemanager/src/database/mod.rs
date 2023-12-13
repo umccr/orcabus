@@ -1,3 +1,6 @@
+//! This module handles connecting to the filemanager database for actions such as ingesting events.
+//!
+
 use async_trait::async_trait;
 use sqlx::PgPool;
 use std::env;

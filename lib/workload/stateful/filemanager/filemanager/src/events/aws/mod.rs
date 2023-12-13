@@ -1,3 +1,6 @@
+//! Convert S3 events for the database.
+//! 
+
 use std::cmp::Ordering;
 
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;

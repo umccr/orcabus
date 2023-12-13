@@ -1,4 +1,4 @@
-//! This module handles converting storage events into database objects
+//! This module converts storage events into database objects.
 //!
 
 use async_trait::async_trait;

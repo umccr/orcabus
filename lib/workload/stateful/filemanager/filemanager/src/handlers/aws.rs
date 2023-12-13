@@ -1,3 +1,6 @@
+//! Event handlers for AWS, such as Lambda event handlers.
+//!
+
 #[double]
 use crate::clients::aws::s3::Client as S3Client;
 #[double]

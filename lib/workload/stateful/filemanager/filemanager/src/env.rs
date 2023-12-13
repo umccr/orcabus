@@ -1,3 +1,6 @@
+//! Handle environment variables.
+//!
+
 use std::{
     env,
     fmt::{self},

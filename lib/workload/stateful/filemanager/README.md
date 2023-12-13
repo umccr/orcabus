@@ -91,3 +91,19 @@ docker exec -it filemanager_db psql filemanager -U filemanager
 
 [deploy]: ./deploy
 [env-example]: .env.example
+
+## Project Layout
+
+The project is divided into multiple crates that serve different functionality.
+
+* [filemanager]: This is the bulk of the filemanager logic, and handles database connections and event processing.
+* [filemanager-http-lambda]: This is a Lambda function which calls the SQS queue manually to ingest events.
+* [filemanager-ingest-lambda]: This is a Lambda function which ingests events directly passed from an SQS queue.
+* [deploy]: CDK deployment code.
+* [database]: Database migration files and queries.
+
+[filemanager]: filemanager
+[filemanager-http-lambda]: filemanager-http-lambda
+[filemanager-ingest-lambda]: filemanager-ingest-lambda
+[deploy]: deploy
+[database]: database

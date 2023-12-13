@@ -1,3 +1,6 @@
+//! Errors used by the crate.
+//!
+
 use std::result;
 
 use sqlx::migrate::MigrateError;

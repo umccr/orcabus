@@ -1,3 +1,6 @@
+//! Database logic for AWS events.
+//!
+
 use aws_sdk_s3::types::StorageClass;
 
 pub mod ingester;
