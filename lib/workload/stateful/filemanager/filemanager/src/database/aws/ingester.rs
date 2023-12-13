@@ -111,7 +111,7 @@ impl Ingest for Ingester {
 pub(crate) mod tests {
     use crate::database::aws::ingester::Ingester;
     use crate::database::{Client, Ingest};
-    use crate::events::aws::tests::expected_events;
+    use crate::events::aws::tests::{expected_events, EXPECTED_E_TAG};
     use crate::events::aws::{Events, StorageClass};
     use crate::events::EventType;
     use chrono::{DateTime, Utc};
@@ -168,10 +168,7 @@ pub(crate) mod tests {
         assert_eq!("bucket", result.get::<String, _>("bucket"));
         assert_eq!("key", result.get::<String, _>("key"));
         assert_eq!(0, result.get::<i32, _>("size"));
-        assert_eq!(
-            "d41d8cd98f00b204e9800998ecf8427e",
-            result.get::<String, _>("hash")
-        );
+        assert_eq!(EXPECTED_E_TAG, result.get::<String, _>("hash"));
         assert_eq!(
             DateTime::<Utc>::default(),
             result.get::<DateTime<Utc>, _>("created_date")
@@ -189,10 +186,7 @@ pub(crate) mod tests {
         assert_eq!("bucket", result.get::<String, _>("bucket"));
         assert_eq!("key", result.get::<String, _>("key"));
         assert_eq!(0, result.get::<i32, _>("size"));
-        assert_eq!(
-            "d41d8cd98f00b204e9800998ecf8427e",
-            result.get::<String, _>("hash")
-        );
+        assert_eq!(EXPECTED_E_TAG, result.get::<String, _>("hash"));
         assert_eq!(
             DateTime::<Utc>::default(),
             result.get::<DateTime<Utc>, _>("created_date")

@@ -415,19 +415,23 @@ pub(crate) mod tests {
     use chrono::{DateTime, Utc};
     use serde_json::json;
 
+    pub(crate) const EXPECTED_SEQUENCER_CREATED: &str = "0055AED6DCD90281E5"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_SEQUENCER_DELETED: &str = "0055AED6DCD90281E6"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_E_TAG: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
+
     #[test]
     fn test_flat_events() {
         let result = expected_flat_events();
         let mut result = result.into_inner().into_iter();
 
         let first = result.next().unwrap();
-        assert_flat_s3_event(first, "ObjectRemoved:Delete", "0055AED6DCD90281E6");
+        assert_flat_s3_event(first, "ObjectRemoved:Delete", EXPECTED_SEQUENCER_DELETED);
 
         let second = result.next().unwrap();
-        assert_flat_s3_event(second, "ObjectCreated:Put", "0055AED6DCD90281E5");
+        assert_flat_s3_event(second, "ObjectCreated:Put", EXPECTED_SEQUENCER_CREATED);
 
         let third = result.next().unwrap();
-        assert_flat_s3_event(third, "ObjectCreated:Put", "0055AED6DCD90281E5");
+        assert_flat_s3_event(third, "ObjectCreated:Put", EXPECTED_SEQUENCER_CREATED);
     }
 
     #[test]
@@ -436,10 +440,10 @@ pub(crate) mod tests {
         let mut result = result.into_inner().into_iter();
 
         let first = result.next().unwrap();
-        assert_flat_s3_event(first, "ObjectCreated:Put", "0055AED6DCD90281E5");
+        assert_flat_s3_event(first, "ObjectCreated:Put", EXPECTED_SEQUENCER_CREATED);
 
         let second = result.next().unwrap();
-        assert_flat_s3_event(second, "ObjectRemoved:Delete", "0055AED6DCD90281E6");
+        assert_flat_s3_event(second, "ObjectRemoved:Delete", EXPECTED_SEQUENCER_DELETED);
     }
 
     fn assert_flat_s3_event(event: FlatS3EventMessage, event_name: &str, sequencer: &str) {
@@ -448,7 +452,7 @@ pub(crate) mod tests {
         assert_eq!(event.bucket, "bucket");
         assert_eq!(event.key, "key");
         assert_eq!(event.size, 0);
-        assert_eq!(event.e_tag, "d41d8cd98f00b204e9800998ecf8427e");
+        assert_eq!(event.e_tag, EXPECTED_E_TAG); // pragma: allowlist secret
         assert_eq!(event.sequencer, Some(sequencer.to_string()));
         assert!(event.portal_run_id.starts_with("19700101"));
         assert_eq!(event.storage_class, None);
@@ -467,13 +471,10 @@ pub(crate) mod tests {
         assert_eq!(result.object_created.buckets[0], "bucket");
         assert_eq!(result.object_created.keys[0], "key");
         assert_eq!(result.object_created.sizes[0], 0);
-        assert_eq!(
-            result.object_created.e_tags[0],
-            "d41d8cd98f00b204e9800998ecf8427e"
-        );
+        assert_eq!(result.object_created.e_tags[0], EXPECTED_E_TAG);
         assert_eq!(
             result.object_created.sequencers[0],
-            Some("0055AED6DCD90281E5".to_string())
+            Some(EXPECTED_SEQUENCER_CREATED.to_string())
         );
         assert!(result.object_created.portal_run_ids[0].starts_with("19700101"));
         assert_eq!(result.object_created.storage_classes[0], None);
@@ -487,13 +488,10 @@ pub(crate) mod tests {
         assert_eq!(result.object_removed.buckets[0], "bucket");
         assert_eq!(result.object_removed.keys[0], "key");
         assert_eq!(result.object_removed.sizes[0], 0);
-        assert_eq!(
-            result.object_removed.e_tags[0],
-            "d41d8cd98f00b204e9800998ecf8427e"
-        );
+        assert_eq!(result.object_removed.e_tags[0], EXPECTED_E_TAG);
         assert_eq!(
             result.object_removed.sequencers[0],
-            Some("0055AED6DCD90281E6".to_string())
+            Some(EXPECTED_SEQUENCER_DELETED.to_string())
         );
         assert!(result.object_removed.portal_run_ids[0].starts_with("19700101"));
         assert_eq!(result.object_removed.storage_classes[0], None);
@@ -522,8 +520,8 @@ pub(crate) mod tests {
                 "sourceIPAddress": "127.0.0.1"
             },
             "responseElements": {
-            "x-amz-request-id": "C3D13FE58DE4C810",
-                "x-amz-id-2": "FMyUVURIY8/IgAtTv8xRjskZQpcIZ9KG4V5Wp6S7S/JRWeUWerMUE5JgHvANOjpD"
+            "x-amz-request-id": "C3D13FE58DE4C810", // pragma: allowlist secret
+                "x-amz-id-2": "FMyUVURIY8/IgAtTv8xRjskZQpcIZ9KG4V5Wp6S7S/JRWeUWerMUE5JgHvANOjpD" // pragma: allowlist secret
             },
             "s3": {
                 "s3SchemaVersion": "1.0",
@@ -538,9 +536,9 @@ pub(crate) mod tests {
                 "object": {
                    "key": "key",
                    "size": 0,
-                   "eTag": "d41d8cd98f00b204e9800998ecf8427e",
+                   "eTag": EXPECTED_E_TAG,
                    "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
-                   "sequencer": "0055AED6DCD90281E5"
+                   "sequencer": EXPECTED_SEQUENCER_CREATED
                 }
             },
             "glacierEventData": {
@@ -567,9 +565,9 @@ pub(crate) mod tests {
             "object": {
                "key": "key",
                "size": 0,
-               "eTag": "d41d8cd98f00b204e9800998ecf8427e",
+               "eTag": EXPECTED_E_TAG,
                "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
-               "sequencer": "0055AED6DCD90281E5"
+               "sequencer": EXPECTED_SEQUENCER_CREATED
             }
         });
 
@@ -591,9 +589,9 @@ pub(crate) mod tests {
             "object": {
                "key": "key",
                "size": 0,
-               "eTag": "d41d8cd98f00b204e9800998ecf8427e",
+               "eTag": EXPECTED_E_TAG,
                "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
-               "sequencer": "0055AED6DCD90281E6"
+               "sequencer": EXPECTED_SEQUENCER_DELETED
             }
         });
 
