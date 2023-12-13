@@ -1,6 +1,6 @@
 //! The filemanager crate is the primary library code used by other crates to handle filemanager
 //! logic.
-//! 
+//!
 
 pub mod clients;
 pub mod database;

@@ -1,11 +1,10 @@
 //! This module handles connecting to the filemanager database for actions such as ingesting events.
 //!
 
+use crate::env::read_env;
 use async_trait::async_trait;
 use sqlx::PgPool;
-use std::env;
 
-use crate::error::Error::MissingDatabaseUrl;
 use crate::error::Result;
 use crate::events::EventType;
 
@@ -25,10 +24,8 @@ impl Client {
 
     /// Create a database with default DATABASE_URL connection.
     pub async fn default() -> Result<Self> {
-        let url = env::var("DATABASE_URL").map_err(|err| MissingDatabaseUrl(err.to_string()))?;
-
         Ok(Self {
-            pool: PgPool::connect(&url).await?,
+            pool: PgPool::connect(&read_env("DATABASE_URL")?).await?,
         })
     }
 

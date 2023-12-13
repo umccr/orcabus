@@ -1,5 +1,5 @@
 //! Convert S3 events for the database.
-//! 
+//!
 
 use std::cmp::Ordering;
 

@@ -2,12 +2,12 @@
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
-use crate::error::Error::{DeserializeError, MissingSQSUrl, SQSReceiveError};
+use crate::env::read_env;
+use crate::error::Error::{DeserializeError, SQSReceiveError};
 use crate::error::Result;
 use crate::events::aws::collecter::Collecter;
 use crate::events::aws::FlatS3EventMessages;
 use mockall_double::double;
-use std::env;
 use tracing::trace;
 
 /// Build an AWS collector struct.
@@ -83,7 +83,7 @@ impl CollecterBuilder {
         let url = if let Some(url) = url {
             url
         } else {
-            env::var("SQS_QUEUE_URL").map_err(|err| MissingSQSUrl(err.to_string()))?
+            read_env("SQS_QUEUE_URL")?
         };
 
         let client = self.sqs_client.take();

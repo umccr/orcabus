@@ -1,11 +1,15 @@
 //! Handle environment variables.
 //!
 
+use std::ffi::OsStr;
 use std::{
     env,
     fmt::{self},
 };
 
+use crate::error::Result;
+
+use crate::error::Error::MissingEnvironmentVariable;
 use dotenvy;
 use tracing::{error, info};
 
@@ -36,6 +40,11 @@ pub fn load_env() -> AppEnv {
     };
 
     app_env
+}
+
+/// Read an environment variable into a string.
+pub fn read_env<K: AsRef<OsStr>>(key: K) -> Result<String> {
+    env::var(key).map_err(|err| MissingEnvironmentVariable(err.to_string()))
 }
 
 impl fmt::Display for AppEnv {
