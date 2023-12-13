@@ -1,4 +1,4 @@
-use crate::clients::config::Config;
+use crate::clients::aws::config::Config;
 use aws_sdk_sqs as sqs;
 use aws_sdk_sqs::error::SdkError;
 use aws_sdk_sqs::operation::receive_message::{ReceiveMessageError, ReceiveMessageOutput};
@@ -23,7 +23,7 @@ impl Client {
 
     /// Create an SQS client with default config.
     pub async fn with_defaults() -> Self {
-        Self::new(sqs::Client::new(&Config::default().load().await))
+        Self::new(sqs::Client::new(&Config::with_defaults().load().await))
     }
 
     /// Execute the `ReceiveMessage` operation.

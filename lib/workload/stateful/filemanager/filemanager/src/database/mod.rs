@@ -6,7 +6,7 @@ use crate::error::Error::MissingDatabaseUrl;
 use crate::error::Result;
 use crate::events::EventType;
 
-pub mod s3;
+pub mod aws;
 
 /// A database client handles database interaction.
 #[derive(Debug)]

@@ -1,11 +1,11 @@
 #[double]
-use crate::clients::s3::Client as S3Client;
+use crate::clients::aws::s3::Client as S3Client;
 #[double]
-use crate::clients::sqs::Client as SQSClient;
+use crate::clients::aws::sqs::Client as SQSClient;
 use crate::error::Error::{DeserializeError, MissingSQSUrl, SQSReceiveError};
 use crate::error::Result;
-use crate::events::s3::collecter::Collecter;
-use crate::events::s3::FlatS3EventMessages;
+use crate::events::aws::collecter::Collecter;
+use crate::events::aws::FlatS3EventMessages;
 use mockall_double::double;
 use std::env;
 use tracing::trace;
@@ -32,8 +32,13 @@ impl CollecterBuilder {
     }
 
     /// Build with the SQS url.
-    pub fn with_sqs_url(mut self, url: impl Into<String>) -> Self {
-        self.sqs_url = Some(url.into());
+    pub fn with_sqs_url(self, url: impl Into<String>) -> Self {
+        self.set_sqs_url(Some(url))
+    }
+
+    /// Set the SQS url to build with.
+    pub fn set_sqs_url(mut self, url: Option<impl Into<String>>) -> Self {
+        self.sqs_url = url.map(|url| url.into());
         self
     }
 
@@ -94,11 +99,11 @@ impl CollecterBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::events::s3::collecter::tests::{
+    use crate::events::aws::collecter::tests::{
         assert_collected_events, set_s3_client_expectations,
     };
-    use crate::events::s3::collector_builder::CollecterBuilder;
-    use crate::events::s3::tests::{expected_event_record, expected_flat_events};
+    use crate::events::aws::collector_builder::CollecterBuilder;
+    use crate::events::aws::tests::{expected_event_record, expected_flat_events};
     use crate::events::Collect;
     use aws_sdk_sqs::operation::receive_message::ReceiveMessageOutput;
     use aws_sdk_sqs::types::builders::MessageBuilder;

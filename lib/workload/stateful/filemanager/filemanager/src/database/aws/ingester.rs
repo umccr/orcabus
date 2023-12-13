@@ -5,8 +5,8 @@ use tracing::trace;
 
 use crate::database::{Client, Ingest};
 use crate::error::Result;
-use crate::events::s3::StorageClass;
-use crate::events::s3::{Events, TransposedS3EventMessages};
+use crate::events::aws::StorageClass;
+use crate::events::aws::{Events, TransposedS3EventMessages};
 use crate::events::EventType;
 
 /// An ingester for S3 events.
@@ -109,10 +109,10 @@ impl Ingest for Ingester {
 
 #[cfg(test)]
 mod tests {
-    use crate::database::s3::ingester::Ingester;
+    use crate::database::aws::ingester::Ingester;
     use crate::database::{Client, Ingest};
-    use crate::events::s3::tests::expected_events;
-    use crate::events::s3::{Events, StorageClass};
+    use crate::events::aws::tests::expected_events;
+    use crate::events::aws::{Events, StorageClass};
     use crate::events::EventType;
     use chrono::{DateTime, Utc};
     use sqlx::postgres::PgRow;

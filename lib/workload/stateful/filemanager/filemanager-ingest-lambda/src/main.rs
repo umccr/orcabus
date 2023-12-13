@@ -5,10 +5,10 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use filemanager::database::s3::ingester::Ingester;
+use filemanager::database::aws::ingester::Ingester;
 use filemanager::database::Ingest;
-use filemanager::events::s3::collector_builder::CollecterBuilder;
-use filemanager::events::s3::FlatS3EventMessages;
+use filemanager::events::aws::collector_builder::CollecterBuilder;
+use filemanager::events::aws::FlatS3EventMessages;
 use filemanager::events::Collect;
 
 /// Handle SQS events that are passed directly to a lambda function.

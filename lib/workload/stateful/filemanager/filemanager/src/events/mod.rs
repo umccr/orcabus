@@ -4,9 +4,9 @@
 use async_trait::async_trait;
 
 use crate::error::Result;
-use crate::events::s3::Events;
+use crate::events::aws::Events;
 
-pub mod s3;
+pub mod aws;
 
 /// This trait processes raw events into a common type that can easily be consumed by the database.
 #[async_trait]

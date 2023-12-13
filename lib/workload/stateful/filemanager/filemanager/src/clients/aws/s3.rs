@@ -1,4 +1,4 @@
-use crate::clients::config::Config;
+use crate::clients::aws::config::Config;
 use aws_sdk_s3 as s3;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
@@ -23,7 +23,7 @@ impl Client {
 
     /// Create an S3 client with default config.
     pub async fn with_defaults() -> Self {
-        Self::new(s3::Client::new(&Config::default().load().await))
+        Self::new(s3::Client::new(&Config::with_defaults().load().await))
     }
 
     /// Execute the `ListBuckets` operation.

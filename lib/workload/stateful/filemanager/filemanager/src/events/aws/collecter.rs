@@ -1,5 +1,5 @@
 #[double]
-use crate::clients::s3::Client;
+use crate::clients::aws::s3::Client;
 use crate::error::Error::S3Error;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
@@ -10,7 +10,7 @@ use mockall_double::double;
 use tracing::trace;
 
 use crate::error::Result;
-use crate::events::s3::{Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
+use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::events::{Collect, EventType};
 
 /// Collect raw events into the processed form which the database module accepts.
@@ -108,9 +108,9 @@ impl Collect for Collecter {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::events::s3::collecter::Collecter;
-    use crate::events::s3::tests::expected_flat_events;
-    use crate::events::s3::StorageClass::Standard;
+    use crate::events::aws::collecter::Collecter;
+    use crate::events::aws::tests::expected_flat_events;
+    use crate::events::aws::StorageClass::Standard;
     use aws_sdk_s3::error::SdkError;
     use aws_sdk_s3::primitives::{DateTimeFormat, SdkBody};
     use aws_sdk_s3::types;

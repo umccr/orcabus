@@ -408,7 +408,7 @@ impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::events::s3::{Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage};
+    use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage};
     use chrono::{DateTime, Utc};
     use serde_json::json;
 
