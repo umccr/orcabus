@@ -25,8 +25,7 @@ new FilemanagerStack(
 
       // Additionally speed up builds by removing debug info. Please enable this if required.
       CARGO_PROFILE_RELEASE_DEBUG: 'false',
-      // Add SCCACHE to speed up compilation. FIXME: Not cross-platform right now as it's defined here :/
-      RUSTC_WRAPPER: '/opt/homebrew/bin/sccache',
+      RUSTC_WRAPPER: `${process.env.HOME}/.cargo/bin/sccache`,
     },
   },
   {
