@@ -5,12 +5,12 @@ import { RustFunction, Settings as CargoSettings } from 'rust.aws-cdk-lambda';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as rds from 'aws-cdk-lib/aws-rds';
-import { CfnBucket } from 'aws-cdk-lib/aws-s3';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaDestinations from 'aws-cdk-lib/aws-lambda-destinations';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 
 /**
  * Common settings for the filemanager stack.
@@ -46,22 +46,8 @@ export class FilemanagerStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
-    const cfnBucket = testBucket.node.defaultChild as CfnBucket;
-    cfnBucket.notificationConfiguration = {
-      queueConfigurations: [
-        {
-          event: 's3:ObjectCreated:*',
-          queue: queue.queueArn,
-        },
-        {
-          event: 's3:ObjectRemoved:*',
-          queue: queue.queueArn,
-        },
-      ],
-    };
-
-    // testBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(queue));
-    // testBucket.addEventNotification(s3.EventType.OBJECT_REMOVED, new s3n.SqsDestination(queue));
+    testBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(queue));
+    testBucket.addEventNotification(s3.EventType.OBJECT_REMOVED, new s3n.SqsDestination(queue));
 
     lambdaRole.addManagedPolicy(
       iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaSQSQueueExecutionRole')
