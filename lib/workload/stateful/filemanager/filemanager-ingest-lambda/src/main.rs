@@ -1,45 +1,11 @@
 use aws_lambda_events::sqs::SqsEvent;
+use filemanager::clients::aws::s3::Client;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-use tracing::trace;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use filemanager::database::s3::ingester::Ingester;
-use filemanager::database::Ingest;
-use filemanager::events::s3::collect::Collecter;
-use filemanager::events::s3::FlatS3EventMessages;
-use filemanager::events::Collect;
-
-/// Handle SQS events that are passed directly to a lambda function.
-async fn event_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
-    trace!("received event: {:?}", event);
-
-    let events: FlatS3EventMessages = event
-        .payload
-        .records
-        .into_iter()
-        .filter_map(|event| {
-            event.body.map(|body| {
-                let body: FlatS3EventMessages = serde_json::from_str(&body)?;
-                Ok(body)
-            })
-        })
-        .collect::<Result<Vec<FlatS3EventMessages>, Error>>()?
-        .into();
-
-    trace!("flattened events: {:?}", events);
-
-    let events = Collecter::with_defaults(events).await?.collect().await?;
-
-    trace!("ingesting events: {:?}", events);
-
-    let mut ingester = Ingester::new_with_defaults().await?;
-    trace!("ingester: {:?}", ingester);
-    ingester.ingest(events).await?;
-
-    Ok(())
-}
+use filemanager::handlers::aws::ingest_event;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -50,5 +16,10 @@ async fn main() -> Result<(), Error> {
         .with(env_filter)
         .init();
 
-    run(service_fn(event_handler)).await
+    run(service_fn(|event: LambdaEvent<SqsEvent>| async move {
+        ingest_event(event.payload, Client::with_defaults().await, None).await?;
+
+        Ok::<(), Error>(())
+    }))
+    .await
 }

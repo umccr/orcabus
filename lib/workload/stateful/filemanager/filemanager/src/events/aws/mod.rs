@@ -1,3 +1,6 @@
+//! Convert S3 events for the database.
+//!
+
 use std::cmp::Ordering;
 
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;
@@ -10,12 +13,11 @@ use crate::error::Error;
 use crate::error::Error::DeserializeError;
 use crate::error::Result;
 
-pub mod collect;
-pub mod s3_client;
-pub mod sqs_client;
+pub mod collecter;
+pub mod collector_builder;
 
 /// A wrapper around AWS storage types with sqlx support.
-#[derive(Debug, Eq, PartialEq, sqlx::Type)]
+#[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type)]
 #[sqlx(type_name = "storage_class")]
 pub enum StorageClass {
     DeepArchive,
@@ -55,9 +57,10 @@ impl StorageClass {
     }
 }
 
-/// AWS S3 events with fields transposed
-/// TODO: Document why we need those 'transposed'
-#[derive(Debug, Eq, PartialEq, Default)]
+/// AWS S3 events with fields transposed. Transposed events are used because this matches the
+/// unnest structure when inserting events into the database. This is convenient to do here so that
+/// the database structs do not have to perform this conversion.
+#[derive(Debug, Eq, PartialEq, Default, Clone)]
 pub struct TransposedS3EventMessages {
     pub object_ids: Vec<Uuid>,
     pub event_times: Vec<DateTime<Utc>>,
@@ -197,6 +200,8 @@ impl FlatS3EventMessages {
 }
 
 impl Ord for FlatS3EventMessage {
+    /// Ordering is implemented so that the sequencer values are considered when the bucket and the
+    /// key are the same.
     fn cmp(&self, other: &Self) -> Ordering {
         // If the sequencer values are present and the bucket and key are the same.
         if let (Some(self_sequencer), Some(other_sequencer)) =
@@ -211,6 +216,8 @@ impl Ord for FlatS3EventMessage {
                     &self.key,
                     &self.size,
                     &self.e_tag,
+                    &self.storage_class,
+                    &self.last_modified_date,
                 )
                     .cmp(&(
                         other_sequencer,
@@ -220,6 +227,8 @@ impl Ord for FlatS3EventMessage {
                         &other.key,
                         &other.size,
                         &other.e_tag,
+                        &other.storage_class,
+                        &other.last_modified_date,
                     ));
             }
         }
@@ -232,6 +241,8 @@ impl Ord for FlatS3EventMessage {
             &self.size,
             &self.e_tag,
             &self.sequencer,
+            &self.storage_class,
+            &self.last_modified_date,
         )
             .cmp(&(
                 &other.event_time,
@@ -241,18 +252,37 @@ impl Ord for FlatS3EventMessage {
                 &other.size,
                 &other.e_tag,
                 &other.sequencer,
+                &other.storage_class,
+                &other.last_modified_date,
             ))
     }
 }
 
 impl PartialOrd for FlatS3EventMessage {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // Total ordering.
         Some(self.cmp(other))
     }
 }
 
+impl PartialEq for FlatS3EventMessage {
+    /// Equality is implemented normally except the object_id and portal_run_id are ignored,
+    /// as these are newly derived for each event.
+    fn eq(&self, other: &Self) -> bool {
+        // Must be consistent with PartialOrd
+        self.event_time == other.event_time
+            && self.event_name == other.event_name
+            && self.bucket == other.bucket
+            && self.key == other.key
+            && self.size == other.size
+            && self.e_tag == other.e_tag
+            && self.storage_class == other.storage_class
+            && self.last_modified_date == other.last_modified_date
+    }
+}
+
 /// A flattened AWS S3 record
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq)]
 pub struct FlatS3EventMessage {
     pub object_id: Uuid,
     pub event_time: DateTime<Utc>,
@@ -376,5 +406,202 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
 impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
     fn from(messages: Vec<FlatS3EventMessages>) -> Self {
         FlatS3EventMessages(messages.into_iter().flat_map(|message| message.0).collect())
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage};
+    use chrono::{DateTime, Utc};
+    use serde_json::json;
+
+    pub(crate) const EXPECTED_SEQUENCER_CREATED: &str = "0055AED6DCD90281E5"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_SEQUENCER_DELETED: &str = "0055AED6DCD90281E6"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_E_TAG: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
+
+    #[test]
+    fn test_flat_events() {
+        let result = expected_flat_events();
+        let mut result = result.into_inner().into_iter();
+
+        let first = result.next().unwrap();
+        assert_flat_s3_event(first, "ObjectRemoved:Delete", EXPECTED_SEQUENCER_DELETED);
+
+        let second = result.next().unwrap();
+        assert_flat_s3_event(second, "ObjectCreated:Put", EXPECTED_SEQUENCER_CREATED);
+
+        let third = result.next().unwrap();
+        assert_flat_s3_event(third, "ObjectCreated:Put", EXPECTED_SEQUENCER_CREATED);
+    }
+
+    #[test]
+    fn test_sort_and_dedup() {
+        let result = expected_flat_events().sort_and_dedup();
+        let mut result = result.into_inner().into_iter();
+
+        let first = result.next().unwrap();
+        assert_flat_s3_event(first, "ObjectCreated:Put", EXPECTED_SEQUENCER_CREATED);
+
+        let second = result.next().unwrap();
+        assert_flat_s3_event(second, "ObjectRemoved:Delete", EXPECTED_SEQUENCER_DELETED);
+    }
+
+    fn assert_flat_s3_event(event: FlatS3EventMessage, event_name: &str, sequencer: &str) {
+        assert_eq!(event.event_time, DateTime::<Utc>::default());
+        assert_eq!(event.event_name, event_name);
+        assert_eq!(event.bucket, "bucket");
+        assert_eq!(event.key, "key");
+        assert_eq!(event.size, 0);
+        assert_eq!(event.e_tag, EXPECTED_E_TAG); // pragma: allowlist secret
+        assert_eq!(event.sequencer, Some(sequencer.to_string()));
+        assert!(event.portal_run_id.starts_with("19700101"));
+        assert_eq!(event.storage_class, None);
+        assert_eq!(event.last_modified_date, None);
+    }
+
+    #[test]
+    fn test_events() {
+        let result = expected_events();
+
+        assert_eq!(
+            result.object_created.event_times[0],
+            DateTime::<Utc>::default()
+        );
+        assert_eq!(result.object_created.event_names[0], "ObjectCreated:Put");
+        assert_eq!(result.object_created.buckets[0], "bucket");
+        assert_eq!(result.object_created.keys[0], "key");
+        assert_eq!(result.object_created.sizes[0], 0);
+        assert_eq!(result.object_created.e_tags[0], EXPECTED_E_TAG);
+        assert_eq!(
+            result.object_created.sequencers[0],
+            Some(EXPECTED_SEQUENCER_CREATED.to_string())
+        );
+        assert!(result.object_created.portal_run_ids[0].starts_with("19700101"));
+        assert_eq!(result.object_created.storage_classes[0], None);
+        assert_eq!(result.object_created.last_modified_dates[0], None);
+
+        assert_eq!(
+            result.object_removed.event_times[0],
+            DateTime::<Utc>::default()
+        );
+        assert_eq!(result.object_removed.event_names[0], "ObjectRemoved:Delete");
+        assert_eq!(result.object_removed.buckets[0], "bucket");
+        assert_eq!(result.object_removed.keys[0], "key");
+        assert_eq!(result.object_removed.sizes[0], 0);
+        assert_eq!(result.object_removed.e_tags[0], EXPECTED_E_TAG);
+        assert_eq!(
+            result.object_removed.sequencers[0],
+            Some(EXPECTED_SEQUENCER_DELETED.to_string())
+        );
+        assert!(result.object_removed.portal_run_ids[0].starts_with("19700101"));
+        assert_eq!(result.object_removed.storage_classes[0], None);
+        assert_eq!(result.object_removed.last_modified_dates[0], None);
+    }
+
+    pub(crate) fn expected_flat_events() -> FlatS3EventMessages {
+        let events: S3EventMessage = serde_json::from_str(&expected_event_record()).unwrap();
+        events.try_into().unwrap()
+    }
+
+    pub(crate) fn expected_events() -> Events {
+        let events = expected_flat_events().sort_and_dedup();
+        events.try_into().unwrap()
+    }
+
+    pub(crate) fn expected_event_record() -> String {
+        let object = json!({
+            "eventVersion": "2.2",
+            "eventSource": "aws:s3",
+            "awsRegion": "us-west-2",
+            "userIdentity": {
+                "principalId": "123456789012"
+            },
+            "requestParameters": {
+                "sourceIPAddress": "127.0.0.1"
+            },
+            "responseElements": {
+            "x-amz-request-id": "C3D13FE58DE4C810", // pragma: allowlist secret
+                "x-amz-id-2": "FMyUVURIY8/IgAtTv8xRjskZQpcIZ9KG4V5Wp6S7S/JRWeUWerMUE5JgHvANOjpD" // pragma: allowlist secret
+            },
+            "s3": {
+                "s3SchemaVersion": "1.0",
+                "configurationId": "testConfigRule",
+                "bucket": {
+                   "name": "bucket",
+                   "ownerIdentity": {
+                      "principalId":"123456789012"
+                   },
+                   "arn": "arn:aws:s3:::bucket"
+                },
+                "object": {
+                   "key": "key",
+                   "size": 0,
+                   "eTag": EXPECTED_E_TAG,
+                   "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
+                   "sequencer": EXPECTED_SEQUENCER_CREATED
+                }
+            },
+            "glacierEventData": {
+                "restoreEventData": {
+                   "lifecycleRestorationExpiryTime": "1970-01-01T00:00:00.000Z",
+                   "lifecycleRestoreStorageClass": "Standard"
+                }
+            }
+        });
+
+        let mut object_created = object.clone();
+        object_created["eventTime"] = json!("1970-01-01T00:00:00.000Z");
+        object_created["eventName"] = json!("ObjectCreated:Put");
+        object_created["s3"] = json!({
+            "s3SchemaVersion": "1.0",
+            "configurationId": "testConfigRule",
+            "bucket": {
+               "name": "bucket",
+               "ownerIdentity": {
+                  "principalId":"123456789012"
+               },
+               "arn": "arn:aws:s3:::bucket"
+            },
+            "object": {
+               "key": "key",
+               "size": 0,
+               "eTag": EXPECTED_E_TAG,
+               "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
+               "sequencer": EXPECTED_SEQUENCER_CREATED
+            }
+        });
+
+        let object_created_duplicate = object_created.clone();
+
+        let mut object_removed = object;
+        object_removed["eventTime"] = json!("1970-01-01T00:00:00.000Z");
+        object_removed["eventName"] = json!("ObjectRemoved:Delete");
+        object_removed["s3"] = json!({
+            "s3SchemaVersion": "1.0",
+            "configurationId": "testConfigRule",
+            "bucket": {
+               "name": "bucket",
+               "ownerIdentity": {
+                  "principalId":"123456789012"
+               },
+               "arn": "arn:aws:s3:::bucket"
+            },
+            "object": {
+               "key": "key",
+               "size": 0,
+               "eTag": EXPECTED_E_TAG,
+               "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
+               "sequencer": EXPECTED_SEQUENCER_DELETED
+            }
+        });
+
+        json!({
+           "Records": [
+                object_removed,
+                object_created,
+                object_created_duplicate,
+           ]
+        })
+        .to_string()
     }
 }

@@ -10,4 +10,4 @@ members = [
 [workspace.package]
 license = "MIT"
 edition = "2021"
-authors = ["Marko Malenic <mmalenic1@gmail.com", "Roman Valls Guimera <brainstorm@nopcode.org>"]
+authors = ["Marko Malenic <mmalenic1@gmail.com>", "Roman Valls Guimera <brainstorm@nopcode.org>"]

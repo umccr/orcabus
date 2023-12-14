@@ -1,3 +1,6 @@
+//! Errors used by the crate.
+//!
+
 use std::result;
 
 use sqlx::migrate::MigrateError;
@@ -26,6 +29,10 @@ pub enum Error {
     DeserializeError(String),
     #[error("Db client error: `{0}`")]
     DbClientError(String),
+    #[error("Missing SQS URL: `{0}`")]
+    MissingSQSUrl(String),
+    #[error("Missing environment variable: `{0}`")]
+    MissingEnvironmentVariable(String),
     #[error("S3 object not found: `{0}`")]
     S3ObjectNotFound(String),
     #[error("S3 error: `{0}`")]

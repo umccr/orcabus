@@ -36,32 +36,32 @@ cargo install cargo-watch sqlx-cli
 cargo build --all-targets --all-features
 ```
 
-Test with:
-
-```sh
-cargo test --all-targets
-```
-
-Formatting and clippy:
-
-```sh
-cargo clippy --all-targets
-cargo fmt
-```
-
 ## Local development
+
+Unit tests can be run with:
+
+```sh
+cargo test --all-targets --all-features
+```
 
 See the [deploy][deploy] directory for the cdk infrastructure code.
 
-In a nutshell, a filemanager developer only needs to run the following:
+In a nutshell, a filemanager developer only needs to run the following to automatically recompile changes and re-deploy the changes:
 
 ```sh
 ./scripts/watch.sh
 ```
 
-To automatically recompile changes and re-deploy the changes.
 
 Please don't use `scripts/deploy.sh` on production deployments, it is only meant for development.
+
+Formatting and clippy should also be run before committing changes:
+
+```sh
+cargo clippy --all-targets --all-features
+cargo fmt
+```
+
 
 ## Database
 
@@ -75,3 +75,19 @@ Alternatively, just `brew install dbeaver-community` to easily browse the databa
 
 [deploy]: ./deploy
 [env-example]: .env.example
+
+## Project Layout
+
+The project is divided into multiple crates that serve different functionality.
+
+* [filemanager]: This is the bulk of the filemanager logic, and handles database connections and event processing.
+* [filemanager-http-lambda]: This is a Lambda function which calls the SQS queue manually to ingest events.
+* [filemanager-ingest-lambda]: This is a Lambda function which ingests events directly passed from an SQS queue.
+* [deploy]: CDK deployment code.
+* [database]: Database migration files and queries.
+
+[filemanager]: filemanager
+[filemanager-http-lambda]: filemanager-http-lambda
+[filemanager-ingest-lambda]: filemanager-ingest-lambda
+[deploy]: deploy
+[database]: database

@@ -1,30 +1,31 @@
+//! This module handles connecting to the filemanager database for actions such as ingesting events.
+//!
+
+use crate::env::read_env;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
-use crate::error::Error::DbClientError;
 use crate::error::Result;
 use crate::events::EventType;
 
-pub mod s3;
+pub mod aws;
 
 /// A database client handles database interaction.
 #[derive(Debug)]
-pub struct DbClient {
+pub struct Client {
     pool: PgPool,
 }
 
-impl DbClient {
+impl Client {
     /// Create a database from an existing pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
     /// Create a database with default DATABASE_URL connection.
-    pub async fn new_with_defaults() -> Result<Self> {
-        let url = std::env::var("DATABASE_URL").map_err(|err| DbClientError(err.to_string()))?;
-
+    pub async fn default() -> Result<Self> {
         Ok(Self {
-            pool: PgPool::connect(&url).await?,
+            pool: PgPool::connect(&read_env("DATABASE_URL")?).await?,
         })
     }
 
