@@ -2,14 +2,13 @@
 
 The filemanager ingests events from cloud storage like S3 and maintains a queryable table of objects.
 
-This project is split up into multiple crates in a workspace. For development, docker is used, which enables localstack and a postgres database.
+This project is split up into multiple crates in a workspace. For development, docker is used, which enables a postgres database, the rest of the stack is developed against an AWS account.
 
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Rust](https://www.rust-lang.org/tools/install)
 - [npm](https://www.npmjs.com/get-npm)
-- [awslocal](https://github.com/localstack/awscli-local)
 
 ## Rust code development
 
@@ -27,18 +26,14 @@ Filemanager uses docker to run a postgres database to track objects. This means 
 running inside the docker compose container. If there are additional postgres installations locally (outside of docker),
 this might interfere and complain about non-existing roles and users.
 
+### Tooling prerequisites, testing and building the code
+
 For development of the rust workspace, install a build cache (sccache) and build manually:
 
 ```sh
 brew install sccache && export RUSTC_WRAPPER=`which sccache`
+cargo install cargo-watch sqlx-cli
 cargo build --all-targets --all-features
-```
-
-Or watch and automatically recompile changes:
-
-```sh
-cargo install cargo-watch     # if not installed previously
-cargo watch -c
 ```
 
 Test with:
@@ -54,32 +49,19 @@ cargo clippy --all-targets
 cargo fmt
 ```
 
-## Localstack development
+## Local development
 
-Localstack enables deploying and testing AWS services locally. See the [deploy][deploy] directory
-for the cdk infrastructure code.
+See the [deploy][deploy] directory for the cdk infrastructure code.
 
-## Setup and deployment
-
-For localstack testing and development:
+In a nutshell, a filemanager developer only needs to run the following:
 
 ```sh
-docker compose up
+./scripts/watch.sh
 ```
 
-Then deploy the cdk to localstack:
+To automatically recompile changes and re-deploy the changes.
 
-```sh
-./scripts deploy.sh
-```
-
-It's possible that a profile called "default" in `~/.aws/config` could interfere with awslocal. A recommended `~/.aws/credentials` that works with localstack's dummy `0000000000` AWS account would look like this:
-
-```
-[default]
-aws_access_key_id = access_key
-aws_secret_access_key = secret_key
-```
+Please don't use `scripts/deploy.sh` on production deployments, it is only meant for development.
 
 ## Database
 
@@ -88,6 +70,8 @@ A shortcut for connecting to the docker database and inspecting its contents:
 ```bash
 docker exec -it filemanager_db psql filemanager -U filemanager
 ```
+
+Alternatively, just `brew install dbeaver-community` to easily browse the database contents (or any other DB viewer you prefer).
 
 [deploy]: ./deploy
 [env-example]: .env.example

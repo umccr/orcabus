@@ -2,7 +2,7 @@
   "name": "filemanager",
   "version": "0.1",
   "bin": {
-    "filemanager-localstack": "localstack/filemanager_localstack.js"
+    "filemanager-stack": "stack/filemanager_stack.js"
   },
   "scripts": {
     "build": "tsc",
@@ -11,16 +11,15 @@
   },
   "devDependencies": {
     "@types/node": "^20.5.9",
-    "aws-cdk": "^2.109.0",
-    "aws-cdk-local": "^2.18.0",
+    "aws-cdk": "^2.114.1",
     "prettier": "3.0.3",
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@aws-cdk/aws-apigatewayv2-alpha": "^2.110.0-alpha.0",
-    "@aws-cdk/aws-apigatewayv2-authorizers-alpha": "^2.110.0-alpha.0",
-    "@aws-cdk/aws-apigatewayv2-integrations-alpha": "^2.110.0-alpha.0",
-    "aws-cdk-lib": "^2.110.0",
+    "@aws-cdk/aws-apigatewayv2-alpha": "^2.114.1-alpha.0",
+    "@aws-cdk/aws-apigatewayv2-authorizers-alpha": "^2.114.1-alpha.0",
+    "@aws-cdk/aws-apigatewayv2-integrations-alpha": "^2.114.1-alpha.0",
+    "aws-cdk-lib": "^2.114.1",
     "constructs": "^10.3.0",
     "dotenv": "^16.3.1",
     "rust.aws-cdk-lambda": "^1.2.1",
