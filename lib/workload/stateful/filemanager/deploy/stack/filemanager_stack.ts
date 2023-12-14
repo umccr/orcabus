@@ -18,7 +18,6 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 interface Settings {
   database_url: string;
   endpoint_url?: string;
-  force_path_style: boolean; //FIXME: Does this refer to buckets? We cannot do this forever as AWS will move to domain style?
   stack_name: string;
   buildEnvironment?: NodeJS.ProcessEnv;
 }
@@ -89,7 +88,6 @@ export class FilemanagerStack extends Stack {
       environment: {
         DATABASE_URL: settings.database_url,
         ...(settings.endpoint_url && { ENDPOINT_URL: settings.endpoint_url }),
-        FORCE_PATH_STYLE: settings.force_path_style.toString(),
         SQS_QUEUE_URL: queue.queueUrl,
         RUST_LOG: 'info,filemanager_ingest_lambda=trace,filemanager=trace',
       },
