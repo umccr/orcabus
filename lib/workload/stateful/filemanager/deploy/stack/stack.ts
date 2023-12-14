@@ -25,7 +25,8 @@ new FilemanagerStack(
 
       // Additionally speed up builds by removing debug info. Please enable this if required.
       CARGO_PROFILE_RELEASE_DEBUG: 'false',
-      RUSTC_WRAPPER: `${process.env.HOME}/.cargo/bin/sccache`,
+      // Use sccache if it is present in the wrapper env.
+      RUSTC_WRAPPER: process.env.RUSTC_WRAPPER,
     },
   },
   {

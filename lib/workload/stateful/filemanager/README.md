@@ -28,10 +28,21 @@ this might interfere and complain about non-existing roles and users.
 
 ### Tooling prerequisites, testing and building the code
 
-For development of the rust workspace, install a build cache (sccache) and build manually:
+For development of the rust workspace, it's recommended to install a build cache (sccache) to improve compilation speeds:
 
 ```sh
 brew install sccache && export RUSTC_WRAPPER=`which sccache`
+```
+
+or 
+
+```sh
+cargo install sccache && export RUSTC_WRAPPER=`which sccache`
+```
+
+Then install build prerequisites to build:
+
+```sh
 cargo install cargo-watch sqlx-cli
 cargo build --all-targets --all-features
 ```
