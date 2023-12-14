@@ -1,4 +1,4 @@
-import { Duration, RemovalPolicy, Stack, StackProps, Tags, Environment } from 'aws-cdk-lib';
+import { Duration, RemovalPolicy, Stack, StackProps, Tags } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { RustFunction, Settings as CargoSettings } from 'rust.aws-cdk-lambda';
@@ -10,7 +10,7 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaDestinations from 'aws-cdk-lib/aws-lambda-destinations';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { STACK_NAME } from './stack';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 
 /**
  * Common settings for the filemanager stack.
@@ -124,15 +124,29 @@ export class FilemanagerStack extends Stack {
       ],
     });
 
+    // Secret
+    new secretsmanager.Secret(this, 'filemanager_db_secret', {
+      secretName: 'filemanager_db_secret', // pragma: allowlist secret
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({ username: 'filemanager' }),
+        excludePunctuation: true,
+        generateStringKey: 'password',
+      },
+    });
+
     // RDS
     new rds.DatabaseCluster(this, 'Database', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
         version: rds.AuroraPostgresEngineVersion.VER_15_3,
       }),
+      defaultDatabaseName: 'filemanager',
+      credentials: rds.Credentials.fromGeneratedSecret('filemanager_db_secret'),
+      removalPolicy: RemovalPolicy.DESTROY,
       serverlessV2MinCapacity: 0.5,
       serverlessV2MaxCapacity: 3,
+      monitoringInterval: Duration.seconds(60),
       writer: rds.ClusterInstance.serverlessV2('writer'),
-      //readers: [rds.ClusterInstance.serverlessV2('reader')],
+      readers: [rds.ClusterInstance.serverlessV2('reader')],
       vpc,
     });
   }
