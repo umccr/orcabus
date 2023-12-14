@@ -135,7 +135,7 @@ export class FilemanagerStack extends Stack {
     // RDS
     new rds.DatabaseCluster(this, 'Database', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_15_3,
+        version: rds.AuroraPostgresEngineVersion.VER_15_4,
       }),
       defaultDatabaseName: 'filemanager',
       credentials: rds.Credentials.fromGeneratedSecret('filemanager_db_secret'),
