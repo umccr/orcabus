@@ -119,18 +119,13 @@ export class FilemanagerStack extends Stack {
     });
 
     // RDS
-    new rds.DatabaseCluster(this, 'Database', {
+    new rds.ServerlessCluster(this, 'Database', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
         version: rds.AuroraPostgresEngineVersion.VER_15_4,
       }),
       defaultDatabaseName: 'filemanager',
       credentials: rds.Credentials.fromGeneratedSecret('filemanager_db_secret'),
       removalPolicy: RemovalPolicy.DESTROY,
-      serverlessV2MinCapacity: 0.5,
-      serverlessV2MaxCapacity: 3,
-      monitoringInterval: Duration.seconds(60),
-      writer: rds.ClusterInstance.serverlessV2('writer'),
-      readers: [rds.ClusterInstance.serverlessV2('reader')],
       vpc,
     });
   }
