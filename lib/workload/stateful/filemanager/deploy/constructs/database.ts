@@ -160,7 +160,6 @@ export class Database extends Construct {
 
   /**
    * Get the connection string. Unsafe because it contains the username and password.
-   * Todo might be better to use secret manager within the Lambda to fetch the connection string.
    */
   get unsafeConnection(): string {
     return this._unsafeConnection;
