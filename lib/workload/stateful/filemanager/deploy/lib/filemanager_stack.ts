@@ -4,7 +4,6 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import { RustFunction, Settings as CargoSettings } from 'rust.aws-cdk-lambda';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as rds from 'aws-cdk-lib/aws-rds';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaDestinations from 'aws-cdk-lib/aws-lambda-destinations';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
@@ -88,7 +87,7 @@ export class FilemanagerStack extends Stack {
 
     // VPC
     //const vpc = ec2.Vpc.fromLookup(this, 'main-vpc', { isDefault: false });
-    const vpc = new ec2.Vpc(this, 'vpc', {
+    new ec2.Vpc(this, 'vpc', {
       ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/24'),
       maxAzs: 99, // As many as there are available in the region
       natGateways: 1,
@@ -116,17 +115,6 @@ export class FilemanagerStack extends Stack {
         excludePunctuation: true,
         generateStringKey: 'password',
       },
-    });
-
-    // RDS
-    new rds.ServerlessCluster(this, 'Database', {
-      engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_13_12,
-      }),
-      defaultDatabaseName: 'filemanager',
-      credentials: rds.Credentials.fromGeneratedSecret('filemanager_db_secret'),
-      removalPolicy: RemovalPolicy.DESTROY,
-      vpc,
     });
   }
 }

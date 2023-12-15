@@ -2,7 +2,7 @@
   "name": "filemanager",
   "version": "0.1",
   "bin": {
-    "filemanager-stack": "stack/filemanager_stack.js"
+    "filemanager": "bin/filemanager.js"
   },
   "scripts": {
     "build": "tsc",
@@ -11,9 +11,10 @@
   },
   "devDependencies": {
     "@types/node": "^20.5.9",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
     "aws-cdk": "^2.114.1",
     "prettier": "3.0.3",
-    "typescript": "^5.2.2"
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "@aws-cdk/aws-apigatewayv2-alpha": "^2.114.1-alpha.0",

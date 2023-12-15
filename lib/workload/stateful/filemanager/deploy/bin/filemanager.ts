@@ -2,7 +2,7 @@
 
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { FilemanagerStack } from './filemanager_stack';
+import { FilemanagerStack } from '../lib/filemanager_stack';
 
 export const STACK_NAME = 'FilemanagerStack';
 const STACK_DESCRIPTION = 'A stack deploying filemanager to dev.';
