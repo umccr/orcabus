@@ -7,11 +7,27 @@ import { Database } from '../database';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import { Settings as CargoSettings } from 'rust.aws-cdk-lambda/dist/settings';
+import { IPolicy, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+
+/**
+ * Settable values for the ingest function.
+ */
+export type IngestFunctionSettings = {
+  /**
+   * Additional build environment variables when building the Lambda function.
+   */
+  readonly buildEnvironment?: { [key: string]: string | undefined };
+  /**
+   * RUST_LOG string, defaults to trace on local crates and info everywhere else.
+   */
+  readonly rustLog?: string;
+};
 
 /**
  * Props for the database
  */
-type IngestFunctionProps = {
+export type IngestFunctionProps = IngestFunctionSettings & {
   /**
    * Vpc for the function.
    */
@@ -29,13 +45,9 @@ type IngestFunctionProps = {
    */
   readonly onFailure?: IDestination;
   /**
-   * Additional build environment variables when building the Lambda function.
+   * Additional policies to add to the Lambda role.
    */
-  readonly buildEnvironment?: { [key: string]: string | undefined };
-  /**
-   * RUST_LOG string, defaults to trace on local crates and info everywhere else.
-   */
-  readonly rustLog?: string;
+  readonly policies?: PolicyStatement[];
 };
 
 /**
@@ -55,6 +67,9 @@ export class IngestFunction extends Construct {
     lambdaRole.addManagedPolicy(
       iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaSQSQueueExecutionRole')
     );
+    props.policies?.forEach((policy) => {
+      lambdaRole.addToPolicy(policy);
+    });
 
     // Lambda needs to be able to reach out to access S3, security manager (eventually), etc.
     // Could this use an endpoint instead?
@@ -64,13 +79,16 @@ export class IngestFunction extends Construct {
       description: 'Security group that allows the ingest Lambda function to egress out.',
     });
 
+    CargoSettings.WORKSPACE_DIR = '../';
+    CargoSettings.BUILD_INDIVIDUALLY = true;
+
     const filemanagerLambda = new RustFunction(this, 'IngestLambdaFunction', {
       package: 'filemanager-ingest-lambda',
       target: 'aarch64-unknown-linux-gnu',
       memorySize: 128,
       timeout: Duration.seconds(28),
       environment: {
-        // Todo use security manager to get connection string rather than passing it in an environment variable
+        // Todo use security manager to get connection string rather than passing it in as an environment variable
         DATABASE_URL: props.database.unsafeConnection,
         RUST_LOG: props.rustLog ?? 'info,filemanager_ingest_lambda=trace,filemanager=trace',
       },
@@ -79,7 +97,6 @@ export class IngestFunction extends Construct {
       role: lambdaRole,
       onFailure: props.onFailure,
       vpc: props.vpc,
-      // Lambda needs to egress to (eventually) access secrets manager/other sqs endpoints.
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [
         securityGroup,

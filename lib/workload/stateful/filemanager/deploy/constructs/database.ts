@@ -15,7 +15,7 @@ import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 /**
  * Props for enabling enhanced monitoring.
  */
-type enableMonitoringProps = {
+export type EnableMonitoringProps = {
   /**
    * Add cloud watch exports.
    */
@@ -31,21 +31,9 @@ type enableMonitoringProps = {
 };
 
 /**
- * Props for the database
+ * Settable database props that can be configured.
  */
-type DatabaseProps = {
-  /**
-   * Vpc for the database.
-   */
-  readonly vpc: IVpc;
-  /**
-   * The name of the database initially created.
-   */
-  readonly databaseName: string;
-  /**
-   * Secret for database credentials
-   */
-  readonly secret: ISecret;
+export type DatabaseSettings = {
   /**
    * Whether to destroy the database on stack removal. Defaults to keeping a snapshot.
    */
@@ -53,7 +41,7 @@ type DatabaseProps = {
   /**
    * Enable enhanced monitoring.
    */
-  readonly enableMonitoring?: enableMonitoringProps;
+  readonly enableMonitoring?: EnableMonitoringProps;
   /**
    * Minimum ACU capacity, defaults to 0.5.
    */
@@ -66,6 +54,24 @@ type DatabaseProps = {
    * Port to use for the database. The default for the engine is used if not specified.
    */
   readonly port?: number;
+};
+
+/**
+ * Props for the database.
+ */
+export type DatabaseProps = DatabaseSettings & {
+  /**
+   * Vpc for the database.
+   */
+  readonly vpc: IVpc;
+  /**
+   * Secret for database credentials
+   */
+  readonly secret: ISecret;
+  /**
+   * The name of the database initially created.
+   */
+  readonly databaseName: string;
 };
 
 /**
