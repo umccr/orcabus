@@ -1,17 +1,16 @@
-import { Duration, RemovalPolicy, Stack, StackProps, Tags } from 'aws-cdk-lib';
+import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import { RustFunction, Settings as CargoSettings } from 'rust.aws-cdk-lambda';
-import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaDestinations from 'aws-cdk-lib/aws-lambda-destinations';
-import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import { IngestFunction, IngestFunctionSettings } from '../constructs/functions/ingest';
-import { Database, EnableMonitoringProps, DatabaseSettings } from '../constructs/database';
+import { Database, DatabaseSettings } from '../constructs/database';
+import { SubnetType } from 'aws-cdk-lib/aws-ec2';
+import { SqsDestination } from 'aws-cdk-lib/aws-s3-notifications';
+import { Bucket, EventType } from 'aws-cdk-lib/aws-s3';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Queue } from 'aws-cdk-lib/aws-sqs';
+import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 
 /**
  * Common settings for the filemanager stack.
@@ -28,46 +27,45 @@ export class FilemanagerStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps, settings?: Settings) {
     super(scope, id, props);
 
-    const queue = new sqs.Queue(this, id + 'Queue');
+    const queue = new Queue(this, id + 'Queue');
 
-    const testBucket = new s3.Bucket(this, id + 'Bucket', {
+    const testBucket = new Bucket(this, id + 'Bucket', {
       bucketName: 'filemanager-test-ingest',
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       removalPolicy: RemovalPolicy.DESTROY,
     });
-    const testBucketPolicy = new iam.PolicyStatement({
+    const testBucketPolicy = new PolicyStatement({
       actions: ['s3:List*', 's3:Get*'],
       resources: ['arn:aws:s3:::*'],
     });
-    testBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(queue));
-    testBucket.addEventNotification(s3.EventType.OBJECT_REMOVED, new s3n.SqsDestination(queue));
+    testBucket.addEventNotification(EventType.OBJECT_CREATED, new SqsDestination(queue));
+    testBucket.addEventNotification(EventType.OBJECT_REMOVED, new SqsDestination(queue));
 
-    const deadLetterQueue = new sqs.Queue(this, id + 'DeadLetterQueue');
+    const deadLetterQueue = new Queue(this, id + 'DeadLetterQueue');
     const deadLetterQueueDestination = new lambdaDestinations.SqsDestination(deadLetterQueue);
 
-    const vpc = new ec2.Vpc(this, 'vpc', {
-      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/24'),
+    const vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: 99, // As many as there are available in the region
       natGateways: 1,
       subnetConfiguration: [
         {
           name: 'ingress',
-          subnetType: ec2.SubnetType.PUBLIC,
+          subnetType: SubnetType.PUBLIC,
         },
         {
           name: 'application',
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+          subnetType: SubnetType.PRIVATE_WITH_EGRESS,
         },
         {
           name: 'database',
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+          subnetType: SubnetType.PRIVATE_ISOLATED,
         },
       ],
     });
 
-    const secret = new secretsmanager.Secret(this, 'FilemanagerDatabaseSecret', {
+    const secret = new Secret(this, 'FilemanagerDatabaseSecret', {
       secretName: 'FilemanagerDatabaseSecret', // pragma: allowlist secret
       generateSecretString: {
         secretStringTemplate: JSON.stringify({ username: 'filemanager' }),

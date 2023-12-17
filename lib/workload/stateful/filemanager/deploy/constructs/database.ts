@@ -6,8 +6,6 @@ import {
   ClusterInstance,
   DatabaseCluster,
   DatabaseClusterEngine,
-  PostgresEngineVersion,
-  ServerlessCluster,
 } from 'aws-cdk-lib/aws-rds';
 import { aws_ec2 as ec2, aws_rds as rds, Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';

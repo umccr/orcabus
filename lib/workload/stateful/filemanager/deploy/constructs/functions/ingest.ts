@@ -2,13 +2,13 @@ import { Construct } from 'constructs';
 import { IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { RustFunction } from 'rust.aws-cdk-lambda';
 import { Duration } from 'aws-cdk-lib';
-import { Architecture, Function, IDestination } from 'aws-cdk-lib/aws-lambda';
+import { Architecture, IDestination } from 'aws-cdk-lib/aws-lambda';
 import { Database } from '../database';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Settings as CargoSettings } from 'rust.aws-cdk-lambda/dist/settings';
-import { IPolicy, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 /**
  * Settable values for the ingest function.
