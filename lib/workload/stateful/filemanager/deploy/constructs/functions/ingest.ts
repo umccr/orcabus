@@ -64,8 +64,13 @@ export class IngestFunction extends Construct {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
       description: 'Lambda execution role for ' + id,
     });
+    // The Lambda needs SQS read to get events from SQS.
     lambdaRole.addManagedPolicy(
       iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaSQSQueueExecutionRole')
+    );
+    // Lambda needs VPC access if it is created in a VPC.
+    lambdaRole.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
     );
     props.policies?.forEach((policy) => {
       lambdaRole.addToPolicy(policy);
