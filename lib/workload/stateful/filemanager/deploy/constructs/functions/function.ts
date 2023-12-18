@@ -1,6 +1,6 @@
 import { IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Database } from '../database';
-import { Architecture, IDestination } from 'aws-cdk-lib/aws-lambda';
+import { Architecture, IDestination, Version } from 'aws-cdk-lib/aws-lambda';
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { RustFunction } from 'rust.aws-cdk-lambda';
@@ -41,6 +41,10 @@ export type FunctionPropsNoPackage = FunctionSettings & {
    * Additional policies to add to the Lambda role.
    */
   readonly policies?: PolicyStatement[];
+  /**
+   * Name of the Lambda function resource.
+   */
+  readonly functionName?: string;
 };
 
 /**
@@ -107,6 +111,7 @@ export class Function extends Construct {
         // Allow access to database.
         props.database.securityGroup,
       ],
+      functionName: props.functionName,
     });
 
     // Todo this should probably connect to an RDS proxy rather than directly to the database.
@@ -117,6 +122,20 @@ export class Function extends Construct {
    */
   addManagedPolicy(policyName: string) {
     this._role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName(policyName));
+  }
+
+  /**
+   * Get the function name.
+   */
+  functionName(): string {
+    return this.function.functionName;
+  }
+
+  /**
+   * Get the function version.
+   */
+  currentVersion(): Version {
+    return this.function.currentVersion;
   }
 
   /**
