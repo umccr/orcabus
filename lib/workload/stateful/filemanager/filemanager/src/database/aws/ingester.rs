@@ -110,6 +110,7 @@ impl Ingest for Ingester {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::database::aws::ingester::Ingester;
+    use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
     use crate::events::aws::tests::{expected_events, EXPECTED_E_TAG};
     use crate::events::aws::{Events, StorageClass};
@@ -118,7 +119,7 @@ pub(crate) mod tests {
     use sqlx::postgres::PgRow;
     use sqlx::{PgPool, Row};
 
-    #[sqlx::test(migrations = "../database/migrations")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {
         let mut events = test_events();
         events.object_removed = Default::default();
@@ -134,7 +135,7 @@ pub(crate) mod tests {
         assert_created(result);
     }
 
-    #[sqlx::test(migrations = "../database/migrations")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_removed(pool: PgPool) {
         let events = test_events();
 
@@ -149,7 +150,7 @@ pub(crate) mod tests {
         assert_deleted(result);
     }
 
-    #[sqlx::test(migrations = "../database/migrations")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest(pool: PgPool) {
         let events = test_events();
 

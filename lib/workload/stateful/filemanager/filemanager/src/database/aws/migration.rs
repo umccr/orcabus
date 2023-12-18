@@ -55,27 +55,37 @@ impl Migrate for Migration {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use sqlx::{PgPool, Row};
+    use lazy_static::lazy_static;
+    use sqlx::PgPool;
 
     use super::*;
+
+    lazy_static! {
+        pub(crate) static ref MIGRATOR: Migrator = Migration::migrator();
+    }
 
     #[sqlx::test(migrations = false)]
     async fn test_migrate(pool: PgPool) {
         let migrate = Migration::new(Client::new(pool));
 
-        let result = sqlx::query("select * from object")
-            .fetch_one(migrate.client.pool())
-            .await;
+        let not_exists = sqlx::query!(
+            "select exists (select from information_schema.tables where table_name = 'object')"
+        )
+        .fetch_one(migrate.client.pool())
+        .await
+        .unwrap();
 
-        assert!(result.is_err());
+        assert!(!not_exists.exists.unwrap());
 
         migrate.migrate().await.unwrap();
 
-        let result = sqlx::query("select * from object")
-            .fetch_one(migrate.client.pool())
-            .await
-            .unwrap();
+        let exists = sqlx::query!(
+            "select exists (select from information_schema.tables where table_name = 'object')"
+        )
+        .fetch_one(migrate.client.pool())
+        .await
+        .unwrap();
 
-        assert!(result.is_empty());
+        assert!(exists.exists.unwrap());
     }
 }

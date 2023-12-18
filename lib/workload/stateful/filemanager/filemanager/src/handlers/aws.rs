@@ -90,13 +90,14 @@ pub async fn ingest_event(
 mod tests {
     use super::*;
     use crate::database::aws::ingester::tests::assert_deleted;
+    use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::collecter::tests::set_s3_client_expectations;
     use crate::events::aws::collector_builder::tests::set_sqs_client_expectations;
     use crate::events::aws::tests::expected_event_record;
     use aws_lambda_events::sqs::SqsMessage;
     use sqlx::PgPool;
 
-    #[sqlx::test(migrations = "../database/migrations")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_receive_and_ingest(pool: PgPool) {
         let mut sqs_client = SQSClient::default();
         let mut s3_client = S3Client::default();
@@ -117,7 +118,7 @@ mod tests {
         assert_deleted(result);
     }
 
-    #[sqlx::test(migrations = "../database/migrations")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_ingest_event(pool: PgPool) {
         let mut s3_client = S3Client::default();
 

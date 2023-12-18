@@ -46,3 +46,4 @@ aws-smithy-runtime-api = "1"
 
 # The migrate feature is required to run sqlx tests
 filemanager = { path = ".", features = ["migrate"] }
+lazy_static = "1.4"
