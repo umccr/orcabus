@@ -43,3 +43,6 @@ futures = "0.3"
 
 [dev-dependencies]
 aws-smithy-runtime-api = "1"
+
+# The migrate feature is required to run sqlx tests
+filemanager = { path = ".", features = ["migrate"] }

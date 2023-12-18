@@ -32,7 +32,7 @@ pub async fn receive_and_ingest(
         .collect()
         .await?;
 
-    let mut ingester = if let Some(database_client) = database_client {
+    let ingester = if let Some(database_client) = database_client {
         Ingester::new(database_client)
     } else {
         Ingester::with_defaults().await?
@@ -74,7 +74,7 @@ pub async fn ingest_event(
 
     trace!("ingesting events: {:?}", events);
 
-    let mut ingester = if let Some(database_client) = database_client {
+    let ingester = if let Some(database_client) = database_client {
         Ingester::new(database_client)
     } else {
         Ingester::with_defaults().await?

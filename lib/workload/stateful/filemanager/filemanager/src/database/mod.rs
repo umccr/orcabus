@@ -39,12 +39,12 @@ impl Client {
 #[async_trait]
 pub trait Ingest {
     /// Ingest the events.
-    async fn ingest(&mut self, events: EventType) -> Result<()>;
+    async fn ingest(&self, events: EventType) -> Result<()>;
 }
 
 /// Trait representing database migrations.
 #[async_trait]
 pub trait Migrate {
     /// Migrate the database.
-    async fn migrate(&mut self) -> Result<()>;
+    async fn migrate(&self) -> Result<()>;
 }

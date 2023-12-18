@@ -29,7 +29,7 @@ impl Ingester {
     }
 
     /// Ingest the events into the database by calling the insert and update queries.
-    pub async fn ingest_events(&mut self, events: Events) -> Result<()> {
+    pub async fn ingest_events(&self, events: Events) -> Result<()> {
         let Events {
             object_created,
             object_removed,
@@ -100,7 +100,7 @@ impl Ingester {
 
 #[async_trait]
 impl Ingest for Ingester {
-    async fn ingest(&mut self, events: EventType) -> Result<()> {
+    async fn ingest(&self, events: EventType) -> Result<()> {
         match events {
             EventType::S3(events) => self.ingest_events(events).await,
         }
@@ -123,7 +123,7 @@ pub(crate) mod tests {
         let mut events = test_events();
         events.object_removed = Default::default();
 
-        let mut ingester = test_ingester(pool);
+        let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
         let result = sqlx::query("select * from object")
@@ -138,7 +138,7 @@ pub(crate) mod tests {
     async fn ingest_object_removed(pool: PgPool) {
         let events = test_events();
 
-        let mut ingester = test_ingester(pool);
+        let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
         let result = sqlx::query("select * from object")
@@ -153,7 +153,7 @@ pub(crate) mod tests {
     async fn ingest(pool: PgPool) {
         let events = test_events();
 
-        let mut ingester = test_ingester(pool);
+        let ingester = test_ingester(pool);
         ingester.ingest(EventType::S3(events)).await.unwrap();
 
         let result = sqlx::query("select * from object")
