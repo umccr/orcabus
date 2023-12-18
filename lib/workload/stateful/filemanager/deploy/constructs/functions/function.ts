@@ -1,6 +1,5 @@
 import { IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Database } from '../database';
-import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { Architecture, IDestination } from 'aws-cdk-lib/aws-lambda';
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
@@ -23,13 +22,9 @@ export type FunctionSettings = {
 };
 
 /**
- * Props for the Rust function.
+ * Props for a Rust function without the package.
  */
-export type FunctionProps = FunctionSettings & {
-  /**
-   * The package to build for this function.
-   */
-  readonly package: string;
+export type FunctionPropsNoPackage = FunctionSettings & {
   /**
    * Vpc for the function.
    */
@@ -46,6 +41,16 @@ export type FunctionProps = FunctionSettings & {
    * Additional policies to add to the Lambda role.
    */
   readonly policies?: PolicyStatement[];
+};
+
+/**
+ * Props for the Rust function.
+ */
+export type FunctionProps = FunctionPropsNoPackage & {
+  /**
+   * The package to build for this function.
+   */
+  readonly package: string;
 };
 
 /**
@@ -74,7 +79,7 @@ export class Function extends Construct {
     const securityGroup = new SecurityGroup(this, 'SecurityGroup', {
       vpc: props.vpc,
       allowAllOutbound: true,
-      description: 'Security group that allows the ingest Lambda function to egress out.',
+      description: 'Security group that allows a filemanager Lambda function to egress out.',
     });
 
     CargoSettings.WORKSPACE_DIR = '../';
