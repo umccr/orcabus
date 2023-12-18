@@ -2,6 +2,7 @@ use lambda_runtime::Error;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
+use filemanager::database::aws::migration::Migration;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -12,5 +13,5 @@ async fn main() -> Result<(), Error> {
         .with(env_filter)
         .init();
 
-    todo!();
+    Migration::with_defaults().await?.migrate()
 }

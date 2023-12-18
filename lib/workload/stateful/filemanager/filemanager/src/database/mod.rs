@@ -41,3 +41,10 @@ pub trait Ingest {
     /// Ingest the events.
     async fn ingest(&mut self, events: EventType) -> Result<()>;
 }
+
+/// Trait representing database migrations.
+#[async_trait]
+pub trait Migrate {
+    /// Migrate the database.
+    async fn migrate(&mut self) -> Result<()>;
+}

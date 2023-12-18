@@ -15,7 +15,7 @@ tokio = { version = "1", features = ["macros"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
 
-filemanager = { path = "../filemanager" }
+filemanager = { path = "../filemanager", features = ["migrate"] }
 serde_json = "1"
 
 aws-config = "1"

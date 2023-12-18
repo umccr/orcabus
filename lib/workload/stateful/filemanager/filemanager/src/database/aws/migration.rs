@@ -24,6 +24,7 @@ impl Migration {
 
     /// Apply migrations.
     pub async fn migrate(&mut self) -> Result<()> {
+        // Note, these get compiled into the source code.
         migrate!("../database/migrations")
             .run(self.client().pool())
             .await
