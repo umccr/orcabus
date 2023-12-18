@@ -1123,6 +1123,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "filemanager-migrate-lambda"
+version = "0.1.0"
+dependencies = [
+ "aws-config",
+ "aws-sdk-sts",
+ "aws_lambda_events 0.12.1",
+ "filemanager",
+ "lambda_runtime",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "finl_unicode"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
