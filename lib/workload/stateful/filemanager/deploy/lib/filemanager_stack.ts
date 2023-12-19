@@ -11,6 +11,9 @@ import { Bucket, EventType } from 'aws-cdk-lib/aws-s3';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
+import { CdkResourceInvoke } from '../constructs/cdk_resource_invoke';
+import { MigrateFunction } from '../constructs/functions/migrate';
+import * as fn from '../constructs/functions/function';
 
 /**
  * Common settings for the filemanager stack.
@@ -84,6 +87,19 @@ export class FilemanagerStack extends Stack {
       maxCapacity: settings?.maxCapacity,
       port: settings?.port,
     });
+
+    const migrate = new CdkResourceInvoke(this, 'MigrateDatabase', {
+      vpc,
+      createFunction: (scope: Construct, id: string, props: fn.FunctionPropsNoPackage) => {
+        return new MigrateFunction(scope, id, props);
+      },
+      functionProps: {
+        vpc,
+        database,
+      },
+      id: 'MigrateFunction',
+    });
+    migrate.addDependency(database.cluster);
 
     new IngestFunction(this, 'IngestLambda', {
       vpc,

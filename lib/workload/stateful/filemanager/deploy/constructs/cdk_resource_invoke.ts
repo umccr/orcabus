@@ -1,15 +1,14 @@
-import { Construct } from 'constructs';
+import { Construct, IDependable } from 'constructs';
 import {
   AwsCustomResource,
   AwsCustomResourcePolicy,
   AwsSdkCall,
   PhysicalResourceId,
 } from 'aws-cdk-lib/custom-resources';
-import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import * as fn from './functions/function';
 import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Stack } from 'aws-cdk-lib';
-import { FunctionProps } from './functions/function';
 
 /**
  * Props for the resource invoke construct.
@@ -24,11 +23,11 @@ export type CdkResourceInvokeProps = {
    * callable using the singleton function created by `AwsCustomResource`. See
    * https://github.com/aws-samples/amazon-rds-init-cdk/blob/239626632f399ebe4928410a49d5ac5d009a6502/lib/resource-initializer.ts#L69-L71.
    */
-  createFunction: (scope: Construct, id: string, props: FunctionProps) => fn.Function;
+  createFunction: (scope: Construct, id: string, props: fn.FunctionPropsNoPackage) => fn.Function;
   /**
    * Function props when creating the Lambda function.
    */
-  functionProps: FunctionProps;
+  functionProps: fn.FunctionPropsNoPackage;
   /**
    * Name to use when creating the function.
    */
@@ -69,6 +68,7 @@ export class CdkResourceInvoke extends Construct {
     role.addToPolicy(
       new PolicyStatement({
         resources: [
+          // This needs to have permissions to run any `ResourceInvokeFunction`.
           `arn:aws:lambda:${stack.region}:${stack.account}:function:*-ResourceInvokeFunction-${stack.stackName}`,
         ],
         actions: ['lambda:InvokeFunction'],
@@ -81,9 +81,18 @@ export class CdkResourceInvoke extends Construct {
       }),
       onUpdate: sdkCall,
       role: role,
+      vpc: props.vpc,
+      vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
     });
 
     this._response = this.customResource.getResponseField('Payload');
+  }
+
+  /**
+   * Add a dependency to this resource.
+   */
+  addDependency(dependency: IDependable) {
+    this.customResource.node.addDependency(dependency);
   }
 
   /**
