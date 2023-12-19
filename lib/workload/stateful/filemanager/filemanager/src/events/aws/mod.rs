@@ -313,7 +313,7 @@ pub struct FlatS3EventMessage {
 }
 
 impl FlatS3EventMessage {
-    /// Update the storage class if not None.
+    /// Update the storage class if not None.`
     pub fn update_storage_class(mut self, storage_class: Option<StorageClass>) -> Self {
         storage_class
             .into_iter()
@@ -422,6 +422,14 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                         Other
                     };
 
+                    // S3 does not return a storage class for standard, so this is assumed to be
+                    // the default. See https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_ResponseSyntax
+                    let storage_class = if let Created = event_type {
+                        Some(StorageClass::Standard)
+                    } else {
+                        None
+                    };
+
                     Ok(FlatS3EventMessage {
                         object_id,
                         event_time,
@@ -432,8 +440,8 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                         e_tag,
                         sequencer,
                         portal_run_id,
-                        // Head field are optionally fetched later.
-                        storage_class: None,
+                        storage_class,
+                        // Head field are fetched later.
                         last_modified_date: None,
                         event_type,
                     })
@@ -451,7 +459,9 @@ impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage};
+    use crate::events::aws::{
+        Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage, StorageClass,
+    };
     use chrono::{DateTime, Utc};
     use serde_json::json;
 
@@ -470,6 +480,7 @@ pub(crate) mod tests {
             "ObjectRemoved:Delete",
             EXPECTED_SEQUENCER_DELETED,
             None,
+            None,
         );
 
         let second = result.next().unwrap();
@@ -478,6 +489,7 @@ pub(crate) mod tests {
             "ObjectCreated:Put",
             EXPECTED_SEQUENCER_CREATED,
             Some(0),
+            Some(StorageClass::Standard),
         );
 
         let third = result.next().unwrap();
@@ -486,6 +498,7 @@ pub(crate) mod tests {
             "ObjectCreated:Put",
             EXPECTED_SEQUENCER_CREATED,
             Some(0),
+            Some(StorageClass::Standard),
         );
     }
 
@@ -500,6 +513,7 @@ pub(crate) mod tests {
             "ObjectCreated:Put",
             EXPECTED_SEQUENCER_CREATED,
             Some(0),
+            Some(StorageClass::Standard),
         );
 
         let second = result.next().unwrap();
@@ -507,6 +521,7 @@ pub(crate) mod tests {
             second,
             "ObjectRemoved:Delete",
             EXPECTED_SEQUENCER_DELETED,
+            None,
             None,
         );
     }
@@ -516,6 +531,7 @@ pub(crate) mod tests {
         event_name: &str,
         sequencer: &str,
         size: Option<i64>,
+        storage_class: Option<StorageClass>,
     ) {
         assert_eq!(event.event_time, DateTime::<Utc>::default());
         assert_eq!(event.event_name, event_name);
@@ -525,7 +541,7 @@ pub(crate) mod tests {
         assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string())); // pragma: allowlist secret
         assert_eq!(event.sequencer, Some(sequencer.to_string()));
         assert!(event.portal_run_id.starts_with("19700101"));
-        assert_eq!(event.storage_class, None);
+        assert_eq!(event.storage_class, storage_class);
         assert_eq!(event.last_modified_date, None);
     }
 
@@ -550,7 +566,10 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_CREATED.to_string())
         );
         assert!(result.object_created.portal_run_ids[0].starts_with("19700101"));
-        assert_eq!(result.object_created.storage_classes[0], None);
+        assert_eq!(
+            result.object_created.storage_classes[0],
+            Some(StorageClass::Standard)
+        );
         assert_eq!(result.object_created.last_modified_dates[0], None);
 
         assert_eq!(

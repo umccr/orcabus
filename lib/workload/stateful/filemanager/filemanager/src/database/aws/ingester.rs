@@ -212,7 +212,7 @@ pub(crate) mod tests {
         events.object_created.storage_classes[0] = Some(StorageClass::Standard);
 
         events.object_removed.last_modified_dates[0] = Some(DateTime::default());
-        events.object_removed.storage_classes[0] = Some(StorageClass::Standard);
+        events.object_removed.storage_classes[0] = None;
 
         events
     }

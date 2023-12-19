@@ -5,5 +5,5 @@ create table s3_object(
     -- The object id.
     object_id uuid references object (object_id) primary key,
     -- The S3 storage class of the object.
-    storage_class storage_class default null
+    storage_class storage_class not null default 'Standard'
 );

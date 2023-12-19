@@ -73,7 +73,7 @@ impl Collecter {
     ) -> Result<FlatS3EventMessages> {
         Ok(FlatS3EventMessages(
             join_all(events.into_inner().into_iter().map(|mut event| async move {
-                // Only run this on created events.
+                // No need to run this unnecessarily on removed events.
                 match event.event_type {
                     EventType::Removed | EventType::Other => return Ok(event),
                     _ => {}
@@ -81,6 +81,9 @@ impl Collecter {
 
                 trace!(key = ?event.key, bucket = ?event.bucket, "updating event");
 
+                // Race condition: it's possible that an object gets deleted so quickly that it
+                // occurs before calling head. This means that there may be cases where the storage
+                // class and other fields are not known.
                 if let Some(head) = Self::head(client, &event.key, &event.bucket).await? {
                     trace!(head = ?head, "received head object output");
 
@@ -124,7 +127,7 @@ impl Collect for Collecter {
 pub(crate) mod tests {
     use crate::events::aws::collecter::Collecter;
     use crate::events::aws::tests::expected_flat_events;
-    use crate::events::aws::StorageClass::Standard;
+    use crate::events::aws::StorageClass::IntelligentTiering;
     use aws_sdk_s3::error::SdkError;
     use aws_sdk_s3::primitives::{DateTimeFormat, SdkBody};
     use aws_sdk_s3::types;
@@ -189,7 +192,7 @@ pub(crate) mod tests {
             .into_iter();
 
         let first = result.next().unwrap();
-        assert_eq!(first.storage_class, Some(Standard));
+        assert_eq!(first.storage_class, Some(IntelligentTiering));
         assert_eq!(first.last_modified_date, Some(Default::default()));
 
         let second = result.next().unwrap();
@@ -213,7 +216,10 @@ pub(crate) mod tests {
 
         match result {
             EventSourceType::S3(events) => {
-                assert_eq!(events.object_created.storage_classes[0], Some(Standard));
+                assert_eq!(
+                    events.object_created.storage_classes[0],
+                    Some(IntelligentTiering)
+                );
                 assert_eq!(
                     events.object_created.last_modified_dates[0],
                     Some(Default::default())
@@ -245,7 +251,7 @@ pub(crate) mod tests {
                 primitives::DateTime::from_str("1970-01-01T00:00:00Z", DateTimeFormat::DateTime)
                     .unwrap(),
             )
-            .storage_class(types::StorageClass::Standard)
+            .storage_class(types::StorageClass::IntelligentTiering)
             .build()
     }
 
