@@ -12,6 +12,7 @@ use uuid::Uuid;
 use crate::error::Error;
 use crate::error::Error::DeserializeError;
 use crate::error::Result;
+use crate::events::aws::EventType::{Created, Other, Removed};
 
 pub mod collecter;
 pub mod collector_builder;
@@ -108,6 +109,7 @@ impl TransposedS3EventMessages {
             portal_run_id,
             storage_class,
             last_modified_date,
+            ..
         } = message;
 
         self.object_ids.push(object_id);
@@ -153,15 +155,20 @@ impl From<FlatS3EventMessages> for Events {
         let mut object_removed = FlatS3EventMessages::default();
         let mut other = FlatS3EventMessages::default();
 
-        messages.into_inner().into_iter().for_each(|message| {
-            if message.event_name.contains("ObjectCreated") {
-                object_created.0.push(message);
-            } else if message.event_name.contains("ObjectRemoved") {
-                object_removed.0.push(message);
-            } else {
-                other.0.push(message);
-            }
-        });
+        messages
+            .into_inner()
+            .into_iter()
+            .for_each(|message| match message.event_type {
+                Created => {
+                    object_created.0.push(message);
+                }
+                Removed => {
+                    object_removed.0.push(message);
+                }
+                Other => {
+                    other.0.push(message);
+                }
+            });
 
         Self {
             object_created: TransposedS3EventMessages::from(object_created),
@@ -281,6 +288,13 @@ impl PartialEq for FlatS3EventMessage {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum EventType {
+    Created,
+    Removed,
+    Other,
+}
+
 /// A flattened AWS S3 record
 #[derive(Debug, Eq)]
 pub struct FlatS3EventMessage {
@@ -295,6 +309,7 @@ pub struct FlatS3EventMessage {
     pub portal_run_id: String,
     pub storage_class: Option<StorageClass>,
     pub last_modified_date: Option<DateTime<Utc>>,
+    pub event_type: EventType,
 }
 
 impl FlatS3EventMessage {
@@ -399,6 +414,14 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                     let portal_run_id =
                         event_time.format("%Y%m%d").to_string() + &object_id.to_string()[..8];
 
+                    let event_type = if event_name.contains("ObjectCreated") {
+                        Created
+                    } else if event_name.contains("ObjectRemoved") {
+                        Removed
+                    } else {
+                        Other
+                    };
+
                     Ok(FlatS3EventMessage {
                         object_id,
                         event_time,
@@ -412,6 +435,7 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                         // Head field are optionally fetched later.
                         storage_class: None,
                         last_modified_date: None,
+                        event_type,
                     })
                 })
                 .collect::<Result<Vec<FlatS3EventMessage>>>()?,

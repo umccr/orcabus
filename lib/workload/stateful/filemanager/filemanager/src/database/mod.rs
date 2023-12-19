@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use sqlx::PgPool;
 
 use crate::error::Result;
-use crate::events::EventType;
+use crate::events::EventSourceType;
 
 pub mod aws;
 
@@ -39,7 +39,7 @@ impl Client {
 #[async_trait]
 pub trait Ingest {
     /// Ingest the events.
-    async fn ingest(&self, events: EventType) -> Result<()>;
+    async fn ingest(&self, events: EventSourceType) -> Result<()>;
 }
 
 /// Trait representing database migrations.

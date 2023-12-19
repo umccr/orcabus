@@ -91,7 +91,7 @@ mod tests {
     use super::*;
     use crate::database::aws::ingester::tests::assert_deleted;
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::events::aws::collecter::tests::set_s3_client_expectations;
+    use crate::events::aws::collecter::tests::{expected_head_object, set_s3_client_expectations};
     use crate::events::aws::collector_builder::tests::set_sqs_client_expectations;
     use crate::events::aws::tests::expected_event_record;
     use aws_lambda_events::sqs::SqsMessage;
@@ -103,7 +103,7 @@ mod tests {
         let mut s3_client = S3Client::default();
 
         set_sqs_client_expectations(&mut sqs_client);
-        set_s3_client_expectations(&mut s3_client, 2);
+        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
 
         let ingester =
             receive_and_ingest(s3_client, sqs_client, Some("url"), Some(Client::new(pool)))
@@ -122,7 +122,7 @@ mod tests {
     async fn test_ingest_event(pool: PgPool) {
         let mut s3_client = S3Client::default();
 
-        set_s3_client_expectations(&mut s3_client, 2);
+        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
 
         let event = SqsEvent {
             records: vec![SqsMessage {

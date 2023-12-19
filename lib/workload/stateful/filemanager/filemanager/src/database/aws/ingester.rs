@@ -7,7 +7,7 @@ use crate::database::{Client, Ingest};
 use crate::error::Result;
 use crate::events::aws::StorageClass;
 use crate::events::aws::{Events, TransposedS3EventMessages};
-use crate::events::EventType;
+use crate::events::EventSourceType;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
@@ -100,9 +100,9 @@ impl Ingester {
 
 #[async_trait]
 impl Ingest for Ingester {
-    async fn ingest(&self, events: EventType) -> Result<()> {
+    async fn ingest(&self, events: EventSourceType) -> Result<()> {
         match events {
-            EventType::S3(events) => self.ingest_events(events).await,
+            EventSourceType::S3(events) => self.ingest_events(events).await,
         }
     }
 }
@@ -114,7 +114,7 @@ pub(crate) mod tests {
     use crate::database::{Client, Ingest};
     use crate::events::aws::tests::{expected_events, EXPECTED_E_TAG};
     use crate::events::aws::{Events, StorageClass};
-    use crate::events::EventType;
+    use crate::events::EventSourceType;
     use chrono::{DateTime, Utc};
     use sqlx::postgres::PgRow;
     use sqlx::{PgPool, Row};
@@ -155,7 +155,7 @@ pub(crate) mod tests {
         let events = test_events();
 
         let ingester = test_ingester(pool);
-        ingester.ingest(EventType::S3(events)).await.unwrap();
+        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
 
         let result = sqlx::query("select * from object")
             .fetch_one(ingester.client.pool())
