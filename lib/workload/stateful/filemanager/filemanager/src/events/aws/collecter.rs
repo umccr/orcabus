@@ -74,15 +74,21 @@ impl Collecter {
                 trace!(key = ?event.key, bucket = ?event.bucket, "updating event");
 
                 if let Some(head) = Self::head(client, &event.key, &event.bucket).await? {
+                    trace!(head = ?head, "received head object output");
+
                     let HeadObjectOutput {
                         storage_class,
                         last_modified,
+                        content_length,
+                        e_tag,
                         ..
                     } = head;
 
-                    event =
-                        event.with_storage_class(storage_class.and_then(StorageClass::from_aws));
-                    event = event.with_last_modified_date(Self::convert_datetime(last_modified));
+                    event = event
+                        .update_storage_class(storage_class.and_then(StorageClass::from_aws))
+                        .update_last_modified_date(Self::convert_datetime(last_modified))
+                        .update_size(content_length)
+                        .update_e_tag(e_tag);
                 }
 
                 Ok(event)

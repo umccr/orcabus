@@ -55,8 +55,8 @@ impl Ingester {
             &object_ids,
             &buckets,
             &keys,
-            &sizes,
-            &e_tags,
+            &sizes as &[Option<i64>],
+            &e_tags as &[Option<String>],
             &event_times,
             &last_modified_dates as &[Option<DateTime<Utc>>],
             &portal_run_ids

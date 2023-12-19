@@ -67,8 +67,8 @@ pub struct TransposedS3EventMessages {
     pub event_names: Vec<String>,
     pub buckets: Vec<String>,
     pub keys: Vec<String>,
-    pub sizes: Vec<i32>,
-    pub e_tags: Vec<String>,
+    pub sizes: Vec<Option<i64>>,
+    pub e_tags: Vec<Option<String>>,
     pub sequencers: Vec<Option<String>>,
     pub portal_run_ids: Vec<String>,
     pub storage_classes: Vec<Option<StorageClass>>,
@@ -289,8 +289,8 @@ pub struct FlatS3EventMessage {
     pub event_name: String,
     pub bucket: String,
     pub key: String,
-    pub size: i32,
-    pub e_tag: String,
+    pub size: Option<i64>,
+    pub e_tag: Option<String>,
     pub sequencer: Option<String>,
     pub portal_run_id: String,
     pub storage_class: Option<StorageClass>,
@@ -298,15 +298,31 @@ pub struct FlatS3EventMessage {
 }
 
 impl FlatS3EventMessage {
-    /// Update the storage class.
-    pub fn with_storage_class(mut self, storage_class: Option<StorageClass>) -> Self {
-        self.storage_class = storage_class;
+    /// Update the storage class if not None.
+    pub fn update_storage_class(mut self, storage_class: Option<StorageClass>) -> Self {
+        storage_class
+            .into_iter()
+            .for_each(|storage_class| self.storage_class = Some(storage_class));
         self
     }
 
-    /// Update the last modified date.
-    pub fn with_last_modified_date(mut self, last_modified_date: Option<DateTime<Utc>>) -> Self {
-        self.last_modified_date = last_modified_date;
+    /// Update the last modified date if not None.
+    pub fn update_last_modified_date(mut self, last_modified_date: Option<DateTime<Utc>>) -> Self {
+        last_modified_date
+            .into_iter()
+            .for_each(|last_modified_date| self.last_modified_date = Some(last_modified_date));
+        self
+    }
+
+    /// Update the size if not None.
+    pub fn update_size(mut self, size: Option<i64>) -> Self {
+        size.into_iter().for_each(|size| self.size = Some(size));
+        self
+    }
+
+    /// Update the e_tag if not None.
+    pub fn update_e_tag(mut self, e_tag: Option<String>) -> Self {
+        e_tag.into_iter().for_each(|e_tag| self.e_tag = Some(e_tag));
         self
     }
 }
@@ -344,8 +360,8 @@ pub struct BucketRecord {
 #[serde(rename_all = "camelCase")]
 pub struct ObjectRecord {
     pub key: String,
-    pub size: i32,
-    pub e_tag: String,
+    pub size: Option<i64>,
+    pub e_tag: Option<String>,
     pub sequencer: Option<String>,
 }
 
@@ -425,13 +441,28 @@ pub(crate) mod tests {
         let mut result = result.into_inner().into_iter();
 
         let first = result.next().unwrap();
-        assert_flat_s3_event(first, "ObjectRemoved:Delete", EXPECTED_SEQUENCER_DELETED);
+        assert_flat_s3_event(
+            first,
+            "ObjectRemoved:Delete",
+            EXPECTED_SEQUENCER_DELETED,
+            None,
+        );
 
         let second = result.next().unwrap();
-        assert_flat_s3_event(second, "ObjectCreated:Put", EXPECTED_SEQUENCER_CREATED);
+        assert_flat_s3_event(
+            second,
+            "ObjectCreated:Put",
+            EXPECTED_SEQUENCER_CREATED,
+            Some(0),
+        );
 
         let third = result.next().unwrap();
-        assert_flat_s3_event(third, "ObjectCreated:Put", EXPECTED_SEQUENCER_CREATED);
+        assert_flat_s3_event(
+            third,
+            "ObjectCreated:Put",
+            EXPECTED_SEQUENCER_CREATED,
+            Some(0),
+        );
     }
 
     #[test]
@@ -440,19 +471,34 @@ pub(crate) mod tests {
         let mut result = result.into_inner().into_iter();
 
         let first = result.next().unwrap();
-        assert_flat_s3_event(first, "ObjectCreated:Put", EXPECTED_SEQUENCER_CREATED);
+        assert_flat_s3_event(
+            first,
+            "ObjectCreated:Put",
+            EXPECTED_SEQUENCER_CREATED,
+            Some(0),
+        );
 
         let second = result.next().unwrap();
-        assert_flat_s3_event(second, "ObjectRemoved:Delete", EXPECTED_SEQUENCER_DELETED);
+        assert_flat_s3_event(
+            second,
+            "ObjectRemoved:Delete",
+            EXPECTED_SEQUENCER_DELETED,
+            None,
+        );
     }
 
-    fn assert_flat_s3_event(event: FlatS3EventMessage, event_name: &str, sequencer: &str) {
+    fn assert_flat_s3_event(
+        event: FlatS3EventMessage,
+        event_name: &str,
+        sequencer: &str,
+        size: Option<i64>,
+    ) {
         assert_eq!(event.event_time, DateTime::<Utc>::default());
         assert_eq!(event.event_name, event_name);
         assert_eq!(event.bucket, "bucket");
         assert_eq!(event.key, "key");
-        assert_eq!(event.size, 0);
-        assert_eq!(event.e_tag, EXPECTED_E_TAG); // pragma: allowlist secret
+        assert_eq!(event.size, size);
+        assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string())); // pragma: allowlist secret
         assert_eq!(event.sequencer, Some(sequencer.to_string()));
         assert!(event.portal_run_id.starts_with("19700101"));
         assert_eq!(event.storage_class, None);
@@ -470,8 +516,11 @@ pub(crate) mod tests {
         assert_eq!(result.object_created.event_names[0], "ObjectCreated:Put");
         assert_eq!(result.object_created.buckets[0], "bucket");
         assert_eq!(result.object_created.keys[0], "key");
-        assert_eq!(result.object_created.sizes[0], 0);
-        assert_eq!(result.object_created.e_tags[0], EXPECTED_E_TAG);
+        assert_eq!(result.object_created.sizes[0], Some(0));
+        assert_eq!(
+            result.object_created.e_tags[0],
+            Some(EXPECTED_E_TAG.to_string())
+        );
         assert_eq!(
             result.object_created.sequencers[0],
             Some(EXPECTED_SEQUENCER_CREATED.to_string())
@@ -487,8 +536,11 @@ pub(crate) mod tests {
         assert_eq!(result.object_removed.event_names[0], "ObjectRemoved:Delete");
         assert_eq!(result.object_removed.buckets[0], "bucket");
         assert_eq!(result.object_removed.keys[0], "key");
-        assert_eq!(result.object_removed.sizes[0], 0);
-        assert_eq!(result.object_removed.e_tags[0], EXPECTED_E_TAG);
+        assert_eq!(result.object_removed.sizes[0], None);
+        assert_eq!(
+            result.object_removed.e_tags[0],
+            Some(EXPECTED_E_TAG.to_string())
+        );
         assert_eq!(
             result.object_removed.sequencers[0],
             Some(EXPECTED_SEQUENCER_DELETED.to_string())
@@ -588,7 +640,8 @@ pub(crate) mod tests {
             },
             "object": {
                "key": "key",
-               "size": 0,
+                // ObjectRemoved::Delete does not have a size, even though this isn't documented
+                // anywhere.
                "eTag": EXPECTED_E_TAG,
                "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
                "sequencer": EXPECTED_SEQUENCER_DELETED

@@ -7,7 +7,7 @@ create table object (
     -- The name of the object.
     key varchar(1024) not null,
     -- The size of the object.
-    size int not null,
+    size int default null,
     -- A unique identifier for the object, if it is present.
     hash varchar(255) default null,
     -- When this object was created.
