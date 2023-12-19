@@ -6,7 +6,6 @@ import { Construct } from 'constructs';
 import { RustFunction } from 'rust.aws-cdk-lambda';
 import { Duration } from 'aws-cdk-lib';
 import { Settings as CargoSettings } from 'rust.aws-cdk-lambda/dist/settings';
-import * as path from 'node:path';
 
 /**
  * Settable values for a Rust function.
@@ -89,7 +88,7 @@ export class Function extends Construct {
 
     CargoSettings.BUILD_INDIVIDUALLY = true;
 
-    this._function = new RustFunction(this, id, {
+    this._function = new RustFunction(this, 'RustFunction', {
       package: props.package,
       target: 'aarch64-unknown-linux-gnu',
       memorySize: 128,

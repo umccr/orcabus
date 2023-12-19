@@ -4,6 +4,7 @@ use crate::error::Result;
 use async_trait::async_trait;
 use sqlx::migrate;
 use sqlx::migrate::Migrator;
+use tracing::trace;
 
 /// A struct to perform database migrations.
 #[derive(Debug)]
@@ -46,6 +47,7 @@ impl Migration {
 #[async_trait]
 impl Migrate for Migration {
     async fn migrate(&self) -> Result<()> {
+        trace!("applying migrations");
         Self::migrator()
             .run(self.client().pool())
             .await

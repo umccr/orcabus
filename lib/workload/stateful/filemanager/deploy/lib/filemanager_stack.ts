@@ -1,4 +1,4 @@
-import { CfnOutput, RemovalPolicy, Stack, StackProps, Token } from 'aws-cdk-lib';
+import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambdaDestinations from 'aws-cdk-lib/aws-lambda-destinations';
@@ -37,9 +37,9 @@ export class FilemanagerStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps, settings?: Settings) {
     super(scope, id, props);
 
-    const queue = new Queue(this, id + 'Queue');
+    const queue = new Queue(this, 'Queue');
 
-    const testBucket = new Bucket(this, id + 'Bucket', {
+    const testBucket = new Bucket(this, 'Bucket', {
       bucketName: 'filemanager-test-ingest',
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -53,7 +53,7 @@ export class FilemanagerStack extends Stack {
     testBucket.addEventNotification(EventType.OBJECT_CREATED, new SqsDestination(queue));
     testBucket.addEventNotification(EventType.OBJECT_REMOVED, new SqsDestination(queue));
 
-    const deadLetterQueue = new Queue(this, id + 'DeadLetterQueue');
+    const deadLetterQueue = new Queue(this, 'DeadLetterQueue');
     const deadLetterQueueDestination = new lambdaDestinations.SqsDestination(deadLetterQueue);
 
     const vpc = new ec2.Vpc(this, 'Vpc', {
@@ -93,6 +93,7 @@ export class FilemanagerStack extends Stack {
       minCapacity: settings?.minCapacity,
       maxCapacity: settings?.maxCapacity,
       port: settings?.port,
+      public: settings?.public,
     });
 
     if (settings?.migrateDatabase) {

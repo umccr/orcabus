@@ -135,11 +135,19 @@ export class Database extends Construct {
       }),
     });
 
-    // Any inbound connections within the same security group are allowed access to the database port.
-    this._securityGroup.addIngressRule(
-      this._securityGroup,
-      ec2.Port.tcp(this._cluster.clusterEndpoint.port)
-    );
+    if (props.public) {
+      // If it's public, anyone can connect.
+      this._securityGroup.addIngressRule(
+        ec2.Peer.anyIpv4(),
+        ec2.Port.tcp(this._cluster.clusterEndpoint.port)
+      );
+    } else {
+      // Any inbound connections within the same security group are allowed access to the database port.
+      this._securityGroup.addIngressRule(
+        this._securityGroup,
+        ec2.Port.tcp(this._cluster.clusterEndpoint.port)
+      );
+    }
 
     this._unsafeConnection =
       `postgres://` +

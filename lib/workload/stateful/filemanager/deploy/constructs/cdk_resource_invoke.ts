@@ -7,7 +7,7 @@ import {
 } from 'aws-cdk-lib/custom-resources';
 import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import * as fn from './functions/function';
-import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { CfnOutput, Stack, Token } from 'aws-cdk-lib';
 
 /**
@@ -52,7 +52,7 @@ export class CdkResourceInvoke extends Construct {
     const stack = Stack.of(this);
     this._function = props.createFunction(this, props.id, {
       ...props.functionProps,
-      functionName: `${id}-ResourceInvokeFunction-${stack.stackName}`,
+      functionName: `${stack.stackName}-ResourceInvokeFunction-${props.id}`,
     });
 
     // Call another lambda function with no arguments.
@@ -75,10 +75,14 @@ export class CdkResourceInvoke extends Construct {
         resources: [
           // This needs to have permissions to run any `ResourceInvokeFunction` because it is deployed as a
           // singleton Lambda function.
-          `arn:aws:lambda:${stack.region}:${stack.account}:function:*-ResourceInvokeFunction-${stack.stackName}`,
+          `arn:aws:lambda:${stack.region}:${stack.account}:function:${stack.stackName}-ResourceInvokeFunction-*`,
         ],
         actions: ['lambda:InvokeFunction'],
       })
+    );
+    // Also require VPC access for a Lambda function within the VPC.
+    role.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
     );
 
     this._customResource = new AwsCustomResource(this, 'AwsCustomResource', {
