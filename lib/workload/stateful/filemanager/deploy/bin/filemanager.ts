@@ -27,6 +27,8 @@ new FilemanagerStack(
     enableMonitoring: {
       enablePerformanceInsights: true,
     },
+    public: true,
+    migrateDatabase: process.env.FILEMANAGER_DEPLOY_MIGRATE_DATABASE == 'true',
   }
 );
 

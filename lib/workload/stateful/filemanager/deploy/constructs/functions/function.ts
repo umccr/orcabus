@@ -6,6 +6,7 @@ import { Construct } from 'constructs';
 import { RustFunction } from 'rust.aws-cdk-lambda';
 import { Duration } from 'aws-cdk-lib';
 import { Settings as CargoSettings } from 'rust.aws-cdk-lambda/dist/settings';
+import * as path from 'node:path';
 
 /**
  * Settable values for a Rust function.
@@ -86,7 +87,6 @@ export class Function extends Construct {
       description: 'Security group that allows a filemanager Lambda function to egress out.',
     });
 
-    CargoSettings.WORKSPACE_DIR = '../';
     CargoSettings.BUILD_INDIVIDUALLY = true;
 
     this._function = new RustFunction(this, id, {
@@ -101,6 +101,7 @@ export class Function extends Construct {
           props.rustLog ?? `info,${props.package.replace('-', '_')}=trace,filemanager=trace`,
       },
       buildEnvironment: props.buildEnvironment,
+      extraBuildArgs: ['--manifest-path', `../${props.package}/Cargo.toml`],
       architecture: Architecture.ARM_64,
       role: this._role,
       onFailure: props.onFailure,

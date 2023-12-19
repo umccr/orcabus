@@ -1,4 +1,4 @@
-import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
+import { CfnOutput, RemovalPolicy, Stack, StackProps, Token } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambdaDestinations from 'aws-cdk-lib/aws-lambda-destinations';
@@ -20,7 +20,14 @@ import * as fn from '../constructs/functions/function';
  */
 type Settings = DatabaseSettings &
   IngestFunctionSettings & {
+    /**
+     * The name of the database. Defaults to `filemanager`.
+     */
     databaseName?: string;
+    /**
+     * Whether to initialize a database migration.
+     */
+    migrateDatabase?: boolean;
   };
 
 /**
@@ -88,18 +95,22 @@ export class FilemanagerStack extends Stack {
       port: settings?.port,
     });
 
-    const migrate = new CdkResourceInvoke(this, 'MigrateDatabase', {
-      vpc,
-      createFunction: (scope: Construct, id: string, props: fn.FunctionPropsNoPackage) => {
-        return new MigrateFunction(scope, id, props);
-      },
-      functionProps: {
+    if (settings?.migrateDatabase) {
+      new CdkResourceInvoke(this, 'MigrateDatabase', {
         vpc,
-        database,
-      },
-      id: 'MigrateFunction',
-    });
-    migrate.addDependency(database.cluster);
+        createFunction: (scope: Construct, id: string, props: fn.FunctionPropsNoPackage) => {
+          return new MigrateFunction(scope, id, props);
+        },
+        functionProps: {
+          vpc,
+          database,
+          buildEnvironment: settings?.buildEnvironment,
+          rustLog: settings?.rustLog,
+        },
+        id: 'MigrateFunction',
+        dependencies: [database.cluster],
+      });
+    }
 
     new IngestFunction(this, 'IngestLambda', {
       vpc,

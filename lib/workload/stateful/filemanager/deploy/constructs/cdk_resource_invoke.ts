@@ -8,7 +8,7 @@ import {
 import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import * as fn from './functions/function';
 import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { Stack } from 'aws-cdk-lib';
+import { CfnOutput, Stack, Token } from 'aws-cdk-lib';
 
 /**
  * Props for the resource invoke construct.
@@ -32,6 +32,10 @@ export type CdkResourceInvokeProps = {
    * Name to use when creating the function.
    */
   id: string;
+  /**
+   * Dependencies for this resource.
+   */
+  dependencies?: IDependable[];
 };
 
 /**
@@ -48,9 +52,10 @@ export class CdkResourceInvoke extends Construct {
     const stack = Stack.of(this);
     this._function = props.createFunction(this, props.id, {
       ...props.functionProps,
-      functionName: `${id}-${props.id}-ResourceInvokeFunction-${stack.stackName}`,
+      functionName: `${id}-ResourceInvokeFunction-${stack.stackName}`,
     });
 
+    // Call another lambda function with no arguments.
     const sdkCall: AwsSdkCall = {
       service: 'Lambda',
       action: 'invoke',
@@ -68,7 +73,8 @@ export class CdkResourceInvoke extends Construct {
     role.addToPolicy(
       new PolicyStatement({
         resources: [
-          // This needs to have permissions to run any `ResourceInvokeFunction`.
+          // This needs to have permissions to run any `ResourceInvokeFunction` because it is deployed as a
+          // singleton Lambda function.
           `arn:aws:lambda:${stack.region}:${stack.account}:function:*-ResourceInvokeFunction-${stack.stackName}`,
         ],
         actions: ['lambda:InvokeFunction'],
@@ -86,6 +92,14 @@ export class CdkResourceInvoke extends Construct {
     });
 
     this._response = this.customResource.getResponseField('Payload');
+
+    // Add any dependencies.
+    props.dependencies?.forEach((dependency) => this.addDependency(dependency));
+
+    // Output the result.
+    new CfnOutput(this, 'MigrateDatabaseResponse', {
+      value: Token.asString(this.response),
+    });
   }
 
   /**

@@ -33,6 +33,10 @@ export type EnableMonitoringProps = {
  */
 export type DatabaseSettings = {
   /**
+   * Whether the database is publically available.
+   */
+  readonly public?: boolean;
+  /**
    * Whether to destroy the database on stack removal. Defaults to keeping a snapshot.
    */
   readonly destroyOnRemove?: boolean;
@@ -114,7 +118,7 @@ export class Database extends Construct {
     this._cluster = new DatabaseCluster(this, 'Cluster', {
       vpc: props.vpc,
       vpcSubnets: {
-        subnetType: SubnetType.PRIVATE_ISOLATED,
+        subnetType: props.public ? SubnetType.PUBLIC : SubnetType.PRIVATE_ISOLATED,
       },
       securityGroups: [this._securityGroup],
       credentials: rds.Credentials.fromSecret(props.secret),
