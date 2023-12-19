@@ -4,6 +4,7 @@ use crate::error::Error::S3Error;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::primitives;
+use aws_sdk_s3::types::StorageClass::Standard;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::future::join_all;
 use mockall_double::double;
@@ -95,8 +96,12 @@ impl Collecter {
                         ..
                     } = head;
 
+                    // S3 does not return a storage class for standard, which means this is the
+                    // default. See https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_ResponseSyntax
                     event = event
-                        .update_storage_class(storage_class.and_then(StorageClass::from_aws))
+                        .update_storage_class(StorageClass::from_aws(
+                            storage_class.unwrap_or(Standard),
+                        ))
                         .update_last_modified_date(Self::convert_datetime(last_modified))
                         .update_size(content_length)
                         .update_e_tag(e_tag);
