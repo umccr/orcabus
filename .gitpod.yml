@@ -10,10 +10,11 @@ tasks:
       yarn install
       find ./lib -name 'requirements.txt' -exec pip install -r {} \;
       pip install -r requirements-dev.txt
+      docker compose pull
 
   - name: Mock Services
     command: |
-      docker compose up -d 
+      docker compose up 
 
 ports:
   - name: Frontend

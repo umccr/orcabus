@@ -1,3 +1,5 @@
+FROM --platform=linux/amd64 public.ecr.aws/aws-cli/aws-cli as aws
+
 FROM gitpod/workspace-full
 
 # Our list of tools we need to use for dev (that won't be installed via npm etc)
@@ -19,5 +21,6 @@ RUN echo "nvm use default &>/dev/null" >> ~/.bashrc.d/51-nvm-fix
 # pre-commit
 RUN pip install pre-commit
 
-# granted (AWS role assume)
-RUN curl -L releases.commonfate.io/granted/v0.20.3/granted_0.20.3_linux_x86_64.tar.gz | sudo tar -zxvf - -C /usr/local/bin
+# aws CLI v2
+COPY --from=aws /usr/local/aws-cli/ /usr/local/aws-cli/
+COPY --from=aws /usr/local/bin/ /usr/local/bin/
