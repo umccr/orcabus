@@ -56,8 +56,8 @@ pub async fn ingest_event(
         .into_iter()
         .filter_map(|event| {
             event.body.map(|body| {
-                let body: FlatS3EventMessages = serde_json::from_str(&body)?;
-                Ok(body)
+                let body: Option<FlatS3EventMessages> = serde_json::from_str(&body)?;
+                Ok(body.unwrap_or_default())
             })
         })
         .collect::<Result<Vec<FlatS3EventMessages>, Error>>()?
