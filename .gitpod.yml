@@ -14,14 +14,17 @@ tasks:
 
   - name: Mock Services
     command: |
-      docker compose up 
+      docker compose up
 
 ports:
-  - name: Frontend
-    description: Port 3000 for the frontend
-    port: 3000
-    onOpen: open-browser
+  - name: Mock ICA
+    description: Port 4010 for a mock ICA
+    port: 4010
+    onOpen: ignore
+    visibility: public
 
-  - name: Database UI
-    description: Port 10700 for the frontend
-    port: 10700
+  - name: Database
+    description: Port 3306 for the database
+    port: 3306
+    onOpen: ignore
+    visibility: public

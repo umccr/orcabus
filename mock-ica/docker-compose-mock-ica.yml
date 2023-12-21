@@ -1,12 +1,11 @@
 version: '3.1'
 
 services:
-
   haproxy:
     image: public.ecr.aws/docker/library/haproxy:2.4
     container_name: orcabus_haproxy
     ports:
-      - "80:80"
+      - '80:80'
     volumes:
       - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
 
@@ -17,7 +16,7 @@ services:
     command: mock -d -h 0.0.0.0 "/openapi/ica/v1/wes.json"
     restart: always
     ports:
-      - "4010:4010"
+      - '4010:4010'
     volumes:
       - ../openapi/ica:/openapi/ica
 
@@ -28,7 +27,7 @@ services:
     command: mock -d -h 0.0.0.0 "/openapi/ica/v1/tes.json"
     restart: always
     ports:
-      - "4011:4010"
+      - '4011:4010'
     volumes:
       - ../openapi/ica:/openapi/ica
 
@@ -39,7 +38,7 @@ services:
     command: mock -d -h 0.0.0.0 "/openapi/ica/v1/gds.json"
     restart: always
     ports:
-      - "4012:4010"
+      - '4012:4010'
     volumes:
       - ../openapi/ica:/openapi/ica
 
@@ -50,7 +49,7 @@ services:
     command: mock -d -h 0.0.0.0 "/openapi/ica/v1/ens.json"
     restart: always
     ports:
-      - "4013:4010"
+      - '4013:4010'
     volumes:
       - ../openapi/ica:/openapi/ica
 
@@ -61,7 +60,7 @@ services:
     command: mock -d -h 0.0.0.0 "/openapi/ica/v1/console.json"
     restart: always
     ports:
-      - "4014:4010"
+      - '4014:4010'
     volumes:
       - ../openapi/ica:/openapi/ica
 
@@ -72,6 +71,6 @@ services:
     command: mock -d -h 0.0.0.0 "/openapi/ica/v2/openapi_public.yaml"
     restart: always
     ports:
-      - "4015:4010"
+      - '4015:4010'
     volumes:
       - ../openapi/ica:/openapi/ica
