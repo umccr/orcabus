@@ -10,7 +10,7 @@ tasks:
       yarn install
       find ./lib -name 'requirements.txt' -exec pip install -r {} \;
       pip install -r requirements-dev.txt
-      docker compose pull
+      docker compose pull --ignore-pull-failures --no-parallel
 
   - name: Mock Services
     command: |
