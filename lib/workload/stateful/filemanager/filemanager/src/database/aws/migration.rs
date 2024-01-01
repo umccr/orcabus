@@ -27,15 +27,7 @@ impl Migration {
 
     /// Get the underlying sqlx migrator for the migrations.
     pub fn migrator() -> Migrator {
-        let mut migrator = migrate!("../database/migrations");
-        let aws_migrations = migrate!("../database/migrations/aws");
-
-        migrator
-            .migrations
-            .to_mut()
-            .extend(aws_migrations.migrations.into_owned());
-
-        migrator
+        migrate!("../database/migrations")
     }
 
     /// Get a reference to the database client.
