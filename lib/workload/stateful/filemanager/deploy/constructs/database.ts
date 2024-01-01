@@ -33,9 +33,9 @@ export type EnableMonitoringProps = {
  */
 export type DatabaseSettings = {
   /**
-   * Whether the database is publically available.
+   * If present, specifies the database as public and adds additional inbound CIDRs to the security group.
    */
-  readonly public?: boolean;
+  readonly public?: string[];
   /**
    * Whether to destroy the database on stack removal. Defaults to keeping a snapshot.
    */
@@ -136,11 +136,13 @@ export class Database extends Construct {
     });
 
     if (props.public) {
-      // If it's public, anyone can connect.
-      this._securityGroup.addIngressRule(
-        ec2.Peer.anyIpv4(),
-        ec2.Port.tcp(this._cluster.clusterEndpoint.port)
-      );
+      // If it's public, set the CIDRs from the config.
+      props.public.forEach((cidr) => {
+        this._securityGroup.addIngressRule(
+          ec2.Peer.ipv4(cidr),
+          ec2.Port.tcp(this._cluster.clusterEndpoint.port)
+        );
+      });
     } else {
       // Any inbound connections within the same security group are allowed access to the database port.
       this._securityGroup.addIngressRule(

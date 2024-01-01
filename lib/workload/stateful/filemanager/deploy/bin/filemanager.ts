@@ -27,7 +27,9 @@ new FilemanagerStack(
     enableMonitoring: {
       enablePerformanceInsights: true,
     },
-    public: true,
+    public: [
+      // Put your IP here if you want the database to be reachable.
+    ],
     migrateDatabase: process.env.FILEMANAGER_DEPLOY_MIGRATE_DATABASE == 'true',
   }
 );
