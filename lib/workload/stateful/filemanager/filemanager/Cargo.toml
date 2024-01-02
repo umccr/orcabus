@@ -6,6 +6,10 @@ authors.workspace = true
 license.workspace = true
 edition.workspace = true
 
+[features]
+
+migrate = ["sqlx/migrate"]
+
 [dependencies]
 axum = "0.6"
 hyper = { version = "1", features = ["full"] }
@@ -39,3 +43,7 @@ futures = "0.3"
 
 [dev-dependencies]
 aws-smithy-runtime-api = "1"
+
+# The migrate feature is required to run sqlx tests
+filemanager = { path = ".", features = ["migrate"] }
+lazy_static = "1.4"

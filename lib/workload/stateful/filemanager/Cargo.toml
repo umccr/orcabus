@@ -5,6 +5,7 @@ members = [
     "filemanager",
     "filemanager-http-lambda",
     "filemanager-ingest-lambda",
+    "filemanager-migrate-lambda"
 ]
 
 [workspace.package]

@@ -7,7 +7,7 @@ use crate::database::{Client, Ingest};
 use crate::error::Result;
 use crate::events::aws::StorageClass;
 use crate::events::aws::{Events, TransposedS3EventMessages};
-use crate::events::EventType;
+use crate::events::EventSourceType;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
@@ -29,7 +29,7 @@ impl Ingester {
     }
 
     /// Ingest the events into the database by calling the insert and update queries.
-    pub async fn ingest_events(&mut self, events: Events) -> Result<()> {
+    pub async fn ingest_events(&self, events: Events) -> Result<()> {
         let Events {
             object_created,
             object_removed,
@@ -55,8 +55,8 @@ impl Ingester {
             &object_ids,
             &buckets,
             &keys,
-            &sizes,
-            &e_tags,
+            &sizes as &[Option<i64>],
+            &e_tags as &[Option<String>],
             &event_times,
             &last_modified_dates as &[Option<DateTime<Utc>>],
             &portal_run_ids
@@ -100,9 +100,9 @@ impl Ingester {
 
 #[async_trait]
 impl Ingest for Ingester {
-    async fn ingest(&mut self, events: EventType) -> Result<()> {
+    async fn ingest(&self, events: EventSourceType) -> Result<()> {
         match events {
-            EventType::S3(events) => self.ingest_events(events).await,
+            EventSourceType::S3(events) => self.ingest_events(events).await,
         }
     }
 }
@@ -110,20 +110,21 @@ impl Ingest for Ingester {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::database::aws::ingester::Ingester;
+    use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
     use crate::events::aws::tests::{expected_events, EXPECTED_E_TAG};
     use crate::events::aws::{Events, StorageClass};
-    use crate::events::EventType;
+    use crate::events::EventSourceType;
     use chrono::{DateTime, Utc};
     use sqlx::postgres::PgRow;
     use sqlx::{PgPool, Row};
 
-    #[sqlx::test(migrations = "../database/migrations")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {
         let mut events = test_events();
         events.object_removed = Default::default();
 
-        let mut ingester = test_ingester(pool);
+        let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
         let result = sqlx::query("select * from object")
@@ -134,11 +135,11 @@ pub(crate) mod tests {
         assert_created(result);
     }
 
-    #[sqlx::test(migrations = "../database/migrations")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_removed(pool: PgPool) {
         let events = test_events();
 
-        let mut ingester = test_ingester(pool);
+        let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
         let result = sqlx::query("select * from object")
@@ -149,12 +150,12 @@ pub(crate) mod tests {
         assert_deleted(result);
     }
 
-    #[sqlx::test(migrations = "../database/migrations")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest(pool: PgPool) {
         let events = test_events();
 
-        let mut ingester = test_ingester(pool);
-        ingester.ingest(EventType::S3(events)).await.unwrap();
+        let ingester = test_ingester(pool);
+        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
 
         let result = sqlx::query("select * from object")
             .fetch_one(ingester.client.pool())
@@ -211,7 +212,7 @@ pub(crate) mod tests {
         events.object_created.storage_classes[0] = Some(StorageClass::Standard);
 
         events.object_removed.last_modified_dates[0] = Some(DateTime::default());
-        events.object_removed.storage_classes[0] = Some(StorageClass::Standard);
+        events.object_removed.storage_classes[0] = None;
 
         events
     }

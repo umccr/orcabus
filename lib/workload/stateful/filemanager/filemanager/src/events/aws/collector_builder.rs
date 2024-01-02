@@ -66,7 +66,9 @@ impl CollecterBuilder {
                 trace!(message = ?message, "got the message");
 
                 if let Some(body) = message.body() {
-                    serde_json::from_str(body).map_err(|err| DeserializeError(err.to_string()))
+                    let events: Option<FlatS3EventMessages> = serde_json::from_str(body)
+                        .map_err(|err| DeserializeError(err.to_string()))?;
+                    Ok(events.unwrap_or_default())
                 } else {
                     Err(SQSReceiveError("No body in SQS message".to_string()))
                 }
@@ -100,7 +102,7 @@ impl CollecterBuilder {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::events::aws::collecter::tests::{
-        assert_collected_events, set_s3_client_expectations,
+        assert_collected_events, expected_head_object, set_s3_client_expectations,
     };
     use crate::events::aws::collector_builder::CollecterBuilder;
     use crate::events::aws::tests::{expected_event_record, expected_flat_events};
@@ -128,7 +130,7 @@ pub(crate) mod tests {
         let mut s3_client = S3Client::default();
 
         set_sqs_client_expectations(&mut sqs_client);
-        set_s3_client_expectations(&mut s3_client, 2);
+        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
 
         let events = CollecterBuilder::default()
             .with_sqs_client(sqs_client)

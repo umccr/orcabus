@@ -32,7 +32,7 @@ pub async fn receive_and_ingest(
         .collect()
         .await?;
 
-    let mut ingester = if let Some(database_client) = database_client {
+    let ingester = if let Some(database_client) = database_client {
         Ingester::new(database_client)
     } else {
         Ingester::with_defaults().await?
@@ -56,8 +56,8 @@ pub async fn ingest_event(
         .into_iter()
         .filter_map(|event| {
             event.body.map(|body| {
-                let body: FlatS3EventMessages = serde_json::from_str(&body)?;
-                Ok(body)
+                let body: Option<FlatS3EventMessages> = serde_json::from_str(&body)?;
+                Ok(body.unwrap_or_default())
             })
         })
         .collect::<Result<Vec<FlatS3EventMessages>, Error>>()?
@@ -74,7 +74,7 @@ pub async fn ingest_event(
 
     trace!("ingesting events: {:?}", events);
 
-    let mut ingester = if let Some(database_client) = database_client {
+    let ingester = if let Some(database_client) = database_client {
         Ingester::new(database_client)
     } else {
         Ingester::with_defaults().await?
@@ -90,19 +90,20 @@ pub async fn ingest_event(
 mod tests {
     use super::*;
     use crate::database::aws::ingester::tests::assert_deleted;
-    use crate::events::aws::collecter::tests::set_s3_client_expectations;
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::events::aws::collecter::tests::{expected_head_object, set_s3_client_expectations};
     use crate::events::aws::collector_builder::tests::set_sqs_client_expectations;
     use crate::events::aws::tests::expected_event_record;
     use aws_lambda_events::sqs::SqsMessage;
     use sqlx::PgPool;
 
-    #[sqlx::test(migrations = "../database/migrations")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_receive_and_ingest(pool: PgPool) {
         let mut sqs_client = SQSClient::default();
         let mut s3_client = S3Client::default();
 
         set_sqs_client_expectations(&mut sqs_client);
-        set_s3_client_expectations(&mut s3_client, 2);
+        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
 
         let ingester =
             receive_and_ingest(s3_client, sqs_client, Some("url"), Some(Client::new(pool)))
@@ -117,11 +118,11 @@ mod tests {
         assert_deleted(result);
     }
 
-    #[sqlx::test(migrations = "../database/migrations")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_ingest_event(pool: PgPool) {
         let mut s3_client = S3Client::default();
 
-        set_s3_client_expectations(&mut s3_client, 2);
+        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
 
         let event = SqsEvent {
             records: vec![SqsMessage {

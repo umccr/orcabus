@@ -4,14 +4,17 @@ use crate::error::Error::S3Error;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::primitives;
+use aws_sdk_s3::types::StorageClass::Standard;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::future::join_all;
 use mockall_double::double;
 use tracing::trace;
 
 use crate::error::Result;
-use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
-use crate::events::{Collect, EventType};
+use crate::events::aws::{
+    EventType, Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass,
+};
+use crate::events::{Collect, EventSourceType};
 
 /// Collect raw events into the processed form which the database module accepts.
 #[derive(Debug)]
@@ -71,18 +74,37 @@ impl Collecter {
     ) -> Result<FlatS3EventMessages> {
         Ok(FlatS3EventMessages(
             join_all(events.into_inner().into_iter().map(|mut event| async move {
+                // No need to run this unnecessarily on removed events.
+                match event.event_type {
+                    EventType::Removed | EventType::Other => return Ok(event),
+                    _ => {}
+                };
+
                 trace!(key = ?event.key, bucket = ?event.bucket, "updating event");
 
+                // Race condition: it's possible that an object gets deleted so quickly that it
+                // occurs before calling head. This means that there may be cases where the storage
+                // class and other fields are not known.
                 if let Some(head) = Self::head(client, &event.key, &event.bucket).await? {
+                    trace!(head = ?head, "received head object output");
+
                     let HeadObjectOutput {
                         storage_class,
                         last_modified,
+                        content_length,
+                        e_tag,
                         ..
                     } = head;
 
-                    event =
-                        event.with_storage_class(storage_class.and_then(StorageClass::from_aws));
-                    event = event.with_last_modified_date(Self::convert_datetime(last_modified));
+                    // S3 does not return a storage class for standard, which means this is the
+                    // default. See https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_ResponseSyntax
+                    event = event
+                        .update_storage_class(StorageClass::from_aws(
+                            storage_class.unwrap_or(Standard),
+                        ))
+                        .update_last_modified_date(Self::convert_datetime(last_modified))
+                        .update_size(content_length)
+                        .update_e_tag(e_tag);
                 }
 
                 Ok(event)
@@ -96,13 +118,13 @@ impl Collecter {
 
 #[async_trait]
 impl Collect for Collecter {
-    async fn collect(self) -> Result<EventType> {
+    async fn collect(self) -> Result<EventSourceType> {
         let (client, raw_events) = self.into_inner();
         let raw_events = raw_events.sort_and_dedup();
 
         let events = Self::update_events(&client, raw_events).await?;
 
-        Ok(EventType::S3(Events::from(events)))
+        Ok(EventSourceType::S3(Events::from(events)))
     }
 }
 
@@ -110,7 +132,7 @@ impl Collect for Collecter {
 pub(crate) mod tests {
     use crate::events::aws::collecter::Collecter;
     use crate::events::aws::tests::expected_flat_events;
-    use crate::events::aws::StorageClass::Standard;
+    use crate::events::aws::StorageClass::IntelligentTiering;
     use aws_sdk_s3::error::SdkError;
     use aws_sdk_s3::primitives::{DateTimeFormat, SdkBody};
     use aws_sdk_s3::types;
@@ -119,6 +141,7 @@ pub(crate) mod tests {
     use aws_smithy_runtime_api::client::result::ServiceError;
     use chrono::{DateTime, Utc};
     use mockall::predicate::eq;
+    use std::result;
 
     use super::*;
 
@@ -136,7 +159,7 @@ pub(crate) mod tests {
     async fn head() {
         let mut collecter = test_collecter().await;
 
-        set_s3_client_expectations(&mut collecter.client, 1);
+        set_s3_client_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
 
         let result = Collecter::head(&collecter.client, "key", "bucket")
             .await
@@ -148,19 +171,10 @@ pub(crate) mod tests {
     async fn head_not_found() {
         let mut collecter = test_collecter().await;
 
-        collecter
-            .client
-            .expect_head_object()
-            .with(eq("key"), eq("bucket"))
-            .times(1)
-            .returning(move |_, _| {
-                Err(SdkError::ServiceError(
-                    ServiceError::builder()
-                        .source(HeadObjectError::NotFound(NotFound::builder().build()))
-                        .raw(HttpResponse::new(404.try_into().unwrap(), SdkBody::empty()))
-                        .build(),
-                ))
-            });
+        set_s3_client_expectations(
+            &mut collecter.client,
+            vec![|| Err(expected_head_object_not_found())],
+        );
 
         let result = Collecter::head(&collecter.client, "key", "bucket")
             .await
@@ -174,7 +188,7 @@ pub(crate) mod tests {
 
         let events = expected_flat_events().sort_and_dedup();
 
-        set_s3_client_expectations(&mut collecter.client, 2);
+        set_s3_client_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
 
         let mut result = Collecter::update_events(&collecter.client, events)
             .await
@@ -183,61 +197,76 @@ pub(crate) mod tests {
             .into_iter();
 
         let first = result.next().unwrap();
-        assert_eq!(first.storage_class, Some(Standard));
+        assert_eq!(first.storage_class, Some(IntelligentTiering));
         assert_eq!(first.last_modified_date, Some(Default::default()));
 
         let second = result.next().unwrap();
-        assert_eq!(second.storage_class, Some(Standard));
-        assert_eq!(second.last_modified_date, Some(Default::default()));
+        assert_eq!(second.storage_class, None);
+        assert_eq!(second.last_modified_date, None);
     }
 
     #[tokio::test]
     async fn collect() {
         let mut collecter = test_collecter().await;
 
-        set_s3_client_expectations(&mut collecter.client, 2);
+        set_s3_client_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
 
         let result = collecter.collect().await.unwrap();
 
         assert_collected_events(result);
     }
 
-    pub(crate) fn assert_collected_events(result: EventType) {
-        assert!(matches!(result, EventType::S3(_)));
+    pub(crate) fn assert_collected_events(result: EventSourceType) {
+        assert!(matches!(result, EventSourceType::S3(_)));
 
         match result {
-            EventType::S3(events) => {
-                assert_eq!(events.object_created.storage_classes[0], Some(Standard));
+            EventSourceType::S3(events) => {
+                assert_eq!(
+                    events.object_created.storage_classes[0],
+                    Some(IntelligentTiering)
+                );
                 assert_eq!(
                     events.object_created.last_modified_dates[0],
                     Some(Default::default())
                 );
 
-                assert_eq!(events.object_removed.storage_classes[0], Some(Standard));
-                assert_eq!(
-                    events.object_removed.last_modified_dates[0],
-                    Some(Default::default())
-                );
+                assert_eq!(events.object_removed.storage_classes[0], None);
+                assert_eq!(events.object_removed.last_modified_dates[0], None);
             }
         }
     }
 
-    pub(crate) fn set_s3_client_expectations(client: &mut Client, times: usize) {
-        client
+    pub(crate) fn set_s3_client_expectations<F>(client: &mut Client, expectations: Vec<F>)
+    where
+        F: Fn() -> result::Result<HeadObjectOutput, SdkError<HeadObjectError>> + Send + 'static,
+    {
+        let client = client
             .expect_head_object()
             .with(eq("key"), eq("bucket"))
-            .times(times)
-            .returning(move |_, _| Ok(expected_head_object()));
+            .times(expectations.len());
+
+        for expectation in expectations {
+            client.returning(move |_, _| expectation());
+        }
     }
 
-    fn expected_head_object() -> HeadObjectOutput {
+    pub(crate) fn expected_head_object() -> HeadObjectOutput {
         HeadObjectOutput::builder()
             .last_modified(
                 primitives::DateTime::from_str("1970-01-01T00:00:00Z", DateTimeFormat::DateTime)
                     .unwrap(),
             )
-            .storage_class(types::StorageClass::Standard)
+            .storage_class(types::StorageClass::IntelligentTiering)
             .build()
+    }
+
+    pub(crate) fn expected_head_object_not_found() -> SdkError<HeadObjectError> {
+        SdkError::ServiceError(
+            ServiceError::builder()
+                .source(HeadObjectError::NotFound(NotFound::builder().build()))
+                .raw(HttpResponse::new(404.try_into().unwrap(), SdkBody::empty()))
+                .build(),
+        )
     }
 
     async fn test_collecter() -> Collecter {

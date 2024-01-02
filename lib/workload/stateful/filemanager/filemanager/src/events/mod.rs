@@ -12,12 +12,12 @@ pub mod aws;
 #[async_trait]
 pub trait Collect {
     /// Collect into events.
-    async fn collect(self) -> Result<EventType>;
+    async fn collect(self) -> Result<EventSourceType>;
 }
 
 /// The type of event.
 #[derive(Debug)]
 #[non_exhaustive]
-pub enum EventType {
+pub enum EventSourceType {
     S3(Events),
 }
