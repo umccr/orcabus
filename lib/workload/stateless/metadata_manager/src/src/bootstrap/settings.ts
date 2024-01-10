@@ -1,9 +1,9 @@
-export type SettingsType = {
+export type SettingType = {
   port: number;
   host: string;
 };
 
-export default function getAppSettings(): SettingsType {
+export default function getAppSettings(): SettingType {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   if (isDevelopment) {
