@@ -19,6 +19,7 @@
     "axios": "^1.6.5",
     "edgedb": "^1.4.1",
     "fastify": "^4.25.2",
+    "fastify-type-provider-zod": "^1.1.9",
     "google-auth-library": "^9.4.1",
     "google-spreadsheet": "^4.1.1",
     "lodash": "^4.17.21",

@@ -4,7 +4,13 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import { DependencyContainer } from 'tsyringe';
 import { internalRoutes } from './api/routes/internal-routes';
 import { gqlRoutes } from './api/routes/graphql-routes';
-import { SettingType } from './bootstrap/settings';
+import {
+  jsonSchemaTransform,
+  createJsonSchemaTransform,
+  serializerCompiler,
+  validatorCompiler,
+  ZodTypeProvider,
+} from 'fastify-type-provider-zod';
 
 export class App {
   public readonly server: FastifyInstance;
@@ -27,6 +33,11 @@ export class App {
   }
 
   public async setupServer(): Promise<FastifyInstance> {
+    // TypeProvider
+    this.server.setValidatorCompiler(validatorCompiler);
+    this.server.setSerializerCompiler(serializerCompiler);
+    this.server.withTypeProvider<ZodTypeProvider>();
+
     // OpenAPI
     await this.server.register(fastifySwagger, {
       // openapi 3.0.3 options
@@ -48,7 +59,9 @@ export class App {
         },
       },
       hideUntagged: true,
+      transform: jsonSchemaTransform,
     });
+
     await this.server.register(fastifySwaggerUi, {
       routePrefix: '/documentation',
       uiConfig: {

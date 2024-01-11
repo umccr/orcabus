@@ -1,6 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { DependencyContainer } from 'tsyringe';
 import { MetadataService } from '../../service/metadata';
+import {
+  selectAllLibraryQueryReturnsSchema,
+  selectAllSpecimenQueryReturnsSchema,
+  selectAllSubjectQueryReturnsSchema,
+} from '../../../dbschema/queriesZodSchema';
 
 export const internalRoutes = async (
   fastify: FastifyInstance,
@@ -8,15 +13,60 @@ export const internalRoutes = async (
 ) => {
   const metadataService = opts.container.resolve(MetadataService);
 
-  fastify.get('/library', async () => {
-    return metadataService.getAllLibrary();
-  });
+  fastify.get(
+    '/library',
+    {
+      schema: {
+        tags: ['library'],
+        response: {
+          200: {
+            description: 'Successful',
+            type: 'object',
+            properties: selectAllLibraryQueryReturnsSchema,
+          },
+        },
+      },
+    },
+    async () => {
+      return metadataService.getAllLibrary();
+    }
+  );
 
-  fastify.get('/specimen', async () => {
-    return metadataService.getAllSpecimen();
-  });
+  fastify.get(
+    '/specimen',
+    {
+      schema: {
+        tags: ['specimen'],
+        response: {
+          200: {
+            description: 'Successful',
+            type: 'object',
+            properties: selectAllSpecimenQueryReturnsSchema,
+          },
+        },
+      },
+    },
+    async () => {
+      return metadataService.getAllSpecimen();
+    }
+  );
 
-  fastify.get('/subject', async () => {
-    return metadataService.getAllSubject();
-  });
+  fastify.get(
+    '/subject',
+    {
+      schema: {
+        tags: ['subject'],
+        response: {
+          200: {
+            description: 'Successful',
+            type: 'object',
+            properties: selectAllSubjectQueryReturnsSchema,
+          },
+        },
+      },
+    },
+    async () => {
+      return metadataService.getAllSubject();
+    }
+  );
 };
