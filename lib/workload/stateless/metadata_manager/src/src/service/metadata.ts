@@ -98,8 +98,8 @@ export class MetadataService {
    * @returns
    */
   protected async checkAndRemoveSubject(sourceInternalIdArray: string[]) {
-    const allExistingSubject = await selectAllSubjectQuery(this.edgeDbClient);
-    for (const s of allExistingSubject) {
+    const allExistingSubject = await selectAllSubjectQuery(this.edgeDbClient, {});
+    for (const s of allExistingSubject.results) {
       const shouldRetain = !!sourceInternalIdArray.find(
         (sourceInternalId) => sourceInternalId == s.internalId
       );
@@ -186,8 +186,8 @@ export class MetadataService {
    * @returns
    */
   protected async checkAndRemoveSpecimen(sourceInternalIdArray: string[]) {
-    const allExistingSpc = await selectAllSpecimenQuery(this.edgeDbClient);
-    for (const s of allExistingSpc) {
+    const allExistingSpc = await selectAllSpecimenQuery(this.edgeDbClient, {});
+    for (const s of allExistingSpc.results) {
       const shouldRetain = !!sourceInternalIdArray.find(
         (sourceInternalId) => sourceInternalId == s.internalId
       );
@@ -262,8 +262,8 @@ export class MetadataService {
    * @returns
    */
   protected async checkAndRemoveLibrary(sourceInternalIdArray: string[]) {
-    const allExistingLib = await selectAllLibraryQuery(this.edgeDbClient);
-    for (const s of allExistingLib) {
+    const allExistingLib = await selectAllLibraryQuery(this.edgeDbClient, {});
+    for (const s of allExistingLib.results) {
       const shouldRetain = !!sourceInternalIdArray.find(
         (sourceInternalId) => sourceInternalId == s.internalId
       );
@@ -345,14 +345,14 @@ export class MetadataService {
   }
 
   public async getAllLibrary() {
-    return await selectAllLibraryQuery(this.edgeDbClient);
+    return await selectAllLibraryQuery(this.edgeDbClient, {});
   }
 
   public async getAllSpecimen() {
-    return await selectAllSpecimenQuery(this.edgeDbClient);
+    return await selectAllSpecimenQuery(this.edgeDbClient, {});
   }
 
   public async getAllSubject() {
-    return await selectAllSubjectQuery(this.edgeDbClient);
+    return await selectAllSubjectQuery(this.edgeDbClient, {});
   }
 }
