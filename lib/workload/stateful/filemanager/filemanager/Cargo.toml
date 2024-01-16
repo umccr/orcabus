@@ -6,6 +6,10 @@ authors.workspace = true
 license.workspace = true
 edition.workspace = true
 
+[features]
+
+migrate = ["sqlx/migrate"]
+
 [dependencies]
 axum = "0.6"
 hyper = { version = "1", features = ["full"] }
@@ -28,7 +32,7 @@ mockall = "0.12"
 mockall_double = "0.3"
 lambda_runtime = "0.8"
 aws_lambda_events = "0.12"
-filemanager-macros = { path = "../filemanager-macros" }
+itertools = "0.12"
 
 # AWS
 aws-sdk-sqs = "1"
@@ -40,3 +44,7 @@ futures = "0.3"
 
 [dev-dependencies]
 aws-smithy-runtime-api = "1"
+
+# The migrate feature is required to run sqlx tests
+filemanager = { path = ".", features = ["migrate"] }
+lazy_static = "1.4"
