@@ -13,6 +13,7 @@ use uuid::Uuid;
 use crate::error::Error;
 use crate::error::Error::DeserializeError;
 use crate::error::Result;
+use crate::events::aws::EventType::{Created, Other, Removed};
 
 pub mod collecter;
 pub mod collector_builder;
@@ -291,6 +292,13 @@ impl FlatS3EventMessages {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub enum EventType {
+    Created,
+    Removed,
+    Other,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum EventType {
     Created,
     Removed,

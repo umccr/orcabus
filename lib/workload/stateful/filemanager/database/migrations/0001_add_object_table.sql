@@ -7,13 +7,13 @@ create table object (
     -- The name of the object.
     key varchar(1024) not null,
     -- The size of the object.
-    size int not null,
+    size int default null,
     -- A unique identifier for the object, if it is present.
     hash varchar(255) default null,
     -- When this object was created.
-    created_date timestamptz not null,
+    created_date timestamptz not null default now(),
     -- When this object was last modified.
-    last_modified_date timestamptz not null,
+    last_modified_date timestamptz not null default now(),
     -- When this object was deleted, a null value means that the object has not yet been deleted.
     deleted_date timestamptz default null,
     -- The date of the object and its id combined.

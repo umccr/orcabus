@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts stack/stack.ts",
+  "app": "npx ts-node --prefer-ts-exts bin/filemanager.ts",
   "watch": {
     "include": ["**"],
     "exclude": [
