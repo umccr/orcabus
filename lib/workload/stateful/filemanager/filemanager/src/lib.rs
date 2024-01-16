@@ -8,3 +8,7 @@ pub mod env;
 pub mod error;
 pub mod events;
 pub mod handlers;
+
+// Re-export all macros.
+pub use filemanager_macros::*;
+

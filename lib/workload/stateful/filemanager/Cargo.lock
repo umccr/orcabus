@@ -1073,6 +1073,7 @@ dependencies = [
  "axum",
  "chrono",
  "dotenvy",
+ "filemanager-macros",
  "futures",
  "hyper 1.0.1",
  "lambda_runtime",
@@ -1120,6 +1121,16 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "filemanager-macros"
+version = "0.1.0"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.37",
 ]
 
 [[package]]
