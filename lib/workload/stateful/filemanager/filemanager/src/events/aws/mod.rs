@@ -212,16 +212,23 @@ impl FlatS3EventMessages {
     pub fn dedup(self) -> Self {
         let mut messages = self.into_inner();
 
-        Self(messages.into_iter().unique_by(|value| (
-            &value.sequencer,
-            &value.event_name,
-            &value.bucket,
-            &value.key,
-            &value.size,
-            &value.e_tag,
-            // Note, `last_modified` and `storage_class` are always `None` at this point anyway so don't need
-            // to be considered.
-        )).collect())
+        Self(
+            messages
+                .into_iter()
+                .unique_by(|value| {
+                    (
+                        value.sequencer.clone(),
+                        value.event_name.clone(),
+                        value.bucket.clone(),
+                        value.key.clone(),
+                        value.size,
+                        value.e_tag.clone(),
+                        // Note, `last_modified` and `storage_class` are always `None` at this point anyway so don't need
+                        // to be considered.
+                    )
+                })
+                .collect(),
+        )
     }
 
     /// Ordering is implemented so that the sequencer values are considered when the bucket and the
@@ -235,7 +242,7 @@ impl FlatS3EventMessages {
         messages.sort();
         messages.sort_by(|a, b| {
             if let (Some(a_sequencer), Some(b_sequencer)) =
-              (a.sequencer.as_ref(), b.sequencer.as_ref())
+                (a.sequencer.as_ref(), b.sequencer.as_ref())
             {
                 if a.bucket == b.bucket && a.key == b.key {
                     return (
@@ -249,17 +256,17 @@ impl FlatS3EventMessages {
                         &a.storage_class,
                         &a.last_modified_date,
                     )
-                      .cmp(&(
-                          b_sequencer,
-                          &b.event_time,
-                          &b.event_name,
-                          &b.bucket,
-                          &b.key,
-                          &b.size,
-                          &b.e_tag,
-                          &b.storage_class,
-                          &b.last_modified_date,
-                      ));
+                        .cmp(&(
+                            b_sequencer,
+                            &b.event_time,
+                            &b.event_name,
+                            &b.bucket,
+                            &b.key,
+                            &b.size,
+                            &b.e_tag,
+                            &b.storage_class,
+                            &b.last_modified_date,
+                        ));
                 }
             }
 
@@ -274,17 +281,17 @@ impl FlatS3EventMessages {
                 &a.storage_class,
                 &a.last_modified_date,
             )
-              .cmp(&(
-                  &b.event_time,
-                  &b.sequencer,
-                  &b.event_name,
-                  &b.bucket,
-                  &b.key,
-                  &b.size,
-                  &b.e_tag,
-                  &b.storage_class,
-                  &b.last_modified_date,
-              ))
+                .cmp(&(
+                    &b.event_time,
+                    &b.sequencer,
+                    &b.event_name,
+                    &b.bucket,
+                    &b.key,
+                    &b.size,
+                    &b.e_tag,
+                    &b.storage_class,
+                    &b.last_modified_date,
+                ))
         });
 
         Self(messages)
@@ -292,13 +299,6 @@ impl FlatS3EventMessages {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum EventType {
-    Created,
-    Removed,
-    Other,
-}
-
-#[derive(Debug, Eq, PartialEq)]
 pub enum EventType {
     Created,
     Removed,
