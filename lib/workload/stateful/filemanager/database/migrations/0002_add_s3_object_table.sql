@@ -19,5 +19,8 @@ create table s3_object(
     -- Record whether the event that generated this object was ever out of order, useful for debugging.
     event_out_of_order boolean not null default false,
     -- Record the number of duplicate events received for this object, useful for debugging.
-    number_duplicate_events integer not null default 0
+    number_duplicate_events integer not null default 0,
+
+    -- The deleted sequencer must be greater than the created sequencer.
+    check (deleted_sequencer is null or created_sequencer is null or deleted_sequencer > created_sequencer)
 );
