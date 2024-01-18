@@ -4,6 +4,12 @@ create type storage_class as enum ('DeepArchive', 'Glacier', 'GlacierIr', 'Intel
 create table s3_object(
     -- The object id.
     object_id uuid references object (object_id) primary key,
+    -- Duplicate the bucket here because it is useful for conflicts. This must match the bucket in object.
+    bucket text references object(bucket) not null,
+    -- Duplicate the key here because it is useful for conflicts. This must match the key in object.
+    key text references object(bucket) not null,
+    -- An S3-specific e_tag, if it is present.
+    e_tag text default null,
     -- The S3 storage class of the object.
     storage_class storage_class not null,
     -- A sequencer value for when the object was created. Used to synchronise out of order and duplicate events.
