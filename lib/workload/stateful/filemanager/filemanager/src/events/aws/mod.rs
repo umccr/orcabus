@@ -1,8 +1,6 @@
 //! Convert S3 events for the database.
 //!
 
-use std::cmp::Ordering;
-
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use chrono::{DateTime, ParseError, Utc};
 use itertools::Itertools;
@@ -210,7 +208,7 @@ impl FlatS3EventMessages {
     /// the logic in this example:
     /// https://github.com/aws-samples/amazon-s3-endedupe/blob/bd906412c2b4ca26eee6312e3ac99120790b9de9/endedupe/app.py#L79-L83
     pub fn dedup(self) -> Self {
-        let mut messages = self.into_inner();
+        let messages = self.into_inner();
 
         Self(
             messages
@@ -591,7 +589,7 @@ pub(crate) mod tests {
 
     pub(crate) fn expected_events() -> Events {
         let events = expected_flat_events().sort_and_dedup();
-        events.try_into().unwrap()
+        events.into()
     }
 
     pub(crate) fn expected_event_record() -> String {

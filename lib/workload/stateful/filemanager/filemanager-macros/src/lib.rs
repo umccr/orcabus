@@ -15,7 +15,7 @@ pub fn import_plrust_function(args: TokenStream, input: TokenStream) -> TokenStr
             return TokenStream::from(Error::from(e).write_errors());
         }
     };
-    let args = match MacroArgs::from_list(&attr_args) {
+    let _args = match MacroArgs::from_list(&attr_args) {
         Ok(v) => v,
         Err(e) => {
             return TokenStream::from(e.write_errors());

@@ -110,7 +110,6 @@ pub(crate) mod tests {
     use aws_sdk_sqs::operation::receive_message::ReceiveMessageOutput;
     use aws_sdk_sqs::types::builders::MessageBuilder;
     use mockall::predicate::eq;
-    use uuid::Uuid;
 
     use super::*;
 
