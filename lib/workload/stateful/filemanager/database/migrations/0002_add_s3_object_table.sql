@@ -21,6 +21,9 @@ create table s3_object(
     -- Record the number of duplicate events received for this object, useful for debugging.
     number_duplicate_events integer not null default 0,
 
+    -- The sequencers should be unique with the bucket and key, otherwise this is a duplicate event.
+    constraint created_sequencer_unique unique (bucket, key, created_sequencer),
+    constraint deleted_sequencer_unique unique (bucket, key, deleted_sequencer),
     -- The deleted sequencer must be greater than the created sequencer.
-    check (deleted_sequencer is null or created_sequencer is null or deleted_sequencer > created_sequencer)
+    constraint deleted_greater_than_created check (deleted_sequencer is null or created_sequencer is null or deleted_sequencer > created_sequencer)
 );
