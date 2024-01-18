@@ -20,7 +20,9 @@ edgetypes:
 	@yarn run -B generate queries --target ts --file --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
 	@yarn run -B generate edgeql-js --target ts --output-dir dbschema/edgeql-js --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
 	@yarn run -B generate interfaces --file dbschema/interfaces.ts --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
-	@yarn run ts-to-zod dbschema/queries.ts dbschema/queriesZodSchema.ts --skipValidation
+	@yarn run ts-to-zod dbschema/queries.ts dbschema/queriesZodSchema.ts
+	sed -i '' 's/.number()/.coerce.number()/g' dbschema/queriesZodSchema.ts
+
 
 build: edgetypes
 	@rm -rf asset

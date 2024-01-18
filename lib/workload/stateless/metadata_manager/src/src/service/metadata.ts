@@ -20,6 +20,8 @@ import {
   updateLibraryRecord,
 } from './helpers/metadata/library-helper';
 import {
+  SelectAllLibraryQueryArgs,
+  SelectAllSubjectQueryArgs,
   deleteLibraryByOrcaBusId,
   deleteSpecimenByOrcaBusId,
   deleteSubjectByOrcaBusId,
@@ -344,15 +346,15 @@ export class MetadataService {
     await this.checkAndRemoveLibrary(internalIdArrays.library);
   }
 
-  public async getAllLibrary() {
-    return await selectAllLibraryQuery(this.edgeDbClient, {});
+  public async getAllLibrary(libraryQuery: SelectAllLibraryQueryArgs) {
+    return await selectAllLibraryQuery(this.edgeDbClient, libraryQuery);
   }
 
-  public async getAllSpecimen() {
-    return await selectAllSpecimenQuery(this.edgeDbClient, {});
+  public async getAllSpecimen(specimenQuery: SelectAllSubjectQueryArgs) {
+    return await selectAllSpecimenQuery(this.edgeDbClient, specimenQuery);
   }
 
-  public async getAllSubject() {
-    return await selectAllSubjectQuery(this.edgeDbClient, {});
+  public async getAllSubject(subjectQuery: SelectAllSubjectQueryArgs) {
+    return await selectAllSubjectQuery(this.edgeDbClient, subjectQuery);
   }
 }

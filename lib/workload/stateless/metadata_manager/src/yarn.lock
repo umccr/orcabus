@@ -5390,7 +5390,7 @@ __metadata:
     reflect-metadata: ^0.2.1
     ts-jest: ^29.1.1
     ts-node: ^10.9.2
-    ts-to-zod: ^3.6.0
+    ts-to-zod: ^3.6.1
     tsyringe: ^4.8.0
     typescript: ^5.3.3
     ulid: ^2.3.0
@@ -5771,9 +5771,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-to-zod@npm:^3.6.0":
-  version: 3.6.0
-  resolution: "ts-to-zod@npm:3.6.0"
+"ts-to-zod@npm:^3.6.1":
+  version: 3.6.1
+  resolution: "ts-to-zod@npm:3.6.1"
   dependencies:
     "@oclif/core": ">=3.10.8"
     "@typescript/vfs": ^1.5.0
@@ -5793,7 +5793,7 @@ __metadata:
     zod: ^3.22.4
   bin:
     ts-to-zod: bin/run
-  checksum: 761d3701d4fec1a434c0f33a2f57e66fbceb58ae9453ef906a526ba5589bb290ad95302d7a9a750cdbf9e64ec46c853ce35cd59079034724bcbaa268b6b1b277
+  checksum: bba2c02dd2f86d9848539cc8d08bacdeb3eb1df4da636dedaae4f8fc547c4ae558f948318424c323aa6b443ec422abdf9631e01e338e921945e26b9743f47b55
   languageName: node
   linkType: hard
 

@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { DependencyContainer } from 'tsyringe';
 import { MetadataService } from '../../service/metadata';
 import {
+  selectAllLibraryQueryArgsSchema,
   selectAllLibraryQueryReturnsSchema,
   selectAllSpecimenQueryReturnsSchema,
   selectAllSubjectQueryReturnsSchema,
@@ -18,6 +19,7 @@ export const internalRoutes = async (
     {
       schema: {
         tags: ['library'],
+        query: selectAllLibraryQueryArgsSchema,
         response: {
           200: {
             description: 'Successful',
@@ -27,8 +29,8 @@ export const internalRoutes = async (
         },
       },
     },
-    async () => {
-      return metadataService.getAllLibrary();
+    async (req, res) => {
+      return metadataService.getAllLibrary(req.query);
     }
   );
 
@@ -37,6 +39,7 @@ export const internalRoutes = async (
     {
       schema: {
         tags: ['specimen'],
+
         response: {
           200: {
             description: 'Successful',
@@ -46,8 +49,8 @@ export const internalRoutes = async (
         },
       },
     },
-    async () => {
-      return metadataService.getAllSpecimen();
+    async (req, res) => {
+      return metadataService.getAllSpecimen(req.query);
     }
   );
 
@@ -65,8 +68,8 @@ export const internalRoutes = async (
         },
       },
     },
-    async () => {
-      return metadataService.getAllSubject();
+    async (req, res) => {
+      return metadataService.getAllSubject(req.query);
     }
   );
 };

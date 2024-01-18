@@ -8,7 +8,7 @@ with
     select metadata::Subject {
       *
     }
-    filter ( 
+    filter (
       .orcaBusId ?= <optional str>$orcaBusId ?? .orcaBusId
         AND
       .internalId ?= <optional str>$internalId ?? .internalId
@@ -30,6 +30,5 @@ select {
     `offset` := offset_,
     `limit` := limit_
   }
-
 }
 
