@@ -5,9 +5,9 @@ create table s3_object(
     -- The object id.
     object_id uuid references object (object_id) primary key,
     -- Duplicate the bucket here because it is useful for conflicts. This must match the bucket in object.
-    bucket text references object(bucket) not null,
+    bucket text not null,
     -- Duplicate the key here because it is useful for conflicts. This must match the key in object.
-    key text references object(bucket) not null,
+    key text not null,
     -- An S3-specific e_tag, if it is present.
     e_tag text default null,
     -- The S3 storage class of the object.
@@ -23,7 +23,5 @@ create table s3_object(
 
     -- The sequencers should be unique with the bucket and key, otherwise this is a duplicate event.
     constraint created_sequencer_unique unique (bucket, key, created_sequencer),
-    constraint deleted_sequencer_unique unique (bucket, key, deleted_sequencer),
-    -- The deleted sequencer must be greater than the created sequencer.
-    constraint deleted_greater_than_created check (deleted_sequencer is null or created_sequencer is null or deleted_sequencer > created_sequencer)
+    constraint deleted_sequencer_unique unique (bucket, key, deleted_sequencer)
 );
