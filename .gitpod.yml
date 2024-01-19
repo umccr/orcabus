@@ -1,0 +1,30 @@
+# An image with our added services
+image:
+  file: .gitpod.Dockerfile
+
+tasks:
+  - name: Packages
+    init: |
+      pre-commit install
+      pre-commit run
+      yarn install
+      find ./lib -name 'requirements.txt' -exec pip install -r {} \;
+      pip install -r requirements-dev.txt
+      docker compose pull --ignore-pull-failures --no-parallel
+
+  - name: Mock Services
+    command: |
+      docker compose up
+
+ports:
+  - name: Mock ICA
+    description: Port 4010 for a mock ICA
+    port: 4010
+    onOpen: ignore
+    visibility: public
+
+  - name: Database
+    description: Port 3306 for the database
+    port: 3306
+    onOpen: ignore
+    visibility: public

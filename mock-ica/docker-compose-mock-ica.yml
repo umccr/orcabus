@@ -1,0 +1,76 @@
+version: '3.1'
+
+services:
+  haproxy:
+    image: public.ecr.aws/docker/library/haproxy:2.4
+    container_name: orcabus_haproxy
+    ports:
+      - '80:80'
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+
+  wes:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_wes
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v1/wes.json"
+    restart: always
+    ports:
+      - '4010:4010'
+    volumes:
+      - ../openapi/ica:/openapi/ica
+
+  tes:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_tes
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v1/tes.json"
+    restart: always
+    ports:
+      - '4011:4010'
+    volumes:
+      - ../openapi/ica:/openapi/ica
+
+  gds:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_gds
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v1/gds.json"
+    restart: always
+    ports:
+      - '4012:4010'
+    volumes:
+      - ../openapi/ica:/openapi/ica
+
+  ens:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_ens
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v1/ens.json"
+    restart: always
+    ports:
+      - '4013:4010'
+    volumes:
+      - ../openapi/ica:/openapi/ica
+
+  console:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_console
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v1/console.json"
+    restart: always
+    ports:
+      - '4014:4010'
+    volumes:
+      - ../openapi/ica:/openapi/ica
+
+  v2:
+    image: stoplight/prism:4
+    platform: linux/amd64
+    container_name: orcabus_ica_v2
+    command: mock -d -h 0.0.0.0 "/openapi/ica/v2/openapi_public.yaml"
+    restart: always
+    ports:
+      - '4015:4010'
+    volumes:
+      - ../openapi/ica:/openapi/ica

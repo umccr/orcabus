@@ -5,8 +5,6 @@
 #
 # Made a copy there in quay due to dockerhub rate limit.
 
-version: '3.1'
-
 services:
 
   db:
