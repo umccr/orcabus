@@ -575,17 +575,18 @@ __metadata:
   linkType: hard
 
 "@fastify/reply-from@npm:^9.0.0":
-  version: 9.4.0
-  resolution: "@fastify/reply-from@npm:9.4.0"
+  version: 9.6.0
+  resolution: "@fastify/reply-from@npm:9.6.0"
   dependencies:
     "@fastify/error": ^3.0.0
     end-of-stream: ^1.4.4
+    fast-content-type-parse: ^1.1.0
     fast-querystring: ^1.0.0
     fastify-plugin: ^4.0.0
     pump: ^3.0.0
     tiny-lru: ^11.0.0
     undici: ^5.19.1
-  checksum: a048d55d2b06898aa4b5b399e4b5e31ec1ca0abbbe06168951cca0342e508dfedd79d857d1d34ffe478e1a2c2713edd6a2a7358250e080db11c1b4c6b5196b6f
+  checksum: 73252363376572fdf7b11b3bf385c1c4d74b206fb9a27d357a6b76caa50e0f2acffd4557f1bc95ad512c944ca8c1da9e2a28b59a020c3a2b936deaede89b3e7c
   languageName: node
   linkType: hard
 
@@ -2499,6 +2500,13 @@ __metadata:
     iconv-lite: ^0.4.24
     tmp: ^0.0.33
   checksum: 1c2a616a73f1b3435ce04030261bed0e22d4737e14b090bb48e58865da92529c9f2b05b893de650738d55e692d071819b45e1669259b2b354bc3154d27a698c7
+  languageName: node
+  linkType: hard
+
+"fast-content-type-parse@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "fast-content-type-parse@npm:1.1.0"
+  checksum: c8c995b60ed30c4914aa255f012347f63fffa0c258039977b2080bb5c951dc6ef68a9243eac8ab456190642be44a31a7ada6e74d846e04f4667d40ebf778b94e
   languageName: node
   linkType: hard
 
