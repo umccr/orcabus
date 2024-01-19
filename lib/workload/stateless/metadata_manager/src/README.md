@@ -114,8 +114,10 @@ http://localhost:8080/subject
 http://localhost:8080/library
 http://localhost:8080/specimen
 
+# Swagger Endpoint
+http://localhost:8080/documentation
 
-<!-- GraphQL -->
+# GraphQL Endpoint
 http://localhost:8080/graphql/explore (UI)
 http://localhost:8080/graphql (Only for graphql POST method)
 ```

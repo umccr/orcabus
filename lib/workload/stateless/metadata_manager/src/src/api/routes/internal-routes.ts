@@ -1,12 +1,32 @@
+import { z } from 'zod';
 import { FastifyInstance } from 'fastify';
 import { DependencyContainer } from 'tsyringe';
 import { MetadataService } from '../../service/metadata';
 import {
   selectAllLibraryQueryArgsSchema,
   selectAllLibraryQueryReturnsSchema,
+  selectAllSpecimenQueryArgsSchema,
   selectAllSpecimenQueryReturnsSchema,
+  selectAllSubjectQueryArgsSchema,
   selectAllSubjectQueryReturnsSchema,
 } from '../../../dbschema/queriesZodSchema';
+
+/**
+ * Query parameter only accept string where pagination needs to be number, this function will
+ * add coerce to zod schema to convert these pagination value to numbers
+ *
+ * @param zodSchema The raw ZodSchema (that is not coerce)
+ * @returns
+ */
+
+const coercePaginationType = <Z extends z.ZodObject<any>>(zodSchema: Z) => {
+  const paginationSchema = z.object({
+    offset: z.coerce.number().optional().nullable(),
+    limit: z.coerce.number().optional().nullable(),
+  });
+
+  return zodSchema.omit({ offset: true, limit: true }).merge(paginationSchema);
+};
 
 export const internalRoutes = async (
   fastify: FastifyInstance,
@@ -19,7 +39,7 @@ export const internalRoutes = async (
     {
       schema: {
         tags: ['library'],
-        query: selectAllLibraryQueryArgsSchema,
+        query: coercePaginationType(selectAllLibraryQueryArgsSchema),
         response: {
           200: {
             description: 'Successful',
@@ -39,7 +59,7 @@ export const internalRoutes = async (
     {
       schema: {
         tags: ['specimen'],
-
+        query: coercePaginationType(selectAllSpecimenQueryArgsSchema),
         response: {
           200: {
             description: 'Successful',
@@ -59,6 +79,7 @@ export const internalRoutes = async (
     {
       schema: {
         tags: ['subject'],
+        query: coercePaginationType(selectAllSubjectQueryArgsSchema),
         response: {
           200: {
             description: 'Successful',
