@@ -11,7 +11,6 @@ import getAppSettings from './bootstrap/settings';
   const dc = await createDependencyContainer();
   const app = new App(dc);
 
-  // Setting/registering server routes
   const server = await app.setupServer();
 
   server.listen({ host: appSettings.host, port: appSettings.port }, (err, address) => {
