@@ -38,13 +38,13 @@ impl Ingester {
 
         trace!(object_created = ?object_created, "ingesting object created events");
         let TransposedS3EventMessages {
+            sequencers,
             object_ids,
             event_times,
             buckets,
             keys,
             sizes,
             e_tags,
-            portal_run_ids,
             storage_classes,
             last_modified_dates,
             ..
@@ -53,21 +53,22 @@ impl Ingester {
         query_file!(
             "../database/queries/ingester/insert_objects.sql",
             &object_ids,
-            &buckets,
-            &keys,
             &sizes as &[Option<i64>],
-            &e_tags as &[Option<String>],
-            &event_times,
-            &last_modified_dates as &[Option<DateTime<Utc>>],
-            &portal_run_ids
+            &vec![None; sizes.len()] as &[Option<String>],
         )
         .execute(&self.client.pool)
         .await?;
 
         query_file!(
-            "../database/queries/ingester/aws/insert_s3_objects.sql",
+            "../database/queries/ingester/aws/insert_s3_created_objects.sql",
             &object_ids,
-            &storage_classes as &[Option<StorageClass>]
+            &buckets,
+            &keys,
+            &event_times,
+            &last_modified_dates as &[Option<DateTime<Utc>>],
+            &e_tags as &[Option<String>],
+            &storage_classes as &[Option<StorageClass>],
+            &sequencers as &[Option<String>]
         )
         .execute(&self.client.pool)
         .await?;
@@ -81,7 +82,7 @@ impl Ingester {
         } = object_removed;
 
         query_file!(
-            "../database/queries/ingester/update_deleted.sql",
+            "../database/queries/ingester/aws/update_deleted.sql",
             &keys,
             &buckets,
             &event_times

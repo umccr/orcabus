@@ -4,10 +4,21 @@ create type storage_class as enum ('DeepArchive', 'Glacier', 'GlacierIr', 'Intel
 create table s3_object(
     -- The object id.
     object_id uuid references object (object_id) primary key,
-    -- Duplicate the bucket here because it is useful for conflicts. This must match the bucket in object.
+
+    -- General fields
+    -- The bucket of the object.
     bucket text not null,
-    -- Duplicate the key here because it is useful for conflicts. This must match the key in object.
+    -- The key of the object.
     key text not null,
+    -- When this object was created.
+    created_date timestamptz not null default now(),
+    -- When this object was deleted, a null value means that the object has not yet been deleted.
+    deleted_date timestamptz default null,
+    -- provenance - history of all objects and how they move?
+
+    -- AWS-specific fields
+    -- The AWS last modified value.
+    last_modified_date timestamptz default null,
     -- An S3-specific e_tag, if it is present.
     e_tag text default null,
     -- The S3 storage class of the object.
