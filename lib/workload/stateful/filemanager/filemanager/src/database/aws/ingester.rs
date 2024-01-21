@@ -128,12 +128,17 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
-        let result = sqlx::query("select * from object")
+        let object_results = sqlx::query("select * from object")
             .fetch_one(ingester.client.pool())
             .await
             .unwrap();
 
-        assert_created(result);
+        let s3_object_results = sqlx::query("select * from s3_object")
+            .fetch_one(ingester.client.pool())
+            .await
+            .unwrap();
+
+        assert_created(object_results, s3_object_results);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -143,12 +148,17 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
-        let result = sqlx::query("select * from object")
+        let object_results = sqlx::query("select * from object")
             .fetch_one(ingester.client.pool())
             .await
             .unwrap();
 
-        assert_deleted(result);
+        let s3_object_results = sqlx::query("select * from s3_object")
+            .fetch_one(ingester.client.pool())
+            .await
+            .unwrap();
+
+        assert_deleted(object_results, s3_object_results);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -158,52 +168,50 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(EventSourceType::S3(events)).await.unwrap();
 
-        let result = sqlx::query("select * from object")
+        let object_results = sqlx::query("select * from object")
+            .fetch_one(ingester.client.pool())
+            .await
+            .unwrap();
+        let s3_object_results = sqlx::query("select * from s3_object")
             .fetch_one(ingester.client.pool())
             .await
             .unwrap();
 
-        assert_deleted(result);
+        assert_deleted(object_results, s3_object_results);
     }
 
-    pub(crate) fn assert_created(result: PgRow) {
-        assert_eq!("bucket", result.get::<String, _>("bucket"));
-        assert_eq!("key", result.get::<String, _>("key"));
-        assert_eq!(0, result.get::<i32, _>("size"));
-        assert_eq!(EXPECTED_E_TAG, result.get::<String, _>("hash"));
+    pub(crate) fn assert_created(object_results: PgRow, s3_object_results: PgRow) {
+        assert_eq!("bucket", s3_object_results.get::<String, _>("bucket"));
+        assert_eq!("key", s3_object_results.get::<String, _>("key"));
+        assert_eq!(0, object_results.get::<i32, _>("size"));
+        assert_eq!(EXPECTED_E_TAG, s3_object_results.get::<String, _>("e_tag"));
         assert_eq!(
             DateTime::<Utc>::default(),
-            result.get::<DateTime<Utc>, _>("created_date")
+            s3_object_results.get::<DateTime<Utc>, _>("created_date")
         );
         assert_eq!(
             DateTime::<Utc>::default(),
-            result.get::<DateTime<Utc>, _>("last_modified_date")
+            s3_object_results.get::<DateTime<Utc>, _>("last_modified_date")
         );
-        assert!(result
-            .get::<String, _>("portal_run_id")
-            .starts_with("19700101"));
     }
 
-    pub(crate) fn assert_deleted(result: PgRow) {
-        assert_eq!("bucket", result.get::<String, _>("bucket"));
-        assert_eq!("key", result.get::<String, _>("key"));
-        assert_eq!(0, result.get::<i32, _>("size"));
-        assert_eq!(EXPECTED_E_TAG, result.get::<String, _>("hash"));
+    pub(crate) fn assert_deleted(object_results: PgRow, s3_object_results: PgRow) {
+        assert_eq!("bucket", s3_object_results.get::<String, _>("bucket"));
+        assert_eq!("key", s3_object_results.get::<String, _>("key"));
+        assert_eq!(0, object_results.get::<i32, _>("size"));
+        assert_eq!(EXPECTED_E_TAG, s3_object_results.get::<String, _>("e_tag"));
         assert_eq!(
             DateTime::<Utc>::default(),
-            result.get::<DateTime<Utc>, _>("created_date")
+            s3_object_results.get::<DateTime<Utc>, _>("created_date")
         );
         assert_eq!(
             DateTime::<Utc>::default(),
-            result.get::<DateTime<Utc>, _>("last_modified_date")
+            s3_object_results.get::<DateTime<Utc>, _>("last_modified_date")
         );
         assert_eq!(
             DateTime::<Utc>::default(),
-            result.get::<DateTime<Utc>, _>("deleted_date")
+            s3_object_results.get::<DateTime<Utc>, _>("deleted_date")
         );
-        assert!(result
-            .get::<String, _>("portal_run_id")
-            .starts_with("19700101"));
     }
 
     fn test_events() -> Events {

@@ -110,12 +110,17 @@ mod tests {
                 .await
                 .unwrap();
 
-        let result = sqlx::query("select * from object")
+        let object_results = sqlx::query("select * from object")
             .fetch_one(ingester.client().pool())
             .await
             .unwrap();
 
-        assert_deleted(result);
+        let s3_object_results = sqlx::query("select * from s3_object")
+            .fetch_one(ingester.client().pool())
+            .await
+            .unwrap();
+
+        assert_deleted(object_results, s3_object_results);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -135,11 +140,16 @@ mod tests {
             .await
             .unwrap();
 
-        let result = sqlx::query("select * from object")
+        let object_results = sqlx::query("select * from object")
             .fetch_one(ingester.client().pool())
             .await
             .unwrap();
 
-        assert_deleted(result);
+        let s3_object_results = sqlx::query("select * from s3_object")
+            .fetch_one(ingester.client().pool())
+            .await
+            .unwrap();
+
+        assert_deleted(object_results, s3_object_results);
     }
 }
