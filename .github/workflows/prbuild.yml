@@ -25,7 +25,13 @@ jobs:
         run: |
           node -v
           python3 -V
+          pip3 -V
           make --version
+
+      # TODO see whether we can leverage https://github.com/pre-commit/action
+      - name: Install system-wide tools dependencies
+        run: |
+          pip3 install pre-commit detect-secrets black ggshield awscli-local
 
       - name: Checkout code
         uses: actions/checkout@v3
