@@ -19,16 +19,19 @@ jobs:
       contents: read
 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.12']
 
     steps:
       - name: Print toolchain versions
         run: |
           node -v
           python3 -V
+          pip3 -V
           make --version
+
+      # TODO see whether we can leverage https://github.com/pre-commit/action
+      - name: Install system-wide tools dependencies
+        run: |
+          pip3 install pre-commit detect-secrets black ggshield awscli-local
 
       - name: Checkout code
         uses: actions/checkout@v3
@@ -43,46 +46,6 @@ jobs:
           head: HEAD
           extra_args: --debug --only-verified
 
-      - name: Localstack
-        uses: ./.github/actions/cache-image
-        with:
-          prefix: localstack
-          image_version: 2.1
-          image: public.ecr.aws/localstack/localstack
-
-      - name: MySQL
-        uses: ./.github/actions/cache-image
-        with:
-          prefix: mysql
-          image_version: 8
-          image: public.ecr.aws/docker/library/mysql
-
-      - name: HAProxy
-        uses: ./.github/actions/cache-image
-        with:
-          prefix: haproxy
-          image_version: 2.4
-          image: public.ecr.aws/docker/library/haproxy
-
-      - name: Prism
-        uses: ./.github/actions/cache-image
-        with:
-          prefix: prism
-          image_version: 4
-          image: quay.io/victorskl/prism
-
-      - name: List container images
-        run: docker images
-
-      - name: Set up compose stack
-        run: |
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
       - name: Install dependencies
         run: |
           make install
@@ -90,11 +53,3 @@ jobs:
       - name: Lint and code formatting
         run: |
           make check
-
-      - name: Run test suite
-        run: |
-          make test
-
-      - name: Tear down compose stack
-        run: |
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml down

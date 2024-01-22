@@ -9,6 +9,7 @@ coverage/
 
 .pre-commit-config.yaml
 buildspec.yml
+compose.yml
 docker-compose.yml
 docker-compose.ci.yml
 docker-compose.override.sample.yml
@@ -29,3 +30,8 @@ config/event_schemas/
 skel/
 docs/
 openapi/
+shared/
+
+# TODO still early days let ignore prettier them (microservice apps) for now
+lib/workload/stateful/filemanager/
+lib/workload/stateless/

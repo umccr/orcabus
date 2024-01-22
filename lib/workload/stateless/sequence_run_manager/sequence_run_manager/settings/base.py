@@ -104,9 +104,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ---
 
-# 1GB packet limit for MySQL. See https://dev.mysql.com/doc/refman/5.7/en/packet-too-large.html
-MYSQL_CLIENT_MAX_ALLOWED_PACKET = 1073741824
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

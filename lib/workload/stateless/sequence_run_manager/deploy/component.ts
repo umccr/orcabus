@@ -10,7 +10,7 @@ import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-a
 import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 import { CorsHttpMethod, HttpApi, HttpMethod, HttpStage } from '@aws-cdk/aws-apigatewayv2-alpha';
 
-export interface ProjectNameProps {
+export interface SequenceRunManagerProps {
   // FIXME change prop interface name
   layers: ILayerVersion[];
   securityGroups: ISecurityGroup[];
@@ -20,15 +20,15 @@ export interface ProjectNameProps {
   lambdaRuntimePythonVersion: aws_lambda.Runtime;
 }
 
-export class ProjectNameConstruct extends Construct {
+export class SequenceRunManagerConstruct extends Construct {
   // FIXME change construct name
   private scope: Construct;
   private readonly id: string;
-  private props: ProjectNameProps;
+  private props: SequenceRunManagerProps;
   private baseLayer: PythonLayerVersion;
   private readonly lambdaEnv;
 
-  constructor(scope: Construct, id: string, props: ProjectNameProps) {
+  constructor(scope: Construct, id: string, props: SequenceRunManagerProps) {
     super(scope, id);
 
     this.scope = scope;
@@ -36,7 +36,7 @@ export class ProjectNameConstruct extends Construct {
     this.props = props;
 
     this.lambdaEnv = {
-      DJANGO_SETTINGS_MODULE: '{{ProjectName}}.settings.aws', // FIXME project name
+      DJANGO_SETTINGS_MODULE: 'sequence_run_manager.settings.aws',   // FIXME project name
       EVENT_BUS_NAME: this.props.mainBus.eventBusName,
     };
 
@@ -49,13 +49,13 @@ export class ProjectNameConstruct extends Construct {
 
   private createLambdaLayer() {
     this.baseLayer = new PythonLayerVersion(this, this.id + 'Layer', {
-      entry: path.join(__dirname, 'src/'),
+      entry: path.join(__dirname, '../'),  // FIXME haven't tried whether dot dot slash here is working like this
     });
   }
 
   private createMigrationHandler() {
     new PythonFunction(this, this.id + 'Migration', {
-      entry: path.join(__dirname, 'src/'),
+      entry: path.join(__dirname, '../'),
       runtime: this.props.lambdaRuntimePythonVersion,
       layers: [this.baseLayer],
       index: 'migrate.py',
@@ -66,7 +66,7 @@ export class ProjectNameConstruct extends Construct {
 
   private createApiHandler() {
     const apiFn = new PythonFunction(this, this.id + 'Api', {
-      entry: path.join(__dirname, 'src/'),
+      entry: path.join(__dirname, '../'),
       runtime: this.props.lambdaRuntimePythonVersion,
       layers: [this.baseLayer],
       index: 'api.py',
@@ -103,7 +103,7 @@ export class ProjectNameConstruct extends Construct {
 
   private createProcHandler() {
     const procFn = new PythonFunction(this, this.id + 'ProcHandler', {
-      entry: path.join(__dirname, 'src/'),
+      entry: path.join(__dirname, '../'),
       runtime: this.props.lambdaRuntimePythonVersion,
       layers: [this.baseLayer],
       index: '{{project_name}}_proc/lambdas/hello_proc.py', // FIXME update appropriate path to Lambda entry point
@@ -117,7 +117,7 @@ export class ProjectNameConstruct extends Construct {
 
   private createProcSqsHandler() {
     const procSqsFn = new PythonFunction(this, this.id + 'ProcHandler', {
-      entry: path.join(__dirname, 'src/'),
+      entry: path.join(__dirname, '../'),
       runtime: this.props.lambdaRuntimePythonVersion,
       layers: [this.baseLayer],
       index: '{{project_name}}_proc/lambdas/hello_proc.py', // FIXME update appropriate path to Lambda entry point

@@ -2,141 +2,21 @@
 
 UMCCR Orchestration Bus that leverage AWS EventBridge as Event Bus to automate the BioInformatics Workflows Pipeline.
 
-## Development
+## CDK
 
-_Heads up: Polyglot programming environment. We shorten some trivial steps into `Makefile` target. You may deduce step-by-step from `Makefile`, if any._
+At the top level, the Git repository root is _the CDK TypeScript project_. It is bootstrapped with `cdk init orcabus --language typescript`. Therefore, the outer level codebase is the single CDK infrastructure application. 
 
-### Typography
+Please note; this is the _INVERSE_ of some typical standalone project setup such that the repo root of the project is your app toolchain codebase and the deployment code are arranged under some arbitrary subdirectory like `./deploy/<cdk app root>`. We **do not** do this in this repo as we anticipate that we are going to deploy multiple of closely related micro applications.
 
-When possible, please use either `OrcaBus` (camel case) or `orcabus` (all lower case).
+In this repo, we flip this view such that the Git repo root is the TypeScript CDK project; that wraps our applications into `./lib/` directory. You may [sparse checkout](https://git-scm.com/docs/git-sparse-checkout) or directly open subdirectory to set up the application project alone if you wish; e.g. `webstorm lib/workload/stateless/metadata_manager` or `code lib/workload/stateless/metadata_manager` or `pycharm lib/workload/stateless/sequence_run_manager` or `rustrover lib/workload/stateless/filemanager`. However, `code .` is a CDK TypeScript project.
 
-### Toolchain
+This root level CDK app contains 3 major stacks: `pipeline`, `stateful` and `stateless`. Pipeline stack is the CI/CD automation with CodePipeline setup. The `stateful` stack holds and manages some long-running AWS infrastructure resources. The `stateless` stack manages self-mutating CodePipeline reusable CDK Constructs for the [MicroService Applications](docs/developer/MICROSERVICE.md). In terms of CDK deployment point-of-view, the microservice application will be "stateless" application such that it will be changing/mutating over time; whereas "the data" its holds like PostgreSQL server infrastructure won't be changing that frequent. When updating "stateful" resources, there involves additional cares, steps and ops-procedures such as backing up database, downtime planning and so on; hence stateful. We use [configuration constants](./config) to decouple the reference between `stateful` and `stateless` AWS resources.
 
-_Setting up baseline toolchain_
-
-```
-docker --version
-Docker version 24.0.1, build 680212238b
-
-conda create -n orcabus python=3.10
-conda activate orcabus
-python -V
-Python 3.10.11
-
-node -v
-v18.16.0
-
-npm i -g yarn
-yarn -v
-3.5.1
-```
-
-### Mocking
-
-* Apart from internal APIs within OrcaBus, it also depends on some external systems. 
-* These key external platform APIs are mocked through Docker compose stack as follows.
-
-#### ICA
-
-* See [docs/ICA/ICA_MOCK.md](docs/ICA/ICA_MOCK.md)
-
-#### AWS
-
-```
-make up
-make ps
-```
-
-```
-make install    (or)    pip install awscli-local
-```
-
-```
-which awslocal
-```
-
-```
-awslocal s3 mb s3://my-test-bucket
-awslocal s3 ls
-```
-
-```
-awslocal events create-event-bus --name MockBus
-awslocal events list-event-buses
-```
-
-```
-awslocal sqs create-queue --queue-name MockStdQueue
-awslocal sqs list-queues
-```
-
-```
-awslocal stepfunctions create-state-machine \
-        --name "WaitMachine" \
-        --definition '{
-        "StartAt": "WaitExecution",
-        "States": {
-            "WaitExecution": {
-            "Type": "Wait",
-            "Seconds": 3,
-            "End": true
-            }
-        }
-        }' \
-        --role-arn "arn:aws:iam::000000000000:role/stepfunctions-role"
-```
-
-```
-awslocal stepfunctions list-state-machines
-```
-
-#### MySQL
-
-```
-make up
-make ps
-make mysql
-mysql> show databases;
-mysql> use orcabus;
-mysql> show tables;
-mysql> \q
-```
-
-### Creating Microservice
-
-Two high level tasks. As follows.
-
-#### 1. Bootstrap using Skel Profile
-
-- [DJANGO_API.md](docs/developer/DJANGO_API.md)
-- [DJANGO_PROC.md](docs/developer/DJANGO_PROC.md)
-- [RUST_API.md](docs/developer/RUST_API.md)
-
-#### 2. Infrastructure as Code for microservice
-
-- Encourage to use CDK as much as possible.
-- You could write one CDK construct from scratch. However, prefer use Construct Library whenever possible.
-- In the order of preference; please browse and make use of Construct patterns from the following.
-  1. https://docs.aws.amazon.com/solutions/latest/constructs/welcome.html
-  2. https://serverlessland.com
-  3. https://constructs.dev
-- Please check existing microservice implementations for reference.
-
-For example, to use https://docs.aws.amazon.com/solutions/latest/constructs/aws-cognito-apigateway-lambda.html
-
-- At project root, execute as follows:
-```
-yarn add @aws-solutions-constructs/aws-cognito-apigateway-lambda
-```
-
-- Or, to remove:
-```
-yarn remove @aws-solutions-constructs/aws-cognito-apigateway-lambda
-```
+In most cases, we deploy with automation across operational target environments or AWS accounts: `beta`, `gamma`, `prod`. For some particular purpose (such as onboarding procedure, isolated experimentation), we can spin up the whole infrastructure into some unique isolated AWS account. These key CDK entrypoints are documented in the following sections: Automation and Manual.
 
 ### Automation
 
-_aka CDK Pipeline or CI-CD through CodePipeline in Toolchain Account_
+_CI/CD through CodePipeline automation from AWS toolchain account_
 
 ```
 make install
@@ -156,7 +36,7 @@ yarn cdk deploy --all
 
 ### Manual
 
-_this is manual deploy to an isolated specific DEV account_
+_manual deploy to an isolated specific AWS account_
 
 ```
 export AWS_PROFILE=dev
@@ -175,20 +55,58 @@ yarn orcabus deploy --all
 yarn orcabus destroy --all
 ```
 
+## Development
+
+_Heads up: Polyglot programming environment. We shorten some trivial steps into `Makefile` target. You may deduce step-by-step from `Makefile`, if any._
+
+### Typography
+
+When possible, please use either `OrcaBus` (camel case) or `orcabus` (all lower case).
+
+### Toolchain
+
+_Setting up baseline toolchain_
+
+```
+docker --version
+Docker version 24.0.7, build afdd53b
+
+node -v
+v18.19.0
+
+npm i -g yarn
+yarn -v
+3.5.1
+```
+
+Additionally, we expect the following common tools be installed and available in your system shell PATH. We provide [Brewfile](Brewfile) as an example. You may manage these common tools in any other way as see fit for your local setup.
+
+```
+brew bundle
+```
+
+### Mocking
+
+- We use docker compose as a mock stack for application local dev and running test suite purpose.
+- Typically, you will have your own application compose stack defined at your app project root, if any.
+- You can also reuse common docker compose stack, if applicable. See [shared/README.md](shared)
+
+### Microservice
+
+- See [docs/developer/MICROSERVICE.md](docs/developer/MICROSERVICE.md)
+
 ### Lint
 
 - Run lint: `yarn lint`
 - Fix lint issue: `yarn lint-fix`
+- Opt-out lint: See [.eslintignore](.eslintignore)
 
 ### Code Formatting
 
 TypeScript
 - Run prettier: `yarn prettier`
 - Fix prettier issue: `yarn prettier-fix`
-
-Python
-- Run code formatter: `yarn black`
-- Fix code format issue: `yarn black-fix`
+- Opt-out prettier: See [.prettierignore](.prettierignore)
 
 ### Audit
 
@@ -206,9 +124,13 @@ pre-commit install
 pre-commit run --all-files
 ```
 
+### GitHub Action
+
+We have GitHub Action workflow to reinforce Lint, Code Formatting and Pre-commit Hook check as [Pull Request Build](.github/workflows/prbuild.yml) pipeline before main CI/CD automation run at CodePipeline. This is to protect any accidental secrets leak and/or pre-flight check for CI/CD automation. 
+
 ### IDE
 
-- Recommended to use JetBrains IDE
+- Visual Studio Code, JetBrains IDE
 - Code style
   - no tab
   - indent with `2` spaces for JS/TS/JSON/YAML
