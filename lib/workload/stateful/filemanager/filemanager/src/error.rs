@@ -39,6 +39,8 @@ pub enum Error {
     S3Error(String),
     #[error("Config error: `{0}`")]
     ConfigError(String),
+    #[error("Ingester error: `{0}`")]
+    IngesterError(String),
 }
 
 impl From<sqlx::Error> for Error {

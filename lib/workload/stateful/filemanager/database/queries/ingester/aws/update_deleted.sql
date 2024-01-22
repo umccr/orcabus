@@ -6,4 +6,4 @@ from (select
     unnest($2::varchar[]) as bucket,
     unnest($3::timestamptz[]) as deleted_time
 ) as data
-where s3_object.key = data.key and s3_object.bucket = data.bucket;
+    where s3_object.key = data.key and s3_object.bucket = data.bucket;

@@ -1,13 +1,14 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::query_file;
-use tracing::trace;
+use tracing::{debug, trace};
 
 use crate::database::{Client, Ingest};
 use crate::error::Result;
 use crate::events::aws::StorageClass;
 use crate::events::aws::{Events, TransposedS3EventMessages};
 use crate::events::EventSourceType;
+use uuid::Uuid;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
@@ -50,17 +51,11 @@ impl Ingester {
             ..
         } = object_created;
 
-        query_file!(
-            "../database/queries/ingester/insert_objects.sql",
-            &object_ids,
-            &sizes as &[Option<i64>],
-            &vec![None; sizes.len()] as &[Option<String>],
-        )
-        .execute(&self.client.pool)
-        .await?;
+        let mut tx = self.client().pool().begin().await?;
 
-        query_file!(
+        let mut inserted = query_file!(
             "../database/queries/ingester/aws/insert_s3_created_objects.sql",
+            &vec![Uuid::new_v4(); sizes.len()] as &[Uuid],
             &object_ids,
             &buckets,
             &keys,
@@ -70,8 +65,45 @@ impl Ingester {
             &storage_classes as &[Option<StorageClass>],
             &sequencers as &[Option<String>]
         )
-        .execute(&self.client.pool)
+        .fetch_all(&mut *tx)
         .await?;
+
+        let (object_ids, sizes): (Vec<_>, Vec<_>) = object_ids
+            .into_iter()
+            .rev()
+            .zip(sizes.into_iter().rev())
+            .flat_map(|(object_id, size)| {
+                // If we cannot find the object in our new ids, this object already exists.
+                let pos = inserted
+                    .iter()
+                    .rposition(|record| record.object_id == Some(object_id))?;
+
+                // We can remove this to avoid searching over it again.
+                let record = inserted.remove(pos);
+                debug!(
+                    object_id = ?record.object_id,
+                    number_duplicate_events = record.number_duplicate_events,
+                    "duplicate event found"
+                );
+
+                // This is a new event so the corresponding object should be inserted.
+                Some((object_id, size))
+            })
+            .unzip();
+
+        // Insert only the non duplicate events.
+        if !object_ids.is_empty() {
+            debug!(count = object_ids.len(), "inserting objects");
+
+            query_file!(
+                "../database/queries/ingester/insert_objects.sql",
+                &object_ids,
+                &sizes as &[Option<i64>],
+                &vec![None; sizes.len()] as &[Option<String>],
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
 
         trace!(object_removed = ?object_removed, "ingesting object removed events");
         let TransposedS3EventMessages {
@@ -87,8 +119,10 @@ impl Ingester {
             &buckets,
             &event_times
         )
-        .execute(&self.client.pool)
+        .execute(&mut *tx)
         .await?;
+
+        tx.commit().await?;
 
         Ok(())
     }

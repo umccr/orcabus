@@ -2,8 +2,10 @@ create type storage_class as enum ('DeepArchive', 'Glacier', 'GlacierIr', 'Intel
 
 -- An object contain in AWS S3, maps as a one-to-one relationship with the object table.
 create table s3_object(
-    -- The object id.
-    object_id uuid references object (object_id) primary key,
+    -- The s3 object id.
+    s3_object_id uuid not null primary key default gen_random_uuid(),
+    -- This is initially deferred because we want to create an s3_object before an object to check for duplicates/order.
+    object_id uuid references object (object_id) deferrable initially deferred,
 
     -- General fields
     -- The bucket of the object.
