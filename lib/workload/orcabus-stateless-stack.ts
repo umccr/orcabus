@@ -42,6 +42,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
   }
 
   private createSequenceRunManager() {
-    // TODO new SequenceRunManagerConstruct()
+    // TODO new SequenceRunManagerConstruct() from lib/workload/stateless/sequence_run_manager/deploy/component.ts
+    //   However, the implementation is still incomplete...
   }
 }

@@ -1,5 +1,5 @@
+-r requirements.txt
 pytest==7.4.0
 factory_boy==3.2.1
 pytz==2023.3
 mockito==1.4.0
-awscli-local

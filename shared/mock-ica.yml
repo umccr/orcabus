@@ -1,6 +1,7 @@
 version: '3.1'
 
 services:
+
   haproxy:
     image: public.ecr.aws/docker/library/haproxy:2.4
     container_name: orcabus_haproxy
@@ -10,7 +11,7 @@ services:
       - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
 
   wes:
-    image: stoplight/prism:4
+    image: quay.io/victorskl/prism:4
     platform: linux/amd64
     container_name: orcabus_wes
     command: mock -d -h 0.0.0.0 "/openapi/ica/v1/wes.json"
@@ -21,7 +22,7 @@ services:
       - ../openapi/ica:/openapi/ica
 
   tes:
-    image: stoplight/prism:4
+    image: quay.io/victorskl/prism:4
     platform: linux/amd64
     container_name: orcabus_tes
     command: mock -d -h 0.0.0.0 "/openapi/ica/v1/tes.json"
@@ -32,7 +33,7 @@ services:
       - ../openapi/ica:/openapi/ica
 
   gds:
-    image: stoplight/prism:4
+    image: quay.io/victorskl/prism:4
     platform: linux/amd64
     container_name: orcabus_gds
     command: mock -d -h 0.0.0.0 "/openapi/ica/v1/gds.json"
@@ -43,7 +44,7 @@ services:
       - ../openapi/ica:/openapi/ica
 
   ens:
-    image: stoplight/prism:4
+    image: quay.io/victorskl/prism:4
     platform: linux/amd64
     container_name: orcabus_ens
     command: mock -d -h 0.0.0.0 "/openapi/ica/v1/ens.json"
@@ -54,7 +55,7 @@ services:
       - ../openapi/ica:/openapi/ica
 
   console:
-    image: stoplight/prism:4
+    image: quay.io/victorskl/prism:4
     platform: linux/amd64
     container_name: orcabus_console
     command: mock -d -h 0.0.0.0 "/openapi/ica/v1/console.json"
@@ -65,7 +66,7 @@ services:
       - ../openapi/ica:/openapi/ica
 
   v2:
-    image: stoplight/prism:4
+    image: quay.io/victorskl/prism:4
     platform: linux/amd64
     container_name: orcabus_ica_v2
     command: mock -d -h 0.0.0.0 "/openapi/ica/v2/openapi_public.yaml"

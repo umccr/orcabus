@@ -8,22 +8,30 @@ Namespace: orcabus.srm
 
 ### Ready Check
 
-- Make sure you have activated conda environment and setup dev toolchain
-- At project root, preform:
+- Go to Django project root
 ```
-(you may create a dedicated conda env for SRM or use existing one)
-conda activate orcabus
-make install
+cd lib/workload/stateless/sequence_run_manager
+```
+_*If you are PyCharmer and opening the whole `orcabus` project (i.e. not doing sparse checkout or not opening directly at this level) then annotate this level `sequence_run_manager` directory as "source" directory in the project structure dialog._
 
-(make sure db is up)
-make up && make ps
+### Python
+
+- Setup Python environment (conda or venv)
+```
+conda create -n orcabus python=3.12
+conda activate orcabus
+```
+
+### Make
+
+- At app root, perform
+```
+make install
+make up
+make ps
 ```
 
 ### Migration
-
-```
-cd lib/workload/stateless/sequence_run_manager/src
-```
 
 ```
 python manage.py help
@@ -156,4 +164,10 @@ python manage.py test sequence_run_manager_proc.tests.test_sequence_domain.Seque
 
 ```
 python manage.py test sequence_run_manager_proc.tests.test_sequence_domain.SequenceDomainUnitTests.test_put_events_request_entry
+```
+
+## Tear Down
+
+```
+make down
 ```

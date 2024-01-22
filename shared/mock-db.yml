@@ -1,0 +1,17 @@
+version: '3.1'
+
+services:
+
+  db:
+    # Use version that align with upper bound of AWS Aurora PostgreSQL LTS
+    # https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Updates.LTS.html
+    # See container image doc https://gallery.ecr.aws/docker/library/postgres for more settings
+    image: public.ecr.aws/docker/library/postgres:14
+    container_name: orcabus_db
+    restart: always
+    environment:
+      - POSTGRES_DB=orcabus
+      - POSTGRES_USER=orcabus
+      - POSTGRES_PASSWORD=orcabus
+    ports:
+      - "5432:5432"
