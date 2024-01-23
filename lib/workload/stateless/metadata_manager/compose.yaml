@@ -12,6 +12,12 @@ services:
       - './dbschema:/dbschema'
     ports:
       - '5656:5656'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://edgedb:5656/server/status/alive"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 30s
 
   app:
     build: .
@@ -26,3 +32,6 @@ services:
       - '8080:8080'
     links:
       - edgedb
+    depends_on:
+      edgedb:
+        condition: service_healthy
