@@ -1,12 +1,12 @@
 EDGEDB_HOST ?= localhost
 
-# Installation
+# installation
 install:
 	@yarn install
 
-# To run docker compose
+# docker compose shortcut
 up:
-	@docker compose up -d
+	@docker compose up --wait -d
 
 down:
 	@docker compose down
@@ -14,9 +14,11 @@ down:
 stop:
 	@docker compose down
 
-# Build the app for deployment
+docker-edgedb:
+	@docker compose up --wait -d edgedb
 
-edgetypes:
+# asset build
+edgetypes: | docker-edgedb
 	@yarn run -B generate queries --target ts --file --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
 	@yarn run -B generate edgeql-js --target ts --output-dir dbschema/edgeql-js --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
 	@yarn run -B generate interfaces --file dbschema/interfaces.ts --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
@@ -35,31 +37,38 @@ build: edgetypes
 	@rm -rf nodejs
 
 # Testing
-test:
+
+# full test pipeline
+test: install docker-edgedb edgetypes suite
+
+suite:
 	@yarn test
 
 # Starting server
-start: edgetypes
-	@yarn start
-start-scenario-1: edgetypes
-	@yarn run insert-scenario-1
+start: up
+
+stop: down 
+
+# development
+start-dev: docker-edgedb edgetypes
 	@yarn start
 
-# Start in watch mode
-watch: edgetypes
+watch-dev: docker-edgedb edgetypes
 	@yarn run insert-scenario-1
 	@yarn watch
 
-# Inserting scenarios
+insert-scenario-1:
+	@yarn run insert-scenario-1
+
 insert-scenario-2:
 	@yarn run insert-scenario-2
 
 # Shortcut of edgedb cli
-edgedb:
+edgedb: | docker-edgedb
 	@edgedb --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
-edgedb-ui:
+edgedb-ui: | docker-edgedb
 	@edgedb ui --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure --no-server-check # pragma: allowlist secret
-edgedb-migrate:
+edgedb-migrate: | docker-edgedb
 	@edgedb migrate --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret
-edgedb-migration-create:
+edgedb-migration-create: | docker-edgedb
 	@edgedb migration create --dsn edgedb://orcabus_admin:admin@$(EDGEDB_HOST):5656 --tls-security insecure # pragma: allowlist secret

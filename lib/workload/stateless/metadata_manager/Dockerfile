@@ -10,5 +10,6 @@ COPY dbschema/migrations ./dbschema/migrations
 COPY dbschema/*.esdl ./dbschema/
 
 RUN make install
+RUN make edgetypes
 
-ENTRYPOINT [ "make", "start", "EDGEDB_HOST=edgedb" ]
+ENTRYPOINT [ "cross-env" "EDGEDB_HOST=edgedb" "yarn" "start" ]
