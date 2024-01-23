@@ -5,5 +5,5 @@ filter .id = <uuid>$auditDbId
 set
 {
   actionOutcome := <ActionOutcome>$actionOutcome,
-  details :=  <json>$details,
+  details :=  <optional json>$details,
 }

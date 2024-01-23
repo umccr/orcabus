@@ -20,6 +20,8 @@ import {
   updateLibraryRecord,
 } from './helpers/metadata/library-helper';
 import {
+  SelectAllLibraryQueryArgs,
+  SelectAllSubjectQueryArgs,
   deleteLibraryByOrcaBusId,
   deleteSpecimenByOrcaBusId,
   deleteSubjectByOrcaBusId,
@@ -98,8 +100,8 @@ export class MetadataService {
    * @returns
    */
   protected async checkAndRemoveSubject(sourceInternalIdArray: string[]) {
-    const allExistingSubject = await selectAllSubjectQuery(this.edgeDbClient);
-    for (const s of allExistingSubject) {
+    const allExistingSubject = await selectAllSubjectQuery(this.edgeDbClient, {});
+    for (const s of allExistingSubject.results) {
       const shouldRetain = !!sourceInternalIdArray.find(
         (sourceInternalId) => sourceInternalId == s.internalId
       );
@@ -186,8 +188,8 @@ export class MetadataService {
    * @returns
    */
   protected async checkAndRemoveSpecimen(sourceInternalIdArray: string[]) {
-    const allExistingSpc = await selectAllSpecimenQuery(this.edgeDbClient);
-    for (const s of allExistingSpc) {
+    const allExistingSpc = await selectAllSpecimenQuery(this.edgeDbClient, {});
+    for (const s of allExistingSpc.results) {
       const shouldRetain = !!sourceInternalIdArray.find(
         (sourceInternalId) => sourceInternalId == s.internalId
       );
@@ -262,8 +264,8 @@ export class MetadataService {
    * @returns
    */
   protected async checkAndRemoveLibrary(sourceInternalIdArray: string[]) {
-    const allExistingLib = await selectAllLibraryQuery(this.edgeDbClient);
-    for (const s of allExistingLib) {
+    const allExistingLib = await selectAllLibraryQuery(this.edgeDbClient, {});
+    for (const s of allExistingLib.results) {
       const shouldRetain = !!sourceInternalIdArray.find(
         (sourceInternalId) => sourceInternalId == s.internalId
       );
@@ -344,15 +346,15 @@ export class MetadataService {
     await this.checkAndRemoveLibrary(internalIdArrays.library);
   }
 
-  public async getAllLibrary() {
-    return await selectAllLibraryQuery(this.edgeDbClient);
+  public async getAllLibrary(libraryQuery: SelectAllLibraryQueryArgs) {
+    return await selectAllLibraryQuery(this.edgeDbClient, libraryQuery);
   }
 
-  public async getAllSpecimen() {
-    return await selectAllSpecimenQuery(this.edgeDbClient);
+  public async getAllSpecimen(specimenQuery: SelectAllSubjectQueryArgs) {
+    return await selectAllSpecimenQuery(this.edgeDbClient, specimenQuery);
   }
 
-  public async getAllSubject() {
-    return await selectAllSubjectQuery(this.edgeDbClient);
+  public async getAllSubject(subjectQuery: SelectAllSubjectQueryArgs) {
+    return await selectAllSubjectQuery(this.edgeDbClient, subjectQuery);
   }
 }

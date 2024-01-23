@@ -1,7 +1,16 @@
 import Fastify, { FastifyBaseLogger, FastifyInstance } from 'fastify';
+import fastifySwagger from '@fastify/swagger';
+import fastifySwaggerUi from '@fastify/swagger-ui';
 import { DependencyContainer } from 'tsyringe';
 import { internalRoutes } from './api/routes/internal-routes';
 import { gqlRoutes } from './api/routes/graphql-routes';
+import {
+  jsonSchemaTransform,
+  createJsonSchemaTransform,
+  serializerCompiler,
+  validatorCompiler,
+  ZodTypeProvider,
+} from 'fastify-type-provider-zod';
 
 export class App {
   public readonly server: FastifyInstance;
@@ -24,11 +33,48 @@ export class App {
   }
 
   public async setupServer(): Promise<FastifyInstance> {
-    // Register Fastify routing
-    this.server.register(internalRoutes, {
+    // TypeProvider
+    this.server.setValidatorCompiler(validatorCompiler);
+    this.server.setSerializerCompiler(serializerCompiler);
+    this.server.withTypeProvider<ZodTypeProvider>();
+
+    // OpenAPI
+    await this.server.register(fastifySwagger, {
+      // openapi 3.0.3 options
+      openapi: {
+        info: {
+          title: 'OrcaBus - Metadata Manager',
+          description: 'one of the microservice in OrcaBus that handles on metadata',
+          version: '0.0.1',
+          license: { name: 'MIT License' },
+        },
+        components: {
+          securitySchemes: {
+            apiKey: {
+              type: 'apiKey',
+              name: 'Authorization',
+              in: 'header',
+            },
+          },
+        },
+      },
+      hideUntagged: true,
+      transform: jsonSchemaTransform,
+    });
+
+    await this.server.register(fastifySwaggerUi, {
+      routePrefix: '/documentation',
+      uiConfig: {
+        docExpansion: 'full',
+        deepLinking: false,
+      },
+    });
+
+    // Register API Routing for the app
+    await this.server.register(internalRoutes, {
       container: this.dc,
     });
-    this.server.register(gqlRoutes, {
+    await this.server.register(gqlRoutes, {
       container: this.dc,
       prefix: '/graphql',
     });

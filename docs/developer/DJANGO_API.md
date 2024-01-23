@@ -1,5 +1,7 @@
 # Django API Profile
 
+> !!! TODO NOTE: DJANGO PROJECT DIR STRUCTURE & STEPS NEED TO BE REVISED DUE TO REFACTOR !!! 
+
 - Use this profile if your microservice need: ORM, API, LAMBDA, SQS
 
 ## App

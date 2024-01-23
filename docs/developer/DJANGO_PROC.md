@@ -1,5 +1,7 @@
 # Django Proc Profile
 
+> !!! TODO NOTE: DJANGO PROJECT DIR STRUCTURE & STEPS NEED TO BE REVISED DUE TO REFACTOR !!!
+
 - Use this profile if your microservice need: ORM, LAMBDA, SQS
 - Mainly data processing app and require no API
 

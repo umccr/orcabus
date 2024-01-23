@@ -4,10 +4,10 @@ Using through `libica` or otherwise, any calling to ICA interfacing logic will b
 
 ## ICA v1 Mock Service
 
-From project root, preform:
+From your compose stack root, preform:
 ```
-make up
-make ps
+docker compose up -d
+docker compose ps
 ```
 
 ### WES
