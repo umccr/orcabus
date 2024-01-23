@@ -141,7 +141,7 @@ impl From<FlatS3EventMessages> for TransposedS3EventMessages {
 }
 
 /// Group by event types.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Events {
     pub object_created: TransposedS3EventMessages,
     pub object_removed: TransposedS3EventMessages,

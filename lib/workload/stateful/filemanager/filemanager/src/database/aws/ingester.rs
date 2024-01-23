@@ -76,7 +76,10 @@ impl Ingester {
                 // If we cannot find the object in our new ids, this object already exists.
                 let pos = inserted
                     .iter()
-                    .rposition(|record| record.object_id == Some(object_id))?;
+                    .rposition(|record| {
+                        // This will never be `None`, maybe this is an sqlx bug?
+                        record.object_id == Some(object_id)
+                    })?;
 
                 // We can remove this to avoid searching over it again.
                 let record = inserted.remove(pos);
@@ -147,7 +150,7 @@ pub(crate) mod tests {
     use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
-    use crate::events::aws::tests::{expected_events, EXPECTED_E_TAG};
+    use crate::events::aws::tests::{expected_events, EXPECTED_E_TAG, expected_flat_events};
     use crate::events::aws::{Events, StorageClass};
     use crate::events::EventSourceType;
     use chrono::{DateTime, Utc};
@@ -162,15 +165,7 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
-        let object_results = sqlx::query("select * from object")
-            .fetch_one(ingester.client.pool())
-            .await
-            .unwrap();
-
-        let s3_object_results = sqlx::query("select * from s3_object")
-            .fetch_one(ingester.client.pool())
-            .await
-            .unwrap();
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
         assert_created(object_results, s3_object_results);
     }
@@ -182,15 +177,7 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
-        let object_results = sqlx::query("select * from object")
-            .fetch_one(ingester.client.pool())
-            .await
-            .unwrap();
-
-        let s3_object_results = sqlx::query("select * from s3_object")
-            .fetch_one(ingester.client.pool())
-            .await
-            .unwrap();
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
         assert_deleted(object_results, s3_object_results);
     }
@@ -202,16 +189,30 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(EventSourceType::S3(events)).await.unwrap();
 
-        let object_results = sqlx::query("select * from object")
-            .fetch_one(ingester.client.pool())
-            .await
-            .unwrap();
-        let s3_object_results = sqlx::query("select * from s3_object")
-            .fetch_one(ingester.client.pool())
-            .await
-            .unwrap();
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
         assert_deleted(object_results, s3_object_results);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_duplicates(pool: PgPool) {
+        let ingester = test_ingester(pool);
+        ingester.ingest(EventSourceType::S3(test_events())).await.unwrap();
+        ingester.ingest(EventSourceType::S3(test_events())).await.unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_deleted(object_results, s3_object_results);
+    }
+
+    pub(crate) async fn fetch_results(ingester: &Ingester) -> (PgRow, PgRow) {
+        (sqlx::query("select * from object")
+            .fetch_one(ingester.client.pool())
+            .await
+            .unwrap(), sqlx::query("select * from s3_object")
+            .fetch_one(ingester.client.pool())
+            .await
+            .unwrap())
     }
 
     pub(crate) fn assert_created(object_results: PgRow, s3_object_results: PgRow) {
@@ -248,17 +249,32 @@ pub(crate) mod tests {
         );
     }
 
-    fn test_events() -> Events {
-        let mut events = expected_events();
+    fn update_test_events(mut events: Events) -> Events {
+        let update_last_modified = |dates: &mut Vec<Option<DateTime<Utc>>>| {
+            dates.iter_mut().for_each(|last_modified| {
+                *last_modified = Some(DateTime::default());
+            });
+        };
+        let update_storage_class = |classes: &mut Vec<Option<StorageClass>>| {
+            classes.iter_mut().for_each(|storage_class| {
+                *storage_class = Some(StorageClass::Standard);
+            });
+        };
 
-        events.object_created.last_modified_dates[0] = Some(DateTime::default());
-        events.object_created.storage_classes[0] = Some(StorageClass::Standard);
+        update_last_modified(&mut events.object_created.last_modified_dates);
+        update_storage_class(&mut events.object_created.storage_classes);
 
-        events.object_removed.last_modified_dates[0] = Some(DateTime::default());
-        events.object_removed.storage_classes[0] = None;
+
+        update_last_modified(&mut events.object_removed.last_modified_dates);
+        update_storage_class(&mut events.object_removed.storage_classes);
 
         events
     }
+
+    fn test_events() -> Events {
+        update_test_events(expected_events())
+    }
+
     fn test_ingester(pool: PgPool) -> Ingester {
         Ingester::new(Client::new(pool))
     }
