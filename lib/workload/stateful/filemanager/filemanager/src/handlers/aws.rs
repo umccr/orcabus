@@ -111,7 +111,10 @@ mod tests {
                 .unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
-        assert_deleted(object_results, s3_object_results);
+
+        assert_eq!(object_results.len(), 1);
+        assert_eq!(s3_object_results.len(), 1);
+        assert_deleted(&object_results[0], &s3_object_results[0]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -132,6 +135,9 @@ mod tests {
             .unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
-        assert_deleted(object_results, s3_object_results);
+
+        assert_eq!(object_results.len(), 1);
+        assert_eq!(s3_object_results.len(), 1);
+        assert_deleted(&object_results[0], &s3_object_results[0]);
     }
 }

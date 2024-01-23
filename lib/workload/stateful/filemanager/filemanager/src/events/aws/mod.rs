@@ -296,7 +296,7 @@ impl FlatS3EventMessages {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
 pub enum EventType {
     Created,
     Removed,
@@ -304,7 +304,7 @@ pub enum EventType {
 }
 
 /// A flattened AWS S3 record
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
 pub struct FlatS3EventMessage {
     pub sequencer: Option<String>,
     pub event_name: String,
