@@ -2510,13 +2510,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fast-content-type-parse@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "fast-content-type-parse@npm:1.1.0"
-  checksum: c8c995b60ed30c4914aa255f012347f63fffa0c258039977b2080bb5c951dc6ef68a9243eac8ab456190642be44a31a7ada6e74d846e04f4667d40ebf778b94e
-  languageName: node
-  linkType: hard
-
 "fast-copy@npm:^3.0.0":
   version: 3.0.1
   resolution: "fast-copy@npm:3.0.1"

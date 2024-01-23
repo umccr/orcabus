@@ -29,8 +29,8 @@ test:
 # 	Python (conda or venv), Rust and Cargo, TypeScript and Node environment, Docker and Container runtimes
 suite: test
 	@(cd lib/workload/stateless/sequence_run_manager && $(MAKE) test)
+	@(cd lib/workload/stateless/metadata_manager && $(MAKE) test)
 	@#(cd lib/workload/stateless/filemanager && $(MAKE) test)   # FIXME uncomment when ready @Marko
-	@#(cd lib/workload/stateless/metadata_manager && $(MAKE) test)  # FIXME uncomment when ready @William
 
 clean:
 	@yarn clean
