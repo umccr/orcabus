@@ -65,6 +65,7 @@ impl Ingester {
             &e_tags as &[Option<String>],
             &storage_classes as &[Option<StorageClass>],
             &version_ids as &[Option<String>],
+            &sequencers as &[Option<String>],
             &sequencers as &[Option<String>]
         )
         .fetch_all(&mut *tx)

@@ -31,6 +31,8 @@ create table s3_object(
     created_sequencer text default null,
     -- A sequencer value for when the object was deleted. Used to synchronise out of order and duplicate events.
     deleted_sequencer text default null,
+    -- The maximum sequencer value for objects with the same bucket, key and version_id. Used for out of order events.
+    maximum_sequencer text default null,
     -- Record whether the event that generated this object was ever out of order, useful for debugging.
     event_out_of_order boolean not null default false,
     -- Record the number of duplicate events received for this object, useful for debugging.
