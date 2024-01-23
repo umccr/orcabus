@@ -67,6 +67,7 @@ pub struct TransposedS3EventMessages {
     pub event_names: Vec<String>,
     pub buckets: Vec<String>,
     pub keys: Vec<String>,
+    pub version_ids: Vec<Option<String>>,
     pub sizes: Vec<Option<i64>>,
     pub e_tags: Vec<Option<String>>,
     pub sequencers: Vec<Option<String>>,
@@ -85,6 +86,7 @@ impl TransposedS3EventMessages {
             event_names: Vec::with_capacity(capacity),
             buckets: Vec::with_capacity(capacity),
             keys: Vec::with_capacity(capacity),
+            version_ids: Vec::with_capacity(capacity),
             sizes: Vec::with_capacity(capacity),
             e_tags: Vec::with_capacity(capacity),
             sequencers: Vec::with_capacity(capacity),
@@ -103,6 +105,7 @@ impl TransposedS3EventMessages {
             bucket,
             key,
             size,
+            version_id,
             e_tag,
             sequencer,
             portal_run_id,
@@ -116,6 +119,7 @@ impl TransposedS3EventMessages {
         self.event_names.push(event_name);
         self.buckets.push(bucket);
         self.keys.push(key);
+        self.version_ids.push(version_id);
         self.sizes.push(size);
         self.e_tags.push(e_tag);
         self.sequencers.push(sequencer);
@@ -219,18 +223,17 @@ impl FlatS3EventMessages {
                         value.event_name.clone(),
                         value.bucket.clone(),
                         value.key.clone(),
-                        value.size,
-                        value.e_tag.clone(),
+                        value.version_id.clone(),
                         // Note, `last_modified` and `storage_class` are always `None` at this point anyway so don't need
-                        // to be considered.
+                        // to be considered. `size` and `e_tag` should be the same but are unimportant in deduplication.
                     )
                 })
                 .collect(),
         )
     }
 
-    /// Ordering is implemented so that the sequencer values are considered when the bucket and the
-    /// key are the same.
+    /// Ordering is implemented so that the sequencer values are considered when the bucket, the
+    /// key and the version id are the same.
     ///
     /// Unlike the `dedup` function, this implementation does consider the event time. This means that events
     /// will be ingested in event time order if the sequencer condition is not met.
@@ -242,13 +245,18 @@ impl FlatS3EventMessages {
             if let (Some(a_sequencer), Some(b_sequencer)) =
                 (a.sequencer.as_ref(), b.sequencer.as_ref())
             {
-                if a.bucket == b.bucket && a.key == b.key {
+                if a.bucket == b.bucket
+                    && a.key == b.key
+                    && a.version_id == b.version_id
+                    && a.event_name == b.event_name
+                {
                     return (
                         a_sequencer,
                         &a.event_time,
                         &a.event_name,
                         &a.bucket,
                         &a.key,
+                        &a.version_id,
                         &a.size,
                         &a.e_tag,
                         &a.storage_class,
@@ -260,6 +268,7 @@ impl FlatS3EventMessages {
                             &b.event_name,
                             &b.bucket,
                             &b.key,
+                            &b.version_id,
                             &b.size,
                             &b.e_tag,
                             &b.storage_class,
@@ -274,6 +283,7 @@ impl FlatS3EventMessages {
                 &a.event_name,
                 &a.bucket,
                 &a.key,
+                &a.version_id,
                 &a.size,
                 &a.e_tag,
                 &a.storage_class,
@@ -285,6 +295,7 @@ impl FlatS3EventMessages {
                     &b.event_name,
                     &b.bucket,
                     &b.key,
+                    &b.version_id,
                     &b.size,
                     &b.e_tag,
                     &b.storage_class,
@@ -310,6 +321,7 @@ pub struct FlatS3EventMessage {
     pub event_name: String,
     pub bucket: String,
     pub key: String,
+    pub version_id: Option<String>,
     pub size: Option<i64>,
     pub e_tag: Option<String>,
     pub storage_class: Option<StorageClass>,
@@ -346,6 +358,84 @@ impl FlatS3EventMessage {
     /// Update the e_tag if not None.
     pub fn update_e_tag(mut self, e_tag: Option<String>) -> Self {
         e_tag.into_iter().for_each(|e_tag| self.e_tag = Some(e_tag));
+        self
+    }
+
+    /// Set the sequencer value.
+    pub fn with_sequencer(mut self, sequencer: Option<String>) -> Self {
+        self.sequencer = sequencer;
+        self
+    }
+
+    /// Set the event name.
+    pub fn with_event_name(mut self, event_name: String) -> Self {
+        self.event_name = event_name;
+        self
+    }
+
+    /// Set the bucket.
+    pub fn with_bucket(mut self, bucket: String) -> Self {
+        self.bucket = bucket;
+        self
+    }
+
+    /// Set the key.
+    pub fn with_key(mut self, key: String) -> Self {
+        self.key = key;
+        self
+    }
+
+    /// Set the version id.
+    pub fn with_version_id(mut self, version_id: Option<String>) -> Self {
+        self.version_id = version_id;
+        self
+    }
+
+    /// Set the size.
+    pub fn with_size(mut self, size: Option<i64>) -> Self {
+        self.size = size;
+        self
+    }
+
+    /// Set the e_tag.
+    pub fn with_e_tag(mut self, e_tag: Option<String>) -> Self {
+        self.e_tag = e_tag;
+        self
+    }
+
+    /// Set the storage class.
+    pub fn with_storage_class(mut self, storage_class: Option<StorageClass>) -> Self {
+        self.storage_class = storage_class;
+        self
+    }
+
+    /// Set the last modified date.
+    pub fn with_last_modified_date(mut self, last_modified_date: Option<DateTime<Utc>>) -> Self {
+        self.last_modified_date = last_modified_date;
+        self
+    }
+
+    /// Set the object id.
+    pub fn with_object_id(mut self, object_id: Uuid) -> Self {
+        self.object_id = object_id;
+        self
+    }
+
+    /// Set the event time.
+    pub fn with_event_time(mut self, event_time: DateTime<Utc>) -> Self {
+        self.event_time = event_time;
+        self
+    }
+
+    /// Set the portal run id.
+    pub fn with_portal_run_id(mut self, portal_run_id: String) -> Self {
+        self.portal_run_id = portal_run_id;
+        self
+    }
+
+    /// Set the event type.
+    pub fn with_event_type(mut self, event_type: EventType) -> Self {
+        self.event_type = event_type;
         self
     }
 }
@@ -385,6 +475,7 @@ pub struct ObjectRecord {
     pub key: String,
     pub size: Option<i64>,
     pub e_tag: Option<String>,
+    pub version_id: Option<String>,
     pub sequencer: Option<String>,
 }
 
@@ -411,6 +502,7 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                         key,
                         size,
                         e_tag,
+                        version_id,
                         sequencer,
                     } = object;
 
@@ -439,6 +531,7 @@ impl TryFrom<S3EventMessage> for FlatS3EventMessages {
                         size,
                         e_tag,
                         sequencer,
+                        version_id,
                         portal_run_id,
                         // Head field are fetched later.
                         storage_class: None,
@@ -467,6 +560,8 @@ pub(crate) mod tests {
     pub(crate) const EXPECTED_SEQUENCER_DELETED: &str = "0055AED6DCD90281E6"; // pragma: allowlist secret
     pub(crate) const EXPECTED_E_TAG: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
 
+    pub(crate) const EXPECTED_VERSION_ID: &str = "096fKKXTRTtl3on89fVO.nfljtsv6qko";
+
     #[test]
     fn test_flat_events() {
         let result = expected_flat_events();
@@ -478,6 +573,7 @@ pub(crate) mod tests {
             "ObjectRemoved:Delete",
             EXPECTED_SEQUENCER_DELETED,
             None,
+            Some(EXPECTED_VERSION_ID.to_string()),
         );
 
         let second = result.next().unwrap();
@@ -486,6 +582,7 @@ pub(crate) mod tests {
             "ObjectCreated:Put",
             EXPECTED_SEQUENCER_CREATED,
             Some(0),
+            Some(EXPECTED_VERSION_ID.to_string()),
         );
 
         let third = result.next().unwrap();
@@ -494,6 +591,7 @@ pub(crate) mod tests {
             "ObjectCreated:Put",
             EXPECTED_SEQUENCER_CREATED,
             Some(0),
+            Some(EXPECTED_VERSION_ID.to_string()),
         );
     }
 
@@ -508,6 +606,7 @@ pub(crate) mod tests {
             "ObjectCreated:Put",
             EXPECTED_SEQUENCER_CREATED,
             Some(0),
+            Some(EXPECTED_VERSION_ID.to_string()),
         );
 
         let second = result.next().unwrap();
@@ -516,6 +615,52 @@ pub(crate) mod tests {
             "ObjectRemoved:Delete",
             EXPECTED_SEQUENCER_DELETED,
             None,
+            Some(EXPECTED_VERSION_ID.to_string()),
+        );
+    }
+
+    #[test]
+    fn test_sort_and_dedup_with_version_id() {
+        let result = expected_flat_events();
+
+        let mut result = result.into_inner();
+        result.push(
+            expected_flat_events()
+                .into_inner()
+                .first()
+                .unwrap()
+                .clone()
+                .with_version_id(Some("version_id".to_string())),
+        );
+
+        let result = FlatS3EventMessages(result).sort_and_dedup();
+        let mut result = result.into_inner().into_iter();
+
+        let first = result.next().unwrap();
+        assert_flat_s3_event(
+            first,
+            "ObjectCreated:Put",
+            EXPECTED_SEQUENCER_CREATED,
+            Some(0),
+            Some(EXPECTED_VERSION_ID.to_string()),
+        );
+
+        let second = result.next().unwrap();
+        assert_flat_s3_event(
+            second,
+            "ObjectRemoved:Delete",
+            EXPECTED_SEQUENCER_DELETED,
+            None,
+            Some(EXPECTED_VERSION_ID.to_string()),
+        );
+
+        let third = result.next().unwrap();
+        assert_flat_s3_event(
+            third,
+            "ObjectRemoved:Delete",
+            EXPECTED_SEQUENCER_DELETED,
+            None,
+            Some("version_id".to_string()),
         );
     }
 
@@ -524,11 +669,13 @@ pub(crate) mod tests {
         event_name: &str,
         sequencer: &str,
         size: Option<i64>,
+        version_id: Option<String>,
     ) {
         assert_eq!(event.event_time, DateTime::<Utc>::default());
         assert_eq!(event.event_name, event_name);
         assert_eq!(event.bucket, "bucket");
         assert_eq!(event.key, "key");
+        assert_eq!(event.version_id, version_id);
         assert_eq!(event.size, size);
         assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string())); // pragma: allowlist secret
         assert_eq!(event.sequencer, Some(sequencer.to_string()));
@@ -550,6 +697,10 @@ pub(crate) mod tests {
         assert_eq!(result.object_created.keys[0], "key");
         assert_eq!(result.object_created.sizes[0], Some(0));
         assert_eq!(
+            result.object_created.version_ids[0],
+            Some(EXPECTED_VERSION_ID.to_string())
+        );
+        assert_eq!(
             result.object_created.e_tags[0],
             Some(EXPECTED_E_TAG.to_string())
         );
@@ -568,6 +719,10 @@ pub(crate) mod tests {
         assert_eq!(result.object_removed.event_names[0], "ObjectRemoved:Delete");
         assert_eq!(result.object_removed.buckets[0], "bucket");
         assert_eq!(result.object_removed.keys[0], "key");
+        assert_eq!(
+            result.object_removed.version_ids[0],
+            Some(EXPECTED_VERSION_ID.to_string())
+        );
         assert_eq!(result.object_removed.sizes[0], None);
         assert_eq!(
             result.object_removed.e_tags[0],
@@ -621,7 +776,7 @@ pub(crate) mod tests {
                    "key": "key",
                    "size": 0,
                    "eTag": EXPECTED_E_TAG,
-                   "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
+                   "versionId": EXPECTED_VERSION_ID,
                    "sequencer": EXPECTED_SEQUENCER_CREATED
                 }
             },
@@ -650,7 +805,7 @@ pub(crate) mod tests {
                "key": "key",
                "size": 0,
                "eTag": EXPECTED_E_TAG,
-               "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
+               "versionId": EXPECTED_VERSION_ID,
                "sequencer": EXPECTED_SEQUENCER_CREATED
             }
         });
@@ -675,7 +830,7 @@ pub(crate) mod tests {
                 // ObjectRemoved::Delete does not have a size, even though this isn't documented
                 // anywhere.
                "eTag": EXPECTED_E_TAG,
-               "versionId": "096fKKXTRTtl3on89fVO.nfljtsv6qko",
+               "versionId": EXPECTED_VERSION_ID,
                "sequencer": EXPECTED_SEQUENCER_DELETED
             }
         });

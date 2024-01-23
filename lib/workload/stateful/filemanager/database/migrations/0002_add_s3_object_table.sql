@@ -25,6 +25,8 @@ create table s3_object(
     e_tag text default null,
     -- The S3 storage class of the object.
     storage_class storage_class not null,
+    -- The version id of the object, if present.
+    version_id text default null,
     -- A sequencer value for when the object was created. Used to synchronise out of order and duplicate events.
     created_sequencer text default null,
     -- A sequencer value for when the object was deleted. Used to synchronise out of order and duplicate events.
@@ -34,7 +36,7 @@ create table s3_object(
     -- Record the number of duplicate events received for this object, useful for debugging.
     number_duplicate_events integer not null default 0,
 
-    -- The sequencers should be unique with the bucket and key, otherwise this is a duplicate event.
-    constraint created_sequencer_unique unique (bucket, key, created_sequencer),
-    constraint deleted_sequencer_unique unique (bucket, key, deleted_sequencer)
+    -- The sequencers should be unique with the bucket, key, and its version, otherwise this is a duplicate event.
+    constraint created_sequencer_unique unique (bucket, key, version_id, created_sequencer),
+    constraint deleted_sequencer_unique unique (bucket, key, version_id, deleted_sequencer)
 );

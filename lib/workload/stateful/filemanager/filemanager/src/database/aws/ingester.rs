@@ -44,6 +44,7 @@ impl Ingester {
             event_times,
             buckets,
             keys,
+            version_ids,
             sizes,
             e_tags,
             storage_classes,
@@ -63,6 +64,7 @@ impl Ingester {
             &last_modified_dates as &[Option<DateTime<Utc>>],
             &e_tags as &[Option<String>],
             &storage_classes as &[Option<StorageClass>],
+            &version_ids as &[Option<String>],
             &sequencers as &[Option<String>]
         )
         .fetch_all(&mut *tx)
@@ -150,6 +152,7 @@ pub(crate) mod tests {
     use crate::database::{Client, Ingest};
     use crate::events::aws::tests::{
         expected_events, expected_flat_events, EXPECTED_E_TAG, EXPECTED_SEQUENCER_CREATED,
+        EXPECTED_VERSION_ID,
     };
     use crate::events::aws::{Events, FlatS3EventMessages, StorageClass};
     use crate::events::EventSourceType;
@@ -252,10 +255,47 @@ pub(crate) mod tests {
             s3_object_results[0].get::<i32, _>("number_duplicate_events")
         );
         assert_deleted(&object_results[0], &s3_object_results[0]);
-        assert_created_with_sequencer(
+        assert_created_with(
             &object_results[1],
             &s3_object_results[1],
+            EXPECTED_VERSION_ID,
             &EXPECTED_SEQUENCER_CREATED.to_string().add("7"),
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_duplicates_with_version_id(pool: PgPool) {
+        let ingester = test_ingester(pool);
+        ingester
+            .ingest(EventSourceType::S3(test_events()))
+            .await
+            .unwrap();
+
+        let event = expected_flat_events().sort_and_dedup().into_inner();
+        let mut event = event[0].clone();
+        event.version_id = Some("version_id".to_string());
+
+        let mut events = vec![event];
+        events.extend(expected_flat_events().sort_and_dedup().into_inner());
+
+        let events = update_test_events(FlatS3EventMessages(events).into());
+
+        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_results.len(), 2);
+        assert_eq!(
+            1,
+            s3_object_results[0].get::<i32, _>("number_duplicate_events")
+        );
+        assert_deleted(&object_results[0], &s3_object_results[0]);
+        assert_created_with(
+            &object_results[1],
+            &s3_object_results[1],
+            "version_id",
+            EXPECTED_SEQUENCER_CREATED,
         );
     }
 
@@ -272,15 +312,20 @@ pub(crate) mod tests {
         )
     }
 
-    pub(crate) fn assert_created_with_sequencer(
+    pub(crate) fn assert_created_with(
         object_results: &PgRow,
         s3_object_results: &PgRow,
+        expected_version_id: &str,
         expected_sequencer: &str,
     ) {
         assert_eq!("bucket", s3_object_results.get::<String, _>("bucket"));
         assert_eq!("key", s3_object_results.get::<String, _>("key"));
         assert_eq!(0, object_results.get::<i32, _>("size"));
         assert_eq!(EXPECTED_E_TAG, s3_object_results.get::<String, _>("e_tag"));
+        assert_eq!(
+            expected_version_id,
+            s3_object_results.get::<String, _>("version_id")
+        );
         assert_eq!(
             expected_sequencer,
             s3_object_results.get::<String, _>("created_sequencer")
@@ -296,9 +341,10 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn assert_created(object_results: &PgRow, s3_object_results: &PgRow) {
-        assert_created_with_sequencer(
+        assert_created_with(
             object_results,
             s3_object_results,
+            EXPECTED_VERSION_ID,
             EXPECTED_SEQUENCER_CREATED,
         )
     }
@@ -306,6 +352,10 @@ pub(crate) mod tests {
     pub(crate) fn assert_deleted(object_results: &PgRow, s3_object_results: &PgRow) {
         assert_eq!("bucket", s3_object_results.get::<String, _>("bucket"));
         assert_eq!("key", s3_object_results.get::<String, _>("key"));
+        assert_eq!(
+            EXPECTED_VERSION_ID,
+            s3_object_results.get::<String, _>("version_id")
+        );
         assert_eq!(0, object_results.get::<i32, _>("size"));
         assert_eq!(EXPECTED_E_TAG, s3_object_results.get::<String, _>("e_tag"));
         assert_eq!(
