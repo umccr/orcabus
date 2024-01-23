@@ -1126,16 +1126,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "filemanager-macros"
-version = "0.1.0"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote",
- "syn 2.0.37",
-]
-
-[[package]]
 name = "filemanager-migrate-lambda"
 version = "0.1.0"
 dependencies = [
