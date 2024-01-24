@@ -121,7 +121,18 @@ pub(crate) mod tests {
 
         let events = CollecterBuilder::receive(&sqs_client, "url").await.unwrap();
 
-        assert_eq!(events, expected_flat_events());
+        let mut expected = expected_flat_events();
+        expected
+            .0
+            .iter_mut()
+            .zip(&events.0)
+            .for_each(|(expected_event, event)| {
+                // The object id will be different for each event.
+                expected_event.object_id = event.object_id;
+                expected_event.portal_run_id = event.portal_run_id.to_string();
+            });
+
+        assert_eq!(events, expected);
     }
 
     #[tokio::test]

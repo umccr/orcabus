@@ -89,7 +89,7 @@ pub async fn ingest_event(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::database::aws::ingester::tests::assert_deleted;
+    use crate::database::aws::ingester::tests::{assert_deleted, fetch_results};
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::collecter::tests::{expected_head_object, set_s3_client_expectations};
     use crate::events::aws::collector_builder::tests::set_sqs_client_expectations;
@@ -110,12 +110,11 @@ mod tests {
                 .await
                 .unwrap();
 
-        let result = sqlx::query("select * from object")
-            .fetch_one(ingester.client().pool())
-            .await
-            .unwrap();
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
-        assert_deleted(result);
+        assert_eq!(object_results.len(), 1);
+        assert_eq!(s3_object_results.len(), 1);
+        assert_deleted(&object_results[0], &s3_object_results[0]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -135,11 +134,10 @@ mod tests {
             .await
             .unwrap();
 
-        let result = sqlx::query("select * from object")
-            .fetch_one(ingester.client().pool())
-            .await
-            .unwrap();
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
-        assert_deleted(result);
+        assert_eq!(object_results.len(), 1);
+        assert_eq!(s3_object_results.len(), 1);
+        assert_deleted(&object_results[0], &s3_object_results[0]);
     }
 }
