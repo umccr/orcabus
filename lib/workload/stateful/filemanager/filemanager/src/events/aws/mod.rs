@@ -552,27 +552,33 @@ impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage};
+    use crate::events::aws::{
+        Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage, TransposedS3EventMessages,
+    };
     use chrono::{DateTime, Utc};
-    use serde_json::json;
+    use serde_json::{json, Value};
 
-    pub(crate) const EXPECTED_SEQUENCER_CREATED: &str = "0055AED6DCD90281E5"; // pragma: allowlist secret
-    pub(crate) const EXPECTED_NEW_SEQUENCER: &str = "0055AED6DCD90281E6"; // pragma: allowlist secret
-    pub(crate) const EXPECTED_SEQUENCER_DELETED: &str = "0055AED6DCD90281E7"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_SEQUENCER_CREATED_ONE: &str = "0055AED6DCD90281E4"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_NEW_SEQUENCER_ONE: &str = "0055AED6DCD90281E5"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_SEQUENCER_DELETED_ONE: &str = "0055AED6DCD90281E6"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_SEQUENCER_CREATED_TWO: &str = "0055AED6DCD90281E7"; // pragma: allowlist secret
+                                                                                  //pub(crate) const EXPECTED_NEW_SEQUENCER_TWO: &str = "0055AED6DCD90281E8"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_SEQUENCER_DELETED_TWO: &str = "0055AED6DCD90281E9"; // pragma: allowlist secret
+
     pub(crate) const EXPECTED_E_TAG: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
 
     pub(crate) const EXPECTED_VERSION_ID: &str = "096fKKXTRTtl3on89fVO.nfljtsv6qko";
 
     #[test]
     fn test_flat_events() {
-        let result = expected_flat_events();
+        let result = expected_flat_events_simple();
         let mut result = result.into_inner().into_iter();
 
         let first = result.next().unwrap();
         assert_flat_s3_event(
             first,
             "ObjectRemoved:Delete",
-            EXPECTED_SEQUENCER_DELETED,
+            EXPECTED_SEQUENCER_DELETED_ONE,
             None,
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -581,7 +587,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             second,
             "ObjectCreated:Put",
-            EXPECTED_SEQUENCER_CREATED,
+            EXPECTED_SEQUENCER_CREATED_ONE,
             Some(0),
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -590,7 +596,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             third,
             "ObjectCreated:Put",
-            EXPECTED_SEQUENCER_CREATED,
+            EXPECTED_SEQUENCER_CREATED_ONE,
             Some(0),
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -598,14 +604,14 @@ pub(crate) mod tests {
 
     #[test]
     fn test_sort_and_dedup() {
-        let result = expected_flat_events().sort_and_dedup();
+        let result = expected_flat_events_simple().sort_and_dedup();
         let mut result = result.into_inner().into_iter();
 
         let first = result.next().unwrap();
         assert_flat_s3_event(
             first,
             "ObjectCreated:Put",
-            EXPECTED_SEQUENCER_CREATED,
+            EXPECTED_SEQUENCER_CREATED_ONE,
             Some(0),
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -614,7 +620,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             second,
             "ObjectRemoved:Delete",
-            EXPECTED_SEQUENCER_DELETED,
+            EXPECTED_SEQUENCER_DELETED_ONE,
             None,
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -622,11 +628,11 @@ pub(crate) mod tests {
 
     #[test]
     fn test_sort_and_dedup_with_version_id() {
-        let result = expected_flat_events();
+        let result = expected_flat_events_simple();
 
         let mut result = result.into_inner();
         result.push(
-            expected_flat_events()
+            expected_flat_events_simple()
                 .into_inner()
                 .first()
                 .unwrap()
@@ -641,7 +647,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             first,
             "ObjectCreated:Put",
-            EXPECTED_SEQUENCER_CREATED,
+            EXPECTED_SEQUENCER_CREATED_ONE,
             Some(0),
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -650,7 +656,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             second,
             "ObjectRemoved:Delete",
-            EXPECTED_SEQUENCER_DELETED,
+            EXPECTED_SEQUENCER_DELETED_ONE,
             None,
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -659,7 +665,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             third,
             "ObjectRemoved:Delete",
-            EXPECTED_SEQUENCER_DELETED,
+            EXPECTED_SEQUENCER_DELETED_ONE,
             None,
             Some("version_id".to_string()),
         );
@@ -685,71 +691,114 @@ pub(crate) mod tests {
         assert_eq!(event.last_modified_date, None);
     }
 
-    #[test]
-    fn test_events() {
-        let result = expected_events();
-
+    fn assert_object(
+        events: &TransposedS3EventMessages,
+        position: usize,
+        size: Option<i64>,
+        event_name: &str,
+        bucket: &str,
+        key: &str,
+        sequencer: &str,
+    ) {
+        assert_eq!(events.event_names[position], event_name);
+        assert_eq!(events.buckets[position], bucket);
+        assert_eq!(events.keys[position], key);
+        assert_eq!(events.sizes[position], size);
         assert_eq!(
-            result.object_created.event_times[0],
-            DateTime::<Utc>::default()
-        );
-        assert_eq!(result.object_created.event_names[0], "ObjectCreated:Put");
-        assert_eq!(result.object_created.buckets[0], "bucket");
-        assert_eq!(result.object_created.keys[0], "key");
-        assert_eq!(result.object_created.sizes[0], Some(0));
-        assert_eq!(
-            result.object_created.version_ids[0],
+            events.version_ids[position],
             Some(EXPECTED_VERSION_ID.to_string())
         );
-        assert_eq!(
-            result.object_created.e_tags[0],
-            Some(EXPECTED_E_TAG.to_string())
-        );
-        assert_eq!(
-            result.object_created.sequencers[0],
-            Some(EXPECTED_SEQUENCER_CREATED.to_string())
-        );
-        assert!(result.object_created.portal_run_ids[0].starts_with("19700101"));
-        assert_eq!(result.object_created.storage_classes[0], None);
-        assert_eq!(result.object_created.last_modified_dates[0], None);
-
-        assert_eq!(
-            result.object_removed.event_times[0],
-            DateTime::<Utc>::default()
-        );
-        assert_eq!(result.object_removed.event_names[0], "ObjectRemoved:Delete");
-        assert_eq!(result.object_removed.buckets[0], "bucket");
-        assert_eq!(result.object_removed.keys[0], "key");
-        assert_eq!(
-            result.object_removed.version_ids[0],
-            Some(EXPECTED_VERSION_ID.to_string())
-        );
-        assert_eq!(result.object_removed.sizes[0], None);
-        assert_eq!(
-            result.object_removed.e_tags[0],
-            Some(EXPECTED_E_TAG.to_string())
-        );
-        assert_eq!(
-            result.object_removed.sequencers[0],
-            Some(EXPECTED_SEQUENCER_DELETED.to_string())
-        );
-        assert!(result.object_removed.portal_run_ids[0].starts_with("19700101"));
-        assert_eq!(result.object_removed.storage_classes[0], None);
-        assert_eq!(result.object_removed.last_modified_dates[0], None);
+        assert_eq!(events.e_tags[position], Some(EXPECTED_E_TAG.to_string()));
+        assert_eq!(events.sequencers[position], Some(sequencer.to_string()));
+        assert!(events.portal_run_ids[position].starts_with("19700101"));
+        assert_eq!(events.storage_classes[position], None);
+        assert_eq!(events.last_modified_dates[position], None);
     }
 
-    pub(crate) fn expected_flat_events() -> FlatS3EventMessages {
-        let events: S3EventMessage = serde_json::from_str(&expected_event_record()).unwrap();
+    #[test]
+    fn test_events() {
+        let result = expected_events_full();
+
+        assert_object(
+            &result.object_created,
+            0,
+            Some(0),
+            "ObjectCreated:Put",
+            "bucket",
+            "key",
+            EXPECTED_SEQUENCER_CREATED_ONE,
+        );
+        assert_object(
+            &result.object_removed,
+            0,
+            None,
+            "ObjectRemoved:Delete",
+            "bucket",
+            "key",
+            EXPECTED_SEQUENCER_DELETED_ONE,
+        );
+
+        assert_object(
+            &result.object_created,
+            1,
+            Some(0),
+            "ObjectCreated:Put",
+            "bucket",
+            "key",
+            EXPECTED_SEQUENCER_CREATED_TWO,
+        );
+        assert_object(
+            &result.object_removed,
+            1,
+            None,
+            "ObjectRemoved:Delete",
+            "bucket",
+            "key",
+            EXPECTED_SEQUENCER_DELETED_TWO,
+        );
+    }
+
+    fn expected_flat_events(records: String) -> FlatS3EventMessages {
+        let events: S3EventMessage = serde_json::from_str(&records).unwrap();
         events.try_into().unwrap()
     }
 
-    pub(crate) fn expected_events() -> Events {
-        let events = expected_flat_events().sort_and_dedup();
+    fn expected_events(records: String) -> Events {
+        let events = expected_flat_events(records).sort_and_dedup();
         events.into()
     }
 
-    pub(crate) fn expected_event_record() -> String {
+    pub(crate) fn expected_flat_events_simple() -> FlatS3EventMessages {
+        expected_flat_events(expected_event_record_simple())
+    }
+
+    pub(crate) fn expected_events_simple() -> Events {
+        expected_events(expected_event_record_simple())
+    }
+
+    // pub(crate) fn expected_flat_events_full() -> FlatS3EventMessages {
+    //     expected_flat_events(expected_event_record_full())
+    // }
+
+    pub(crate) fn expected_events_full() -> Events {
+        expected_events(expected_event_record_full())
+    }
+
+    pub(crate) fn expected_event_record_simple() -> String {
+        let mut records: Value = serde_json::from_str(&expected_event_record_full()).unwrap();
+
+        records["Records"] = json!([
+            records["Records"][0].clone(),
+            records["Records"][1].clone(),
+            records["Records"][2].clone(),
+        ]);
+
+        records.to_string()
+    }
+
+    pub(crate) fn expected_event_record_full() -> String {
         let object = json!({
+            "eventTime": "1970-01-01T00:00:00.000Z",
             "eventVersion": "2.2",
             "eventSource": "aws:s3",
             "awsRegion": "us-west-2",
@@ -775,10 +824,9 @@ pub(crate) mod tests {
                 },
                 "object": {
                    "key": "key",
-                   "size": 0,
                    "eTag": EXPECTED_E_TAG,
                    "versionId": EXPECTED_VERSION_ID,
-                   "sequencer": EXPECTED_SEQUENCER_CREATED
+                   "sequencer": EXPECTED_SEQUENCER_CREATED_ONE
                 }
             },
             "glacierEventData": {
@@ -789,58 +837,35 @@ pub(crate) mod tests {
             }
         });
 
-        let mut object_created = object.clone();
-        object_created["eventTime"] = json!("1970-01-01T00:00:00.000Z");
-        object_created["eventName"] = json!("ObjectCreated:Put");
-        object_created["s3"] = json!({
-            "s3SchemaVersion": "1.0",
-            "configurationId": "testConfigRule",
-            "bucket": {
-               "name": "bucket",
-               "ownerIdentity": {
-                  "principalId":"123456789012"
-               },
-               "arn": "arn:aws:s3:::bucket"
-            },
-            "object": {
-               "key": "key",
-               "size": 0,
-               "eTag": EXPECTED_E_TAG,
-               "versionId": EXPECTED_VERSION_ID,
-               "sequencer": EXPECTED_SEQUENCER_CREATED
-            }
-        });
+        let mut object_created_one = object.clone();
+        object_created_one["eventName"] = json!("ObjectCreated:Put");
+        object_created_one["s3"]["object"]["size"] = json!(0);
 
-        let object_created_duplicate = object_created.clone();
+        let object_created_one_duplicate = object_created_one.clone();
 
-        let mut object_removed = object;
-        object_removed["eventTime"] = json!("1970-01-01T00:00:00.000Z");
-        object_removed["eventName"] = json!("ObjectRemoved:Delete");
-        object_removed["s3"] = json!({
-            "s3SchemaVersion": "1.0",
-            "configurationId": "testConfigRule",
-            "bucket": {
-               "name": "bucket",
-               "ownerIdentity": {
-                  "principalId":"123456789012"
-               },
-               "arn": "arn:aws:s3:::bucket"
-            },
-            "object": {
-               "key": "key",
-                // ObjectRemoved::Delete does not have a size, even though this isn't documented
-                // anywhere.
-               "eTag": EXPECTED_E_TAG,
-               "versionId": EXPECTED_VERSION_ID,
-               "sequencer": EXPECTED_SEQUENCER_DELETED
-            }
-        });
+        let mut object_removed_one = object.clone();
+        object_removed_one["eventName"] = json!("ObjectRemoved:Delete");
+        object_removed_one["s3"]["object"]["sequencer"] = json!(EXPECTED_SEQUENCER_DELETED_ONE);
+
+        let mut object_created_two = object.clone();
+        object_created_two["eventName"] = json!("ObjectCreated:Put");
+        object_created_two["s3"]["object"]["size"] = json!(0);
+        object_created_two["s3"]["object"]["sequencer"] = json!(EXPECTED_SEQUENCER_CREATED_TWO);
+
+        let mut object_removed_two = object.clone();
+        object_removed_two["eventName"] = json!("ObjectRemoved:Delete");
+        object_removed_two["s3"]["object"]["sequencer"] = json!(EXPECTED_SEQUENCER_DELETED_TWO);
+
+        let object_removed_two_duplicate = object_removed_two.clone();
 
         json!({
            "Records": [
-                object_removed,
-                object_created,
-                object_created_duplicate,
+                object_removed_one,
+                object_created_one,
+                object_created_one_duplicate,
+                object_created_two,
+                object_removed_two,
+                object_removed_two_duplicate
            ]
         })
         .to_string()

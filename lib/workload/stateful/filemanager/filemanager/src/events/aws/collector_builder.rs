@@ -105,7 +105,7 @@ pub(crate) mod tests {
         assert_collected_events, expected_head_object, set_s3_client_expectations,
     };
     use crate::events::aws::collector_builder::CollecterBuilder;
-    use crate::events::aws::tests::{expected_event_record, expected_flat_events};
+    use crate::events::aws::tests::{expected_event_record_simple, expected_flat_events_simple};
     use crate::events::Collect;
     use aws_sdk_sqs::operation::receive_message::ReceiveMessageOutput;
     use aws_sdk_sqs::types::builders::MessageBuilder;
@@ -121,7 +121,7 @@ pub(crate) mod tests {
 
         let events = CollecterBuilder::receive(&sqs_client, "url").await.unwrap();
 
-        let mut expected = expected_flat_events();
+        let mut expected = expected_flat_events_simple();
         expected
             .0
             .iter_mut()
@@ -169,7 +169,7 @@ pub(crate) mod tests {
         ReceiveMessageOutput::builder()
             .messages(
                 MessageBuilder::default()
-                    .body(expected_event_record())
+                    .body(expected_event_record_simple())
                     .build(),
             )
             .build()

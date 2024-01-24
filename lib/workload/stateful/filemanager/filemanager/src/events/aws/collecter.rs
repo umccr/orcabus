@@ -131,7 +131,7 @@ impl Collect for Collecter {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::events::aws::collecter::Collecter;
-    use crate::events::aws::tests::expected_flat_events;
+    use crate::events::aws::tests::expected_flat_events_simple;
     use crate::events::aws::StorageClass::IntelligentTiering;
     use aws_sdk_s3::error::SdkError;
     use aws_sdk_s3::primitives::{DateTimeFormat, SdkBody};
@@ -186,7 +186,7 @@ pub(crate) mod tests {
     async fn update_events() {
         let mut collecter = test_collecter().await;
 
-        let events = expected_flat_events().sort_and_dedup();
+        let events = expected_flat_events_simple().sort_and_dedup();
 
         set_s3_client_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
 
@@ -270,6 +270,6 @@ pub(crate) mod tests {
     }
 
     async fn test_collecter() -> Collecter {
-        Collecter::new(Client::default(), expected_flat_events())
+        Collecter::new(Client::default(), expected_flat_events_simple())
     }
 }

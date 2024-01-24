@@ -151,66 +151,15 @@ pub(crate) mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
     use crate::events::aws::tests::{
-        expected_events, expected_flat_events, EXPECTED_E_TAG, EXPECTED_NEW_SEQUENCER,
-        EXPECTED_SEQUENCER_CREATED, EXPECTED_VERSION_ID,
+        expected_events_simple, expected_flat_events_simple, EXPECTED_E_TAG,
+        EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_VERSION_ID,
     };
     use crate::events::aws::{Events, FlatS3EventMessages, StorageClass};
     use crate::events::EventSourceType;
     use chrono::{DateTime, Utc};
     use sqlx::postgres::PgRow;
-    use sqlx::{query_file, PgPool, Row};
+    use sqlx::{PgPool, Row};
     use std::ops::Add;
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn select_reordered_for_deleted_event_created(pool: PgPool) {
-        let mut events = test_events();
-        events.object_removed = Default::default();
-
-        let ingester = test_ingester(pool);
-        ingester.ingest_events(events.clone()).await.unwrap();
-
-        let sequencers = query_file!(
-            "../database/queries/ingester/aws/select_reordered_for_deleted.sql",
-            "bucket",
-            "key",
-            EXPECTED_VERSION_ID,
-            EXPECTED_NEW_SEQUENCER
-        )
-        .fetch_all(ingester.client().pool())
-        .await
-        .unwrap();
-
-        assert_eq!(sequencers.len(), 1);
-        assert_eq!(
-            sequencers[0].object_id,
-            Some(events.object_created.object_ids[0])
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn select_reordered_for_deleted_event_deleted(pool: PgPool) {
-        let events = test_events();
-
-        let ingester = test_ingester(pool);
-        ingester.ingest_events(events.clone()).await.unwrap();
-
-        let sequencers = query_file!(
-            "../database/queries/ingester/aws/select_reordered_for_deleted.sql",
-            "bucket",
-            "key",
-            EXPECTED_VERSION_ID,
-            EXPECTED_NEW_SEQUENCER
-        )
-        .fetch_all(ingester.client().pool())
-        .await
-        .unwrap();
-
-        assert_eq!(sequencers.len(), 1);
-        assert_eq!(
-            sequencers[0].object_id,
-            Some(events.object_created.object_ids[0])
-        );
-    }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {
@@ -286,12 +235,12 @@ pub(crate) mod tests {
             .await
             .unwrap();
 
-        let event = expected_flat_events().sort_and_dedup().into_inner();
+        let event = expected_flat_events_simple().sort_and_dedup().into_inner();
         let mut event = event[0].clone();
         event.sequencer = Some(event.sequencer.unwrap().add("7"));
 
         let mut events = vec![event];
-        events.extend(expected_flat_events().sort_and_dedup().into_inner());
+        events.extend(expected_flat_events_simple().sort_and_dedup().into_inner());
 
         let events = update_test_events(FlatS3EventMessages(events).into());
 
@@ -310,7 +259,7 @@ pub(crate) mod tests {
             &object_results[1],
             &s3_object_results[1],
             EXPECTED_VERSION_ID,
-            &EXPECTED_SEQUENCER_CREATED.to_string().add("7"),
+            &EXPECTED_SEQUENCER_CREATED_ONE.to_string().add("7"),
         );
     }
 
@@ -322,12 +271,12 @@ pub(crate) mod tests {
             .await
             .unwrap();
 
-        let event = expected_flat_events().sort_and_dedup().into_inner();
+        let event = expected_flat_events_simple().sort_and_dedup().into_inner();
         let mut event = event[0].clone();
         event.version_id = Some("version_id".to_string());
 
         let mut events = vec![event];
-        events.extend(expected_flat_events().sort_and_dedup().into_inner());
+        events.extend(expected_flat_events_simple().sort_and_dedup().into_inner());
 
         let events = update_test_events(FlatS3EventMessages(events).into());
 
@@ -346,7 +295,7 @@ pub(crate) mod tests {
             &object_results[1],
             &s3_object_results[1],
             "version_id",
-            EXPECTED_SEQUENCER_CREATED,
+            EXPECTED_SEQUENCER_CREATED_ONE,
         );
     }
 
@@ -396,7 +345,7 @@ pub(crate) mod tests {
             object_results,
             s3_object_results,
             EXPECTED_VERSION_ID,
-            EXPECTED_SEQUENCER_CREATED,
+            EXPECTED_SEQUENCER_CREATED_ONE,
         )
     }
 
@@ -444,11 +393,11 @@ pub(crate) mod tests {
         events
     }
 
-    fn test_events() -> Events {
-        update_test_events(expected_events())
+    pub(crate) fn test_events() -> Events {
+        update_test_events(expected_events_simple())
     }
 
-    fn test_ingester(pool: PgPool) -> Ingester {
+    pub(crate) fn test_ingester(pool: PgPool) -> Ingester {
         Ingester::new(Client::new(pool))
     }
 }

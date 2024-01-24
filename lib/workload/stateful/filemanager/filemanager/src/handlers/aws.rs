@@ -93,7 +93,7 @@ mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::collecter::tests::{expected_head_object, set_s3_client_expectations};
     use crate::events::aws::collector_builder::tests::set_sqs_client_expectations;
-    use crate::events::aws::tests::expected_event_record;
+    use crate::events::aws::tests::expected_event_record_simple;
     use aws_lambda_events::sqs::SqsMessage;
     use sqlx::PgPool;
 
@@ -125,7 +125,7 @@ mod tests {
 
         let event = SqsEvent {
             records: vec![SqsMessage {
-                body: Some(expected_event_record()),
+                body: Some(expected_event_record_simple()),
                 ..Default::default()
             }],
         };
