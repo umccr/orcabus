@@ -65,7 +65,6 @@ impl Ingester {
             &e_tags as &[Option<String>],
             &storage_classes as &[Option<StorageClass>],
             &version_ids as &[Option<String>],
-            &sequencers as &[Option<String>],
             &sequencers as &[Option<String>]
         )
         .fetch_all(&mut *tx)
@@ -152,15 +151,66 @@ pub(crate) mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
     use crate::events::aws::tests::{
-        expected_events, expected_flat_events, EXPECTED_E_TAG, EXPECTED_SEQUENCER_CREATED,
-        EXPECTED_VERSION_ID,
+        expected_events, expected_flat_events, EXPECTED_E_TAG, EXPECTED_NEW_SEQUENCER,
+        EXPECTED_SEQUENCER_CREATED, EXPECTED_VERSION_ID,
     };
     use crate::events::aws::{Events, FlatS3EventMessages, StorageClass};
     use crate::events::EventSourceType;
     use chrono::{DateTime, Utc};
     use sqlx::postgres::PgRow;
-    use sqlx::{PgPool, Row};
+    use sqlx::{query_file, PgPool, Row};
     use std::ops::Add;
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn select_reordered_for_deleted_event_created(pool: PgPool) {
+        let mut events = test_events();
+        events.object_removed = Default::default();
+
+        let ingester = test_ingester(pool);
+        ingester.ingest_events(events.clone()).await.unwrap();
+
+        let sequencers = query_file!(
+            "../database/queries/ingester/aws/select_reordered_for_deleted.sql",
+            "bucket",
+            "key",
+            EXPECTED_VERSION_ID,
+            EXPECTED_NEW_SEQUENCER
+        )
+        .fetch_all(ingester.client().pool())
+        .await
+        .unwrap();
+
+        assert_eq!(sequencers.len(), 1);
+        assert_eq!(
+            sequencers[0].object_id,
+            Some(events.object_created.object_ids[0])
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn select_reordered_for_deleted_event_deleted(pool: PgPool) {
+        let events = test_events();
+
+        let ingester = test_ingester(pool);
+        ingester.ingest_events(events.clone()).await.unwrap();
+
+        let sequencers = query_file!(
+            "../database/queries/ingester/aws/select_reordered_for_deleted.sql",
+            "bucket",
+            "key",
+            EXPECTED_VERSION_ID,
+            EXPECTED_NEW_SEQUENCER
+        )
+        .fetch_all(ingester.client().pool())
+        .await
+        .unwrap();
+
+        assert_eq!(sequencers.len(), 1);
+        assert_eq!(
+            sequencers[0].object_id,
+            Some(events.object_created.object_ids[0])
+        );
+    }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {

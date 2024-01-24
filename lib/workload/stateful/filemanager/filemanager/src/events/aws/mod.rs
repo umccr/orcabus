@@ -557,7 +557,8 @@ pub(crate) mod tests {
     use serde_json::json;
 
     pub(crate) const EXPECTED_SEQUENCER_CREATED: &str = "0055AED6DCD90281E5"; // pragma: allowlist secret
-    pub(crate) const EXPECTED_SEQUENCER_DELETED: &str = "0055AED6DCD90281E6"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_NEW_SEQUENCER: &str = "0055AED6DCD90281E6"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_SEQUENCER_DELETED: &str = "0055AED6DCD90281E7"; // pragma: allowlist secret
     pub(crate) const EXPECTED_E_TAG: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
 
     pub(crate) const EXPECTED_VERSION_ID: &str = "096fKKXTRTtl3on89fVO.nfljtsv6qko";

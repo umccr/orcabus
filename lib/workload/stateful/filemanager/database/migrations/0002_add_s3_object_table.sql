@@ -1,7 +1,19 @@
-create type storage_class as enum ('DeepArchive', 'Glacier', 'GlacierIr', 'IntelligentTiering', 'OnezoneIa', 'Outposts', 'ReducedRedundancy', 'Snow', 'Standard', 'StandardIa');
+-- The AWS S3 storage classes.
+create type storage_class as enum (
+    'DeepArchive',
+    'Glacier',
+    'GlacierIr',
+    'IntelligentTiering',
+    'OnezoneIa',
+    'Outposts',
+    'ReducedRedundancy',
+    'Snow',
+    'Standard',
+    'StandardIa'
+);
 
 -- An object contain in AWS S3, maps as a one-to-one relationship with the object table.
-create table s3_object(
+create table s3_object (
     -- The s3 object id.
     s3_object_id uuid not null primary key default gen_random_uuid(),
     -- This is initially deferred because we want to create an s3_object before an object to check for duplicates/order.
@@ -31,8 +43,6 @@ create table s3_object(
     created_sequencer text default null,
     -- A sequencer value for when the object was deleted. Used to synchronise out of order and duplicate events.
     deleted_sequencer text default null,
-    -- The maximum sequencer value for objects with the same bucket, key and version_id. Used for out of order events.
-    maximum_sequencer text default null,
     -- Record whether the event that generated this object was ever out of order, useful for debugging.
     event_out_of_order boolean not null default false,
     -- Record the number of duplicate events received for this object, useful for debugging.
