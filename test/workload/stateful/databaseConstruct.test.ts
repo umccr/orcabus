@@ -11,6 +11,7 @@ const constructConfig = getEnvironmentConfig('beta');
 if (!constructConfig) throw new Error('No construct config for the test');
 
 expect(constructConfig).toBeTruthy();
+const dbProps = constructConfig.stackProps.orcaBusStatefulConfig.databaseProps;
 
 beforeEach(() => {
   stack = new cdk.Stack();
@@ -28,10 +29,10 @@ test('Test DBCluster created props', () => {
   template.hasResourceProperties('AWS::RDS::DBCluster', {
     DBClusterIdentifier: 'orcabus-db',
     DatabaseName: 'orcabus',
-    DBClusterParameterGroupName: 'default.aurora-mysql8.0',
+    DBClusterParameterGroupName: dbProps.parameterGroupName,
     ServerlessV2ScalingConfiguration: {
-      MaxCapacity: 1,
-      MinCapacity: 0.5,
+      MaxCapacity: dbProps.maxACU,
+      MinCapacity: dbProps.minACU,
     },
   });
 });
@@ -45,13 +46,13 @@ test('Test other SG Allow Ingress to DB SG', () => {
 
   new DatabaseConstruct(stack, 'TestDatabaseConstruct', vpc, {
     ...constructConfig.stackProps.orcaBusStatefulConfig.databaseProps,
-    allowDbSGIngressRule: [{ peer: allowedSG, description: 'Allowed SG DB Ingress' }],
+    allowedInboundSG: allowedSG,
   });
   const template = Template.fromStack(stack);
 
   template.hasResourceProperties('AWS::EC2::SecurityGroupIngress', {
-    ToPort: 3306,
-    FromPort: 3306,
+    ToPort: dbProps.dbPort,
+    FromPort: dbProps.dbPort,
     SourceSecurityGroupId: {
       'Fn::GetAtt': [sgLogicalId, 'GroupId'],
     },
