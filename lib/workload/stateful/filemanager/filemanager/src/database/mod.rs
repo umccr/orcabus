@@ -53,33 +53,61 @@ pub trait Migrate {
 pub(crate) mod tests {
     use crate::database::aws::ingester::tests::{test_events, test_ingester};
     use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::aws::S3ObjectTable;
     use crate::events::aws::tests::{EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_VERSION_ID};
     use crate::events::aws::Events;
-    use sqlx::{query_file, PgPool};
+    use crate::events::aws::StorageClass;
+    use chrono::{DateTime, Utc};
+    use sqlx::{query, query_file_as, PgPool};
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn select_reordered_for_deleted_event_created(pool: PgPool) {
+    async fn update_reordered_for_deleted_event_created(pool: PgPool) {
         let mut events = test_events();
         events.object_removed = Default::default();
 
-        test_select_reordered_for_deleted(pool, test_events()).await;
+        test_update_reordered_for_deleted(pool, test_events()).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn select_reordered_for_deleted_event_deleted(pool: PgPool) {
-        test_select_reordered_for_deleted(pool, test_events()).await;
+    async fn update_reordered_for_deleted_event_deleted(pool: PgPool) {
+        test_update_reordered_for_deleted(pool, test_events()).await;
     }
 
-    async fn test_select_reordered_for_deleted(pool: PgPool, events: Events) {
+    async fn test_update_reordered_for_deleted(pool: PgPool, events: Events) {
         let ingester = test_ingester(pool);
         ingester.ingest_events(events.clone()).await.unwrap();
 
-        let sequencers = query_file!(
-            "../database/queries/ingester/aws/select_reordered_for_deleted.sql",
+        let sequencers = query_file_as!(
+            S3ObjectTable,
+            "../database/queries/ingester/aws/update_reordered_for_deleted.sql",
             "bucket",
             "key",
             EXPECTED_VERSION_ID,
-            EXPECTED_NEW_SEQUENCER_ONE
+            EXPECTED_NEW_SEQUENCER_ONE,
+            Some::<DateTime<Utc>>(DateTime::default())
+        )
+        .fetch_all(ingester.client().pool())
+        .await
+        .unwrap();
+
+        assert_eq!(sequencers.len(), 1);
+        assert_eq!(sequencers[0].object_id, events.object_created.object_ids[0]);
+
+        let updated = query!(
+            "select s3_object_id as \"s3_object_id!\",
+                object_id as \"object_id!\",
+                bucket,
+                key,
+                created_date,
+                deleted_date,
+                last_modified_date,
+                e_tag,
+                storage_class as \"storage_class: StorageClass\",
+                version_id,
+                created_sequencer,
+                deleted_sequencer,
+                number_reordered,
+                number_duplicate_events from s3_object"
         )
         .fetch_all(ingester.client().pool())
         .await
@@ -87,8 +115,10 @@ pub(crate) mod tests {
 
         assert_eq!(sequencers.len(), 1);
         assert_eq!(
-            sequencers[0].object_id,
-            Some(events.object_created.object_ids[0])
+            updated[0].deleted_sequencer,
+            Some(EXPECTED_NEW_SEQUENCER_ONE.to_string())
         );
+        assert_eq!(updated[0].deleted_date, Some(DateTime::default()));
+        assert_eq!(updated[0].number_reordered, 1);
     }
 }

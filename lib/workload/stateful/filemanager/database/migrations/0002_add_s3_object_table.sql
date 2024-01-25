@@ -17,7 +17,7 @@ create table s3_object (
     -- The s3 object id.
     s3_object_id uuid not null primary key default gen_random_uuid(),
     -- This is initially deferred because we want to create an s3_object before an object to check for duplicates/order.
-    object_id uuid references object (object_id) deferrable initially deferred,
+    object_id uuid not null references object (object_id) deferrable initially deferred,
 
     -- General fields
     -- The bucket of the object.
@@ -43,8 +43,8 @@ create table s3_object (
     created_sequencer text default null,
     -- A sequencer value for when the object was deleted. Used to synchronise out of order and duplicate events.
     deleted_sequencer text default null,
-    -- Record whether the event that generated this object was ever out of order, useful for debugging.
-    event_out_of_order boolean not null default false,
+    -- Record the number of times this event has been considered out of order, useful for debugging.
+    number_reordered integer not null default 0,
     -- Record the number of duplicate events received for this object, useful for debugging.
     number_duplicate_events integer not null default 0,
 
