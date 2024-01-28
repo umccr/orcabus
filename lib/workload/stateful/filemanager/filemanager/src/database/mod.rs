@@ -52,9 +52,12 @@ pub trait Migrate {
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::database::aws::ingester::tests::{test_events, test_ingester};
+    use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::aws::S3ObjectTable;
-    use crate::events::aws::tests::{EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_VERSION_ID};
+    use crate::events::aws::tests::{
+        EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_SEQUENCER_CREATED_TWO, EXPECTED_VERSION_ID,
+    };
     use crate::events::aws::Events;
     use crate::events::aws::StorageClass;
     use chrono::{DateTime, Utc};
@@ -73,9 +76,21 @@ pub(crate) mod tests {
         test_update_reordered_for_deleted(pool, test_events()).await;
     }
 
-    async fn test_update_reordered_for_deleted(pool: PgPool, events: Events) {
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_reordered_for_deleted_no_update(pool: PgPool) {
+        let events = test_events();
+        let (_, sequencers) = ingest_events(pool, events, EXPECTED_SEQUENCER_CREATED_TWO).await;
+
+        assert_eq!(sequencers.len(), 0);
+    }
+
+    async fn ingest_events(
+        pool: PgPool,
+        events: Events,
+        sequencer: &str,
+    ) -> (Ingester, Vec<S3ObjectTable>) {
         let ingester = test_ingester(pool);
-        ingester.ingest_events(events.clone()).await.unwrap();
+        ingester.ingest_events(events).await.unwrap();
 
         let sequencers = query_file_as!(
             S3ObjectTable,
@@ -83,12 +98,19 @@ pub(crate) mod tests {
             "bucket",
             "key",
             EXPECTED_VERSION_ID,
-            EXPECTED_NEW_SEQUENCER_ONE,
-            Some::<DateTime<Utc>>(DateTime::default())
+            sequencer,
+            Some(DateTime::<Utc>::default())
         )
         .fetch_all(ingester.client().pool())
         .await
         .unwrap();
+
+        (ingester, sequencers)
+    }
+
+    async fn test_update_reordered_for_deleted(pool: PgPool, events: Events) {
+        let (ingester, sequencers) =
+            ingest_events(pool, events.clone(), EXPECTED_NEW_SEQUENCER_ONE).await;
 
         assert_eq!(sequencers.len(), 1);
         assert_eq!(sequencers[0].object_id, events.object_created.object_ids[0]);
@@ -113,7 +135,7 @@ pub(crate) mod tests {
         .await
         .unwrap();
 
-        assert_eq!(sequencers.len(), 1);
+        assert_eq!(updated.len(), 1);
         assert_eq!(
             updated[0].deleted_sequencer,
             Some(EXPECTED_NEW_SEQUENCER_ONE.to_string())

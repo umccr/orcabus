@@ -78,7 +78,7 @@ impl Ingester {
                 // If we cannot find the object in our new ids, this object already exists.
                 let pos = inserted.iter().rposition(|record| {
                     // This will never be `None`, maybe this is an sqlx bug?
-                    record.object_id == Some(object_id)
+                    record.object_id == object_id
                 })?;
 
                 // We can remove this to avoid searching over it again.
@@ -113,6 +113,7 @@ impl Ingester {
             event_times,
             buckets,
             keys,
+            sequencers,
             ..
         } = object_removed;
 
@@ -120,7 +121,8 @@ impl Ingester {
             "../database/queries/ingester/aws/update_deleted.sql",
             &keys,
             &buckets,
-            &event_times
+            &event_times,
+            &sequencers as &[Option<String>]
         )
         .execute(&mut *tx)
         .await?;
