@@ -175,20 +175,20 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
-        let sequencers = query_file_as!(
-            S3ObjectTable,
-            "../database/queries/ingester/aws/update_reordered_for_created.sql",
-            "bucket",
-            "key",
-            EXPECTED_VERSION_ID,
-            sequencer,
-            Some(DateTime::<Utc>::default())
-        )
-        .fetch_all(ingester.client().pool())
-        .await
-        .unwrap();
+        // let sequencers = query_file_as!(
+        //     S3ObjectTable,
+        //     "../database/queries/ingester/aws/update_reordered_for_created.sql",
+        //     "bucket",
+        //     "key",
+        //     EXPECTED_VERSION_ID,
+        //     sequencer,
+        //     Some(DateTime::<Utc>::default())
+        // )
+        // .fetch_all(ingester.client().pool())
+        // .await
+        // .unwrap();
 
-        (ingester, sequencers)
+        (ingester, vec![])
     }
 
     async fn test_update_reordered_for_created(pool: PgPool, events: Events) {

@@ -5,8 +5,7 @@
 with input as (
     select
         *
-    from unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[], $6::timestamptz[]) as input (
-         s3_object_id,
+    from unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::timestamptz[]) as input (
          bucket,
          key,
          version_id,
@@ -19,12 +18,14 @@ current_s3_objects as (
     select
         s3_object.*
     from s3_object
-    -- Grab the correct input point to update with.
-    join input on input.s3_object_id = s3_object.s3_object_id
+    -- Grab the relevant values to update with.
+    join input on
+        input.bucket = s3_object.bucket and
+        input.key = s3_object.key and
+        input.version_id = s3_object.version_id
     where
-        s3_object.bucket = input.bucket and
-        s3_object.key = input.key and
-        s3_object.version_id = input.version_id and
+        -- Check the sequencer condition. We only update if there is a deleted
+        -- sequencer that is closer to the created sequencer.
         s3_object.created_sequencer < input.deleted_sequencer and
         (
             s3_object.deleted_sequencer is null or
@@ -42,7 +43,7 @@ update as (
     from current_s3_objects
     where s3_object.s3_object_id = current_s3_objects.s3_object_id
 )
--- Return the old values because these needs to be reprocessed.
+-- Return the old values because these need to be reprocessed.
 select
     s3_object_id as "s3_object_id!",
     object_id as "object_id!",
