@@ -558,6 +558,7 @@ pub(crate) mod tests {
     use chrono::{DateTime, Utc};
     use serde_json::{json, Value};
 
+    pub(crate) const EXPECTED_SEQUENCER_CREATED_ZERO: &str = "0055AED6DCD90281E3"; // pragma: allowlist secret
     pub(crate) const EXPECTED_SEQUENCER_CREATED_ONE: &str = "0055AED6DCD90281E4"; // pragma: allowlist secret
     pub(crate) const EXPECTED_NEW_SEQUENCER_ONE: &str = "0055AED6DCD90281E5"; // pragma: allowlist secret
     pub(crate) const EXPECTED_SEQUENCER_DELETED_ONE: &str = "0055AED6DCD90281E6"; // pragma: allowlist secret
