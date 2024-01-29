@@ -1,9 +1,31 @@
 import { Construct } from 'constructs';
-import { RemovalPolicy } from 'aws-cdk-lib';
+import { RemovalPolicy, Duration } from 'aws-cdk-lib';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
-export interface DatabaseProps {
+/**
+ * Props for enabling enhanced monitoring.
+ */
+type MonitoringProps = {
+  /**
+   * Add cloud watch exports.
+   */
+  readonly cloudwatchLogsExports?: string[];
+  /**
+   * Enable performance insights.
+   */
+  readonly enablePerformanceInsights?: boolean;
+  /**
+   * performance insights retention period
+   */
+  readonly performanceInsightsRetention?: rds.PerformanceInsightRetention;
+  /**
+   * Enable enhanced monitoring by specifying the interval
+   */
+  readonly enhancedMonitoringInterval?: Duration;
+};
+
+export type DatabaseProps = MonitoringProps & {
   clusterIdentifier: string;
   defaultDatabaseName: string;
   parameterGroupName: string;
@@ -14,7 +36,7 @@ export interface DatabaseProps {
   maxACU: number;
   dbPort: number;
   allowedInboundSG?: ec2.SecurityGroup;
-}
+};
 
 export class DatabaseConstruct extends Construct {
   readonly dbSecurityGroup: ec2.SecurityGroup;
@@ -62,7 +84,13 @@ export class DatabaseConstruct extends Construct {
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
       },
-      writer: rds.ClusterInstance.serverlessV2('WriterClusterInstance', {}),
+
+      cloudwatchLogsExports: props.cloudwatchLogsExports,
+      monitoringInterval: props.enhancedMonitoringInterval,
+
+      writer: rds.ClusterInstance.serverlessV2('WriterClusterInstance', {
+        enablePerformanceInsights: props.enablePerformanceInsights,
+      }),
     });
   }
 }
