@@ -5,7 +5,8 @@
 with input as (
     select
         *
-    from unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::timestamptz[]) as input (
+    from unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[], $6::timestamptz[]) as input (
+        s3_object_id,
         bucket,
         key,
         version_id,
@@ -16,10 +17,12 @@ with input as (
 -- Then, select the objects that need to be updated.
 current_s3_objects as (
     select
-        s3_object.*
+        s3_object.*,
+        -- Pass this through to the output.
+        input.s3_object_id as input_id
     from s3_object
-        -- Grab the relevant values to update with.
-        join input on
+    -- Grab the relevant values to update with.
+    join input on
         input.bucket = s3_object.bucket and
         input.key = s3_object.key and
         input.version_id = s3_object.version_id
@@ -45,18 +48,22 @@ update as (
 )
 -- Return the old values because these need to be reprocessed.
 select
-    s3_object_id as "s3_object_id!",
-    object_id as "object_id!",
+    -- Note, this is the passed through value from the input in order to identify this event later.
+    input_id as s3_object_id,
     bucket,
     key,
-    created_date,
-    deleted_date,
+    created_date as event_time,
     last_modified_date,
     e_tag,
     storage_class as "storage_class: StorageClass",
     version_id,
-    created_sequencer,
-    deleted_sequencer,
+    created_sequencer as sequencer,
     number_reordered,
-    number_duplicate_events
-from current_s3_objects;
+    number_duplicate_events,
+    -- Also need the size from the object table.
+    size,
+    -- This is used to simplify re-constructing the FlatS3EventMesssages in the Lambda. I.e. this update detected an
+    -- out of order created event, so return a created event back.
+    'Created' as "event_type!: EventType"
+from current_s3_objects
+join object on object.object_id = current_s3_objects.object_id;
