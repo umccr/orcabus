@@ -6,6 +6,7 @@ import { Duration, aws_lambda } from 'aws-cdk-lib';
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
 const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
+const rdsMasterSecretName = 'orcabus/rds-master'; // pragma: allowlist secret
 
 const orcaBusStatefulConfig = {
   schemaRegistryProps: {
@@ -25,6 +26,7 @@ const orcaBusStatefulConfig = {
     parameterGroupName: 'default.aurora-postgresql15',
     username: 'admin',
     dbPort: 5432,
+    masterSecretName: rdsMasterSecretName,
     monitoring: {
       cloudwatchLogsExports: ['orcabus-postgresql'],
     },
@@ -57,6 +59,7 @@ const orcaBusStatelessConfig = {
   lambdaSecurityGroupName: lambdaSecurityGroupName,
   lambdaRuntimePythonVersion: aws_lambda.Runtime.PYTHON_3_10,
   bclConvertFunctionName: 'orcabus_bcl_convert',
+  rdsMasterSecretName: rdsMasterSecretName,
 };
 
 interface EnvironmentConfig {

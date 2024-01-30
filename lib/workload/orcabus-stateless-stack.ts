@@ -11,6 +11,7 @@ export interface OrcaBusStatelessConfig {
   lambdaSecurityGroupName: string;
   lambdaRuntimePythonVersion: aws_lambda.Runtime;
   bclConvertFunctionName: string;
+  rdsMasterSecretName: string;
 }
 
 export class OrcaBusStatelessStack extends cdk.Stack {

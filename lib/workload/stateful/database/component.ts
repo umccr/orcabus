@@ -30,6 +30,7 @@ export type DatabaseProps = MonitoringProps & {
   defaultDatabaseName: string;
   parameterGroupName: string;
   username: string;
+  masterSecretName: string;
   version: rds.AuroraPostgresEngineVersion;
   numberOfInstance: number;
   minACU: number;
@@ -47,6 +48,7 @@ export class DatabaseConstruct extends Construct {
 
     const dbSecret = new rds.DatabaseSecret(this, id + 'DbSecret', {
       username: props.username,
+      secretName: props.masterSecretName,
     });
 
     this.dbSecurityGroup = new ec2.SecurityGroup(this, 'DbSecurityGroup', {
