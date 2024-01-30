@@ -25,7 +25,7 @@ create table s3_object (
     -- The key of the object.
     key text not null,
     -- When this object was created.
-    created_date timestamptz not null default now(),
+    created_date timestamptz default null,
     -- When this object was deleted, a null value means that the object has not yet been deleted.
     deleted_date timestamptz default null,
     -- provenance - history of all objects and how they move?
@@ -49,6 +49,6 @@ create table s3_object (
     number_duplicate_events integer not null default 0,
 
     -- The sequencers should be unique with the bucket, key, and its version, otherwise this is a duplicate event.
-    constraint created_sequencer_unique unique (bucket, key, version_id, created_sequencer)
-    -- constraint deleted_sequencer_unique unique (bucket, key, version_id, deleted_sequencer)
+    constraint created_sequencer_unique unique (bucket, key, version_id, created_sequencer),
+    constraint deleted_sequencer_unique unique (bucket, key, version_id, deleted_sequencer)
 );

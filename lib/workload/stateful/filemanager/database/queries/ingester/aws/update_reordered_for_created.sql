@@ -49,7 +49,7 @@ update as (
 -- Return the old values because these need to be reprocessed.
 select
     -- Note, this is the passed through value from the input in order to identify this event later.
-    input_id as s3_object_id,
+    input_id as "s3_object_id!",
     bucket,
     key,
     created_date as event_time,

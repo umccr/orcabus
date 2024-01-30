@@ -128,8 +128,7 @@ pub(crate) mod tests {
             .zip(&events.0)
             .for_each(|(expected_event, event)| {
                 // The object id will be different for each event.
-                expected_event.object_id = event.object_id;
-                expected_event.portal_run_id = event.portal_run_id.to_string();
+                expected_event.s3_object_id = event.s3_object_id;
             });
 
         assert_eq!(events, expected);

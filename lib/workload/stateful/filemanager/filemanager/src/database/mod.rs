@@ -54,15 +54,16 @@ pub(crate) mod tests {
     use crate::database::aws::ingester::tests::{test_events, test_ingester};
     use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::aws::S3ObjectTable;
     use crate::events::aws::tests::{
         EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_SEQUENCER_CREATED_TWO,
         EXPECTED_SEQUENCER_CREATED_ZERO, EXPECTED_VERSION_ID,
     };
-    use crate::events::aws::Events;
+    use crate::events::aws::EventType;
     use crate::events::aws::StorageClass;
+    use crate::events::aws::{Events, FlatS3EventMessage};
     use chrono::{DateTime, Utc};
     use sqlx::{query, query_file_as, PgPool};
+    use uuid::Uuid;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_reordered_for_deleted_event_created(pool: PgPool) {
@@ -111,24 +112,25 @@ pub(crate) mod tests {
         pool: PgPool,
         events: Events,
         sequencer: &str,
-    ) -> (Ingester, Vec<S3ObjectTable>) {
+    ) -> (Ingester, Vec<FlatS3EventMessage>) {
         let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
-        // let sequencers = query_file_as!(
-        //     S3ObjectTable,
-        //     "../database/queries/ingester/aws/update_reordered_for_deleted.sql",
-        //     vec!["bucket"],
-        //     vec!["key"],
-        //     vec![EXPECTED_VERSION_ID],
-        //     vec![sequencer],
-        //     vec![Some(DateTime::<Utc>::default())]
-        // )
-        // .fetch_all(ingester.client().pool())
-        // .await
-        // .unwrap();
+        let sequencers = query_file_as!(
+            FlatS3EventMessage,
+            "../database/queries/ingester/aws/update_reordered_for_deleted.sql",
+            &vec![Uuid::new_v4()],
+            &vec!["bucket".to_string()],
+            &vec!["key".to_string()],
+            &vec![EXPECTED_VERSION_ID.to_string()],
+            &vec![sequencer.to_string()],
+            &vec![DateTime::<Utc>::default()]
+        )
+        .fetch_all(ingester.client().pool())
+        .await
+        .unwrap();
 
-        (ingester, vec![])
+        (ingester, sequencers)
     }
 
     async fn test_update_reordered_for_deleted(pool: PgPool, events: Events) {
@@ -136,7 +138,10 @@ pub(crate) mod tests {
             ingest_events(pool, events.clone(), EXPECTED_NEW_SEQUENCER_ONE).await;
 
         assert_eq!(sequencers.len(), 1);
-        assert_eq!(sequencers[0].object_id, events.object_created.object_ids[0]);
+        assert_eq!(
+            sequencers[0].s3_object_id,
+            events.object_created.s3_object_ids[0]
+        );
 
         let updated = query!(
             "select s3_object_id as \"s3_object_id!\",
@@ -171,24 +176,25 @@ pub(crate) mod tests {
         pool: PgPool,
         events: Events,
         sequencer: &str,
-    ) -> (Ingester, Vec<S3ObjectTable>) {
+    ) -> (Ingester, Vec<FlatS3EventMessage>) {
         let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
 
-        // let sequencers = query_file_as!(
-        //     S3ObjectTable,
-        //     "../database/queries/ingester/aws/update_reordered_for_created.sql",
-        //     "bucket",
-        //     "key",
-        //     EXPECTED_VERSION_ID,
-        //     sequencer,
-        //     Some(DateTime::<Utc>::default())
-        // )
-        // .fetch_all(ingester.client().pool())
-        // .await
-        // .unwrap();
+        let sequencers = query_file_as!(
+            FlatS3EventMessage,
+            "../database/queries/ingester/aws/update_reordered_for_created.sql",
+            &vec![Uuid::new_v4()],
+            &vec!["bucket".to_string()],
+            &vec!["key".to_string()],
+            &vec![EXPECTED_VERSION_ID.to_string()],
+            &vec![sequencer.to_string()],
+            &vec![DateTime::<Utc>::default()]
+        )
+        .fetch_all(ingester.client().pool())
+        .await
+        .unwrap();
 
-        (ingester, vec![])
+        (ingester, sequencers)
     }
 
     async fn test_update_reordered_for_created(pool: PgPool, events: Events) {
@@ -196,7 +202,10 @@ pub(crate) mod tests {
             ingest_events_created(pool, events.clone(), EXPECTED_NEW_SEQUENCER_ONE).await;
 
         assert_eq!(sequencers.len(), 1);
-        assert_eq!(sequencers[0].object_id, events.object_created.object_ids[0]);
+        assert_eq!(
+            sequencers[0].s3_object_id,
+            events.object_created.s3_object_ids[0]
+        );
 
         let updated = query!(
             "select s3_object_id as \"s3_object_id!\",

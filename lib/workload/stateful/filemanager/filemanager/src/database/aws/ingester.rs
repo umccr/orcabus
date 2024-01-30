@@ -1,12 +1,13 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sqlx::query_file;
+use sqlx::{query_file, query_file_as};
 use tracing::{debug, trace};
 
 use crate::database::{Client, Ingest};
 use crate::error::Result;
-use crate::events::aws::StorageClass;
+use crate::events::aws::EventType;
 use crate::events::aws::{Events, TransposedS3EventMessages};
+use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::events::EventSourceType;
 use uuid::Uuid;
 
@@ -32,40 +33,47 @@ impl Ingester {
     /// Ingest the events into the database by calling the insert and update queries.
     pub async fn ingest_events(&self, events: Events) -> Result<()> {
         let Events {
-            object_created,
-            object_removed,
+            mut object_created,
+            mut object_removed,
             ..
         } = events;
 
         trace!(object_created = ?object_created, "ingesting object created events");
-        let TransposedS3EventMessages {
-            sequencers,
-            object_ids,
-            event_times,
-            buckets,
-            keys,
-            version_ids,
-            sizes,
-            e_tags,
-            storage_classes,
-            last_modified_dates,
-            ..
-        } = object_created;
 
         let mut tx = self.client().pool().begin().await?;
 
+        // First, try and update existing events to remove any un-ordered events.
+        let updated = query_file_as!(
+            FlatS3EventMessage,
+            "../database/queries/ingester/aws/update_reordered_for_created.sql",
+            &object_created.s3_object_ids,
+            &object_created.buckets,
+            &object_created.keys,
+            &object_created.version_ids as &[Option<String>],
+            &object_created.sequencers as &[Option<String>],
+            &object_created.event_times as &[Option<DateTime<Utc>>],
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        // These events now need to be reprocessed
+        let reprocess =
+            TransposedS3EventMessages::from(FlatS3EventMessages(updated).sort_and_dedup());
+        object_created.update_on_id(reprocess);
+
+        let object_ids = vec![Uuid::new_v4(); object_created.s3_object_ids.len()];
         let mut inserted = query_file!(
             "../database/queries/ingester/aws/insert_s3_created_objects.sql",
-            &vec![Uuid::new_v4(); sizes.len()] as &[Uuid],
+            &object_created.s3_object_ids,
             &object_ids,
-            &buckets,
-            &keys,
-            &event_times,
-            &last_modified_dates as &[Option<DateTime<Utc>>],
-            &e_tags as &[Option<String>],
-            &storage_classes as &[Option<StorageClass>],
-            &version_ids as &[Option<String>],
-            &sequencers as &[Option<String>]
+            &object_created.buckets,
+            &object_created.keys,
+            &object_created.event_times as &[Option<DateTime<Utc>>],
+            &object_created.last_modified_dates as &[Option<DateTime<Utc>>],
+            &object_created.e_tags as &[Option<String>],
+            &object_created.storage_classes as &[Option<StorageClass>],
+            &object_created.version_ids as &[Option<String>],
+            &object_created.sequencers as &[Option<String>]
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -73,7 +81,7 @@ impl Ingester {
         let (object_ids, sizes): (Vec<_>, Vec<_>) = object_ids
             .into_iter()
             .rev()
-            .zip(sizes.into_iter().rev())
+            .zip(object_created.sizes.into_iter().rev())
             .flat_map(|(object_id, size)| {
                 // If we cannot find the object in our new ids, this object already exists.
                 let pos = inserted.iter().rposition(|record| {
@@ -101,7 +109,7 @@ impl Ingester {
             query_file!(
                 "../database/queries/ingester/insert_objects.sql",
                 &object_ids,
-                &sizes as &[Option<i64>],
+                &sizes as &[Option<i32>],
                 &vec![None; sizes.len()] as &[Option<String>],
             )
             .execute(&mut *tx)
@@ -109,23 +117,80 @@ impl Ingester {
         }
 
         trace!(object_removed = ?object_removed, "ingesting object removed events");
-        let TransposedS3EventMessages {
-            event_times,
-            buckets,
-            keys,
-            sequencers,
-            ..
-        } = object_removed;
 
-        query_file!(
-            "../database/queries/ingester/aws/update_deleted.sql",
-            &keys,
-            &buckets,
-            &event_times,
-            &sequencers as &[Option<String>]
+        // First, try and update existing events to remove any un-ordered events.
+        let updated = query_file_as!(
+            FlatS3EventMessage,
+            "../database/queries/ingester/aws/update_reordered_for_deleted.sql",
+            &object_removed.s3_object_ids,
+            &object_removed.buckets,
+            &object_removed.keys,
+            &object_removed.version_ids as &[Option<String>],
+            &object_removed.sequencers as &[Option<String>],
+            &object_removed.event_times as &[Option<DateTime<Utc>>],
         )
-        .execute(&mut *tx)
+        .fetch_all(&mut *tx)
         .await?;
+
+        // These events now need to be reprocessed
+        let reprocess =
+            TransposedS3EventMessages::from(FlatS3EventMessages(updated).sort_and_dedup());
+        object_removed.update_on_id(reprocess);
+
+        let object_ids = vec![Uuid::new_v4(); object_removed.s3_object_ids.len()];
+        let mut inserted = query_file!(
+            "../database/queries/ingester/aws/insert_s3_deleted_objects.sql",
+            &object_removed.s3_object_ids,
+            &object_ids,
+            &object_removed.buckets,
+            &object_removed.keys,
+            &object_removed.event_times as &[Option<DateTime<Utc>>],
+            &object_removed.last_modified_dates as &[Option<DateTime<Utc>>],
+            &object_removed.e_tags as &[Option<String>],
+            &object_removed.storage_classes as &[Option<StorageClass>],
+            &object_removed.version_ids as &[Option<String>],
+            &object_removed.sequencers as &[Option<String>]
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        let (object_ids, sizes): (Vec<_>, Vec<_>) = object_ids
+            .into_iter()
+            .rev()
+            .zip(object_removed.sizes.into_iter().rev())
+            .flat_map(|(object_id, size)| {
+                // If we cannot find the object in our new ids, this object already exists.
+                let pos = inserted.iter().rposition(|record| {
+                    // This will never be `None`, maybe this is an sqlx bug?
+                    record.object_id == object_id
+                })?;
+
+                // We can remove this to avoid searching over it again.
+                let record = inserted.remove(pos);
+                debug!(
+                    object_id = ?record.object_id,
+                    number_duplicate_events = record.number_duplicate_events,
+                    "duplicate event found"
+                );
+
+                // This is a new event so the corresponding object should be inserted.
+                Some((object_id, size))
+            })
+            .unzip();
+
+        // Insert only the non duplicate events.
+        if !object_ids.is_empty() {
+            debug!(count = object_ids.len(), "inserting objects");
+
+            query_file!(
+                "../database/queries/ingester/insert_objects.sql",
+                &object_ids,
+                &sizes as &[Option<i32>],
+                &vec![None; sizes.len()] as &[Option<String>],
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
 
         tx.commit().await?;
 

@@ -76,7 +76,7 @@ impl Collecter {
             join_all(events.into_inner().into_iter().map(|mut event| async move {
                 // No need to run this unnecessarily on removed events.
                 match event.event_type {
-                    EventType::Removed | EventType::Other => return Ok(event),
+                    EventType::Deleted | EventType::Other => return Ok(event),
                     _ => {}
                 };
 
@@ -103,7 +103,7 @@ impl Collecter {
                             storage_class.unwrap_or(Standard),
                         ))
                         .update_last_modified_date(Self::convert_datetime(last_modified))
-                        .update_size(content_length)
+                        .update_size(content_length.map(|value| value as i32))
                         .update_e_tag(e_tag);
                 }
 
