@@ -166,7 +166,7 @@ from bssh_manager_tools.utils.icav2_project_data_handler import (
     get_uri_from_project_id_and_path
 )
 from bssh_manager_tools.utils.icav2_configuration_handler import set_icav2_env_vars
-from bssh_manager_tools.utils.icav2_analysis_handler import (
+from bssh_manager_tools.utils.icav2_analysis_helpers import (
     get_bssh_json_file_id_from_analysis_output_list,
     get_outputs_object_from_analysis_id, get_run_info_xml_file_id_analysis_output_list,
     get_fastq_list_csv_file_id_from_analysis_output_list, get_samplesheet_path_from_analysis_output_list

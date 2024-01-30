@@ -1,0 +1,213 @@
+{
+  "Comment": "An example of the Amazon States Language for reading messages from an SQS queue and iteratively processing each message.",
+  "StartAt": "Move inputs",
+  "States": {
+    "Move inputs": {
+      "Type": "Pass",
+      "Next": "Flip Manifest",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      }
+    },
+    "Flip Manifest": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__manifest_inverter_lambda_arn__}",
+        "Payload.$": "$"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Initialise Static Parameters",
+      "ResultPath": "$.manifest_inverted_step",
+      "TimeoutSeconds": 20,
+      "InputPath": "$.workflow_inputs",
+      "ResultSelector": {
+        "manifest_inverted.$": "$.Payload"
+      }
+    },
+    "Initialise Static Parameters": {
+      "Type": "Pass",
+      "Next": "Initialise Job Status Iterable Parameter",
+      "ResultPath": "$.static_parameters",
+      "Parameters": {
+        "manifest_length.$": "States.ArrayLength($.manifest_inverted_step.manifest_inverted)"
+      }
+    },
+    "Initialise Job Status Iterable Parameter": {
+      "Type": "Pass",
+      "Next": "Initialise Job Status Parameter",
+      "ResultPath": "$.job_status_iterable_parameter",
+      "Result": {
+        "job_status_iterable": 0
+      }
+    },
+    "Initialise Job Status Parameter": {
+      "Type": "Pass",
+      "Next": "Process Manifest",
+      "ResultPath": "$.job_status_parameter",
+      "Result": {
+        "current_job_status": null
+      }
+    },
+    "Process Manifest": {
+      "Type": "Map",
+      "Next": "Flatten Array",
+      "Iterator": {
+        "StartAt": "Launch Copy Job Lambda",
+        "States": {
+          "Launch Copy Job Lambda": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "Payload.$": "$",
+              "FunctionName": "${__copy_batch_data_lambda_arn__}"
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2
+              }
+            ],
+            "ResultSelector": {
+              "job_id.$": "$.Payload"
+            },
+            "End": true
+          }
+        }
+      },
+      "ItemsPath": "$.manifest_inverted_step.manifest_inverted",
+      "ResultPath": "$.job_ids_list"
+    },
+    "Flatten Array": {
+      "Type": "Pass",
+      "Next": "Initialise counters",
+      "InputPath": "$.job_ids_list",
+      "Parameters": {
+        "job_ids_flattened_list.$": "$[*][*]"
+      },
+      "ResultPath": "$.flatten_job_list_step"
+    },
+    "Initialise counters": {
+      "Type": "Pass",
+      "Next": "All jobs completed",
+      "Parameters": {
+        "jobs_passed": 0,
+        "jobs_failed": 0,
+        "jobs_running.$": "States.ArrayLength($.flatten_job_list_step.job_ids_flattened_list)"
+      },
+      "ResultPath": "$.counters"
+    },
+    "All jobs completed": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.counters.jobs_running",
+            "NumericEquals": 0
+          },
+          "Next": "Check Job Status"
+        }
+      ],
+      "Default": "Finish"
+    },
+    "Check Job Status": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload": {
+          "job_id.$": "States.ArrayGetItem($.flatten_job_list_step.job_ids_flattened_list, $.job_status_iterable_parameter.job_status_iterable)"
+        },
+        "FunctionName": "${__job_status_handler_lambda_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "current_job_status.$": "$.Payload"
+      },
+      "Next": "Job Completed",
+      "ResultPath": "$.job_status_parameter"
+    },
+    "Job Completed": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.job_status_parameter.current_job_status",
+          "BooleanEquals": false,
+          "Next": "Update counters with failed jobs"
+        },
+        {
+          "Variable": "$.job_status_parameter.current_job_status",
+          "BooleanEquals": true,
+          "Next": "Update counters with completed job"
+        }
+      ],
+      "Default": "Wait 10 seconds before retrying job status check"
+    },
+    "Update counters with completed job": {
+      "Type": "Pass",
+      "Next": "Update job iterator variable",
+      "Parameters": {
+        "jobs_passed.$": "States.MathAdd($.counters.jobs_passed, 1)",
+        "jobs_failed.$": "$.counters.jobs_failed",
+        "jobs_running.$": "States.MathAdd($.counters.jobs_running, -1)"
+      },
+      "ResultPath": "$.counters"
+    },
+    "Update job iterator variable": {
+      "Type": "Pass",
+      "Next": "All jobs completed",
+      "Parameters": {
+        "job_status_iterable.$": "States.MathAdd($.job_status_iterable_parameter.job_status_iterable, 1)"
+      },
+      "ResultPath": "$.job_status_iterable_parameter"
+    },
+    "Update counters with failed jobs": {
+      "Type": "Pass",
+      "Next": "Update job iterator variable",
+      "Parameters": {
+        "jobs_passed.$": "$.counters.jobs_passed",
+        "jobs_failed.$": "States.MathAdd($.counters.jobs_failed, 1)",
+        "jobs_running.$": "States.MathAdd($.counters.jobs_running, -1)"
+      },
+      "ResultPath": "$.counters"
+    },
+    "Wait 60 seconds before retrying job status check": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "Check Job Status"
+    },
+    "Finish": {
+      "Type": "Succeed"
+    }
+  }
+}

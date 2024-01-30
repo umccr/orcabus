@@ -66,7 +66,7 @@ that can be done by the lambda that generates the copy job
 ]
 
 """
-
+from functools import reduce
 from typing import Dict, List
 
 
@@ -81,9 +81,13 @@ def handler(event: Dict, context) -> List[Dict]:
     # Collect all values from all keys
     all_destination_uris = list(
         set(
-            map(
-                lambda dest_uri: dest_uri,
-                event.values()
+            reduce(
+                lambda list_1, list_2: list_1 + list_2,
+                map(
+                    lambda dest_uri: dest_uri,
+                    event.values()
+                ),
+                []
             )
         )
     )
@@ -108,4 +112,5 @@ def handler(event: Dict, context) -> List[Dict]:
             source_uris_by_dest.items()
         )
     )
+
 

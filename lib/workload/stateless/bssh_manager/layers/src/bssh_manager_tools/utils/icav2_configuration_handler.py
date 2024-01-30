@@ -83,8 +83,7 @@ def set_icav2_configuration():
     global ICAV2_CONFIGURATION
     ICAV2_CONFIGURATION = Configuration(
         host=get_icav2_base_url(),
-        api_key_prefix="Bearer",
-        api_key=get_icav2_access_token()
+        access_token=get_icav2_access_token()
     )
 
 

@@ -52,7 +52,6 @@ def project_data_as_uri(file_obj: ProjectData) -> str:
     )
 
 
-
 def get_data_object_from_id(project_id: str, data_id: str) -> ProjectData:
     # Get configuration
     configuration = get_icav2_configuration()
@@ -97,9 +96,9 @@ def create_folder_in_project(project_id: str, parent_folder_path: Path, folder_n
         api_response: ProjectData = api_instance.create_data_in_project(
             project_id=project_id,
             create_data=CreateData(
-                name=folder_name + "/",
+                name=folder_name,
                 folder_path=parent_folder_path,
-                data_type="FILE",
+                data_type="FOLDER",
             )
         )
     except ApiException as e:
@@ -144,7 +143,9 @@ def get_folder_id_from_project_data_path(
         data_items: List[ProjectData] = api_instance.get_project_data_list(
             project_id=project_id,
             parent_folder_path=parent_folder_path,
-            file_name=folder_name,
+            filename=folder_name,
+            filename_match_mode="EXACT",
+            file_path_match_mode="FULL_CASE_INSENSITIVE",
             type="FOLDER"
         ).items
     except libica.openapi.v2.ApiException as e:
@@ -229,8 +230,10 @@ def get_file_id_from_path(project_id: str, file_path: Path) -> str:
         # Retrieve the list of project data.
         data_items: List[ProjectData] = api_instance.get_project_data_list(
             project_id=project_id,
-            folder_path=parent_folder_path,
+            parent_folder_path=parent_folder_path,
             filename=filename,
+            filename_match_mode="EXACT",
+            file_path_match_mode="FULL_CASE_INSENSITIVE",
             type="FILE"
         ).items
     except libica.openapi.v2.ApiException as e:

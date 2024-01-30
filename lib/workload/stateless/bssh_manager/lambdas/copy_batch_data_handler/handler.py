@@ -35,7 +35,12 @@ def handler(event, context):
     set_icav2_env_vars()
 
     # Get the source URI and destination URIs from the event
-    source_uris = urlparse(event.get("source_uris"))
+    source_uris = list(
+        map(
+            lambda source_uri_iter: urlparse(source_uri_iter),
+            event.get("source_uris")
+        )
+    )
     dest_uri = urlparse(event.get("dest_uri"))
 
     source_data_ids = list(
@@ -53,3 +58,13 @@ def handler(event, context):
         destination_project_id=dest_uri.netloc,
         destination_folder_path=Path(dest_uri.path).parent
     ).id
+
+# handler(
+# {
+#       "dest_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/copy-out-test/folder2/",
+#       "source_uris": [
+#         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-analyses/NovaSeqX-Demo_3664cd_3a7062-BclConvert v4_2_7-0ff58e03-efc1-4e25-bdf5-e3ea835df5dc/bsshoutput.json"
+#       ]
+#     },
+#     None
+# )

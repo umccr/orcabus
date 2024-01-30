@@ -273,4 +273,3 @@ def get_cttso_fastq_cache_path(run_id: str, basespace_run_id: int, library_id: s
             get_cttso_run_cache_path(run_id, basespace_run_id, library_id) /
             library_id
     )
-
