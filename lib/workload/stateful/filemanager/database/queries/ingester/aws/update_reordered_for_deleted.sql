@@ -31,7 +31,10 @@ current_s3_objects as (
         -- sequencer that is closer to the created sequencer.
         s3_object.created_sequencer < input.deleted_sequencer and
         (
+            -- Updating a null sequencer doesn't cause the event to be reprocessed.
             s3_object.deleted_sequencer is null or
+            -- If a sequencer already exists this event should be reprocessed because this
+            -- sequencer would belong to another object.
             s3_object.deleted_sequencer > input.deleted_sequencer
         )
     -- Lock this pre-emptively for the update.
@@ -62,8 +65,10 @@ select
     number_duplicate_events,
     -- Also need the size from the object table.
     size,
-    -- This is used to simplify re-constructing the FlatS3EventMesssages in the Lambda. I.e. this update detected an
+    -- This is used to simplify re-constructing the FlatS3EventMessages in the Lambda. I.e. this update detected an
     -- out of order deleted event, so return a deleted event back.
-    'Removed' as "event_type!: EventType"
+    'Deleted' as "event_type!: EventType"
 from current_s3_objects
-join object on object.object_id = current_s3_objects.object_id;
+join object on object.object_id = current_s3_objects.object_id
+-- Only returns values to reprocess when the sequencer is not null.
+where deleted_sequencer is not null;;
