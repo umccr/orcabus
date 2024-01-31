@@ -23,7 +23,7 @@ suite:
 	@python manage.py test
 
 up:
-	@docker compose up -d
+	@docker compose up --wait -d
 
 down:
 	@docker compose down
