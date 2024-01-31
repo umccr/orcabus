@@ -15,14 +15,14 @@ export class PipelineStack extends cdk.Stack {
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
     const sourceFile = pipelines.CodePipelineSource.connection(
       'umccr/orcabus',
-      'feature/base-cdk-deployment',
+      'feature/base-cdk-codepipeline',
       {
         connectionArn: codeStarArn,
       }
     );
 
     const orcabusUnitTest = new pipelines.CodeBuildStep('UnitTest', {
-      commands: ['yarn install --forzen-lockfile', 'make suite'],
+      commands: ['yarn install --frozen-lockfile', 'make suite'],
       input: sourceFile,
       primaryOutputDirectory: '.',
     });
