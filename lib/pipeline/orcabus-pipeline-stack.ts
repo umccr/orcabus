@@ -25,6 +25,15 @@ export class PipelineStack extends cdk.Stack {
       commands: ['yarn install --frozen-lockfile', 'make suite'],
       input: sourceFile,
       primaryOutputDirectory: '.',
+      buildEnvironment: {
+        computeType: codebuild.ComputeType.LARGE,
+        buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
+        environmentVariables: {
+          NODE_OPTIONS: {
+            value: '--max-old-space-size=8192',
+          },
+        },
+      },
     });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
@@ -38,9 +47,10 @@ export class PipelineStack extends cdk.Stack {
       selfMutation: true,
       crossAccountKeys: true,
       dockerEnabledForSynth: true,
+      dockerEnabledForSelfMutation: true,
       codeBuildDefaults: {
         buildEnvironment: {
-          computeType: codebuild.ComputeType.SMALL,
+          computeType: codebuild.ComputeType.LARGE,
           buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
         },
       },
