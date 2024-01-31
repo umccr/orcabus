@@ -24,7 +24,7 @@ const orcaBusStatefulConfig = {
     defaultDatabaseName: 'orcabus',
     version: AuroraPostgresEngineVersion.VER_15_4,
     parameterGroupName: 'default.aurora-postgresql15',
-    username: 'admin',
+    username: 'postgres',
     dbPort: 5432,
     masterSecretName: rdsMasterSecretName,
     monitoring: {
