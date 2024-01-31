@@ -3,6 +3,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as pipelines from 'aws-cdk-lib/pipelines';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { OrcaBusStatelessConfig, OrcaBusStatelessStack } from '../workload/orcabus-stateless-stack';
 import { OrcaBusStatefulConfig, OrcaBusStatefulStack } from '../workload/orcabus-stateful-stack';
 import { getEnvironmentConfig } from '../../config/constants';
@@ -21,25 +22,17 @@ export class PipelineStack extends cdk.Stack {
       }
     );
 
-    const orcabusUnitTest = new pipelines.CodeBuildStep('UnitTest', {
-      commands: ['yarn install --frozen-lockfile', 'make suite'],
-      input: sourceFile,
-      primaryOutputDirectory: '.',
-      buildEnvironment: {
-        computeType: codebuild.ComputeType.LARGE,
-        buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
-        environmentVariables: {
-          NODE_OPTIONS: {
-            value: '--max-old-space-size=8192',
-          },
-        },
-      },
-    });
-
     const synthAction = new pipelines.CodeBuildStep('Synth', {
-      commands: ['yarn install --frozen-lockfile', 'yarn run cdk synth -v'],
-      input: orcabusUnitTest,
+      commands: ['yarn install --frozen-lockfile', 'make suite', 'yarn run cdk synth'],
+      input: sourceFile,
       primaryOutputDirectory: 'cdk.out',
+      rolePolicyStatements: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['sts:AssumeRole'],
+          resources: ['*'],
+        }),
+      ],
     });
 
     const pipeline = new pipelines.CodePipeline(this, 'Pipeline', {
@@ -50,8 +43,14 @@ export class PipelineStack extends cdk.Stack {
       dockerEnabledForSelfMutation: true,
       codeBuildDefaults: {
         buildEnvironment: {
+          privileged: true,
           computeType: codebuild.ComputeType.LARGE,
           buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
+          environmentVariables: {
+            NODE_OPTIONS: {
+              value: '--max-old-space-size=8192',
+            },
+          },
         },
       },
     });
