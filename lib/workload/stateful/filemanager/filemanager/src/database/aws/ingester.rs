@@ -56,10 +56,34 @@ impl Ingester {
         .fetch_all(&mut *tx)
         .await?;
 
-        // These events now need to be reprocessed
-        let reprocess =
-            TransposedS3EventMessages::from(FlatS3EventMessages(updated).sort_and_dedup());
-        object_created.update_on_id(reprocess);
+        if !updated.is_empty() {
+            // Now, events with a sequencer value need to be reprocessed.
+            let mut flat_object_created = FlatS3EventMessages::from(object_created).into_inner();
+            let mut reprocess = FlatS3EventMessages(updated).into_inner();
+
+            flat_object_created.retain_mut(|object| {
+                // If the sequencer is null, then we remove this object has it has already been consumed. Otherwise,
+                // we keep it, and potentially replace an existing object.
+                if let Some(pos) = reprocess
+                    .iter()
+                    .position(|reprocess| reprocess.s3_object_id == object.s3_object_id)
+                {
+                    let reprocess = reprocess.remove(pos);
+                    if reprocess.sequencer.is_none() {
+                        false
+                    } else {
+                        *object = reprocess;
+                        true
+                    }
+                } else {
+                    true
+                }
+            });
+
+            object_created = TransposedS3EventMessages::from(
+                FlatS3EventMessages(flat_object_created).sort_and_dedup(),
+            );
+        }
 
         let object_ids = vec![Uuid::new_v4(); object_created.s3_object_ids.len()];
         let mut inserted = query_file!(
@@ -135,10 +159,34 @@ impl Ingester {
         .fetch_all(&mut *tx)
         .await?;
 
-        // These events now need to be reprocessed
-        let reprocess =
-            TransposedS3EventMessages::from(FlatS3EventMessages(updated).sort_and_dedup());
-        object_removed.update_on_id(reprocess);
+        if !updated.is_empty() {
+            // Now, events with a sequencer value need to be reprocessed.
+            let mut flat_object_removed = FlatS3EventMessages::from(object_removed).into_inner();
+            let mut reprocess = FlatS3EventMessages(updated).into_inner();
+
+            flat_object_removed.retain_mut(|object| {
+                // If the sequencer is null, then we remove this object has it has already been consumed. Otherwise,
+                // we keep it, and potentially replace an existing object.
+                if let Some(pos) = reprocess
+                    .iter()
+                    .position(|reprocess| reprocess.s3_object_id == object.s3_object_id)
+                {
+                    let reprocess = reprocess.remove(pos);
+                    if reprocess.sequencer.is_none() {
+                        false
+                    } else {
+                        *object = reprocess;
+                        true
+                    }
+                } else {
+                    true
+                }
+            });
+
+            object_removed = TransposedS3EventMessages::from(
+                FlatS3EventMessages(flat_object_removed).sort_and_dedup(),
+            );
+        }
 
         let object_ids = vec![Uuid::new_v4(); object_removed.s3_object_ids.len()];
         let mut inserted = query_file!(
@@ -291,7 +339,7 @@ pub(crate) mod tests {
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
         assert_eq!(
-            1,
+            2,
             s3_object_results[0].get::<i32, _>("number_duplicate_events")
         );
         assert_deleted(&object_results[0], &s3_object_results[0]);

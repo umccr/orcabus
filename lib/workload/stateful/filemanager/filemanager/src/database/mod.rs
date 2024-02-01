@@ -138,10 +138,7 @@ pub(crate) mod tests {
             ingest_events(pool, events.clone(), EXPECTED_NEW_SEQUENCER_ONE).await;
 
         assert_eq!(sequencers.len(), 1);
-        assert_eq!(
-            sequencers[0].s3_object_id,
-            events.object_created.s3_object_ids[0]
-        );
+        assert_eq!(sequencers[0].sequencer, events.object_removed.sequencers[0]);
 
         let updated = query!(
             "select s3_object_id as \"s3_object_id!\",
@@ -202,10 +199,7 @@ pub(crate) mod tests {
             ingest_events_created(pool, events.clone(), EXPECTED_NEW_SEQUENCER_ONE).await;
 
         assert_eq!(sequencers.len(), 1);
-        assert_eq!(
-            sequencers[0].s3_object_id,
-            events.object_created.s3_object_ids[0]
-        );
+        assert_eq!(sequencers[0].sequencer, events.object_created.sequencers[0]);
 
         let updated = query!(
             "select s3_object_id as \"s3_object_id!\",

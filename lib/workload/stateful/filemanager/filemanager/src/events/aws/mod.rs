@@ -3,7 +3,7 @@
 
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use chrono::{DateTime, ParseError, Utc};
-use itertools::Itertools;
+use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use uuid::Uuid;
@@ -72,6 +72,7 @@ pub struct TransposedS3EventMessages {
     pub sequencers: Vec<Option<String>>,
     pub storage_classes: Vec<Option<StorageClass>>,
     pub last_modified_dates: Vec<Option<DateTime<Utc>>>,
+    pub event_types: Vec<EventType>,
 }
 
 impl TransposedS3EventMessages {
@@ -89,6 +90,7 @@ impl TransposedS3EventMessages {
             sequencers: Vec::with_capacity(capacity),
             storage_classes: Vec::with_capacity(capacity),
             last_modified_dates: Vec::with_capacity(capacity),
+            event_types: Vec::with_capacity(capacity),
         }
     }
 
@@ -105,6 +107,7 @@ impl TransposedS3EventMessages {
             sequencer,
             storage_class,
             last_modified_date,
+            event_type,
             ..
         } = message;
 
@@ -118,64 +121,7 @@ impl TransposedS3EventMessages {
         self.sequencers.push(sequencer);
         self.storage_classes.push(storage_class);
         self.last_modified_dates.push(last_modified_date);
-    }
-
-    fn update_or_push<T>(container: &mut Vec<T>, pos: Option<usize>, value: T) {
-        if let Some(pos) = pos {
-            container[pos] = value;
-        } else {
-            container.push(value);
-        }
-    }
-
-    /// Update self with events if the events has the same s3_object_id, or otherwise insert events.
-    pub fn update_on_id(&mut self, mut events: TransposedS3EventMessages) {
-        events
-            .s3_object_ids
-            .clone()
-            .iter()
-            .enumerate()
-            .for_each(|(pos, id)| {
-                let original_pos = self.s3_object_ids.iter().position(|new_id| new_id == id);
-
-                Self::update_or_push(
-                    &mut self.s3_object_ids,
-                    original_pos,
-                    events.s3_object_ids.swap_remove(pos),
-                );
-                Self::update_or_push(
-                    &mut self.buckets,
-                    original_pos,
-                    events.buckets.swap_remove(pos),
-                );
-                Self::update_or_push(&mut self.keys, original_pos, events.keys.swap_remove(pos));
-                Self::update_or_push(
-                    &mut self.version_ids,
-                    original_pos,
-                    events.version_ids.swap_remove(pos),
-                );
-                Self::update_or_push(&mut self.sizes, original_pos, events.sizes.swap_remove(pos));
-                Self::update_or_push(
-                    &mut self.e_tags,
-                    original_pos,
-                    events.e_tags.swap_remove(pos),
-                );
-                Self::update_or_push(
-                    &mut self.sequencers,
-                    original_pos,
-                    events.sequencers.swap_remove(pos),
-                );
-                Self::update_or_push(
-                    &mut self.storage_classes,
-                    original_pos,
-                    events.storage_classes.swap_remove(pos),
-                );
-                Self::update_or_push(
-                    &mut self.last_modified_dates,
-                    original_pos,
-                    events.last_modified_dates.swap_remove(pos),
-                );
-            });
+        self.event_types.push(event_type);
     }
 }
 
@@ -191,6 +137,57 @@ impl From<FlatS3EventMessages> for TransposedS3EventMessages {
                 acc
             },
         )
+    }
+}
+
+impl From<TransposedS3EventMessages> for FlatS3EventMessages {
+    fn from(messages: TransposedS3EventMessages) -> Self {
+        let zip = izip!(
+            messages.s3_object_ids,
+            messages.event_times,
+            messages.buckets,
+            messages.keys,
+            messages.version_ids,
+            messages.sizes,
+            messages.e_tags,
+            messages.sequencers,
+            messages.storage_classes,
+            messages.last_modified_dates,
+            messages.event_types
+        )
+        .map(
+            |(
+                s3_object_id,
+                event_time,
+                bucket,
+                key,
+                version_id,
+                size,
+                e_tag,
+                sequencer,
+                storage_class,
+                last_modified_date,
+                event_type,
+            )| {
+                FlatS3EventMessage {
+                    s3_object_id,
+                    sequencer,
+                    bucket,
+                    key,
+                    version_id,
+                    size,
+                    e_tag,
+                    storage_class,
+                    last_modified_date,
+                    event_time,
+                    event_type,
+                    number_reordered: 0,
+                    number_duplicate_events: 0,
+                }
+            },
+        );
+
+        FlatS3EventMessages(zip.collect())
     }
 }
 
@@ -605,7 +602,6 @@ pub(crate) mod tests {
     pub(crate) const EXPECTED_NEW_SEQUENCER_ONE: &str = "0055AED6DCD90281E5"; // pragma: allowlist secret
     pub(crate) const EXPECTED_SEQUENCER_DELETED_ONE: &str = "0055AED6DCD90281E6"; // pragma: allowlist secret
     pub(crate) const EXPECTED_SEQUENCER_CREATED_TWO: &str = "0055AED6DCD90281E7"; // pragma: allowlist secret
-                                                                                  //pub(crate) const EXPECTED_NEW_SEQUENCER_TWO: &str = "0055AED6DCD90281E8"; // pragma: allowlist secret
     pub(crate) const EXPECTED_SEQUENCER_DELETED_TWO: &str = "0055AED6DCD90281E9"; // pragma: allowlist secret
 
     pub(crate) const EXPECTED_E_TAG: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret

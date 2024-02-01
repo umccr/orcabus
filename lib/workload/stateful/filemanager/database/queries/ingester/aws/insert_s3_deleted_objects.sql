@@ -12,16 +12,16 @@ insert into s3_object (
     deleted_sequencer
 )
 values (
-   unnest($1::uuid[]),
-   unnest($2::uuid[]),
-   unnest($3::text[]),
-   unnest($4::text[]),
-   unnest($5::timestamptz[]),
-   unnest($6::timestamptz[]),
-   unnest($7::text[]),
-   unnest($8::storage_class[]),
-   unnest($9::text[]),
-   unnest($10::text[])
+    unnest($1::uuid[]),
+    unnest($2::uuid[]),
+    unnest($3::text[]),
+    unnest($4::text[]),
+    unnest($5::timestamptz[]),
+    unnest($6::timestamptz[]),
+    unnest($7::text[]),
+    unnest($8::storage_class[]),
+    unnest($9::text[]),
+    unnest($10::text[])
 ) on conflict on constraint deleted_sequencer_unique do update
     set number_duplicate_events = s3_object.number_duplicate_events + 1
     returning object_id, number_duplicate_events;
