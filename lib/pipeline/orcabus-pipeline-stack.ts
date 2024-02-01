@@ -43,7 +43,6 @@ export class PipelineStack extends cdk.Stack {
       dockerEnabledForSelfMutation: true,
       codeBuildDefaults: {
         buildEnvironment: {
-          privileged: true,
           computeType: codebuild.ComputeType.LARGE,
           buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
           environmentVariables: {
@@ -104,7 +103,7 @@ class OrcaBusDeploymentStage extends cdk.Stage {
   ) {
     super(scope, environmentName, { env: { account: env?.account, region: 'ap-southeast-2' } });
 
-    new OrcaBusStatefulStack(this, 'OrcaBusStatefulStack', stackProps.orcaBusStatefulConfig);
-    // new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', stackProps.orcaBusStatelessConfig);
+    // new OrcaBusStatefulStack(this, 'OrcaBusStatefulStack', stackProps.orcaBusStatefulConfig);
+    new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', stackProps.orcaBusStatelessConfig);
   }
 }
