@@ -21,6 +21,9 @@ create or replace function update_reordered_for_deleted(
     number_duplicate_events integer,
     size integer
 ) as $$
+    declare
+        current_name text;
+        constraint_name text := 'deleted_sequencer_unique';
     begin
         create temp table current_s3_objects on commit drop as
         -- First, unnest the input parameters into a record.
@@ -65,15 +68,25 @@ create or replace function update_reordered_for_deleted(
         -- Lock this pre-emptively for the update.
         for update;
 
-        -- Finally, update the required objects.
-        update s3_object
-        set deleted_sequencer = current_s3_objects.input_deleted_sequencer,
-            deleted_date = current_s3_objects.input_deleted_date,
-            number_reordered = s3_object.number_reordered +
-                -- If the sequencer is null then this isn't a reorder, so it shouldn't add to the counter.
-                case when current_s3_objects.deleted_sequencer is null then 0 else 1 end
-        from current_s3_objects
-        where s3_object.s3_object_id = current_s3_objects.s3_object_id;
+        begin
+            -- Finally, update the required objects.
+            update s3_object
+            set deleted_sequencer = current_s3_objects.input_deleted_sequencer,
+                deleted_date = current_s3_objects.input_deleted_date,
+                number_reordered = s3_object.number_reordered +
+                    -- If the sequencer is null then this isn't a reorder, so it shouldn't add to the counter.
+                    case when current_s3_objects.deleted_sequencer is null then 0 else 1 end
+            from current_s3_objects
+            where s3_object.s3_object_id = current_s3_objects.s3_object_id;
+        exception when unique_violation then
+            raise;
+            get stacked diagnostics current_name := constraint_name;
+            -- If the exception matches the constraint name, this is okay, as it's a duplicate that will be
+            -- handled later.
+            if current_name != constraint_name then
+                raise;
+            end if;
+        end;
 
         -- Return the old values because these need to be reprocessed.
         return query
