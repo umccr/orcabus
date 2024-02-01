@@ -5,10 +5,10 @@ import * as pipelines from 'aws-cdk-lib/pipelines';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { OrcaBusStatelessConfig, OrcaBusStatelessStack } from '../workload/orcabus-stateless-stack';
-import { OrcaBusStatefulConfig, OrcaBusStatefulStack } from '../workload/orcabus-stateful-stack';
+import { OrcaBusStatefulConfig } from '../workload/orcabus-stateful-stack';
 import { getEnvironmentConfig } from '../../config/constants';
 
-export class PipelineStack extends cdk.Stack {
+export class StatelessPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
 
@@ -60,9 +60,34 @@ export class PipelineStack extends cdk.Stack {
     const betaConfig = getEnvironmentConfig('beta');
     if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
     pipeline.addStage(
-      new OrcaBusDeploymentStage(this, 'BetaDeployment', betaConfig.stackProps, {
+      new OrcaBusStatelessDeploymentStage(this, 'BetaDeployment', betaConfig.stackProps, {
         account: betaConfig.accountId,
-      })
+      }),
+      {
+        pre: [
+          // need to make sure state*ful* stack matches with the current asset
+          new pipelines.CodeBuildStep('BetaStatefulDiffCheck', {
+            commands: [
+              'yarn install --frozen-lockfile',
+              "yarn run cdk diff -a 'yarn run ts-node --prefer-ts-exts bin/orcabus.ts' --fail OrcaBusStatefulStack",
+            ],
+            rolePolicyStatements: [
+              new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['sts:AssumeRole'],
+                resources: ['*'],
+              }),
+            ],
+            buildEnvironment: {
+              environmentVariables: {
+                CDK_DEPLOY_ACCOUNT: {
+                  value: betaConfig.accountId,
+                },
+              },
+            },
+          }),
+        ],
+      }
     );
 
     // /**
@@ -71,10 +96,22 @@ export class PipelineStack extends cdk.Stack {
     // const gammaConfig = getEnvironmentConfig('gamma');
     // if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
     // pipeline.addStage(
-    //   new OrcaBusDeploymentStage(this, 'GammaDeployment', gammaConfig.stackProps, {
+    //   new OrcaBusStatelessDeploymentStage(this, 'GammaDeployment', gammaConfig.stackProps, {
     //     account: gammaConfig.accountId,
     //   }),
-    //   { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
+    //   {
+    //     pre: [
+    //       // need to make sure stateful stack matches
+    //       // new pipelines.CodeBuildStep('StatefulDiffCheck', {
+    //       //   commands: [
+    //       //     'yarn install --frozen-lockfile',
+    //       //     'yarn run cdk diff OrcaBusPipeline/GammaDeployment/OrcaBusStatelessStack --fail',
+    //       //   ],
+    //       // }),
+    //       // approval to gamma release
+    //       new pipelines.ManualApprovalStep('PromoteToGamma'),
+    //     ],
+    //   }
     // );
 
     /**
@@ -91,7 +128,7 @@ export class PipelineStack extends cdk.Stack {
   }
 }
 
-class OrcaBusDeploymentStage extends cdk.Stage {
+class OrcaBusStatelessDeploymentStage extends cdk.Stage {
   constructor(
     scope: Construct,
     environmentName: string,
@@ -103,7 +140,6 @@ class OrcaBusDeploymentStage extends cdk.Stage {
   ) {
     super(scope, environmentName, { env: { account: env?.account, region: 'ap-southeast-2' } });
 
-    // new OrcaBusStatefulStack(this, 'OrcaBusStatefulStack', stackProps.orcaBusStatefulConfig);
     new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', stackProps.orcaBusStatelessConfig);
   }
 }
