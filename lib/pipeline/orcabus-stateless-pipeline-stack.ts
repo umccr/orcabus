@@ -21,15 +21,43 @@ export class StatelessPipelineStack extends cdk.Stack {
       }
     );
 
+    const infrastructureTestReports = new codebuild.ReportGroup(
+      this,
+      `OrcaBusInfrastructureTestReport`,
+      {
+        reportGroupName: `OrcaBusInfrastructureTestReport`,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }
+    );
+
     const synthAction = new pipelines.CodeBuildStep('Synth', {
       commands: [
         'yarn install --frozen-lockfile',
         'make suite',
-        'yarn run yarn run cdk-stateless-pipeline synth synth',
+        'yarn run cdk-stateless-pipeline synth',
       ],
       input: sourceFile,
       primaryOutputDirectory: 'cdk.out',
+      partialBuildSpec: codebuild.BuildSpec.fromObject({
+        reports: {
+          cdk: {
+            files: ['target/test/*.xml'],
+            'file-format': 'JUNITXML',
+          },
+        },
+      }),
       rolePolicyStatements: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'codebuild:CreateReportGroup',
+            'codebuild:CreateReport',
+            'codebuild:UpdateReport',
+            'codebuild:BatchPutTestCases',
+            'codebuild:BatchPutCodeCoverages',
+          ],
+          resources: [infrastructureTestReports.reportGroupArn],
+        }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: ['sts:AssumeRole'],

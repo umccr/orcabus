@@ -1,8 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { DatabaseConstruct } from '../../../lib/workload/stateful/database/component';
+import { DatabaseConstruct } from '../../lib/workload/stateful/database/component';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { getEnvironmentConfig } from '../../../config/constants';
+import { getEnvironmentConfig } from '../../config/constants';
 
 let stack: cdk.Stack;
 let vpc: ec2.Vpc;
