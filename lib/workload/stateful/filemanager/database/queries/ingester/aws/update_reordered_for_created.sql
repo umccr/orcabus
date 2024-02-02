@@ -15,7 +15,7 @@ with input as (
     )
 ),
 -- Then, select the objects that need to be updated.
-current_s3_objects as (
+current_objects as (
     select
         s3_object.*,
         input.s3_object_id as input_id,
@@ -30,29 +30,40 @@ current_s3_objects as (
         input.bucket = s3_object.bucket and
         input.key = s3_object.key and
         input.version_id = s3_object.version_id
+    -- Lock this pre-emptively for the update.
+    for update
+),
+-- And filter them to the objects that need to be updated.
+objects_to_update as (
+    select
+        *
+    from current_objects
     where
         -- Check the sequencer condition. We only update if there is a created
         -- sequencer that is closer to the deleted sequencer.
-        s3_object.deleted_sequencer > input.created_sequencer and
+        current_objects.deleted_sequencer > current_objects.input_created_sequencer and
         (
             -- Updating a null sequencer doesn't cause the event to be reprocessed.
-            s3_object.created_sequencer is null or
+            current_objects.created_sequencer is null or
             -- If a sequencer already exists this event should be reprocessed because this
             -- sequencer could belong to another object.
-            s3_object.created_sequencer < input.created_sequencer
+            current_objects.created_sequencer < current_objects.input_created_sequencer
         )
-    -- Lock this pre-emptively for the update.
-    for update
+        -- And there should not be any objects with a created sequencer that is the same as the input created
+        -- sequencer because this is a duplicate event that would cause a constraint error in the update.
+        and current_objects.input_created_sequencer not in (
+            select created_sequencer from current_objects where created_sequencer is not null
+        )
 ),
 -- Finally, update the required objects.
 update as (
     update s3_object
-    set created_sequencer = current_s3_objects.input_created_sequencer,
-        created_date = current_s3_objects.input_created_date,
+    set created_sequencer = objects_to_update.input_created_sequencer,
+        created_date = objects_to_update.input_created_date,
         number_reordered = s3_object.number_reordered +
-            case when current_s3_objects.created_sequencer is null then 0 else 1 end
-    from current_s3_objects
-    where s3_object.s3_object_id = current_s3_objects.s3_object_id
+            case when objects_to_update.created_sequencer is null then 0 else 1 end
+    from objects_to_update
+    where s3_object.s3_object_id = objects_to_update.s3_object_id
 )
 -- Return the old values because these need to be reprocessed.
 select
@@ -73,5 +84,5 @@ select
     -- This is used to simplify re-constructing the FlatS3EventMessages in the Lambda. I.e. this update detected an
     -- out of order created event, so return a created event back.
     'Created' as "event_type!: EventType"
-from current_s3_objects
-join object on object.object_id = current_s3_objects.object_id;
+from objects_to_update
+join object on object.object_id = objects_to_update.object_id;

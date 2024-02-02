@@ -369,15 +369,21 @@ pub(crate) mod tests {
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_eq!(
-            1,
+            0,
             s3_object_results[0].get::<i32, _>("number_duplicate_events")
         );
-        assert_deleted(&object_results[0], &s3_object_results[0]);
+        assert_eq!(0, s3_object_results[0].get::<i32, _>("number_reordered"));
+        assert_eq!(
+            1,
+            s3_object_results[1].get::<i32, _>("number_duplicate_events")
+        );
+        assert_eq!(1, s3_object_results[1].get::<i32, _>("number_reordered"));
+        assert_deleted(&object_results[1], &s3_object_results[1]);
         assert_created_with(
-            &object_results[1],
-            &s3_object_results[1],
+            &object_results[0],
+            &s3_object_results[0],
             EXPECTED_VERSION_ID,
-            &EXPECTED_SEQUENCER_CREATED_ONE.to_string().add("7"),
+            EXPECTED_SEQUENCER_CREATED_ONE,
         );
     }
 
@@ -405,13 +411,19 @@ pub(crate) mod tests {
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_eq!(
-            1,
+            0,
             s3_object_results[0].get::<i32, _>("number_duplicate_events")
         );
-        assert_deleted(&object_results[0], &s3_object_results[0]);
+        assert_eq!(0, s3_object_results[0].get::<i32, _>("number_reordered"));
+        assert_eq!(
+            2,
+            s3_object_results[1].get::<i32, _>("number_duplicate_events")
+        );
+        assert_eq!(0, s3_object_results[1].get::<i32, _>("number_reordered"));
+        assert_deleted(&object_results[1], &s3_object_results[1]);
         assert_created_with(
-            &object_results[1],
-            &s3_object_results[1],
+            &object_results[0],
+            &s3_object_results[0],
             "version_id",
             EXPECTED_SEQUENCER_CREATED_ONE,
         );
