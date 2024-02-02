@@ -230,8 +230,8 @@ pub(crate) mod tests {
                     Some(Default::default())
                 );
 
-                assert_eq!(events.object_removed.storage_classes[0], None);
-                assert_eq!(events.object_removed.last_modified_dates[0], None);
+                assert_eq!(events.object_deleted.storage_classes[0], None);
+                assert_eq!(events.object_deleted.last_modified_dates[0], None);
             }
         }
     }

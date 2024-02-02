@@ -195,7 +195,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
 #[derive(Debug, Clone)]
 pub struct Events {
     pub object_created: TransposedS3EventMessages,
-    pub object_removed: TransposedS3EventMessages,
+    pub object_deleted: TransposedS3EventMessages,
     pub other: TransposedS3EventMessages,
 }
 
@@ -222,7 +222,7 @@ impl From<FlatS3EventMessages> for Events {
 
         Self {
             object_created: TransposedS3EventMessages::from(object_created),
-            object_removed: TransposedS3EventMessages::from(object_removed),
+            object_deleted: TransposedS3EventMessages::from(object_removed),
             other: TransposedS3EventMessages::from(other),
         }
     }
@@ -763,7 +763,7 @@ pub(crate) mod tests {
             EXPECTED_SEQUENCER_CREATED_ONE,
         );
         assert_object(
-            &result.object_removed,
+            &result.object_deleted,
             0,
             None,
             "bucket",
@@ -780,7 +780,7 @@ pub(crate) mod tests {
             EXPECTED_SEQUENCER_CREATED_TWO,
         );
         assert_object(
-            &result.object_removed,
+            &result.object_deleted,
             1,
             None,
             "bucket",

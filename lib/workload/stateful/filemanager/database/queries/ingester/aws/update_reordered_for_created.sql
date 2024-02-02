@@ -61,7 +61,12 @@ update as (
     set created_sequencer = objects_to_update.input_created_sequencer,
         created_date = objects_to_update.input_created_date,
         number_reordered = s3_object.number_reordered +
-            case when objects_to_update.created_sequencer is null then 0 else 1 end
+            -- Note the asymmetry between this and the reorder for deleted query.
+            case when objects_to_update.deleted_sequencer is not null or objects_to_update.created_sequencer is not null then
+                1
+            else
+                0
+            end
     from objects_to_update
     where s3_object.s3_object_id = objects_to_update.s3_object_id
 )

@@ -68,7 +68,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_reordered_for_deleted_event_created(pool: PgPool) {
         let mut events = test_events();
-        events.object_removed = Default::default();
+        events.object_deleted = Default::default();
 
         test_update_reordered_for_deleted(pool, test_events()).await;
     }
@@ -138,7 +138,7 @@ pub(crate) mod tests {
             ingest_events(pool, events.clone(), EXPECTED_NEW_SEQUENCER_ONE).await;
 
         assert_eq!(sequencers.len(), 1);
-        assert_eq!(sequencers[0].sequencer, events.object_removed.sequencers[0]);
+        assert_eq!(sequencers[0].sequencer, events.object_deleted.sequencers[0]);
 
         let updated = query!(
             "select s3_object_id as \"s3_object_id!\",
