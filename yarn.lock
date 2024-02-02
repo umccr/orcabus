@@ -1726,6 +1726,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cdk-nag@npm:^2.28.27":
+  version: 2.28.27
+  resolution: "cdk-nag@npm:2.28.27"
+  peerDependencies:
+    aws-cdk-lib: ^2.116.0
+    constructs: ^10.0.5
+  checksum: 208a704f021ebf695bee215d29b51fb5b0a49128371d56a2f35052fbbb61393f9fcb28baac2a0899ba10bf9857e8f079f8ba1dc5d1e86fea0664f9e722d3ea24
+  languageName: node
+  linkType: hard
+
 "chalk@npm:^2.4.2":
   version: 2.4.2
   resolution: "chalk@npm:2.4.2"
@@ -3957,6 +3967,7 @@ __metadata:
     "@typescript-eslint/parser": ^6.19.1
     aws-cdk: 2.110.0
     aws-cdk-lib: ^2.110.0
+    cdk-nag: ^2.28.27
     constructs: ^10.2.69
     dotenv: ^16.3.1
     eslint: ^8.44.0
