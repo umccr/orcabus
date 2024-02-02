@@ -109,7 +109,8 @@ export class StatelessPipelineStack extends cdk.Stack {
         {
           account: gammaConfig.accountId,
         }
-      )
+      ),
+      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
     );
 
     /**
