@@ -76,7 +76,8 @@ export class StatefulPipelineStack extends cdk.Stack {
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(this, 'GammaDeployment', gammaConfig.stackProps, {
         account: gammaConfig.accountId,
-      })
+      }),
+      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
     );
 
     /**

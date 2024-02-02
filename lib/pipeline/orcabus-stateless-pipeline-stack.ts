@@ -13,13 +13,9 @@ export class StatelessPipelineStack extends cdk.Stack {
 
     // A connection where the pipeline get its source code
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
-    const sourceFile = pipelines.CodePipelineSource.connection(
-      'umccr/orcabus',
-      'feature/base-cdk-codepipeline',
-      {
-        connectionArn: codeStarArn,
-      }
-    );
+    const sourceFile = pipelines.CodePipelineSource.connection('umccr/orcabus', 'main', {
+      connectionArn: codeStarArn,
+    });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
       commands: [
@@ -29,14 +25,6 @@ export class StatelessPipelineStack extends cdk.Stack {
       ],
       input: sourceFile,
       primaryOutputDirectory: 'cdk.out',
-      partialBuildSpec: codebuild.BuildSpec.fromObject({
-        reports: {
-          cdk: {
-            files: ['target/test/*.xml'],
-            'file-format': 'JUNITXML',
-          },
-        },
-      }),
       rolePolicyStatements: [
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
