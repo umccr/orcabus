@@ -4,10 +4,10 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as pipelines from 'aws-cdk-lib/pipelines';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { OrcaBusStatelessConfig, OrcaBusStatelessStack } from '../workload/orcabus-stateless-stack';
+import { OrcaBusStatefulConfig, OrcaBusStatefulStack } from '../workload/orcabus-stateful-stack';
 import { getEnvironmentConfig } from '../../config/constants';
 
-export class StatelessPipelineStack extends cdk.Stack {
+export class StatefulPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
 
@@ -24,8 +24,8 @@ export class StatelessPipelineStack extends cdk.Stack {
     const synthAction = new pipelines.CodeBuildStep('Synth', {
       commands: [
         'yarn install --frozen-lockfile',
-        'make suite',
-        'yarn run yarn run cdk-stateless-pipeline synth synth',
+        'make test',
+        'yarn run cdk-stateful-pipeline synth',
       ],
       input: sourceFile,
       primaryOutputDirectory: 'cdk.out',
@@ -63,7 +63,7 @@ export class StatelessPipelineStack extends cdk.Stack {
     const betaConfig = getEnvironmentConfig('beta');
     if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
     pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(this, 'BetaStatelessDeployment', betaConfig.stackProps, {
+      new OrcaBusStatefulDeploymentStage(this, 'BetaDeployment', betaConfig.stackProps, {
         account: betaConfig.accountId,
       })
     );
@@ -74,23 +74,18 @@ export class StatelessPipelineStack extends cdk.Stack {
     const gammaConfig = getEnvironmentConfig('gamma');
     if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
     pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(
-        this,
-        'GammaStatelessDeployment',
-        gammaConfig.stackProps,
-        {
-          account: gammaConfig.accountId,
-        }
-      )
+      new OrcaBusStatefulDeploymentStage(this, 'GammaDeployment', gammaConfig.stackProps, {
+        account: gammaConfig.accountId,
+      })
     );
 
     /**
-     * Deployment to Prod account
+     * Deployment to Prod account (DISABLED)
      */
     const prodConfig = getEnvironmentConfig('prod');
     if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
     pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(this, 'ProdStatelessDeployment', prodConfig.stackProps, {
+      new OrcaBusStatefulDeploymentStage(this, 'prodDeployment', prodConfig.stackProps, {
         account: gammaConfig?.accountId,
       }),
       { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
@@ -98,17 +93,17 @@ export class StatelessPipelineStack extends cdk.Stack {
   }
 }
 
-class OrcaBusStatelessDeploymentStage extends cdk.Stage {
+class OrcaBusStatefulDeploymentStage extends cdk.Stage {
   constructor(
     scope: Construct,
     environmentName: string,
     stackProps: {
-      orcaBusStatelessConfig: OrcaBusStatelessConfig;
+      orcaBusStatefulConfig: OrcaBusStatefulConfig;
     },
     env?: cdk.Environment
   ) {
     super(scope, environmentName, { env: { account: env?.account, region: 'ap-southeast-2' } });
 
-    new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', stackProps.orcaBusStatelessConfig);
+    new OrcaBusStatefulStack(this, 'OrcaBusStatefulStack', stackProps.orcaBusStatefulConfig);
   }
 }
