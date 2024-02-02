@@ -21,15 +21,6 @@ export class StatelessPipelineStack extends cdk.Stack {
       }
     );
 
-    const infrastructureTestReports = new codebuild.ReportGroup(
-      this,
-      `OrcaBusInfrastructureTestReport`,
-      {
-        reportGroupName: `OrcaBusInfrastructureTestReport`,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }
-    );
-
     const synthAction = new pipelines.CodeBuildStep('Synth', {
       commands: [
         'yarn install --frozen-lockfile',
@@ -47,17 +38,6 @@ export class StatelessPipelineStack extends cdk.Stack {
         },
       }),
       rolePolicyStatements: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [
-            'codebuild:CreateReportGroup',
-            'codebuild:CreateReport',
-            'codebuild:UpdateReport',
-            'codebuild:BatchPutTestCases',
-            'codebuild:BatchPutCodeCoverages',
-          ],
-          resources: [infrastructureTestReports.reportGroupArn],
-        }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: ['sts:AssumeRole'],

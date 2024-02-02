@@ -24,7 +24,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     const synthAction = new pipelines.CodeBuildStep('Synth', {
       commands: [
         'yarn install --frozen-lockfile',
-        'make test',
+        'make test-stateful',
         'yarn run cdk-stateful-pipeline synth',
       ],
       input: sourceFile,
