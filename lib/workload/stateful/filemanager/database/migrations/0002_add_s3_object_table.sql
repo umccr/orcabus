@@ -29,6 +29,10 @@ create table s3_object (
     -- When this object was deleted, a null value means that the object has not yet been deleted.
     deleted_date timestamptz default null,
     -- provenance - history of all objects and how they move?
+    -- The size of the object.
+    size integer default null,
+    -- A unique identifier for the object, if it is present.
+    checksum text default null,
 
     -- AWS-specific fields
     -- The AWS last modified value.

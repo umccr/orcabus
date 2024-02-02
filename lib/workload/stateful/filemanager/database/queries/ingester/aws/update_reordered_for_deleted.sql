@@ -79,10 +79,8 @@ select
     deleted_sequencer as sequencer,
     number_reordered,
     number_duplicate_events,
-    -- Also need the size from the object table.
     size,
     -- This is used to simplify re-constructing the FlatS3EventMessages in the Lambda. I.e. this update detected an
     -- out of order deleted event, so return a deleted event back.
     'Deleted' as "event_type!: EventType"
-from objects_to_update
-join object on object.object_id = objects_to_update.object_id;
+from objects_to_update;

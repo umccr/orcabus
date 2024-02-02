@@ -93,6 +93,8 @@ impl Ingester {
             &object_created.buckets,
             &object_created.keys,
             &object_created.event_times as &[Option<DateTime<Utc>>],
+            &object_created.sizes as &[Option<i32>],
+            &vec![None; object_created.s3_object_ids.len()] as &[Option<String>],
             &object_created.last_modified_dates as &[Option<DateTime<Utc>>],
             &object_created.e_tags as &[Option<String>],
             &object_created.storage_classes as &[Option<StorageClass>],
@@ -102,7 +104,7 @@ impl Ingester {
         .fetch_all(&mut *tx)
         .await?;
 
-        let (object_ids, sizes): (Vec<_>, Vec<_>) = object_ids
+        let (object_ids, _): (Vec<_>, Vec<_>) = object_ids
             .into_iter()
             .rev()
             .zip(object_created.sizes.into_iter().rev())
@@ -133,8 +135,6 @@ impl Ingester {
             query_file!(
                 "../database/queries/ingester/insert_objects.sql",
                 &object_ids,
-                &sizes as &[Option<i32>],
-                &vec![None; sizes.len()] as &[Option<String>],
             )
             .execute(&mut *tx)
             .await?;
@@ -196,6 +196,8 @@ impl Ingester {
             &object_removed.buckets,
             &object_removed.keys,
             &object_removed.event_times as &[Option<DateTime<Utc>>],
+            &object_removed.sizes as &[Option<i32>],
+            &vec![None; object_removed.s3_object_ids.len()] as &[Option<String>],
             &object_removed.last_modified_dates as &[Option<DateTime<Utc>>],
             &object_removed.e_tags as &[Option<String>],
             &object_removed.storage_classes as &[Option<StorageClass>],
@@ -207,7 +209,7 @@ impl Ingester {
         .fetch_all(&mut *tx)
         .await?;
 
-        let (object_ids, sizes): (Vec<_>, Vec<_>) = object_ids
+        let (object_ids, _): (Vec<_>, Vec<_>) = object_ids
             .into_iter()
             .rev()
             .zip(object_removed.sizes.into_iter().rev())
@@ -238,8 +240,6 @@ impl Ingester {
             query_file!(
                 "../database/queries/ingester/insert_objects.sql",
                 &object_ids,
-                &sizes as &[Option<i32>],
-                &vec![None; sizes.len()] as &[Option<String>],
             )
             .execute(&mut *tx)
             .await?;
