@@ -55,14 +55,14 @@ pub(crate) mod tests {
     use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::tests::{
-        EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_SEQUENCER_CREATED_TWO,
+        EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_TWO,
         EXPECTED_SEQUENCER_CREATED_ZERO, EXPECTED_VERSION_ID,
     };
     use crate::events::aws::EventType;
     use crate::events::aws::StorageClass;
     use crate::events::aws::{Events, FlatS3EventMessage};
     use chrono::{DateTime, Utc};
-    use sqlx::{query, query_file_as, PgPool};
+    use sqlx::{query, query_file, query_file_as, PgPool};
     use uuid::Uuid;
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -106,6 +106,137 @@ pub(crate) mod tests {
             ingest_events_created(pool, events, EXPECTED_SEQUENCER_CREATED_ZERO).await;
 
         assert_eq!(sequencers.len(), 0);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn insert_created(pool: PgPool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let object_id = Uuid::new_v4();
+        query_file!(
+            "../database/queries/ingester/aws/insert_s3_created_objects.sql",
+            &vec![Uuid::new_v4()],
+            &vec![object_id],
+            &vec!["bucket".to_string()],
+            &vec!["key".to_string()],
+            &vec![DateTime::<Utc>::default()],
+            &vec![Some(0)] as &[Option<i32>],
+            &vec![None] as &[Option<String>],
+            &vec![DateTime::<Utc>::default()],
+            &vec![None] as &[Option<String>],
+            &vec![Some(StorageClass::Standard)] as &[Option<StorageClass>],
+            &vec![EXPECTED_VERSION_ID.to_string()],
+            &vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()],
+        )
+        .fetch_all(&mut *tx)
+        .await
+        .unwrap();
+
+        query_file!(
+            "../database/queries/ingester/insert_objects.sql",
+            &vec![object_id],
+        )
+        .fetch_all(&mut *tx)
+        .await
+        .unwrap();
+
+        tx.commit().await.unwrap();
+
+        let inserted = query!(
+            "select s3_object_id as \"s3_object_id!\",
+                object_id as \"object_id!\",
+                bucket,
+                key,
+                created_date,
+                deleted_date,
+                last_modified_date,
+                e_tag,
+                storage_class as \"storage_class: StorageClass\",
+                version_id,
+                created_sequencer,
+                deleted_sequencer,
+                number_reordered,
+                number_duplicate_events from s3_object"
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(inserted.len(), 1);
+        assert_eq!(inserted[0].deleted_sequencer, None);
+        assert_eq!(
+            inserted[0].created_sequencer,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string())
+        );
+        assert_eq!(inserted[0].deleted_date, None);
+        assert_eq!(inserted[0].created_date, Some(DateTime::default()));
+        assert_eq!(inserted[0].number_reordered, 0);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn insert_deleted(pool: PgPool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let object_id = Uuid::new_v4();
+        query_file!(
+            "../database/queries/ingester/aws/insert_s3_deleted_objects.sql",
+            &vec![Uuid::new_v4()],
+            &vec![object_id],
+            &vec!["bucket".to_string()],
+            &vec!["key".to_string()],
+            &vec![DateTime::<Utc>::default()],
+            &vec![Some(0)] as &[Option<i32>],
+            &vec![None] as &[Option<String>],
+            &vec![DateTime::<Utc>::default()],
+            &vec![None] as &[Option<String>],
+            &vec![Some(StorageClass::Standard)] as &[Option<StorageClass>],
+            &vec![EXPECTED_VERSION_ID.to_string()],
+            &vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()],
+            &vec![1],
+        )
+        .fetch_all(&mut *tx)
+        .await
+        .unwrap();
+
+        query_file!(
+            "../database/queries/ingester/insert_objects.sql",
+            &vec![object_id],
+        )
+        .fetch_all(&mut *tx)
+        .await
+        .unwrap();
+
+        tx.commit().await.unwrap();
+
+        let inserted = query!(
+            "select s3_object_id as \"s3_object_id!\",
+                object_id as \"object_id!\",
+                bucket,
+                key,
+                created_date,
+                deleted_date,
+                last_modified_date,
+                e_tag,
+                storage_class as \"storage_class: StorageClass\",
+                version_id,
+                created_sequencer,
+                deleted_sequencer,
+                number_reordered,
+                number_duplicate_events from s3_object"
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(inserted.len(), 1);
+        assert_eq!(inserted[0].created_sequencer, None);
+        assert_eq!(
+            inserted[0].deleted_sequencer,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string())
+        );
+        assert_eq!(inserted[0].created_date, None);
+        assert_eq!(inserted[0].deleted_date, Some(DateTime::default()));
+        assert_eq!(inserted[0].number_reordered, 1);
     }
 
     async fn ingest_events(

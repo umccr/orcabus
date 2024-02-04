@@ -145,9 +145,6 @@ impl Ingester {
             .await?;
         }
 
-        tx.commit().await?;
-        let mut tx = self.client().pool().begin().await?;
-
         trace!(object_removed = ?object_removed, "ingesting object removed events");
 
         // First, try and update existing events to remove any un-ordered events.
