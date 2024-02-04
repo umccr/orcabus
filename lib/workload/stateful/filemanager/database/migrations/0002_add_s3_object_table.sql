@@ -40,7 +40,7 @@ create table s3_object (
     -- An S3-specific e_tag, if it is present.
     e_tag text default null,
     -- The S3 storage class of the object.
-    storage_class storage_class not null,
+    storage_class storage_class default null,
     -- The version id of the object, if present.
     version_id text default null,
     -- A sequencer value for when the object was created. Used to synchronise out of order and duplicate events.

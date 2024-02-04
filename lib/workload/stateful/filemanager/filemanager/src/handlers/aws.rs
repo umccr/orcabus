@@ -114,7 +114,7 @@ mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_deleted_with(&object_results[0], &s3_object_results[0], Some(0));
+        assert_deleted_with(&s3_object_results[0], Some(0));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -138,6 +138,6 @@ mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_deleted_with(&object_results[0], &s3_object_results[0], Some(0));
+        assert_deleted_with(&s3_object_results[0], Some(0));
     }
 }

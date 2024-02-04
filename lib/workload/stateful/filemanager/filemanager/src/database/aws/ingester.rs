@@ -49,9 +49,14 @@ impl Ingester {
             &object_created.s3_object_ids,
             &object_created.buckets,
             &object_created.keys,
-            &object_created.version_ids as &[Option<String>],
-            &object_created.sequencers as &[Option<String>],
             &object_created.event_times as &[Option<DateTime<Utc>>],
+            &object_created.sizes as &[Option<i32>],
+            &vec![None; object_created.s3_object_ids.len()] as &[Option<String>],
+            &object_created.last_modified_dates as &[Option<DateTime<Utc>>],
+            &object_created.e_tags as &[Option<String>],
+            &object_created.storage_classes as &[Option<StorageClass>],
+            &object_created.version_ids as &[Option<String>],
+            &object_created.sequencers as &[Option<String>]
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -152,9 +157,14 @@ impl Ingester {
             &object_removed.s3_object_ids,
             &object_removed.buckets,
             &object_removed.keys,
+            &object_removed.event_times as &[Option<DateTime<Utc>>],
+            &object_removed.sizes as &[Option<i32>],
+            &vec![None; object_removed.s3_object_ids.len()] as &[Option<String>],
+            &object_removed.last_modified_dates as &[Option<DateTime<Utc>>],
+            &object_removed.e_tags as &[Option<String>],
+            &object_removed.storage_classes as &[Option<StorageClass>],
             &object_removed.version_ids as &[Option<String>],
             &object_removed.sequencers as &[Option<String>],
-            &object_removed.event_times as &[Option<DateTime<Utc>>],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -293,7 +303,7 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_created(&object_results[0], &s3_object_results[0]);
+        assert_created(&s3_object_results[0]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -307,7 +317,7 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_deleted_with(&object_results[0], &s3_object_results[0], Some(0));
+        assert_deleted_with(&s3_object_results[0], Some(0));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -321,7 +331,7 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_deleted_with(&object_results[0], &s3_object_results[0], Some(0));
+        assert_deleted_with(&s3_object_results[0], Some(0));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -344,7 +354,7 @@ pub(crate) mod tests {
             2,
             s3_object_results[0].get::<i32, _>("number_duplicate_events")
         );
-        assert_deleted_with(&object_results[0], &s3_object_results[0], Some(0));
+        assert_deleted_with(&s3_object_results[0], Some(0));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -374,7 +384,7 @@ pub(crate) mod tests {
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
         assert_eq!(2, s3_object_results[0].get::<i32, _>("number_reordered"));
-        assert_deleted_with(&object_results[0], &s3_object_results[0], None);
+        assert_deleted_with(&s3_object_results[0], Some(0));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -410,9 +420,8 @@ pub(crate) mod tests {
             s3_object_results[1].get::<i32, _>("number_duplicate_events")
         );
         assert_eq!(1, s3_object_results[1].get::<i32, _>("number_reordered"));
-        assert_deleted_with(&object_results[1], &s3_object_results[1], Some(0));
+        assert_deleted_with(&s3_object_results[1], Some(0));
         assert_created_with(
-            &object_results[0],
             &s3_object_results[0],
             EXPECTED_VERSION_ID,
             EXPECTED_SEQUENCER_CREATED_ONE,
@@ -452,9 +461,8 @@ pub(crate) mod tests {
             s3_object_results[1].get::<i32, _>("number_duplicate_events")
         );
         assert_eq!(0, s3_object_results[1].get::<i32, _>("number_reordered"));
-        assert_deleted_with(&object_results[1], &s3_object_results[1], Some(0));
+        assert_deleted_with(&s3_object_results[1], Some(0));
         assert_created_with(
-            &object_results[0],
             &s3_object_results[0],
             "version_id",
             EXPECTED_SEQUENCER_CREATED_ONE,
@@ -475,14 +483,13 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn assert_created_with(
-        object_results: &PgRow,
         s3_object_results: &PgRow,
         expected_version_id: &str,
         expected_sequencer: &str,
     ) {
         assert_eq!("bucket", s3_object_results.get::<String, _>("bucket"));
         assert_eq!("key", s3_object_results.get::<String, _>("key"));
-        assert_eq!(0, object_results.get::<i32, _>("size"));
+        assert_eq!(0, s3_object_results.get::<i32, _>("size"));
         assert_eq!(EXPECTED_E_TAG, s3_object_results.get::<String, _>("e_tag"));
         assert_eq!(
             expected_version_id,
@@ -502,27 +509,22 @@ pub(crate) mod tests {
         );
     }
 
-    pub(crate) fn assert_created(object_results: &PgRow, s3_object_results: &PgRow) {
+    pub(crate) fn assert_created(s3_object_results: &PgRow) {
         assert_created_with(
-            object_results,
             s3_object_results,
             EXPECTED_VERSION_ID,
             EXPECTED_SEQUENCER_CREATED_ONE,
         )
     }
 
-    pub(crate) fn assert_deleted_with(
-        object_results: &PgRow,
-        s3_object_results: &PgRow,
-        size: Option<i32>,
-    ) {
+    pub(crate) fn assert_deleted_with(s3_object_results: &PgRow, size: Option<i32>) {
         assert_eq!("bucket", s3_object_results.get::<String, _>("bucket"));
         assert_eq!("key", s3_object_results.get::<String, _>("key"));
         assert_eq!(
             EXPECTED_VERSION_ID,
             s3_object_results.get::<String, _>("version_id")
         );
-        assert_eq!(size, object_results.get::<Option<i32>, _>("size"));
+        assert_eq!(size, s3_object_results.get::<Option<i32>, _>("size"));
         assert_eq!(EXPECTED_E_TAG, s3_object_results.get::<String, _>("e_tag"));
         assert_eq!(
             DateTime::<Utc>::default(),

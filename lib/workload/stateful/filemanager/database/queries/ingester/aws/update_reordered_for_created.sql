@@ -5,13 +5,30 @@
 with input as (
     select
         *
-    from unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[], $6::timestamptz[]) as input (
+    from unnest(
+        $1::uuid[],
+        $2::text[],
+        $3::text[],
+        $4::timestamptz[],
+        $5::integer[],
+        $6::text[],
+        $7::timestamptz[],
+        $8::text[],
+        $9::storage_class[],
+        $10::text[],
+        $11::text[]
+    ) as input (
         s3_object_id,
         bucket,
         key,
+        created_date,
+        size,
+        checksum,
+        last_modified_date,
+        e_tag,
+        storage_class,
         version_id,
-        created_sequencer,
-        created_date
+        created_sequencer
     )
 ),
 -- Then, select the objects that need to be updated.
@@ -23,7 +40,12 @@ current_objects as (
         input.key as input_key,
         input.version_id as input_version_id,
         input.created_sequencer as input_created_sequencer,
-        input.created_date as input_created_date
+        input.created_date as input_created_date,
+        input.size as input_size,
+        input.checksum as input_checksum,
+        input.last_modified_date as input_last_modified_date,
+        input.e_tag as input_e_tag,
+        input.storage_class as input_storage_class
     from s3_object
     -- Grab the relevant values to update with.
     join input on
@@ -60,6 +82,11 @@ update as (
     update s3_object
     set created_sequencer = objects_to_update.input_created_sequencer,
         created_date = objects_to_update.input_created_date,
+        size = coalesce(objects_to_update.input_size, objects_to_update.size),
+        checksum = coalesce(objects_to_update.input_checksum, objects_to_update.checksum),
+        last_modified_date = coalesce(objects_to_update.input_last_modified_date, objects_to_update.last_modified_date),
+        e_tag = coalesce(objects_to_update.e_tag, objects_to_update.e_tag),
+        storage_class = objects_to_update.storage_class,
         number_reordered = s3_object.number_reordered +
             -- Note the asymmetry between this and the reorder for deleted query.
             case when objects_to_update.deleted_sequencer is not null or objects_to_update.created_sequencer is not null then
