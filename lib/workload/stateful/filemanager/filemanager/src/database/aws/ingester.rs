@@ -58,14 +58,20 @@ impl Ingester {
             {
                 let reprocess = reprocess.remove(pos);
                 if reprocess.sequencer.is_none() {
-                    false
+                    // No re-processing if the sequencer was never set.
+                    return false;
                 } else {
                     *object = reprocess;
-                    true
                 }
-            } else {
-                true
             }
+
+            debug!(
+                s3_object_id = ?object.s3_object_id,
+                number_duplicate_events = object.number_reordered,
+                "out of order event found"
+            );
+
+            true
         });
 
         TransposedS3EventMessages::from(FlatS3EventMessages(flat_object_created).sort_and_dedup())
