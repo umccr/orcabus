@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{query_file, query_file_as};
 use tracing::{debug, trace};
+use uuid::Uuid;
 
 use crate::database::{Client, Ingest};
 use crate::error::Result;
@@ -9,12 +10,18 @@ use crate::events::aws::EventType;
 use crate::events::aws::{Events, TransposedS3EventMessages};
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::events::EventSourceType;
-use uuid::Uuid;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
 pub struct Ingester {
     client: Client,
+}
+
+/// The type representing an insert query.
+#[derive(Debug)]
+struct Insert {
+    object_id: Uuid,
+    number_duplicate_events: i32,
 }
 
 impl Ingester {
@@ -30,11 +37,70 @@ impl Ingester {
         })
     }
 
+    fn reprocess_updated(
+        messages: TransposedS3EventMessages,
+        updated: Vec<FlatS3EventMessage>,
+    ) -> TransposedS3EventMessages {
+        if updated.is_empty() {
+            return messages;
+        }
+
+        // Now, events with a sequencer value need to be reprocessed.
+        let mut flat_object_created = FlatS3EventMessages::from(messages).into_inner();
+        let mut reprocess = FlatS3EventMessages(updated).into_inner();
+
+        flat_object_created.retain_mut(|object| {
+            // If the sequencer is null, then we remove this object has it has already been consumed. Otherwise,
+            // we keep it, and potentially replace an existing object.
+            if let Some(pos) = reprocess
+                .iter()
+                .position(|reprocess| reprocess.s3_object_id == object.s3_object_id)
+            {
+                let reprocess = reprocess.remove(pos);
+                if reprocess.sequencer.is_none() {
+                    false
+                } else {
+                    *object = reprocess;
+                    true
+                }
+            } else {
+                true
+            }
+        });
+
+        TransposedS3EventMessages::from(FlatS3EventMessages(flat_object_created).sort_and_dedup())
+    }
+
+    fn reprocess_inserts(object_ids: Vec<Uuid>, inserted: &mut Vec<Insert>) -> Vec<Uuid> {
+        object_ids
+            .into_iter()
+            .rev()
+            .flat_map(|object_id| {
+                // If we cannot find the object in our new ids, this object already exists.
+                let pos = inserted.iter().rposition(|record| {
+                    // This will never be `None`, maybe this is an sqlx bug?
+                    record.object_id == object_id
+                })?;
+
+                // We can remove this to avoid searching over it again.
+                let record = inserted.remove(pos);
+                debug!(
+                    object_id = ?record.object_id,
+                    number_duplicate_events = record.number_duplicate_events,
+                    "duplicate event found"
+                );
+
+                // This is a new event so the corresponding object should be inserted.
+                Some(object_id)
+            })
+            .collect()
+    }
+
     /// Ingest the events into the database by calling the insert and update queries.
     pub async fn ingest_events(&self, events: Events) -> Result<()> {
         let Events {
-            mut object_created,
-            object_deleted: mut object_removed,
+            object_created,
+            object_deleted,
             ..
         } = events;
 
@@ -61,37 +127,11 @@ impl Ingester {
         .fetch_all(&mut *tx)
         .await?;
 
-        if !updated.is_empty() {
-            // Now, events with a sequencer value need to be reprocessed.
-            let mut flat_object_created = FlatS3EventMessages::from(object_created).into_inner();
-            let mut reprocess = FlatS3EventMessages(updated).into_inner();
-
-            flat_object_created.retain_mut(|object| {
-                // If the sequencer is null, then we remove this object has it has already been consumed. Otherwise,
-                // we keep it, and potentially replace an existing object.
-                if let Some(pos) = reprocess
-                    .iter()
-                    .position(|reprocess| reprocess.s3_object_id == object.s3_object_id)
-                {
-                    let reprocess = reprocess.remove(pos);
-                    if reprocess.sequencer.is_none() {
-                        false
-                    } else {
-                        *object = reprocess;
-                        true
-                    }
-                } else {
-                    true
-                }
-            });
-
-            object_created = TransposedS3EventMessages::from(
-                FlatS3EventMessages(flat_object_created).sort_and_dedup(),
-            );
-        }
-
+        let object_created = Self::reprocess_updated(object_created, updated);
         let object_ids = vec![Uuid::new_v4(); object_created.s3_object_ids.len()];
-        let mut inserted = query_file!(
+
+        let mut inserted = query_file_as!(
+            Insert,
             "../database/queries/ingester/aws/insert_s3_created_objects.sql",
             &object_created.s3_object_ids,
             &object_ids,
@@ -109,29 +149,7 @@ impl Ingester {
         .fetch_all(&mut *tx)
         .await?;
 
-        let (object_ids, _): (Vec<_>, Vec<_>) = object_ids
-            .into_iter()
-            .rev()
-            .zip(object_created.sizes.into_iter().rev())
-            .flat_map(|(object_id, size)| {
-                // If we cannot find the object in our new ids, this object already exists.
-                let pos = inserted.iter().rposition(|record| {
-                    // This will never be `None`, maybe this is an sqlx bug?
-                    record.object_id == object_id
-                })?;
-
-                // We can remove this to avoid searching over it again.
-                let record = inserted.remove(pos);
-                debug!(
-                    object_id = ?record.object_id,
-                    number_duplicate_events = record.number_duplicate_events,
-                    "duplicate event found"
-                );
-
-                // This is a new event so the corresponding object should be inserted.
-                Some((object_id, size))
-            })
-            .unzip();
+        let object_ids = Self::reprocess_inserts(object_ids, &mut inserted);
 
         // Insert only the non duplicate events.
         if !object_ids.is_empty() {
@@ -145,100 +163,52 @@ impl Ingester {
             .await?;
         }
 
-        trace!(object_removed = ?object_removed, "ingesting object removed events");
+        trace!(object_removed = ?object_deleted, "ingesting object removed events");
 
         // First, try and update existing events to remove any un-ordered events.
         let updated = query_file_as!(
             FlatS3EventMessage,
             "../database/queries/ingester/aws/update_reordered_for_deleted.sql",
-            &object_removed.s3_object_ids,
-            &object_removed.buckets,
-            &object_removed.keys,
-            &object_removed.event_times as &[Option<DateTime<Utc>>],
-            &object_removed.sizes as &[Option<i32>],
-            &vec![None; object_removed.s3_object_ids.len()] as &[Option<String>],
-            &object_removed.last_modified_dates as &[Option<DateTime<Utc>>],
-            &object_removed.e_tags as &[Option<String>],
-            &object_removed.storage_classes as &[Option<StorageClass>],
-            &object_removed.version_ids as &[Option<String>],
-            &object_removed.sequencers as &[Option<String>],
+            &object_deleted.s3_object_ids,
+            &object_deleted.buckets,
+            &object_deleted.keys,
+            &object_deleted.event_times as &[Option<DateTime<Utc>>],
+            &object_deleted.sizes as &[Option<i32>],
+            &vec![None; object_deleted.s3_object_ids.len()] as &[Option<String>],
+            &object_deleted.last_modified_dates as &[Option<DateTime<Utc>>],
+            &object_deleted.e_tags as &[Option<String>],
+            &object_deleted.storage_classes as &[Option<StorageClass>],
+            &object_deleted.version_ids as &[Option<String>],
+            &object_deleted.sequencers as &[Option<String>],
         )
         .fetch_all(&mut *tx)
         .await?;
 
-        if !updated.is_empty() {
-            // Now, events with a sequencer value need to be reprocessed.
-            let mut flat_object_removed = FlatS3EventMessages::from(object_removed).into_inner();
-            let mut reprocess = FlatS3EventMessages(updated).into_inner();
+        let object_deleted = Self::reprocess_updated(object_deleted, updated);
+        let object_ids = vec![Uuid::new_v4(); object_deleted.s3_object_ids.len()];
 
-            flat_object_removed.retain_mut(|object| {
-                // If the sequencer is null, then we remove this object has it has already been consumed. Otherwise,
-                // we keep it, and potentially replace an existing object.
-                if let Some(pos) = reprocess
-                    .iter()
-                    .position(|reprocess| reprocess.s3_object_id == object.s3_object_id)
-                {
-                    let reprocess = reprocess.remove(pos);
-                    if reprocess.sequencer.is_none() {
-                        false
-                    } else {
-                        *object = reprocess;
-                        true
-                    }
-                } else {
-                    true
-                }
-            });
-
-            object_removed = TransposedS3EventMessages::from(
-                FlatS3EventMessages(flat_object_removed).sort_and_dedup(),
-            );
-        }
-
-        let object_ids = vec![Uuid::new_v4(); object_removed.s3_object_ids.len()];
-        let mut inserted = query_file!(
+        let mut inserted = query_file_as!(
+            Insert,
             "../database/queries/ingester/aws/insert_s3_deleted_objects.sql",
-            &object_removed.s3_object_ids,
+            &object_deleted.s3_object_ids,
             &object_ids,
-            &object_removed.buckets,
-            &object_removed.keys,
-            &object_removed.event_times as &[Option<DateTime<Utc>>],
-            &object_removed.sizes as &[Option<i32>],
-            &vec![None; object_removed.s3_object_ids.len()] as &[Option<String>],
-            &object_removed.last_modified_dates as &[Option<DateTime<Utc>>],
-            &object_removed.e_tags as &[Option<String>],
-            &object_removed.storage_classes as &[Option<StorageClass>],
-            &object_removed.version_ids as &[Option<String>],
-            &object_removed.sequencers as &[Option<String>],
+            &object_deleted.buckets,
+            &object_deleted.keys,
+            &object_deleted.event_times as &[Option<DateTime<Utc>>],
+            &object_deleted.sizes as &[Option<i32>],
+            &vec![None; object_deleted.s3_object_ids.len()] as &[Option<String>],
+            &object_deleted.last_modified_dates as &[Option<DateTime<Utc>>],
+            &object_deleted.e_tags as &[Option<String>],
+            &object_deleted.storage_classes as &[Option<StorageClass>],
+            &object_deleted.version_ids as &[Option<String>],
+            &object_deleted.sequencers as &[Option<String>],
             // Fill this with 1 reorder, because if we get here then this must be a reordered event.
-            &vec![1; object_removed.s3_object_ids.len()]
+            &vec![1; object_deleted.s3_object_ids.len()]
         )
         .fetch_all(&mut *tx)
         .await?;
 
-        let (object_ids, _): (Vec<_>, Vec<_>) = object_ids
-            .into_iter()
-            .rev()
-            .zip(object_removed.sizes.into_iter().rev())
-            .flat_map(|(object_id, size)| {
-                // If we cannot find the object in our new ids, this object already exists.
-                let pos = inserted.iter().rposition(|record| {
-                    // This will never be `None`, maybe this is an sqlx bug?
-                    record.object_id == object_id
-                })?;
-
-                // We can remove this to avoid searching over it again.
-                let record = inserted.remove(pos);
-                debug!(
-                    object_id = ?record.object_id,
-                    number_duplicate_events = record.number_duplicate_events,
-                    "duplicate event found"
-                );
-
-                // This is a new event so the corresponding object should be inserted.
-                Some((object_id, size))
-            })
-            .unzip();
+        let object_ids = Self::reprocess_inserts(object_ids, &mut inserted);
 
         // Insert only the non duplicate events.
         if !object_ids.is_empty() {
@@ -274,6 +244,14 @@ impl Ingest for Ingester {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::ops::Add;
+
+    use chrono::{DateTime, Utc};
+    use itertools::Itertools;
+    use sqlx::postgres::PgRow;
+    use sqlx::{PgPool, Row};
+    use tokio::time::Instant;
+
     use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
@@ -284,12 +262,6 @@ pub(crate) mod tests {
     use crate::events::aws::EventType::{Created, Deleted};
     use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
     use crate::events::EventSourceType;
-    use chrono::{DateTime, Utc};
-    use itertools::Itertools;
-    use sqlx::postgres::PgRow;
-    use sqlx::{PgPool, Row};
-    use std::ops::Add;
-    use tokio::time::Instant;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {

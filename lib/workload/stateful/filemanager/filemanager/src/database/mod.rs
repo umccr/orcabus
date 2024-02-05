@@ -1,10 +1,10 @@
 //! This module handles connecting to the filemanager database for actions such as ingesting events.
 //!
 
-use crate::env::read_env;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
+use crate::env::read_env;
 use crate::error::Result;
 use crate::events::EventSourceType;
 
@@ -51,6 +51,10 @@ pub trait Migrate {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use chrono::{DateTime, Utc};
+    use sqlx::{query, query_file, query_file_as, PgPool};
+    use uuid::Uuid;
+
     use crate::database::aws::ingester::tests::{test_events, test_ingester};
     use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
@@ -61,9 +65,6 @@ pub(crate) mod tests {
     use crate::events::aws::EventType;
     use crate::events::aws::StorageClass;
     use crate::events::aws::{Events, FlatS3EventMessage};
-    use chrono::{DateTime, Utc};
-    use sqlx::{query, query_file, query_file_as, PgPool};
-    use uuid::Uuid;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_reordered_for_deleted_event_created(pool: PgPool) {

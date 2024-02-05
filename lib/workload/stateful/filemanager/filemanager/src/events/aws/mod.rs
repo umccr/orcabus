@@ -596,12 +596,13 @@ impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use chrono::{DateTime, Utc};
+    use serde_json::{json, Value};
+
     use crate::events::aws::{
         EventType, Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage,
         TransposedS3EventMessages,
     };
-    use chrono::{DateTime, Utc};
-    use serde_json::{json, Value};
 
     pub(crate) const EXPECTED_SEQUENCER_CREATED_ZERO: &str = "0055AED6DCD90281E3"; // pragma: allowlist secret
     pub(crate) const EXPECTED_SEQUENCER_CREATED_ONE: &str = "0055AED6DCD90281E4"; // pragma: allowlist secret

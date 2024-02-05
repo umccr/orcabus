@@ -1,6 +1,3 @@
-#[double]
-use crate::clients::aws::s3::Client;
-use crate::error::Error::S3Error;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::primitives;
@@ -10,6 +7,9 @@ use futures::future::join_all;
 use mockall_double::double;
 use tracing::trace;
 
+#[double]
+use crate::clients::aws::s3::Client;
+use crate::error::Error::S3Error;
 use crate::error::Result;
 use crate::events::aws::{
     EventType, Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass,
@@ -130,9 +130,8 @@ impl Collect for Collecter {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::events::aws::collecter::Collecter;
-    use crate::events::aws::tests::expected_flat_events_simple;
-    use crate::events::aws::StorageClass::IntelligentTiering;
+    use std::result;
+
     use aws_sdk_s3::error::SdkError;
     use aws_sdk_s3::primitives::{DateTimeFormat, SdkBody};
     use aws_sdk_s3::types;
@@ -141,7 +140,10 @@ pub(crate) mod tests {
     use aws_smithy_runtime_api::client::result::ServiceError;
     use chrono::{DateTime, Utc};
     use mockall::predicate::eq;
-    use std::result;
+
+    use crate::events::aws::collecter::Collecter;
+    use crate::events::aws::tests::expected_flat_events_simple;
+    use crate::events::aws::StorageClass::IntelligentTiering;
 
     use super::*;
 

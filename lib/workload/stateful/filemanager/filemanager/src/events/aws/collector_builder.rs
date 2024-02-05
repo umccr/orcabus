@@ -1,3 +1,6 @@
+use mockall_double::double;
+use tracing::trace;
+
 #[double]
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
@@ -7,8 +10,6 @@ use crate::error::Error::{DeserializeError, SQSReceiveError};
 use crate::error::Result;
 use crate::events::aws::collecter::Collecter;
 use crate::events::aws::FlatS3EventMessages;
-use mockall_double::double;
-use tracing::trace;
 
 /// Build an AWS collector struct.
 #[derive(Default, Debug)]
@@ -101,15 +102,16 @@ impl CollecterBuilder {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use aws_sdk_sqs::operation::receive_message::ReceiveMessageOutput;
+    use aws_sdk_sqs::types::builders::MessageBuilder;
+    use mockall::predicate::eq;
+
     use crate::events::aws::collecter::tests::{
         assert_collected_events, expected_head_object, set_s3_client_expectations,
     };
     use crate::events::aws::collector_builder::CollecterBuilder;
     use crate::events::aws::tests::{expected_event_record_simple, expected_flat_events_simple};
     use crate::events::Collect;
-    use aws_sdk_sqs::operation::receive_message::ReceiveMessageOutput;
-    use aws_sdk_sqs::types::builders::MessageBuilder;
-    use mockall::predicate::eq;
 
     use super::*;
 
