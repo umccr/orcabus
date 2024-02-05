@@ -73,6 +73,12 @@ cargo clippy --all-targets --all-features
 cargo fmt
 ```
 
+Note, some tests can take a while to run so they are ignored by default. It is still useful to run these tests sometimes, 
+especially if changing code related to them. To do so, run the ignored tests with the `--ignored` flag:
+
+```sh
+cargo test --all-targets --all-features -- --ignored
+```
 
 ## Database
 

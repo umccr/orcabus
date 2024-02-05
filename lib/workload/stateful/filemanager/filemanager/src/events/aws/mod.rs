@@ -354,9 +354,10 @@ impl FlatS3EventMessages {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
+#[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
 #[sqlx(type_name = "event_type")]
 pub enum EventType {
+    #[default]
     Created,
     Deleted,
     Other,
@@ -369,7 +370,7 @@ impl PgHasArrayType for EventType {
 }
 
 /// A flattened AWS S3 record
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default)]
 pub struct FlatS3EventMessage {
     pub s3_object_id: Uuid,
     pub sequencer: Option<String>,
@@ -387,6 +388,11 @@ pub struct FlatS3EventMessage {
 }
 
 impl FlatS3EventMessage {
+    /// Create an event with a newly generated s3_object_id.
+    pub fn new_with_generated_id() -> Self {
+        Self::default().with_s3_object_id(Uuid::new_v4())
+    }
+
     /// Update the storage class if not None.`
     pub fn update_storage_class(mut self, storage_class: Option<StorageClass>) -> Self {
         storage_class

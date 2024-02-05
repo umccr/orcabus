@@ -106,7 +106,7 @@ select
     created_date as event_time,
     last_modified_date,
     e_tag,
-    storage_class as "storage_class: StorageClass",
+    storage_class as "storage_class: Option<StorageClass>",
     version_id,
     created_sequencer as sequencer,
     number_reordered,
