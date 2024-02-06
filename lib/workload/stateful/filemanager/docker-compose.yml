@@ -1,7 +1,7 @@
 version: '3.1'
 
 services:
-  db:
+  postgres:
     build: database
     container_name: filemanager_db
     restart: always
@@ -9,18 +9,6 @@ services:
       - POSTGRES_DATABASE=filemanager
       - POSTGRES_USER=filemanager
       - POSTGRES_PASSWORD=filemanager
+      - PGPORT=4321
     ports:
-      - "5432:5432"
-
-#  localstack:
-#   container_name: localstack-main
-#    image: localstack/localstack:3.0.1
-#    ports:
-#      - "127.0.0.1:4566:4566"            # LocalStack Gateway
-#      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
-#    environment:
-#      - DEBUG=${DEBUG-}
-#      - DOCKER_HOST=unix:///var/run/docker.sock
-#    volumes:
-#      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
-#      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "4321:4321"

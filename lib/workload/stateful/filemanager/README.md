@@ -12,21 +12,23 @@ This project is split up into multiple crates in a workspace. For development, d
 
 ## Rust code development
 
-Start the postgres database and ensure that an `.env` file is set containing the `DATABASE_URL`, e.g. see [`.env.example`][env-example]:
+The filemanager uses docker to run a local postgres database to track objects, and sqlx, which connects to the database
+at compile time to ensure that queries are valid. Compilation will emit errors if a query cannot successfully be run
+on postgres database.
+
+Makefile is used to simplify development. To get started run:
 
 ```sh
-docker compose up
+make build
 ```
 
-The filemanager uses sqlx to check if queries succeed against a database at compile time.
+This will spin up the docker postgres database, and compile the code using `cargo build`.
 
-A `.env` file ensures that the sqlx code can check queries at compile time by providing a `DATABASE_URL`. If `.env` is not present and there's no active database running and ready to be connected to, this project will fail to compile at all (preventing unnecessary runtime errors).
+Note, that this sets an environment variable containing the `DATABASE_URL` to the local postgres database. This is variable
+is expected by sqlx to check queries at compile time. If running `cargo` commands directly, this variable can be sourced
+from an `.env` file. E.g. see [`.env.example`][env-example].
 
-Filemanager uses docker to run a postgres database to track objects. This means that sqlx connects to the postgres server
-running inside the docker compose container. If there are additional postgres installations locally (outside of docker),
-this might interfere and complain about non-existing roles and users.
-
-### Tooling prerequisites, testing and building the code
+### Tooling pre-requisites, testing and building the code
 
 For development of the rust workspace, it's recommended to install a build cache (sccache) to improve compilation speeds:
 
@@ -34,52 +36,47 @@ For development of the rust workspace, it's recommended to install a build cache
 brew install sccache && export RUSTC_WRAPPER=`which sccache`
 ```
 
-or 
+or
 
 ```sh
 cargo install sccache && export RUSTC_WRAPPER=`which sccache`
 ```
 
-Then install build prerequisites to build:
+Then, cargo-watch can be used to recompile files as they change:
 
 ```sh
 cargo install cargo-watch sqlx-cli
-cargo build --all-targets --all-features
+make watch
 ```
 
-## Local development
+## Linting and testing
 
 Unit tests can be run with:
 
 ```sh
-cargo test --all-targets --all-features
+make test
 ```
+
+Which runs `cargo test`.
+
+To lint the code and format it, run:
+
+```sh
+make check-fix
+```
+
+This will run `cargo clippy` and `cargo fmt`.
+
+Testing and linting should be run before committing changes to the repository.
 
 See the [deploy][deploy] directory for the cdk infrastructure code.
 
-In a nutshell, a filemanager developer only needs to run the following to automatically recompile changes and re-deploy the changes:
-
-```sh
-./scripts/watch.sh
-```
-
-
-Please don't use `scripts/deploy.sh` on production deployments, it is only meant for development.
-
-Formatting and clippy should also be run before committing changes:
-
-```sh
-cargo clippy --all-targets --all-features
-cargo fmt
-```
-
-
 ## Database
 
-A shortcut for connecting to the docker database and inspecting its contents:
+To connect to the local postgres database, run:
 
 ```bash
-docker exec -it filemanager_db psql filemanager -U filemanager
+make psql
 ```
 
 Alternatively, just `brew install dbeaver-community` to easily browse the database contents (or any other DB viewer you prefer).
