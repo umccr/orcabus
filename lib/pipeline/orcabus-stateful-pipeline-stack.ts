@@ -32,8 +32,8 @@ export class StatefulPipelineStack extends cdk.Stack {
         },
       },
       partialBuildSpec: codebuild.BuildSpec.fromObject({
-        'orcabus-infrastructureStatefulReports': {
-          infrastructureStatefulReports: {
+        reports: {
+          'orcabus-infrastructureStatefulReports': {
             files: ['target/report/*.xml'],
             'file-format': 'JUNITXML',
           },
