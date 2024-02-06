@@ -17,13 +17,56 @@ export class StatelessPipelineStack extends cdk.Stack {
       connectionArn: codeStarArn,
     });
 
-    const synthAction = new pipelines.CodeBuildStep('Synth', {
-      commands: [
-        'yarn install --frozen-lockfile',
-        'make suite',
-        'yarn run cdk-stateless-pipeline synth',
-      ],
+    const unitTestReports = new codebuild.ReportGroup(this, `CodebuildTestReport`, {
+      reportGroupName: `UnitTestReport`,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const unitTest = new pipelines.CodeBuildStep('UnitTest', {
+      commands: ['yarn install --frozen-lockfile', 'make suite'],
       input: sourceFile,
+      primaryOutputDirectory: '.',
+      buildEnvironment: {
+        privileged: true,
+        computeType: codebuild.ComputeType.LARGE,
+        buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
+        environmentVariables: {
+          NODE_OPTIONS: {
+            value: '--max-old-space-size=8192',
+          },
+        },
+      },
+      partialBuildSpec: codebuild.BuildSpec.fromObject({
+        reports: {
+          infrastructureReports: {
+            files: ['target/report/*.xml'],
+            'file-format': 'JUNITXML',
+          },
+          microserviceReports: {
+            files: ['**/target/report/*.xml'],
+            'file-format': 'JUNITXML',
+          },
+        },
+        version: '0.2',
+      }),
+      rolePolicyStatements: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'codebuild:CreateReportGroup',
+            'codebuild:CreateReport',
+            'codebuild:UpdateReport',
+            'codebuild:BatchPutTestCases',
+            'codebuild:BatchPutCodeCoverages',
+          ],
+          resources: [unitTestReports.reportGroupArn],
+        }),
+      ],
+    });
+
+    const synthAction = new pipelines.CodeBuildStep('Synth', {
+      commands: ['yarn install --frozen-lockfile', 'yarn run cdk-stateless-pipeline synth'],
+      input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
         new iam.PolicyStatement({

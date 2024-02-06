@@ -54,3 +54,5 @@ data/
 
 Brewfile.lock.json
 *.xml
+
+target/

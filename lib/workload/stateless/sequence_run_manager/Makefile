@@ -11,13 +11,8 @@ lint:
 lint-fix:
 	@black -t py312 ./src --exclude skel --exclude .venv
 
-# full mock suite test pipeline - install deps, bring up compose stack, wait a bit, run suite, bring down compose stack
-test: install up wait suite down
-
-# heuristic wait 8s to make sure the database is fully up
-# todo we could improve this
-wait:
-	@sleep 8
+# full mock suite test pipeline - install deps, bring up compose stack, run suite, bring down compose stack
+test: install up suite down
 
 suite:
 	@python manage.py test
