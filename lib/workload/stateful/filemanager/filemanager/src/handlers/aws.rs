@@ -12,7 +12,7 @@ use crate::clients::aws::s3::Client as S3Client;
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::database::aws::ingester::Ingester;
 use crate::database::{Client, Ingest};
-use crate::events::aws::collector_builder::CollecterBuilder;
+use crate::events::aws::collecter::CollecterBuilder;
 use crate::events::aws::FlatS3EventMessages;
 use crate::events::Collect;
 
@@ -94,8 +94,9 @@ mod tests {
 
     use crate::database::aws::ingester::tests::{assert_deleted_with, fetch_results};
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::events::aws::collecter::tests::{expected_head_object, set_s3_client_expectations};
-    use crate::events::aws::collector_builder::tests::set_sqs_client_expectations;
+    use crate::events::aws::collecter::tests::{
+        expected_head_object, set_s3_client_expectations, set_sqs_client_expectations,
+    };
     use crate::events::aws::tests::expected_event_record_simple;
 
     use super::*;

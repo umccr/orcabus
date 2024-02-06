@@ -14,7 +14,6 @@ use crate::error::Result;
 use crate::events::aws::EventType::{Created, Deleted, Other};
 
 pub mod collecter;
-pub mod collector_builder;
 
 /// A wrapper around AWS storage types with sqlx support.
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type)]
@@ -125,6 +124,7 @@ impl TransposedS3EventMessages {
     }
 }
 
+/// Conversion from flat events to transposed events.
 impl From<FlatS3EventMessages> for TransposedS3EventMessages {
     fn from(messages: FlatS3EventMessages) -> Self {
         let messages = messages.into_inner();
@@ -140,6 +140,8 @@ impl From<FlatS3EventMessages> for TransposedS3EventMessages {
     }
 }
 
+/// Conversion from transposed events to flat events. This is useful for processing events returned by the database
+/// after updating out of order events.
 impl From<TransposedS3EventMessages> for FlatS3EventMessages {
     fn from(messages: TransposedS3EventMessages) -> Self {
         let zip = izip!(

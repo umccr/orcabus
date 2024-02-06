@@ -101,7 +101,7 @@ select
     deleted_date as event_time,
     last_modified_date,
     e_tag,
-    storage_class as "storage_class: Option<StorageClass>",
+    storage_class as "storage_class?: StorageClass",
     version_id,
     deleted_sequencer as sequencer,
     number_reordered,
