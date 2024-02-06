@@ -255,11 +255,6 @@ pub(crate) mod tests {
             &vec!["bucket".to_string()],
             &vec!["key".to_string()],
             &vec![DateTime::<Utc>::default()],
-            &vec![Some(0)] as &[Option<i32>],
-            &vec![None] as &[Option<String>],
-            &vec![DateTime::<Utc>::default()],
-            &vec![None] as &[Option<String>],
-            &vec![Some(StorageClass::Standard)] as &[Option<StorageClass>],
             &vec![EXPECTED_VERSION_ID.to_string()],
             &vec![sequencer.to_string()],
         )

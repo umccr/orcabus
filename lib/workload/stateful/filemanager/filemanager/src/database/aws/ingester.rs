@@ -179,11 +179,6 @@ impl Ingester {
             &object_deleted.buckets,
             &object_deleted.keys,
             &object_deleted.event_times as &[Option<DateTime<Utc>>],
-            &object_deleted.sizes as &[Option<i32>],
-            &vec![None; object_deleted.s3_object_ids.len()] as &[Option<String>],
-            &object_deleted.last_modified_dates as &[Option<DateTime<Utc>>],
-            &object_deleted.e_tags as &[Option<String>],
-            &object_deleted.storage_classes as &[Option<StorageClass>],
             &object_deleted.version_ids as &[Option<String>],
             &object_deleted.sequencers as &[Option<String>],
         )
