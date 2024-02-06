@@ -17,11 +17,6 @@ export class StatefulPipelineStack extends cdk.Stack {
       connectionArn: codeStarArn,
     });
 
-    const unitTestReports = new codebuild.ReportGroup(this, `CodebuildStatefulTestReport`, {
-      reportGroupName: `UnitTestStatefulReport`,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
-
     const unitTest = new pipelines.CodeBuildStep('UnitTest', {
       commands: ['yarn install --frozen-lockfile', 'make test-stateful'],
       input: sourceFile,
@@ -37,7 +32,7 @@ export class StatefulPipelineStack extends cdk.Stack {
         },
       },
       partialBuildSpec: codebuild.BuildSpec.fromObject({
-        reports: {
+        'orcabus-infrastructureStatefulReports': {
           infrastructureStatefulReports: {
             files: ['target/report/*.xml'],
             'file-format': 'JUNITXML',
@@ -45,19 +40,6 @@ export class StatefulPipelineStack extends cdk.Stack {
         },
         version: '0.2',
       }),
-      rolePolicyStatements: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [
-            'codebuild:CreateReportGroup',
-            'codebuild:CreateReport',
-            'codebuild:UpdateReport',
-            'codebuild:BatchPutTestCases',
-            'codebuild:BatchPutCodeCoverages',
-          ],
-          resources: [unitTestReports.reportGroupArn],
-        }),
-      ],
     });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
