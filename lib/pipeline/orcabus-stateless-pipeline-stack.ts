@@ -43,7 +43,7 @@ export class StatelessPipelineStack extends cdk.Stack {
             'file-format': 'JUNITXML',
           },
           microserviceReports: {
-            files: ['**/target/report/*.xml'],
+            files: ['workload/**/target/report/*.xml'],
             'file-format': 'JUNITXML',
           },
         },
