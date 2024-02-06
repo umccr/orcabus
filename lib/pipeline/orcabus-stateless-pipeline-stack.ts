@@ -17,8 +17,8 @@ export class StatelessPipelineStack extends cdk.Stack {
       connectionArn: codeStarArn,
     });
 
-    const unitTestReports = new codebuild.ReportGroup(this, `CodebuildTestReport`, {
-      reportGroupName: `UnitTestReport`,
+    const unitTestReports = new codebuild.ReportGroup(this, `CodebuildTestStatelessReport`, {
+      reportGroupName: `UnitTestStatelessReport`,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
@@ -38,12 +38,12 @@ export class StatelessPipelineStack extends cdk.Stack {
       },
       partialBuildSpec: codebuild.BuildSpec.fromObject({
         reports: {
-          infrastructureReports: {
+          infrastructureStatelessReports: {
             files: ['target/report/*.xml'],
             'file-format': 'JUNITXML',
           },
           microserviceReports: {
-            files: ['workload/**/target/report/*.xml'],
+            files: ['lib/workload/**/target/report/*.xml'],
             'file-format': 'JUNITXML',
           },
         },

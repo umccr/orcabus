@@ -13,21 +13,56 @@ export class StatefulPipelineStack extends cdk.Stack {
 
     // A connection where the pipeline get its source code
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
-    const sourceFile = pipelines.CodePipelineSource.connection(
-      'umccr/orcabus',
-      'feature/base-cdk-codepipeline',
-      {
-        connectionArn: codeStarArn,
-      }
-    );
+    const sourceFile = pipelines.CodePipelineSource.connection('umccr/orcabus', 'main', {
+      connectionArn: codeStarArn,
+    });
+
+    const unitTestReports = new codebuild.ReportGroup(this, `CodebuildStatefulTestReport`, {
+      reportGroupName: `UnitTestStatefulReport`,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const unitTest = new pipelines.CodeBuildStep('UnitTest', {
+      commands: ['yarn install --frozen-lockfile', 'make test-stateful'],
+      input: sourceFile,
+      primaryOutputDirectory: '.',
+      buildEnvironment: {
+        privileged: true,
+        computeType: codebuild.ComputeType.LARGE,
+        buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
+        environmentVariables: {
+          NODE_OPTIONS: {
+            value: '--max-old-space-size=8192',
+          },
+        },
+      },
+      partialBuildSpec: codebuild.BuildSpec.fromObject({
+        reports: {
+          infrastructureStatefulReports: {
+            files: ['target/report/*.xml'],
+            'file-format': 'JUNITXML',
+          },
+        },
+        version: '0.2',
+      }),
+      rolePolicyStatements: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'codebuild:CreateReportGroup',
+            'codebuild:CreateReport',
+            'codebuild:UpdateReport',
+            'codebuild:BatchPutTestCases',
+            'codebuild:BatchPutCodeCoverages',
+          ],
+          resources: [unitTestReports.reportGroupArn],
+        }),
+      ],
+    });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
-      commands: [
-        'yarn install --frozen-lockfile',
-        'make test-stateful',
-        'yarn run cdk-stateful-pipeline synth',
-      ],
-      input: sourceFile,
+      commands: ['yarn install --frozen-lockfile', 'yarn run cdk-stateful-pipeline synth'],
+      input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
         new iam.PolicyStatement({
