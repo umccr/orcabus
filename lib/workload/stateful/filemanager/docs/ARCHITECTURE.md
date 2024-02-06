@@ -1,14 +1,15 @@
 # Filemanager
 
-Architectural considerations for the filemanager.
+The aim of the filemanager is to maintain a database state that is as correct as possible at the time an event is received.
+It does this by processing cloud storage events that contain information about objects. The database tables reflect this
+information, where data is stored in the object and s3_object tables.
 
 ## Event ingestion
 
 The filemanager determines the location of objects in cloud storage by ingesting events like the [AWS S3 events][s3-events].
 However, events for most cloud services only guarantee that events are received at least once. Duplicate events may be received
 or events could be received out of order, and the filemanager should handle this. This needs to occur both in application
-code and at the database level because events can be out of order across Lambda function calls. The aim of the filemanager
-is to maintain a database state that is as correct as possible at the time an event is received.
+code and at the database level because events can be out of order across Lambda function calls.
 
 To detect out of order and duplicate events, the filemanager relies on the fields within the events received from AWS.
 These fields are the `bucket`, `key`, `version_id`, and `sequencer` values. For an S3 object, when the `bucket`, `key`
