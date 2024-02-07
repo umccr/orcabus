@@ -39,9 +39,16 @@ export type DatabaseProps = MonitoringProps & {
   allowedInboundSG?: ec2.SecurityGroup;
 };
 
-export class DatabaseConstruct extends Construct {
-  readonly dbSecurityGroup: ec2.SecurityGroup;
-  readonly dbCluster: rds.DatabaseCluster;
+export interface IDatabase {
+  readonly securityGroup: ec2.SecurityGroup;
+  readonly cluster: rds.DatabaseCluster;
+  readonly unsafeConnection: string;
+}
+
+export class Database extends Construct implements IDatabase {
+  readonly securityGroup: ec2.SecurityGroup;
+  readonly cluster: rds.DatabaseCluster;
+  readonly unsafeConnection: string;
 
   constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: DatabaseProps) {
     super(scope, id);
@@ -51,7 +58,7 @@ export class DatabaseConstruct extends Construct {
       secretName: props.masterSecretName,
     });
 
-    this.dbSecurityGroup = new ec2.SecurityGroup(this, 'DbSecurityGroup', {
+    this.securityGroup = new ec2.SecurityGroup(this, 'DbSecurityGroup', {
       vpc: vpc,
       allowAllOutbound: false,
       allowAllIpv6Outbound: false,
@@ -60,14 +67,14 @@ export class DatabaseConstruct extends Construct {
 
     // give compute sg to access the rds
     if (props.allowedInboundSG) {
-      this.dbSecurityGroup.addIngressRule(
+      this.securityGroup.addIngressRule(
         props.allowedInboundSG,
         ec2.Port.tcp(props.dbPort),
         'allow the OrcaBus compute sg to access db'
       );
     }
 
-    this.dbCluster = new rds.DatabaseCluster(this, id + 'Cluster', {
+    this.cluster = new rds.DatabaseCluster(this, id + 'Cluster', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({ version: props.version }),
       clusterIdentifier: props.clusterIdentifier,
       credentials: rds.Credentials.fromSecret(dbSecret),
@@ -79,7 +86,7 @@ export class DatabaseConstruct extends Construct {
       ),
       port: props.dbPort,
       removalPolicy: RemovalPolicy.DESTROY,
-      securityGroups: [this.dbSecurityGroup],
+      securityGroups: [this.securityGroup],
       serverlessV2MaxCapacity: props.maxACU,
       serverlessV2MinCapacity: props.minACU,
       vpc: vpc,
@@ -94,5 +101,15 @@ export class DatabaseConstruct extends Construct {
         enablePerformanceInsights: props.enablePerformanceInsights,
       }),
     });
+
+    this.unsafeConnection =
+      `postgres://` +
+      `${props.secret.secretValueFromJson('username').unsafeUnwrap()}` +
+      `:` +
+      `${props.secret.secretValueFromJson('password').unsafeUnwrap()}` +
+      `@` +
+      `${this._cluster.clusterEndpoint.socketAddress}` +
+      `/` +
+      `${props.databaseName}`;
   }
 }
