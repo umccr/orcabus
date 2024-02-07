@@ -5,11 +5,13 @@ Configuration handler
 
 Get ICAv2 configuration handler
 """
+import typing
 
 import boto3
 
-from mypy_boto3_ssm import SSMClient
-from mypy_boto3_secretsmanager import SecretsManagerClient
+if typing.TYPE_CHECKING:
+    from mypy_boto3_ssm import SSMClient
+    from mypy_boto3_secretsmanager import SecretsManagerClient
 
 
 from os import environ
@@ -22,14 +24,14 @@ ICAV2_CONFIGURATION: Optional[Configuration] = None
 
 
 # AWS things
-def get_ssm_client() -> SSMClient:
+def get_ssm_client() -> 'SSMClient':
     """
     Return SSM client
     """
     return boto3.client("ssm")
 
 
-def get_secrets_manager_client() -> SecretsManagerClient:
+def get_secrets_manager_client() -> 'SecretsManagerClient':
     """
     Return Secrets Manager client
     """

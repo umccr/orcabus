@@ -20,8 +20,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 # Imports
-from bssh_manager_tools.utils.icav2_configuration_handler import set_icav2_env_vars
-from bssh_manager_tools.utils.icav2_project_data_handler import (
+from bssh_manager_tools.utils.icav2_configuration_helper import set_icav2_env_vars
+from bssh_manager_tools.utils.icav2_project_data_helper import (
     get_file_id_from_path,
     project_data_copy_batch_handler
 )
@@ -56,7 +56,7 @@ def handler(event, context):
     return project_data_copy_batch_handler(
         source_data_ids=source_data_ids,
         destination_project_id=dest_uri.netloc,
-        destination_folder_path=Path(dest_uri.path).parent
+        destination_folder_path=Path(dest_uri.path)
     ).id
 
 # handler(

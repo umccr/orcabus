@@ -1,5 +1,5 @@
 {
-  "Comment": "An example of the Amazon States Language for reading messages from an SQS queue and iteratively processing each message.",
+  "Comment": "Deploy a set of ICAv2 copy batch jobs and wait until theyre finished",
   "StartAt": "Move inputs",
   "States": {
     "Move inputs": {
@@ -32,7 +32,7 @@
       "Next": "Initialise Static Parameters",
       "ResultPath": "$.manifest_inverted_step",
       "TimeoutSeconds": 20,
-      "InputPath": "$.workflow_inputs",
+      "InputPath": "$.workflow_inputs.manifest",
       "ResultSelector": {
         "manifest_inverted.$": "$.Payload"
       }
@@ -74,6 +74,7 @@
               "Payload.$": "$",
               "FunctionName": "${__copy_batch_data_lambda_arn__}"
             },
+            "TimeoutSeconds": 300,
             "Retry": [
               {
                 "ErrorEquals": [
@@ -171,7 +172,7 @@
           "Next": "Update counters with completed job"
         }
       ],
-      "Default": "Wait 10 seconds before retrying job status check"
+      "Default": "Wait 300 seconds before retrying job status check"
     },
     "Update counters with completed job": {
       "Type": "Pass",
@@ -201,12 +202,26 @@
       },
       "ResultPath": "$.counters"
     },
-    "Wait 60 seconds before retrying job status check": {
+    "Wait 300 seconds before retrying job status check": {
       "Type": "Wait",
-      "Seconds": 60,
+      "Seconds": 300,
       "Next": "Check Job Status"
     },
     "Finish": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.counters.jobs_failed",
+          "NumericGreaterThan": 0,
+          "Next": "Fail"
+        }
+      ],
+      "Default": "Succeed"
+    },
+    "Fail": {
+      "Type": "Fail"
+    },
+    "Succeed": {
       "Type": "Succeed"
     }
   }

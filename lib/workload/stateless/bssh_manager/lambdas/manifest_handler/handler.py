@@ -103,14 +103,17 @@ def handler(event: Dict, context) -> List[Dict]:
         )
 
     # Convert the dict to a list where the key is "dest_uri" and "source_uris" represents the value
-    return list(
-        map(
-            lambda dest_uri_iter_kv: {
-                "dest_uri": dest_uri_iter_kv[0],
-                "source_uris": dest_uri_iter_kv[1]
-            },
-            source_uris_by_dest.items()
+    return (
+        sorted(
+            list(
+                map(
+                    lambda dest_uri_iter_kv: {
+                        "dest_uri": dest_uri_iter_kv[0],
+                        "source_uris": dest_uri_iter_kv[1]
+                    },
+                    source_uris_by_dest.items()
+                )
+            ),
+            key=lambda x: x.get("dest_uri")
         )
     )
-
-

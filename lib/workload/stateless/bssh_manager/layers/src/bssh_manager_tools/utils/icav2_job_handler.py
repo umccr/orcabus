@@ -7,7 +7,7 @@ from libica.openapi.v2 import ApiClient, ApiException
 from libica.openapi.v2.api.job_api import JobApi
 from libica.openapi.v2.model.job import Job
 
-from bssh_manager_tools.utils.icav2_configuration_handler import get_icav2_configuration
+from bssh_manager_tools.utils.icav2_configuration_helper import get_icav2_configuration
 
 
 def get_job(job_id: str) -> Job:

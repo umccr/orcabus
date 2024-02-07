@@ -3,12 +3,12 @@
 """
 Metadata handlers
 """
-from typing import Union, Dict, List
+import typing
+from typing import Union, Dict, List, Optional
 from urllib.parse import urlparse
 
 import pandas as pd
 import requests
-from mypy_boto3_ssm import SSMClient
 import boto3
 from botocore.client import BaseClient
 from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
@@ -17,6 +17,11 @@ from requests import Response
 from .logger import get_logger
 
 from bssh_manager_tools.utils.globals import PORTAL_API_BASE_URL_SSM_PATH, PORTAL_METADATA_ENDPOINT
+from .samplesheet_helper import get_library_assay_from_samplesheet_dict
+
+if typing.TYPE_CHECKING:
+    from mypy_boto3_ssm import SSMClient
+
 
 logger = get_logger()
 
@@ -38,7 +43,7 @@ def get_aws_region() -> str:
     return boto3_session.region_name
 
 
-def get_boto3_ssm_client() -> Union[SSMClient, BaseClient]:
+def get_boto3_ssm_client() -> Union['SSMClient', BaseClient]:
     return boto3.client("ssm")
 
 
@@ -114,10 +119,19 @@ def get_metadatadata_information_from_portal_for_library_id(library_id: str) -> 
     return pd.DataFrame([result])
 
 
-def get_library_id_assay(library_id: str) -> str:
+def get_library_id_assay(library_id: str, samplesheet_dict: Dict) -> Optional[str]:
     """
     Returns the assay type for a given library id
     :param library_id:
     :return:
     """
-    return get_metadatadata_information_from_portal_for_library_id(library_id)["assay"].unique().item()
+    try:
+        return get_library_assay_from_samplesheet_dict(library_id, samplesheet_dict)
+    except ValueError:
+        return None
+    #
+    # try:
+    #     return get_metadatadata_information_from_portal_for_library_id(library_id)["assay"].unique().item()
+    # except:
+    #     # FIXME - workaround while we wait for the portal to be updated
+    #     return "WGS"

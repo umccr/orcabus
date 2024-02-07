@@ -5,7 +5,7 @@ ICAv2 file utils
 """
 import re
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 from urllib.parse import urlunparse
 
 import libica
@@ -22,18 +22,18 @@ from libica.openapi.v2.model.project_data import ProjectData
 from libica.openapi.v2.model.project_data_copy_batch import ProjectDataCopyBatch
 
 from .globals import LIBICAV2_DEFAULT_PAGE_SIZE
-from .icav2_configuration_handler import get_icav2_configuration
+from .icav2_configuration_helper import get_icav2_configuration
 from .logger import get_logger
 
 logger = get_logger()
 
 
-def get_uri_from_project_id_and_path(project_id: str, data_path: str) -> str:
+def get_uri_from_project_id_and_path(project_id: str, data_path: Union[str | Path]) -> str:
     """
     Use the urlunparse function to return the data path as a uri
     :return:
     """
-    return str(urlunparse(("icav2://", project_id, data_path, None, None, None)))
+    return str(urlunparse(("icav2", project_id, str(data_path), None, None, None)))
 
 
 def project_data_as_uri(file_obj: ProjectData) -> str:
@@ -44,7 +44,7 @@ def project_data_as_uri(file_obj: ProjectData) -> str:
     """
     return str(
         urlunparse((
-            "icav2://",
+            "icav2",
             file_obj.project_id,
             file_obj.data.details.path,
             None, None, None
@@ -134,7 +134,7 @@ def get_folder_id_from_project_data_path(
 
     # Add the folder name to the list of folder names to search on
     folder_name = [
-        folder_path.name + "/"
+        folder_path.name
     ]
 
     # example passing only required values which don't have defaults set
@@ -156,7 +156,7 @@ def get_folder_id_from_project_data_path(
     try:
         folder_id: ProjectData = next(
              filter(
-                lambda data_iter: data_iter.data.details.path == str(folder_path),
+                lambda data_iter: data_iter.data.details.path == str(folder_path) + "/",
                 data_items
              )
         )
@@ -294,7 +294,7 @@ def project_data_copy_batch_handler(
                 copy_user_tags=True,
                 copy_technical_tags=True,
                 copy_instrument_info=True,
-                action_on_exist="OVERWRITE"
+                action_on_exist="SKIP"
             )
         )
     except ApiException as e:
@@ -340,15 +340,24 @@ def list_data_non_recursively(
     while True:
         # Attempt to collect all data ids
         try:
-            # Retrieve the list of project data
-            api_response = api_instance.get_project_data_list(
-                project_id=project_id,
-                parent_folder_id=parent_folder_ids,
-                parent_folder_path=parent_folder_path,
-                page_size=str(page_size),
-                page_offset=str(page_offset),
-                sort=sort
-            )
+            if parent_folder_id is not None:
+                # Retrieve the list of project data
+                api_response = api_instance.get_project_data_list(
+                    project_id=project_id,
+                    parent_folder_id=parent_folder_ids,
+                    page_size=str(page_size),
+                    page_offset=str(page_offset),
+                    sort=sort
+                )
+            else:
+                # Retrieve the list of project data
+                api_response = api_instance.get_project_data_list(
+                    project_id=project_id,
+                    parent_folder_path=parent_folder_path,
+                    page_size=str(page_size),
+                    page_offset=str(page_offset),
+                    sort=sort
+                )
         except ApiException as e:
             raise ValueError("Exception when calling ProjectDataApi->get_project_data_list: %s\n" % e)
 
@@ -377,13 +386,14 @@ def find_data_recursively(project_id: str,
     # Get top level items
     if parent_folder_id is None and parent_folder_path is None:
         logger.error("Must specify one of parent_folder_id or parent_folder_path")
+        raise AssertionError
     elif parent_folder_id is not None:
         data_items: List[ProjectData] = list_data_non_recursively(project_id, parent_folder_id=parent_folder_id)
     elif parent_folder_path is not None:
         data_items: List[ProjectData] = list_data_non_recursively(project_id, parent_folder_path=parent_folder_path)
 
     # Check if we can pull out any items in the top directory
-    if mindepth is None or mindepth <= 0:
+    if mindepth is None or mindepth <= 1:
         name_regex_obj = re.compile(name)
         for data_item in data_items:
             data_item_match = name_regex_obj.match(data_item.data.details.name)
@@ -393,11 +403,13 @@ def find_data_recursively(project_id: str,
                 matched_data_items.append(data_item)
 
     # Otherwise look recursively
-    if maxdepth is None or not maxdepth <= 0:
+    if maxdepth is None or not maxdepth <= 1:
         # Listing subfolders
-        subfolders = filter(
-            lambda x: x.data.details.data_type == "FOLDER",
-            data_items
+        subfolders = list(
+            filter(
+                lambda x: x.data.details.data_type == "FOLDER",
+                data_items
+            )
         )
         for subfolder in subfolders:
             matched_data_items.extend(
@@ -413,3 +425,206 @@ def find_data_recursively(project_id: str,
             )
 
     return matched_data_items
+
+
+def get_folder_path_from_folder_id(project_id: str, data_id: str):
+    """
+    Given a project id, and data_id return the folder path
+    :param project_id:
+    :param data_id:
+    :return:
+    """
+
+    configuration = get_icav2_configuration()
+
+    # Enter a context with an instance of the API client
+    with ApiClient(configuration) as api_client:
+        # Create an instance of the API class
+        api_instance = ProjectDataApi(api_client)
+
+    # example passing only required values which don't have defaults set
+    try:
+        # Retrieve the list of project data.
+        data_obj: ProjectData = api_instance.get_project_data(
+            project_id=project_id,
+            data_id=data_id
+        )
+    except libica.openapi.v2.ApiException as e:
+        logger.error("Exception when calling ProjectDataApi->get_project_data_list: %s\n" % e)
+        raise ApiException
+
+    return data_obj.data.details.path
+
+
+def find_data_recursively_bulk(
+        project_id: str,
+        parent_folder_id: Optional[str] = None,
+        parent_folder_path: Optional[Path] = None,
+        data_type: Optional[str] = None
+) -> List[ProjectData]:
+    """
+    Runs a bulk find - because we're not sorting, we can use cursor based pagination
+    :param project_id:
+    :param parent_folder_path:
+    :param data_type:
+    :return:
+    """
+
+    if parent_folder_id is None and parent_folder_path is None:
+        logger.error("Please specify one of parent_folder_id and parent_folder_path")
+
+    # Get the parent folder path as a string
+    if parent_folder_path is None:
+        parent_folder_path = str(Path(get_folder_path_from_folder_id(project_id, parent_folder_id))) + "/"
+    else:
+        parent_folder_path = str(parent_folder_path.absolute()) + "/"
+
+    # Initialise
+    data_ids: List[ProjectData] = []
+    # Collect api instance
+    with ApiClient(get_icav2_configuration()) as api_client:
+        api_instance = ProjectDataApi(api_client)
+
+    # Set other parameters
+    page_size = LIBICAV2_DEFAULT_PAGE_SIZE
+    page_token = ""
+
+    # Iterate over all pages
+    while True:
+        # Attempt to collect all data ids
+        try:
+            # Retrieve the list of project data
+            api_response = api_instance.get_project_data_list(
+                project_id=project_id,
+                file_path=[parent_folder_path],
+                file_path_match_mode="STARTS_WITH_CASE_INSENSITIVE",
+                page_size=str(page_size),
+                page_token=page_token,
+                type=data_type
+            )
+
+        except ApiException as e:
+            logger.error("Exception when calling ProjectDataApi->get_project_data_list: %s\n" % e)
+            raise ApiException
+
+        # Extend items list
+        data_ids.extend(api_response.items)
+
+        # Check page offset and page size against total item count
+        page_token = api_response.next_page_token
+
+        if page_token == "":
+            break
+
+    return data_ids
+
+
+# Check file exists
+def get_project_data(project_id: str, data_path: Path) -> ProjectData:
+    """
+    Get a project data object - useful for making sure if we want to upload a file that we delete the original?
+    :param project_id:
+    :param data_path:
+    :return:
+    """
+    data_list = find_data_recursively(
+        project_id=project_id,
+        parent_folder_path=str(data_path.parent) + "/" if not data_path.parent == Path("/") else "/",
+        name=data_path.name,
+        maxdepth=1
+    )
+
+    if not len(data_list) == 1:
+        logger.error(f"Could not find project data in project {project_id} with path {data_path}")
+        raise FileNotFoundError
+
+    return data_list[0]
+
+
+def delete_project_data(project_id: str, data_id: str):
+    """
+    # FIXME - yet to try this, ended to using another solution for now that meant that this function
+    # was not required
+    Delete data id, this is useful if we need to overwrite data
+    :param project_id:
+    :param data_id:
+    :return:
+    """
+    # Get the configuration
+    icav2_configuration = get_icav2_configuration()
+
+    # Enter a context with an instance of the API client
+    with ApiClient(icav2_configuration) as api_client:
+        # Create an instance of the API class
+        api_instance = ProjectDataApi(api_client)
+
+    # example passing only required values which don't have defaults set
+    try:
+        # Schedule this data for deletion.
+        api_instance.delete_data(project_id, data_id)
+    except ApiException as e:
+        logger.error("Exception when calling ProjectDataApi->delete_data: %s\n" % e)
+        raise ApiException
+
+
+def upload_file_to_icav2(local_file_path: Path, project_id: str, data_path: Path):
+    """
+    # FIXME - yet to try this, ended to using another solution for now that meant that this function
+    # was not required
+    :param local_file_path:
+    :param project_id:
+    :param data_path:
+    :return:
+    """
+    # Check the local file exists
+    if not local_file_path.is_file():
+        logger.error("Local file path does not exist: %s" % local_file_path)
+        raise FileNotFoundError
+
+    # Check if data exists and delete if so
+    try:
+        # Check if the project data exists already
+        project_data: ProjectData = get_project_data(project_id, data_path)
+    except FileNotFoundError:
+        pass
+    else:
+        # Delete the existing project data
+        delete_project_data(project_id, project_data.data.id)
+
+    # Make a new file
+    with libica.openapi.v2.ApiClient(get_icav2_configuration()) as api_client:
+        # Create an instance of the API class
+        api_instance = ProjectDataApi(api_client)
+
+    # Create data
+    create_data = CreateData(
+        name=data_path.name,
+        folder_path=str(data_path.parent) + "/" if not data_path.parent == Path("/") else "/",
+        data_type="FILE"
+    )
+
+    # Create the data object
+    try:
+        # Create data in this project.
+        project_data_obj: ProjectData = api_instance.create_data_in_project(project_id, create_data)
+    except ApiException as e:
+        logger.error("Exception when calling ProjectDataApi->create_data_in_project: %s\n" % e)
+        raise ApiException
+
+    # example passing only required values which don't have defaults set
+    try:
+        # Retrieve an upload URL for this data.
+        upload_url_response = api_instance.create_upload_url_for_data(
+            project_id,
+            project_data_obj.data.id,
+            file_type="FILE"
+        )
+    except ApiException as e:
+        logger.error("Exception when calling ProjectDataApi->create_upload_url_for_data: %s\n" % e)
+        raise ApiException
+
+    # Use the requests library to upload to the url
+    upload_url = upload_url_response.url
+
+    with open(local_file_path, "rb") as file_h:
+        response = requests.put(upload_url, data=file_h)

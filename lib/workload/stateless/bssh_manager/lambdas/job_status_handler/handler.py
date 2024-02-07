@@ -17,7 +17,7 @@ The event input is
 }
 
 """
-from bssh_manager_tools.utils.icav2_configuration_handler import set_icav2_env_vars
+from bssh_manager_tools.utils.icav2_configuration_helper import set_icav2_env_vars
 from bssh_manager_tools.utils.icav2_job_handler import get_job
 
 SUCCESS_STATES = [
