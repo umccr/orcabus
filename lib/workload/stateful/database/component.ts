@@ -160,6 +160,7 @@ export class Database extends Construct implements IDatabase {
       }),
     });
 
+    // Todo use secrets manager for this and query for password within Lambda functions.
     this.unsafeConnection =
       `postgres://` +
       `${dbSecret.secretValueFromJson('username').unsafeUnwrap()}` +

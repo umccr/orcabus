@@ -4,7 +4,6 @@ import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
 import { MultiSchemaConstructProps } from './stateless/schema/component';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { Filemanager } from './stateful/filemanager/deploy/lib/filemanager';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;

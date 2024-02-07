@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import { RustFunction } from 'rust.aws-cdk-lambda';
 import { Duration } from 'aws-cdk-lib';
 import { Settings as CargoSettings } from 'rust.aws-cdk-lambda/dist/settings';
-import { IDatabase } from '../../../../database/component';
+import { IDatabase } from '../../../../../stateful/database/component';
 import { IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Architecture, IDestination, Version } from 'aws-cdk-lib/aws-lambda';
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';

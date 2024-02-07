@@ -1,10 +1,9 @@
-import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { IngestFunction, IngestFunctionSettings } from '../constructs/functions/ingest';
 import { CdkResourceInvoke } from '../constructs/cdk_resource_invoke';
 import { MigrateFunction } from '../constructs/functions/migrate';
 import * as fn from '../constructs/functions/function';
-import { IDatabase } from '../../../database/component';
+import { IDatabase } from '../../../../stateful/database/component';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { IDestination } from 'aws-cdk-lib/aws-lambda';
