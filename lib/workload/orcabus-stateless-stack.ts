@@ -4,6 +4,7 @@ import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
 import { MultiSchemaConstructProps } from './stateless/schema/component';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { Filemanager } from './stateful/filemanager/deploy/lib/filemanager';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
@@ -40,10 +41,30 @@ export class OrcaBusStatelessStack extends cdk.Stack {
 
     // hook microservice construct components here
     this.createSequenceRunManager();
+
+    this.createFilemanager();
   }
 
   private createSequenceRunManager() {
     // TODO new SequenceRunManagerConstruct() from lib/workload/stateless/sequence_run_manager/deploy/component.ts
     //   However, the implementation is still incomplete...
+  }
+
+  private createFilemanager() {
+    // todo, implement after https://github.com/umccr/orcabus/issues/86
+    // new Filemanager(
+    //   this,
+    //   "Filemanager",
+    //   {
+    //     buckets: [],
+    //     buildEnvironment: {},
+    //     database: undefined,
+    //     eventSources: [],
+    //     migrateDatabase: false,
+    //     onFailure: undefined,
+    //     rustLog: '',
+    //     vpc: undefined
+    //   }
+    // );
   }
 }

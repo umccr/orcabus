@@ -1,7 +1,8 @@
 import { Construct } from 'constructs';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
-import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as fn from './function';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 /**
  * Settable values for the ingest function.
@@ -16,7 +17,12 @@ export type IngestFunctionProps = IngestFunctionSettings &
     /**
      * The SQS queue URL to receive events from.
      */
-    readonly queue: IQueue;
+    readonly eventSources: IQueue[];
+    /**
+     * The buckets that the filemanager is expected to process. This will add policies to access the buckets via
+     * 's3:List*' and 's3:Get*'.
+     */
+    readonly buckets: string[];
   };
 
 /**
@@ -28,7 +34,15 @@ export class IngestFunction extends fn.Function {
 
     this.addManagedPolicy('service-role/AWSLambdaSQSQueueExecutionRole');
 
-    const eventSource = new lambdaEventSources.SqsEventSource(props.queue);
-    this.function.addEventSource(eventSource);
+    props.eventSources.forEach((source) => {
+      const eventSource = new SqsEventSource(source);
+      this.function.addEventSource(eventSource);
+    });
+    props.buckets.map((bucket) => {
+      this.addToPolicy(new PolicyStatement({
+        actions: ['s3:List*', 's3:Get*'],
+        resources: [`arn:aws:s3:::${bucket}/*`],
+      }));
+    })
   }
 }

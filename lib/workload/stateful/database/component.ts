@@ -16,32 +16,90 @@ type MonitoringProps = {
    */
   readonly enablePerformanceInsights?: boolean;
   /**
-   * performance insights retention period
+   * performance insights retention period.
    */
   readonly performanceInsightsRetention?: rds.PerformanceInsightRetention;
   /**
-   * Enable enhanced monitoring by specifying the interval
+   * Enable enhanced monitoring by specifying the interval.
    */
   readonly enhancedMonitoringInterval?: Duration;
 };
 
-export type DatabaseProps = MonitoringProps & {
+/**
+ * Database props without a VPC.
+ */
+export type DatabasePropsNoVPC = MonitoringProps & {
+  /**
+   * The cluster identifier.
+   */
   clusterIdentifier: string;
+  /**
+   * The initial database name created.
+   */
   defaultDatabaseName: string;
+  /**
+   * Parameter group for the database.
+   */
   parameterGroupName: string;
+  /**
+   * Database username.
+   */
   username: string;
+  /**
+   * Database secret name.
+   */
   masterSecretName: string;
+  /**
+   * Database engine version.
+   */
   version: rds.AuroraPostgresEngineVersion;
+  /**
+   * Number of database instances.
+   */
   numberOfInstance: number;
+  /**
+   * Min ACU for serverless database.
+   */
   minACU: number;
+  /**
+   * Max ACU for serverless database.
+   */
   maxACU: number;
+  /**
+   * Port to run the database on.
+   */
   dbPort: number;
+  /**
+   * Inbound security groups that are allowed to connect to the database.
+   */
   allowedInboundSG?: ec2.SecurityGroup;
 };
 
+/**
+ * Database props with a vpc.
+ */
+export type DatabaseProps = DatabasePropsNoVPC & {
+  /**
+   * The database VPC.
+   */
+  vpc: ec2.IVpc;
+};
+
+/**
+ * Interface representing the database.
+ */
 export interface IDatabase {
+  /**
+   * The database security group.
+   */
   readonly securityGroup: ec2.SecurityGroup;
+  /**
+   * The database cluster.
+   */
   readonly cluster: rds.DatabaseCluster;
+  /**
+   * A connection string to the database.
+   */
   readonly unsafeConnection: string;
 }
 
@@ -50,7 +108,7 @@ export class Database extends Construct implements IDatabase {
   readonly cluster: rds.DatabaseCluster;
   readonly unsafeConnection: string;
 
-  constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: DatabaseProps) {
+  constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
 
     const dbSecret = new rds.DatabaseSecret(this, id + 'DbSecret', {
@@ -59,7 +117,7 @@ export class Database extends Construct implements IDatabase {
     });
 
     this.securityGroup = new ec2.SecurityGroup(this, 'DbSecurityGroup', {
-      vpc: vpc,
+      vpc: props.vpc,
       allowAllOutbound: false,
       allowAllIpv6Outbound: false,
       description: 'security group for OrcaBus RDS',
@@ -89,7 +147,7 @@ export class Database extends Construct implements IDatabase {
       securityGroups: [this.securityGroup],
       serverlessV2MaxCapacity: props.maxACU,
       serverlessV2MinCapacity: props.minACU,
-      vpc: vpc,
+      vpc: props.vpc,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
       },
@@ -104,12 +162,12 @@ export class Database extends Construct implements IDatabase {
 
     this.unsafeConnection =
       `postgres://` +
-      `${props.secret.secretValueFromJson('username').unsafeUnwrap()}` +
+      `${dbSecret.secretValueFromJson('username').unsafeUnwrap()}` +
       `:` +
-      `${props.secret.secretValueFromJson('password').unsafeUnwrap()}` +
+      `${dbSecret.secretValueFromJson('password').unsafeUnwrap()}` +
       `@` +
-      `${this._cluster.clusterEndpoint.socketAddress}` +
+      `${this.cluster.clusterEndpoint.socketAddress}` +
       `/` +
-      `${props.databaseName}`;
+      `${props.defaultDatabaseName}`;
   }
 }

@@ -2,14 +2,14 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
 import { EventBusConstruct, EventBusProps } from './stateful/eventbridge/component';
-import { Database, DatabaseProps } from './stateful/database/component';
+import { Database, DatabasePropsNoVPC } from './stateful/database/component';
 import { SecurityGroupConstruct, SecurityGroupProps } from './stateful/securitygroup/component';
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './stateful/schemaregistry/component';
 
 export interface OrcaBusStatefulConfig {
   schemaRegistryProps: SchemaRegistryProps;
   eventBusProps: EventBusProps;
-  databaseProps: DatabaseProps;
+  databaseProps: DatabasePropsNoVPC;
   securityGroupProps: SecurityGroupProps;
 }
 
@@ -37,7 +37,8 @@ export class OrcaBusStatefulStack extends cdk.Stack {
       props.securityGroupProps
     );
 
-    this.database = new Database(this, 'OrcaBusDatabaseConstruct', vpc, {
+    this.database = new Database(this, 'OrcaBusDatabaseConstruct', {
+      vpc,
       ...props.databaseProps,
     });
 

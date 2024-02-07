@@ -1,11 +1,11 @@
-import { IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
-import { Database } from '../database';
-import { Architecture, IDestination, Version } from 'aws-cdk-lib/aws-lambda';
-import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { RustFunction } from 'rust.aws-cdk-lambda';
 import { Duration } from 'aws-cdk-lib';
 import { Settings as CargoSettings } from 'rust.aws-cdk-lambda/dist/settings';
+import { IDatabase } from '../../../../database/component';
+import { IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
+import { Architecture, IDestination, Version } from 'aws-cdk-lib/aws-lambda';
+import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
 /**
  * Settable values for a Rust function.
@@ -32,15 +32,11 @@ export type FunctionPropsNoPackage = FunctionSettings & {
   /**
    * Database that the function uses.
    */
-  readonly database: Database;
+  readonly database: IDatabase;
   /**
    * The destination to post failed invocations to.
    */
   readonly onFailure?: IDestination;
-  /**
-   * Additional policies to add to the Lambda role.
-   */
-  readonly policies?: PolicyStatement[];
   /**
    * Name of the Lambda function resource.
    */
@@ -74,9 +70,6 @@ export class Function extends Construct {
     });
     // Lambda needs VPC access if it is created in a VPC.
     this.addManagedPolicy('service-role/AWSLambdaVPCAccessExecutionRole');
-    props.policies?.forEach((policy) => {
-      this._role.addToPolicy(policy);
-    });
 
     // Lambda needs to be able to reach out to access S3, security manager (eventually), etc.
     // Could this use an endpoint instead?
@@ -122,6 +115,13 @@ export class Function extends Construct {
    */
   addManagedPolicy(policyName: string) {
     this._role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName(policyName));
+  }
+
+  /**
+   * Add a policy statement to this function's role.
+   */
+  addToPolicy(policyStatement: PolicyStatement) {
+    this._role.addToPolicy(policyStatement)
   }
 
   /**

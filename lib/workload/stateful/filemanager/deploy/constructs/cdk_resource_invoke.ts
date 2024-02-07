@@ -5,10 +5,10 @@ import {
   AwsSdkCall,
   PhysicalResourceId,
 } from 'aws-cdk-lib/custom-resources';
-import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import * as fn from './functions/function';
-import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { CfnOutput, Stack, Token } from 'aws-cdk-lib';
+import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
+import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
 /**
  * Props for the resource invoke construct.

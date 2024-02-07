@@ -21,7 +21,8 @@ beforeEach(() => {
 });
 
 test('Test DBCluster created props', () => {
-  new Database(stack, 'TestDatabaseConstruct', vpc, {
+  new Database(stack, 'TestDatabaseConstruct', {
+    vpc,
     ...constructConfig.stackProps.orcaBusStatefulConfig.databaseProps,
   });
   const template = Template.fromStack(stack);
@@ -44,7 +45,8 @@ test('Test other SG Allow Ingress to DB SG', () => {
   });
   const sgLogicalId = stack.getLogicalId(allowedSG.node.defaultChild as ec2.CfnSecurityGroup);
 
-  new Database(stack, 'TestDatabaseConstruct', vpc, {
+  new Database(stack, 'TestDatabaseConstruct', {
+    vpc,
     ...constructConfig.stackProps.orcaBusStatefulConfig.databaseProps,
     allowedInboundSG: allowedSG,
   });
