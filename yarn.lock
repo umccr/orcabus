@@ -29,6 +29,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aws-cdk/asset-awscli-v1@npm:^2.2.202":
+  version: 2.2.202
+  resolution: "@aws-cdk/asset-awscli-v1@npm:2.2.202"
+  checksum: 40a536008f1de5587ab0b1d7018942c048888c43b145ac10b030e841ab017839a02ad102daac3a29ae4b2242007b2dea499195b4807dc90944973b107427108b
+  languageName: node
+  linkType: hard
+
 "@aws-cdk/asset-kubectl-v20@npm:^2.1.2":
   version: 2.1.2
   resolution: "@aws-cdk/asset-kubectl-v20@npm:2.1.2"
@@ -1484,7 +1491,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aws-cdk-lib@npm:^2.*, aws-cdk-lib@npm:^2.110.0":
+"aws-cdk-lib@npm:^2.*":
   version: 2.115.0
   resolution: "aws-cdk-lib@npm:2.115.0"
   dependencies:
@@ -1507,9 +1514,32 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aws-cdk@npm:2.110.0":
-  version: 2.110.0
-  resolution: "aws-cdk@npm:2.110.0"
+"aws-cdk-lib@npm:^2.126.0":
+  version: 2.126.0
+  resolution: "aws-cdk-lib@npm:2.126.0"
+  dependencies:
+    "@aws-cdk/asset-awscli-v1": ^2.2.202
+    "@aws-cdk/asset-kubectl-v20": ^2.1.2
+    "@aws-cdk/asset-node-proxy-agent-v6": ^2.0.1
+    "@balena/dockerignore": ^1.0.2
+    case: 1.6.3
+    fs-extra: ^11.2.0
+    ignore: ^5.3.0
+    jsonschema: ^1.4.1
+    minimatch: ^3.1.2
+    punycode: ^2.3.1
+    semver: ^7.5.4
+    table: ^6.8.1
+    yaml: 1.10.2
+  peerDependencies:
+    constructs: ^10.0.0
+  checksum: 62d46d108fba4ef2c76e7c46767bddfe7019b2f96ad1bfb1b8ae348eeefb889dc6314b56fa5da16c299477ebc1463354de93df45a0ca72cc4d6faee5a0eb9656
+  languageName: node
+  linkType: hard
+
+"aws-cdk@npm:^2.126.0":
+  version: 2.126.0
+  resolution: "aws-cdk@npm:2.126.0"
   dependencies:
     fsevents: 2.3.2
   dependenciesMeta:
@@ -1517,7 +1547,7 @@ __metadata:
       optional: true
   bin:
     cdk: bin/cdk
-  checksum: 69ea8ca2d764a00c7b52889f55ad611655298a49c00cbdd3f976e94fd375c9d48c0e646b24c243555af5ac9e68437f078a9a3c08d3ffa96908d90e2a76845eb6
+  checksum: 93c82ccb949059ef07e88a2952df7fe025dc60a8d3e687c26497660de5ac2433bf719f0dbff415fa41eef2c1a64caf37a77110d3d2a4c6de9f122dcd1f293506
   languageName: node
   linkType: hard
 
@@ -3977,8 +4007,8 @@ __metadata:
     "@types/node": ^20.4.0
     "@typescript-eslint/eslint-plugin": ^6.19.1
     "@typescript-eslint/parser": ^6.19.1
-    aws-cdk: 2.110.0
-    aws-cdk-lib: ^2.110.0
+    aws-cdk: ^2.126.0
+    aws-cdk-lib: ^2.126.0
     cdk-nag: ^2.28.27
     constructs: ^10.2.69
     dotenv: ^16.3.1
@@ -3993,8 +4023,6 @@ __metadata:
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
     typescript: ^5.1.6
-  bin:
-    orcabus: bin/pipeline.js
   languageName: unknown
   linkType: soft
 
