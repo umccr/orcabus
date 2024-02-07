@@ -1,21 +1,23 @@
-# Deployment of filemanager
+# CDK constructs for filemanager
 
-This folder contains CDK deployment code for filemanager. The CDK code can be deployed using `cdk`:
+This folder contains CDK constructs for filemanager which is used by the outer project 
+to instantiate and deploy filemanager.
 
-```sh
-npm install
-cdk bootstrap
-cdk deploy
-```
+## Overview
 
-By default, the stack does not perform database migration. To migrate the database, use the script inside `package.json`:
+The primary component that is deployed in filemanager is Lambda functions for each of the lambda
+crates within this project. This, alongside the shared database in Orcabus allows the filemanager
+to perform file ingestion, querying, etc.
 
-```sh
-npm run migrate -- cdk deploy
-```
+### Inputs
 
-or set `FILEMANAGER_DEPLOY_DATABASE_MIGRATION`:
+The filemanage operates on S3 buckets, and expects queues as input which can recieve S3 events. It also requires
+the bucket names to create policies that allow S3 's3:List*' and 's3:Get*' operations. These operations are used to
+fetch additional object data such as storage classes.
 
-```sh
-export FILEMANAGER_DEPLOY_DATABASE_MIGRATION="true"
-```
+### Migration
+
+The filemanager expects a dedicated database within the shared database cluster, which it can use to store data.
+Initially, the filemanager-migrate-lambda function is deployed to perform database table migrations using the
+cdk_resource_invoke.ts construct. Then, the other Lambda functions are deployed normally within the filemanager
+construct.
