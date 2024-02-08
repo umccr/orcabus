@@ -1,22 +1,43 @@
 import { Construct } from 'constructs';
-import { Aspects, RemovalPolicy } from 'aws-cdk-lib';
+import { RemovalPolicy, Duration } from 'aws-cdk-lib';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
-export interface DatabaseProps {
+/**
+ * Props for enabling enhanced monitoring.
+ */
+type MonitoringProps = {
+  /**
+   * Add cloud watch exports.
+   */
+  readonly cloudwatchLogsExports?: string[];
+  /**
+   * Enable performance insights.
+   */
+  readonly enablePerformanceInsights?: boolean;
+  /**
+   * performance insights retention period
+   */
+  readonly performanceInsightsRetention?: rds.PerformanceInsightRetention;
+  /**
+   * Enable enhanced monitoring by specifying the interval
+   */
+  readonly enhancedMonitoringInterval?: Duration;
+};
+
+export type DatabaseProps = MonitoringProps & {
   clusterIdentifier: string;
   defaultDatabaseName: string;
   parameterGroupName: string;
   username: string;
-  version: rds.AuroraMysqlEngineVersion;
+  masterSecretName: string;
+  version: rds.AuroraPostgresEngineVersion;
   numberOfInstance: number;
   minACU: number;
   maxACU: number;
-  allowDbSGIngressRule?: {
-    peer: ec2.IPeer;
-    description?: string;
-  }[];
-}
+  dbPort: number;
+  allowedInboundSG?: ec2.SecurityGroup;
+};
 
 export class DatabaseConstruct extends Construct {
   readonly dbSecurityGroup: ec2.SecurityGroup;
@@ -24,63 +45,54 @@ export class DatabaseConstruct extends Construct {
 
   constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: DatabaseProps) {
     super(scope, id);
-    const dbPort = 3306;
 
-    const secret = new rds.DatabaseSecret(this, id + 'Secret', {
+    const dbSecret = new rds.DatabaseSecret(this, id + 'DbSecret', {
       username: props.username,
+      secretName: props.masterSecretName,
     });
 
     this.dbSecurityGroup = new ec2.SecurityGroup(this, 'DbSecurityGroup', {
       vpc: vpc,
-      allowAllOutbound: true,
+      allowAllOutbound: false,
+      allowAllIpv6Outbound: false,
+      description: 'security group for OrcaBus RDS',
     });
 
-    if (props.allowDbSGIngressRule) {
-      for (const i in props.allowDbSGIngressRule) {
-        const sgProps = props.allowDbSGIngressRule[i];
-        this.dbSecurityGroup.addIngressRule(
-          sgProps.peer,
-          ec2.Port.tcp(dbPort),
-          sgProps.description
-        );
-      }
+    // give compute sg to access the rds
+    if (props.allowedInboundSG) {
+      this.dbSecurityGroup.addIngressRule(
+        props.allowedInboundSG,
+        ec2.Port.tcp(props.dbPort),
+        'allow the OrcaBus compute sg to access db'
+      );
     }
 
     this.dbCluster = new rds.DatabaseCluster(this, id + 'Cluster', {
-      engine: rds.DatabaseClusterEngine.auroraMysql({
-        version: props.version,
-      }),
-      port: dbPort,
-      instances: props.numberOfInstance,
-      instanceProps: {
-        vpc: vpc,
-        vpcSubnets: {
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-        },
-        securityGroups: [this.dbSecurityGroup],
-        instanceType: new ec2.InstanceType('serverless'),
-        parameterGroup: rds.ParameterGroup.fromParameterGroupName(
-          this,
-          id + 'ParameterGroup',
-          props.parameterGroupName
-        ),
-      },
-
-      removalPolicy: RemovalPolicy.DESTROY,
-      credentials: rds.Credentials.fromSecret(secret),
+      engine: rds.DatabaseClusterEngine.auroraPostgres({ version: props.version }),
       clusterIdentifier: props.clusterIdentifier,
+      credentials: rds.Credentials.fromSecret(dbSecret),
       defaultDatabaseName: props.defaultDatabaseName,
-    });
-
-    Aspects.of(this.dbCluster).add({
-      visit(node) {
-        if (node instanceof rds.CfnDBCluster) {
-          node.serverlessV2ScalingConfiguration = {
-            minCapacity: props.minACU,
-            maxCapacity: props.maxACU,
-          };
-        }
+      parameterGroup: rds.ParameterGroup.fromParameterGroupName(
+        this,
+        id + 'ParameterGroup',
+        props.parameterGroupName
+      ),
+      port: props.dbPort,
+      removalPolicy: RemovalPolicy.DESTROY,
+      securityGroups: [this.dbSecurityGroup],
+      serverlessV2MaxCapacity: props.maxACU,
+      serverlessV2MinCapacity: props.minACU,
+      vpc: vpc,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
       },
+
+      cloudwatchLogsExports: props.cloudwatchLogsExports,
+      monitoringInterval: props.enhancedMonitoringInterval,
+
+      writer: rds.ClusterInstance.serverlessV2('WriterClusterInstance', {
+        enablePerformanceInsights: props.enablePerformanceInsights,
+      }),
     });
   }
 }
