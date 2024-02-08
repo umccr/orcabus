@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { IngestFunction, IngestFunctionSettings } from '../constructs/functions/ingest';
-import { CdkResourceInvoke } from '../constructs/cdk_resource_invoke';
+import { CdkResourceInvoke } from '../../../functions/cdk_resource_invoke';
 import { MigrateFunction } from '../constructs/functions/migrate';
 import * as fn from '../constructs/functions/function';
 import { IDatabase } from '../../../../stateful/database/component';

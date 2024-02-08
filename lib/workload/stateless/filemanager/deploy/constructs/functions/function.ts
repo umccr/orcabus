@@ -7,6 +7,7 @@ import { IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Architecture, IDestination, Version } from 'aws-cdk-lib/aws-lambda';
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
+
 /**
  * Settable values for a Rust function.
  */
@@ -127,14 +128,14 @@ export class Function extends Construct {
   /**
    * Get the function name.
    */
-  functionName(): string {
+  get functionName(): string {
     return this.function.functionName;
   }
 
   /**
    * Get the function version.
    */
-  currentVersion(): Version {
+  get currentVersion(): Version {
     return this.function.currentVersion;
   }
 
