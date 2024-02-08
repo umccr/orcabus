@@ -5,7 +5,6 @@ import {
   AwsSdkCall,
   PhysicalResourceId,
 } from 'aws-cdk-lib/custom-resources';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { CfnOutput, Stack, Token } from 'aws-cdk-lib';
 import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';

@@ -11,7 +11,7 @@ to perform file ingestion, querying, etc.
 
 ### Inputs
 
-The filemanage operates on S3 buckets, and expects queues as input which can recieve S3 events. It also requires
+The filemanager operates on S3 buckets, and expects queues as input which can recieve S3 events. It also requires
 the bucket names to create policies that allow S3 's3:List*' and 's3:Get*' operations. These operations are used to
 fetch additional object data such as storage classes.
 
