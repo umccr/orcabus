@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import { Rule } from 'aws-cdk-lib/aws-events';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { SqsQueue } from 'aws-cdk-lib/aws-events-targets';
+import { Alarm, ComparisonOperator, MathExpression } from 'aws-cdk-lib/aws-cloudwatch';
 
 /**
  * Props for the `EventSource` construct.
@@ -24,6 +25,7 @@ export type EventSourceProps = {
 export class EventSource extends Construct {
   readonly queue: Queue;
   readonly deadLetterQueue: Queue;
+  readonly alarm: Alarm;
 
   constructor(scope: Construct, id: string, props: EventSourceProps) {
     super(scope, id);
@@ -34,10 +36,10 @@ export class EventSource extends Construct {
         detailType: props.eventTypes,
         detail: {
           bucket: {
-            name: props.buckets
+            name: props.buckets,
           },
-        }
-      }
+        },
+      },
     });
 
     this.queue = new Queue(this, 'Queue');
@@ -48,13 +50,21 @@ export class EventSource extends Construct {
       })
     );
 
-    this.deadLetterQueue.metricNumberOfMessagesSent().createAlarm(
-      this,
-      'Alarm',
-      {
-        threshold: 1,
-        evaluationPeriods: 1
-      }
-    );
+    const rateOfMessagesReceived = new MathExpression({
+      expression: 'RATE(visible + notVisible)',
+      usingMetrics: {
+        visible: this.deadLetterQueue.metricApproximateNumberOfMessagesVisible(),
+        notVisible: this.deadLetterQueue.metricApproximateNumberOfMessagesVisible(),
+      },
+    });
+
+    this.alarm = new Alarm(this, 'Alarm', {
+      metric: rateOfMessagesReceived,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+      threshold: 0,
+      evaluationPeriods: 1,
+      alarmName: 'Orcabus EventSource Alarm',
+      alarmDescription: 'An event has been received in the dead letter queue.',
+    });
   }
 }
