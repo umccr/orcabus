@@ -83,7 +83,6 @@ export const getEnvironmentConfig = (
             schemaRegistryProps: {
               ...orcaBusStatefulConfig.schemaRegistryProps,
             },
-
             eventBusProps: {
               ...orcaBusStatefulConfig.eventBusProps,
             },
@@ -97,6 +96,9 @@ export const getEnvironmentConfig = (
             },
             securityGroupProps: {
               ...orcaBusStatefulConfig.securityGroupProps,
+            },
+            eventSourceProps: {
+              buckets: ['umccr-temp-dev'],
             },
           },
           orcaBusStatelessConfig: orcaBusStatelessConfig,
@@ -112,7 +114,6 @@ export const getEnvironmentConfig = (
             schemaRegistryProps: {
               ...orcaBusStatefulConfig.schemaRegistryProps,
             },
-
             eventBusProps: {
               ...orcaBusStatefulConfig.eventBusProps,
             },
@@ -141,7 +142,6 @@ export const getEnvironmentConfig = (
             schemaRegistryProps: {
               ...orcaBusStatefulConfig.schemaRegistryProps,
             },
-
             eventBusProps: {
               ...orcaBusStatefulConfig.eventBusProps,
             },

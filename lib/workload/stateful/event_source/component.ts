@@ -9,7 +9,7 @@ import { Alarm, ComparisonOperator, MathExpression } from 'aws-cdk-lib/aws-cloud
  */
 export type EventSourceProps = {
   /**
-   * Bucket to receive events from.
+   * Buckets to receive events from.
    */
   buckets: string[];
   /**
@@ -17,6 +17,10 @@ export type EventSourceProps = {
    * S3 EventBridge events: https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventBridge.html
    */
   eventTypes?: string[];
+  /**
+   * A prefix of the objects that are matched when receiving events from the buckets.
+   */
+  prefix?: string;
 };
 
 /**
@@ -38,6 +42,15 @@ export class EventSource extends Construct {
           bucket: {
             name: props.buckets,
           },
+          ...(props.prefix && {
+            object: {
+              key: [
+                {
+                  prefix: props.prefix,
+                },
+              ],
+            },
+          }),
         },
       },
     });
@@ -50,7 +63,7 @@ export class EventSource extends Construct {
       })
     );
 
-    const rateOfMessagesReceived = new MathExpression({
+    const rateOfMessages = new MathExpression({
       expression: 'RATE(visible + notVisible)',
       usingMetrics: {
         visible: this.deadLetterQueue.metricApproximateNumberOfMessagesVisible(),
@@ -59,7 +72,7 @@ export class EventSource extends Construct {
     });
 
     this.alarm = new Alarm(this, 'Alarm', {
-      metric: rateOfMessagesReceived,
+      metric: rateOfMessages,
       comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
       threshold: 0,
       evaluationPeriods: 1,

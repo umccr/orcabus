@@ -4,6 +4,7 @@ import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
 import { MultiSchemaConstructProps } from './stateless/schema/component';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { OrcaBusStatefulStack } from './orcabus-stateful-stack';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
@@ -14,9 +15,28 @@ export interface OrcaBusStatelessConfig {
   rdsMasterSecretName: string;
 }
 
+/**
+ * The stateless stack depends on the stateful stack. Note, this could be restricted further
+ * so that not all of the stateful stack is passed to the stateless stack. E.g. for filemanager,
+ * instead of passing the whole stack, it could just be the `IQueue` that filemanager depends on.
+ *
+ * See for reference:
+ * https://blog.serverlessadvocate.com/serverless-aws-cdk-pipeline-best-practices-patterns-part-1-ab80962f109d#1913
+ */
+export interface StatefulStackDependency {
+  /**
+   * The stateful stack which the stateless stack depends on.
+   */
+  statefulStack: OrcaBusStatefulStack;
+}
+
 export class OrcaBusStatelessStack extends cdk.Stack {
   private vpc: IVpc;
-  constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatelessConfig) {
+  constructor(
+    scope: Construct,
+    id: string,
+    props: cdk.StackProps & OrcaBusStatelessConfig & StatefulStackDependency
+  ) {
     super(scope, id, props);
 
     // --- Constructs from Stateful stack or pre-existing resources

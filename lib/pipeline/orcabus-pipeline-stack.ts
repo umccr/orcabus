@@ -97,8 +97,15 @@ class OrcaBusDeploymentStage extends cdk.Stage {
   ) {
     super(scope, environmentName, { env: { account: env?.account, region: 'ap-southeast-2' } });
 
-    new OrcaBusStatefulStack(this, 'OrcaBusStatefulStack', stackProps.orcaBusStatefulConfig);
-    new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', stackProps.orcaBusStatelessConfig);
+    const statefulStack = new OrcaBusStatefulStack(
+      this,
+      'OrcaBusStatefulStack',
+      stackProps.orcaBusStatefulConfig
+    );
+    new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', {
+      statefulStack,
+      ...stackProps.orcaBusStatelessConfig,
+    });
   }
 }
 

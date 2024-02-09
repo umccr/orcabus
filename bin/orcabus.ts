@@ -27,12 +27,13 @@ const props: cdk.StackProps = {
 const config = getEnvironmentConfig('beta');
 if (!config) throw new Error('No Config');
 
-new OrcaBusStatefulStack(app, 'OrcaBusStatefulStack', {
+const statefulStack = new OrcaBusStatefulStack(app, 'OrcaBusStatefulStack', {
   ...config.stackProps.orcaBusStatefulConfig,
   ...props,
 });
 
 new OrcaBusStatelessStack(app, 'OrcaBusStatelessStack', {
+  statefulStack,
   ...config.stackProps.orcaBusStatelessConfig,
   ...props,
 });
