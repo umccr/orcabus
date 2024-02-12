@@ -6,6 +6,7 @@ import { DatabaseConstruct, DatabaseProps } from './stateful/database/component'
 import { SecurityGroupConstruct, SecurityGroupProps } from './stateful/securitygroup/component';
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './stateful/schemaregistry/component';
 import { EventSource, EventSourceProps } from './stateful/event_source/component';
+import { EventSourceDependency } from './orcabus-stateless-stack';
 
 export interface OrcaBusStatefulConfig {
   schemaRegistryProps: SchemaRegistryProps;
@@ -53,5 +54,16 @@ export class OrcaBusStatefulStack extends cdk.Stack {
     if (props.eventSourceProps) {
       this.eventSource = new EventSource(this, 'EventSourceConstruct', props.eventSourceProps);
     }
+  }
+
+  intoEventSourceDependency(): EventSourceDependency | undefined {
+    if (!this.eventSource) {
+      return;
+    }
+
+    return {
+      queueArn: this.eventSource.queueArn,
+      deadLetterQueueArn: this.eventSource.deadLetterQueueArn,
+    };
   }
 }

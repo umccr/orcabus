@@ -4,7 +4,6 @@ import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
 import { MultiSchemaConstructProps } from './stateless/schema/component';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { OrcaBusStatefulStack } from './orcabus-stateful-stack';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
@@ -16,18 +15,27 @@ export interface OrcaBusStatelessConfig {
 }
 
 /**
- * The stateless stack depends on the stateful stack. Note, this could be restricted further
- * so that not all of the stateful stack is passed to the stateless stack. E.g. for filemanager,
- * instead of passing the whole stack, it could just be the `IQueue` that filemanager depends on.
- *
- * See for reference:
- * https://blog.serverlessadvocate.com/serverless-aws-cdk-pipeline-best-practices-patterns-part-1-ab80962f109d#1913
+ * Components from the event source construct.
+ */
+export type EventSourceDependency = {
+  /**
+   * The SQS queue ARN.
+   */
+  queueArn: string;
+  /**
+   * The dead letter queue ARN.
+   */
+  deadLetterQueueArn: string;
+};
+
+/**
+ * Dependencies from the stateful stack.
  */
 export interface StatefulStackDependency {
   /**
-   * The stateful stack which the stateless stack depends on.
+   * Event source prop
    */
-  statefulStack: OrcaBusStatefulStack;
+  eventSourceDependency?: EventSourceDependency;
 }
 
 export class OrcaBusStatelessStack extends cdk.Stack {

@@ -7,7 +7,7 @@ import { Alarm, ComparisonOperator, MathExpression } from 'aws-cdk-lib/aws-cloud
 /**
  * Properties for defining an S3 EventBridge rule.
  */
-export type EventSourceRule = {
+export type EventSourceProps = {
   /**
    * Bucket to receive events from. If not specified, captures events from all buckets.
    */
@@ -22,12 +22,7 @@ export type EventSourceRule = {
    * A prefix of the objects that are matched when receiving events from the buckets.
    */
   prefix?: string;
-};
-
-/**
- * Props for the `EventSource` construct. An array of rules.
- */
-export type EventSourceProps = EventSourceRule[];
+}[];
 
 /**
  * A construct that defines an SQS S3 event source, along with a DLQ and CloudWatch alarms.
@@ -90,5 +85,19 @@ export class EventSource extends Construct {
       alarmName: 'Orcabus EventSource Alarm',
       alarmDescription: 'An event has been received in the dead letter queue.',
     });
+  }
+
+  /**
+   * Get the SQS queue ARN.
+   */
+  get queueArn(): string {
+    return this.queue.queueArn;
+  }
+
+  /**
+   * Get the dead letter queue ARN.
+   */
+  get deadLetterQueueArn(): string {
+    return this.deadLetterQueue.queueArn;
   }
 }

@@ -33,7 +33,7 @@ const statefulStack = new OrcaBusStatefulStack(app, 'OrcaBusStatefulStack', {
 });
 
 new OrcaBusStatelessStack(app, 'OrcaBusStatelessStack', {
-  statefulStack,
+  eventSourceDependency: statefulStack.intoEventSourceDependency(),
   ...config.stackProps.orcaBusStatelessConfig,
   ...props,
 });

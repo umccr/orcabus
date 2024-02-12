@@ -103,7 +103,7 @@ class OrcaBusDeploymentStage extends cdk.Stage {
       stackProps.orcaBusStatefulConfig
     );
     new OrcaBusStatelessStack(this, 'OrcaBusStatelessStack', {
-      statefulStack,
+      eventSourceDependency: statefulStack.intoEventSourceDependency(),
       ...stackProps.orcaBusStatelessConfig,
     });
   }
