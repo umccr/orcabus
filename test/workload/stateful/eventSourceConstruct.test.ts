@@ -18,7 +18,7 @@ function assert_common(template: Template) {
       source: ['aws.s3'],
       detail: {
         bucket: {
-          name: ['bucket'],
+          name: 'bucket',
         },
       },
     },
@@ -30,19 +30,23 @@ beforeEach(() => {
 });
 
 test('Test EventSource created props', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', {
-    buckets: ['bucket'],
-  });
+  new EventSource(stack, 'TestDatabaseConstruct', [
+    {
+      bucket: 'bucket',
+    },
+  ]);
   const template = Template.fromStack(stack);
 
   assert_common(template);
 });
 
 test('Test EventSource created props with event types', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', {
-    buckets: ['bucket'],
-    eventTypes: ['Object Created'],
-  });
+  new EventSource(stack, 'TestDatabaseConstruct', [
+    {
+      bucket: 'bucket',
+      eventTypes: ['Object Created'],
+    },
+  ]);
   const template = Template.fromStack(stack);
 
   assert_common(template);
@@ -54,10 +58,12 @@ test('Test EventSource created props with event types', () => {
 });
 
 test('Test EventSource created props with prefix', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', {
-    buckets: ['bucket'],
-    prefix: 'prefix',
-  });
+  new EventSource(stack, 'TestDatabaseConstruct', [
+    {
+      bucket: 'bucket',
+      prefix: 'prefix',
+    },
+  ]);
   const template = Template.fromStack(stack);
 
   assert_common(template);
@@ -72,6 +78,18 @@ test('Test EventSource created props with prefix', () => {
           ],
         },
       },
+    },
+  });
+});
+
+test('Test EventSource created props with all buckets', () => {
+  new EventSource(stack, 'TestDatabaseConstruct', [{}]);
+  const template = Template.fromStack(stack);
+
+  template.hasResourceProperties('AWS::Events::Rule', {
+    EventPattern: {
+      source: ['aws.s3'],
+      detail: {},
     },
   });
 });

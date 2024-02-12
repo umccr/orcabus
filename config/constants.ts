@@ -1,7 +1,7 @@
 import { OrcaBusStatefulConfig } from '../lib/workload/orcabus-stateful-stack';
 import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
-import { Duration, aws_lambda } from 'aws-cdk-lib';
+import { aws_lambda, Duration } from 'aws-cdk-lib';
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
@@ -97,9 +97,11 @@ export const getEnvironmentConfig = (
             securityGroupProps: {
               ...orcaBusStatefulConfig.securityGroupProps,
             },
-            eventSourceProps: {
-              buckets: ['umccr-temp-dev'],
-            },
+            eventSourceProps: [
+              {
+                bucket: 'umccr-temp-dev',
+              },
+            ],
           },
           orcaBusStatelessConfig: orcaBusStatelessConfig,
         },
