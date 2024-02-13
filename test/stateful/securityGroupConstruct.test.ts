@@ -1,8 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Template } from 'aws-cdk-lib/assertions';
-import { getEnvironmentConfig } from '../../../config/constants';
-import { SecurityGroupConstruct } from '../../../lib/workload/stateful/securitygroup/component';
+import { getEnvironmentConfig } from '../../config/constants';
+import { SecurityGroupConstruct } from '../../lib/workload/stateful/securitygroup/component';
 
 let stack: cdk.Stack;
 let vpc: ec2.Vpc;
