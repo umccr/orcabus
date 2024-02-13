@@ -1,8 +1,12 @@
 # Filemanager
 
 The aim of the filemanager is to maintain a database state that is as correct as possible at the time an event is received.
-It does this by processing cloud storage events that contain information about objects. The database tables reflect this
-information, where data is stored in the object and s3_object tables.
+Broadly, the architecture of filemanager reflects this, where cloud storage events that contain information about objects
+are processed and stored in the database. The database tables reflect the information from the events, and data is stored
+in the `object` and `s3_object` tables.
+
+Some details about S3 event processing needs to be addressed in filemanager, specifically in relation to out of order
+and duplicate events.
 
 ## Event ingestion
 
@@ -33,7 +37,7 @@ At the database level, events are processed as they arrive. For each object in t
 recorded. When an event is inserted, it is first checked to see if it belongs to an already existing object, i.e. whether
 there are any objects with sequencer values that are greater (for created events) or lower (for deleted events) than the
 existing sequencer. If this condition is met, then the existing object is updated, and the old event is returned by the
-database to be reinserted. If it is not met, then the event is inserted normally.
+database to be re-inserted. If it is not met, then the event is inserted normally.
 
 [events]: ../filemanager/src/events
 [s3-events]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventNotifications.html
