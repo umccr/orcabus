@@ -93,11 +93,4 @@ export class EventSource extends Construct {
   get queueArn(): string {
     return this.queue.queueArn;
   }
-
-  /**
-   * Get the dead letter queue ARN.
-   */
-  get deadLetterQueueArn(): string {
-    return this.deadLetterQueue.queueArn;
-  }
 }

@@ -63,7 +63,6 @@ export class OrcaBusStatefulStack extends cdk.Stack {
 
     return {
       queueArn: this.eventSource.queueArn,
-      deadLetterQueueArn: this.eventSource.deadLetterQueueArn,
     };
   }
 }

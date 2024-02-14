@@ -22,10 +22,6 @@ export type EventSourceDependency = {
    * The SQS queue ARN.
    */
   queueArn: string;
-  /**
-   * The dead letter queue ARN.
-   */
-  deadLetterQueueArn: string;
 };
 
 /**
