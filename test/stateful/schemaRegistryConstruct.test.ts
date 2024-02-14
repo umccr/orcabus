@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { getEnvironmentConfig } from '../../../config/constants';
-import { SchemaRegistryConstruct } from '../../../lib/workload/stateful/schemaregistry/component';
+import { getEnvironmentConfig } from '../../config/constants';
+import { SchemaRegistryConstruct } from '../../lib/workload/stateful/schemaregistry/component';
 
 let stack: cdk.Stack;
 

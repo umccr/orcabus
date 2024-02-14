@@ -39,7 +39,7 @@ build: edgetypes
 # Testing
 
 # full test pipeline
-test: install docker-edgedb edgetypes suite
+test: install docker-edgedb edgetypes suite down
 
 suite:
 	@yarn test

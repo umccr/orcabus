@@ -36,6 +36,7 @@ export type DatabaseProps = MonitoringProps & {
   minACU: number;
   maxACU: number;
   dbPort: number;
+  removalPolicy: RemovalPolicy;
   allowedInboundSG?: ec2.SecurityGroup;
 };
 
@@ -78,7 +79,9 @@ export class DatabaseConstruct extends Construct {
         props.parameterGroupName
       ),
       port: props.dbPort,
-      removalPolicy: RemovalPolicy.DESTROY,
+      storageEncrypted: true,
+      iamAuthentication: true,
+      removalPolicy: props.removalPolicy,
       securityGroups: [this.dbSecurityGroup],
       serverlessV2MaxCapacity: props.maxACU,
       serverlessV2MinCapacity: props.minACU,
