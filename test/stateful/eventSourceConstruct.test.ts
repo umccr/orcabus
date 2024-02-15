@@ -38,7 +38,7 @@ beforeEach(() => {
 });
 
 test('Test EventSource created props', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', {
+  new EventSource(stack, 'TestEventSourceConstruct', {
     queueName: 'queue',
     maxReceiveCount: 100,
     rules: [
@@ -55,7 +55,7 @@ test('Test EventSource created props', () => {
 });
 
 test('Test EventSource created props with event types', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', {
+  new EventSource(stack, 'TestEventSourceConstruct', {
     queueName: 'queue',
     maxReceiveCount: 100,
     rules: [
@@ -76,7 +76,7 @@ test('Test EventSource created props with event types', () => {
 });
 
 test('Test EventSource created props with prefix', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', {
+  new EventSource(stack, 'TestEventSourceConstruct', {
     queueName: 'queue',
     maxReceiveCount: 100,
     rules: [
@@ -104,8 +104,8 @@ test('Test EventSource created props with prefix', () => {
   });
 });
 
-test('Test EventSource created props with all buckets', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', {
+test('Test EventSource created props with rules matching any bucket', () => {
+  new EventSource(stack, 'TestEventSourceConstruct', {
     queueName: 'queue',
     maxReceiveCount: 100,
     rules: [{}],
