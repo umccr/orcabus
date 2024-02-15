@@ -2,6 +2,7 @@ import { OrcaBusStatefulConfig } from '../lib/workload/orcabus-stateful-stack';
 import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
 import { Duration, aws_lambda, RemovalPolicy } from 'aws-cdk-lib';
+import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
@@ -62,6 +63,16 @@ const orcaBusStatelessConfig = {
   rdsMasterSecretName: rdsMasterSecretName,
 };
 
+const eventSourceConfig: EventSourceProps = {
+  queueName: 'orcabus-event-source-queue',
+  maxReceiveCount: 3,
+  rules: [
+    {
+      bucket: 'umccr-temp-dev',
+    },
+  ],
+};
+
 interface EnvironmentConfig {
   name: string;
   accountId: string;
@@ -83,7 +94,6 @@ export const getEnvironmentConfig = (
             schemaRegistryProps: {
               ...orcaBusStatefulConfig.schemaRegistryProps,
             },
-
             eventBusProps: {
               ...orcaBusStatefulConfig.eventBusProps,
             },
@@ -99,8 +109,12 @@ export const getEnvironmentConfig = (
             securityGroupProps: {
               ...orcaBusStatefulConfig.securityGroupProps,
             },
+            eventSourceProps: eventSourceConfig,
           },
-          orcaBusStatelessConfig: orcaBusStatelessConfig,
+          orcaBusStatelessConfig: {
+            ...orcaBusStatelessConfig,
+            eventSourceQueueName: eventSourceConfig.queueName,
+          },
         },
       };
 
@@ -113,7 +127,6 @@ export const getEnvironmentConfig = (
             schemaRegistryProps: {
               ...orcaBusStatefulConfig.schemaRegistryProps,
             },
-
             eventBusProps: {
               ...orcaBusStatefulConfig.eventBusProps,
             },
@@ -143,7 +156,6 @@ export const getEnvironmentConfig = (
             schemaRegistryProps: {
               ...orcaBusStatefulConfig.schemaRegistryProps,
             },
-
             eventBusProps: {
               ...orcaBusStatefulConfig.eventBusProps,
             },
