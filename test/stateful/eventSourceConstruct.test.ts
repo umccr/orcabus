@@ -1,11 +1,19 @@
 import * as cdk from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
-import { EventSource } from '../../../lib/workload/stateful/event_source/component';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import { EventSource } from '../../lib/workload/stateful/event_source/component';
 
 let stack: cdk.Stack;
 
 function assert_common(template: Template) {
   template.resourceCountIs('AWS::SQS::Queue', 2);
+
+  template.hasResourceProperties('AWS::SQS::Queue', {
+    QueueName: 'queue',
+    RedrivePolicy: {
+      deadLetterTargetArn: Match.anyValue(),
+      maxReceiveCount: 100,
+    },
+  });
 
   template.hasResourceProperties('AWS::CloudWatch::Alarm', {
     ComparisonOperator: 'GreaterThanThreshold',
@@ -30,23 +38,33 @@ beforeEach(() => {
 });
 
 test('Test EventSource created props', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', [
-    {
-      bucket: 'bucket',
-    },
-  ]);
+  new EventSource(stack, 'TestDatabaseConstruct', {
+    queueName: 'queue',
+    maxReceiveCount: 100,
+    rules: [
+      {
+        bucket: 'bucket',
+      },
+    ],
+  });
   const template = Template.fromStack(stack);
+
+  console.log(JSON.stringify(template, undefined, 2));
 
   assert_common(template);
 });
 
 test('Test EventSource created props with event types', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', [
-    {
-      bucket: 'bucket',
-      eventTypes: ['Object Created'],
-    },
-  ]);
+  new EventSource(stack, 'TestDatabaseConstruct', {
+    queueName: 'queue',
+    maxReceiveCount: 100,
+    rules: [
+      {
+        bucket: 'bucket',
+        eventTypes: ['Object Created'],
+      },
+    ],
+  });
   const template = Template.fromStack(stack);
 
   assert_common(template);
@@ -58,12 +76,16 @@ test('Test EventSource created props with event types', () => {
 });
 
 test('Test EventSource created props with prefix', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', [
-    {
-      bucket: 'bucket',
-      prefix: 'prefix',
-    },
-  ]);
+  new EventSource(stack, 'TestDatabaseConstruct', {
+    queueName: 'queue',
+    maxReceiveCount: 100,
+    rules: [
+      {
+        bucket: 'bucket',
+        prefix: 'prefix',
+      },
+    ],
+  });
   const template = Template.fromStack(stack);
 
   assert_common(template);
@@ -83,7 +105,11 @@ test('Test EventSource created props with prefix', () => {
 });
 
 test('Test EventSource created props with all buckets', () => {
-  new EventSource(stack, 'TestDatabaseConstruct', [{}]);
+  new EventSource(stack, 'TestDatabaseConstruct', {
+    queueName: 'queue',
+    maxReceiveCount: 100,
+    rules: [{}],
+  });
   const template = Template.fromStack(stack);
 
   template.hasResourceProperties('AWS::Events::Rule', {

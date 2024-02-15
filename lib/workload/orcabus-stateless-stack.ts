@@ -12,35 +12,12 @@ export interface OrcaBusStatelessConfig {
   lambdaRuntimePythonVersion: aws_lambda.Runtime;
   bclConvertFunctionName: string;
   rdsMasterSecretName: string;
-}
-
-/**
- * Components from the event source construct.
- */
-export type EventSourceDependency = {
-  /**
-   * The SQS queue ARN.
-   */
-  queueArn: string;
-};
-
-/**
- * Dependencies from the stateful stack.
- */
-export interface StatefulStackDependency {
-  /**
-   * Event source prop
-   */
-  eventSourceDependency?: EventSourceDependency;
+  eventSourceQueueName?: string;
 }
 
 export class OrcaBusStatelessStack extends cdk.Stack {
   private vpc: IVpc;
-  constructor(
-    scope: Construct,
-    id: string,
-    props: cdk.StackProps & OrcaBusStatelessConfig & StatefulStackDependency
-  ) {
+  constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatelessConfig) {
     super(scope, id, props);
 
     // --- Constructs from Stateful stack or pre-existing resources

@@ -3,11 +3,12 @@ import { Rule } from 'aws-cdk-lib/aws-events';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { SqsQueue } from 'aws-cdk-lib/aws-events-targets';
 import { Alarm, ComparisonOperator, MathExpression } from 'aws-cdk-lib/aws-cloudwatch';
+import { ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
 /**
  * Properties for defining an S3 EventBridge rule.
  */
-export type EventSourceProps = {
+export type EventSourceRule = {
   /**
    * Bucket to receive events from. If not specified, captures events from all buckets.
    */
@@ -22,7 +23,26 @@ export type EventSourceProps = {
    * A prefix of the objects that are matched when receiving events from the buckets.
    */
   prefix?: string;
-}[];
+};
+
+/**
+ * Properties for the EventSource construct.
+ */
+export type EventSourceProps = {
+  /**
+   * The name of the queue to construct.
+   */
+  queueName: string;
+  /**
+   * The maximum number of times a message can be unsuccessfully received before
+   * pushing it to the DLQ.
+   */
+  maxReceiveCount: number;
+  /**
+   * A set of EventBridge rules to define..
+   */
+  rules: EventSourceRule[];
+};
 
 /**
  * A construct that defines an SQS S3 event source, along with a DLQ and CloudWatch alarms.
@@ -35,10 +55,16 @@ export class EventSource extends Construct {
   constructor(scope: Construct, id: string, props: EventSourceProps) {
     super(scope, id);
 
-    this.queue = new Queue(this, 'Queue');
     this.deadLetterQueue = new Queue(this, 'DeadLetterQueue');
+    this.queue = new Queue(this, 'Queue', {
+      queueName: props.queueName,
+      deadLetterQueue: {
+        maxReceiveCount: props.maxReceiveCount,
+        queue: this.deadLetterQueue,
+      },
+    });
 
-    for (const prop of props) {
+    for (const prop of props.rules) {
       const rule = new Rule(scope, 'Rule', {
         eventPattern: {
           source: ['aws.s3'],
@@ -62,12 +88,10 @@ export class EventSource extends Construct {
         },
       });
 
-      rule.addTarget(
-        new SqsQueue(this.queue, {
-          deadLetterQueue: this.deadLetterQueue,
-        })
-      );
+      rule.addTarget(new SqsQueue(this.queue));
     }
+
+    this.queue.grantSendMessages(new ServicePrincipal('events.amazonaws.com'));
 
     const rateOfMessages = new MathExpression({
       expression: 'RATE(visible + notVisible)',
