@@ -25,6 +25,8 @@ watch: build
 	@cargo watch -w *.toml -w *.rs
 test: build
 	@cargo test --all-features --all-targets
+test-ignored: build
+	@cargo test --all-features --all-targets -- --ignored
 lint:
 	@cargo fmt --check
 lint-fix:
@@ -47,3 +49,6 @@ psql:
 help:
 	@printf "The filemanager Makefile.\n\n"
 	@printf "Usage: make <target> [POSTGRES_DATABASE_URL=<database_url>]\n"
+
+# No targets are files, so they are all PHONY.
+.PHONY: *

@@ -72,11 +72,13 @@ Testing and linting should be run before committing changes to the repository.
 See the [deploy][deploy] directory for the cdk infrastructure code.
 
 Note, some tests can take a while to run so they are ignored by default. It is still useful to run these tests sometimes,
-especially if changing code related to them. To do so, run the ignored tests with the `--ignored` flag:
+especially if changing code related to them. To do so, run the ignored tests with:
 
 ```sh
-cargo test --all-targets --all-features -- --ignored
+make test-ignored
 ```
+
+Which runs `cargo test -- --ignored`.
 
 ## Database
 
