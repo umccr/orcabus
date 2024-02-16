@@ -5,12 +5,14 @@ import { EventBusConstruct, EventBusProps } from './stateful/eventbridge/compone
 import { Database, DatabasePropsNoVPC } from './stateful/database/component';
 import { SecurityGroupConstruct, SecurityGroupProps } from './stateful/securitygroup/component';
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './stateful/schemaregistry/component';
+import { EventSource, EventSourceProps } from './stateful/event_source/component';
 
 export interface OrcaBusStatefulConfig {
   schemaRegistryProps: SchemaRegistryProps;
   eventBusProps: EventBusProps;
   databaseProps: DatabasePropsNoVPC;
   securityGroupProps: SecurityGroupProps;
+  eventSourceProps?: EventSourceProps;
 }
 
 export class OrcaBusStatefulStack extends cdk.Stack {
@@ -18,6 +20,7 @@ export class OrcaBusStatefulStack extends cdk.Stack {
   readonly database: Database;
   readonly securityGroup: SecurityGroupConstruct;
   readonly schemaRegistry: SchemaRegistryConstruct;
+  readonly eventSource?: EventSource;
 
   constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatefulConfig) {
     super(scope, id, props);
@@ -47,5 +50,9 @@ export class OrcaBusStatefulStack extends cdk.Stack {
       'SchemaRegistryConstruct',
       props.schemaRegistryProps
     );
+
+    if (props.eventSourceProps) {
+      this.eventSource = new EventSource(this, 'EventSourceConstruct', props.eventSourceProps);
+    }
   }
 }

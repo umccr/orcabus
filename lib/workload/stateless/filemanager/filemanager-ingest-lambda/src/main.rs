@@ -1,10 +1,10 @@
 use aws_lambda_events::sqs::SqsEvent;
-use filemanager::clients::aws::s3::Client;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
 
+use filemanager::clients::aws::s3::Client;
 use filemanager::handlers::aws::ingest_event;
 
 #[tokio::main]

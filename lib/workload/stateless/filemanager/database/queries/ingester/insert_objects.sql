@@ -1,7 +1,5 @@
 -- Bulk insert of objects
-insert into object (object_id, size, checksum)
+insert into object (object_id)
 values (
-    unnest($1::uuid[]),
-    unnest($2::int[]),
-    unnest($3::text[])
+    unnest($1::uuid[])
 );

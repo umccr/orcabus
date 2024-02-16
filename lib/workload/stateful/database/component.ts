@@ -70,6 +70,10 @@ export type DatabasePropsNoVPC = MonitoringProps & {
    */
   dbPort: number;
   /**
+   * The database removal policy.
+   */
+  removalPolicy: RemovalPolicy;
+  /**
    * Inbound security groups that are allowed to connect to the database.
    */
   allowedInboundSG?: ec2.SecurityGroup;
@@ -143,7 +147,9 @@ export class Database extends Construct implements IDatabase {
         props.parameterGroupName
       ),
       port: props.dbPort,
-      removalPolicy: RemovalPolicy.DESTROY,
+      storageEncrypted: true,
+      iamAuthentication: true,
+      removalPolicy: props.removalPolicy,
       securityGroups: [this.securityGroup],
       serverlessV2MaxCapacity: props.maxACU,
       serverlessV2MinCapacity: props.minACU,

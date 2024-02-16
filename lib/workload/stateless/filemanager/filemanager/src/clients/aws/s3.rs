@@ -1,10 +1,12 @@
-use crate::clients::aws::config::Config;
+use std::result;
+
 use aws_sdk_s3 as s3;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::operation::list_buckets::{ListBucketsError, ListBucketsOutput};
 use mockall::automock;
-use std::result;
+
+use crate::clients::aws::config::Config;
 
 pub type Result<T, E> = result::Result<T, SdkError<E>>;
 

@@ -15,8 +15,8 @@ import { getEnvironmentConfig } from '../config/constants';
 const app = new cdk.App();
 const props: cdk.StackProps = {
   env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION,
+    account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
+    region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION,
   },
   tags: {
     'umccr-org:Stack': 'OrcaBusSandboxApp',

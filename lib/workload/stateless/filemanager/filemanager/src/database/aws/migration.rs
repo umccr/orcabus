@@ -1,10 +1,11 @@
-use crate::database::{Client, Migrate};
-use crate::error::Error::MigrateError;
-use crate::error::Result;
 use async_trait::async_trait;
 use sqlx::migrate;
 use sqlx::migrate::Migrator;
 use tracing::trace;
+
+use crate::database::{Client, Migrate};
+use crate::error::Error::MigrateError;
+use crate::error::Result;
 
 /// A struct to perform database migrations.
 #[derive(Debug)]

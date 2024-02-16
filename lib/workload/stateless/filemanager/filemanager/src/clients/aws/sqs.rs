@@ -1,10 +1,12 @@
-use crate::clients::aws::config::Config;
+use std::result;
+
 use aws_sdk_sqs as sqs;
 use aws_sdk_sqs::error::SdkError;
 use aws_sdk_sqs::operation::receive_message::{ReceiveMessageError, ReceiveMessageOutput};
 use aws_sdk_sqs::operation::send_message::{SendMessageError, SendMessageOutput};
 use mockall::automock;
-use std::result;
+
+use crate::clients::aws::config::Config;
 
 pub type Result<T, E> = result::Result<T, SdkError<E>>;
 

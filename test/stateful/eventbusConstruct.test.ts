@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { getEnvironmentConfig } from '../../../config/constants';
-import { EventBusConstruct } from '../../../lib/workload/stateful/eventbridge/component';
+import { getEnvironmentConfig } from '../../config/constants';
+import { EventBusConstruct } from '../../lib/workload/stateful/eventbridge/component';
 
 let stack: cdk.Stack;
 

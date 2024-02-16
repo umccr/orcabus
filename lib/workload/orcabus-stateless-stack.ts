@@ -12,6 +12,7 @@ export interface OrcaBusStatelessConfig {
   lambdaRuntimePythonVersion: aws_lambda.Runtime;
   bclConvertFunctionName: string;
   rdsMasterSecretName: string;
+  eventSourceQueueName?: string;
 }
 
 export class OrcaBusStatelessStack extends cdk.Stack {
