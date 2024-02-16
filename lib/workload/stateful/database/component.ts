@@ -46,6 +46,10 @@ export type DatabasePropsNoVPC = MonitoringProps & {
    */
   username: string;
   /**
+   * Database security group name.
+   */
+  securityGroupName: string;
+  /**
    * Database secret name.
    */
   masterSecretName: string;
@@ -89,28 +93,9 @@ export type DatabaseProps = DatabasePropsNoVPC & {
   vpc: ec2.IVpc;
 };
 
-/**
- * Interface representing the database.
- */
-export interface IDatabase {
-  /**
-   * The database security group.
-   */
-  readonly securityGroup: ec2.SecurityGroup;
-  /**
-   * The database cluster.
-   */
-  readonly cluster: rds.DatabaseCluster;
-  /**
-   * A connection string to the database.
-   */
-  readonly unsafeConnection: string;
-}
-
-export class Database extends Construct implements IDatabase {
+export class Database extends Construct {
   readonly securityGroup: ec2.SecurityGroup;
   readonly cluster: rds.DatabaseCluster;
-  readonly unsafeConnection: string;
 
   constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
@@ -124,6 +109,7 @@ export class Database extends Construct implements IDatabase {
       vpc: props.vpc,
       allowAllOutbound: false,
       allowAllIpv6Outbound: false,
+      securityGroupName: props.securityGroupName,
       description: 'security group for OrcaBus RDS',
     });
 
@@ -165,16 +151,5 @@ export class Database extends Construct implements IDatabase {
         enablePerformanceInsights: props.enablePerformanceInsights,
       }),
     });
-
-    // Todo use secrets manager for this and query for password within Lambda functions.
-    this.unsafeConnection =
-      `postgres://` +
-      `${dbSecret.secretValueFromJson('username').unsafeUnwrap()}` +
-      `:` +
-      `${dbSecret.secretValueFromJson('password').unsafeUnwrap()}` +
-      `@` +
-      `${this.cluster.clusterEndpoint.socketAddress}` +
-      `/` +
-      `${props.defaultDatabaseName}`;
   }
 }

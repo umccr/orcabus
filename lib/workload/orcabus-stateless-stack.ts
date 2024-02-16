@@ -1,9 +1,12 @@
 import * as cdk from 'aws-cdk-lib';
-import { aws_lambda } from 'aws-cdk-lib';
+import { Arn, aws_lambda } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
 import { MultiSchemaConstructProps } from './stateless/schema/component';
-import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { IVpc, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
+import { Filemanager } from './stateless/filemanager/deploy/lib/filemanager';
+import { Queue } from 'aws-cdk-lib/aws-sqs';
+import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
@@ -12,7 +15,26 @@ export interface OrcaBusStatelessConfig {
   lambdaRuntimePythonVersion: aws_lambda.Runtime;
   bclConvertFunctionName: string;
   rdsMasterSecretName: string;
-  eventSourceQueueName?: string;
+  filemanagerDependencies?: FilemanagerDependencies;
+}
+
+export interface FilemanagerDependencies {
+  /**
+   * Queue name used by the EventSource construct.
+   */
+  eventSourceQueueName: string;
+  /**
+   * Buckets defined by the EventSource construct.
+   */
+  eventSourceBuckets: string[];
+  /**
+   * Database secret name for the filemanager.
+   */
+  databaseSecretName: string;
+  /**
+   * Database security group name to allow the filemanager Lambda to connect.
+   */
+  databaseSecurityGroupName: string;
 }
 
 export class OrcaBusStatelessStack extends cdk.Stack {
@@ -42,7 +64,9 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     // hook microservice construct components here
     this.createSequenceRunManager();
 
-    this.createFilemanager();
+    if (props.filemanagerDependencies) {
+      this.createFilemanager(props.filemanagerDependencies, this.vpc);
+    }
   }
 
   private createSequenceRunManager() {
@@ -50,21 +74,39 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     //   However, the implementation is still incomplete...
   }
 
-  private createFilemanager() {
-    // todo, implement after https://github.com/umccr/orcabus/issues/86
-    // new Filemanager(
-    //   this,
-    //   "Filemanager",
-    //   {
-    //     buckets: [],
-    //     buildEnvironment: {},
-    //     database: undefined,
-    //     eventSources: [],
-    //     migrateDatabase: false,
-    //     onFailure: undefined,
-    //     rustLog: '',
-    //     vpc: undefined
-    //   }
-    // );
+  private createFilemanager(dependencies: FilemanagerDependencies, vpc: IVpc) {
+    // Opting to reconstruct the dependencies here, and pass them into the service as constructs.
+    const queue = Queue.fromQueueArn(
+      this,
+      'Filemanager Queue',
+      Arn.format(
+        {
+          resource: dependencies.eventSourceQueueName,
+          service: 'Queue',
+        },
+        this
+      )
+    );
+    const securityGroup = SecurityGroup.fromLookupByName(
+      this,
+      'Filemanager Database Security Group',
+      dependencies.databaseSecurityGroupName,
+      vpc
+    );
+    const databaseSecret = Secret.fromSecretNameV2(
+      this,
+      'Filemanager Database Secret',
+      dependencies.databaseSecretName
+    );
+
+    new Filemanager(this, 'Filemanager', {
+      buckets: dependencies.eventSourceBuckets,
+      buildEnvironment: {},
+      databaseSecret: databaseSecret,
+      databaseSecurityGroup: securityGroup,
+      eventSources: [queue],
+      migrateDatabase: true,
+      vpc: vpc,
+    });
   }
 }

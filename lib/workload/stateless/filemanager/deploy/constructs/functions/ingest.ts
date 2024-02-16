@@ -5,15 +5,9 @@ import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 /**
- * Settable values for the ingest function.
- */
-export type IngestFunctionSettings = fn.FunctionSettings;
-
-/**
  * Props for the ingest function.
  */
-export type IngestFunctionProps = IngestFunctionSettings &
-  fn.FunctionPropsNoPackage & {
+export type IngestFunctionProps = fn.FunctionPropsNoPackage & {
     /**
      * The SQS queue URL to receive events from.
      */
