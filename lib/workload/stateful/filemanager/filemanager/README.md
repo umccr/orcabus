@@ -20,6 +20,8 @@ contain thin wrappers around clients, and any logic should be elsewhere to ensur
 * [env]: Environment variable handling.
 * [error]: Error code associated with filemanager.
 
+Generally code that belongs to a particular cloud service should be put in its own module (e.g. AWS code goes in an `aws` module).
+
 [clients]: src/clients
 [database]: src/database
 [events]: src/events
@@ -27,5 +29,4 @@ contain thin wrappers around clients, and any logic should be elsewhere to ensur
 [env]: src/env.rs
 [error]: src/error.rs
 [mockall]: https://github.com/asomers/mockall
-
-Generally code that belongs to a particular cloud service should be put in its own module (e.g. AWS code goes in an `aws` module).
+[s3-events]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventNotifications.html

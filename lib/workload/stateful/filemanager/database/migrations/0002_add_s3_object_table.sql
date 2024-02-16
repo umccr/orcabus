@@ -1,22 +1,38 @@
-create type storage_class as enum ('DeepArchive', 'Glacier', 'GlacierIr', 'IntelligentTiering', 'OnezoneIa', 'Outposts', 'ReducedRedundancy', 'Snow', 'Standard', 'StandardIa');
+-- The AWS S3 storage classes.
+create type storage_class as enum (
+    'DeepArchive',
+    'Glacier',
+    'GlacierIr',
+    'IntelligentTiering',
+    'OnezoneIa',
+    'Outposts',
+    'ReducedRedundancy',
+    'Snow',
+    'Standard',
+    'StandardIa'
+);
 
 -- An object contain in AWS S3, maps as a one-to-one relationship with the object table.
-create table s3_object(
+create table s3_object (
     -- The s3 object id.
-    s3_object_id uuid not null primary key default gen_random_uuid(),
+    s3_object_id uuid not null primary key,
     -- This is initially deferred because we want to create an s3_object before an object to check for duplicates/order.
-    object_id uuid references object (object_id) deferrable initially deferred,
+    object_id uuid not null references object (object_id) deferrable initially deferred,
 
     -- General fields
     -- The bucket of the object.
     bucket text not null,
     -- The key of the object.
     key text not null,
-    -- When this object was created.
-    created_date timestamptz not null default now(),
+    -- When this object was created. A null value here means that a deleted event has occurred before a created event.
+    created_date timestamptz default null,
     -- When this object was deleted, a null value means that the object has not yet been deleted.
     deleted_date timestamptz default null,
     -- provenance - history of all objects and how they move?
+    -- The size of the object.
+    size integer default null,
+    -- A unique identifier for the object, if it is present.
+    checksum text default null,
 
     -- AWS-specific fields
     -- The AWS last modified value.
@@ -24,15 +40,15 @@ create table s3_object(
     -- An S3-specific e_tag, if it is present.
     e_tag text default null,
     -- The S3 storage class of the object.
-    storage_class storage_class not null,
+    storage_class storage_class default null,
     -- The version id of the object, if present.
     version_id text default null,
     -- A sequencer value for when the object was created. Used to synchronise out of order and duplicate events.
     created_sequencer text default null,
     -- A sequencer value for when the object was deleted. Used to synchronise out of order and duplicate events.
     deleted_sequencer text default null,
-    -- Record whether the event that generated this object was ever out of order, useful for debugging.
-    event_out_of_order boolean not null default false,
+    -- Record the number of times this event has been considered out of order, useful for debugging.
+    number_reordered integer not null default 0,
     -- Record the number of duplicate events received for this object, useful for debugging.
     number_duplicate_events integer not null default 0,
 

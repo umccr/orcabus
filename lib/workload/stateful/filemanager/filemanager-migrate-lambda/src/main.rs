@@ -1,10 +1,12 @@
-use filemanager::database::aws::migration::Migration;
-use filemanager::database::Migrate;
-use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use std::collections::HashMap;
+
+use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
+
+use filemanager::database::aws::migration::Migration;
+use filemanager::database::Migrate;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

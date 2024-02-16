@@ -7,11 +7,11 @@ use std::{
     fmt::{self},
 };
 
-use crate::error::Result;
-
-use crate::error::Error::MissingEnvironmentVariable;
 use dotenvy;
 use tracing::{error, info};
+
+use crate::error::Error::MissingEnvironmentVariable;
+use crate::error::Result;
 
 /// Controls environment.
 #[derive(PartialEq)]

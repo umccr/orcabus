@@ -1,19 +1,20 @@
 //! Event handlers for AWS, such as Lambda event handlers.
 //!
 
+use aws_lambda_events::sqs::SqsEvent;
+use lambda_runtime::Error;
+use mockall_double::double;
+use tracing::trace;
+
 #[double]
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::database::aws::ingester::Ingester;
 use crate::database::{Client, Ingest};
-use crate::events::aws::collector_builder::CollecterBuilder;
+use crate::events::aws::collecter::CollecterBuilder;
 use crate::events::aws::FlatS3EventMessages;
 use crate::events::Collect;
-use aws_lambda_events::sqs::SqsEvent;
-use lambda_runtime::Error;
-use mockall_double::double;
-use tracing::trace;
 
 /// Handle SQS events by manually calling the SQS receive function. This is meant
 /// to be run through something like API gateway to manually invoke ingestion.
@@ -88,14 +89,17 @@ pub async fn ingest_event(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::database::aws::ingester::tests::{assert_deleted, fetch_results};
-    use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::events::aws::collecter::tests::{expected_head_object, set_s3_client_expectations};
-    use crate::events::aws::collector_builder::tests::set_sqs_client_expectations;
-    use crate::events::aws::tests::expected_event_record;
     use aws_lambda_events::sqs::SqsMessage;
     use sqlx::PgPool;
+
+    use crate::database::aws::ingester::tests::{assert_deleted_with, fetch_results};
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::events::aws::collecter::tests::{
+        expected_head_object, set_s3_client_expectations, set_sqs_client_expectations,
+    };
+    use crate::events::aws::tests::expected_event_record_simple;
+
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_receive_and_ingest(pool: PgPool) {
@@ -114,7 +118,7 @@ mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_deleted(&object_results[0], &s3_object_results[0]);
+        assert_deleted_with(&s3_object_results[0], Some(0));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -125,7 +129,7 @@ mod tests {
 
         let event = SqsEvent {
             records: vec![SqsMessage {
-                body: Some(expected_event_record()),
+                body: Some(expected_event_record_simple()),
                 ..Default::default()
             }],
         };
@@ -138,6 +142,6 @@ mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_deleted(&object_results[0], &s3_object_results[0]);
+        assert_deleted_with(&s3_object_results[0], Some(0));
     }
 }
