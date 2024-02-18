@@ -9,6 +9,7 @@ import { CfnOutput, Stack, Token } from 'aws-cdk-lib';
 import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Version } from 'aws-cdk-lib/aws-lambda';
+import { createHash } from 'node:crypto';
 
 /**
  * The interface by which the generic type of `CdkResourceInvoke` is constrained by.
@@ -66,6 +67,10 @@ export type CdkResourceInvokeProps<P, F extends InvokeFunction> = {
    * Dependencies for this resource.
    */
   dependencies?: IDependable[];
+  /**
+   * Any payload to pass to the Lambda function.
+   */
+  payload?: string;
 };
 
 /**
@@ -82,9 +87,12 @@ export class CdkResourceInvoke<P, F extends InvokeFunction> extends Construct {
     super(scope, id);
 
     const stack = Stack.of(this);
+
+    // It's necessary to hash this because stack names can exceed the 64 character limit of function names.
+    const stackHash = this.hashValue(stack.stackName);
     this._function = props.createFunction(this, props.id, {
       ...props.functionProps,
-      functionName: `${stack.stackName}-ResourceInvokeFunction-${props.id}`,
+      functionName: `${stackHash}-ResourceInvokeFunction-${props.id}`,
     });
 
     // Call another lambda function with no arguments.
@@ -93,9 +101,10 @@ export class CdkResourceInvoke<P, F extends InvokeFunction> extends Construct {
       action: 'invoke',
       parameters: {
         FunctionName: this.function.functionName,
+        ...(props.payload && { Payload: props.payload })
       },
       physicalResourceId: PhysicalResourceId.of(
-        `${id}-AwsSdkCall-${this.function.currentVersion}`
+        `${id}-AwsSdkCall-${this.function.currentVersion + this.hashValue(props.payload)}`
       ),
     };
 
@@ -107,7 +116,7 @@ export class CdkResourceInvoke<P, F extends InvokeFunction> extends Construct {
         resources: [
           // This needs to have permissions to run any `ResourceInvokeFunction` because it is deployed as a
           // singleton Lambda function.
-          `arn:aws:lambda:${stack.region}:${stack.account}:function:${stack.stackName}-ResourceInvokeFunction-*`,
+          `arn:aws:lambda:${stack.region}:${stack.account}:function:${stackHash}-ResourceInvokeFunction-*`,
         ],
         actions: ['lambda:InvokeFunction'],
       })
@@ -136,6 +145,14 @@ export class CdkResourceInvoke<P, F extends InvokeFunction> extends Construct {
     new CfnOutput(this, 'MigrateDatabaseResponse', {
       value: Token.asString(this.response),
     });
+  }
+
+  private hashValue(value?: string): string {
+    if (!value) {
+      return '';
+    }
+
+    return createHash('md5').update(value).digest('hex').substring(0, 24);
   }
 
   /**

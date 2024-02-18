@@ -3,26 +3,18 @@ import { IngestFunction, IngestFunctionProps } from '../constructs/functions/ing
 import { CdkResourceInvoke } from '../../../functions/cdk_resource_invoke';
 import { MigrateFunction } from '../constructs/functions/migrate';
 import * as fn from '../constructs/functions/function';
-import { ISecurityGroup, IVpc } from 'aws-cdk-lib/aws-ec2';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
-import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
+import { DatabaseProps } from '../constructs/functions/function';
 
 /**
  * Props for the filemanager stack.
  */
-type FilemanagerProps = IngestFunctionProps & {
+type FilemanagerProps = IngestFunctionProps & DatabaseProps & {
     /**
      * VPC to use for filemanager.
      */
     readonly vpc: IVpc,
-    /**
-     * The database secret.
-     */
-    readonly databaseSecret: ISecret;
-    /**
-     * The database security group.
-     */
-    readonly databaseSecurityGroup: ISecurityGroup;
     /**
      * Whether to initialize a database migration.
      */
@@ -42,21 +34,21 @@ type FilemanagerProps = IngestFunctionProps & {
  * Construct used to configure the filemanager.
  */
 export class Filemanager extends Construct {
-  constructor(scope: Construct, id: string, settings: FilemanagerProps) {
+  constructor(scope: Construct, id: string, props: FilemanagerProps) {
     super(scope, id);
 
-    if (settings?.migrateDatabase) {
+    if (props?.migrateDatabase) {
       new CdkResourceInvoke(this, 'MigrateDatabase', {
-        vpc: settings.vpc,
+        vpc: props.vpc,
         createFunction: (scope: Construct, id: string, props: fn.FunctionPropsNoPackage) => {
           return new MigrateFunction(scope, id, props);
         },
         functionProps: {
-          vpc: settings.vpc,
-          databaseSecret: settings.databaseSecret,
-          databaseSecurityGroup: settings.databaseSecurityGroup,
-          buildEnvironment: settings?.buildEnvironment,
-          rustLog: settings?.rustLog,
+          vpc: props.vpc,
+          databaseSecret: props.databaseSecret,
+          databaseSecurityGroup: props.databaseSecurityGroup,
+          buildEnvironment: props?.buildEnvironment,
+          rustLog: props?.rustLog,
         },
         id: 'MigrateFunction',
         // Assuming no dependencies because the database will already exist.
@@ -64,13 +56,13 @@ export class Filemanager extends Construct {
     }
 
     new IngestFunction(this, 'IngestLambda', {
-      vpc: settings.vpc,
-      databaseSecret: settings.databaseSecret,
-      databaseSecurityGroup: settings.databaseSecurityGroup,
-      eventSources: settings.eventSources,
-      buckets: settings.buckets,
-      buildEnvironment: settings?.buildEnvironment,
-      rustLog: settings?.rustLog,
+      vpc: props.vpc,
+      databaseSecret: props.databaseSecret,
+      databaseSecurityGroup: props.databaseSecurityGroup,
+      eventSources: props.eventSources,
+      buckets: props.buckets,
+      buildEnvironment: props?.buildEnvironment,
+      rustLog: props?.rustLog,
     });
   }
 }

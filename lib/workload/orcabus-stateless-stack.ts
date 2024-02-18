@@ -78,7 +78,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     // Opting to reconstruct the dependencies here, and pass them into the service as constructs.
     const queue = Queue.fromQueueArn(
       this,
-      'Filemanager Queue',
+      'FilemanagerQueue',
       Arn.format(
         {
           resource: dependencies.eventSourceQueueName,
@@ -87,23 +87,23 @@ export class OrcaBusStatelessStack extends cdk.Stack {
         this
       )
     );
-    const securityGroup = SecurityGroup.fromLookupByName(
+    const databaseSecurityGroup = SecurityGroup.fromLookupByName(
       this,
-      'Filemanager Database Security Group',
+      'FilemanagerDatabaseSecurityGroup',
       dependencies.databaseSecurityGroupName,
       vpc
     );
     const databaseSecret = Secret.fromSecretNameV2(
       this,
-      'Filemanager Database Secret',
+      'FilemanagerDatabaseSecret',
       dependencies.databaseSecretName
     );
 
     new Filemanager(this, 'Filemanager', {
       buckets: dependencies.eventSourceBuckets,
       buildEnvironment: {},
-      databaseSecret: databaseSecret,
-      databaseSecurityGroup: securityGroup,
+      databaseSecret,
+      databaseSecurityGroup,
       eventSources: [queue],
       migrateDatabase: true,
       vpc: vpc,

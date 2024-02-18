@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Bulk insert of s3 objects.\ninsert into s3_object (\n    s3_object_id,\n    object_id,\n    bucket,\n    key,\n    created_date,\n    size,\n    checksum,\n    last_modified_date,\n    e_tag,\n    storage_class,\n    version_id,\n    created_sequencer\n)\nvalues (\n    unnest($1::uuid[]),\n    unnest($2::uuid[]),\n    unnest($3::text[]),\n    unnest($4::text[]),\n    unnest($5::timestamptz[]),\n    unnest($6::integer[]),\n    unnest($7::text[]),\n    unnest($8::timestamptz[]),\n    unnest($9::text[]),\n    unnest($10::storage_class[]),\n    unnest($11::text[]),\n    unnest($12::text[])\n) on conflict on constraint created_sequencer_unique do update\n    set number_duplicate_events = s3_object.number_duplicate_events + 1\n    returning object_id, number_duplicate_events;\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "object_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "number_duplicate_events",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "UuidArray",
+        "TextArray",
+        "TextArray",
+        "TimestamptzArray",
+        "Int4Array",
+        "TextArray",
+        "TimestamptzArray",
+        "TextArray",
+        {
+          "Custom": {
+            "name": "_storage_class",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "storage_class",
+                  "kind": {
+                    "Enum": [
+                      "DeepArchive",
+                      "Glacier",
+                      "GlacierIr",
+                      "IntelligentTiering",
+                      "OnezoneIa",
+                      "Outposts",
+                      "ReducedRedundancy",
+                      "Snow",
+                      "Standard",
+                      "StandardIa"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "a21baafb9a67774ec404c4ef80ff43b6f0d78fd3a31ae2517ba889ed50496dff"
+}

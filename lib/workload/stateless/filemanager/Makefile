@@ -36,14 +36,17 @@ clippy: build
 check: lint clippy
 check-fix: lint-fix clippy
 
-
 ## Clean
 clean: docker-clean
 	@cargo clean
 
-## Connect to the database
+## Database related targets
 psql:
 	@docker exec -it filemanager_db psql filemanager -U filemanager
+prepare:
+	cargo sqlx prepare --workspace
+prepare-check:
+	cargo sqlx prepare --workspace --check
 
 ## Help text
 help:

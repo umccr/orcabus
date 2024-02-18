@@ -42,10 +42,16 @@ or
 cargo install sccache && export RUSTC_WRAPPER=`which sccache`
 ```
 
-Then, cargo-watch can be used to recompile files as they change:
+The sqlx-cli is also required for compiling code without a database running:
 
 ```sh
-cargo install cargo-watch sqlx-cli
+cargo install sqlx-cli
+```
+
+cargo-watch can be used to recompile files as they change:
+
+```sh
+cargo install cargo-watch
 make watch
 ```
 
@@ -81,6 +87,38 @@ make test-ignored
 Which runs `cargo test -- --ignored`.
 
 ## Database
+
+### Offline compilation
+
+In order to compile code without a local database running, queries should be prepared using `sqlx-cli`:
+
+```sh
+make prepare
+```
+
+which runs:
+
+```sh
+cargo sqlx prepare --workspace
+```
+
+This creates a `.sqlx` file in the workspace directory which contains the pre-compiled query information.
+This is useful  for deploying the orcabus code without a dependency on the filemanager's Docker compose, and it also
+ensures that cdk tests which synthesize the filemanager stack without additional modifications. 
+
+In order to check if this file is out of date, run:
+
+```sh
+make prepare-check
+```
+
+which runs:
+
+```sh
+cargo sqlx prepare --workspace --check
+```
+
+### Database connection
 
 To connect to the local postgres database, run:
 

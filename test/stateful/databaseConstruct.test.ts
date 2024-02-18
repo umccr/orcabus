@@ -39,18 +39,19 @@ test('Test DBCluster created props', () => {
 });
 
 test('Test other SG Allow Ingress to DB SG', () => {
-  const allowedSG = new ec2.SecurityGroup(stack, 'AllowedSG', {
-    securityGroupName: 'Allowed DB Ingress',
+  const props = constructConfig.stackProps.orcaBusStatefulConfig.databaseProps;
+  props.inboundSecurityGroupName = 'test-security-group';
+  const database = new Database(stack, 'TestDatabaseConstruct', {
     vpc,
+    ...props,
   });
-  const sgLogicalId = stack.getLogicalId(allowedSG.node.defaultChild as ec2.CfnSecurityGroup);
 
-  new Database(stack, 'TestDatabaseConstruct', {
-    vpc,
-    ...constructConfig.stackProps.orcaBusStatefulConfig.databaseProps,
-    allowedInboundSG: allowedSG,
-  });
+  const sgLogicalId = stack.getLogicalId(
+    database.inboundSecurityGroup.node.defaultChild as ec2.CfnSecurityGroup
+  );
+
   const template = Template.fromStack(stack);
+  console.log(JSON.stringify(template, undefined, 2));
 
   template.hasResourceProperties('AWS::EC2::SecurityGroupIngress', {
     ToPort: dbProps.dbPort,
@@ -58,5 +59,9 @@ test('Test other SG Allow Ingress to DB SG', () => {
     SourceSecurityGroupId: {
       'Fn::GetAtt': [sgLogicalId, 'GroupId'],
     },
+  });
+
+  template.hasResourceProperties('AWS::EC2::SecurityGroup', {
+    GroupName: props.inboundSecurityGroupName,
   });
 });

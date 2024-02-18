@@ -8,9 +8,23 @@ import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 
 /**
+ * Properties for the database.
+ */
+export type DatabaseProps = {
+  /**
+   * The database secret.
+   */
+  readonly databaseSecret: ISecret;
+  /**
+   * The database security group.
+   */
+  readonly databaseSecurityGroup: ISecurityGroup;
+}
+
+/**
  * Props for a Rust function without the package.
  */
-export type FunctionPropsNoPackage = {
+export type FunctionPropsNoPackage = DatabaseProps & {
   /**
    * Additional build environment variables when building the Lambda function.
    */
@@ -23,14 +37,6 @@ export type FunctionPropsNoPackage = {
    * Vpc for the function.
    */
   readonly vpc: IVpc;
-  /**
-   * The database secret.
-   */
-  readonly databaseSecret: ISecret;
-  /**
-   * The database security group.
-   */
-  readonly databaseSecurityGroup: ISecurityGroup;
 };
 
 /**
