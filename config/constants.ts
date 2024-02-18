@@ -35,7 +35,6 @@ const orcaBusStatefulConfig = {
     monitoring: {
       cloudwatchLogsExports: ['orcabus-postgresql'],
     },
-    databaseSecurityGroupName: 'database-security-group',
     inboundSecurityGroupName: 'inbound-database-security-group',
   },
   securityGroupProps: {
