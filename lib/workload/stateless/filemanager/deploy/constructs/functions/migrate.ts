@@ -2,14 +2,9 @@ import { Construct } from 'constructs';
 import * as fn from './function';
 
 /**
- * Settable values for the migrate function.
- */
-export type MigrateFunctionSettings = fn.FunctionSettings;
-
-/**
  * Props for the migrate function.
  */
-export type MigrateFunctionProps = MigrateFunctionSettings & fn.FunctionPropsNoPackage;
+export type MigrateFunctionProps = fn.FunctionPropsNoPackage;
 
 /**
  * A construct for the Lambda migrate function.

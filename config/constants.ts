@@ -1,6 +1,9 @@
 import { OrcaBusStatefulConfig } from '../lib/workload/orcabus-stateful-stack';
 import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
-import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
+import {
+  FilemanagerDependencies,
+  OrcaBusStatelessConfig,
+} from '../lib/workload/orcabus-stateless-stack';
 import { Duration, aws_lambda, RemovalPolicy } from 'aws-cdk-lib';
 import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
 
@@ -73,6 +76,12 @@ const eventSourceConfig: EventSourceProps = {
   ],
 };
 
+const filemanagerDependencies: FilemanagerDependencies = {
+  eventSourceBuckets: ['umccr-temp-dev'],
+  eventSourceQueueName: eventSourceConfig.queueName,
+  databaseSecretName: orcaBusStatefulConfig.databaseProps.masterSecretName,
+};
+
 interface EnvironmentConfig {
   name: string;
   accountId: string;
@@ -113,7 +122,7 @@ export const getEnvironmentConfig = (
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
-            eventSourceQueueName: eventSourceConfig.queueName,
+            filemanagerDependencies: filemanagerDependencies,
           },
         },
       };

@@ -1,0 +1,117 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Update the matching s3_objects which should be re-ordered based on the deleted event. Returns the\n-- data associated with the event before the update, if an update occurred.\n\n-- First, unnest the input parameters into a query.\nwith input as (\n    select\n        *\n    from unnest(\n        $1::uuid[],\n        $2::text[],\n        $3::text[],\n        $4::timestamptz[],\n        $5::text[],\n        $6::text[]\n    ) as input (\n        s3_object_id,\n        bucket,\n        key,\n        deleted_date,\n        version_id,\n        deleted_sequencer\n    )\n),\n-- Then, select the objects that match the bucket, key and version_id\ncurrent_objects as (\n    select\n        s3_object.*,\n        input.s3_object_id as input_id,\n        input.bucket as input_bucket,\n        input.key as input_key,\n        input.version_id as input_version_id,\n        input.deleted_sequencer as input_deleted_sequencer,\n        input.deleted_date as input_deleted_date\n    from s3_object\n    -- Grab the relevant values to update with.\n    join input on\n        input.bucket = s3_object.bucket and\n        input.key = s3_object.key and\n        input.version_id = s3_object.version_id\n    -- Lock this pre-emptively for the update.\n    for update\n),\n-- And filter them to the objects that need to be updated.\nobjects_to_update as (\n    select\n        *\n    from current_objects\n    where\n        -- Check the sequencer condition. We only update if there is a deleted\n        -- sequencer that is closer to the created sequencer.\n        current_objects.created_sequencer < current_objects.input_deleted_sequencer and\n        (\n            -- Updating a null sequencer doesn't cause the event to be reprocessed.\n            current_objects.deleted_sequencer is null or\n            -- If a sequencer already exists this event should be reprocessed because this\n            -- sequencer would belong to another object.\n            current_objects.deleted_sequencer > current_objects.input_deleted_sequencer\n        )\n        -- And there should not be any objects with a deleted sequencer that is the same as the input deleted\n        -- sequencer because this is a duplicate event that would cause a constraint error in the update.\n        and current_objects.input_deleted_sequencer not in (\n            select deleted_sequencer from current_objects where deleted_sequencer is not null\n        )\n),\n-- Finally, update the required objects.\nupdate as (\n    update s3_object\n    set deleted_sequencer = objects_to_update.input_deleted_sequencer,\n        deleted_date = objects_to_update.input_deleted_date,\n        number_reordered = s3_object.number_reordered +\n            case when objects_to_update.deleted_sequencer is null then 0 else 1 end\n    from objects_to_update\n    where s3_object.s3_object_id = objects_to_update.s3_object_id\n)\n-- Return the old values because these need to be reprocessed.\nselect\n    -- Note, this is the passed through value from the input in order to identify this event later.\n    input_id as \"s3_object_id!\",\n    bucket,\n    key,\n    deleted_date as event_time,\n    last_modified_date,\n    e_tag,\n    storage_class as \"storage_class?: StorageClass\",\n    version_id,\n    deleted_sequencer as sequencer,\n    number_reordered,\n    number_duplicate_events,\n    size,\n    -- This is used to simplify re-constructing the FlatS3EventMessages in the Lambda. I.e. this update detected an\n    -- out of order deleted event, so return a deleted event back.\n    'Deleted' as \"event_type!: EventType\"\nfrom objects_to_update;\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "s3_object_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "bucket",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "event_time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "last_modified_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "e_tag",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "storage_class?: StorageClass",
+        "type_info": {
+          "Custom": {
+            "name": "storage_class",
+            "kind": {
+              "Enum": [
+                "DeepArchive",
+                "Glacier",
+                "GlacierIr",
+                "IntelligentTiering",
+                "OnezoneIa",
+                "Outposts",
+                "ReducedRedundancy",
+                "Snow",
+                "Standard",
+                "StandardIa"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "version_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "sequencer",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "number_reordered",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "number_duplicate_events",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "size",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "event_type!: EventType",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "TextArray",
+        "TextArray",
+        "TimestamptzArray",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "6515aa29536fb79eb777151f8650c8eec41a9bd4bcc72a06d36a5d0eed482115"
+}
