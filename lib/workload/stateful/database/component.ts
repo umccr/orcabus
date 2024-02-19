@@ -48,10 +48,6 @@ export type ConfigurableDatabaseProps = MonitoringProps & {
    */
   username: string;
   /**
-   * Database security group name.
-   */
-  securityGroupName: string;
-  /**
    * Database secret name.
    */
   masterSecretName: string;
@@ -79,26 +75,24 @@ export type ConfigurableDatabaseProps = MonitoringProps & {
    * The database removal policy.
    */
   removalPolicy: RemovalPolicy;
-  /**
-   * Create an inbound security group that can connect to the database. Stateless resources can recreate
-   * this security group to access the database.
-   */
-  inboundSecurityGroupName: string;
 };
 
 /**
- * Database props with a vpc.
+ * Database props with vpc and inbound security group.
  */
 export type DatabaseProps = ConfigurableDatabaseProps & {
   /**
    * The database VPC.
    */
   vpc: ec2.IVpc;
+  /**
+   * Inbound security group for the database.
+   */
+  allowedInboundSG?: ec2.SecurityGroup;
 };
 
 export class Database extends Construct {
   readonly securityGroup: SecurityGroup;
-  readonly inboundSecurityGroup: SecurityGroup;
   readonly cluster: DatabaseCluster;
 
   constructor(scope: Construct, id: string, props: DatabaseProps) {
@@ -113,23 +107,17 @@ export class Database extends Construct {
       vpc: props.vpc,
       allowAllOutbound: false,
       allowAllIpv6Outbound: false,
-      securityGroupName: props.securityGroupName,
       description: 'security group for OrcaBus RDS',
     });
 
-    this.inboundSecurityGroup = new ec2.SecurityGroup(this, 'DbInboundSecurityGroup', {
-      vpc: props.vpc,
-      allowAllOutbound: false,
-      allowAllIpv6Outbound: false,
-      securityGroupName: props.inboundSecurityGroupName,
-      description: 'an inbound security group to connect to the OrcaBus RDS',
-    });
-
-    this.securityGroup.addIngressRule(
-      this.inboundSecurityGroup,
-      ec2.Port.tcp(props.dbPort),
-      'allow the OrcaBus security group to access db'
-    );
+    // give compute sg to access the rds
+    if (props.allowedInboundSG) {
+      this.securityGroup.addIngressRule(
+        props.allowedInboundSG,
+        ec2.Port.tcp(props.dbPort),
+        'allow the OrcaBus compute sg to access db'
+      );
+    }
 
     this.cluster = new rds.DatabaseCluster(this, id + 'Cluster', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({ version: props.version }),

@@ -42,6 +42,7 @@ export class OrcaBusStatefulStack extends cdk.Stack {
 
     this.database = new Database(this, 'OrcaBusDatabaseConstruct', {
       vpc,
+      allowedInboundSG: this.securityGroup.computeSecurityGroup,
       ...props.databaseProps,
     });
 

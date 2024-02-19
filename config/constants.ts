@@ -31,11 +31,9 @@ const orcaBusStatefulConfig = {
     username: 'postgres',
     dbPort: 5432,
     masterSecretName: rdsMasterSecretName,
-    securityGroupName: 'orcabus-database-security-group',
     monitoring: {
       cloudwatchLogsExports: ['orcabus-postgresql'],
     },
-    inboundSecurityGroupName: 'inbound-database-security-group',
   },
   securityGroupProps: {
     securityGroupName: lambdaSecurityGroupName,
@@ -82,7 +80,6 @@ const filemanagerDependencies: FilemanagerDependencies = {
   eventSourceBuckets: ['umccr-temp-dev'],
   eventSourceQueueName: eventSourceConfig.queueName,
   databaseSecretName: orcaBusStatefulConfig.databaseProps.masterSecretName,
-  databaseSecurityGroupName: orcaBusStatefulConfig.databaseProps.inboundSecurityGroupName,
 };
 
 interface EnvironmentConfig {

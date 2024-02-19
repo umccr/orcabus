@@ -31,10 +31,6 @@ export interface FilemanagerDependencies {
    * Database secret name for the filemanager.
    */
   databaseSecretName: string;
-  /**
-   * Database security group name to allow the filemanager Lambda to connect.
-   */
-  databaseSecurityGroupName: string;
 }
 
 export class OrcaBusStatelessStack extends cdk.Stack {
@@ -65,7 +61,10 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     this.createSequenceRunManager();
 
     if (props.filemanagerDependencies) {
-      this.createFilemanager(props.filemanagerDependencies, this.vpc);
+      this.createFilemanager({
+        ...props.filemanagerDependencies,
+        lambdaSecurityGroupName: props.lambdaSecurityGroupName,
+      });
     }
   }
 
@@ -74,7 +73,9 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     //   However, the implementation is still incomplete...
   }
 
-  private createFilemanager(dependencies: FilemanagerDependencies, vpc: IVpc) {
+  private createFilemanager(
+    dependencies: FilemanagerDependencies & { lambdaSecurityGroupName: string }
+  ) {
     // Opting to reconstruct the dependencies here, and pass them into the service as constructs.
     const queue = Queue.fromQueueArn(
       this,
@@ -90,8 +91,8 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     const databaseSecurityGroup = SecurityGroup.fromLookupByName(
       this,
       'FilemanagerDatabaseSecurityGroup',
-      dependencies.databaseSecurityGroupName,
-      vpc
+      dependencies.lambdaSecurityGroupName,
+      this.vpc
     );
     const databaseSecret = Secret.fromSecretNameV2(
       this,
@@ -106,7 +107,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
       databaseSecurityGroup,
       eventSources: [queue],
       migrateDatabase: true,
-      vpc: vpc,
+      vpc: this.vpc,
     });
   }
 }
