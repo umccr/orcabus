@@ -1,6 +1,6 @@
 aws-xray-sdk==2.12.0
 boto3==1.28.0
-Django==4.2.7
+Django==4.2.10
 djangorestframework==3.14.0
 django-cors-headers==4.1.0
 django-environ==0.10.0
