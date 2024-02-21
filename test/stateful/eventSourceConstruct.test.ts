@@ -26,7 +26,7 @@ function assert_common(template: Template) {
       source: ['aws.s3'],
       detail: {
         bucket: {
-          name: 'bucket',
+          name: ['bucket'],
         },
       },
     },
