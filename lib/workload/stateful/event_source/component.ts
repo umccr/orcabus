@@ -72,7 +72,7 @@ export class EventSource extends Construct {
           detail: {
             ...(prop.bucket && {
               bucket: {
-                name: prop.bucket,
+                name: [prop.bucket],
               },
             }),
             ...(prop.prefix && {
