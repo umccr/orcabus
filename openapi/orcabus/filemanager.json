@@ -1,1 +1,151 @@
-{"openapi":"3.0.3","info":{"title":"rust-api","description":"","license":{"name":""},"version":"0.1.0"},"paths":{"/file/":{"get":{"tags":["file"],"summary":"Search query","description":"Search query\nSearch files","operationId":"search","parameters":[{"name":"id","in":"query","required":true,"schema":{"type":"integer","format":"int32"}},{"name":"name","in":"query","required":true,"schema":{"type":"string"}},{"name":"size","in":"query","required":true,"schema":{"type":"integer","format":"int64","minimum":0.0}},{"name":"hash","in":"query","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"List matching objects","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/File"}}}}}}}}},"components":{"schemas":{"File":{"type":"object","description":"Item to do.","required":["id","name","size","hash"],"properties":{"hash":{"type":"string"},"id":{"type":"integer","format":"int32"},"name":{"type":"string","example":"foo.bam"},"size":{"type":"integer","format":"int64","minimum":0.0}}},"FileError":{"oneOf":[{"type":"object","required":["NotFound"],"properties":{"NotFound":{"type":"string","description":"File not found by id."}},"example":"id = 1"},{"type":"object","required":["Unauthorized"],"properties":{"Unauthorized":{"type":"string","description":"File operation unauthorized"}},"example":"missing api key"}],"description":"File operation errors"}},"securitySchemes":{"api_key":{"type":"apiKey","in":"header","name":"File_apikey"}}},"tags":[{"name":"File","description":"File manager API"}]}
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "rust-api",
+        "description": "",
+        "license": {
+            "name": ""
+        },
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/file/": {
+            "get": {
+                "tags": [
+                    "file"
+                ],
+                "summary": "Search query",
+                "description": "Search query\nSearch files",
+                "operationId": "search",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "size",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64",
+                            "minimum": 0.0
+                        }
+                    },
+                    {
+                        "name": "hash",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List matching objects",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/File"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "File": {
+                "type": "object",
+                "description": "Item to do.",
+                "required": [
+                    "id",
+                    "name",
+                    "size",
+                    "hash"
+                ],
+                "properties": {
+                    "hash": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "foo.bam"
+                    },
+                    "size": {
+                        "type": "integer",
+                        "format": "int64",
+                        "minimum": 0.0
+                    }
+                }
+            },
+            "FileError": {
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "required": [
+                            "NotFound"
+                        ],
+                        "properties": {
+                            "NotFound": {
+                                "type": "string",
+                                "description": "File not found by id."
+                            }
+                        },
+                        "example": "id = 1"
+                    },
+                    {
+                        "type": "object",
+                        "required": [
+                            "Unauthorized"
+                        ],
+                        "properties": {
+                            "Unauthorized": {
+                                "type": "string",
+                                "description": "File operation unauthorized"
+                            }
+                        },
+                        "example": "missing api key"
+                    }
+                ],
+                "description": "File operation errors"
+            }
+        },
+        "securitySchemes": {
+            "api_key": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "File_apikey"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "File",
+            "description": "File manager API"
+        }
+    ]
+}
