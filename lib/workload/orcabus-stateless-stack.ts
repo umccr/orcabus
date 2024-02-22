@@ -83,7 +83,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
       Arn.format(
         {
           resource: dependencies.eventSourceQueueName,
-          service: 'Queue',
+          service: 'sqs',
         },
         this
       )
