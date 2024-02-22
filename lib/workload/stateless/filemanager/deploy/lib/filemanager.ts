@@ -1,11 +1,14 @@
 import { Construct } from 'constructs';
 import { IngestFunction, IngestFunctionProps } from '../constructs/functions/ingest';
+import { ObjectsQueryFunction, ObjectsQueryFunctionProps } from '../constructs/functions/query';
 import { CdkResourceInvoke } from '../../../functions/cdk_resource_invoke';
 import { MigrateFunction } from '../constructs/functions/migrate';
 import * as fn from '../constructs/functions/function';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { DatabaseProps } from '../constructs/functions/function';
+import { HttpApi, HttpMethod } from '@aws-cdk/aws-apigatewayv2-alpha';
+import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 
 /**
  * Props for the filemanager stack.
@@ -55,6 +58,8 @@ export class Filemanager extends Construct {
       });
     }
 
+
+
     new IngestFunction(this, 'IngestLambda', {
       vpc: props.vpc,
       databaseSecret: props.databaseSecret,
@@ -63,6 +68,29 @@ export class Filemanager extends Construct {
       buckets: props.buckets,
       buildEnvironment: props?.buildEnvironment,
       rustLog: props?.rustLog,
+    });
+
+    let objectsQuery = new ObjectsQueryFunction(this, 'ObjectsQueryFunction', {
+      vpc: props.vpc,
+      databaseSecret: props.databaseSecret,
+      databaseSecurityGroup: props.databaseSecurityGroup,
+      buildEnvironment: props?.buildEnvironment,
+      rustLog: props?.rustLog, 
+    });
+
+    // API Gateway v2 endpoints for querying data
+    const api = new HttpApi(this, 'HttpApi');
+
+    const ObjectsQueryFunctionIntegration = new HttpLambdaIntegration(
+      id + "HtsgetIntegration",
+      objectsQuery,
+    );
+
+    // Add a route to the API
+    api.addRoutes({
+      path: '/objects/{:id}',
+      methods: [HttpMethod.GET],
+      integration: ObjectsQueryFunctionIntegration,
     });
   }
 }
