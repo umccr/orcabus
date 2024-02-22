@@ -10,7 +10,10 @@ import { EventSourceProps } from '../lib/workload/stateful/event_source/componen
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
 const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
-const rdsMasterSecretName = 'orcabus/rds-master'; // pragma: allowlist secret
+
+// Note, this should not end with a hyphen and 6 characters, otherwise secrets manager won't be
+// able to find the secret using a partial ARN.
+const rdsMasterSecretName = 'orcabus/master-rds'; // pragma: allowlist secret
 
 const orcaBusStatefulConfig = {
   schemaRegistryProps: {
@@ -90,12 +93,25 @@ interface EnvironmentConfig {
     orcaBusStatelessConfig: OrcaBusStatelessConfig;
   };
 }
+
+/**
+ * Validate the secret name so that it doesn't end with 6 characters and a hyphen.
+ */
+export const validateSecretName = (secretName: string) => {
+  // If there are more config validation requirements like this it might be good to use
+  // a dedicated library like zod.
+  if (/-(.){6}$/.test(secretName)) {
+    throw new Error('the secret name should not end with a hyphen and 6 characters');
+  }
+};
+
 export const getEnvironmentConfig = (
   accountName: 'beta' | 'gamma' | 'prod'
 ): EnvironmentConfig | null => {
+  let config = null;
   switch (accountName) {
     case 'beta':
-      return {
+      config = {
         name: 'beta',
         accountId: '843407916570', // umccr_development
         stackProps: {
@@ -126,9 +142,10 @@ export const getEnvironmentConfig = (
           },
         },
       };
+      break;
 
     case 'gamma':
-      return {
+      config = {
         name: 'gamma',
         accountId: '455634345446', // umccr_staging
         stackProps: {
@@ -155,9 +172,10 @@ export const getEnvironmentConfig = (
           orcaBusStatelessConfig: orcaBusStatelessConfig,
         },
       };
+      break;
 
     case 'prod':
-      return {
+      config = {
         name: 'prod',
         accountId: '472057503814', // umccr_production
         stackProps: {
@@ -182,8 +200,10 @@ export const getEnvironmentConfig = (
           orcaBusStatelessConfig: orcaBusStatelessConfig,
         },
       };
-
-    default:
-      return null;
+      break;
   }
+
+  validateSecretName(config.stackProps.orcaBusStatefulConfig.databaseProps.masterSecretName);
+
+  return config;
 };
