@@ -1,6 +1,6 @@
 {
   "rust-analyzer.linkedProjects": [
-    "lib/workload/stateful/filemanager/Cargo.toml",
+    "lib/workload/stateless/filemanager/Cargo.toml",
     "skel/rust-api/Cargo.toml"
   ]
 }
