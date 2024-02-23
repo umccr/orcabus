@@ -83,7 +83,7 @@ export class Filemanager extends Construct {
 
     const ObjectsQueryFunctionIntegration = new HttpLambdaIntegration(
       id + "HtsgetIntegration",
-      objectsQuery,
+      objectsQuery.function
     );
 
     // Add a route to the API
