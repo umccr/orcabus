@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::database::{Client, Ingest};
 use crate::error::Result;
-use crate::events::aws::EventType;
+use crate::events::aws::message::EventType;
 use crate::events::aws::{Events, TransposedS3EventMessages};
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::events::EventSourceType;
@@ -256,11 +256,11 @@ pub(crate) mod tests {
     use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
+    use crate::events::aws::message::EventType::{Created, Deleted};
     use crate::events::aws::tests::{
         expected_events_simple, expected_flat_events_simple, EXPECTED_E_TAG,
         EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_VERSION_ID,
     };
-    use crate::events::aws::EventType::{Created, Deleted};
     use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
     use crate::events::EventSourceType;
 
