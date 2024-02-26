@@ -58,11 +58,11 @@ pub(crate) mod tests {
     use crate::database::aws::ingester::tests::{test_events, test_ingester};
     use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::events::aws::message::EventType;
     use crate::events::aws::tests::{
         EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_TWO,
         EXPECTED_SEQUENCER_CREATED_ZERO, EXPECTED_VERSION_ID,
     };
-    use crate::events::aws::EventType;
     use crate::events::aws::StorageClass;
     use crate::events::aws::{Events, FlatS3EventMessage};
 
