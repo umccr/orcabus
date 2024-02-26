@@ -500,7 +500,7 @@ pub(crate) mod tests {
     use chrono::{DateTime, Utc};
     use serde_json::{json, Value};
 
-    use crate::events::aws::message::sqs::SQSEventMessage;
+    use crate::events::aws::message::Message;
     use crate::events::aws::{
         EventType, Events, FlatS3EventMessage, FlatS3EventMessages, TransposedS3EventMessages,
     };
@@ -698,7 +698,7 @@ pub(crate) mod tests {
     }
 
     fn expected_flat_events(records: String) -> FlatS3EventMessages {
-        let events: SQSEventMessage = serde_json::from_str(&records).unwrap();
+        let events: Message = serde_json::from_str(&records).unwrap();
         events.try_into().unwrap()
     }
 
@@ -731,7 +731,7 @@ pub(crate) mod tests {
         records.to_string()
     }
 
-    pub(crate) fn expected_event_record_full() -> String {
+    pub(crate) fn expected_sqs_event_message() -> Value {
         let object = json!({
             "eventTime": "1970-01-01T00:00:00.000Z",
             "eventVersion": "2.2",
@@ -771,6 +771,15 @@ pub(crate) mod tests {
                 }
             }
         });
+
+        let mut object_deleted = object.clone();
+        object_deleted["eventName"] = json!("ObjectRemoved:Delete");
+
+        object_deleted
+    }
+
+    pub(crate) fn expected_event_record_full() -> String {
+        let object = expected_sqs_event_message();
 
         let mut object_created_one = object.clone();
         object_created_one["eventName"] = json!("ObjectCreated:Put");
