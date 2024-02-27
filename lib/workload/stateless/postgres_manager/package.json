@@ -1,0 +1,15 @@
+{
+  "name": "lambda-with-rds",
+  "packageManager": "yarn@3.5.1",
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.515.0",
+    "axios": "^1.6.7",
+    "generate-password": "^1.7.1",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.134",
+    "@types/pg": "^8",
+    "typescript": "^5.3.3"
+  }
+}
