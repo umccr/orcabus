@@ -11,13 +11,16 @@ make use of `rds_iam` or the conventional `user-password` connection string.
 
 The microservice config should look as follows:
 
-```json
+```ts
     microserviceDbConfig: [
       {
         name: 'metadata_manager',
         authType: DbAuthType.USERNAME_PASSWORD,
       },
-      { name: 'filemanager', authType: DbAuthType.RDS_IAM },
+      { 
+        name: 'filemanager', 
+        authType: DbAuthType.RDS_IAM 
+      },
     ]
 ```
 
