@@ -66,12 +66,12 @@ export class OrcaBusStatelessStack extends cdk.Stack {
 
     this.createPostgresManager(props.postgresManagerConfig);
 
-    // if (props.filemanagerDependencies) {
-    //   this.createFilemanager({
-    //     ...props.filemanagerDependencies,
-    //     lambdaSecurityGroupName: props.lambdaSecurityGroupName,
-    //   });
-    // }
+    if (props.filemanagerDependencies) {
+      this.createFilemanager({
+        ...props.filemanagerDependencies,
+        lambdaSecurityGroupName: props.lambdaSecurityGroupName,
+      });
+    }
   }
 
   private createSequenceRunManager() {
