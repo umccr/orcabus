@@ -65,7 +65,7 @@ export class PostgresManager extends Construct {
       securityGroups: [props.lambdaSecurityGroup],
     };
 
-    // create new database lambda
+    // 1. lambda responsible on db creation
     const createPgDb = new nodejs.NodejsFunction(this, 'CreateDbPostgresLambda', {
       ...rdsLambdaProps,
       entry: __dirname + '/../function/create-pg-db.ts',
@@ -73,7 +73,7 @@ export class PostgresManager extends Construct {
     });
     masterSecret.grantRead(createPgDb);
 
-    // create role which has the rds-iam
+    // 2. lambda responsible on role creation with rds_iam
     const initiatePgRdsIam = new nodejs.NodejsFunction(this, 'CreateIamUserPostgresLambda', {
       ...rdsLambdaProps,
       entry: __dirname + '/../function/create-pg-iam-role.ts',
@@ -101,7 +101,7 @@ export class PostgresManager extends Construct {
       }
     }
 
-    // create role with username-password login
+    // 3. lambda responsible on role creation with username-password auth
     const createRolePgLambda = new nodejs.NodejsFunction(this, 'CreateUserPassPostgresLambda', {
       ...rdsLambdaProps,
       initialPolicy: [
@@ -116,7 +116,7 @@ export class PostgresManager extends Construct {
     });
     masterSecret.grantRead(createRolePgLambda);
 
-    // alter db owner to its respective role
+    // 4. lambda responsible on alter db owner
     const alterDbPgOwnerLambda = new nodejs.NodejsFunction(this, 'AlterDbOwnerPostgresLambda', {
       ...rdsLambdaProps,
       entry: __dirname + '/../function/alter-pg-db-owner.ts',
