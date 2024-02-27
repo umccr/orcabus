@@ -1,5 +1,5 @@
-import axios from 'axios';
 import { Client } from 'pg';
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 
 /**
  * There are 2 ways of connecting from microservice to db
@@ -70,7 +70,7 @@ export const getRdsMasterSecret = async () => {
   const rdsSecretName = process.env.RDS_SECRET_MANAGER_NAME;
   if (!rdsSecretName) throw new Error('No RDS master secret configure in the env variable');
 
-  const rdsSecret = JSON.parse(await getSecretManagerWithLayerExtension(rdsSecretName));
+  const rdsSecret = JSON.parse(await getSecretValue(rdsSecretName));
 
   return {
     host: rdsSecret.host,
@@ -81,20 +81,17 @@ export const getRdsMasterSecret = async () => {
   };
 };
 
-/**
- * Wrapper to use the default lambda layer extension to query secret manager
- * Ref: https://docs.aws.amazon.com/secretsmanager/latest/userguide/retrieving-secrets_lambda.html
- * @param secretManagerName The microserviceName of the secret or ARN
- * @returns
- */
-export const getSecretManagerWithLayerExtension = async (secretManagerName: string) => {
-  const apiUrl = `http://localhost:2773/secretsmanager/get?secretId=${encodeURIComponent(
-    secretManagerName
-  )}`;
-  const headers = { 'X-Aws-Parameters-Secrets-Token': process.env.AWS_SESSION_TOKEN };
-  const res = await axios.get(apiUrl, {
-    headers: headers,
-  });
+export const getSecretValue = async (secretManagerName: string) => {
+  const client = new SecretsManagerClient();
+  const response = await client.send(
+    new GetSecretValueCommand({
+      SecretId: secretManagerName,
+    })
+  );
 
-  return res.data.SecretString;
+  if (response.SecretString) {
+    return response.SecretString;
+  }
+
+  throw new Error('Failed to retrieve secret value');
 };

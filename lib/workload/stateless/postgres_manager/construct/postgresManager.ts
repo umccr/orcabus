@@ -38,20 +38,10 @@ export class PostgresManager extends Construct {
       '/orcabus/db-cluster-resource-id'
     );
 
-    // Let lambda access secret manager via aws managed lambda extension
-    // Ref:
-    // https://aws.amazon.com/blogs/compute/using-the-aws-parameter-and-secrets-lambda-extension-to-cache-parameters-and-secrets/
-    const lambdaLayerGetSecretExtension = lambda.LayerVersion.fromLayerVersionArn(
-      this,
-      'GetSecretExtensionLayer',
-      'arn:aws:lambda:ap-southeast-2:665172237481:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11'
-    );
-
     const rdsLambdaProps = {
       timeout: Duration.minutes(5),
       depsLockFilePath: __dirname + '/../yarn.lock',
       handler: 'handler',
-      layers: [lambdaLayerGetSecretExtension],
       runtime: lambda.Runtime.NODEJS_20_X,
       architecture: lambda.Architecture.ARM_64,
       environment: {
