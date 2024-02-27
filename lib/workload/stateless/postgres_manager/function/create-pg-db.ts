@@ -23,7 +23,7 @@ export const handler = async (event: EventType) => {
 
   // restrict privileged access
   console.info('restrict database access from public');
-  const restrictPrivilegedQuery = `REVOKE connect ON DATABASE ${microserviceName} FROM PUBLIC;`;
+  const restrictPrivilegedQuery = `REVOKE ALL ON DATABASE ${microserviceName} FROM PUBLIC;`;
   await executeSqlWithLog(client, restrictPrivilegedQuery);
 
   await client.end();
