@@ -35,7 +35,7 @@ export class PostgresManager extends Construct {
 
     const dbClusterResourceId = ssm.StringParameter.valueFromLookup(
       this,
-      '/orcabus/db-cluster-resource-id'
+      props.clusterResourceIdParameterName
     );
 
     const rdsLambdaProps = {
@@ -99,6 +99,11 @@ export class PostgresManager extends Construct {
           actions: ['secretsmanager:CreateSecret', 'secretsmanager:TagResource'],
           effect: iam.Effect.ALLOW,
           resources: ['arn:aws:secretsmanager:ap-southeast-2:*:secret:*'],
+        }),
+        new iam.PolicyStatement({
+          actions: ['secretsmanager:GetRandomPassword'],
+          effect: iam.Effect.ALLOW,
+          resources: ['*'],
         }),
       ],
       entry: __dirname + '/../function/create-pg-login-role.ts',

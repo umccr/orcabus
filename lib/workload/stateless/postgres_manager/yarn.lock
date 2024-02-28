@@ -1042,13 +1042,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"generate-password@npm:^1.7.1":
-  version: 1.7.1
-  resolution: "generate-password@npm:1.7.1"
-  checksum: 76ab72dcf13ae174e4e069b32b94d7c2613c6e83db1c00ffad17a480a80875b28c4ed8f0767b143f7103b0742afb45a10549e6ef2f72c0a994979e77b8e95b86
-  languageName: node
-  linkType: hard
-
 "lambda-with-rds@workspace:.":
   version: 0.0.0-use.local
   resolution: "lambda-with-rds@workspace:."
@@ -1056,7 +1049,6 @@ __metadata:
     "@aws-sdk/client-secrets-manager": ^3.515.0
     "@types/aws-lambda": ^8.10.134
     "@types/pg": ^8
-    generate-password: ^1.7.1
     pg: ^8.11.3
     typescript: ^5.3.3
   languageName: unknown

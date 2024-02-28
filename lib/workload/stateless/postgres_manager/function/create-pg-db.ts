@@ -12,19 +12,19 @@ export const handler = async (event: EventType) => {
   const microserviceName = getMicroserviceName(microserviceConfig, event);
   const pgMasterConfig = await getRdsMasterSecret();
 
-  const client = new Client(pgMasterConfig);
-  await client.connect();
+  const pgClient = new Client(pgMasterConfig);
+  await pgClient.connect();
   console.info('connected to RDS with master credential');
 
   // create microservice db
   console.info('create a new database for the given microservice microserviceName');
   const createDbQuery = `CREATE DATABASE ${microserviceName};`;
-  await executeSqlWithLog(client, createDbQuery);
+  await executeSqlWithLog(pgClient, createDbQuery);
 
   // restrict privileged access
   console.info('restrict database access from public');
   const restrictPrivilegedQuery = `REVOKE ALL ON DATABASE ${microserviceName} FROM PUBLIC;`;
-  await executeSqlWithLog(client, restrictPrivilegedQuery);
+  await executeSqlWithLog(pgClient, restrictPrivilegedQuery);
 
-  await client.end();
+  await pgClient.end();
 };

@@ -1,6 +1,4 @@
-import { generate as pass_generator } from 'generate-password';
 import {
-  executeSqlWithLog,
   getMicroserviceName,
   getMicroserviceConfig,
   getRdsMasterSecret,
@@ -10,6 +8,8 @@ import {
   SecretsManagerClient,
   CreateSecretCommandInput,
   CreateSecretCommand,
+  GetRandomPasswordCommandInput,
+  GetRandomPasswordCommand,
 } from '@aws-sdk/client-secrets-manager';
 import { Client } from 'pg';
 
@@ -18,6 +18,7 @@ type EventType = {
 };
 
 export const handler = async (event: EventType) => {
+  const smClient = new SecretsManagerClient();
   const microserviceConfig = getMicroserviceConfig();
   const microserviceName = getMicroserviceName(microserviceConfig, event);
   const pgMasterConfig = await getRdsMasterSecret();
@@ -27,17 +28,31 @@ export const handler = async (event: EventType) => {
     throw new Error('this microservice is not configured for username-password authentication');
   }
 
-  const client = new Client(pgMasterConfig);
-  await client.connect();
+  const pgClient = new Client(pgMasterConfig);
+  await pgClient.connect();
   console.info('connected to RDS with master credential');
 
   // create a new role
   console.info('creating a user-password login role');
-  const password = pass_generator({ length: 10, numbers: true });
-  const createRoleQueryTemplate = `CREATE ROLE ${microserviceName} with LOGIN ENCRYPTED PASSWORD '${password}'`;
-  await executeSqlWithLog(client, createRoleQueryTemplate);
 
-  await client.end();
+  // get random password using aws secret manager sdk
+  const randomPassConfig: GetRandomPasswordCommandInput = {
+    PasswordLength: 32,
+    ExcludePunctuation: true,
+    RequireEachIncludedType: true,
+  };
+  const randomPassCommandInput = new GetRandomPasswordCommand(randomPassConfig);
+  const randomPassResponse = await smClient.send(randomPassCommandInput);
+  const password = randomPassResponse.RandomPassword;
+  if (!password) throw new Error('No password output from password generator');
+
+  // run the create role
+  const createRolePasswordSQL = `CREATE ROLE ${microserviceName} with LOGIN ENCRYPTED PASSWORD '${password}'`;
+  console.info(
+    `RESULT: ${JSON.stringify(await pgClient.query(createRolePasswordSQL), undefined, 2)}`
+  );
+
+  await pgClient.end();
 
   // store the new db config at secret manager
   const secretValue = createSecretValue({
@@ -48,7 +63,6 @@ export const handler = async (event: EventType) => {
     dbname: microserviceName,
   });
 
-  const smClient = new SecretsManagerClient();
   const smInput: CreateSecretCommandInput = {
     Name: `orcabus/microservice/${microserviceName}`,
     Description: `orcabus microservice secret for '${microserviceName}'`,
@@ -65,7 +79,7 @@ export const handler = async (event: EventType) => {
     `storing the role credential at the secret manager (orcabus/microservice/${microserviceName})`
   );
   const response = await smClient.send(smCommand);
-  console.info(`ssm-response: ${response}`);
+  console.info(`ssm-response: ${JSON.stringify(response, undefined, 2)}`);
 };
 
 /**
