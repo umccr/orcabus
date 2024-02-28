@@ -31,7 +31,7 @@ jobs:
       # TODO see whether we can leverage https://github.com/pre-commit/action
       - name: Install system-wide tools dependencies
         run: |
-          pip3 install pre-commit detect-secrets black ggshield awscli-local
+          pip3 install pre-commit detect-secrets black ggshield
 
       - name: Checkout code
         uses: actions/checkout@v3
