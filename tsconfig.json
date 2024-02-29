@@ -30,6 +30,7 @@
   "exclude": [
     "node_modules",
     "cdk.out",
-    "lib/workload/stateless/metadata_manager"
+    "lib/workload/stateless/metadata_manager",
+    "lib/workload/stateless/postgres_manager"
   ]
 }

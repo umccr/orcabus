@@ -98,7 +98,9 @@ export class PostgresManager extends Construct {
         new iam.PolicyStatement({
           actions: ['secretsmanager:CreateSecret', 'secretsmanager:TagResource'],
           effect: iam.Effect.ALLOW,
-          resources: ['arn:aws:secretsmanager:ap-southeast-2:*:secret:*'],
+          resources: [
+            `arn:aws:secretsmanager:ap-southeast-2:${process.env.CDK_DEFAULT_ACCOUNT}:secret:*`,
+          ],
         }),
         new iam.PolicyStatement({
           actions: ['secretsmanager:GetRandomPassword'],

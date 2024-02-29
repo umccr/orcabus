@@ -1,7 +1,7 @@
 import { App, Aspects } from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { SynthesisMessage } from 'aws-cdk-lib/cx-api';
-import { AwsSolutionsChecks } from 'cdk-nag';
+import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 import { OrcaBusStatelessStack } from '../../lib/workload/orcabus-stateless-stack';
 import { getEnvironmentConfig } from '../../config/constants';
 
@@ -26,8 +26,22 @@ describe('cdk-nag-stateless-stack', () => {
     });
     Aspects.of(stack).add(new AwsSolutionsChecks());
 
-    // Suppressions (if any)
-    //  ...
+    NagSuppressions.addStackSuppressions(stack, [
+      { id: 'AwsSolutions-IAM4', reason: 'allow to use AWS managed policy' },
+    ]);
+
+    // suppress by resource
+    NagSuppressions.addResourceSuppressionsByPath(
+      stack,
+      `/TestStack/PostgresManager/CreateUserPassPostgresLambda/ServiceRole/DefaultPolicy/Resource`,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            "'*' is required for secretsmanager:GetRandomPassword and new SM ARN will contain random character",
+        },
+      ]
+    );
   });
 
   test('cdk-nag AwsSolutions Pack errors', () => {
