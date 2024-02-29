@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 """
-Read runinfo xml
+Read runinfo xml  # FIXME - wait for release of new v2-samplesheet-maker to handle runinfo xml parsing / writing
 """
-from typing import Dict
 
+# Standard imports
+from typing import Dict
 import xmltodict
 
 

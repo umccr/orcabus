@@ -5,22 +5,19 @@ Configuration handler
 
 Get ICAv2 configuration handler
 """
+
+# Standard imports
 import typing
-
 import boto3
+from os import environ
 
+# Local imports
+from .globals import ICAV2_BASE_URL, ICAV2_ACCESS_TOKEN_URN_SSM_PATH
+
+# Type checking, only available as dev dependencies
 if typing.TYPE_CHECKING:
     from mypy_boto3_ssm import SSMClient
     from mypy_boto3_secretsmanager import SecretsManagerClient
-
-
-from os import environ
-from typing import Optional
-from libica.openapi.v2 import Configuration
-from .globals import ICAV2_BASE_URL, ICAV2_ACCESS_TOKEN_URN_SSM_PATH
-
-# Global runtime vars
-ICAV2_CONFIGURATION: Optional[Configuration] = None
 
 
 # AWS things
@@ -64,36 +61,3 @@ def set_icav2_env_vars():
     environ["ICAV2_ACCESS_TOKEN"] = get_secret(
         get_ssm_parameter_value(ICAV2_ACCESS_TOKEN_URN_SSM_PATH)
     )
-
-
-# ICAv2 Things
-def get_icav2_base_url() -> str:
-    """
-    Return icav2 base url
-    """
-    return environ["ICAV2_BASE_URL"]
-
-
-def get_icav2_access_token():
-    """
-    Return icav2 access token
-    """
-    return environ["ICAV2_ACCESS_TOKEN"]
-
-
-def set_icav2_configuration():
-    global ICAV2_CONFIGURATION
-    ICAV2_CONFIGURATION = Configuration(
-        host=get_icav2_base_url(),
-        access_token=get_icav2_access_token()
-    )
-
-
-def get_icav2_configuration() -> Configuration:
-    """
-    Return icav2 configuration, if not set, sets it first, then returns
-    :return:
-    """
-    if ICAV2_CONFIGURATION is None:
-        set_icav2_configuration()
-    return ICAV2_CONFIGURATION

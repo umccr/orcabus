@@ -19,12 +19,13 @@ from pathlib import Path
 # Imports
 from urllib.parse import urlparse
 
-# Imports
-from bssh_manager_tools.utils.icav2_configuration_helper import set_icav2_env_vars
-from bssh_manager_tools.utils.icav2_project_data_helper import (
-    get_file_id_from_path,
-    project_data_copy_batch_handler
+from wrapica.project_data import (
+    project_data_copy_batch_handler,
+    convert_icav2_uri_to_data_obj
 )
+
+# Imports
+from bssh_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
 
 
 def handler(event, context):
@@ -45,10 +46,9 @@ def handler(event, context):
 
     source_data_ids = list(
         map(
-            lambda source_uri_iter: get_file_id_from_path(
-                source_uri_iter.netloc,
-                Path(source_uri_iter.path)
-            ),
+            lambda source_uri_iter: convert_icav2_uri_to_data_obj(
+                source_uri_iter
+            ).data.id,
             source_uris
         )
     )

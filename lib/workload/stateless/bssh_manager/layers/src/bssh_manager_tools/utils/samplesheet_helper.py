@@ -3,27 +3,34 @@
 """
 Reads in a v2 samplesheet object from a file
 """
-
-# Standard
+# Standard imports
 import json
 from io import StringIO
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
+from tempfile import NamedTemporaryFile
 
-import pandas as pd
+# UMCCR Libraries
+from v2_samplesheet_maker.classes.samplesheet import SampleSheet
+from wrapica.project_data import read_icav2_file_contents
 
 # Logger
 from ..utils.logger import get_logger
 
+
 logger = get_logger()
 
 
-def read_v2_samplesheet(samplesheet_path: Path | StringIO) -> Dict:
+def read_v2_samplesheet(project_id: str, data_id: str) -> Dict:
     """
     Given a v2 samplesheet path, read in the file as a v2 samplesheet (we first convert to json)
-    :param samplesheet_path:
-    :return:
 
+    :param project_id:
+    :param data_id:
+
+    :return: A dictionary
+
+    :Example:
     /home/alexiswl/UMCCR/GitHub/v2-bclconvert-samplesheet-maker/venv/bin/python -m v2_samplesheet_maker.modules.v2_samplesheet_reader
     {
         "Header": {
@@ -84,100 +91,57 @@ def read_v2_samplesheet(samplesheet_path: Path | StringIO) -> Dict:
             ...
         ]
     }
-
-
-
     """
 
-    # Part 1 - read in the samplesheet as a string
-    if isinstance(samplesheet_path, Path):
-        if not samplesheet_path.is_file():
-            logger.error(f"Samplesheet path {samplesheet_path} is not a file")
-            raise ValueError
-        with open(samplesheet_path, 'r') as samplesheet_h:
-            samplesheet_string_list = samplesheet_h.readlines()
-    elif isinstance(samplesheet_path, StringIO):
-        samplesheet_string_list = samplesheet_path.readlines()
-    else:
-        logger.error(f"Unknown type for samplesheet_path: {type(samplesheet_path)}")
-        raise ValueError
+    with (
+        NamedTemporaryFile(suffix='.csv') as input_csv,
+        NamedTemporaryFile(suffix='.json') as output_json
+    ):
+        # Write the contents of the samplesheet to a temporary file
+        read_icav2_file_contents(
+            project_id=project_id,
+            data_id=data_id,
+            output_path=Path(input_csv.name)
+        )
 
-    # Part 2 - assign each line to a header
-    samplesheet_strings_by_header = {}
+        # Read in the samplehseet from the temp file
+        SampleSheet.read_from_samplesheet_csv(
+            Path(input_csv.name)
+        ).to_json(
+            Path(output_json.name)
+        )
 
-    header_name = None
-
-    for line in samplesheet_string_list:
-        if line.startswith('['):
-            header_name = (line.strip().replace("[", "").replace("]", ""))
-            samplesheet_strings_by_header[header_name] = []
-            continue
-
-        # Sample Line - check to make sure header_name is not None
-        if header_name is None:
-            logger.error("Got a non-header line before a header line in the samplesheet")
-            raise ValueError
-
-        # Don't add in blank lines
-        if line.strip() == "":
-            continue
-
-        # Add the line to the values under the current header name
-        samplesheet_strings_by_header[header_name].append(line.strip())
-
-    # Part 3 - for each part, write out key value pairs or a data frame
-    samplesheet_objects_by_header = {}
-
-    for header_name, value_lines in samplesheet_strings_by_header.items():
-        if header_name.lower().endswith("_data"):
-            # This is the data section, which we will convert to a dataframe
-            samplesheet_objects_by_header[header_name] = (
-                json.loads(
-                    pd.read_csv(
-                        StringIO("\n".join(value_lines))
-                    ).to_json(
-                        orient='records'
-                    )
-                )
-            )
-        else:
-            # This is a key value pair section
-            samplesheet_objects_by_header[header_name] = {}
-            for line in value_lines:
-                key, value = line.split(",")
-                samplesheet_objects_by_header[header_name][key] = value
-
-    # Return the samplesheet as a dict
-    return samplesheet_objects_by_header
+        with open(output_json.name, 'r') as f:
+            return json.loads(f.read())
 
 
-def get_library_assay_from_samplesheet_dict(library_id: str, samplesheet_dict: Dict):
-    """
-    Get the library assay from the samplesheet dict -
-    The library assay should be accessible from
-    Cloud_Data -> Sample_ID == Library_ID -> LibraryPrepKitName
-    :param library_id:
-    :param samplesheet_dict:
-    :return:
-    """
-    if 'Cloud_Data' not in samplesheet_dict.keys():
-        logger.warning("No Cloud_Data section in the samplesheet, could not get the library assay")
-        return None
-
-    cloud_data_df = pd.DataFrame(samplesheet_dict['Cloud_Data'])
-
-    # Get all matches to the library_id
-    library_df = cloud_data_df.query(f"Sample_ID == '{library_id}'")
-
-    if library_df.shape[0] == 0:
-        logger.warning(f"No matches to the library_id '{library_id}' in the Cloud_Data section of the samplesheet")
-        return None
-
-    library_kits = library_df["LibraryPrepKitName"].unique().tolist()
-
-    if len(library_kits) > 1:
-        logger.warning(f"Multiple library kits found for the library_id {library_id}: {library_kits}")
-        return None
-
-    return library_kits[0]
-
+# def get_library_assay_from_samplesheet_dict(library_id: str, samplesheet_dict: Dict):
+#     """
+#     Get the library assay from the samplesheet dict -
+#     The library assay should be accessible from
+#     Cloud_Data -> Sample_ID == Library_ID -> LibraryPrepKitName
+#     :param library_id:
+#     :param samplesheet_dict:
+#     :return:
+#     """
+#     if 'Cloud_Data' not in samplesheet_dict.keys():
+#         logger.warning("No Cloud_Data section in the samplesheet, could not get the library assay")
+#         return None
+#
+#     cloud_data_df = pd.DataFrame(samplesheet_dict['Cloud_Data'])
+#
+#     # Get all matches to the library_id
+#     library_df = cloud_data_df.query(f"Sample_ID == '{library_id}'")
+#
+#     if library_df.shape[0] == 0:
+#         logger.warning(f"No matches to the library_id '{library_id}' in the Cloud_Data section of the samplesheet")
+#         return None
+#
+#     library_kits = library_df["LibraryPrepKitName"].unique().tolist()
+#
+#     if len(library_kits) > 1:
+#         logger.warning(f"Multiple library kits found for the library_id {library_id}: {library_kits}")
+#         return None
+#
+#     return library_kits[0]
+#

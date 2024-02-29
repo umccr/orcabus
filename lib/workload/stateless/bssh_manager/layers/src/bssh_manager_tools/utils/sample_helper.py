@@ -1,31 +1,39 @@
 #!/usr/bin/env python3
 
-"""
-
-"""
+# Standard imports
 from typing import Dict
-
 import pandas as pd
 from pathlib import Path
 
-from bssh_manager_tools.utils.icav2_project_data_helper import get_uri_from_project_id_and_path
+# Wrapica imports
+from wrapica.enums import DataType
+from wrapica.project_data import (
+    convert_project_id_and_data_path_to_icav2_uri
+)
 
 
-def get_sample_id_path_prefix_from_bssh_datasets_dict(sample_id: str, lane: int, datasets_dict: Dict) -> Path:
+def get_sample_id_path_prefix_from_bssh_datasets_dict(
+    sample_id: str,
+    lane: int,
+    datasets_dict: Dict
+) -> Path:
     """
     From the DataSets dict, collect the sample_id as a key and then retunr the path attribute
+
     :param sample_id:
     :param datasets_dict:
+    :param lane:
+
     :return:
     """
     return Path(datasets_dict.get(sample_id + f"_L{lane}").get('Path'))
 
 
 def get_fastq_list_paths_from_bssh_output_and_fastq_list_csv(
-        fastq_list_pd: pd.DataFrame,
-        bssh_output_dict: Dict,
-        project_id: str,
-        run_output_path: Path
+    fastq_list_pd: pd.DataFrame,
+    bssh_output_dict: Dict,
+    project_id: str,
+    run_output_path: Path
 ) -> pd.DataFrame:
     """
     Takes the SampleSheet.Samples key for bssh output dict and convert into a pandas DataFrame,
@@ -228,7 +236,7 @@ def get_fastq_list_paths_from_bssh_output_and_fastq_list_csv(
     :param fastq_list_pd: pandas dataframe of fastq list csv
     :param bssh_output_dict: dictionary of bssh output
 
-    :return Returns the paths to the fastq files for each sample id  # FIXME - return fastq list rows as a dict instead
+    :return Returns the paths to the fastq files for each sample id and lane
     """
 
     fastq_list_pd["sample_prefix"] = fastq_list_pd.apply(
@@ -242,17 +250,19 @@ def get_fastq_list_paths_from_bssh_output_and_fastq_list_csv(
 
     # Update the fastqs to contain the full path
     fastq_list_pd["Read1FileURISrc"] = fastq_list_pd.apply(
-        lambda row: get_uri_from_project_id_and_path(
+        lambda row: convert_project_id_and_data_path_to_icav2_uri(
             project_id,
-            run_output_path / row["sample_prefix"] / row["Read1File"]
+            run_output_path / row["sample_prefix"] / row["Read1File"],
+            DataType.FILE
         ),
         axis="columns"
     )
 
     fastq_list_pd["Read2FileURISrc"] = fastq_list_pd.apply(
-        lambda row: get_uri_from_project_id_and_path(
+        lambda row: convert_project_id_and_data_path_to_icav2_uri(
             project_id,
-            run_output_path / row["sample_prefix"] / row["Read2File"]
+            run_output_path / row["sample_prefix"] / row["Read2File"],
+            DataType.FILE
         ),
         axis="columns"
     )

@@ -23,6 +23,7 @@ aws_requests_auth = "^0.4.3"
 xmltodict = "^0.13.0"
 pandas = "^2.2.0"
 v2_samplesheet_maker = "^4.2.4"
+# wrapica = ">=0.0.1"  # FIXME
 
 [tool.poetry.group.dev]
 optional = true
@@ -33,3 +34,4 @@ pytest = "^7.0.0"  # For testing only
 # For typehinting only, not required at runtime
 mypy-boto3-ssm = "^1.34"
 mypy-boto3-secretsmanager = "^1.34"
+mypy-boto3-stepfunctions = "^1.34"

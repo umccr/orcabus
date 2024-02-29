@@ -10,6 +10,9 @@ The BCLConversion complete object looks something like this:
   "analysis_id": "b1234567-1234-1234-1234-1234567890ab",
   "portal_run_id": "20240207abcduuid"
 }
+
+# FIXME - bring back samplesheet - we might want this to return to the workflow as a json object
+
 """
 
 # Imports
@@ -18,34 +21,40 @@ from io import StringIO
 from pathlib import Path
 from typing import Dict
 from urllib.parse import urlparse
-
 import pandas as pd
+from bssh_manager_tools.utils.samplesheet_helper import read_v2_samplesheet
+from wrapica.enums import DataType
+import logging
+
+# Wrapica imports
+from wrapica.libica_models import ProjectData
+from wrapica.project_data import (
+    get_project_data_obj_by_id,
+    read_icav2_file_contents_to_string, get_project_data_folder_id_from_project_id_and_path,
+    convert_project_id_and_data_path_to_icav2_uri, convert_project_data_obj_to_icav2_uri
+)
 
 # Local imports
 from bssh_manager_tools.utils.manifest_helper import generate_run_manifest, get_dest_uri_from_src_uri
 from bssh_manager_tools.utils.sample_helper import get_fastq_list_paths_from_bssh_output_and_fastq_list_csv
-from bssh_manager_tools.utils.samplesheet_helper import read_v2_samplesheet
-from bssh_manager_tools.utils.workflow_session_helper import (
+from bssh_manager_tools.utils.directory_helper import (
     get_basespace_run_id_from_bssh_json_output,
-    generate_bclconvert_output_folder_path, get_dest_project_id_from_ssm_parameter, get_cttso_fastq_cache_path,
-    get_cttso_library_run_path
+    generate_bclconvert_output_folder_path, get_dest_project_id_from_ssm_parameter
 )
-from bssh_manager_tools.utils.icav2_project_data_helper import (
-    get_icav2_file_contents, get_data_object_from_id,
-    get_uri_from_project_id_and_path, get_folder_id_from_project_data_path
-)
-from bssh_manager_tools.utils.icav2_configuration_helper import set_icav2_env_vars
+from bssh_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
 from bssh_manager_tools.utils.icav2_analysis_helpers import (
     get_bssh_json_file_id_from_analysis_output_list,
-    get_outputs_object_from_analysis_id, get_run_info_xml_file_id_analysis_output_list,
-    get_fastq_list_csv_file_id_from_analysis_output_list, get_samplesheet_path_from_analysis_output_list,
-    get_samplesheet_file_id_from_analysis_output_list, get_run_folder_inputs_from_analysis_id,
-    get_interop_files_from_run_folder
+    get_run_info_xml_file_id_analysis_output_list,
+    get_fastq_list_csv_file_id_from_analysis_output_list, get_run_folder_obj_from_analysis_id,
+    get_interop_files_from_run_folder, get_bclconvert_outputs_from_analysis_id,
+    get_samplesheet_path_from_analysis_output_list, get_samplesheet_file_id_from_analysis_output_list
 )
 from bssh_manager_tools.utils.xml_helpers import parse_runinfo_xml, get_run_id_from_run_info_xml_dict
-from bssh_manager_tools.utils.logger import get_logger
+from bssh_manager_tools.utils.logger import set_basic_logger
 
-logger = get_logger()
+# Set logger
+logger = set_basic_logger()
+logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
@@ -53,6 +62,7 @@ def handler(event, context):
     Read in the event and collect the workflow session details
     """
     # Set ICAv2 configuration from secrets
+    logger.info("Setting icav2 env vars from secrets manager")
     set_icav2_env_vars()
 
     # Get the BCLConvert analysis ID
@@ -62,31 +72,27 @@ def handler(event, context):
     portal_run_id = event['portal_run_id']
 
     # Get the input run inputs
-    input_run_folder_id, input_run_data_list = get_run_folder_inputs_from_analysis_id(
+    logger.info("Collecting input run data objects")
+    input_run_folder_obj: ProjectData = get_run_folder_obj_from_analysis_id(
         project_id=project_id,
         analysis_id=analysis_id
     )
 
-    # Get the run folder object itself
-    input_run_folder_obj = get_data_object_from_id(
-        project_id=project_id,
-        data_id=input_run_folder_id
-    )
-
     # Get the interop files
     interop_files = get_interop_files_from_run_folder(
-        input_run_folder_obj, input_run_data_list
+        input_run_folder_obj
     )
 
     # Get the analysis output path
     logger.info("Collecting output data objects")
-    bclconvert_output_folder_id, bclconvert_output_data_list = get_outputs_object_from_analysis_id(
+    bclconvert_output_folder_id, bclconvert_output_data_list = get_bclconvert_outputs_from_analysis_id(
         project_id=project_id,
         analysis_id=analysis_id
     )
 
     # Get the output folder object
-    bclconvert_output_folder_obj = get_data_object_from_id(
+    logger.info("Get bclconvert output folder object")
+    bclconvert_output_folder_obj = get_project_data_obj_by_id(
         project_id=project_id,
         data_id=bclconvert_output_folder_id
     )
@@ -97,9 +103,9 @@ def handler(event, context):
 
     # Read the json object
     bssh_json_dict = json.loads(
-        get_icav2_file_contents(
+        read_icav2_file_contents_to_string(
             project_id=project_id,
-            file_id=bssh_output_file_id
+            data_id=bssh_output_file_id
         )
     )
 
@@ -108,12 +114,12 @@ def handler(event, context):
     # Such as the IndexMetricsOut.bin file in the Reports Directory
     # Which we also copy over to the interops directory
     bcl_convert_output_path = Path(bclconvert_output_folder_obj.data.details.path) / "output"
-    bcl_convert_output_fol_id = get_folder_id_from_project_data_path(
+    bcl_convert_output_fol_id = get_project_data_folder_id_from_project_id_and_path(
         project_id,
         bcl_convert_output_path,
         create_folder_if_not_found=False
     )
-    bcl_convert_output_obj = get_data_object_from_id(
+    bcl_convert_output_obj = get_project_data_obj_by_id(
         project_id=project_id,
         data_id=bcl_convert_output_fol_id
     )
@@ -146,9 +152,9 @@ def handler(event, context):
 
     # Read in the run info xml
     run_info_dict = parse_runinfo_xml(
-        get_icav2_file_contents(
+        read_icav2_file_contents_to_string(
             project_id=project_id,
-            file_id=run_info_file_id
+            data_id=run_info_file_id
         )
     )
 
@@ -158,7 +164,9 @@ def handler(event, context):
 
     # Get the samplesheet id
     # The samplesheet needs to be placed in every cttso directory
-    logger.info("Getting the samplesheet")
+    # FIXME - to remove - don't need the samplesheet anymore
+    # Since we're not copying over cttso runs
+    # logger.info("Getting the samplesheet")
     samplesheet_path = get_samplesheet_path_from_analysis_output_list(
         bclconvert_output_data_list
     )
@@ -166,30 +174,20 @@ def handler(event, context):
         bclconvert_output_data_list
     )
 
-    # Get the samplesheet as URI
-    samplesheet_as_uri = get_uri_from_project_id_and_path(
-        project_id=project_id,
-        data_path=samplesheet_path
-    )
-
+    #
     logger.info("Reading in the samplesheet")
     samplesheet_dict = read_v2_samplesheet(
-        StringIO(
-            get_icav2_file_contents(
-                project_id=project_id,
-                file_id=samplesheet_file_id
-            )
-        )
+        project_id=project_id,
+        data_id=samplesheet_file_id
     )
-
     # Get fastq list csv
     logger.info("Getting the fastq list csv file")
     fastq_list_csv_file_id = get_fastq_list_csv_file_id_from_analysis_output_list(bclconvert_output_data_list)
     fastq_list_csv_pd = pd.read_csv(
         StringIO(
-            get_icav2_file_contents(
+            read_icav2_file_contents_to_string(
                 project_id=project_id,
-                file_id=fastq_list_csv_file_id
+                data_id=fastq_list_csv_file_id
             )
         )
     )
@@ -222,7 +220,11 @@ def handler(event, context):
         portal_run_id=portal_run_id
     )
     dest_project_id = get_dest_project_id_from_ssm_parameter()
-    run_root_uri = get_uri_from_project_id_and_path(project_id, str(bcl_convert_output_path) + "/")
+    run_root_uri = convert_project_id_and_data_path_to_icav2_uri(
+            project_id,
+            bcl_convert_output_path,
+            DataType.FOLDER
+    )
     run_manifest: Dict = generate_run_manifest(
         root_run_uri=run_root_uri,
         project_data_list=bclconvert_output_data_list,
@@ -240,63 +242,64 @@ def handler(event, context):
             ) + Path(urlparse(src_uri).path).name
         )
 
-    # Query the samples from the bssh sample outputs to determine if there are any samples that need to be added
-    # to the cttso run cache path
-    cttso_run_configurations = []
-    logger.info("Checking for cttso samples - these need to be copied over twice!")
-    if "TSO500L_Settings" in samplesheet_dict.keys():
-        # Iterate over each library id and add dest uri to the run manifest for each fastq
-        cttso_library_ids = list(
-            map(
-                lambda tsodata_iter: tsodata_iter.get("Sample_ID", None),
-                samplesheet_dict.get("TSO500L_Data", [])
-            )
-        )
-
-        # Get library ids
-        for cttso_library_id in cttso_library_ids:
-            # Add samplesheet to top level of library run directory
-            # <cttso_run_cache_path> / <YYYY> / <MM> / <run_id> / <basespace_run_id> /
-            # <library_id> + "_run_cache"
-            run_folder_uri = get_uri_from_project_id_and_path(
-                dest_project_id,
-                get_cttso_library_run_path(
-                    run_id=run_id,
-                    basespace_run_id=basespace_run_id,
-                    library_id=cttso_library_id,
-                    portal_run_id=portal_run_id
-                )
-            ) + "/"
-            samplesheet_dest_uri = run_folder_uri
-
-            # Add to manifest list
-            run_manifest[samplesheet_as_uri].append(
-                samplesheet_dest_uri
-            )
-
-            # Append the run configuration containing the samplesheet
-            cttso_run_configurations.append(
-                {
-                    "samplesheet_uri": samplesheet_dest_uri + "SampleSheet.csv",
-                    "run_folder_uri": run_folder_uri
-                }
-            )
-
-            # <cttso_run_cache_path> / <YYYY> / <MM> / <run_id> / <basespace_run_id> /
-            # <library_id> + "_run_cache" / <library_id>
-            for fastq_uri in fastq_list_paths_by_sample_id.get(cttso_library_id):
-                # Add fastq uri to list
-                run_manifest[fastq_uri].append(
-                    get_uri_from_project_id_and_path(
-                        dest_project_id,
-                        get_cttso_fastq_cache_path(
-                            run_id=run_id,
-                            basespace_run_id=basespace_run_id,
-                            library_id=cttso_library_id,
-                            portal_run_id=portal_run_id
-                        )
-                    ) + "/"
-                )
+    # FIXME - to delete we don't copy over cttso runs anymore, part of the cttso v2 step functions now
+    # # Query the samples from the bssh sample outputs to determine if there are any samples that need to be added
+    # # to the cttso run cache path
+    # cttso_run_configurations = []
+    # logger.info("Checking for cttso samples - these need to be copied over twice!")
+    # if "TSO500L_Settings" in samplesheet_dict.keys():
+    #     # Iterate over each library id and add dest uri to the run manifest for each fastq
+    #     cttso_library_ids = list(
+    #         map(
+    #             lambda tsodata_iter: tsodata_iter.get("Sample_ID", None),
+    #             samplesheet_dict.get("TSO500L_Data", [])
+    #         )
+    #     )
+    #
+    #     # Get library ids
+    #     for cttso_library_id in cttso_library_ids:
+    #         # Add samplesheet to top level of library run directory
+    #         # <cttso_run_cache_path> / <YYYY> / <MM> / <run_id> / <basespace_run_id> /
+    #         # <library_id> + "_run_cache"
+    #         run_folder_uri = convert_project_data_obj_to_icav2_uri(
+    #             dest_project_id,
+    #             get_cttso_library_run_path(
+    #                 run_id=run_id,
+    #                 basespace_run_id=basespace_run_id,
+    #                 library_id=cttso_library_id,
+    #                 portal_run_id=portal_run_id
+    #             )
+    #         ) + "/"
+    #         samplesheet_dest_uri = run_folder_uri
+    #
+    #         # Add to manifest list
+    #         run_manifest[samplesheet_as_uri].append(
+    #             samplesheet_dest_uri
+    #         )
+    #
+    #         # Append the run configuration containing the samplesheet
+    #         cttso_run_configurations.append(
+    #             {
+    #                 "samplesheet_uri": samplesheet_dest_uri + "SampleSheet.csv",
+    #                 "run_folder_uri": run_folder_uri
+    #             }
+    #         )
+    #
+    #         # <cttso_run_cache_path> / <YYYY> / <MM> / <run_id> / <basespace_run_id> /
+    #         # <library_id> + "_run_cache" / <library_id>
+    #         for fastq_uri in fastq_list_paths_by_sample_id.get(cttso_library_id):
+    #             # Add fastq uri to list
+    #             run_manifest[fastq_uri].append(
+    #                 convert_project_data_obj_to_icav2_uri(
+    #                     dest_project_id,
+    #                     get_cttso_fastq_cache_path(
+    #                         run_id=run_id,
+    #                         basespace_run_id=basespace_run_id,
+    #                         library_id=cttso_library_id,
+    #                         portal_run_id=portal_run_id
+    #                     )
+    #                 ) + "/"
+    #             )
 
     # Sanitise the manifest file - make sure theres no Path objects in there
     run_manifest = dict(
@@ -331,15 +334,22 @@ def handler(event, context):
     interops_as_uri = dict(
         map(
             lambda interop_iter: (
-                get_uri_from_project_id_and_path(
-                    project_id,
-                    interop_iter.data.details.path
+                convert_project_id_and_data_path_to_icav2_uri(
+                        project_id,
+                        Path(interop_iter.data.details.path),
+                        data_type=DataType.FILE
                 ),
                 [
-                    get_uri_from_project_id_and_path(
-                        dest_project_id,
-                        dest_folder_path / Path(interop_iter.data.details.path).parent.relative_to(input_run_folder_obj.data.details.path)
-                    ) + "/"
+                    convert_project_id_and_data_path_to_icav2_uri(
+                            dest_project_id,
+                            (
+                                dest_folder_path /
+                                Path(interop_iter.data.details.path).parent.relative_to(
+                                    input_run_folder_obj.data.details.path
+                                )
+                            ),
+                            data_type=DataType.FOLDER
+                    )
                 ]
             ),
             interop_files
@@ -362,32 +372,38 @@ def handler(event, context):
         )
     except StopIteration:
         # Add 'IndexMetricsOut.bin' from reports directory to the interop files
-        index_metrics_uri = get_uri_from_project_id_and_path(
+        index_metrics_uri = convert_project_id_and_data_path_to_icav2_uri(
             project_id,
-            Path(bcl_convert_output_obj.data.details.path) / "Reports" / "IndexMetricsOut.bin"
+            Path(bcl_convert_output_obj.data.details.path) / "Reports" / "IndexMetricsOut.bin",
+            data_type=DataType.FILE
         )
 
         # Append InterOp directory to list of outputs for IndexMetricsOut.bin
         run_manifest[index_metrics_uri].append(
-            get_uri_from_project_id_and_path(
+            convert_project_id_and_data_path_to_icav2_uri(
                 dest_project_id,
-                dest_folder_path / "InterOp"
-            ) + "/"
+                dest_folder_path / "InterOp",
+                data_type=DataType.FOLDER
+            )
         )
 
     return {
         "manifest": run_manifest,
         "run_id": run_id,
         "basespace_run_id": basespace_run_id,
-        "output_uri": get_uri_from_project_id_and_path(dest_project_id, dest_folder_path) + "/",
+        "output_uri": convert_project_id_and_data_path_to_icav2_uri(
+            dest_project_id,
+            dest_folder_path,
+            data_type=DataType.FOLDER
+        ),
         "fastq_list_rows": fastq_list_rows_df_list,
-        "cttso_run_configurations": cttso_run_configurations
+        "samplesheet_dict": samplesheet_dict
     }
 
 
 #
-print(
-    json.dumps(
+with open("test.json", "w") as f:
+    f.write(json.dumps(
         handler(
             {
                 "project_id": "b23fb516-d852-4985-adcc-831c12e8cd22",

@@ -17,8 +17,8 @@ The event input is
 }
 
 """
-from bssh_manager_tools.utils.icav2_configuration_helper import set_icav2_env_vars
-from bssh_manager_tools.utils.icav2_job_handler import get_job
+from bssh_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
+from wrapica.job import get_job
 
 SUCCESS_STATES = [
     "SUCCEEDED"
@@ -57,5 +57,3 @@ def handler(event, context):
         return None
     else:
         raise Exception("Unknown job status: {}".format(job.status))
-
-

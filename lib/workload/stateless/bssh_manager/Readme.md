@@ -2,7 +2,9 @@
 
 The bssh manager runs performs the following logic
 
-* Handles the ICAv2 AutoLaunch Workflow Session event that kicks off BCLConvert in the BaseSpace Managed ICAv2 Project.
+~~* Handles the ICAv2 AutoLaunch Workflow Session event that kicks off BCLConvert in the BaseSpace Managed ICAv2 Project.~~
+* Statemachine expects a project_id (the project in which BCLConvert was run), an analysis_id (the analysis id), and a portal_run_id
+  * The portal run id is important for placing outputs under a nested uuid directory.
 * Copies data from BSSH to our own ICAv2 project
 
 ## Lambdas in this directory

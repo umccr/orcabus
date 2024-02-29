@@ -3,16 +3,23 @@
 """
 Add run manifest
 """
+
+# Standard libraries
 from pathlib import Path
 from typing import List, Dict
 from urllib.parse import urlparse, urlunparse
 
-from libica.openapi.v2.model.project_data import ProjectData
+# Wrapica imports
+from wrapica.libica_models import ProjectData
+from wrapica.project_data import convert_project_data_obj_to_icav2_uri
 
-from bssh_manager_tools.utils.icav2_project_data_helper import project_data_as_uri
 
-
-def get_destination_uri_path(root_output_path: Path, output_project_id: str, output_folder_path: Path, file_path: Path) -> str:
+def get_destination_uri_path(
+    root_output_path: Path,
+    output_project_id: str,
+    output_folder_path: Path,
+    file_path: Path
+) -> str:
     """
     Get the destination uri path
     :param root_output_path: The root output path
@@ -38,7 +45,12 @@ def get_destination_uri_path(root_output_path: Path, output_project_id: str, out
     return dest_uri_path
 
 
-def get_dest_uri_from_src_uri(src_uri: str, root_output_path: Path, dest_project_id: str, dest_folder_path: Path) -> str:
+def get_dest_uri_from_src_uri(
+        src_uri: str,
+        root_output_path: Path,
+        dest_project_id: str,
+        dest_folder_path: Path
+) -> str:
     """
     Get the destination uri path from the source uri path, use this for generating the fastq list rows
     :param src_uri: The source uri
@@ -64,13 +76,18 @@ def get_dest_uri_from_src_uri(src_uri: str, root_output_path: Path, dest_project
     return dest_uri_path
 
 
-def generate_run_manifest(root_run_uri: str, project_data_list: List[ProjectData], output_project_id: str, output_folder_path: Path) -> Dict:
+def generate_run_manifest(
+    root_run_uri: str,
+    project_data_list: List[ProjectData],
+    output_project_id: str,
+    output_folder_path: Path
+) -> Dict:
     """
     Generate run manifest
     :param root_run_uri: Use this to get the relative path for each file list to be added to the run manifest
-    :param files_list: list of projectdata objects
+    :param project_data_list: list of projectdata objects
     :param output_project_id: The output project id to extend the path to
-    :param run_name: run name
+    :param output_folder_path: Path
     :return: run manifest
     """
     
@@ -83,7 +100,7 @@ def generate_run_manifest(root_run_uri: str, project_data_list: List[ProjectData
     for file_obj_iter in project_data_list:
 
         # Get the source file uri
-        source_file_uri = project_data_as_uri(file_obj_iter)
+        source_file_uri = convert_project_data_obj_to_icav2_uri(file_obj_iter)
         
         # Get the output path (which is the parent directory)
         dest_uri_path = get_destination_uri_path(

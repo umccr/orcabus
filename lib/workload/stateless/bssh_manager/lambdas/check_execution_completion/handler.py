@@ -82,4 +82,3 @@ def handler(event, context):
         }
     else:
         raise ValueError(f"Unknown status {status}")
-

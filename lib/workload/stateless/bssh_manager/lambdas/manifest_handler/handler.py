@@ -40,7 +40,7 @@ So we flip this to be
 
 Convert to an array as this will help AWS Step Functions deploy the manifest for the copy batch data handler.
 
-We don't convert the uris to data ids incase there are too many and we worry about lambda time outs,
+We don't convert the uris to data ids incase there are too many, and we worry about lambda time outs,
 that can be done by the lambda that generates the copy job
 
 [
@@ -84,7 +84,7 @@ def handler(event: Dict, context) -> List[Dict]:
             reduce(
                 lambda list_1, list_2: list_1 + list_2,
                 map(
-                    lambda dest_uri: dest_uri,
+                    lambda dest_uri_iter: dest_uri_iter,
                     event.values()
                 ),
                 []

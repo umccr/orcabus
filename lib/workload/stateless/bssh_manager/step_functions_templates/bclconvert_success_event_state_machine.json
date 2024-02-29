@@ -22,7 +22,7 @@
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
         "FunctionName": "${__bclconvert_success_event_lambda_arn__}",
-        "Payload.$": "$.workflow_inputs.detail.ica-event"
+        "Payload.$": "$.workflow_inputs"
       },
       "Retry": [
         {
