@@ -6,7 +6,7 @@ import {
 } from '../lib/workload/orcabus-stateless-stack';
 import { Duration, aws_lambda, RemovalPolicy } from 'aws-cdk-lib';
 import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
-import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/utils';
+import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';

@@ -7,7 +7,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import { DbAuthType, MicroserviceConfig } from '../function/utils';
+import { MicroserviceConfig, DbAuthType } from '../function/type';
 
 export type PostgresManagerConfig = {
   masterSecretName: string;

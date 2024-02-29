@@ -1,6 +1,6 @@
 import { Client } from 'pg';
+import { EventType } from './type';
 import {
-  EventType,
   getMicroserviceConfig,
   getMicroserviceName,
   executeSqlWithLog,

@@ -1,12 +1,11 @@
 import { Client } from 'pg';
 import {
-  EventType,
   getMicroserviceConfig,
   getMicroserviceName,
   executeSqlWithLog,
   getRdsMasterSecret,
-  DbAuthType,
 } from './utils';
+import { DbAuthType, EventType } from './type';
 
 export const handler = async (event: EventType) => {
   const microserviceConfig = getMicroserviceConfig();
