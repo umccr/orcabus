@@ -1,4 +1,4 @@
-import { Duration } from 'aws-cdk-lib';
+import { Duration, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -16,13 +16,13 @@ export type PostgresManagerConfig = {
   clusterResourceIdParameterName: string;
 };
 
-export type PostgresManagerStackProps = PostgresManagerConfig & {
+export type PostgresManagerProps = PostgresManagerConfig & {
   vpc: ec2.IVpc;
   lambdaSecurityGroup: ec2.ISecurityGroup;
 };
 
-export class PostgresManager extends Construct {
-  constructor(scope: Construct, id: string, props: PostgresManagerStackProps) {
+export class PostgresManagerStack extends Stack {
+  constructor(scope: Construct, id: string, props: StackProps & PostgresManagerProps) {
     super(scope, id);
 
     const { dbClusterIdentifier, microserviceDbConfig } = props;
@@ -33,12 +33,12 @@ export class PostgresManager extends Construct {
       props.masterSecretName
     );
 
-    const dbClusterResourceId = ssm.StringParameter.valueFromLookup(
+    const dbClusterResourceId = ssm.StringParameter.valueForStringParameter(
       this,
       props.clusterResourceIdParameterName
     );
 
-    const rdsLambdaProps = {
+    const rdsLambdaProps : nodejs.NodejsFunctionProps = {
       timeout: Duration.minutes(5),
       depsLockFilePath: __dirname + '/../yarn.lock',
       handler: 'handler',
