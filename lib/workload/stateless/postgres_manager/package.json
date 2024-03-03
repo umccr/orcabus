@@ -1,5 +1,5 @@
 {
-  "name": "lambda-with-rds",
+  "name": "postgres-manager",
   "packageManager": "yarn@3.5.1",
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.515.0",

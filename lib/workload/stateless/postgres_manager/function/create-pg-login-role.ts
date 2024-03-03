@@ -1,9 +1,5 @@
-import {
-  getMicroserviceName,
-  getMicroserviceConfig,
-  getRdsMasterSecret,
-  DbAuthType,
-} from './utils';
+import { DbAuthType } from './type';
+import { getMicroserviceName, getMicroserviceConfig, getRdsMasterSecret } from './utils';
 import {
   SecretsManagerClient,
   CreateSecretCommandInput,

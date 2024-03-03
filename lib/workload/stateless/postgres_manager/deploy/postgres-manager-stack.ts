@@ -1,4 +1,4 @@
-import { Duration } from 'aws-cdk-lib';
+import { Duration, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -7,7 +7,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import { DbAuthType, MicroserviceConfig } from '../function/utils';
+import { MicroserviceConfig, DbAuthType } from '../function/type';
 
 export type PostgresManagerConfig = {
   masterSecretName: string;
@@ -16,13 +16,13 @@ export type PostgresManagerConfig = {
   clusterResourceIdParameterName: string;
 };
 
-export type PostgresManagerStackProps = PostgresManagerConfig & {
+export type PostgresManagerProps = PostgresManagerConfig & {
   vpc: ec2.IVpc;
   lambdaSecurityGroup: ec2.ISecurityGroup;
 };
 
-export class PostgresManager extends Construct {
-  constructor(scope: Construct, id: string, props: PostgresManagerStackProps) {
+export class PostgresManagerStack extends Stack {
+  constructor(scope: Construct, id: string, props: StackProps & PostgresManagerProps) {
     super(scope, id);
 
     const { dbClusterIdentifier, microserviceDbConfig } = props;
@@ -33,12 +33,12 @@ export class PostgresManager extends Construct {
       props.masterSecretName
     );
 
-    const dbClusterResourceId = ssm.StringParameter.valueFromLookup(
+    const dbClusterResourceId = ssm.StringParameter.valueForStringParameter(
       this,
       props.clusterResourceIdParameterName
     );
 
-    const rdsLambdaProps = {
+    const rdsLambdaProps : nodejs.NodejsFunctionProps = {
       timeout: Duration.minutes(5),
       depsLockFilePath: __dirname + '/../yarn.lock',
       handler: 'handler',
@@ -98,7 +98,9 @@ export class PostgresManager extends Construct {
         new iam.PolicyStatement({
           actions: ['secretsmanager:CreateSecret', 'secretsmanager:TagResource'],
           effect: iam.Effect.ALLOW,
-          resources: ['arn:aws:secretsmanager:ap-southeast-2:*:secret:*'],
+          resources: [
+            `arn:aws:secretsmanager:ap-southeast-2:${process.env.CDK_DEFAULT_ACCOUNT}:secret:*`,
+          ],
         }),
         new iam.PolicyStatement({
           actions: ['secretsmanager:GetRandomPassword'],

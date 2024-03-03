@@ -8,9 +8,9 @@ import { Filemanager } from './stateless/filemanager/deploy/lib/filemanager';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import {
-  PostgresManager,
+  PostgresManagerStack,
   PostgresManagerConfig,
-} from './stateless/postgres_manager/construct/postgresManager';
+} from './stateless/postgres_manager/deploy/postgres-manager-stack';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
@@ -41,6 +41,10 @@ export interface FilemanagerDependencies {
 export class OrcaBusStatelessStack extends cdk.Stack {
   private vpc: IVpc;
   private lambdaSecurityGroup: ISecurityGroup;
+
+  // microservice stacks
+  microserviceStackArray: cdk.Stack[] = [];
+
   constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatelessConfig) {
     super(scope, id, props);
 
@@ -63,8 +67,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
 
     // hook microservice construct components here
     this.createSequenceRunManager();
-
-    this.createPostgresManager(props.postgresManagerConfig);
+    this.microserviceStackArray.push(this.createPostgresManager(props.postgresManagerConfig));
 
     if (props.filemanagerDependencies) {
       this.createFilemanager({
@@ -80,7 +83,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
   }
 
   private createPostgresManager(config: PostgresManagerConfig) {
-    new PostgresManager(this, 'PostgresManager', {
+    return new PostgresManagerStack(this, 'PostgresManager', {
       ...config,
       vpc: this.vpc,
       lambdaSecurityGroup: this.lambdaSecurityGroup,
@@ -114,7 +117,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
       dependencies.databaseSecretName
     );
 
-    new Filemanager(this, 'Filemanager', {
+    return new Filemanager(this, 'Filemanager', {
       buckets: dependencies.eventSourceBuckets,
       buildEnvironment: {},
       databaseSecret,
