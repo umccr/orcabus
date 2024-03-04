@@ -89,34 +89,38 @@ export class StatelessPipelineStack extends cdk.Stack {
       })
     );
 
-    /**
-     * Deployment to Gamma (Staging) account
-     */
-    const gammaConfig = getEnvironmentConfig('gamma');
-    if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(
-        this,
-        'GammaStatelessDeployment',
-        gammaConfig.stackProps,
-        {
-          account: gammaConfig.accountId,
-        }
-      ),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
-    );
+    // Since the stateless stack might need to reference the stateful resources (e.g. db, sg), we might comment this out
+    // to prevent cdk from looking up for non existence resource. Currently the stateful resource is only deployed in
+    // dev
 
-    /**
-     * Deployment to Prod account
-     */
-    const prodConfig = getEnvironmentConfig('prod');
-    if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(this, 'ProdStatelessDeployment', prodConfig.stackProps, {
-        account: gammaConfig?.accountId,
-      }),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
-    );
+    // /**
+    //  * Deployment to Gamma (Staging) account
+    //  */
+    // const gammaConfig = getEnvironmentConfig('gamma');
+    // if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
+    // pipeline.addStage(
+    //   new OrcaBusStatelessDeploymentStage(
+    //     this,
+    //     'GammaStatelessDeployment',
+    //     gammaConfig.stackProps,
+    //     {
+    //       account: gammaConfig.accountId,
+    //     }
+    //   ),
+    //   { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
+    // );
+
+    // /**
+    //  * Deployment to Prod account
+    //  */
+    // const prodConfig = getEnvironmentConfig('prod');
+    // if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
+    // pipeline.addStage(
+    //   new OrcaBusStatelessDeploymentStage(this, 'ProdStatelessDeployment', prodConfig.stackProps, {
+    //     account: gammaConfig?.accountId,
+    //   }),
+    //   { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+    // );
   }
 }
 
