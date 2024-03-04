@@ -8,6 +8,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { MicroserviceConfig, DbAuthType } from '../function/type';
+import package_json from '../package.json';
 
 export type PostgresManagerConfig = {
   masterSecretName: string;
@@ -38,7 +39,10 @@ export class PostgresManagerStack extends Stack {
       props.clusterResourceIdParameterName
     );
 
-    const rdsLambdaProps : nodejs.NodejsFunctionProps = {
+    const runtimeDependencies = Object.keys(package_json.dependencies);
+
+    const rdsLambdaProps: nodejs.NodejsFunctionProps = {
+      bundling: { externalModules: runtimeDependencies },
       timeout: Duration.minutes(5),
       depsLockFilePath: __dirname + '/../yarn.lock',
       handler: 'handler',
