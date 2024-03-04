@@ -99,7 +99,7 @@ make prepare
 which runs:
 
 ```sh
-cargo sqlx prepare --workspace
+cargo sqlx prepare --workspace --all-features --all-targets
 ```
 
 This creates a `.sqlx` file in the workspace directory which contains the pre-compiled query information.
@@ -115,7 +115,7 @@ make prepare-check
 which runs:
 
 ```sh
-cargo sqlx prepare --workspace --check
+cargo sqlx prepare --workspace --check --all-features --all-targets
 ```
 
 ### Database connection

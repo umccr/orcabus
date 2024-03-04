@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select exists (select from information_schema.tables where table_name = 'object')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "3fe88592da137c9706a5b541ef8edb7a794c72051d12c8c3b57d853b37a8392e"
+}
