@@ -69,17 +69,12 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     this.createSequenceRunManager();
     this.microserviceStackArray.push(this.createPostgresManager(props.postgresManagerConfig));
 
-    // Disable the stateless stack from cdk-nag as it doesn't seems to like RustFunction library
-    // RustFunction do not return resourceId (the `toString()`) which cdk-nag relies on.
-    // Will enable this back once the filemanager moved to its stack so it could be disabled
-    // for that specific stack
-    // if (props.filemanagerDependencies) {
-    //   this.createFilemanager({
-    //     ...props.filemanagerDependencies,
-    //     lambdaSecurityGroupName: props.lambdaSecurityGroupName,
-    //   });
-    // }
-    //
+    if (props.filemanagerDependencies) {
+      this.createFilemanager({
+        ...props.filemanagerDependencies,
+        lambdaSecurityGroupName: props.lambdaSecurityGroupName,
+      });
+    }
   }
 
   private createSequenceRunManager() {

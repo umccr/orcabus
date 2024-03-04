@@ -36,7 +36,7 @@ test-stateless:
 suite: test-stateless
 	@(cd lib/workload/stateless/sequence_run_manager && $(MAKE) test)
 	@(cd lib/workload/stateless/metadata_manager && $(MAKE) test)
-	# @(cd lib/workload/stateless/filemanager && $(MAKE) test)
+	@(cd lib/workload/stateless/filemanager && $(MAKE) test)
 
 clean:
 	@yarn clean
