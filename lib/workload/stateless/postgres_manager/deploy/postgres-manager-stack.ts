@@ -103,7 +103,7 @@ export class PostgresManagerStack extends Stack {
           actions: ['secretsmanager:CreateSecret', 'secretsmanager:TagResource'],
           effect: iam.Effect.ALLOW,
           resources: [
-            `arn:aws:secretsmanager:ap-southeast-2:${process.env.CDK_DEFAULT_ACCOUNT}:secret:*`,
+            `arn:aws:secretsmanager:ap-southeast-2:*:secret:*`,
           ],
         }),
         new iam.PolicyStatement({
