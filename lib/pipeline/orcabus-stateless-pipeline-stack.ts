@@ -18,6 +18,11 @@ export class StatelessPipelineStack extends cdk.Stack {
     });
 
     const unitTest = new pipelines.CodeBuildStep('UnitTest', {
+      installCommands: [
+        //  RUST installation
+        `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`,
+        `source $HOME/.cargo/env`,
+      ],
       commands: ['yarn install --immutable', 'make suite'],
       input: sourceFile,
       primaryOutputDirectory: '.',
