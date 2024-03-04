@@ -13,12 +13,16 @@ export class StatelessPipelineStack extends cdk.Stack {
 
     // A connection where the pipeline get its source code
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
-    const sourceFile = pipelines.CodePipelineSource.connection('umccr/orcabus', 'main', {
-      connectionArn: codeStarArn,
-    });
+    const sourceFile = pipelines.CodePipelineSource.connection(
+      'umccr/orcabus',
+      'fix(postgres-manager)/codebuild-unit-test',
+      {
+        connectionArn: codeStarArn,
+      }
+    );
 
     const unitTest = new pipelines.CodeBuildStep('UnitTest', {
-      commands: ['yarn install --frozen-lockfile', 'make suite'],
+      commands: ['yarn install --immutable', 'make suite'],
       input: sourceFile,
       primaryOutputDirectory: '.',
       buildEnvironment: {
@@ -47,7 +51,7 @@ export class StatelessPipelineStack extends cdk.Stack {
     });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
-      commands: ['yarn install --frozen-lockfile', 'yarn run cdk-stateless-pipeline synth'],
+      commands: ['yarn install --immutable', 'yarn run cdk-stateless-pipeline synth'],
       input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
