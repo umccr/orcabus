@@ -13,9 +13,13 @@ export class StatelessPipelineStack extends cdk.Stack {
 
     // A connection where the pipeline get its source code
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
-    const sourceFile = pipelines.CodePipelineSource.connection('umccr/orcabus', 'main', {
-      connectionArn: codeStarArn,
-    });
+    const sourceFile = pipelines.CodePipelineSource.connection(
+      'umccr/orcabus',
+      'fix(postgres-manager)/codebuild-unit-test',
+      {
+        connectionArn: codeStarArn,
+      }
+    );
 
     const unitTest = new pipelines.CodeBuildStep('UnitTest', {
       installCommands: [
