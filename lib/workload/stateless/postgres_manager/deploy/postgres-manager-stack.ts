@@ -40,12 +40,8 @@ export class PostgresManagerStack extends Stack {
     );
 
     const runtimeDependencies = Object.keys(package_json.dependencies);
-
     const rdsLambdaProps: nodejs.NodejsFunctionProps = {
-      bundling: {
-        nodeModules:runtimeDependencies,
-        externalModules: runtimeDependencies
-      },
+      bundling: { nodeModules: runtimeDependencies },
       timeout: Duration.minutes(5),
       depsLockFilePath: __dirname + '/../yarn.lock',
       handler: 'handler',
