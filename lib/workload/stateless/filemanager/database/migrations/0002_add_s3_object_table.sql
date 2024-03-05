@@ -24,7 +24,8 @@ create table s3_object (
     bucket text not null,
     -- The key of the object.
     key text not null,
-    -- The version id of the object.
+    -- The version id of the object. A 'null' string is used to indicate no version id. This matches logic in AWS which
+    -- also returns 'null' strings.
     version_id text not null default 'null',
     -- When this object was created. A null value here means that a deleted event has occurred before a created event.
     created_date timestamptz default null,

@@ -657,16 +657,9 @@ pub(crate) mod tests {
         // Missing deleted event.
         events_one.object_deleted = Default::default();
 
-        let mut events_two = test_events();
-        events_two.object_deleted = Default::default();
         // New created event with a higher sequencer.
-        events_two
-            .object_created
-            .sequencers
-            .iter_mut()
-            .for_each(|sequencer| {
-                _ = sequencer.replace(EXPECTED_SEQUENCER_DELETED_ONE.to_string())
-            });
+        let mut events_two = replace_sequencers(test_events(), EXPECTED_SEQUENCER_DELETED_ONE);
+        events_two.object_deleted = Default::default();
 
         ingester.ingest_events(events_one).await.unwrap();
         ingester.ingest_events(events_two).await.unwrap();
@@ -691,16 +684,9 @@ pub(crate) mod tests {
         // Missing deleted event.
         events_one.object_deleted = Default::default();
 
-        let mut events_two = test_events();
-        events_two.object_deleted = Default::default();
         // New created event with a higher sequencer.
-        events_two
-            .object_created
-            .sequencers
-            .iter_mut()
-            .for_each(|sequencer| {
-                _ = sequencer.replace(EXPECTED_SEQUENCER_DELETED_ONE.to_string())
-            });
+        let mut events_two = replace_sequencers(test_events(), EXPECTED_SEQUENCER_DELETED_ONE);
+        events_two.object_deleted = Default::default();
 
         // Reorder
         ingester.ingest_events(events_two).await.unwrap();
@@ -726,16 +712,9 @@ pub(crate) mod tests {
         // Missing created event.
         events_one.object_created = Default::default();
 
-        let mut events_two = test_events();
-        events_two.object_created = Default::default();
         // New deleted event with a higher sequencer.
-        events_two
-            .object_deleted
-            .sequencers
-            .iter_mut()
-            .for_each(|sequencer| {
-                _ = sequencer.replace(EXPECTED_SEQUENCER_DELETED_TWO.to_string())
-            });
+        let mut events_two = replace_sequencers(test_events(), EXPECTED_SEQUENCER_DELETED_TWO);
+        events_two.object_created = Default::default();
 
         ingester.ingest_events(events_one).await.unwrap();
         ingester.ingest_events(events_two).await.unwrap();
@@ -768,16 +747,9 @@ pub(crate) mod tests {
         // Missing created event.
         events_one.object_created = Default::default();
 
-        let mut events_two = test_events();
-        events_two.object_created = Default::default();
         // New deleted event with a higher sequencer.
-        events_two
-            .object_deleted
-            .sequencers
-            .iter_mut()
-            .for_each(|sequencer| {
-                _ = sequencer.replace(EXPECTED_SEQUENCER_DELETED_TWO.to_string())
-            });
+        let mut events_two = replace_sequencers(test_events(), EXPECTED_SEQUENCER_DELETED_TWO);
+        events_two.object_created = Default::default();
 
         // Reorder
         ingester.ingest_events(events_two).await.unwrap();
@@ -799,6 +771,152 @@ pub(crate) mod tests {
             None,
             EXPECTED_SEQUENCER_DELETED_TWO,
             EXPECTED_VERSION_ID.to_string(),
+            None,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_object_missing_deleted_without_version_id(pool: PgPool) {
+        let ingester = test_ingester(pool);
+
+        let mut events_one = remove_version_ids(test_events());
+        // Missing deleted event.
+        events_one.object_deleted = Default::default();
+
+        // New created event with a higher sequencer.
+        let mut events_two = replace_sequencers(
+            remove_version_ids(test_events()),
+            EXPECTED_SEQUENCER_DELETED_ONE,
+        );
+        events_two.object_deleted = Default::default();
+
+        ingester.ingest_events(events_one).await.unwrap();
+        ingester.ingest_events(events_two).await.unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_results.len(), 2);
+        assert_created_with(
+            &s3_object_results[0],
+            FlatS3EventMessage::default_version_id(),
+            EXPECTED_SEQUENCER_CREATED_ONE,
+        );
+        assert_created_with(
+            &s3_object_results[1],
+            FlatS3EventMessage::default_version_id(),
+            EXPECTED_SEQUENCER_DELETED_ONE,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_object_missing_deleted_reorder_without_version_id(pool: PgPool) {
+        let ingester = test_ingester(pool);
+
+        let mut events_one = remove_version_ids(test_events());
+        // Missing deleted event.
+        events_one.object_deleted = Default::default();
+
+        // New created event with a higher sequencer.
+        let mut events_two = replace_sequencers(
+            remove_version_ids(test_events()),
+            EXPECTED_SEQUENCER_DELETED_ONE,
+        );
+        events_two.object_deleted = Default::default();
+
+        // Reorder
+        ingester.ingest_events(events_two).await.unwrap();
+        ingester.ingest_events(events_one).await.unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_results.len(), 2);
+        assert_created_with(
+            &s3_object_results[1],
+            FlatS3EventMessage::default_version_id(),
+            EXPECTED_SEQUENCER_CREATED_ONE,
+        );
+        assert_created_with(
+            &s3_object_results[0],
+            FlatS3EventMessage::default_version_id(),
+            EXPECTED_SEQUENCER_DELETED_ONE,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_object_missing_created_without_version_id(pool: PgPool) {
+        let ingester = test_ingester(pool);
+
+        let mut events_one = remove_version_ids(test_events());
+        // Missing created event.
+        events_one.object_created = Default::default();
+
+        // New deleted event with a higher sequencer.
+        let mut events_two = replace_sequencers(
+            remove_version_ids(test_events()),
+            EXPECTED_SEQUENCER_DELETED_TWO,
+        );
+        events_two.object_created = Default::default();
+
+        ingester.ingest_events(events_one).await.unwrap();
+        ingester.ingest_events(events_two).await.unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_results.len(), 2);
+        assert_deleted_with(
+            &s3_object_results[0],
+            None,
+            EXPECTED_SEQUENCER_DELETED_ONE,
+            FlatS3EventMessage::default_version_id(),
+            None,
+        );
+        assert_deleted_with(
+            &s3_object_results[1],
+            None,
+            EXPECTED_SEQUENCER_DELETED_TWO,
+            FlatS3EventMessage::default_version_id(),
+            None,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_object_missing_created_reorder_without_version_id(pool: PgPool) {
+        let ingester = test_ingester(pool);
+
+        let mut events_one = remove_version_ids(test_events());
+        // Missing created event.
+        events_one.object_created = Default::default();
+
+        // New deleted event with a higher sequencer.
+        let mut events_two = replace_sequencers(
+            remove_version_ids(test_events()),
+            EXPECTED_SEQUENCER_DELETED_TWO,
+        );
+        events_two.object_created = Default::default();
+
+        // Reorder
+        ingester.ingest_events(events_two).await.unwrap();
+        ingester.ingest_events(events_one).await.unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_results.len(), 2);
+        assert_deleted_with(
+            &s3_object_results[1],
+            None,
+            EXPECTED_SEQUENCER_DELETED_ONE,
+            FlatS3EventMessage::default_version_id(),
+            None,
+        );
+        assert_deleted_with(
+            &s3_object_results[0],
+            None,
+            EXPECTED_SEQUENCER_DELETED_TWO,
+            FlatS3EventMessage::default_version_id(),
             None,
         );
     }
@@ -977,6 +1095,21 @@ pub(crate) mod tests {
             .version_ids
             .iter_mut()
             .for_each(|version_id| *version_id = FlatS3EventMessage::default_version_id());
+
+        events
+    }
+
+    fn replace_sequencers(mut events: Events, sequencer: &str) -> Events {
+        events
+            .object_deleted
+            .sequencers
+            .iter_mut()
+            .for_each(|replace_sequencer| _ = replace_sequencer.replace(sequencer.to_string()));
+        events
+            .object_created
+            .sequencers
+            .iter_mut()
+            .for_each(|replace_sequencer| _ = replace_sequencer.replace(sequencer.to_string()));
 
         events
     }
