@@ -14,15 +14,6 @@ describe('cdk-nag-stateless-pipeline', () => {
   let stack: StatelessPipelineStack;
   let app: App;
 
-  // The pipeline is not happy with the RustFunction for testing as it doesn't return
-  // constructId when using toString() at the lambda. Will revisit this later but for now
-  // it will ignore filemanager (current prod do not have filemanager config)
-
-  // -- Remove below --
-  const temp = config.getEnvironmentConfig('prod');
-  jest.spyOn(config, 'getEnvironmentConfig').mockImplementation(() => temp);
-  // -- --
-
   beforeEach(() => {
     app = new App({});
     stack = new StatelessPipelineStack(app, 'TestStack', {
