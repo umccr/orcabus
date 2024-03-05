@@ -97,7 +97,9 @@ mod tests {
     use crate::events::aws::collecter::tests::{
         expected_head_object, set_s3_client_expectations, set_sqs_client_expectations,
     };
-    use crate::events::aws::tests::{expected_event_record_simple, EXPECTED_VERSION_ID};
+    use crate::events::aws::tests::{
+        expected_event_record_simple, EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_VERSION_ID,
+    };
 
     use super::*;
 
@@ -121,7 +123,9 @@ mod tests {
         assert_deleted_with(
             &s3_object_results[0],
             Some(0),
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_SEQUENCER_DELETED_ONE,
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
         );
     }
 
@@ -149,7 +153,9 @@ mod tests {
         assert_deleted_with(
             &s3_object_results[0],
             Some(0),
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_SEQUENCER_DELETED_ONE,
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
         );
     }
 }

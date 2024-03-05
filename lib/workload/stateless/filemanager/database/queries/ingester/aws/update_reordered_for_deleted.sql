@@ -36,7 +36,7 @@ current_objects as (
     join input on
         input.bucket = s3_object.bucket and
         input.key = s3_object.key and
-        input.version_id is not distinct from s3_object.version_id
+        input.version_id = s3_object.version_id
     -- Lock this pre-emptively for the update.
     for update
 ),
@@ -82,7 +82,7 @@ select
     last_modified_date,
     e_tag,
     storage_class as "storage_class?: StorageClass",
-    version_id,
+    version_id as "version_id!",
     deleted_sequencer as sequencer,
     number_reordered,
     number_duplicate_events,

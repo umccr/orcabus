@@ -128,7 +128,7 @@ impl From<Record> for FlatS3EventMessages {
             size,
             e_tag: etag,
             sequencer,
-            version_id,
+            version_id: version_id.unwrap_or_else(FlatS3EventMessage::default_version_id),
             // Head fields are fetched later.
             storage_class: None,
             last_modified_date: None,
@@ -179,7 +179,7 @@ mod tests {
             &Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
     }
 
@@ -195,7 +195,7 @@ mod tests {
             &Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
     }
 }
