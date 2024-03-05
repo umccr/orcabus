@@ -55,12 +55,17 @@ objects_to_update as (
             -- If a sequencer already exists this event should be reprocessed because this
             -- sequencer would belong to another object.
             current_objects.deleted_sequencer > current_objects.input_deleted_sequencer
-        )
+        ) and
         -- And there should not be any objects with a deleted sequencer that is the same as the input deleted
         -- sequencer because this is a duplicate event that would cause a constraint error in the update.
-        and current_objects.input_deleted_sequencer not in (
+        current_objects.input_deleted_sequencer not in (
             select deleted_sequencer from current_objects where deleted_sequencer is not null
         )
+    -- Only one event entry should be updated, and that entry must be the one with the
+    -- created sequencer that is maximum, i.e. closest to the deleted sequencer which
+    -- is going to be inserted.
+    order by current_objects.created_sequencer desc
+    limit 1
 ),
 -- Finally, update the required objects.
 update as (
