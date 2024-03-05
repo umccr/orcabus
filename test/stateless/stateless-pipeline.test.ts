@@ -3,6 +3,7 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { SynthesisMessage } from 'aws-cdk-lib/cx-api';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 import { StatelessPipelineStack } from '../../lib/pipeline/orcabus-stateless-pipeline-stack';
+import * as config from '../../config/constants';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {
   return `${sm.entry.data} [${sm.id}]`;
@@ -12,6 +13,11 @@ function synthesisMessageToString(sm: SynthesisMessage): string {
 describe('cdk-nag-stateless-pipeline', () => {
   let stack: StatelessPipelineStack;
   let app: App;
+
+  // -- Remove below --
+  const temp = config.getEnvironmentConfig('prod');
+  jest.spyOn(config, 'getEnvironmentConfig').mockImplementation(() => temp);
+  // -- --
 
   beforeEach(() => {
     app = new App({});
