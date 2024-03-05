@@ -14,11 +14,6 @@ describe('cdk-nag-stateless-pipeline', () => {
   let stack: StatelessPipelineStack;
   let app: App;
 
-  // -- Remove below --
-  const temp = config.getEnvironmentConfig('prod');
-  jest.spyOn(config, 'getEnvironmentConfig').mockImplementation(() => temp);
-  // -- --
-
   beforeEach(() => {
     app = new App({});
     stack = new StatelessPipelineStack(app, 'TestStack', {

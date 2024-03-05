@@ -26,6 +26,7 @@ export class StatelessPipelineStack extends cdk.Stack {
         //  RUST installation
         `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`,
         `source $HOME/.cargo/env`,
+        `cargo install cargo-lambda`,
       ],
       commands: ['yarn install --immutable', 'make suite'],
       input: sourceFile,
