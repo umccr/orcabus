@@ -4,6 +4,9 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as pipelines from 'aws-cdk-lib/pipelines';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as chatbot from 'aws-cdk-lib/aws-chatbot';
+import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
+import * as codestarnotifications from 'aws-cdk-lib/aws-codestarnotifications';
 import { OrcaBusStatelessConfig, OrcaBusStatelessStack } from '../workload/orcabus-stateless-stack';
 import { getEnvironmentConfig } from '../../config/constants';
 
@@ -129,10 +132,33 @@ export class StatelessPipelineStack extends cdk.Stack {
     // if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
     // pipeline.addStage(
     //   new OrcaBusStatelessDeploymentStage(this, 'ProdStatelessDeployment', prodConfig.stackProps, {
-    //     account: gammaConfig?.accountId,
+    //     account: prodConfig?.accountId,
     //   }),
     //   { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
     // );
+
+    // need to build pipeline so we could add notification at the pipeline construct
+    pipeline.buildPipeline();
+
+    // notification for success/failure
+    const arteriaDevSlackConfigArn = ssm.StringParameter.valueForStringParameter(
+      this,
+      '/chatbot_arn/slack/arteria-dev'
+    );
+    const target = chatbot.SlackChannelConfiguration.fromSlackChannelConfigurationArn(
+      this,
+      'SlackChannelConfiguration',
+      arteriaDevSlackConfigArn
+    );
+
+    pipeline.pipeline.notifyOn('PipelineSlackNotification', target, {
+      events: [
+        codepipeline.PipelineNotificationEvents.PIPELINE_EXECUTION_FAILED,
+        codepipeline.PipelineNotificationEvents.PIPELINE_EXECUTION_SUCCEEDED,
+      ],
+      detailType: codestarnotifications.DetailType.BASIC,
+      notificationRuleName: 'orcabus_stateless_pipeline_notification',
+    });
   }
 }
 
