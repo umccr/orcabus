@@ -21,7 +21,13 @@ export class StatelessPipelineStack extends cdk.Stack {
     });
 
     const unitTest = new pipelines.CodeBuildStep('UnitTest', {
-      commands: ['yarn install --frozen-lockfile', 'make suite'],
+      installCommands: [
+        //  RUST installation
+        `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`,
+        `source $HOME/.cargo/env`,
+        `pip3 install cargo-lambda`,
+      ],
+      commands: ['yarn install --immutable', 'make suite'],
       input: sourceFile,
       primaryOutputDirectory: '.',
       buildEnvironment: {
@@ -50,7 +56,13 @@ export class StatelessPipelineStack extends cdk.Stack {
     });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
-      commands: ['yarn install --frozen-lockfile', 'yarn run cdk-stateless-pipeline synth'],
+      installCommands: [
+        //  RUST installation
+        `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`,
+        `source $HOME/.cargo/env`,
+        `pip3 install cargo-lambda`,
+      ],
+      commands: ['yarn install --immutable', 'yarn run cdk-stateless-pipeline synth'],
       input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
@@ -92,34 +104,38 @@ export class StatelessPipelineStack extends cdk.Stack {
       })
     );
 
-    /**
-     * Deployment to Gamma (Staging) account
-     */
-    const gammaConfig = getEnvironmentConfig('gamma');
-    if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(
-        this,
-        'GammaStatelessDeployment',
-        gammaConfig.stackProps,
-        {
-          account: gammaConfig.accountId,
-        }
-      ),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
-    );
+    // Since the stateless stack might need to reference the stateful resources (e.g. db, sg), we might comment this out
+    // to prevent cdk from looking up for non existence resource. Currently the stateful resource is only deployed in
+    // dev
 
-    /**
-     * Deployment to Prod account
-     */
-    const prodConfig = getEnvironmentConfig('prod');
-    if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(this, 'ProdStatelessDeployment', prodConfig.stackProps, {
-        account: gammaConfig?.accountId,
-      }),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
-    );
+    // /**
+    //  * Deployment to Gamma (Staging) account
+    //  */
+    // const gammaConfig = getEnvironmentConfig('gamma');
+    // if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
+    // pipeline.addStage(
+    //   new OrcaBusStatelessDeploymentStage(
+    //     this,
+    //     'GammaStatelessDeployment',
+    //     gammaConfig.stackProps,
+    //     {
+    //       account: gammaConfig.accountId,
+    //     }
+    //   ),
+    //   { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
+    // );
+
+    // /**
+    //  * Deployment to Prod account
+    //  */
+    // const prodConfig = getEnvironmentConfig('prod');
+    // if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
+    // pipeline.addStage(
+    //   new OrcaBusStatelessDeploymentStage(this, 'ProdStatelessDeployment', prodConfig.stackProps, {
+    //     account: prodConfig?.accountId,
+    //   }),
+    //   { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+    // );
 
     // need to build pipeline so we could add notification at the pipeline construct
     pipeline.buildPipeline();

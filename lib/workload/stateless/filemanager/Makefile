@@ -44,9 +44,9 @@ clean: docker-clean
 psql:
 	@docker exec -it filemanager_db psql filemanager -U filemanager
 prepare:
-	cargo sqlx prepare --workspace
+	cargo sqlx prepare --workspace -- --all-features --all-targets
 prepare-check:
-	cargo sqlx prepare --workspace --check
+	cargo sqlx prepare --workspace --check -- --all-features --all-targets
 
 ## Help text
 help:

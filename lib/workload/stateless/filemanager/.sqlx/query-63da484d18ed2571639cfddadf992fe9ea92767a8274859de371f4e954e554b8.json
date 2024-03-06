@@ -1,0 +1,116 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select s3_object_id as \"s3_object_id!\",\n                object_id as \"object_id!\",\n                bucket,\n                key,\n                created_date,\n                deleted_date,\n                last_modified_date,\n                e_tag,\n                storage_class as \"storage_class: StorageClass\",\n                version_id,\n                created_sequencer,\n                deleted_sequencer,\n                number_reordered,\n                number_duplicate_events from s3_object",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "s3_object_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "object_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "bucket",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "deleted_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "last_modified_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "e_tag",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "storage_class: StorageClass",
+        "type_info": {
+          "Custom": {
+            "name": "storage_class",
+            "kind": {
+              "Enum": [
+                "DeepArchive",
+                "Glacier",
+                "GlacierIr",
+                "IntelligentTiering",
+                "OnezoneIa",
+                "Outposts",
+                "ReducedRedundancy",
+                "Snow",
+                "Standard",
+                "StandardIa"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "version_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_sequencer",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "deleted_sequencer",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "number_reordered",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 13,
+        "name": "number_duplicate_events",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "63da484d18ed2571639cfddadf992fe9ea92767a8274859de371f4e954e554b8"
+}

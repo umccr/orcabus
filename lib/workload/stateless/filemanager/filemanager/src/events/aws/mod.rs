@@ -194,11 +194,31 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
 }
 
 /// Group by event types.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Events {
     pub object_created: TransposedS3EventMessages,
     pub object_deleted: TransposedS3EventMessages,
     pub other: TransposedS3EventMessages,
+}
+
+impl Events {
+    /// Set the created objects.
+    pub fn with_object_created(mut self, object_created: TransposedS3EventMessages) -> Self {
+        self.object_created = object_created;
+        self
+    }
+
+    /// Set the deleted objects.
+    pub fn with_object_deleted(mut self, object_deleted: TransposedS3EventMessages) -> Self {
+        self.object_deleted = object_deleted;
+        self
+    }
+
+    /// Set the other events.
+    pub fn with_other(mut self, other: TransposedS3EventMessages) -> Self {
+        self.other = other;
+        self
+    }
 }
 
 impl From<FlatS3EventMessages> for Events {

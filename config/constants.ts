@@ -6,10 +6,13 @@ import {
 } from '../lib/workload/orcabus-stateless-stack';
 import { Duration, aws_lambda, RemovalPolicy } from 'aws-cdk-lib';
 import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
+import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
 const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
+const dbClusterIdentifier = 'orcabus-db';
+const dbClusterResourceIdParameterName = '/orcabus/db-cluster-resource-id';
 
 // Note, this should not end with a hyphen and 6 characters, otherwise secrets manager won't be
 // able to find the secret using a partial ARN.
@@ -27,7 +30,7 @@ const orcaBusStatefulConfig = {
     archiveRetention: 365,
   },
   databaseProps: {
-    clusterIdentifier: 'orcabus-db',
+    clusterIdentifier: dbClusterIdentifier,
     defaultDatabaseName: 'orcabus',
     version: AuroraPostgresEngineVersion.VER_15_4,
     parameterGroupName: 'default.aurora-postgresql15',
@@ -37,6 +40,7 @@ const orcaBusStatefulConfig = {
     monitoring: {
       cloudwatchLogsExports: ['orcabus-postgresql'],
     },
+    clusterResourceIdParameterName: dbClusterResourceIdParameterName,
   },
   securityGroupProps: {
     securityGroupName: lambdaSecurityGroupName,
@@ -67,6 +71,18 @@ const orcaBusStatelessConfig = {
   lambdaRuntimePythonVersion: aws_lambda.Runtime.PYTHON_3_10,
   bclConvertFunctionName: 'orcabus_bcl_convert',
   rdsMasterSecretName: rdsMasterSecretName,
+  postgresManagerConfig: {
+    masterSecretName: rdsMasterSecretName,
+    dbClusterIdentifier: dbClusterIdentifier,
+    clusterResourceIdParameterName: dbClusterResourceIdParameterName,
+    microserviceDbConfig: [
+      {
+        name: 'metadata_manager',
+        authType: DbAuthType.USERNAME_PASSWORD,
+      },
+      { name: 'filemanager', authType: DbAuthType.RDS_IAM },
+    ],
+  },
 };
 
 const eventSourceConfig: EventSourceProps = {

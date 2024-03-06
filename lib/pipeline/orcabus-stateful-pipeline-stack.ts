@@ -21,7 +21,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     });
 
     const unitTest = new pipelines.CodeBuildStep('UnitTest', {
-      commands: ['yarn install --frozen-lockfile', 'make test-stateful'],
+      commands: ['yarn install --immutable', 'make test-stateful'],
       input: sourceFile,
       primaryOutputDirectory: '.',
       buildEnvironment: {
@@ -46,7 +46,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
-      commands: ['yarn install --frozen-lockfile', 'yarn run cdk-stateful-pipeline synth'],
+      commands: ['yarn install --immutable', 'yarn run cdk-stateful-pipeline synth'],
       input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [

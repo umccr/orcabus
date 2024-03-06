@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import { RemovalPolicy, Duration } from 'aws-cdk-lib';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { DatabaseCluster } from 'aws-cdk-lib/aws-rds';
 
@@ -75,6 +76,10 @@ export type ConfigurableDatabaseProps = MonitoringProps & {
    * The database removal policy.
    */
   removalPolicy: RemovalPolicy;
+  /**
+   * The ssm parameter name to store the cluster resource id
+   */
+  clusterResourceIdParameterName: string;
 };
 
 /**
@@ -147,6 +152,14 @@ export class Database extends Construct {
       writer: rds.ClusterInstance.serverlessV2('WriterClusterInstance', {
         enablePerformanceInsights: props.enablePerformanceInsights,
       }),
+    });
+
+    // saving the cluster id to be used in stateless stack on rds-iam
+    // ref: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.IAMPolicy.html
+    new ssm.StringParameter(this, 'DbClusterResourceIdSSM', {
+      stringValue: this.cluster.clusterResourceIdentifier,
+      description: 'cluster resource id at the orcabus rds cluster',
+      parameterName: props.clusterResourceIdParameterName,
     });
   }
 }
