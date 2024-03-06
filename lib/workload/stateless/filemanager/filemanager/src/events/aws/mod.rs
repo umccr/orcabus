@@ -458,6 +458,12 @@ impl FlatS3EventMessage {
         self
     }
 
+    /// Set the version id.
+    pub fn with_default_version_id(mut self) -> Self {
+        self.version_id = Self::default_version_id();
+        self
+    }
+
     /// Set the size.
     pub fn with_size(mut self, size: Option<i32>) -> Self {
         self.size = size;

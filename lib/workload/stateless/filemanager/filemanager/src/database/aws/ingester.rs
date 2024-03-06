@@ -248,7 +248,7 @@ pub(crate) mod tests {
     use chrono::{DateTime, Utc};
     use itertools::Itertools;
     use sqlx::postgres::PgRow;
-    use sqlx::{PgPool, Row};
+    use sqlx::{Executor, PgPool, Row};
     use std::ops::Add;
     use tokio::time::Instant;
 
@@ -921,6 +921,211 @@ pub(crate) mod tests {
         );
     }
 
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_permutations_small_without_version_id(pool: PgPool) {
+        let event_permutations = vec![
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_default_version_id()
+                .with_event_type(Created)
+                .with_sequencer(Some("1".to_string())),
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_default_version_id()
+                .with_event_type(Deleted)
+                .with_sequencer(Some("2".to_string())),
+            // Missing created event.
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_default_version_id()
+                .with_event_type(Deleted)
+                .with_sequencer(Some("3".to_string())),
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_default_version_id()
+                .with_event_type(Created)
+                .with_sequencer(Some("4".to_string())),
+            // Missing deleted event.
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_default_version_id()
+                .with_event_type(Created)
+                .with_sequencer(Some("5".to_string())),
+            // Different key
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key1".to_string())
+                .with_default_version_id()
+                .with_event_type(Created)
+                .with_sequencer(Some("1".to_string())),
+        ];
+
+        // 720 permutations
+        run_permutation_test(&pool, event_permutations, 5, |s3_object_results| {
+            s3_object_results
+                .iter()
+                .find(|object| {
+                    object.get::<String, _>("key") == "key"
+                        && object.get::<String, _>("bucket") == "bucket"
+                        && object.get::<String, _>("version_id")
+                            == FlatS3EventMessage::default_version_id()
+                        && object.get::<Option<String>, _>("created_sequencer")
+                            == Some("1".to_string())
+                        && object.get::<Option<String>, _>("deleted_sequencer")
+                            == Some("2".to_string())
+                })
+                .unwrap();
+            s3_object_results
+                .iter()
+                .find(|object| {
+                    object.get::<String, _>("key") == "key"
+                        && object.get::<String, _>("bucket") == "bucket"
+                        && object.get::<String, _>("version_id")
+                            == FlatS3EventMessage::default_version_id()
+                        && object
+                            .get::<Option<String>, _>("created_sequencer")
+                            .is_none()
+                        && object.get::<Option<String>, _>("deleted_sequencer")
+                            == Some("3".to_string())
+                })
+                .unwrap();
+            s3_object_results
+                .iter()
+                .find(|object| {
+                    object.get::<String, _>("key") == "key"
+                        && object.get::<String, _>("bucket") == "bucket"
+                        && object.get::<String, _>("version_id")
+                            == FlatS3EventMessage::default_version_id()
+                        && object.get::<Option<String>, _>("created_sequencer")
+                            == Some("4".to_string())
+                        && object
+                            .get::<Option<String>, _>("deleted_sequencer")
+                            .is_none()
+                })
+                .unwrap();
+            s3_object_results
+                .iter()
+                .find(|object| {
+                    object.get::<String, _>("key") == "key"
+                        && object.get::<String, _>("bucket") == "bucket"
+                        && object.get::<String, _>("version_id")
+                            == FlatS3EventMessage::default_version_id()
+                        && object.get::<Option<String>, _>("created_sequencer")
+                            == Some("5".to_string())
+                        && object
+                            .get::<Option<String>, _>("deleted_sequencer")
+                            .is_none()
+                })
+                .unwrap();
+            s3_object_results
+                .iter()
+                .find(|object| {
+                    object.get::<String, _>("key") == "key1"
+                        && object.get::<String, _>("bucket") == "bucket"
+                        && object.get::<String, _>("version_id")
+                            == FlatS3EventMessage::default_version_id()
+                        && object.get::<Option<String>, _>("created_sequencer")
+                            == Some("1".to_string())
+                        && object
+                            .get::<Option<String>, _>("deleted_sequencer")
+                            .is_none()
+                })
+                .unwrap();
+        })
+        .await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_permutations_small(pool: PgPool) {
+        let event_permutations = vec![
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_version_id("version_id".to_string())
+                .with_event_type(Created)
+                .with_sequencer(Some("1".to_string())),
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_version_id("version_id".to_string())
+                .with_event_type(Deleted)
+                .with_sequencer(Some("2".to_string())),
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_version_id("version_id".to_string())
+                .with_event_type(Created)
+                .with_sequencer(Some("3".to_string())),
+            // Duplicate
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_version_id("version_id".to_string())
+                .with_event_type(Created)
+                .with_sequencer(Some("3".to_string())),
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_version_id("version_id".to_string())
+                .with_event_type(Deleted)
+                .with_sequencer(Some("4".to_string())),
+            // Different version id
+            FlatS3EventMessage::new_with_generated_id()
+                .with_bucket("bucket".to_string())
+                .with_key("key".to_string())
+                .with_version_id("version_id1".to_string())
+                .with_event_type(Deleted)
+                .with_sequencer(Some("1".to_string())),
+        ];
+
+        // 720 permutations
+        run_permutation_test(&pool, event_permutations, 3, |s3_object_results| {
+            s3_object_results
+                .iter()
+                .find(|object| {
+                    object.get::<String, _>("key") == "key"
+                        && object.get::<String, _>("bucket") == "bucket"
+                        && object.get::<String, _>("version_id") == *"version_id"
+                        && object.get::<Option<String>, _>("created_sequencer")
+                            == Some("1".to_string())
+                        && object.get::<Option<String>, _>("deleted_sequencer")
+                            == Some("2".to_string())
+                })
+                .unwrap();
+            s3_object_results
+                .iter()
+                .find(|object| {
+                    object.get::<String, _>("key") == "key"
+                        && object.get::<String, _>("bucket") == "bucket"
+                        && object.get::<String, _>("version_id") == *"version_id"
+                        && object.get::<Option<String>, _>("created_sequencer")
+                            == Some("3".to_string())
+                        && object.get::<Option<String>, _>("deleted_sequencer")
+                            == Some("4".to_string())
+                })
+                .unwrap();
+            s3_object_results
+                .iter()
+                .find(|object| {
+                    object.get::<String, _>("key") == "key"
+                        && object.get::<String, _>("bucket") == "bucket"
+                        && object.get::<String, _>("version_id") == *"version_id1"
+                        && object
+                            .get::<Option<String>, _>("created_sequencer")
+                            .is_none()
+                        && object.get::<Option<String>, _>("deleted_sequencer")
+                            == Some("1".to_string())
+                })
+                .unwrap();
+        })
+        .await;
+    }
+
     #[ignore]
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_permutations(pool: PgPool) {
@@ -979,57 +1184,14 @@ pub(crate) mod tests {
                 .with_sequencer(Some("1".to_string())),
         ];
 
-        let now = Instant::now();
-
-        let length = event_permutations.len();
         // 40320 permutations
-        for events in event_permutations.into_iter().permutations(length) {
-            let ingester = test_ingester(pool.clone());
-
-            ingester
-                .ingest(EventSourceType::S3(
-                    // Okay to dedup here as the Lambda function would be doing this anyway.
-                    FlatS3EventMessages(events[0..2].to_vec()).dedup().into(),
-                ))
-                .await
-                .unwrap();
-            ingester
-                .ingest(EventSourceType::S3(
-                    FlatS3EventMessages(vec![events[2].clone()]).into(),
-                ))
-                .await
-                .unwrap();
-            ingester
-                .ingest(EventSourceType::S3(
-                    FlatS3EventMessages(vec![events[3].clone()]).into(),
-                ))
-                .await
-                .unwrap();
-            ingester
-                .ingest(EventSourceType::S3(
-                    FlatS3EventMessages(vec![events[4].clone()]).into(),
-                ))
-                .await
-                .unwrap();
-            ingester
-                .ingest(EventSourceType::S3(
-                    FlatS3EventMessages(events[5..].to_vec()).dedup().into(),
-                ))
-                .await
-                .unwrap();
-
-            let (object_results, s3_object_results) = fetch_results(&ingester).await;
-
-            assert_eq!(object_results.len(), 4);
-            assert_eq!(s3_object_results.len(), 4);
-
+        run_permutation_test(&pool, event_permutations, 4, |s3_object_results| {
             s3_object_results
                 .iter()
                 .find(|object| {
                     object.get::<String, _>("key") == "key"
                         && object.get::<String, _>("bucket") == "bucket"
-                        && object.get::<Option<String>, _>("version_id")
-                            == Some("version_id".to_string())
+                        && object.get::<String, _>("version_id") == *"version_id"
                         && object.get::<Option<String>, _>("created_sequencer")
                             == Some("1".to_string())
                         && object.get::<Option<String>, _>("deleted_sequencer")
@@ -1041,8 +1203,7 @@ pub(crate) mod tests {
                 .find(|object| {
                     object.get::<String, _>("key") == "key"
                         && object.get::<String, _>("bucket") == "bucket"
-                        && object.get::<Option<String>, _>("version_id")
-                            == Some("version_id".to_string())
+                        && object.get::<String, _>("version_id") == *"version_id"
                         && object.get::<Option<String>, _>("created_sequencer")
                             == Some("3".to_string())
                         && object.get::<Option<String>, _>("deleted_sequencer")
@@ -1054,8 +1215,7 @@ pub(crate) mod tests {
                 .find(|object| {
                     object.get::<String, _>("key") == "key"
                         && object.get::<String, _>("bucket") == "bucket"
-                        && object.get::<Option<String>, _>("version_id")
-                            == Some("version_id".to_string())
+                        && object.get::<String, _>("version_id") == *"version_id"
                         && object.get::<Option<String>, _>("created_sequencer")
                             == Some("5".to_string())
                         && object.get::<Option<String>, _>("deleted_sequencer")
@@ -1067,8 +1227,7 @@ pub(crate) mod tests {
                 .find(|object| {
                     object.get::<String, _>("key") == "key"
                         && object.get::<String, _>("bucket") == "bucket"
-                        && object.get::<Option<String>, _>("version_id")
-                            == Some("version_id1".to_string())
+                        && object.get::<String, _>("version_id") == *"version_id1"
                         && object
                             .get::<Option<String>, _>("created_sequencer")
                             .is_none()
@@ -1076,6 +1235,43 @@ pub(crate) mod tests {
                             == Some("1".to_string())
                 })
                 .unwrap();
+        })
+        .await;
+    }
+
+    async fn run_permutation_test<F>(
+        pool: &PgPool,
+        permutations: Vec<FlatS3EventMessage>,
+        expected_rows: usize,
+        row_asserts: F,
+    ) where
+        F: Fn(Vec<PgRow>),
+    {
+        let now = Instant::now();
+
+        let length = permutations.len();
+        for events in permutations.into_iter().permutations(length) {
+            let ingester = test_ingester(pool.clone());
+
+            for chunk in events.chunks(1) {
+                ingester
+                    .ingest(EventSourceType::S3(
+                        // Okay to dedup here as the Lambda function would be doing this anyway.
+                        FlatS3EventMessages(chunk.to_vec()).dedup().into(),
+                    ))
+                    .await
+                    .unwrap();
+            }
+
+            let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+            assert_eq!(object_results.len(), expected_rows);
+            assert_eq!(s3_object_results.len(), expected_rows);
+
+            row_asserts(s3_object_results);
+
+            // Clean up for next permutation.
+            pool.execute("truncate s3_object, object").await.unwrap();
         }
 
         println!(
