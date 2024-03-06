@@ -92,14 +92,12 @@ mod tests {
     use aws_lambda_events::sqs::SqsMessage;
     use sqlx::PgPool;
 
-    use crate::database::aws::ingester::tests::{assert_deleted_with, fetch_results};
+    use crate::database::aws::ingester::tests::{assert_ingest_events, fetch_results};
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::collecter::tests::{
         expected_head_object, set_s3_client_expectations, set_sqs_client_expectations,
     };
-    use crate::events::aws::tests::{
-        expected_event_record_simple, EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_VERSION_ID,
-    };
+    use crate::events::aws::tests::{expected_event_record_simple, EXPECTED_VERSION_ID};
 
     use super::*;
 
@@ -120,13 +118,7 @@ mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_deleted_with(
-            &s3_object_results[0],
-            Some(0),
-            EXPECTED_SEQUENCER_DELETED_ONE,
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-        );
+        assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -150,12 +142,6 @@ mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_deleted_with(
-            &s3_object_results[0],
-            Some(0),
-            EXPECTED_SEQUENCER_DELETED_ONE,
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-        );
+        assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
     }
 }
