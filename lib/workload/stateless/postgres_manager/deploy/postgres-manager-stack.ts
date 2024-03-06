@@ -8,6 +8,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { MicroserviceConfig, DbAuthType } from '../function/type';
+import package_json from '../package.json';
 
 export type PostgresManagerConfig = {
   masterSecretName: string;
@@ -38,9 +39,21 @@ export class PostgresManagerStack extends Stack {
       props.clusterResourceIdParameterName
     );
 
-    const rdsLambdaProps : nodejs.NodejsFunctionProps = {
+    const dependencyLayer = new lambda.LayerVersion(this, 'DependenciesLayer', {
+      code: lambda.Code.fromDockerBuild(__dirname + '/../', {
+        cacheDisabled: true,
+        file: 'deploy/construct/layer/node_module.Dockerfile',
+        imagePath: 'home/node/app/output',
+      }),
+      compatibleArchitectures: [lambda.Architecture.ARM_64],
+      compatibleRuntimes: [lambda.Runtime.NODEJS_20_X],
+    });
+
+    const runtimeDependencies = Object.keys(package_json.dependencies);
+    const rdsLambdaProps: nodejs.NodejsFunctionProps = {
+      layers: [dependencyLayer],
+      bundling: { externalModules: runtimeDependencies },
       timeout: Duration.minutes(5),
-      depsLockFilePath: __dirname + '/../yarn.lock',
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_20_X,
       architecture: lambda.Architecture.ARM_64,
@@ -98,9 +111,7 @@ export class PostgresManagerStack extends Stack {
         new iam.PolicyStatement({
           actions: ['secretsmanager:CreateSecret', 'secretsmanager:TagResource'],
           effect: iam.Effect.ALLOW,
-          resources: [
-            `arn:aws:secretsmanager:ap-southeast-2:${process.env.CDK_DEFAULT_ACCOUNT}:secret:*`,
-          ],
+          resources: [`arn:aws:secretsmanager:ap-southeast-2:*:secret:*`],
         }),
         new iam.PolicyStatement({
           actions: ['secretsmanager:GetRandomPassword'],

@@ -1042,18 +1042,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lambda-with-rds@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "lambda-with-rds@workspace:."
-  dependencies:
-    "@aws-sdk/client-secrets-manager": ^3.515.0
-    "@types/aws-lambda": ^8.10.134
-    "@types/pg": ^8
-    pg: ^8.11.3
-    typescript: ^5.3.3
-  languageName: unknown
-  linkType: soft
-
 "obuf@npm:~1.1.2":
   version: 1.1.2
   resolution: "obuf@npm:1.1.2"
@@ -1232,6 +1220,18 @@ __metadata:
   checksum: c7a1cf006de97de663b6b8c4d2b167aa9909a238c4866a94b15d303762f5ac884ff4796cd6e2111b7f0a91302b83c570453aa8506fd005b5a5d5dfa87441bebc
   languageName: node
   linkType: hard
+
+"postgres-manager@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "postgres-manager@workspace:."
+  dependencies:
+    "@aws-sdk/client-secrets-manager": ^3.515.0
+    "@types/aws-lambda": ^8.10.134
+    "@types/pg": ^8
+    pg: ^8.11.3
+    typescript: ^5.3.3
+  languageName: unknown
+  linkType: soft
 
 "postgres-range@npm:^1.1.1":
   version: 1.1.4
