@@ -53,6 +53,6 @@ create table s3_object (
     number_duplicate_events integer not null default 0,
 
     -- The sequencers should be unique with the bucket, key, and its version, otherwise this is a duplicate event.
-    constraint created_sequencer_unique unique (bucket, key, version_id, created_sequencer),
-    constraint deleted_sequencer_unique unique (bucket, key, version_id, deleted_sequencer)
+    constraint created_sequencer_unique unique nulls not distinct (bucket, key, version_id, created_sequencer),
+    constraint deleted_sequencer_unique unique nulls not distinct (bucket, key, version_id, deleted_sequencer)
 );

@@ -4,6 +4,9 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as pipelines from 'aws-cdk-lib/pipelines';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
+import * as chatbot from 'aws-cdk-lib/aws-chatbot';
+import * as codestarnotifications from 'aws-cdk-lib/aws-codestarnotifications';
 import { OrcaBusStatefulConfig, OrcaBusStatefulStack } from '../workload/orcabus-stateful-stack';
 import { getEnvironmentConfig } from '../../config/constants';
 
@@ -18,7 +21,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     });
 
     const unitTest = new pipelines.CodeBuildStep('UnitTest', {
-      commands: ['yarn install --frozen-lockfile', 'make test-stateful'],
+      commands: ['yarn install --immutable', 'make test-stateful'],
       input: sourceFile,
       primaryOutputDirectory: '.',
       buildEnvironment: {
@@ -43,7 +46,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
-      commands: ['yarn install --frozen-lockfile', 'yarn run cdk-stateful-pipeline synth'],
+      commands: ['yarn install --immutable', 'yarn run cdk-stateful-pipeline synth'],
       input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
@@ -108,6 +111,29 @@ export class StatefulPipelineStack extends cdk.Stack {
       }),
       { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
     );
+
+    // need to build pipeline so we could add notification at the pipeline construct
+    pipeline.buildPipeline();
+
+    // notification for success/failure
+    const arteriaDevSlackConfigArn = ssm.StringParameter.valueForStringParameter(
+      this,
+      '/chatbot_arn/slack/arteria-dev'
+    );
+    const target = chatbot.SlackChannelConfiguration.fromSlackChannelConfigurationArn(
+      this,
+      'SlackChannelConfiguration',
+      arteriaDevSlackConfigArn
+    );
+
+    pipeline.pipeline.notifyOn('PipelineSlackNotification', target, {
+      events: [
+        codepipeline.PipelineNotificationEvents.PIPELINE_EXECUTION_FAILED,
+        codepipeline.PipelineNotificationEvents.PIPELINE_EXECUTION_SUCCEEDED,
+      ],
+      detailType: codestarnotifications.DetailType.BASIC,
+      notificationRuleName: 'orcabus_stateful_pipeline_notification',
+    });
   }
 }
 

@@ -97,7 +97,7 @@ mod tests {
     use crate::events::aws::collecter::tests::{
         expected_head_object, set_s3_client_expectations, set_sqs_client_expectations,
     };
-    use crate::events::aws::tests::expected_event_record_simple;
+    use crate::events::aws::tests::{expected_event_record_simple, EXPECTED_VERSION_ID};
 
     use super::*;
 
@@ -118,7 +118,11 @@ mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_deleted_with(&s3_object_results[0], Some(0));
+        assert_deleted_with(
+            &s3_object_results[0],
+            Some(0),
+            Some(EXPECTED_VERSION_ID.to_string()),
+        );
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -142,6 +146,10 @@ mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_deleted_with(&s3_object_results[0], Some(0));
+        assert_deleted_with(
+            &s3_object_results[0],
+            Some(0),
+            Some(EXPECTED_VERSION_ID.to_string()),
+        );
     }
 }

@@ -2,18 +2,18 @@
 //!
 
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;
-use chrono::{DateTime, ParseError, Utc};
+use chrono::{DateTime, Utc};
 use itertools::{izip, Itertools};
-use serde::{Deserialize, Serialize};
+use message::EventMessage;
+use serde::Deserialize;
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use uuid::Uuid;
 
-use crate::error::Error;
-use crate::error::Error::DeserializeError;
-use crate::error::Result;
+use crate::events::aws::message::EventType;
 use crate::events::aws::EventType::{Created, Deleted, Other};
 
 pub mod collecter;
+pub mod message;
 
 /// A wrapper around AWS storage types with sqlx support.
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type)]
@@ -194,11 +194,31 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
 }
 
 /// Group by event types.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Events {
     pub object_created: TransposedS3EventMessages,
     pub object_deleted: TransposedS3EventMessages,
     pub other: TransposedS3EventMessages,
+}
+
+impl Events {
+    /// Set the created objects.
+    pub fn with_object_created(mut self, object_created: TransposedS3EventMessages) -> Self {
+        self.object_created = object_created;
+        self
+    }
+
+    /// Set the deleted objects.
+    pub fn with_object_deleted(mut self, object_deleted: TransposedS3EventMessages) -> Self {
+        self.object_deleted = object_deleted;
+        self
+    }
+
+    /// Set the other events.
+    pub fn with_other(mut self, other: TransposedS3EventMessages) -> Self {
+        self.other = other;
+        self
+    }
 }
 
 impl From<FlatS3EventMessages> for Events {
@@ -232,7 +252,7 @@ impl From<FlatS3EventMessages> for Events {
 
 /// Flattened AWS S3 events
 #[derive(Debug, Deserialize, Eq, PartialEq, Default)]
-#[serde(try_from = "S3EventMessage")]
+#[serde(from = "EventMessage")]
 pub struct FlatS3EventMessages(pub Vec<FlatS3EventMessage>);
 
 impl FlatS3EventMessages {
@@ -356,21 +376,6 @@ impl FlatS3EventMessages {
     }
 }
 
-#[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
-#[sqlx(type_name = "event_type")]
-pub enum EventType {
-    #[default]
-    Created,
-    Deleted,
-    Other,
-}
-
-impl PgHasArrayType for EventType {
-    fn array_type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("_event_type")
-    }
-}
-
 /// A flattened AWS S3 record
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default)]
 pub struct FlatS3EventMessage {
@@ -490,106 +495,6 @@ impl FlatS3EventMessage {
     }
 }
 
-/// The basic AWS S3 Event.
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct S3EventMessage {
-    #[serde(rename = "Records")]
-    pub records: Vec<Record>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct Record {
-    pub event_time: String,
-    pub event_name: String,
-    pub s3: S3Record,
-}
-
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct S3Record {
-    pub bucket: BucketRecord,
-    pub object: ObjectRecord,
-}
-
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct BucketRecord {
-    pub name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ObjectRecord {
-    pub key: String,
-    pub size: Option<i32>,
-    pub e_tag: Option<String>,
-    pub version_id: Option<String>,
-    pub sequencer: Option<String>,
-}
-
-impl TryFrom<S3EventMessage> for FlatS3EventMessages {
-    type Error = Error;
-
-    fn try_from(message: S3EventMessage) -> Result<Self> {
-        Ok(FlatS3EventMessages(
-            message
-                .records
-                .into_iter()
-                .map(|record| {
-                    let Record {
-                        event_time,
-                        event_name,
-                        s3,
-                    } = record;
-
-                    let S3Record { bucket, object } = s3;
-
-                    let BucketRecord { name: bucket } = bucket;
-
-                    let ObjectRecord {
-                        key,
-                        size,
-                        e_tag,
-                        version_id,
-                        sequencer,
-                    } = object;
-
-                    let event_time: DateTime<Utc> = event_time
-                        .parse()
-                        .map_err(|err: ParseError| DeserializeError(err.to_string()))?;
-
-                    let event_type = if event_name.contains("ObjectCreated") {
-                        Created
-                    } else if event_name.contains("ObjectRemoved") {
-                        Deleted
-                    } else {
-                        Other
-                    };
-
-                    Ok(FlatS3EventMessage {
-                        s3_object_id: Uuid::new_v4(),
-                        event_time: Some(event_time),
-                        bucket,
-                        key,
-                        size,
-                        e_tag,
-                        sequencer,
-                        version_id,
-                        // Head field are fetched later.
-                        storage_class: None,
-                        last_modified_date: None,
-                        event_type,
-                        number_reordered: 0,
-                        number_duplicate_events: 0,
-                    })
-                })
-                .collect::<Result<Vec<FlatS3EventMessage>>>()?,
-        ))
-    }
-}
-
 impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
     fn from(messages: Vec<FlatS3EventMessages>) -> Self {
         FlatS3EventMessages(messages.into_iter().flat_map(|message| message.0).collect())
@@ -601,9 +506,9 @@ pub(crate) mod tests {
     use chrono::{DateTime, Utc};
     use serde_json::{json, Value};
 
+    use crate::events::aws::message::Message;
     use crate::events::aws::{
-        EventType, Events, FlatS3EventMessage, FlatS3EventMessages, S3EventMessage,
-        TransposedS3EventMessages,
+        EventType, Events, FlatS3EventMessage, FlatS3EventMessages, TransposedS3EventMessages,
     };
 
     pub(crate) const EXPECTED_SEQUENCER_CREATED_ZERO: &str = "0055AED6DCD90281E3"; // pragma: allowlist secret
@@ -626,7 +531,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             first,
             &EventType::Deleted,
-            EXPECTED_SEQUENCER_DELETED_ONE,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -635,7 +540,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             second,
             &EventType::Created,
-            EXPECTED_SEQUENCER_CREATED_ONE,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -644,7 +549,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             third,
             &EventType::Created,
-            EXPECTED_SEQUENCER_CREATED_ONE,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -659,7 +564,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             first,
             &EventType::Created,
-            EXPECTED_SEQUENCER_CREATED_ONE,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -668,7 +573,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             second,
             &EventType::Deleted,
-            EXPECTED_SEQUENCER_DELETED_ONE,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -695,7 +600,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             first,
             &EventType::Created,
-            EXPECTED_SEQUENCER_CREATED_ONE,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -704,7 +609,7 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             second,
             &EventType::Deleted,
-            EXPECTED_SEQUENCER_DELETED_ONE,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             Some(EXPECTED_VERSION_ID.to_string()),
         );
@@ -713,16 +618,16 @@ pub(crate) mod tests {
         assert_flat_s3_event(
             third,
             &EventType::Deleted,
-            EXPECTED_SEQUENCER_DELETED_ONE,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             Some("version_id".to_string()),
         );
     }
 
-    fn assert_flat_s3_event(
+    pub(crate) fn assert_flat_s3_event(
         event: FlatS3EventMessage,
         event_type: &EventType,
-        sequencer: &str,
+        sequencer: Option<String>,
         size: Option<i32>,
         version_id: Option<String>,
     ) {
@@ -733,7 +638,7 @@ pub(crate) mod tests {
         assert_eq!(event.version_id, version_id);
         assert_eq!(event.size, size);
         assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string())); // pragma: allowlist secret
-        assert_eq!(event.sequencer, Some(sequencer.to_string()));
+        assert_eq!(event.sequencer, sequencer);
         assert_eq!(event.storage_class, None);
         assert_eq!(event.last_modified_date, None);
     }
@@ -799,8 +704,8 @@ pub(crate) mod tests {
     }
 
     fn expected_flat_events(records: String) -> FlatS3EventMessages {
-        let events: S3EventMessage = serde_json::from_str(&records).unwrap();
-        events.try_into().unwrap()
+        let events: Message = serde_json::from_str(&records).unwrap();
+        events.into()
     }
 
     fn expected_events(records: String) -> Events {
@@ -815,10 +720,6 @@ pub(crate) mod tests {
     pub(crate) fn expected_events_simple() -> Events {
         expected_events(expected_event_record_simple())
     }
-
-    // pub(crate) fn expected_flat_events_full() -> FlatS3EventMessages {
-    //     expected_flat_events(expected_event_record_full())
-    // }
 
     pub(crate) fn expected_events_full() -> Events {
         expected_events(expected_event_record_full())
@@ -836,12 +737,47 @@ pub(crate) mod tests {
         records.to_string()
     }
 
-    pub(crate) fn expected_event_record_full() -> String {
-        let object = json!({
-            "eventTime": "1970-01-01T00:00:00.000Z",
+    /// https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
+    pub(crate) fn expected_event_bridge_record() -> Value {
+        json!({
+            "version": "0",
+            "id": "2ee9cc15-d022-99ea-1fb8-1b1bac4850f9",
+            "detail-type": "Object Deleted",
+            "source": "aws.s3",
+            "account": "111122223333",
+            "time": "1970-01-01T00:00:00.000Z",
+            "region": "ca-central-1",
+            "resources": [
+                "arn:aws:s3:::bucket"
+            ],
+            "detail": {
+                "version": "0",
+                "bucket": {
+                    "name": "bucket"
+                },
+                "object": {
+                    "key": "key",
+                    "etag": EXPECTED_E_TAG,
+                    "version-id": EXPECTED_VERSION_ID,
+                    "sequencer": EXPECTED_SEQUENCER_DELETED_ONE,
+                },
+                "request-id": "C3D13FE58DE4C810", // pragma: allowlist secret
+                "requester": "123456789012",
+                "source-ip-address": "127.0.0.1",
+                "reason": "DeleteObject",
+                "deletion-type": "Delete Marker Created"
+            }
+        })
+    }
+
+    /// https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-content-structure.html
+    pub(crate) fn expected_sqs_record() -> Value {
+        json!({
             "eventVersion": "2.2",
             "eventSource": "aws:s3",
             "awsRegion": "us-west-2",
+            "eventTime": "1970-01-01T00:00:00.000Z",
+            "eventName": "ObjectRemoved:Delete",
             "userIdentity": {
                 "principalId": "123456789012"
             },
@@ -856,17 +792,17 @@ pub(crate) mod tests {
                 "s3SchemaVersion": "1.0",
                 "configurationId": "testConfigRule",
                 "bucket": {
-                   "name": "bucket",
-                   "ownerIdentity": {
-                      "principalId":"123456789012"
-                   },
-                   "arn": "arn:aws:s3:::bucket"
+                    "name": "bucket",
+                    "ownerIdentity": {
+                       "principalId":"123456789012"
+                    },
+                    "arn": "arn:aws:s3:::bucket"
                 },
                 "object": {
-                   "key": "key",
-                   "eTag": EXPECTED_E_TAG,
-                   "versionId": EXPECTED_VERSION_ID,
-                   "sequencer": EXPECTED_SEQUENCER_CREATED_ONE
+                    "key": "key",
+                    "eTag": EXPECTED_E_TAG,
+                    "versionId": EXPECTED_VERSION_ID,
+                    "sequencer": EXPECTED_SEQUENCER_DELETED_ONE,
                 }
             },
             "glacierEventData": {
@@ -875,10 +811,15 @@ pub(crate) mod tests {
                    "lifecycleRestoreStorageClass": "Standard"
                 }
             }
-        });
+        })
+    }
+
+    pub(crate) fn expected_event_record_full() -> String {
+        let object = expected_sqs_record();
 
         let mut object_created_one = object.clone();
         object_created_one["eventName"] = json!("ObjectCreated:Put");
+        object_created_one["s3"]["object"]["sequencer"] = json!(EXPECTED_SEQUENCER_CREATED_ONE);
         object_created_one["s3"]["object"]["size"] = json!(0);
 
         let object_created_one_duplicate = object_created_one.clone();
