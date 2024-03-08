@@ -1,0 +1,147 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Update the matching s3_objects which should be re-ordered based on the created event. Returns the\n-- data associated with the event before the update, if an update occurred.\n\n-- First, unnest the input parameters into a query.\nwith input as (\n    select\n        *\n    from unnest(\n        $1::uuid[],\n        $2::text[],\n        $3::text[],\n        $4::timestamptz[],\n        $5::integer[],\n        $6::text[],\n        $7::timestamptz[],\n        $8::text[],\n        $9::storage_class[],\n        $10::text[],\n        $11::text[]\n    ) as input (\n        s3_object_id,\n        bucket,\n        key,\n        created_date,\n        size,\n        checksum,\n        last_modified_date,\n        e_tag,\n        storage_class,\n        version_id,\n        created_sequencer\n    )\n),\n-- Then, select the objects that need to be updated.\ncurrent_objects as (\n    select\n        s3_object.*,\n        input.s3_object_id as input_id,\n        input.bucket as input_bucket,\n        input.key as input_key,\n        input.version_id as input_version_id,\n        input.created_sequencer as input_created_sequencer,\n        input.created_date as input_created_date,\n        input.size as input_size,\n        input.checksum as input_checksum,\n        input.last_modified_date as input_last_modified_date,\n        input.e_tag as input_e_tag,\n        input.storage_class as input_storage_class\n    from s3_object\n    -- Grab the relevant values to update with.\n    join input on\n        input.bucket = s3_object.bucket and\n        input.key = s3_object.key and\n        input.version_id = s3_object.version_id\n    -- Lock this pre-emptively for the update.\n    for update\n),\n-- And filter them to the objects that need to be updated.\nobjects_to_update as (\n    select\n        *\n    from current_objects\n    where\n        -- Check the sequencer condition. We only update if there is a created\n        -- sequencer that is closer to the deleted sequencer.\n        current_objects.deleted_sequencer > current_objects.input_created_sequencer and\n        (\n            -- Updating a null sequencer doesn't cause the event to be reprocessed.\n            current_objects.created_sequencer is null or\n            -- If a sequencer already exists this event should be reprocessed because this\n            -- sequencer could belong to another object.\n            current_objects.created_sequencer < current_objects.input_created_sequencer\n        ) and\n        -- And there should not be any objects with a created sequencer that is the same as the input created\n        -- sequencer because this is a duplicate event that would cause a constraint error in the update.\n        current_objects.input_created_sequencer not in (\n            select created_sequencer from current_objects where created_sequencer is not null\n        )\n    -- Only one event entry should be updated, and that entry must be the one with the\n    -- deleted sequencer that is minimum, i.e. closest to the created sequencer which\n    -- is going to be inserted.\n    order by current_objects.deleted_sequencer asc\n    limit 1\n),\n-- Finally, update the required objects.\nupdate as (\n    update s3_object\n    set created_sequencer = objects_to_update.input_created_sequencer,\n        created_date = objects_to_update.input_created_date,\n        size = coalesce(objects_to_update.input_size, objects_to_update.size),\n        checksum = coalesce(objects_to_update.input_checksum, objects_to_update.checksum),\n        last_modified_date = coalesce(objects_to_update.input_last_modified_date, objects_to_update.last_modified_date),\n        e_tag = coalesce(objects_to_update.e_tag, objects_to_update.e_tag),\n        storage_class = objects_to_update.storage_class,\n        number_reordered = s3_object.number_reordered +\n            -- Note the asymmetry between this and the reorder for deleted query.\n            case when objects_to_update.deleted_sequencer is not null or objects_to_update.created_sequencer is not null then\n                1\n            else\n                0\n            end\n    from objects_to_update\n    where s3_object.s3_object_id = objects_to_update.s3_object_id\n)\n-- Return the old values because these need to be reprocessed.\nselect\n    -- Note, this is the passed through value from the input in order to identify this event later.\n    input_id as \"s3_object_id!\",\n    bucket,\n    key,\n    created_date as event_time,\n    last_modified_date,\n    e_tag,\n    storage_class as \"storage_class?: StorageClass\",\n    version_id as \"version_id!\",\n    created_sequencer as sequencer,\n    number_reordered,\n    number_duplicate_events,\n    size,\n    -- This is used to simplify re-constructing the FlatS3EventMessages in the Lambda. I.e. this update detected an\n    -- out of order created event, so return a created event back.\n    'Created' as \"event_type!: EventType\"\nfrom objects_to_update;\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "s3_object_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "bucket",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "event_time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "last_modified_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "e_tag",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "storage_class?: StorageClass",
+        "type_info": {
+          "Custom": {
+            "name": "storage_class",
+            "kind": {
+              "Enum": [
+                "DeepArchive",
+                "Glacier",
+                "GlacierIr",
+                "IntelligentTiering",
+                "OnezoneIa",
+                "Outposts",
+                "ReducedRedundancy",
+                "Snow",
+                "Standard",
+                "StandardIa"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "version_id!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "sequencer",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "number_reordered",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "number_duplicate_events",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "size",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "event_type!: EventType",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "TextArray",
+        "TextArray",
+        "TimestamptzArray",
+        "Int4Array",
+        "TextArray",
+        "TimestamptzArray",
+        "TextArray",
+        {
+          "Custom": {
+            "name": "_storage_class",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "storage_class",
+                  "kind": {
+                    "Enum": [
+                      "DeepArchive",
+                      "Glacier",
+                      "GlacierIr",
+                      "IntelligentTiering",
+                      "OnezoneIa",
+                      "Outposts",
+                      "ReducedRedundancy",
+                      "Snow",
+                      "Standard",
+                      "StandardIa"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "7495c606d6e756a6e53e45fc0ee6a0765922a5fef3d512c719d4aec543d0d8a6"
+}
