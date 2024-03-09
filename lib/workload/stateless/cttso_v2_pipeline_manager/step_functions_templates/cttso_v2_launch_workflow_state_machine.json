@@ -1,0 +1,212 @@
+{
+  "Comment": "Move inputs to workflow_inputs",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "get_cache_and_output_paths",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      },
+      "Comment": "We expect the inputs:\n* \"samplesheet_b64gz\"\n* \"project_id\"\n* \"portal_run_id\"\n* \"sample_id\"\n* \"fastq_list_rows_b64gz\"\n\nPlus the following workflow input parameters\n* user_reference\n* technical_tags\n* user_tags\n"
+    },
+    "get_cache_and_output_paths": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__get_cttso_cache_and_output_paths__}",
+        "Payload": {
+          "project_id.$": "$.workflow_inputs.project_id",
+          "portal_run_id.$": "$.workflow_inputs.portal_run_id",
+          "sample_id.$": "$.workflow_inputs.sample_id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "copy_files_to_cache_directory",
+      "Comment": "Takes in: \n* project id\n* portal run id \n* sample id\n\nOutputs\n* cache_path\n* output_path\n* cache_uri\n* output_uri\n\nvarious downstream steps will need a combination of these",
+      "ResultPath": "$.get_cache_and_output_paths_step",
+      "ResultSelector": {
+        "cache_path.$": "$.Payload.cache_path",
+        "output_path.$": "$.Payload.output_path",
+        "cache_uri.$": "$.Payload.cache_uri",
+        "output_uri.$": "$.Payload.output_uri"
+      }
+    },
+    "copy_files_to_cache_directory": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "generate_trimmed_samplesheet",
+          "States": {
+            "generate_trimmed_samplesheet": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__generate_trimmed_samplesheet__}",
+                "Payload": {
+                  "samplesheet_b64gz.$": "$.workflow_inputs.samplesheet_b64gz",
+                  "sample_id.$": "$.workflow_inputs.sample_id"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "upload_samplesheet_to_cache_path",
+              "Comment": "We expect the inputs:\n* samplesheet_b64gz\n* sample_id\n\nAnd we provide outputs as \n* samplesheet_b64gz",
+              "ResultPath": "$.generate_trimmed_samplesheet_step",
+              "ResultSelector": {
+                "samplesheet_b64gz.$": "$.Payload.samplesheet_b64gz"
+              }
+            },
+            "upload_samplesheet_to_cache_path": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__upload_samplesheet_to_cache_dir__}",
+                "Payload": {
+                  "cache_path.$": "$.get_cache_and_output_paths_step.cache_path",
+                  "project_id.$": "$.workflow_inputs.project_id",
+                  "samplesheet_dict_b64gz.$": "$.generate_trimmed_samplesheet_step.samplesheet_b64gz"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true,
+              "Comment": "We expect the inputs to be:\n\n* project_id\n* samplesheet_dict_b64gz\n\nWe expect the outputs to be:\n\n\n\n",
+              "ResultPath": "$.upload_samplesheet_to_cache_path_step",
+              "ResultSelector": {
+                "samplesheet_file_id.$": "$.Payload.samplesheet_file_id",
+                "samplesheet_file_uri.$": "$.Payload.samplesheet_file_uri"
+              }
+            }
+          }
+        },
+        {
+          "StartAt": "generate_copy_manifest",
+          "States": {
+            "generate_copy_manifest": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__generate_copy_manifest_dict__}",
+                "Payload": {
+                  "cache_path.$": "$.get_cache_and_output_paths_step.cache_path",
+                  "project_id.$": "$.workflow_inputs.project_id",
+                  "sample_id.$": "$.workflow_inputs.sample_id",
+                  "fastq_list_rows_b64gz.$": "$.workflow_inputs.fastq_list_rows_b64gz"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "copy_fastq_files_to_cache_directory",
+              "Comment": "Generate a copy manifest object, ready to parse into the icav2 copy batch utility step function\n\nWe expect the following inputs:\n\n* cache_path\n* project_id\n* sample_id\n* fastq_list_rows\n\nAnd we expect the following outputs:\n\n* manifest_list",
+              "ResultSelector": {
+                "manifest_list.$": "$.Payload.manifest_list"
+              },
+              "ResultPath": "$.generate_copy_manifest_dict_step"
+            },
+            "copy_fastq_files_to_cache_directory": {
+              "Type": "Task",
+              "End": true,
+              "Parameters": {
+                "StateMachineArn": "${__copy_batch_data_state_machine_arn__}",
+                "Input": {
+                  "manifest.$": "$.generate_copy_manifest_dict_step.manifest_list"
+                }
+              },
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "ResultPath": "$.copy_fastq_files_to_cache_directory_step",
+              "ResultSelector": {
+                "jobs_list.$": "$.Output.job_list_with_attempt_counter"
+              }
+            }
+          }
+        }
+      ],
+      "Next": "launch_nextflow_object",
+      "ResultSelector": {
+        "trimmed_samplesheet_b64gz.$": "$.[0].generate_trimmed_samplesheet_step.samplesheet_b64gz",
+        "samplesheet_file_id.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_id",
+        "samplesheet_file_uri.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_uri",
+        "copy_jobs_list.$": "$.[1].copy_fastq_files_to_cache_directory_step.jobs_list"
+      },
+      "ResultPath": "$.copy_files_to_cache_directory_step"
+    },
+    "launch_nextflow_object": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "${__launch_cttso_nextflow_pipeline__}",
+        "Payload": {
+          "project_id.$": "$.workflow_inputs.project_id",
+          "user_reference.$": "$.workflow_inputs.user_reference",
+          "run_folder_uri.$": "$.get_cache_and_output_paths_step.cache_uri",
+          "samplesheet_uri.$": "$.copy_files_to_cache_directory_step.samplesheet_file_uri",
+          "sample_id.$": "$.workflow_inputs.sample_id",
+          "analysis_output_uri.$": "$.get_cache_and_output_paths_step.output_uri",
+          "technical_tags.$": "$.workflow_inputs.technical_tags",
+          "user_tags.$": "$.workflow_inputs.user_tags"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "End": true
+    }
+  }
+}
