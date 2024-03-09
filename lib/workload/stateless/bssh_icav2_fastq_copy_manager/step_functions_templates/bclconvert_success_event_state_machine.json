@@ -1,0 +1,86 @@
+{
+  "Comment": "Generate an icav2 manifest file for copying data out from a bclconvert workflow session, then deploy and wait for the copy jobs to complete",
+  "StartAt": "Move inputs",
+  "States": {
+    "Move inputs": {
+      "Type": "Pass",
+      "Next": "Initialise Step Functions Complete Parameter",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      }
+    },
+    "Initialise Step Functions Complete Parameter": {
+      "Type": "Pass",
+      "Next": "Get Manifest",
+      "ResultPath": "$.step_functions_complete",
+      "Result": {
+        "is_complete": null
+      }
+    },
+    "Get Manifest": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__bclconvert_success_event_lambda_arn__}",
+        "Payload.$": "$.workflow_inputs"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Launch Copy Job StateMachine",
+      "ResultPath": "$.bclconvert_success_event_handler_step",
+      "TimeoutSeconds": 60,
+      "ResultSelector": {
+        "run_id.$": "$.Payload.run_id",
+        "basespace_run_id.$": "$.Payload.basespace_run_id",
+        "output_uri.$": "$.Payload.output_uri",
+        "fastq_list_rows_b64gz.$": "$.Payload.fastq_list_rows_b64gz",
+        "manifest_b64gz.$": "$.Payload.manifest_b64gz",
+        "samplesheet_b64gz.$": "$.Payload.samplesheet_dict_b64gz"
+      }
+    },
+    "Launch Copy Job StateMachine": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__copy_batch_data_state_machine_arn__}",
+        "Input": {
+          "manifest_b64gz.$": "$.bclconvert_success_event_handler_step.manifest_b64gz"
+        }
+      },
+      "ResultSelector": {
+        "execution_id.$": "$.ExecutionArn"
+      },
+      "ResultPath": "$.state_machine_parameter",
+      "Next": "Set Workflow Outputs"
+    },
+    "Set Workflow Outputs": {
+      "Type": "Pass",
+      "Next": "Succeed",
+      "Parameters": {
+        "outputs": {
+          "run_id.$": "$.bclconvert_success_event_handler_step.run_id",
+          "basespace_run_id.$": "$.bclconvert_success_event_handler_step.basespace_run_id",
+          "output_uri.$": "$.bclconvert_success_event_handler_step.output_uri",
+          "fastq_list_rows_b64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz",
+          "manifest_b64gz.$":"$.bclconvert_success_event_handler_step.manifest_b64gz",
+          "samplesheet_b64gz.$": "$.bclconvert_success_event_handler_step.samplesheet_b64gz",
+          "icav2_copy_utility_job_execution_id.$": "$.state_machine_parameter.execution_id"
+        }
+      }
+    },
+    "Succeed": {
+      "Type": "Succeed"
+    }
+  }
+}
