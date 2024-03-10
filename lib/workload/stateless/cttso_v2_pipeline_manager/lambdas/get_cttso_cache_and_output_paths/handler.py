@@ -100,13 +100,13 @@ def handler(event, context):
 #
 #     """
 #     {
-#         "cache_path": "/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache",
+#         "cache_path": "/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache",  /* pragma: allowlist secret */
 #         "output_path": "/ilmn_cttso_fastq_cache/20241231abcd1234",
 #         "cache_uri": "icav2://project_id/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache/",
 #         "output_uri": "icav2://project_id/ilmn_cttso_fastq_cache/20241231abcd1234/"
 #     }
 #     {
-#         "cache_path": "/ilmn_cttso_fastq_cache/2024030527c5a3d4/L12345678_run_cache",
+#         "cache_path": "/ilmn_cttso_fastq_cache/2024030527c5a3d4/L12345678_run_cache",  /* pragma: allowlist secret */
 #         "output_path": "/ilmn_cttso_fastq_cache/2024030527c5a3d4",
 #         "cache_uri": "icav2://project_id/ilmn_cttso_fastq_cache/2024030527c5a3d4/L12345678_run_cache/",
 #         "output_uri": "icav2://project_id/ilmn_cttso_fastq_cache/2024030527c5a3d4/"
