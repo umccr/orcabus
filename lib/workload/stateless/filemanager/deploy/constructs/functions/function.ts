@@ -6,6 +6,7 @@ import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { RustFunction } from 'cargo-lambda-cdk';
 import path from 'path';
+import { exec } from 'cargo-lambda-cdk/lib/util';
 
 /**
  * Properties for the database.
@@ -92,11 +93,26 @@ export class Function extends Construct {
       `/` +
       `${props.databaseSecret.secretValueFromJson('dbname').unsafeUnwrap()}`;
 
+    const manifestPath = path.join(__dirname, '..', '..', '..');
+    // This starts the container running postgres in order to compile queries using sqlx.
+    // It needs to be executed outside `beforeBundling`, because `beforeBundling` runs inside
+    // the container context, and docker compose needs to run outside of this context.
+    exec('make', ['docker-postgres'], { cwd: manifestPath, shell: true });
+
     this._function = new RustFunction(this, 'RustFunction', {
-      manifestPath: path.join(__dirname, '..', '..', '..'),
+      manifestPath,
       binaryName: props.package,
       bundling: {
-        environment: props.buildEnvironment
+        environment: {
+          ...props.buildEnvironment,
+          // Avoid permission issues by creating another target directory.
+          CARGO_TARGET_DIR: "target-cdk-docker-bundling",
+          // The bundling container needs to be able to connect to the container running postgres.
+          DATABASE_URL: "postgresql://filemanager:filemanager@host.docker.internal:4321/filemanager", // pragma: allowlist secret
+        },
+        // This uses docker only to compile the binary. I.e. the Lambda function still runs natively and
+        // is not dockerized.
+        forcedDockerBundling: true,
       },
       memorySize: 128,
       timeout: Duration.seconds(28),
