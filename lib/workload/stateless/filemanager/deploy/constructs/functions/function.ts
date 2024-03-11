@@ -1,11 +1,11 @@
 import { Construct } from 'constructs';
-import { RustFunction } from 'rust.aws-cdk-lambda';
 import { Duration } from 'aws-cdk-lib';
-import { Settings as CargoSettings } from 'rust.aws-cdk-lambda/dist/settings';
 import { ISecurityGroup, IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Architecture, Version } from 'aws-cdk-lib/aws-lambda';
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
+import { RustFunction } from 'cargo-lambda-cdk';
+import path from 'path';
 
 /**
  * Properties for the database.
@@ -28,7 +28,7 @@ export type FunctionPropsNoPackage = DatabaseProps & {
   /**
    * Additional build environment variables when building the Lambda function.
    */
-  readonly buildEnvironment?: { [key: string]: string | undefined };
+  readonly buildEnvironment?: { [key: string]: string };
   /**
    * RUST_LOG string, defaults to trace on local crates and info everywhere else.
    */
@@ -79,8 +79,6 @@ export class Function extends Construct {
       description: 'Security group that allows a filemanager Lambda function to egress out.',
     });
 
-    CargoSettings.BUILD_INDIVIDUALLY = true;
-
     // Todo use secrets manager for this and query for password within Lambda functions.
     const unsafeConnection =
       `postgres://` +
@@ -95,8 +93,11 @@ export class Function extends Construct {
       `${props.databaseSecret.secretValueFromJson('dbname').unsafeUnwrap()}`;
 
     this._function = new RustFunction(this, 'RustFunction', {
-      package: props.package,
-      target: 'aarch64-unknown-linux-gnu',
+      manifestPath: path.join(__dirname, '..', '..', '..'),
+      binaryName: props.package,
+      bundling: {
+        environment: props.buildEnvironment
+      },
       memorySize: 128,
       timeout: Duration.seconds(28),
       environment: {
@@ -104,10 +105,7 @@ export class Function extends Construct {
         RUST_LOG:
           props.rustLog ?? `info,${props.package.replace('-', '_')}=trace,filemanager=trace`,
       },
-      buildEnvironment: props.buildEnvironment,
-      // Todo, fix this so that it's not relying on the path.
-      extraBuildArgs: ['--manifest-path', `lib/workload/stateless/filemanager/${props.package}/Cargo.toml`],
-      architecture: Architecture.ARM_64,
+      architecture: Architecture.X86_64,
       role: this._role,
       vpc: props.vpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
