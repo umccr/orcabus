@@ -203,7 +203,7 @@ def handler(event, context):
 
     # Generate the inputs and analysis object
     # Call the object to launch it
-    analysis_id: str = nextflow_analysis()
+    analysis_launch_obj: Analysis = nextflow_analysis()
 
     # Save the analysis
     with NamedTemporaryFile(suffix='.json') as temp_file:
@@ -213,7 +213,8 @@ def handler(event, context):
             analysis_launch_payload = json.load(tmp_file_h)
 
     return {
-        "analysis_id": analysis_id,
+        "analysis_id": analysis_launch_obj.id,
+        "analysis_return_payload": recursively_build_open_api_body_from_libica_item(analysis_launch_obj),
         "analysis_launch_payload": analysis_launch_payload
     }
 
