@@ -51,6 +51,7 @@ export const handler = async (event: EventType) => {
   await pgClient.end();
 
   // store the new db config at secret manager
+  const secretName = `orcabus/${microserviceName}/rdsLoginCredential`; // pragma: allowlist secret
   const secretValue = createSecretValue({
     password: password,
     host: pgMasterConfig.host,
@@ -60,7 +61,7 @@ export const handler = async (event: EventType) => {
   });
 
   const smInput: CreateSecretCommandInput = {
-    Name: `orcabus/microservice/${microserviceName}`,
+    Name: secretName,
     Description: `orcabus microservice secret for '${microserviceName}'`,
     SecretString: JSON.stringify(secretValue),
     Tags: [
@@ -71,9 +72,7 @@ export const handler = async (event: EventType) => {
   };
   const smCommand = new CreateSecretCommand(smInput);
 
-  console.info(
-    `storing the role credential at the secret manager (orcabus/microservice/${microserviceName})`
-  );
+  console.info(`storing the role credential at the secret manager (${secretName})`);
   const response = await smClient.send(smCommand);
   console.info(`ssm-response: ${JSON.stringify(response, undefined, 2)}`);
 };

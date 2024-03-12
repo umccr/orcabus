@@ -52,7 +52,7 @@ There are 4 lambdas in this stack:
 
     Create a role with login credentials used for this microservice.
     The name of the role would be the microservice name itself, and the credential will be saved into the secret
-    manager. The secret manager name is saved to `orcabus/microservice/${microserviceName}`.
+    manager. The secret manager name is saved to `orcabus/${microserviceName}/RdsLoginCredential`.
 
     Note: this will only work if the DbAuthType is configured to `USERNAME_PASSWORD`.
 
