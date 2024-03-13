@@ -50,9 +50,9 @@ There are 4 lambdas in this stack:
 
 2. `orcabus-create-pg-login-role`
 
-    Create a role with login credentials used for this microservice.
+    Create a role with login credentials used for the microservice to use.
     The name of the role would be the microservice name itself, and the credential will be saved into the secret
-    manager. The secret manager name is saved to `orcabus/microservice/${microserviceName}`.
+    manager. The secret manager name is saved to `orcabus/${microserviceName}/rdsLoginCredential`.
 
     Note: this will only work if the DbAuthType is configured to `USERNAME_PASSWORD`.
 
