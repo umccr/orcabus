@@ -77,6 +77,10 @@ const orcaBusStatelessConfig = {
     clusterResourceIdParameterName: dbClusterResourceIdParameterName,
     microserviceDbConfig: [
       {
+        name: 'sequence_run_manager',
+        authType: DbAuthType.USERNAME_PASSWORD,
+      },
+      {
         name: 'metadata_manager',
         authType: DbAuthType.USERNAME_PASSWORD,
       },

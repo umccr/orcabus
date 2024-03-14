@@ -65,7 +65,7 @@ pub struct TransposedS3EventMessages {
     pub event_times: Vec<Option<DateTime<Utc>>>,
     pub buckets: Vec<String>,
     pub keys: Vec<String>,
-    pub version_ids: Vec<Option<String>>,
+    pub version_ids: Vec<String>,
     pub sizes: Vec<Option<i32>>,
     pub e_tags: Vec<Option<String>>,
     pub sequencers: Vec<Option<String>>,
@@ -383,7 +383,7 @@ pub struct FlatS3EventMessage {
     pub sequencer: Option<String>,
     pub bucket: String,
     pub key: String,
-    pub version_id: Option<String>,
+    pub version_id: String,
     pub size: Option<i32>,
     pub e_tag: Option<String>,
     pub storage_class: Option<StorageClass>,
@@ -453,8 +453,14 @@ impl FlatS3EventMessage {
     }
 
     /// Set the version id.
-    pub fn with_version_id(mut self, version_id: Option<String>) -> Self {
+    pub fn with_version_id(mut self, version_id: String) -> Self {
         self.version_id = version_id;
+        self
+    }
+
+    /// Set the version id.
+    pub fn with_default_version_id(mut self) -> Self {
+        self.version_id = Self::default_version_id();
         self
     }
 
@@ -492,6 +498,10 @@ impl FlatS3EventMessage {
     pub fn with_event_type(mut self, event_type: EventType) -> Self {
         self.event_type = event_type;
         self
+    }
+
+    pub fn default_version_id() -> String {
+        "null".to_string()
     }
 }
 
@@ -533,7 +543,7 @@ pub(crate) mod tests {
             &EventType::Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
 
         let second = result.next().unwrap();
@@ -542,7 +552,7 @@ pub(crate) mod tests {
             &EventType::Created,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
 
         let third = result.next().unwrap();
@@ -551,7 +561,7 @@ pub(crate) mod tests {
             &EventType::Created,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
     }
 
@@ -566,7 +576,7 @@ pub(crate) mod tests {
             &EventType::Created,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
 
         let second = result.next().unwrap();
@@ -575,7 +585,7 @@ pub(crate) mod tests {
             &EventType::Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
     }
 
@@ -590,7 +600,7 @@ pub(crate) mod tests {
                 .first()
                 .unwrap()
                 .clone()
-                .with_version_id(Some("version_id".to_string())),
+                .with_version_id("version_id".to_string()),
         );
 
         let result = FlatS3EventMessages(result).sort_and_dedup();
@@ -602,7 +612,7 @@ pub(crate) mod tests {
             &EventType::Created,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
 
         let second = result.next().unwrap();
@@ -611,7 +621,7 @@ pub(crate) mod tests {
             &EventType::Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
 
         let third = result.next().unwrap();
@@ -620,7 +630,7 @@ pub(crate) mod tests {
             &EventType::Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
-            Some("version_id".to_string()),
+            "version_id".to_string(),
         );
     }
 
@@ -629,7 +639,7 @@ pub(crate) mod tests {
         event_type: &EventType,
         sequencer: Option<String>,
         size: Option<i32>,
-        version_id: Option<String>,
+        version_id: String,
     ) {
         assert_eq!(event.event_time, Some(DateTime::<Utc>::default()));
         assert_eq!(&event.event_type, event_type);
@@ -656,7 +666,7 @@ pub(crate) mod tests {
         assert_eq!(events.sizes[position], size);
         assert_eq!(
             events.version_ids[position],
-            Some(EXPECTED_VERSION_ID.to_string())
+            EXPECTED_VERSION_ID.to_string()
         );
         assert_eq!(events.e_tags[position], Some(EXPECTED_E_TAG.to_string()));
         assert_eq!(events.sequencers[position], Some(sequencer.to_string()));
