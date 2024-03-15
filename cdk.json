@@ -1,5 +1,4 @@
 {
-  "app": "yarn run -B ts-node --prefer-ts-exts bin/orcabus.ts",
   "watch": {
     "include": [
       "**"

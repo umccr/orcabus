@@ -19,9 +19,8 @@
     "lint-fix": "eslint --fix .",
     "prettier": "prettier --check .",
     "prettier-fix": "prettier --write .",
-    "cdk-stateless-pipeline": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/stateless-pipeline.ts'",
-    "cdk-stateful-pipeline": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/stateful-pipeline.ts'",
-    "cdk-orcabus": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/orcabus.ts'"
+    "cdk-stateless": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/stateless-pipeline.ts'",
+    "cdk-stateful": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/stateful-pipeline.ts'"
   },
   "dependencies": {
     "@aws-cdk/aws-apigatewayv2-alpha": "^2.110.0-alpha.0",
