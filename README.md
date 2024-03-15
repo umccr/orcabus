@@ -85,14 +85,14 @@ You could list the CDK stacks with the `cdk ls` command to look at the stackId g
 yarn cdk-stateless ls
 
 OrcaBusStatelessPipeline
-OrcaBusStatelessPipeline/BetaStatelessDeployment/MetadataManager
+OrcaBusStatelessPipeline/BetaDeployment/MetadataManager
 ...
 ```
 
 For example, deploying the metadata manager stateless resources directly from your computer as follows.
 
 ```sh
-yarn cdk-stateless deploy OrcaBusStatelessPipeline/BetaStatelessDeployment/MetadataManager
+yarn cdk-stateless deploy OrcaBusStatelessPipeline/BetaDeployment/MetadataManager
 ```
 
 NOTE: If you deployed manually and the pipeline starts running (e.g. a new commit at the source branch) your stack will be overridden to what you have in the main branch.
