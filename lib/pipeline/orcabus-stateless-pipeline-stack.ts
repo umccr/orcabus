@@ -25,6 +25,7 @@ export class StatelessPipelineStack extends cdk.Stack {
         //  RUST installation
         `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`,
         `source $HOME/.cargo/env`,
+        `pip3 install cargo-lambda`,
       ],
       commands: ['yarn install --immutable', 'make suite'],
       input: sourceFile,
@@ -55,6 +56,12 @@ export class StatelessPipelineStack extends cdk.Stack {
     });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
+      installCommands: [
+        //  RUST installation
+        `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`,
+        `source $HOME/.cargo/env`,
+        `pip3 install cargo-lambda`,
+      ],
       commands: ['yarn install --immutable', 'yarn run cdk-stateless-pipeline synth'],
       input: unitTest,
       primaryOutputDirectory: 'cdk.out',
