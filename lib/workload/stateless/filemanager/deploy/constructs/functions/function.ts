@@ -108,11 +108,8 @@ export class Function extends Construct {
           // Avoid permission issues by creating another target directory.
           CARGO_TARGET_DIR: "target-cdk-docker-bundling",
           // The bundling container needs to be able to connect to the container running postgres.
-          DATABASE_URL: "postgresql://filemanager:filemanager@host.docker.internal:4321/filemanager", // pragma: allowlist secret
-        },
-        // This uses docker only to compile the binary. I.e. the Lambda function still runs natively and
-        // is not dockerized.
-        forcedDockerBundling: true,
+          DATABASE_URL: "postgresql://filemanager:filemanager@localhost:4321/filemanager", // pragma: allowlist secret
+        }
       },
       memorySize: 128,
       timeout: Duration.seconds(28),
