@@ -46,7 +46,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
-      commands: ['yarn install --immutable', 'yarn run cdk-stateful-pipeline synth'],
+      commands: ['yarn install --immutable', 'yarn run cdk-stateful synth'],
       input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [

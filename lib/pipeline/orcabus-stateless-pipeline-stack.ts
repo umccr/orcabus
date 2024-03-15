@@ -62,7 +62,7 @@ export class StatelessPipelineStack extends cdk.Stack {
         `source $HOME/.cargo/env`,
         `pip3 install cargo-lambda`,
       ],
-      commands: ['yarn install --immutable', 'yarn run cdk-stateless-pipeline synth'],
+      commands: ['yarn install --immutable', 'yarn run cdk-stateless synth'],
       input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
@@ -99,7 +99,7 @@ export class StatelessPipelineStack extends cdk.Stack {
     const betaConfig = getEnvironmentConfig('beta');
     if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
     pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(this, 'BetaStatelessDeployment', betaConfig.stackProps, {
+      new OrcaBusStatelessDeploymentStage(this, 'BetaDeployment', betaConfig.stackProps, {
         account: betaConfig.accountId,
       })
     );
@@ -116,7 +116,7 @@ export class StatelessPipelineStack extends cdk.Stack {
     // pipeline.addStage(
     //   new OrcaBusStatelessDeploymentStage(
     //     this,
-    //     'GammaStatelessDeployment',
+    //     'GammaDeployment',
     //     gammaConfig.stackProps,
     //     {
     //       account: gammaConfig.accountId,
@@ -131,7 +131,7 @@ export class StatelessPipelineStack extends cdk.Stack {
     // const prodConfig = getEnvironmentConfig('prod');
     // if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
     // pipeline.addStage(
-    //   new OrcaBusStatelessDeploymentStage(this, 'ProdStatelessDeployment', prodConfig.stackProps, {
+    //   new OrcaBusStatelessDeploymentStage(this, 'ProdDeployment', prodConfig.stackProps, {
     //     account: prodConfig?.accountId,
     //   }),
     //   { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
