@@ -2,10 +2,11 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
 import { EventBusConstruct, EventBusProps } from './stateful/eventbridge/component';
-import { Database, ConfigurableDatabaseProps } from './stateful/database/component';
+import { ConfigurableDatabaseProps, Database } from './stateful/database/component';
 import { SecurityGroupConstruct, SecurityGroupProps } from './stateful/securitygroup/component';
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './stateful/schemaregistry/component';
 import { EventSource, EventSourceProps } from './stateful/event_source/component';
+import { SharedApiGatewayConstruct } from './stateful/apigw/component';
 
 export interface OrcaBusStatefulConfig {
   schemaRegistryProps: SchemaRegistryProps;
@@ -55,5 +56,7 @@ export class OrcaBusStatefulStack extends cdk.Stack {
     if (props.eventSourceProps) {
       this.eventSource = new EventSource(this, 'EventSourceConstruct', props.eventSourceProps);
     }
+
+    new SharedApiGatewayConstruct(this, 'OrcaBusSharedApiGatewayConstruct');
   }
 }

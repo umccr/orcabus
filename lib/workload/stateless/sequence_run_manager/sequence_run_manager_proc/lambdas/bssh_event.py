@@ -32,6 +32,9 @@ PRODUCED_BY_BSSH = ["BaseSpaceSequenceHub"]
 def sqs_handler(event, context):
     """event payload dict
 
+    Here is how to generate an example event. See README for more.
+        python manage.py generate_mock_bssh_event | jq
+
     This Lambda is to be subscribed to SQS for BSSH event through ICA v1 ENS
     https://illumina.gitbook.io/ica-v1/events/e-deliverytargets
 

@@ -5,17 +5,30 @@ Usage:
 - export DJANGO_SETTINGS_MODULE=sequence_run_manager.settings.aws
 """
 import copy
+import json
+import logging
+from types import SimpleNamespace
 
 from environ import Env
-from libumccr.aws import libssm
+from libumccr.aws import libsm
 
 from .base import *  # noqa
 
-SECRET_KEY = libssm.get_secret("/orcabus/backend/django_secret_key")
+logger = logging.getLogger(__name__)
 
 DEBUG = False
 
-db_conn_cfg = Env.db_url_config(libssm.get_secret("/orcabus/backend/full_db_url"))
+secret_id = os.environ.get("SECRET_ID", "orcabus/sequence_run_manager/rdsLoginCredential")
+
+try:
+    secret_str = libsm.get_secret(secret_id)  # this will be lru cached throughout exec lifetime
+    sd = json.loads(secret_str, object_hook=lambda d: SimpleNamespace(**d))
+    db_conn = f"{sd.engine}://{sd.username}:{sd.password}@{sd.host}:{sd.port}/{sd.dbname}"
+except Exception as e:
+    logger.error(f"Error retrieving db secret from the Secret Manager: {e}")
+    raise e
+
+db_conn_cfg = Env.db_url_config(db_conn)
 
 DATABASES = {"default": db_conn_cfg}
 

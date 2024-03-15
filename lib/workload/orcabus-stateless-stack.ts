@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { Arn, aws_lambda } from 'aws-cdk-lib';
+import { Arn, aws_ssm } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
 import { MultiSchemaConstructProps } from './stateless/schema/component';
@@ -11,13 +11,15 @@ import {
   PostgresManagerStack,
   PostgresManagerConfig,
 } from './stateless/postgres_manager/deploy/postgres-manager-stack';
+import { SequenceRunManagerStack } from './stateless/sequence_run_manager/deploy/component';
+import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
+import * as param from '../../config/param';
+import { IHttpApi, HttpApiAttributes, HttpStage, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
   eventBusName: string;
   lambdaSecurityGroupName: string;
-  lambdaRuntimePythonVersion: aws_lambda.Runtime;
-  bclConvertFunctionName: string;
   rdsMasterSecretName: string;
   postgresManagerConfig: PostgresManagerConfig;
   filemanagerDependencies?: FilemanagerDependencies;
@@ -39,8 +41,10 @@ export interface FilemanagerDependencies {
 }
 
 export class OrcaBusStatelessStack extends cdk.Stack {
-  private vpc: IVpc;
-  private lambdaSecurityGroup: ISecurityGroup;
+  private readonly vpc: IVpc;
+  private readonly lambdaSecurityGroup: ISecurityGroup;
+  private readonly mainBus: IEventBus;
+  private readonly sharedHttpApi: IHttpApi;
 
   // microservice stacks
   microserviceStackArray: cdk.Stack[] = [];
@@ -59,14 +63,26 @@ export class OrcaBusStatelessStack extends cdk.Stack {
       this.vpc
     );
 
-    // const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.eventBusName);
+    this.mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.eventBusName);
+
+    // You may reuse the shared HttpApi Gateway if you prefer. Doing so, please use the namespace
+    // in the route path prefix. You can pass along `this.sharedHttpApi` through your stack props.
+    const sharedHttpApiId = aws_ssm.StringParameter.valueFromLookup(this, param.SHARED_HTTP_API_ID);
+    const sharedHttpApiAttributes: HttpApiAttributes = { httpApiId: sharedHttpApiId };
+    this.sharedHttpApi = HttpApi.fromHttpApiAttributes(
+      this,
+      'OrcaBusSharedHttpApi',
+      sharedHttpApiAttributes
+    );
+    new HttpStage(this, 'OrcaBusSharedHttpApiStage', { httpApi: this.sharedHttpApi });
 
     // --- Create Stateless resources
 
     // new MultiSchemaConstruct(this, 'MultiSchema', props.multiSchemaConstructProps);
 
     // hook microservice construct components here
-    this.createSequenceRunManager();
+
+    this.microserviceStackArray.push(this.createSequenceRunManager());
     this.microserviceStackArray.push(this.createPostgresManager(props.postgresManagerConfig));
 
     if (props.filemanagerDependencies) {
@@ -78,8 +94,12 @@ export class OrcaBusStatelessStack extends cdk.Stack {
   }
 
   private createSequenceRunManager() {
-    // TODO new SequenceRunManagerConstruct() from lib/workload/stateless/sequence_run_manager/deploy/component.ts
-    //   However, the implementation is still incomplete...
+    return new SequenceRunManagerStack(this, 'SequenceRunManager', {
+      securityGroups: [this.lambdaSecurityGroup],
+      vpc: this.vpc,
+      mainBus: this.mainBus,
+      httpApi: this.sharedHttpApi,
+    });
   }
 
   private createPostgresManager(config: PostgresManagerConfig) {

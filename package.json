@@ -24,10 +24,7 @@
     "cdk-orcabus": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/orcabus.ts'"
   },
   "dependencies": {
-    "@aws-cdk/aws-apigatewayv2-alpha": "^2.110.0-alpha.0",
-    "@aws-cdk/aws-apigatewayv2-authorizers-alpha": "^2.110.0-alpha.0",
-    "@aws-cdk/aws-apigatewayv2-integrations-alpha": "^2.110.0-alpha.0",
-    "@aws-cdk/aws-lambda-python-alpha": "2.110.0-alpha.0",
+    "@aws-cdk/aws-lambda-python-alpha": "2.126.0-alpha.0",
     "aws-cdk-lib": "^2.126.0",
     "cargo-lambda-cdk": "^0.0.19",
     "cdk-nag": "^2.28.27",

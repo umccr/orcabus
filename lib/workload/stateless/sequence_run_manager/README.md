@@ -18,8 +18,8 @@ _*If you are PyCharmer and opening the whole `orcabus` project (i.e. not doing s
 
 - Setup Python environment (conda or venv)
 ```
-conda create -n orcabus python=3.12
-conda activate orcabus
+conda create -n sequence_run_manager python=3.12
+conda activate sequence_run_manager
 ```
 
 ### Make
