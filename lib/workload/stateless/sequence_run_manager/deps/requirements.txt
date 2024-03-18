@@ -15,4 +15,3 @@ serverless-wsgi==3.0.2
 # for sequencerunstatechange package
 six==1.16.0
 regex==2023.6.3
-pymysql==1.1.0

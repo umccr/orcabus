@@ -43,45 +43,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-apigatewayv2-alpha@npm:^2.110.0-alpha.0":
-  version: 2.110.0-alpha.0
-  resolution: "@aws-cdk/aws-apigatewayv2-alpha@npm:2.110.0-alpha.0"
+"@aws-cdk/aws-lambda-python-alpha@npm:2.126.0-alpha.0":
+  version: 2.126.0-alpha.0
+  resolution: "@aws-cdk/aws-lambda-python-alpha@npm:2.126.0-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.110.0
+    aws-cdk-lib: ^2.126.0
     constructs: ^10.0.0
-  checksum: e850053a39af974268a96d6cc6cfd4b5d3ac7409d30dee5a5072c61474603ae131d3cd5279e1112fee4543c7ce47b8c0a35398b2e993a242ce2b167657ad1fcf
-  languageName: node
-  linkType: hard
-
-"@aws-cdk/aws-apigatewayv2-authorizers-alpha@npm:^2.110.0-alpha.0":
-  version: 2.110.0-alpha.0
-  resolution: "@aws-cdk/aws-apigatewayv2-authorizers-alpha@npm:2.110.0-alpha.0"
-  peerDependencies:
-    "@aws-cdk/aws-apigatewayv2-alpha": 2.110.0-alpha.0
-    aws-cdk-lib: ^2.110.0
-    constructs: ^10.0.0
-  checksum: f6891878d3eb8e5b5ebadead61a28c936c89fb150bc2c766f900a56e7cb8908dc23177c8e1ff247817e2a4ce48cdc0ccf1f89c3db5132a519f9d39b6c3a7962e
-  languageName: node
-  linkType: hard
-
-"@aws-cdk/aws-apigatewayv2-integrations-alpha@npm:^2.110.0-alpha.0":
-  version: 2.110.0-alpha.0
-  resolution: "@aws-cdk/aws-apigatewayv2-integrations-alpha@npm:2.110.0-alpha.0"
-  peerDependencies:
-    "@aws-cdk/aws-apigatewayv2-alpha": 2.110.0-alpha.0
-    aws-cdk-lib: ^2.110.0
-    constructs: ^10.0.0
-  checksum: e2bca14e9154d8706398324e805d8912a5ad4fea589130e242f62d00675ade12627c5d74ddca231e039e1954bef698a04fe2aec4766cf6d123e0fb5108790e4c
-  languageName: node
-  linkType: hard
-
-"@aws-cdk/aws-lambda-python-alpha@npm:2.110.0-alpha.0":
-  version: 2.110.0-alpha.0
-  resolution: "@aws-cdk/aws-lambda-python-alpha@npm:2.110.0-alpha.0"
-  peerDependencies:
-    aws-cdk-lib: ^2.110.0
-    constructs: ^10.0.0
-  checksum: 2f52d4ba1efbb37e545bb31a623f5fe582b009e3f599d666d23181158e83b00d3a16147b368a905eb2edcc3731aea5efcf2808483ffb8e8592ec6cca954063e9
+  checksum: b7e18df1c66a0c17be8c873a58cd10405269cb0b80f7d8e6913fbf853c1f52f46a8290301ed0b8e79264503f08820d7470fc4378fcb81eaf7532483d92aa3de8
   languageName: node
   linkType: hard
 
@@ -1477,8 +1445,8 @@ __metadata:
   linkType: hard
 
 "aws-cdk-lib@npm:^2.126.0":
-  version: 2.126.0
-  resolution: "aws-cdk-lib@npm:2.126.0"
+  version: 2.132.1
+  resolution: "aws-cdk-lib@npm:2.132.1"
   dependencies:
     "@aws-cdk/asset-awscli-v1": ^2.2.202
     "@aws-cdk/asset-kubectl-v20": ^2.1.2
@@ -1486,16 +1454,17 @@ __metadata:
     "@balena/dockerignore": ^1.0.2
     case: 1.6.3
     fs-extra: ^11.2.0
-    ignore: ^5.3.0
+    ignore: ^5.3.1
     jsonschema: ^1.4.1
+    mime-types: ^2.1.35
     minimatch: ^3.1.2
     punycode: ^2.3.1
-    semver: ^7.5.4
+    semver: ^7.6.0
     table: ^6.8.1
     yaml: 1.10.2
   peerDependencies:
     constructs: ^10.0.0
-  checksum: 62d46d108fba4ef2c76e7c46767bddfe7019b2f96ad1bfb1b8ae348eeefb889dc6314b56fa5da16c299477ebc1463354de93df45a0ca72cc4d6faee5a0eb9656
+  checksum: eb017fff6aa72b2d0cebaf317971b4b9f803322feb3fbc9b940f5dd72fe65213f92880a8b0fe6214a860b6ad985df2ad6839e4ed15d899dbdff8c5da1728230f
   languageName: node
   linkType: hard
 
@@ -2681,10 +2650,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ignore@npm:^5.2.0, ignore@npm:^5.2.4, ignore@npm:^5.3.0":
+"ignore@npm:^5.2.0, ignore@npm:^5.2.4":
   version: 5.3.0
   resolution: "ignore@npm:5.3.0"
   checksum: 2736da6621f14ced652785cb05d86301a66d70248597537176612bd0c8630893564bd5f6421f8806b09e8472e75c591ef01672ab8059c07c6eb2c09cefe04bf9
+  languageName: node
+  linkType: hard
+
+"ignore@npm:^5.3.1":
+  version: 5.3.1
+  resolution: "ignore@npm:5.3.1"
+  checksum: 71d7bb4c1dbe020f915fd881108cbe85a0db3d636a0ea3ba911393c53946711d13a9b1143c7e70db06d571a5822c0a324a6bcde5c9904e7ca5047f01f1bf8cd3
   languageName: node
   linkType: hard
 
@@ -3657,6 +3633,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mime-db@npm:1.52.0":
+  version: 1.52.0
+  resolution: "mime-db@npm:1.52.0"
+  checksum: 0d99a03585f8b39d68182803b12ac601d9c01abfa28ec56204fa330bc9f3d1c5e14beb049bafadb3dbdf646dfb94b87e24d4ec7b31b7279ef906a8ea9b6a513f
+  languageName: node
+  linkType: hard
+
+"mime-types@npm:^2.1.35":
+  version: 2.1.35
+  resolution: "mime-types@npm:2.1.35"
+  dependencies:
+    mime-db: 1.52.0
+  checksum: 89a5b7f1def9f3af5dad6496c5ed50191ae4331cc5389d7c521c8ad28d5fdad2d06fd81baf38fed813dc4e46bb55c8145bb0ff406330818c9cf712fb2e9b3836
+  languageName: node
+  linkType: hard
+
 "mimic-fn@npm:^2.1.0":
   version: 2.1.0
   resolution: "mimic-fn@npm:2.1.0"
@@ -3893,10 +3885,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "orcabus@workspace:."
   dependencies:
-    "@aws-cdk/aws-apigatewayv2-alpha": ^2.110.0-alpha.0
-    "@aws-cdk/aws-apigatewayv2-authorizers-alpha": ^2.110.0-alpha.0
-    "@aws-cdk/aws-apigatewayv2-integrations-alpha": ^2.110.0-alpha.0
-    "@aws-cdk/aws-lambda-python-alpha": 2.110.0-alpha.0
+    "@aws-cdk/aws-lambda-python-alpha": 2.126.0-alpha.0
     "@types/jest": ^29.5.2
     "@types/node": ^20.4.0
     "@typescript-eslint/eslint-plugin": ^6.19.1

@@ -4,7 +4,7 @@ import {
   FilemanagerDependencies,
   OrcaBusStatelessConfig,
 } from '../lib/workload/orcabus-stateless-stack';
-import { Duration, aws_lambda, RemovalPolicy } from 'aws-cdk-lib';
+import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
 import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
 
@@ -68,8 +68,6 @@ const orcaBusStatelessConfig = {
   },
   eventBusName: eventBusName,
   lambdaSecurityGroupName: lambdaSecurityGroupName,
-  lambdaRuntimePythonVersion: aws_lambda.Runtime.PYTHON_3_10,
-  bclConvertFunctionName: 'orcabus_bcl_convert',
   rdsMasterSecretName: rdsMasterSecretName,
   postgresManagerConfig: {
     masterSecretName: rdsMasterSecretName,

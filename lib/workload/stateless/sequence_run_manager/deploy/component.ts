@@ -1,145 +1,129 @@
-// FIXME complete the implementation
-
 import path from 'path';
+import * as cdk from 'aws-cdk-lib';
+import { aws_lambda, aws_secretsmanager, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { ILayerVersion } from 'aws-cdk-lib/aws-lambda';
 import { ISecurityGroup, IVpc } from 'aws-cdk-lib/aws-ec2';
-import { IEventBus, Rule } from 'aws-cdk-lib/aws-events';
-import { aws_events_targets, aws_lambda, Duration } from 'aws-cdk-lib';
+import { IEventBus } from 'aws-cdk-lib/aws-events';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
-import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
-import { CorsHttpMethod, HttpApi, HttpMethod, HttpStage } from '@aws-cdk/aws-apigatewayv2-alpha';
+import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { HttpMethod, HttpRoute, HttpRouteKey, HttpStage } from 'aws-cdk-lib/aws-apigatewayv2';
+import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { SRMApiGatewayConstruct } from './apigw/component';
 
 export interface SequenceRunManagerProps {
-  // FIXME change prop interface name
-  layers: ILayerVersion[];
   securityGroups: ISecurityGroup[];
   vpc: IVpc;
   mainBus: IEventBus;
-  functionName: string;
-  lambdaRuntimePythonVersion: aws_lambda.Runtime;
 }
 
-export class SequenceRunManagerConstruct extends Construct {
-  // FIXME change construct name
-  private scope: Construct;
+export class SequenceRunManagerStack extends Stack {
+  // Follow by naming convention. See https://github.com/umccr/orcabus/pull/149
+  private readonly secretId: string = 'orcabus/sequence_run_manager/rdsLoginCredential';
+  private readonly apiNamespace: string = '/srm/v1';
   private readonly id: string;
-  private props: SequenceRunManagerProps;
-  private baseLayer: PythonLayerVersion;
+  private readonly props: SequenceRunManagerProps;
+  private readonly baseLayer: PythonLayerVersion;
   private readonly lambdaEnv;
+  private readonly lambdaRuntimePythonVersion: aws_lambda.Runtime = aws_lambda.Runtime.PYTHON_3_12;
+  private readonly lambdaRole: Role;
 
-  constructor(scope: Construct, id: string, props: SequenceRunManagerProps) {
+  constructor(scope: Construct, id: string, props: cdk.StackProps & SequenceRunManagerProps) {
     super(scope, id);
 
-    this.scope = scope;
     this.id = id;
     this.props = props;
 
+    this.lambdaRole = new Role(this, this.id + 'Role', {
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+      description: 'Lambda execution role for ' + this.id,
+    });
+    this.lambdaRole.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+    );
+    this.lambdaRole.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'),
+    );
+
+    const dbSecret = aws_secretsmanager.Secret.fromSecretNameV2(this, this.id + 'dbSecret', this.secretId);
+    dbSecret.grantRead(this.lambdaRole);
+
     this.lambdaEnv = {
-      DJANGO_SETTINGS_MODULE: 'sequence_run_manager.settings.aws',   // FIXME project name
+      DJANGO_SETTINGS_MODULE: 'sequence_run_manager.settings.aws',
       EVENT_BUS_NAME: this.props.mainBus.eventBusName,
+      SECRET_ID: this.secretId,
     };
 
-    this.createLambdaLayer();
+    this.baseLayer = new PythonLayerVersion(this, this.id + 'Layer', {
+      entry: path.join(__dirname, '../deps'),
+      compatibleRuntimes: [this.lambdaRuntimePythonVersion],
+    });
+
     this.createMigrationHandler();
-    this.createApiHandler();
-    this.createProcHandler();
+    this.createApiHandlerAndIntegration();
     this.createProcSqsHandler();
   }
 
-  private createLambdaLayer() {
-    this.baseLayer = new PythonLayerVersion(this, this.id + 'Layer', {
-      entry: path.join(__dirname, '../'),  // FIXME haven't tried whether dot dot slash here is working like this
+  private createPythonFunction(name: string, props: object): PythonFunction {
+    return new PythonFunction(this, this.id + name, {
+      entry: path.join(__dirname, '../'),
+      runtime: this.lambdaRuntimePythonVersion,
+      layers: [this.baseLayer],
+      environment: this.lambdaEnv,
+      securityGroups: this.props.securityGroups,
+      vpc: this.props.vpc,
+      vpcSubnets: { subnets: this.props.vpc.privateSubnets },
+      role: this.lambdaRole,
+      ...props,
     });
   }
 
   private createMigrationHandler() {
-    new PythonFunction(this, this.id + 'Migration', {
-      entry: path.join(__dirname, '../'),
-      runtime: this.props.lambdaRuntimePythonVersion,
-      layers: [this.baseLayer],
+    this.createPythonFunction('Migration', {
       index: 'migrate.py',
       handler: 'handler',
-      environment: this.lambdaEnv,
     });
   }
 
-  private createApiHandler() {
-    const apiFn = new PythonFunction(this, this.id + 'Api', {
-      entry: path.join(__dirname, '../'),
-      runtime: this.props.lambdaRuntimePythonVersion,
-      layers: [this.baseLayer],
+  private createApiHandlerAndIntegration() {
+    const apiFn: PythonFunction = this.createPythonFunction('Api', {
       index: 'api.py',
       handler: 'handler',
-      environment: this.lambdaEnv,
     });
+
+    const httpApi = new SRMApiGatewayConstruct(this, this.id + 'SRMApiGatewayConstruct').httpApi;
+
+    new HttpStage(this, this.id + 'HttpStage', { httpApi: httpApi });
 
     const apiIntegration = new HttpLambdaIntegration(this.id + 'ApiIntegration', apiFn);
 
-    const httpApi = new HttpApi(this, this.id + 'HttpApi', {
-      corsPreflight: {
-        allowHeaders: ['Authorization'],
-        allowMethods: [
-          CorsHttpMethod.GET,
-          CorsHttpMethod.HEAD,
-          CorsHttpMethod.OPTIONS,
-          CorsHttpMethod.POST,
-        ],
-        allowOrigins: ['*'], // TODO to get this allowed origins from config constant
-        maxAge: Duration.days(10),
-      },
-    });
-
-    httpApi.addRoutes({
-      path: '/{proxy+}',
-      methods: [HttpMethod.ANY],
-      integration: apiIntegration,
-    });
-
-    new HttpStage(this, this.id + 'ApiStage', {
+    new HttpRoute(this, this.id + 'HttpRoute', {
       httpApi: httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with(this.apiNamespace + '/{proxy+}', HttpMethod.ANY),
     });
-  }
-
-  private createProcHandler() {
-    const procFn = new PythonFunction(this, this.id + 'ProcHandler', {
-      entry: path.join(__dirname, '../'),
-      runtime: this.props.lambdaRuntimePythonVersion,
-      layers: [this.baseLayer],
-      index: '{{project_name}}_proc/lambdas/hello_proc.py', // FIXME update appropriate path to Lambda entry point
-      handler: 'handler',
-      environment: this.lambdaEnv,
-    });
-
-    this.props.mainBus.grantPutEventsTo(procFn);
-    this.setupEventRule(procFn);
   }
 
   private createProcSqsHandler() {
-    const procSqsFn = new PythonFunction(this, this.id + 'ProcHandler', {
-      entry: path.join(__dirname, '../'),
-      runtime: this.props.lambdaRuntimePythonVersion,
-      layers: [this.baseLayer],
-      index: '{{project_name}}_proc/lambdas/hello_proc.py', // FIXME update appropriate path to Lambda entry point
+    const procSqsFn = this.createPythonFunction('ProcHandler', {
+      index: 'sequence_run_manager_proc/lambdas/bssh_event.py',
       handler: 'sqs_handler',
-      environment: this.lambdaEnv,
     });
 
-    this.props.mainBus.grantPutEventsTo(procSqsFn); // FIXME remove this if no use
-    this.setupEventRule(procSqsFn); // FIXME remove this if no use
+    this.props.mainBus.grantPutEventsTo(procSqsFn);
+    // this.setupEventRule(procSqsFn);  // TODO comment this out for now
   }
 
-  private setupEventRule(fn: aws_lambda.Function) {
-    const eventRule = new Rule(this, this.id + 'EventRule', {
-      ruleName: this.id + 'EventRule',
-      description: 'Rule to send {event_type.value} events to the {handler.function_name} Lambda',
-      eventBus: this.props.mainBus,
-    });
-
-    eventRule.addTarget(new aws_events_targets.LambdaFunction(fn));
-    eventRule.addEventPattern({
-      source: ['ORCHESTRATOR'], // FIXME complete source to destination event mapping
-      detailType: ['SequenceRunStateChange'],
-    });
-  }
+  // private setupEventRule(fn: aws_lambda.Function) {
+  //   const eventRule = new Rule(this, this.id + 'EventRule', {
+  //     ruleName: this.id + 'EventRule',
+  //     description: 'Rule to send {event_type.value} events to the {handler.function_name} Lambda',
+  //     eventBus: this.props.mainBus,
+  //   });
+  //
+  //   eventRule.addTarget(new aws_events_targets.LambdaFunction(fn));
+  //   eventRule.addEventPattern({
+  //     source: ['ORCHESTRATOR'], // FIXME complete source to destination event mapping
+  //     detailType: ['SequenceRunStateChange'],
+  //   });
+  // }
 }

@@ -24,6 +24,8 @@ describe('cdk-nag-stateless-stack', () => {
 
   // stateless stack cdk-nag test
   Aspects.of(stack).add(new AwsSolutionsChecks());
+  applyNagSuppression(stack.node.id, stack);
+
   test(`OrcaBusStatelessStack: cdk-nag AwsSolutions Pack errors`, () => {
     const errors = Annotations.fromStack(stack)
       .findError('*', Match.stringLikeRegexp('AwsSolutions-.*'))
@@ -68,12 +70,39 @@ describe('cdk-nag-stateless-stack', () => {
  * @param stack
  */
 function applyNagSuppression(stackId: string, stack: Stack) {
+  // all stacks widely
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [{ id: 'AwsSolutions-IAM4', reason: 'allow to use AWS managed policy' }],
+    true
+  );
+
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-APIG1',
+        reason: 'See https://github.com/aws/aws-cdk/issues/11100',
+      },
+    ],
+    true
+  );
+
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-APIG4',
+        reason: 'We have the default Cognito UserPool authorizer',
+      },
+    ],
+    true
+  );
+
+  // for each stack specific
+
   switch (stackId) {
     case 'PostgresManager':
-      NagSuppressions.addStackSuppressions(stack, [
-        { id: 'AwsSolutions-IAM4', reason: 'allow to use AWS managed policy' },
-      ]);
-
       // suppress by resource
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
