@@ -9,6 +9,7 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 import { HttpMethod, HttpRoute, HttpRouteKey, HttpStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { SRMApiGatewayConstruct } from './apigw/component';
+import { Architecture } from 'aws-cdk-lib/aws-lambda';
 
 export interface SequenceRunManagerProps {
   securityGroups: ISecurityGroup[];
@@ -56,6 +57,7 @@ export class SequenceRunManagerStack extends Stack {
     this.baseLayer = new PythonLayerVersion(this, this.id + 'Layer', {
       entry: path.join(__dirname, '../deps'),
       compatibleRuntimes: [this.lambdaRuntimePythonVersion],
+      compatibleArchitectures: [Architecture.ARM_64],
     });
 
     this.createMigrationHandler();
@@ -73,6 +75,7 @@ export class SequenceRunManagerStack extends Stack {
       vpc: this.props.vpc,
       vpcSubnets: { subnets: this.props.vpc.privateSubnets },
       role: this.lambdaRole,
+      architecture: Architecture.ARM_64,
       ...props,
     });
   }
