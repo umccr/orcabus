@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use crate::events::aws::message::EventType;
 use crate::events::aws::EventType::{Created, Deleted, Other};
+use crate::uuid::UuidGenerator;
 
 pub mod collecter;
 pub mod message;
@@ -397,7 +398,7 @@ pub struct FlatS3EventMessage {
 impl FlatS3EventMessage {
     /// Create an event with a newly generated s3_object_id.
     pub fn new_with_generated_id() -> Self {
-        Self::default().with_s3_object_id(Uuid::new_v4())
+        Self::default().with_s3_object_id(UuidGenerator::generate())
     }
 
     /// Update the storage class if not None.`

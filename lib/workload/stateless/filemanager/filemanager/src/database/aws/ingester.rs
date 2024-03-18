@@ -10,6 +10,7 @@ use crate::events::aws::message::EventType;
 use crate::events::aws::{Events, TransposedS3EventMessages};
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::events::EventSourceType;
+use crate::uuid::UuidGenerator;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
@@ -134,7 +135,7 @@ impl Ingester {
         .await?;
 
         let object_created = Self::reprocess_updated(object_created, updated);
-        let object_ids = vec![Uuid::new_v4(); object_created.s3_object_ids.len()];
+        let object_ids = UuidGenerator::generate_n(object_created.s3_object_ids.len());
 
         let mut inserted = query_file_as!(
             Insert,
@@ -159,7 +160,10 @@ impl Ingester {
 
         // Insert only the non duplicate events.
         if !object_ids.is_empty() {
-            debug!(count = object_ids.len(), "inserting objects");
+            debug!(
+                count = object_ids.len(),
+                "inserting object_id created events"
+            );
 
             query_file!(
                 "../database/queries/ingester/insert_objects.sql",
@@ -186,7 +190,7 @@ impl Ingester {
         .await?;
 
         let object_deleted = Self::reprocess_updated(object_deleted, updated);
-        let object_ids = vec![Uuid::new_v4(); object_deleted.s3_object_ids.len()];
+        let object_ids = UuidGenerator::generate_n(object_deleted.s3_object_ids.len());
 
         let mut inserted = query_file_as!(
             Insert,
@@ -213,7 +217,10 @@ impl Ingester {
 
         // Insert only the non duplicate events.
         if !object_ids.is_empty() {
-            debug!(count = object_ids.len(), "inserting objects");
+            debug!(
+                count = object_ids.len(),
+                "inserting object_id removed events"
+            );
 
             query_file!(
                 "../database/queries/ingester/insert_objects.sql",

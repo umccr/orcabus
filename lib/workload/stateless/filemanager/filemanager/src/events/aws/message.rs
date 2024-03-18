@@ -1,8 +1,8 @@
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
+use crate::uuid::UuidGenerator;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
-use uuid::Uuid;
 
 #[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
 #[sqlx(type_name = "event_type")]
@@ -121,7 +121,7 @@ impl From<Record> for FlatS3EventMessages {
         } = object;
 
         FlatS3EventMessages(vec![FlatS3EventMessage {
-            s3_object_id: Uuid::new_v4(),
+            s3_object_id: UuidGenerator::generate(),
             event_time: Some(time),
             bucket,
             key,

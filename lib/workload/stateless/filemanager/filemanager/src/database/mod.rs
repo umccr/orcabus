@@ -53,7 +53,6 @@ pub trait Migrate {
 pub(crate) mod tests {
     use chrono::{DateTime, Utc};
     use sqlx::{query, query_file, query_file_as, PgPool};
-    use uuid::Uuid;
 
     use crate::database::aws::ingester::tests::{test_events, test_ingester};
     use crate::database::aws::ingester::Ingester;
@@ -65,6 +64,7 @@ pub(crate) mod tests {
     };
     use crate::events::aws::StorageClass;
     use crate::events::aws::{Events, FlatS3EventMessage};
+    use crate::uuid::UuidGenerator;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_reordered_for_deleted_event_created(pool: PgPool) {
@@ -113,10 +113,10 @@ pub(crate) mod tests {
     async fn insert_created(pool: PgPool) {
         let mut tx = pool.begin().await.unwrap();
 
-        let object_id = Uuid::new_v4();
+        let object_id = UuidGenerator::generate();
         query_file!(
             "../database/queries/ingester/aws/insert_s3_created_objects.sql",
-            &vec![Uuid::new_v4()],
+            &vec![UuidGenerator::generate()],
             &vec![object_id],
             &vec!["bucket".to_string()],
             &vec!["key".to_string()],
@@ -178,10 +178,10 @@ pub(crate) mod tests {
     async fn insert_deleted(pool: PgPool) {
         let mut tx = pool.begin().await.unwrap();
 
-        let object_id = Uuid::new_v4();
+        let object_id = UuidGenerator::generate();
         query_file!(
             "../database/queries/ingester/aws/insert_s3_deleted_objects.sql",
-            &vec![Uuid::new_v4()],
+            &vec![UuidGenerator::generate()],
             &vec![object_id],
             &vec!["bucket".to_string()],
             &vec!["key".to_string()],
@@ -251,7 +251,7 @@ pub(crate) mod tests {
         let sequencers = query_file_as!(
             FlatS3EventMessage,
             "../database/queries/ingester/aws/update_reordered_for_deleted.sql",
-            &vec![Uuid::new_v4()],
+            &vec![UuidGenerator::generate()],
             &vec!["bucket".to_string()],
             &vec!["key".to_string()],
             &vec![DateTime::<Utc>::default()],
@@ -312,7 +312,7 @@ pub(crate) mod tests {
         let sequencers = query_file_as!(
             FlatS3EventMessage,
             "../database/queries/ingester/aws/update_reordered_for_created.sql",
-            &vec![Uuid::new_v4()],
+            &vec![UuidGenerator::generate()],
             &vec!["bucket".to_string()],
             &vec!["key".to_string()],
             &vec![DateTime::<Utc>::default()],
