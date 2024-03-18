@@ -1444,9 +1444,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aws-cdk-lib@npm:^2.126.0":
-  version: 2.132.1
-  resolution: "aws-cdk-lib@npm:2.132.1"
+"aws-cdk-lib@npm:^2.133.0":
+  version: 2.133.0
+  resolution: "aws-cdk-lib@npm:2.133.0"
   dependencies:
     "@aws-cdk/asset-awscli-v1": ^2.2.202
     "@aws-cdk/asset-kubectl-v20": ^2.1.2
@@ -1464,13 +1464,13 @@ __metadata:
     yaml: 1.10.2
   peerDependencies:
     constructs: ^10.0.0
-  checksum: eb017fff6aa72b2d0cebaf317971b4b9f803322feb3fbc9b940f5dd72fe65213f92880a8b0fe6214a860b6ad985df2ad6839e4ed15d899dbdff8c5da1728230f
+  checksum: a9be8aef427573f0a89cecf34e13048b86ec1082f714a984df8088da485a4496e50f75a367b85035a22193fa4f8768d2557a9e2041be0b47c7a623b0665f15c0
   languageName: node
   linkType: hard
 
-"aws-cdk@npm:^2.126.0":
-  version: 2.132.0
-  resolution: "aws-cdk@npm:2.132.0"
+"aws-cdk@npm:^2.133.0":
+  version: 2.133.0
+  resolution: "aws-cdk@npm:2.133.0"
   dependencies:
     fsevents: 2.3.2
   dependenciesMeta:
@@ -1478,7 +1478,7 @@ __metadata:
       optional: true
   bin:
     cdk: bin/cdk
-  checksum: 17d653260f02825dc4e74d7af3b515928438e07a7488344adbbe98133fc9c58fdbd5c8d6ad20c900cf7f11e9a8e2240558d75444c706900cdb095f41eec77918
+  checksum: bdeaf2b0d9246a07e21a13f23d04a189a84d7d7a9352765754c99563ee8199b2543cf35a35804c5e3ff0ca834eb090a43504a716957d87c0123ef2da6659b823
   languageName: node
   linkType: hard
 
@@ -3890,8 +3890,8 @@ __metadata:
     "@types/node": ^20.4.0
     "@typescript-eslint/eslint-plugin": ^6.19.1
     "@typescript-eslint/parser": ^6.19.1
-    aws-cdk: ^2.126.0
-    aws-cdk-lib: ^2.126.0
+    aws-cdk: ^2.133.0
+    aws-cdk-lib: ^2.133.0
     cargo-lambda-cdk: ^0.0.19
     cdk-nag: ^2.28.27
     constructs: ^10.2.69
