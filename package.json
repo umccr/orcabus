@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@aws-cdk/aws-lambda-python-alpha": "2.126.0-alpha.0",
-    "aws-cdk-lib": "^2.126.0",
+    "aws-cdk-lib": "^2.133.0",
     "cargo-lambda-cdk": "^0.0.19",
     "cdk-nag": "^2.28.27",
     "constructs": "^10.2.69",
@@ -36,7 +36,7 @@
     "@types/node": "^20.4.0",
     "@typescript-eslint/eslint-plugin": "^6.19.1",
     "@typescript-eslint/parser": "^6.19.1",
-    "aws-cdk": "^2.126.0",
+    "aws-cdk": "^2.133.0",
     "eslint": "^8.44.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
