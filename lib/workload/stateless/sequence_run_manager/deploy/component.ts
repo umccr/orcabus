@@ -1,18 +1,19 @@
 import path from 'path';
+import * as cdk from 'aws-cdk-lib';
+import { aws_lambda, aws_secretsmanager, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ISecurityGroup, IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IEventBus } from 'aws-cdk-lib/aws-events';
-import { aws_lambda, aws_secretsmanager, Stack } from 'aws-cdk-lib';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import { HttpMethod, HttpRoute, HttpRouteKey, IHttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpMethod, HttpRoute, HttpRouteKey, HttpStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { SRMApiGatewayConstruct } from './apigw/component';
 
 export interface SequenceRunManagerProps {
   securityGroups: ISecurityGroup[];
   vpc: IVpc;
   mainBus: IEventBus;
-  httpApi: IHttpApi;
 }
 
 export class SequenceRunManagerStack extends Stack {
@@ -26,7 +27,7 @@ export class SequenceRunManagerStack extends Stack {
   private readonly lambdaRuntimePythonVersion: aws_lambda.Runtime = aws_lambda.Runtime.PYTHON_3_12;
   private readonly lambdaRole: Role;
 
-  constructor(scope: Construct, id: string, props: SequenceRunManagerProps) {
+  constructor(scope: Construct, id: string, props: cdk.StackProps & SequenceRunManagerProps) {
     super(scope, id);
 
     this.id = id;
@@ -58,7 +59,7 @@ export class SequenceRunManagerStack extends Stack {
     });
 
     this.createMigrationHandler();
-    this.createApiHandler();
+    this.createApiHandlerAndIntegration();
     this.createProcSqsHandler();
   }
 
@@ -83,15 +84,20 @@ export class SequenceRunManagerStack extends Stack {
     });
   }
 
-  private createApiHandler() {
-    const apiFn = this.createPythonFunction('Api', {
+  private createApiHandlerAndIntegration() {
+    const apiFn: PythonFunction = this.createPythonFunction('Api', {
       index: 'api.py',
       handler: 'handler',
     });
 
+    const httpApi = new SRMApiGatewayConstruct(this, this.id + 'SRMApiGatewayConstruct').httpApi;
+
+    new HttpStage(this, this.id + 'HttpStage', { httpApi: httpApi });
+
     const apiIntegration = new HttpLambdaIntegration(this.id + 'ApiIntegration', apiFn);
-    new HttpRoute(this, 'OrcaBusSRMHttpRoute', {
-      httpApi: this.props.httpApi,
+
+    new HttpRoute(this, this.id + 'HttpRoute', {
+      httpApi: httpApi,
       integration: apiIntegration,
       routeKey: HttpRouteKey.with(this.apiNamespace + '/{proxy+}', HttpMethod.ANY),
     });
