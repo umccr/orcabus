@@ -1,4 +1,4 @@
-//! Logic for creating uuids
+//! Logic for creating uuids.
 //!
 
 use uuid::Uuid;

@@ -161,8 +161,8 @@ impl Ingester {
         // Insert only the non duplicate events.
         if !object_ids.is_empty() {
             debug!(
-                count = object_ids.len(),
-                "inserting object_id created events"
+                object_ids = ?object_ids,
+                "inserting into object table created events"
             );
 
             query_file!(
@@ -218,8 +218,8 @@ impl Ingester {
         // Insert only the non duplicate events.
         if !object_ids.is_empty() {
             debug!(
-                count = object_ids.len(),
-                "inserting object_id removed events"
+                object_ids = ?object_ids,
+                "inserting into object table from deleted events"
             );
 
             query_file!(
@@ -335,6 +335,72 @@ pub(crate) mod tests {
             s3_object_results[0].get::<i32, _>("number_duplicate_events")
         );
         assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_created_multiple_object_ids(pool: PgPool) {
+        let ingester = test_ingester(pool);
+        let mut events_one = test_events();
+        events_one.object_deleted = Default::default();
+
+        let events_two = replace_sequencers(
+            test_events(),
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+        );
+        // Merge events into same ingestion.
+        let flat_events = FlatS3EventMessages::from(events_two.object_created);
+        flat_events
+            .into_inner()
+            .into_iter()
+            .for_each(|event| events_one.object_created.push(event));
+
+        ingester
+            .ingest(EventSourceType::S3(events_one))
+            .await
+            .unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_results.len(), 2);
+        assert_missing_deleted(
+            &s3_object_results[0],
+            &s3_object_results[1],
+            EXPECTED_VERSION_ID,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_deleted_multiple_object_ids(pool: PgPool) {
+        let ingester = test_ingester(pool);
+        let mut events_one = test_events();
+        events_one.object_created = Default::default();
+
+        let events_two = replace_sequencers(
+            test_events(),
+            Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
+        );
+        // Merge events into same ingestion.
+        let flat_events = FlatS3EventMessages::from(events_two.object_deleted);
+        flat_events
+            .into_inner()
+            .into_iter()
+            .for_each(|event| events_one.object_deleted.push(event));
+
+        ingester
+            .ingest(EventSourceType::S3(events_one))
+            .await
+            .unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_results.len(), 2);
+        assert_missing_created(
+            &s3_object_results[0],
+            &s3_object_results[1],
+            EXPECTED_VERSION_ID,
+        );
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -653,15 +719,10 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
-        assert_created(&s3_object_results[0]);
-        assert_with(
+        assert_missing_deleted(
+            &s3_object_results[0],
             &s3_object_results[1],
-            Some(0),
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            None,
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-            None,
+            EXPECTED_VERSION_ID,
         );
     }
 
@@ -688,15 +749,10 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
-        assert_created(&s3_object_results[1]);
-        assert_with(
+        assert_missing_deleted(
+            &s3_object_results[1],
             &s3_object_results[0],
-            Some(0),
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            None,
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-            None,
+            EXPECTED_VERSION_ID,
         );
     }
 
@@ -722,23 +778,10 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
-        assert_with(
+        assert_missing_created(
             &s3_object_results[0],
-            None,
-            None,
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            EXPECTED_VERSION_ID.to_string(),
-            None,
-            Some(Default::default()),
-        );
-        assert_with(
             &s3_object_results[1],
-            None,
-            None,
-            Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
-            EXPECTED_VERSION_ID.to_string(),
-            None,
-            Some(Default::default()),
+            EXPECTED_VERSION_ID,
         );
     }
 
@@ -765,23 +808,10 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
-        assert_with(
+        assert_missing_created(
             &s3_object_results[1],
-            None,
-            None,
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            EXPECTED_VERSION_ID.to_string(),
-            None,
-            Some(Default::default()),
-        );
-        assert_with(
             &s3_object_results[0],
-            None,
-            None,
-            Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
-            EXPECTED_VERSION_ID.to_string(),
-            None,
-            Some(Default::default()),
+            EXPECTED_VERSION_ID,
         );
     }
 
@@ -807,23 +837,10 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
-        assert_with(
-            &s3_object_results[1],
-            Some(0),
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            None,
-            FlatS3EventMessage::default_version_id(),
-            Some(Default::default()),
-            None,
-        );
-        assert_with(
+        assert_missing_deleted(
             &s3_object_results[0],
-            Some(0),
-            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
-            None,
-            FlatS3EventMessage::default_version_id(),
-            Some(Default::default()),
-            None,
+            &s3_object_results[1],
+            &FlatS3EventMessage::default_version_id(),
         );
     }
 
@@ -850,23 +867,10 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
-        assert_with(
+        assert_missing_deleted(
             &s3_object_results[1],
-            Some(0),
-            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
-            None,
-            FlatS3EventMessage::default_version_id(),
-            Some(Default::default()),
-            None,
-        );
-        assert_with(
             &s3_object_results[0],
-            Some(0),
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            None,
-            FlatS3EventMessage::default_version_id(),
-            Some(Default::default()),
-            None,
+            &FlatS3EventMessage::default_version_id(),
         );
     }
 
@@ -892,23 +896,10 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
-        assert_with(
+        assert_missing_created(
             &s3_object_results[0],
-            None,
-            None,
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            FlatS3EventMessage::default_version_id(),
-            None,
-            Some(Default::default()),
-        );
-        assert_with(
             &s3_object_results[1],
-            None,
-            None,
-            Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
-            FlatS3EventMessage::default_version_id(),
-            None,
-            Some(Default::default()),
+            &FlatS3EventMessage::default_version_id(),
         );
     }
 
@@ -935,23 +926,10 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
-        assert_with(
+        assert_missing_created(
             &s3_object_results[1],
-            None,
-            None,
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            FlatS3EventMessage::default_version_id(),
-            None,
-            Some(Default::default()),
-        );
-        assert_with(
             &s3_object_results[0],
-            None,
-            None,
-            Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
-            FlatS3EventMessage::default_version_id(),
-            None,
-            Some(Default::default()),
+            &FlatS3EventMessage::default_version_id(),
         );
     }
 
@@ -1449,6 +1427,48 @@ pub(crate) mod tests {
         println!(
             "permutation test took: {} seconds",
             now.elapsed().as_secs_f32()
+        );
+    }
+
+    fn assert_missing_deleted(created: &PgRow, deleted: &PgRow, version_id: &str) {
+        assert_with(
+            created,
+            Some(0),
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            None,
+            version_id.to_string(),
+            Some(Default::default()),
+            None,
+        );
+        assert_with(
+            deleted,
+            Some(0),
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            None,
+            version_id.to_string(),
+            Some(Default::default()),
+            None,
+        );
+    }
+
+    fn assert_missing_created(created: &PgRow, deleted: &PgRow, version_id: &str) {
+        assert_with(
+            created,
+            None,
+            None,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            version_id.to_string(),
+            None,
+            Some(Default::default()),
+        );
+        assert_with(
+            deleted,
+            None,
+            None,
+            Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
+            version_id.to_string(),
+            None,
+            Some(Default::default()),
         );
     }
 
