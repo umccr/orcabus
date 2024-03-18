@@ -1,15 +1,15 @@
 .PHONY: test suite
 
 install:
-	@pip install -r requirements-dev.txt
+	@pip install -r deps/requirements-dev.txt
 
 check: lint
 
 lint:
-	@black -t py312 --check ./src --exclude skel --exclude .venv
+	@black -t py312 --check . --exclude .venv
 
 lint-fix:
-	@black -t py312 ./src --exclude skel --exclude .venv
+	@black -t py312 . --exclude .venv
 
 # full mock suite test pipeline - install deps, bring up compose stack, run suite, bring down compose stack
 test: install up suite down

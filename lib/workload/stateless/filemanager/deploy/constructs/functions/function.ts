@@ -1,11 +1,12 @@
 import { Construct } from 'constructs';
-import { RustFunction } from 'rust.aws-cdk-lambda';
 import { Duration } from 'aws-cdk-lib';
-import { Settings as CargoSettings } from 'rust.aws-cdk-lambda/dist/settings';
 import { ISecurityGroup, IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Architecture, Version } from 'aws-cdk-lib/aws-lambda';
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
+import { RustFunction } from 'cargo-lambda-cdk';
+import path from 'path';
+import { exec } from 'cargo-lambda-cdk/lib/util';
 
 /**
  * Properties for the database.
@@ -28,7 +29,7 @@ export type FunctionPropsNoPackage = DatabaseProps & {
   /**
    * Additional build environment variables when building the Lambda function.
    */
-  readonly buildEnvironment?: { [key: string]: string | undefined };
+  readonly buildEnvironment?: { [key: string]: string };
   /**
    * RUST_LOG string, defaults to trace on local crates and info everywhere else.
    */
@@ -79,8 +80,6 @@ export class Function extends Construct {
       description: 'Security group that allows a filemanager Lambda function to egress out.',
     });
 
-    CargoSettings.BUILD_INDIVIDUALLY = true;
-
     // Todo use secrets manager for this and query for password within Lambda functions.
     const unsafeConnection =
       `postgres://` +
@@ -94,9 +93,24 @@ export class Function extends Construct {
       `/` +
       `${props.databaseSecret.secretValueFromJson('dbname').unsafeUnwrap()}`;
 
+    const manifestPath = path.join(__dirname, '..', '..', '..');
+    // This starts the container running postgres in order to compile queries using sqlx.
+    // It needs to be executed outside `beforeBundling`, because `beforeBundling` runs inside
+    // the container context, and docker compose needs to run outside of this context.
+    exec('make', ['docker-postgres'], { cwd: manifestPath, shell: true });
+
     this._function = new RustFunction(this, 'RustFunction', {
-      package: props.package,
-      target: 'aarch64-unknown-linux-gnu',
+      manifestPath,
+      binaryName: props.package,
+      bundling: {
+        environment: {
+          ...props.buildEnvironment,
+          // Avoid permission issues by creating another target directory.
+          CARGO_TARGET_DIR: "target-cdk-docker-bundling",
+          // The bundling container needs to be able to connect to the container running postgres.
+          DATABASE_URL: "postgresql://filemanager:filemanager@localhost:4321/filemanager", // pragma: allowlist secret
+        }
+      },
       memorySize: 128,
       timeout: Duration.seconds(28),
       environment: {
@@ -104,10 +118,7 @@ export class Function extends Construct {
         RUST_LOG:
           props.rustLog ?? `info,${props.package.replace('-', '_')}=trace,filemanager=trace`,
       },
-      buildEnvironment: props.buildEnvironment,
-      // Todo, fix this so that it's not relying on the path.
-      extraBuildArgs: ['--manifest-path', `lib/workload/stateless/filemanager/${props.package}/Cargo.toml`],
-      architecture: Architecture.ARM_64,
+      architecture: Architecture.X86_64,
       role: this._role,
       vpc: props.vpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },

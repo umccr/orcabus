@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { Arn, aws_lambda } from 'aws-cdk-lib';
+import { Arn } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
 import { MultiSchemaConstructProps } from './stateless/schema/component';
@@ -11,13 +11,13 @@ import {
   PostgresManagerStack,
   PostgresManagerConfig,
 } from './stateless/postgres_manager/deploy/postgres-manager-stack';
+import { SequenceRunManagerStack } from './stateless/sequence_run_manager/deploy/component';
+import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
   eventBusName: string;
   lambdaSecurityGroupName: string;
-  lambdaRuntimePythonVersion: aws_lambda.Runtime;
-  bclConvertFunctionName: string;
   rdsMasterSecretName: string;
   postgresManagerConfig: PostgresManagerConfig;
   filemanagerDependencies?: FilemanagerDependencies;
@@ -39,8 +39,9 @@ export interface FilemanagerDependencies {
 }
 
 export class OrcaBusStatelessStack extends cdk.Stack {
-  private vpc: IVpc;
-  private lambdaSecurityGroup: ISecurityGroup;
+  private readonly vpc: IVpc;
+  private readonly lambdaSecurityGroup: ISecurityGroup;
+  private readonly mainBus: IEventBus;
 
   // microservice stacks
   microserviceStackArray: cdk.Stack[] = [];
@@ -59,14 +60,15 @@ export class OrcaBusStatelessStack extends cdk.Stack {
       this.vpc
     );
 
-    // const mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.eventBusName);
+    this.mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.eventBusName);
 
     // --- Create Stateless resources
 
     // new MultiSchemaConstruct(this, 'MultiSchema', props.multiSchemaConstructProps);
 
     // hook microservice construct components here
-    this.createSequenceRunManager();
+
+    this.microserviceStackArray.push(this.createSequenceRunManager(props));
     this.microserviceStackArray.push(this.createPostgresManager(props.postgresManagerConfig));
 
     if (props.filemanagerDependencies) {
@@ -77,9 +79,13 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     }
   }
 
-  private createSequenceRunManager() {
-    // TODO new SequenceRunManagerConstruct() from lib/workload/stateless/sequence_run_manager/deploy/component.ts
-    //   However, the implementation is still incomplete...
+  private createSequenceRunManager(props: cdk.StackProps) {
+    return new SequenceRunManagerStack(this, 'SequenceRunManager', {
+      securityGroups: [this.lambdaSecurityGroup],
+      vpc: this.vpc,
+      mainBus: this.mainBus,
+      ...props,
+    });
   }
 
   private createPostgresManager(config: PostgresManagerConfig) {
