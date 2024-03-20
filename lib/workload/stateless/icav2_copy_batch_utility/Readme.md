@@ -29,14 +29,25 @@ persisting with.
 
 When working with the ICAv2 CopyBatch API, we need to provide a unique identifier for the run, and a unique location for the outputs.
 
-Once all jobs are deployed we monitor their status (redeploy if failed - up to five times) and wait for all jobs to complete.
+Once all jobs are deployed, each job is monitored by its own separate state machine 
 
 This process will transfer an entire BCLConvert process from one ICAv2 project to another in under 10 minutes!  
 
 Note that a current limitation prevents using this API within the same project.  
 
 
-![](images/step_functions_example.png)
+### Step Functions Graphs
+
+The copy batch utility has the following steps
+
+![](./images/step_functions_wf_graph.png)
+
+The step function map will then spawn out a job for each folder that is monitored by the state machine below.  
+
+Failed jobs are relaunched by the single state machine below and monitored until they pass.  
+We accept 10 failed jobs before we give up.
+
+![](./images/step_functions_tool_graph.png)
 
 ## Inputs
 
@@ -133,19 +144,11 @@ and monitor the job throughout the step function process.
 This lambda is called in a map state.
 
 
-### Update job session
-
-Goes through the list of jobs (breaks after 10 to prevent timeouts) and 
-
-1. Checks the current job id for the dest uri and source uris combination
-2. If the job has failed, resubmits it and increments the attempt counter, also adds the previous job id to the failed jobs list
-3. If the job has passed, move the job id to the front, so we don't need to monitor it again.
-
-
 ## SSM Parameters 
 
 ```
-"/icav2_copy_batch_utility/state_machine_arn"
+"/icav2_copy_batch_utility/state_machine_arn_batch"
+"/icav2_copy_batch_utility/state_machine_arn_single"
 ```
 
 ### External Parameters required by CDK
@@ -153,5 +156,3 @@ Goes through the list of jobs (breaks after 10 to prevent timeouts) and
 ```
 "/icav2/umccr-prod/service-user-trial-jwt-token-secret-arn"
 ```
-
-
