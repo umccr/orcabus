@@ -1,3 +1,4 @@
+import * as cdk from 'aws-cdk-lib';
 import { Duration } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -14,9 +15,9 @@ export interface ICAv2CopyBatchUtilityConstructProps {
   icav2_jwt_ssm_parameter_path: string;  // "/icav2/umccr-prod/service-production-jwt-token-secret-arn"
   lambdas_layer_path: string; // __dirname + '/../../../layers
   manifest_handler_lambda_path: string; // __dirname + '/../../../lambdas/manifest_handler'
-  copy_batch_data_lambda_path: string; // __dirname + '/../../../lambdas/copy_batch_data_handler'
-  job_status_handler_lambda_path: string; // __dirname + '/../../../lambdas/job_status_handler'
-  definition_body_path: string; // __dirname + '/../../../step_functions_templates/copy_batch_state_machine.json'
+  check_or_launch_job_lambda_path: string; // __dirname + '/../../../lambdas/check_or_launch_job'
+  state_machine_batch_definition_body_path: string; // __dirname + '/../../../step_functions_templates/copy_batch_state_machine.json'
+  state_machine_single_definition_body_path: string; // __dirname + '/../../../step_functions_templates/copy_single_state_machine.json'
 }
 
 export class ICAv2CopyBatchUtilityConstruct extends Construct {
@@ -24,6 +25,7 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
   private icav2_jwt_ssm_parameter_path: string;
   private icav2_jwt_secret_arn_value: string;
   public readonly icav2_copy_batch_state_machine_arn: string;
+  public readonly icav2_copy_single_state_machine_arn: string;
 
   constructor(scope: Construct, id: string, props: ICAv2CopyBatchUtilityConstructProps) {
     super(scope, id);
@@ -49,22 +51,9 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
       layers: [lambda_layer.lambda_layer_version_obj]
     });
 
-    // Copy batch data handler lambda
-    const copy_batch_data_lambda = new PythonFunction(this, 'copy_batch_data_lambda_python_function', {
-      entry: props.copy_batch_data_lambda_path,
-      runtime: lambda.Runtime.PYTHON_3_11,
-      index: 'handler.py',
-      handler: 'handler',
-      memorySize: 1024,
-      // @ts-ignore
-      layers: [lambda_layer.lambda_layer_version_obj],
-      // @ts-ignore
-      timeout: Duration.seconds(300),
-    });
-
     // Job Status Handler
-    const job_status_handler_lambda = new PythonFunction(this, 'job_status_handler_lambda', {
-      entry: props.job_status_handler_lambda_path,
+    const check_or_launch_job_lambda = new PythonFunction(this, 'check_or_launch_job_lambda', {
+      entry: props.check_or_launch_job_lambda_path,
       runtime: lambda.Runtime.PYTHON_3_11,
       index: 'handler.py',
       handler: 'handler',
@@ -75,26 +64,33 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
       timeout: Duration.seconds(300),
     });
 
-    // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
-    const stateMachine = new sfn.StateMachine(this, 'copy_batch_state_machine', {
+    // Specify the single statemachine and replace the arn placeholders with the lambda arns defined above
+    const stateMachineSingle = new sfn.StateMachine(this, 'copy_single_state_machine', {
       // Definition Template
-      definitionBody: DefinitionBody.fromFile(props.definition_body_path),
+      definitionBody: DefinitionBody.fromFile(props.state_machine_single_definition_body_path),
+      // Definition Substitutions
+      definitionSubstitutions: {
+        '__check_or_launch_job_lambda_arn__': check_or_launch_job_lambda.functionArn,
+      },
+    });
+
+    // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
+    const stateMachineBatch = new sfn.StateMachine(this, 'copy_batch_state_machine', {
+      // Definition Template
+      definitionBody: DefinitionBody.fromFile(props.state_machine_batch_definition_body_path),
       // Definition Substitutions
       definitionSubstitutions: {
         '__manifest_inverter_lambda_arn__': manifest_inverter_lambda.functionArn,
-        '__copy_batch_data_lambda_arn__': copy_batch_data_lambda.functionArn,
-        '__job_status_handler_lambda_arn__': job_status_handler_lambda.functionArn,
+        '__copy_single_job_state_machine_arn__': stateMachineSingle.stateMachineArn,
       },
     });
 
     // Add execution permissions to stateMachine role
-    stateMachine.addToRolePolicy(
+    stateMachineBatch.addToRolePolicy(
       new iam.PolicyStatement(
         {
           resources: [
             manifest_inverter_lambda.functionArn,
-            copy_batch_data_lambda.functionArn,
-            job_status_handler_lambda.functionArn,
           ],
           actions: [
             'lambda:InvokeFunction',
@@ -103,10 +99,54 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
       ),
     );
 
+    // Add execution permissions to stateMachine role
+    stateMachineSingle.addToRolePolicy(
+      new iam.PolicyStatement(
+        {
+          resources: [
+            check_or_launch_job_lambda.functionArn,
+          ],
+          actions: [
+            'lambda:InvokeFunction',
+          ],
+        },
+      ),
+    );
+
+      // Because we run a nested state machine, we need to add the permissions to the state machine role
+    // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
+    stateMachineBatch.addToRolePolicy(
+      new iam.PolicyStatement(
+        {
+          resources: [
+            `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
+          ],
+          actions: [
+            'events:PutTargets',
+            'events:PutRule',
+            'events:DescribeRule',
+          ],
+        },
+      ),
+    );
+
+    // Add state machine execution permissions to stateMachineBatch role
+    stateMachineBatch.addToRolePolicy(
+      new iam.PolicyStatement(
+        {
+          resources: [
+            stateMachineSingle.stateMachineArn,
+          ],
+          actions: [
+            'states:StartExecution',
+          ],
+        },
+      ),
+    );
+
     // Update lambda policies
     [
-      copy_batch_data_lambda,
-      job_status_handler_lambda
+      check_or_launch_job_lambda
     ].forEach(
       lambda_function => {
         this.add_icav2_secrets_permissions_to_lambda(
@@ -116,7 +156,8 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     );
 
     // Set outputs
-    this.icav2_copy_batch_state_machine_arn = stateMachine.stateMachineArn;
+    this.icav2_copy_batch_state_machine_arn = stateMachineBatch.stateMachineArn;
+    this.icav2_copy_single_state_machine_arn = stateMachineSingle.stateMachineArn;
   }
 
   private set_jwt_secret_arn_object(icav2_jwt_ssm_parameter_path: string) {

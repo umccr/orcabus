@@ -13,7 +13,15 @@ Returns the status of the job which is one of the following
 
 The event input is
 {
-    "job_id": "12345"  # FIXME
+    "dest_uri": "icav2://path/to/destination/folder/"
+    "source_uris": [
+        "icav2://path/to/data",
+        "icav2://path/to/data2",
+    ]
+    "job_id": null  # Or the job id abcd-1234-efgh-5678
+    "failed_job_list": []  # Empty list or list of failed jobs
+    "job_status": One of RUNNING, SUCCEEDED or FAILED (not the same as the job states, we reu)
+    "wait_time_seconds": int  # Number of seconds to wait before checking the job status - we double this each time we go through this loop
 }
 
 """
@@ -42,8 +50,10 @@ RUNNING_STATES = [
     "RUNNING"
 ]
 
-MAX_JOB_ATTEMPT_COUNTER = 5
-MAX_JOBS_HANDLED = 10
+
+# Try a job 10 times before giving up
+MAX_JOB_ATTEMPT_COUNTER = 10
+DEFAULT_WAIT_TIME_SECONDS = 10
 
 
 def handler(event, context):
@@ -56,110 +66,94 @@ def handler(event, context):
     set_icav2_env_vars()
 
     # Get events
-    job_list: List = event.get("job_list")
-    job_list_index: int = event.get("job_list_index")
+    dest_uri = event.get("dest_uri")
+    source_uris = event.get("source_uris")
+    job_id = event.get("job_id")
+    failed_job_list = event.get("failed_job_list")
+    job_status = event.get("job_status")
+    wait_time_seconds = event.get("wait_time_seconds")
 
-    # Initialise the number of jobs handled
-    num_jobs_handled = 0
-    job_iterables_to_bump = []  # List of job iterables we can move to the end of the list
-    wait = True  # Whether or not to go to wait step or call this function again
-
-    # Loop through the job list starting from the job list index
-    for job_iter in range(job_list_index, len(job_list)):
-        # Get job object
-        job = get_job(job_list[job_iter].get("job_id"))
-
-        # Return status
-        if job.status in SUCCESS_STATES:
-            job_status = True
-        elif job.status in TERMINAL_STATES:
-            job_status = False
-        elif job.status in RUNNING_STATES:
-            job_status = None
-        else:
-            raise Exception("Unknown job status: {}".format(job.status))
-
-        # Check iterator
-        if job_status is False:
-            if job_list[job_iter].get("job_attempt_counter", 0) > MAX_JOB_ATTEMPT_COUNTER:
-                job_list[job_iter]["job_status"] = False
-            # Update the failed jobs list
-            job_list[job_iter]["failed_jobs_list"].append(job_list[job_iter].get("job_id"))
-
-            # Get inputs to this job
-            dest_uri = job_list[job_iter].get("dest_uri")
-            source_uris = job_list[job_iter].get("source_uris")
-            job_list[job_iter]["job_id"] = submit_copy_job(
+    # Check if job is None
+    if job_id is None:
+        # First time through
+        return {
+            "dest_uri": dest_uri,
+            "source_uris": source_uris,
+            "job_id": submit_copy_job(
                 dest_uri=dest_uri,
                 source_uris=source_uris,
-            )
+            ),
+            "failed_job_list": [],  # Empty list or list of failed jobs
+            "job_status": "RUNNING",
+            "wait_time_seconds": DEFAULT_WAIT_TIME_SECONDS
+        }
 
-            # Set job status to running state
-            job_list[job_iter]["job_status"] = None
+    # Else job id is not none
+    job_obj = get_job(job_id)
 
-            # Increment the job attempt counter
-            job_list[job_iter]["job_attempt_counter"] += 1
+    # Check job status
 
-            job_iterables_to_bump.append(job_iter)
+    # Return status
+    if job_obj.status in SUCCESS_STATES:
+        job_status = True
+    elif job_obj.status in TERMINAL_STATES:
+        job_status = False
+    elif job_obj.status in RUNNING_STATES:
+        job_status = None
+    else:
+        raise Exception("Unknown job status: {}".format(job_obj.status))
 
-        else:
-            # Update the job status for the job
-            job_list[job_iter]["job_status"] = job_status
+    # Check if we're still running
+    if job_status is None:
+        return {
+            "dest_uri": dest_uri,
+            "source_uris": source_uris,
+            "job_id": job_id,
+            "failed_job_list": failed_job_list,  # Empty list or list of failed jobs
+            "job_status": "RUNNING",
+            "wait_time_seconds": wait_time_seconds * 2  # Wait a bit longer
+        }
 
-        # Increment the number of jobs handled
-        num_jobs_handled += 1
+    # Handle a failed job
+    if job_status is False:
+        # Add this job id to the failed job list
+        failed_job_list.append(job_id)
 
-        # If the number of jobs handled is greater than the maximum number of jobs handled
-        if num_jobs_handled > MAX_JOBS_HANDLED:
-            wait = False
-            break
+        # Check we haven't exceeded the excess number of attempts
+        if len(failed_job_list) >= MAX_JOB_ATTEMPT_COUNTER:
+            # Most important bit is that the job_status is set to failed
+            return {
+                "dest_uri": dest_uri,
+                "source_uris": source_uris,
+                "job_id": None,
+                "failed_job_list": failed_job_list,  # Empty list or list of failed jobs
+                "job_status": "FAILED",
+                "wait_time_seconds": DEFAULT_WAIT_TIME_SECONDS
+            }
 
-    # Move jobs in the job_iterables_to_bump to the end of the list
-    # These have just been submitted (again) and we dont want to look at them at the next iteration
-    job_list_clean = [job_list[i] for i in range(len(job_list)) if i not in job_iterables_to_bump]
-    job_list = job_list_clean + [job_list[i] for i in job_iterables_to_bump]
-    del job_list_clean
+        # Return a new job with new wait time
+        return {
+            "dest_uri": dest_uri,
+            "source_uris": source_uris,
+            "job_id": submit_copy_job(
+                dest_uri=dest_uri,
+                source_uris=source_uris,
+            ),
+            "failed_job_list": failed_job_list,  # Empty list or list of failed jobs
+            "job_status": "RUNNING",
+            "wait_time_seconds": DEFAULT_WAIT_TIME_SECONDS
+        }
 
-    # Move all passed and failed copy jobs to the front
-    passed_jobs = list(
-        filter(
-            lambda job_iter_obj: job_iter_obj.get("job_status") is True,
-            job_list
-        )
-    )
-
-    failed_jobs = list(
-        filter(
-            lambda job_iter_obj: job_iter_obj.get("job_status") is False,
-            job_list
-        )
-    )
-
-    running_jobs = list(
-        filter(
-            lambda job_iter_obj: job_iter_obj.get("job_status") is None,
-            job_list
-        )
-    )
-
-    # We set the index of the list to the length of the passed jobs
-    job_list_index = len(passed_jobs) + len(failed_jobs)
-
-    # Push all running jobs to the back of the list
-    job_list = passed_jobs + failed_jobs + running_jobs
-
-    # Return the job list
-    return {
-        "job_list": job_list,
-        "job_list_index": job_list_index,
-        "counters": {
-            "jobs_failed": len(failed_jobs),
-            "jobs_running": len(running_jobs),
-            "jobs_passed": len(passed_jobs)
-        },
-        "wait": wait
-    }
-
+    # Handle successful job
+    if job_status is True:
+        return {
+            "dest_uri": dest_uri,
+            "source_uris": source_uris,
+            "job_id": job_id,
+            "failed_job_list": failed_job_list,  # Empty list or list of failed jobs
+            "job_status": "SUCCEEDED",
+            "wait_time_seconds": DEFAULT_WAIT_TIME_SECONDS
+        }
 
 # if __name__ == "__main__":
 #     import json
