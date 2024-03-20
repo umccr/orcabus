@@ -153,10 +153,6 @@ def handler(event, context):
     if not user_reference:
         raise ValueError("user_reference is required")
 
-    # Check project id
-    if not project_id:
-        raise ValueError("project_id is required")
-
     # Check run folder uri
     if not run_folder_uri:
         raise ValueError("run_folder_uri is required")

@@ -4,11 +4,22 @@
   "States": {
     "Move Inputs": {
       "Type": "Pass",
-      "Next": "get_cache_and_output_paths",
+      "Next": "set_technical_tags",
       "Parameters": {
         "workflow_inputs.$": "$"
       },
-      "Comment": "We expect the inputs:\n* \"samplesheet_b64gz\"\n* \"project_id\"\n* \"portal_run_id\"\n* \"sample_id\"\n* \"fastq_list_rows_b64gz\"\n\nPlus the following workflow input parameters\n* user_reference\n* technical_tags\n* user_tags\n"
+      "Comment": "We expect the inputs:\n* \"samplesheet_b64gz\"\n* \"project_id\"\n* \"portal_run_id\"\n* \"sample_id\"\n* \"fastq_list_rows_b64gz\"\n\nPlus the following workflow input parameters\n* user_reference\n* user_tags\n"
+    },
+    "set_technical_tags": {
+      "Type": "Pass",
+      "Next": "get_cache_and_output_paths",
+      "Parameters": {
+        "technical_tags": {
+          "portal_run_id.$": "$.workflow_inputs.portal_run_id",
+          "step_functions_execution_arn.$": "$$.Execution.Id"
+        }
+      },
+      "ResultPath": "$.get_technical_tags_step"
     },
     "get_cache_and_output_paths": {
       "Type": "Task",
@@ -189,7 +200,7 @@
           "samplesheet_uri.$": "$.copy_files_to_cache_directory_step.samplesheet_file_uri",
           "sample_id.$": "$.workflow_inputs.sample_id",
           "analysis_output_uri.$": "$.get_cache_and_output_paths_step.output_uri",
-          "technical_tags.$": "$.workflow_inputs.technical_tags",
+          "technical_tags.$": "$.get_technical_tags_step.technical_tags",
           "user_tags.$": "$.workflow_inputs.user_tags"
         }
       },
