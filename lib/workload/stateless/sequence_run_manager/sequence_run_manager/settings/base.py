@@ -17,10 +17,7 @@ DEBUG = os.getenv("DJANGO_DEBUG", True)
 
 ALLOWED_HOSTS = ["*"]
 
-DB_PREFIX = "sequence_run_manager_"
-
 INSTALLED_APPS = [
-    "django_database_prefix",
     "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
