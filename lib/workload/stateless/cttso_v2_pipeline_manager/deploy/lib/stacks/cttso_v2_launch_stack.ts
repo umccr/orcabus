@@ -7,6 +7,7 @@ interface ctTSOV2LaunchStateMachineStackProps extends cdk.StackProps {
   icav2_jwt_ssm_parameter_path: string;  // "/icav2/umccr-prod/service-production-jwt-token-secret-arn"
   ssm_parameter_list: string[]; // List of parameters the workflow session state machine will need access to
   icav2_copy_batch_utility_state_machine_ssm_parameter_path: string;
+  cttso_v2_launch_state_machine_ssm_parameter_path: string
 }
 
 export class ctTSOV2LaunchStateMachineStack extends cdk.Stack {
@@ -44,19 +45,20 @@ export class ctTSOV2LaunchStateMachineStack extends cdk.Stack {
 
     // Set outputs
     this.cttso_v2_launch_state_machine_arn = cttso_v2_launch_state_machine.cttso_v2_launch_state_machine_arn
-    this.cttso_v2_launch_state_machine_ssm_parameter_path = this.get_ssm_parameter_obj_for_state_machine(
-      cttso_v2_launch_state_machine.cttso_v2_launch_state_machine_arn
-    ).parameterName
+    this.cttso_v2_launch_state_machine_ssm_parameter_path = props.cttso_v2_launch_state_machine_ssm_parameter_path
 
+    this.set_ssm_parameter_obj_for_state_machine(
+      cttso_v2_launch_state_machine.cttso_v2_launch_state_machine_arn
+    )
   }
 
-  private get_ssm_parameter_obj_for_state_machine(
+  private set_ssm_parameter_obj_for_state_machine(
     state_machine_arn: string,
-  ): ssm.StringParameter {
+  ) {
     /*
     Generate the ssm parameter for the state machine arn
     */
-    return new ssm.StringParameter(
+    new ssm.StringParameter(
       this,
       'state_machine_arn_ssm_parameter',
       {
