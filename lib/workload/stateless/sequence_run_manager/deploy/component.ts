@@ -93,9 +93,8 @@ export class SequenceRunManagerStack extends Stack {
       handler: 'handler',
     });
 
-    const httpApi = new SRMApiGatewayConstruct(this, this.id + 'SRMApiGatewayConstruct').httpApi;
-
-    new HttpStage(this, this.id + 'HttpStage', { httpApi: httpApi });
+    const srmApi = new SRMApiGatewayConstruct(this, this.id + 'SRMApiGatewayConstruct');
+    const httpApi = srmApi.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration(this.id + 'ApiIntegration', apiFn);
 
