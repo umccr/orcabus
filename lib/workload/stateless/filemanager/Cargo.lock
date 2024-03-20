@@ -1096,6 +1096,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "filemanager-api"
+version = "0.1.0"
+
+[[package]]
 name = "filemanager-http-lambda"
 version = "0.1.0"
 dependencies = [

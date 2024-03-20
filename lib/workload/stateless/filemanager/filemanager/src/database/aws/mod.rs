@@ -3,6 +3,7 @@
 
 use aws_sdk_s3::types::StorageClass;
 
+pub mod query;
 pub mod ingester;
 
 #[cfg(feature = "migrate")]
