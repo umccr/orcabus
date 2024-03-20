@@ -163,7 +163,7 @@ Take the fastq output locations, samplesheet location and metadata generated in 
 
 ```
 /icav2/umccr-prod/service-user-trial-jwt-token-secret-arn
-/icav2_copy_batch_utility/state_machine_arn
+/icav2_copy_batch_utility/state_machine_arn_batch
 /icav2/umccr-prod/cache_project_cttso_fastq_path
 /icav2/umccr-prod/output_project_cttso_fastq_path
 /icav2/umccr-prod/tso500_ctdna_2.1_pipeline_id
