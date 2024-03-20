@@ -1,0 +1,111 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "move_workflow_inputs",
+  "States": {
+    "move_workflow_inputs": {
+      "Type": "Pass",
+      "Next": "add_technical_tags",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      }
+    },
+    "add_technical_tags": {
+      "Type": "Pass",
+      "Next": "DynamoDB PutItem",
+      "Parameters": {
+        "technical_tags": {
+          "portal_run_id.$": "$.workflow_inputs.portal_run_id",
+          "step_execution_arn.$": "$$.Execution.Id"
+        }
+      },
+      "ResultPath": "$.add_technical_tags_step"
+    },
+    "DynamoDB PutItem": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "portal_run_id": {
+              "S.$": "$.workflow_inputs.portal_run_id"
+          },
+          "analysis_status": {
+              "S": "PRE_LAUNCH"
+          }
+        }
+      },
+      "ResultPath": "$.dynamo_db_put_item_step",
+      "Next": "launch_interop_qc_step"
+    },
+    "launch_interop_qc_step": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__launch_bclconvert_interop_qc_pipeline__}",
+        "Payload": {
+          "project_id.$": "$.workflow_inputs.project_id",
+          "user_reference.$": "$.workflow_inputs.user_reference",
+          "bclconvert_report_directory.$": "$.workflow_inputs.bclconvert_report_directory",
+          "interop_directory.$": "$.workflow_inputs.interop_directory",
+          "run_id.$": "$.workflow_inputs.run_id",
+          "analysis_output_uri.$": "$.workflow_inputs.analysis_output_uri",
+          "user_tags.$": "$.workflow_inputs.user_tags",
+          "technical_tags.$": "$.add_technical_tags_step.technical_tags"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "DynamoDB UpdateItem",
+      "ResultSelector": {
+        "analysis_id.$": "$.Payload.analysis_id",
+        "analysis_status.$": "$.Payload.analysis_status",
+        "analysis_return_payload.$": "$.Payload.analysis_return_payload",
+        "analysis_launch_payload.$": "$.Payload.analysis_launch_payload"
+      },
+      "ResultPath": "$.launch_interop_qc_step"
+    },
+    "DynamoDB UpdateItem": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "portal_run_id": {
+              "S.$": "$.workflow_inputs.portal_run_id"
+          }
+        },
+        "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload, state_machine_execution_arn = :state_machine_execution_arn",
+        "ExpressionAttributeValues": {
+          ":analysis_id": {
+            "S.$": "$.launch_interop_qc_step.analysis_id"
+          },
+          ":analysis_status": {
+            "S.$": "$.launch_interop_qc_step.analysis_status"
+          },
+          ":analysis_return_payload": {
+            "S.$": "States.JsonToString($.launch_interop_qc_step.analysis_return_payload)"
+          },
+          ":analysis_launch_payload": {
+            "S.$": "States.JsonToString($.launch_interop_qc_step.analysis_launch_payload)"
+          },
+          ":state_machine_execution_arn": {
+            "S.$": "$$.Execution.Id"
+          }
+        }
+      },
+      "ResultPath": "$.dynamodb_update_item_step",
+      "End": true
+    }
+  }
+}
