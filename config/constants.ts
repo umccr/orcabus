@@ -82,7 +82,7 @@ const orcaBusStatelessConfig = {
         name: 'metadata_manager',
         authType: DbAuthType.USERNAME_PASSWORD,
       },
-      { name: 'filemanager', authType: DbAuthType.USERNAME_PASSWORD },
+      { name: 'filemanager', authType: DbAuthType.RDS_IAM },
     ],
   },
 };
