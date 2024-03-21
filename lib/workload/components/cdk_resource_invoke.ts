@@ -36,7 +36,7 @@ export type FunctionName = {
    * Function name.
    */
   functionName: string;
-}
+};
 
 /**
  * Props for the resource invoke construct.
@@ -101,7 +101,7 @@ export class CdkResourceInvoke<P, F extends InvokeFunction> extends Construct {
       action: 'invoke',
       parameters: {
         FunctionName: this.function.functionName,
-        ...(props.payload && { Payload: props.payload })
+        ...(props.payload && { Payload: props.payload }),
       },
       physicalResourceId: PhysicalResourceId.of(
         `${id}-AwsSdkCall-${this.function.currentVersion + this.hashValue(props.payload)}`

@@ -4,7 +4,7 @@ import { Construct } from 'constructs';
 import { getVpc } from './stateful/vpc/component';
 import { MultiSchemaConstructProps } from './stateless/schema/component';
 import { IVpc, ISecurityGroup, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
-import { Filemanager } from './stateless/filemanager/deploy/lib/filemanager';
+import { Filemanager, FilemanagerConfig } from './stateless/filemanager/deploy/lib/filemanager';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import {
@@ -20,22 +20,7 @@ export interface OrcaBusStatelessConfig {
   lambdaSecurityGroupName: string;
   rdsMasterSecretName: string;
   postgresManagerConfig: PostgresManagerConfig;
-  filemanagerDependencies?: FilemanagerDependencies;
-}
-
-export interface FilemanagerDependencies {
-  /**
-   * Queue name used by the EventSource construct.
-   */
-  eventSourceQueueName: string;
-  /**
-   * Buckets defined by the EventSource construct.
-   */
-  eventSourceBuckets: string[];
-  /**
-   * Database secret name for the filemanager.
-   */
-  databaseSecretName: string;
+  filemanagerConfig: FilemanagerConfig;
 }
 
 export class OrcaBusStatelessStack extends cdk.Stack {
@@ -70,15 +55,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
 
     this.microserviceStackArray.push(this.createSequenceRunManager(props));
     this.microserviceStackArray.push(this.createPostgresManager(props.postgresManagerConfig));
-
-    if (props.filemanagerDependencies) {
-      this.microserviceStackArray.push(
-        this.createFilemanager({
-          ...props.filemanagerDependencies,
-          lambdaSecurityGroupName: props.lambdaSecurityGroupName,
-        })
-      );
-    }
+    this.microserviceStackArray.push(this.createFilemanager(props.filemanagerConfig));
   }
 
   private createSequenceRunManager(props: cdk.StackProps) {
@@ -98,38 +75,30 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     });
   }
 
-  private createFilemanager(
-    dependencies: FilemanagerDependencies & { lambdaSecurityGroupName: string }
-  ) {
+  private createFilemanager(config: FilemanagerConfig) {
     // Opting to reconstruct the dependencies here, and pass them into the service as constructs.
     const queue = Queue.fromQueueArn(
       this,
       'FilemanagerQueue',
       Arn.format(
         {
-          resource: dependencies.eventSourceQueueName,
+          resource: config.eventSourceQueueName,
           service: 'sqs',
         },
         this
       )
     );
-    const databaseSecurityGroup = SecurityGroup.fromLookupByName(
-      this,
-      'FilemanagerDatabaseSecurityGroup',
-      dependencies.lambdaSecurityGroupName,
-      this.vpc
-    );
     const databaseSecret = Secret.fromSecretNameV2(
       this,
       'FilemanagerDatabaseSecret',
-      dependencies.databaseSecretName
+      config.databaseSecretName
     );
 
     return new Filemanager(this, 'Filemanager', {
-      buckets: dependencies.eventSourceBuckets,
+      buckets: config.eventSourceBuckets,
       buildEnvironment: {},
       databaseSecret,
-      databaseSecurityGroup,
+      databaseSecurityGroup: this.lambdaSecurityGroup,
       eventSources: [queue],
       migrateDatabase: true,
       vpc: this.vpc,
