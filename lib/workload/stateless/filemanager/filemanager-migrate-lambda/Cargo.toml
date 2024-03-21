@@ -4,6 +4,7 @@ version = "0.1.0"
 license.workspace = true
 edition.workspace = true
 authors.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 tokio = { version = "1", features = ["macros"] }

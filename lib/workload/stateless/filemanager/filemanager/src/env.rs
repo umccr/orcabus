@@ -1,13 +1,10 @@
 //! Handle environment variables.
 //!
 
+use dotenvy::dotenv;
 use std::ffi::OsStr;
-use std::{
-    env,
-    fmt::{self},
-};
+use std::{env, fmt};
 
-use dotenvy;
 use tracing::{error, info};
 
 use crate::error::Error::MissingEnvironmentVariable;
@@ -33,7 +30,7 @@ pub fn load_env() -> AppEnv {
     info!("Running in {app_env} mode");
 
     if app_env == AppEnv::Dev {
-        match dotenvy::dotenv() {
+        match dotenv() {
             Ok(path) => info!(".env read successfully from {}", path.display()),
             Err(e) => error!("Could not load .env file: {e}"),
         };
