@@ -6,11 +6,12 @@ import * as fn from '../constructs/functions/function';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { DatabaseProps } from '../constructs/functions/function';
+import { Stack, StackProps } from 'aws-cdk-lib';
 
 /**
  * Props for the filemanager stack.
  */
-type FilemanagerProps = IngestFunctionProps & DatabaseProps & {
+type FilemanagerProps = StackProps & IngestFunctionProps & DatabaseProps & {
     /**
      * VPC to use for filemanager.
      */
@@ -33,9 +34,9 @@ type FilemanagerProps = IngestFunctionProps & DatabaseProps & {
 /**
  * Construct used to configure the filemanager.
  */
-export class Filemanager extends Construct {
+export class Filemanager extends Stack {
   constructor(scope: Construct, id: string, props: FilemanagerProps) {
-    super(scope, id);
+    super(scope, id, props);
 
     if (props?.migrateDatabase) {
       new CdkResourceInvoke(this, 'MigrateDatabase', {
