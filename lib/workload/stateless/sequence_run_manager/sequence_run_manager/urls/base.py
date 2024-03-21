@@ -3,12 +3,16 @@ from django.urls import path, include
 from sequence_run_manager.routers import OptionalSlashDefaultRouter
 from sequence_run_manager.viewsets.sequence import SequenceViewSet
 
+api_namespace = "srm"
+api_version = "v1"
+api_base = f"{api_namespace}/{api_version}/"
+
 router = OptionalSlashDefaultRouter()
 router.register(r"sequence", SequenceViewSet, basename="sequence")
 
 urlpatterns = [
     # path("iam/", include(router.urls)),
-    path("", include(router.urls)),
+    path(f"{api_base}", include(router.urls)),
 ]
 
 handler500 = "rest_framework.exceptions.server_error"

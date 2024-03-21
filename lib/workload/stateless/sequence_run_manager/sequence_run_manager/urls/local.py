@@ -3,12 +3,12 @@ from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
-from .base import urlpatterns as base_urlpatterns, router
+from .base import urlpatterns as base_urlpatterns, router, api_base, api_version
 
 schema_view = get_schema_view(
     openapi.Info(
         title="UMCCR OrcaBus sequence_run_manager API",
-        default_version="v1",
+        default_version=f"{api_version}",
         description="UMCCR OrcaBus sequence_run_manager API",
         terms_of_service="https://umccr.org/",
         contact=openapi.Contact(email="services@umccr.org"),
@@ -19,7 +19,7 @@ schema_view = get_schema_view(
         permissions.AllowAny,
     ],
     patterns=[
-        path("", include(router.urls)),
+        path(f"{api_base}", include(router.urls)),
     ],
 )
 
