@@ -1,12 +1,12 @@
 import path from 'path';
 import * as cdk from 'aws-cdk-lib';
-import { aws_lambda, aws_secretsmanager, Stack } from 'aws-cdk-lib';
+import { aws_lambda, aws_secretsmanager, Duration, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ISecurityGroup, IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IEventBus } from 'aws-cdk-lib/aws-events';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import { HttpMethod, HttpRoute, HttpRouteKey, HttpStage } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { SRMApiGatewayConstruct } from './apigw/component';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
@@ -20,7 +20,7 @@ export interface SequenceRunManagerProps {
 export class SequenceRunManagerStack extends Stack {
   // Follow by naming convention. See https://github.com/umccr/orcabus/pull/149
   private readonly secretId: string = 'orcabus/sequence_run_manager/rdsLoginCredential';
-  private readonly apiNamespace: string = '/srm/v1';
+  private readonly apiName: string = 'SequenceRunManager';  // apiNamespace `/srm/v1` is handled by Django Router
   private readonly id: string;
   private readonly props: SequenceRunManagerProps;
   private readonly baseLayer: PythonLayerVersion;
@@ -38,11 +38,17 @@ export class SequenceRunManagerStack extends Stack {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
       description: 'Lambda execution role for ' + this.id,
     });
+    // FIXME it is best practise to such that we do not use AWS managed policy
+    //  we should improve this at some point down the track.
+    //  See https://github.com/umccr/orcabus/issues/174
     this.lambdaRole.addManagedPolicy(
       ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
     );
     this.lambdaRole.addManagedPolicy(
       ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'),
+    );
+    this.lambdaRole.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMReadOnlyAccess'),
     );
 
     const dbSecret = aws_secretsmanager.Secret.fromSecretNameV2(this, this.id + 'dbSecret', this.secretId);
@@ -84,6 +90,7 @@ export class SequenceRunManagerStack extends Stack {
     this.createPythonFunction('Migration', {
       index: 'migrate.py',
       handler: 'handler',
+      timeout: Duration.minutes(2),
     });
   }
 
@@ -91,9 +98,10 @@ export class SequenceRunManagerStack extends Stack {
     const apiFn: PythonFunction = this.createPythonFunction('Api', {
       index: 'api.py',
       handler: 'handler',
+      timeout: Duration.seconds(28),
     });
 
-    const srmApi = new SRMApiGatewayConstruct(this, this.id + 'SRMApiGatewayConstruct');
+    const srmApi = new SRMApiGatewayConstruct(this, this.id + 'SRMApiGatewayConstruct', this.apiName, this.region);
     const httpApi = srmApi.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration(this.id + 'ApiIntegration', apiFn);
@@ -101,7 +109,7 @@ export class SequenceRunManagerStack extends Stack {
     new HttpRoute(this, this.id + 'HttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
-      routeKey: HttpRouteKey.with(this.apiNamespace + '/{proxy+}', HttpMethod.ANY),
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
     });
   }
 
@@ -109,6 +117,7 @@ export class SequenceRunManagerStack extends Stack {
     const procSqsFn = this.createPythonFunction('ProcHandler', {
       index: 'sequence_run_manager_proc/lambdas/bssh_event.py',
       handler: 'sqs_handler',
+      timeout: Duration.minutes(2),
     });
 
     this.props.mainBus.grantPutEventsTo(procSqsFn);
