@@ -1,16 +1,35 @@
 import { Construct } from 'constructs';
 import { IngestFunction, IngestFunctionProps } from '../constructs/functions/ingest';
-import { CdkResourceInvoke } from '../../../functions/cdk_resource_invoke';
 import { MigrateFunction } from '../constructs/functions/migrate';
 import * as fn from '../constructs/functions/function';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { DatabaseProps } from '../constructs/functions/function';
+import { Stack, StackProps } from 'aws-cdk-lib';
+import { CdkResourceInvoke } from '../../../../components/cdk_resource_invoke';
+
+/**
+ * Stateful config for filemanager.
+ */
+export type FilemanagerConfig = {
+  /**
+   * Queue name used by the EventSource construct.
+   */
+  eventSourceQueueName: string;
+  /**
+   * Buckets defined by the EventSource construct.
+   */
+  eventSourceBuckets: string[];
+  /**
+   * Database secret name for the filemanager.
+   */
+  databaseSecretName: string;
+}
 
 /**
  * Props for the filemanager stack.
  */
-type FilemanagerProps = IngestFunctionProps & DatabaseProps & {
+type FilemanagerProps = StackProps & IngestFunctionProps & DatabaseProps & {
     /**
      * VPC to use for filemanager.
      */
@@ -33,9 +52,9 @@ type FilemanagerProps = IngestFunctionProps & DatabaseProps & {
 /**
  * Construct used to configure the filemanager.
  */
-export class Filemanager extends Construct {
+export class Filemanager extends Stack {
   constructor(scope: Construct, id: string, props: FilemanagerProps) {
-    super(scope, id);
+    super(scope, id, props);
 
     if (props?.migrateDatabase) {
       new CdkResourceInvoke(this, 'MigrateDatabase', {

@@ -1,8 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { CdkResourceInvoke } from '../../lib/workload/stateless/functions/cdk_resource_invoke';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { CdkResourceInvoke } from '../../lib/workload/components/cdk_resource_invoke';
 
 let stack: cdk.Stack;
 let vpc: ec2.Vpc;
@@ -62,7 +62,7 @@ test('Test CdkResourceInvoke', () => {
           Resource: {
             'Fn::Join': [
               '',
-              Match.arrayWith([`:function:${expectedHash}-ResourceInvokeFunction-*`]),
+              Match.arrayWith([`:function:${expectedHash}-ResourceInvokeFunction-TestFunction`]),
             ],
           },
         },

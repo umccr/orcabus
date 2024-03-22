@@ -99,6 +99,17 @@ function applyNagSuppression(stackId: string, stack: Stack) {
     true
   );
 
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-L1',
+        reason: "'AwsCustomResource' is out of date",
+      },
+    ],
+    true
+  );
+
   // for each stack specific
 
   switch (stackId) {
@@ -114,6 +125,20 @@ function applyNagSuppression(stackId: string, stack: Stack) {
               "'*' is required for secretsmanager:GetRandomPassword and new SM ARN will contain random character",
           },
         ]
+      );
+      break;
+
+    case 'Filemanager':
+      NagSuppressions.addResourceSuppressions(
+        stack,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason: "'*' is required to access objects in the indexed bucket by filemanager",
+            appliesTo: ['Resource::arn:aws:s3:::org.umccr.data.oncoanalyser/*'],
+          },
+        ],
+        true
       );
       break;
 

@@ -118,7 +118,7 @@ export class Function extends Construct {
         RUST_LOG:
           props.rustLog ?? `info,${props.package.replace('-', '_')}=trace,filemanager=trace`,
       },
-      architecture: Architecture.X86_64,
+      architecture: Architecture.ARM_64,
       role: this._role,
       vpc: props.vpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
