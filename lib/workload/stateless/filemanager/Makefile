@@ -42,7 +42,7 @@ clean: docker-clean
 
 ## Database related targets
 psql:
-	@docker exec -it filemanager_db psql filemanager -U filemanager
+	@docker compose exec postgres psql filemanager -U filemanager
 
 ## Help text
 help:

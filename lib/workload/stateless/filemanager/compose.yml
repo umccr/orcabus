@@ -3,7 +3,6 @@ version: '3.1'
 services:
   postgres:
     build: database
-    container_name: filemanager_db
     restart: always
     environment:
       - POSTGRES_DATABASE=filemanager
