@@ -1,3 +1,4 @@
 -r requirements-test.txt
 django_extensions==3.2.3
 drf_yasg==1.21.7
+openapi-spec-validator

@@ -134,6 +134,14 @@ python manage.py generateschema > orcabus.srm.openapi.yaml
 
 ## Testing
 
+### Coverage report
+
+```
+make coverage report
+```
+
+_The html report is in `htmlcov/index.html`._
+
 ### Run test suite
 
 ```

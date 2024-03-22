@@ -4,12 +4,15 @@ from django.test import TestCase
 from django.utils.timezone import now
 
 from sequence_run_manager.models.sequence import Sequence
+from sequence_run_manager.urls.base import api_base
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
 class SequenceViewSetTestCase(TestCase):
+    endpoint = f"/{api_base}sequence"
+
     def setUp(self):
         Sequence.objects.create(
             instrument_run_id="190101_A01052_0001_BH5LY7ACGT",
@@ -29,22 +32,41 @@ class SequenceViewSetTestCase(TestCase):
         """
         # Get sequence list
         logger.info("Get sequence API")
-        response = self.client.get("/sequence/")
+        response = self.client.get(self.endpoint)
         self.assertEqual(response.status_code, 200, "Ok status response is expected")
 
         logger.info("Check if API return result")
         result_response = response.data["results"]
         self.assertGreater(len(result_response), 0, "A result is expected")
 
+    def test_get_by_uk_surrogate_key(self):
+        """
+        python manage.py test sequence_run_manager.tests.test_viewsets.SequenceViewSetTestCase.test_get_by_uk_surrogate_key
+        """
         logger.info("Check if unique data has a single entry")
-        response = self.client.get("/sequence/?sequence_run_id=r.AAAAAA")
+        response = self.client.get(f"{self.endpoint}/?instrument_run_id=190101_A01052_0001_BH5LY7ACGT")
         results_response = response.data["results"]
         self.assertEqual(
             len(results_response), 1, "Single result is expected for unique data"
         )
 
+    def test_get_by_sequence_run_id(self):
+        """
+        python manage.py test sequence_run_manager.tests.test_viewsets.SequenceViewSetTestCase.test_get_by_sequence_run_id
+        """
+        logger.info("Check if unique data has a single entry")
+        response = self.client.get(f"{self.endpoint}/?sequence_run_id=r.AAAAAA")
+        results_response = response.data["results"]
+        self.assertEqual(
+            len(results_response), 1, "Single result is expected for unique data"
+        )
+
+    def test_get_by_invalid_parameter(self):
+        """
+        python manage.py test sequence_run_manager.tests.test_viewsets.SequenceViewSetTestCase.test_get_by_invalid_parameter
+        """
         logger.info("Check if wrong parameter")
-        response = self.client.get("/sequence/?lib_id=LBR0001")
+        response = self.client.get(f"{self.endpoint}/?lib_id=LBR0001")
         results_response = response.data["results"]
         self.assertEqual(
             len(results_response),
