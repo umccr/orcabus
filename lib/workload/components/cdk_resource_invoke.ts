@@ -111,13 +111,10 @@ export class CdkResourceInvoke<P, F extends InvokeFunction> extends Construct {
     const role = new Role(this, 'AwsCustomResourceRole', {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
+    const lambdaResource = `arn:aws:lambda:${stack.region}:${stack.account}:function:${stackHash}-ResourceInvokeFunction-${props.id}`;
     role.addToPolicy(
       new PolicyStatement({
-        resources: [
-          // This needs to have permissions to run any `ResourceInvokeFunction` because it is deployed as a
-          // singleton Lambda function.
-          `arn:aws:lambda:${stack.region}:${stack.account}:function:${stackHash}-ResourceInvokeFunction-*`,
-        ],
+        resources: [lambdaResource],
         actions: ['lambda:InvokeFunction'],
       })
     );
@@ -128,11 +125,12 @@ export class CdkResourceInvoke<P, F extends InvokeFunction> extends Construct {
 
     this._customResource = new AwsCustomResource(this, 'AwsCustomResource', {
       policy: AwsCustomResourcePolicy.fromSdkCalls({
-        resources: AwsCustomResourcePolicy.ANY_RESOURCE,
+        resources: [lambdaResource],
       }),
       onUpdate: sdkCall,
       role: role,
       vpc: props.vpc,
+      installLatestAwsSdk: true,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
     });
 

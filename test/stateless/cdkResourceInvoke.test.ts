@@ -62,7 +62,7 @@ test('Test CdkResourceInvoke', () => {
           Resource: {
             'Fn::Join': [
               '',
-              Match.arrayWith([`:function:${expectedHash}-ResourceInvokeFunction-*`]),
+              Match.arrayWith([`:function:${expectedHash}-ResourceInvokeFunction-TestFunction`]),
             ],
           },
         },
