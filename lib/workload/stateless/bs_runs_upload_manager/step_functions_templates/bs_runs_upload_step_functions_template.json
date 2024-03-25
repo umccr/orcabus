@@ -1,0 +1,77 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "move_workflow_inputs",
+  "States": {
+    "move_workflow_inputs": {
+      "Type": "Pass",
+      "Next": "upload_v2_samplesheet_to_gds_bssh",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      }
+    },
+    "upload_v2_samplesheet_to_gds_bssh": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "ResultPath": "$.upload_v2_samplesheet_to_gds_bssh_step",
+      "Parameters": {
+        "FunctionName": "${__upload_v2_samplesheet_to_gds_bssh_function_arn__}",
+        "Payload": {
+          "gds_folder_path.$": "$.workflow_inputs.gdsFolderPath",
+          "gds_volume_name.$": "$.workflow_inputs.gdsVolumeName",
+          "samplesheet_name.$": "$.workflow_inputs.sampleSheetName"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "launch_bs_runs_upload_tes",
+      "ResultSelector": {
+        "samplesheet_name.$": "$.Payload.samplesheet_name"
+      },
+      "TimeoutSeconds": 60
+    },
+    "launch_bs_runs_upload_tes": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "ResultPath": "$.launch_bs_runs_upload_tes_step",
+      "Parameters": {
+        "FunctionName": "${__launch_bs_runs_upload_tes_function_arn__}",
+        "Payload": {
+          "gds_folder_path.$": "$.workflow_inputs.gds_folder_path",
+          "gds_volume_name.$": "$.workflow_inputs.gds_volume_name",
+          "samplesheet_name.$": "$.upload_v2_samplesheet_to_gds_bssh_step.samplesheet_name"
+        }
+      },
+      "ResultSelector": {
+        "task_run_id.$": "$.Payload.task_run_id"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Success"
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}
