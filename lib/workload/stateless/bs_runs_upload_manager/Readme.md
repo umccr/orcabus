@@ -3,6 +3,11 @@
 <!-- TOC -->
 * [BS Runs Upload Manager](#bs-runs-upload-manager)
   * [Summary](#summary)
+  * [Inputs](#inputs)
+    * [Example input](#example-input)
+    * [Lambdas in this directory](#lambdas-in-this-directory)
+      * [Upload V2 SampleSheet to GDS Bssh](#upload-v2-samplesheet-to-gds-bssh)
+      * [Launch BS Runs Upload Tes](#launch-bs-runs-upload-tes)
 <!-- TOC -->
 
 ## Summary
