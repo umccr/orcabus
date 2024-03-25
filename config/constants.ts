@@ -49,6 +49,15 @@ const orcaBusStatefulConfig = {
     securityGroupName: lambdaSecurityGroupName,
     securityGroupDescription: 'allow within same SecurityGroup and rds SG',
   },
+  icaEventPipeProps: {
+    icaEventPipeName: 'IcaEventPipe',
+    icaQueueName: 'IcaEventQueue',
+    icaQueueVizTimeout: 30,
+    slackChannelConfigurationName: 'IcaEventDLQNotification',
+    slackWorkspaceIdSSMParam: '/orcabus/ica-event-pipe/slack-workspace-id',
+    slackChannelIdSSMParam: '/orcabus/ica-event-pipe/slack-channel-id',
+    eventBusName: eventBusName,
+  },
 };
 
 const orcaBusStatelessConfig = {
@@ -160,6 +169,9 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(devBucket),
+            icaEventPipeProps: {
+              ...orcaBusStatefulConfig.icaEventPipeProps,
+            },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -194,6 +206,9 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(stgBucket),
+            icaEventPipeProps: {
+              ...orcaBusStatefulConfig.icaEventPipeProps,
+            },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -226,6 +241,9 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(prodBucket),
+            icaEventPipeProps: {
+              ...orcaBusStatefulConfig.icaEventPipeProps,
+            },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,

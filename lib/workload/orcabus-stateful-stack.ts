@@ -6,6 +6,7 @@ import { ConfigurableDatabaseProps, Database } from './stateful/database/compone
 import { SecurityGroupConstruct, SecurityGroupProps } from './stateful/securitygroup/component';
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './stateful/schemaregistry/component';
 import { EventSource, EventSourceProps } from './stateful/event_source/component';
+import { IcaEventPipeConstruct, IcaEventPipeProps } from './stateful/ica_event_pipe/component';
 
 export interface OrcaBusStatefulConfig {
   schemaRegistryProps: SchemaRegistryProps;
@@ -13,14 +14,15 @@ export interface OrcaBusStatefulConfig {
   databaseProps: ConfigurableDatabaseProps;
   securityGroupProps: SecurityGroupProps;
   eventSourceProps?: EventSourceProps;
+  icaEventPipeProps: IcaEventPipeProps;
 }
 
 export class OrcaBusStatefulStack extends cdk.Stack {
-  readonly eventBus: EventBusConstruct;
-  readonly database: Database;
-  readonly securityGroup: SecurityGroupConstruct;
-  readonly schemaRegistry: SchemaRegistryConstruct;
-  readonly eventSource?: EventSource;
+  // readonly eventBus: EventBusConstruct;
+  // readonly database: Database;
+  // readonly securityGroup: SecurityGroupConstruct;
+  // readonly schemaRegistry: SchemaRegistryConstruct;
+  // readonly eventSource?: EventSource;
 
   constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatefulConfig) {
     super(scope, id, props);
@@ -31,29 +33,27 @@ export class OrcaBusStatefulStack extends cdk.Stack {
 
     // --- Create Stateful resources
 
-    this.eventBus = new EventBusConstruct(this, 'OrcaBusEventBusConstruct', props.eventBusProps);
+    new EventBusConstruct(this, 'OrcaBusEventBusConstruct', props.eventBusProps);
 
-    this.securityGroup = new SecurityGroupConstruct(
+    const securityGroup = new SecurityGroupConstruct(
       this,
       'OrcaBusSecurityGroupConstruct',
       vpc,
       props.securityGroupProps
     );
 
-    this.database = new Database(this, 'OrcaBusDatabaseConstruct', {
+    new Database(this, 'OrcaBusDatabaseConstruct', {
       vpc,
-      allowedInboundSG: this.securityGroup.computeSecurityGroup,
+      allowedInboundSG: securityGroup.computeSecurityGroup,
       ...props.databaseProps,
     });
 
-    this.schemaRegistry = new SchemaRegistryConstruct(
-      this,
-      'SchemaRegistryConstruct',
-      props.schemaRegistryProps
-    );
+    new SchemaRegistryConstruct(this, 'SchemaRegistryConstruct', props.schemaRegistryProps);
 
     if (props.eventSourceProps) {
-      this.eventSource = new EventSource(this, 'EventSourceConstruct', props.eventSourceProps);
+      new EventSource(this, 'EventSourceConstruct', props.eventSourceProps);
     }
+
+    new IcaEventPipeConstruct(this, 'IcaEventPipeConstruct', props.icaEventPipeProps);
   }
 }
