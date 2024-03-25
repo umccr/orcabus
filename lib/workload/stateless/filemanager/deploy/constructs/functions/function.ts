@@ -97,7 +97,8 @@ export class Function extends Construct {
     // This starts the container running postgres in order to compile queries using sqlx.
     // It needs to be executed outside `beforeBundling`, because `beforeBundling` runs inside
     // the container context, and docker compose needs to run outside of this context.
-    exec('make', ['docker-postgres'], { cwd: manifestPath, shell: true });
+    const output = exec('make', ['docker-run'], { cwd: manifestPath, shell: true });
+    const address = output.stdout.toString().trim();
 
     this._function = new RustFunction(this, 'RustFunction', {
       manifestPath,
@@ -108,7 +109,7 @@ export class Function extends Construct {
           // Avoid permission issues by creating another target directory.
           CARGO_TARGET_DIR: "target-cdk-docker-bundling",
           // The bundling container needs to be able to connect to the container running postgres.
-          DATABASE_URL: "postgresql://filemanager:filemanager@localhost:4321/filemanager", // pragma: allowlist secret
+          DATABASE_URL: `postgresql://filemanager:filemanager@${address}/filemanager`, // pragma: allowlist secret
         }
       },
       memorySize: 128,
