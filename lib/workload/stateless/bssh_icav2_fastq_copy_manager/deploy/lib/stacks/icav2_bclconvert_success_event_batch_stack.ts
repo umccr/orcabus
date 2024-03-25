@@ -33,7 +33,7 @@ export class ICAv2BCLConvertSuccessEventStateMachineStack extends cdk.Stack {
         icav2_copy_batch_state_machine_arn: icav2_copy_batch_stack_state_machine_arn_obj.stringValue,
         lambdas_layer_path: __dirname + '/../../../layers',
         ssm_parameter_list: props.ssm_parameter_list,
-        bclconvert_success_event_handler_path: __dirname + '/../../../lambdas/bclconvert_success_event_handler',
+        bclconvert_success_event_handler_path: __dirname + '/../../../lambdas/query_bclconvert_outputs_handler',
         workflow_definition_body_path: __dirname + '/../../../step_functions_templates/bclconvert_success_event_state_machine.json',
         icav2_jwt_ssm_parameter_path: props.icav2_jwt_ssm_parameter_path,
       }

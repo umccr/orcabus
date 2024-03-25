@@ -7,7 +7,7 @@
 test('SQS Queue Created', () => {
 //   const app = new cdk.App();
 //     // WHEN
-//   const stack = new Deploy.DeployStack(app, 'MyTestStack');
+//   const stack = new Deploy.Bs_runs_upload_manager_stack(app, 'MyTestStack');
 //     // THEN
 //   const template = Template.fromStack(stack);
 
