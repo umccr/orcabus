@@ -1,8 +1,8 @@
-FILEMANAGER_DATABASE_HOST ?= localhost
-FILEMANAGER_DATABASE_PORT ?= 4321
-POSTGRES_DATABASE_URL ?= postgresql://filemanager:filemanager@${FILEMANAGER_DATABASE_HOST}:${FILEMANAGER_DATABASE_PORT}/filemanager #pragma: allowlist secret
+.EXPORT_ALL_VARIABLES:
 
-export DATABASE_URL=$(POSTGRES_DATABASE_URL)
+FILEMANAGER_DATABASE_HOST ?= 0.0.0.0
+FILEMANAGER_DATABASE_PORT ?= 4321
+DATABASE_URL ?= postgresql://filemanager:filemanager@${FILEMANAGER_DATABASE_HOST}:${FILEMANAGER_DATABASE_PORT}/filemanager #pragma: allowlist secret
 
 ## Default target
 default: help
@@ -19,9 +19,11 @@ docker-postgres:
 	@docker compose up --wait -d postgres
 docker-clean:
 	@docker compose down --volumes
-docker-run:
+docker-build:
+	@docker compose build
+docker-run: docker-build
 	@FILEMANAGER_DATABASE_HOST=0.0.0.0 FILEMANAGER_DATABASE_PORT=0 \
-	docker compose run -d --service-ports postgres | xargs -I {} docker port {} $(FILEMANAGER_DATABASE_PORT)
+	docker compose run -d --service-ports postgres | xargs -I {} docker port {} 4321
 
 ## Build related commands
 build: docker-postgres
