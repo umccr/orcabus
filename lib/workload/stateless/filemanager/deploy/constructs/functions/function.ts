@@ -99,7 +99,7 @@ export class Function extends Construct {
     // the container context, and docker compose needs to run outside of this context.
     const output = exec('make', ['-s', 'docker-run'], { cwd: manifestPath, shell: true });
     // Grab the last line only in case there are other outputs.
-    const address = output.stdout.toString().trim().match('.*$');
+    const address = output.stdout.toString().trim().match('.*$')?.pop();
 
     this._function = new RustFunction(this, 'RustFunction', {
       manifestPath,

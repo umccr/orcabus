@@ -23,7 +23,7 @@ docker-build:
 	@docker compose build
 docker-run: docker-build
 	@FILEMANAGER_DATABASE_HOST=0.0.0.0 FILEMANAGER_DATABASE_PORT=0 \
-	docker compose run -d --service-ports postgres | xargs -I {} docker port {} 4321
+	docker compose -p "$($(MAKE) -s uuid)" run -d --service-ports postgres | xargs -I {} docker port {} 4321
 
 ## Build related commands
 build: docker-postgres
@@ -50,6 +50,10 @@ clean: docker-clean
 ## Database related targets
 psql:
 	@docker compose exec postgres psql filemanager -U filemanager
+
+## Generate a uuid
+uuid:
+	@python -c "import uuid; print(uuid.uuid4())"
 
 ## Help text
 help:
