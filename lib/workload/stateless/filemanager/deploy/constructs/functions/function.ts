@@ -7,6 +7,7 @@ import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { RustFunction } from 'cargo-lambda-cdk';
 import path from 'path';
 import { exec } from 'cargo-lambda-cdk/lib/util';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Properties for the database.
@@ -97,7 +98,11 @@ export class Function extends Construct {
     // This starts the container running postgres in order to compile queries using sqlx.
     // It needs to be executed outside `beforeBundling`, because `beforeBundling` runs inside
     // the container context, and docker compose needs to run outside of this context.
-    const output = exec('make', ['-s', 'docker-run'], { cwd: manifestPath, shell: true });
+    const output = exec(
+      'make',
+      ['-s', 'docker-run', `DOCKER_PROJECT_NAME=${randomUUID()}`],
+      { cwd: manifestPath, shell: true }
+    );
     // Grab the last line only in case there are other outputs.
     const address = output.stdout.toString().trim().match('.*$')?.pop();
 
