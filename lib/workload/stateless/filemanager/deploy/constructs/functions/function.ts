@@ -7,6 +7,8 @@ import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { RustFunction } from 'cargo-lambda-cdk';
 import path from 'path';
 import { exec } from 'cargo-lambda-cdk/lib/util';
+import { randomUUID } from 'node:crypto';
+import { print } from 'aws-cdk/lib/logging';
 
 /**
  * Properties for the database.
@@ -93,15 +95,27 @@ export class Function extends Construct {
       `/` +
       `${props.databaseSecret.secretValueFromJson('dbname').unsafeUnwrap()}`;
 
-    const manifestPath = path.join(__dirname, '..', '..', '..');
+    const workspacePath = path.join(__dirname, '..', '..', '..');
+    const manifestPath =  path.join(workspacePath, props.package, 'Cargo.toml');
+    const uuid = randomUUID();
+
     // This starts the container running postgres in order to compile queries using sqlx.
     // It needs to be executed outside `beforeBundling`, because `beforeBundling` runs inside
     // the container context, and docker compose needs to run outside of this context.
-    const output = exec('make', ['docker-run'], { cwd: manifestPath, shell: true });
-    const address = output.stdout.toString().trim();
+    const output = exec(
+      'make',
+      ['-s', 'docker-run', `DOCKER_PROJECT_NAME=${uuid}`],
+      { cwd: workspacePath, shell: true }
+    );
+    print(`running filemanager \`make -s docker-run DOCKER_PROJECT_NAME=${uuid}\``);
+
+    // Grab the last line only in case there are other outputs.
+    const address = output.stdout.toString().trim().match('.*$')?.pop();
+    const localDatabaseUrl = `postgresql://filemanager:filemanager@${address}/filemanager`; // pragma: allowlist secret
+    print(`the local filemanager database url is: ${localDatabaseUrl}`);
 
     this._function = new RustFunction(this, 'RustFunction', {
-      manifestPath,
+      manifestPath: manifestPath,
       binaryName: props.package,
       bundling: {
         environment: {
@@ -109,8 +123,8 @@ export class Function extends Construct {
           // Avoid permission issues by creating another target directory.
           CARGO_TARGET_DIR: "target-cdk-docker-bundling",
           // The bundling container needs to be able to connect to the container running postgres.
-          DATABASE_URL: `postgresql://filemanager:filemanager@${address}/filemanager`, // pragma: allowlist secret
-        }
+          DATABASE_URL: localDatabaseUrl,
+        },
       },
       memorySize: 128,
       timeout: Duration.seconds(28),

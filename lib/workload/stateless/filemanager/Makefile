@@ -1,8 +1,13 @@
-FILEMANAGER_DATABASE_HOST ?= localhost
-FILEMANAGER_DATABASE_PORT ?= 4321
-POSTGRES_DATABASE_URL ?= postgresql://filemanager:filemanager@${FILEMANAGER_DATABASE_HOST}:${FILEMANAGER_DATABASE_PORT}/filemanager #pragma: allowlist secret
+.EXPORT_ALL_VARIABLES:
 
-export DATABASE_URL=$(POSTGRES_DATABASE_URL)
+## Database host ip address
+FILEMANAGER_DATABASE_HOST ?= 0.0.0.0
+## Database port
+FILEMANAGER_DATABASE_PORT ?= 4321
+## Database connection url
+DATABASE_URL ?= postgresql://filemanager:filemanager@${FILEMANAGER_DATABASE_HOST}:${FILEMANAGER_DATABASE_PORT}/filemanager #pragma: allowlist secret
+## Override the default project name
+DOCKER_PROJECT_NAME ?= filemanager
 
 ## Default target
 default: help
@@ -12,16 +17,18 @@ all: build
 
 ## Docker related targets
 up:
-	@docker compose up --wait -d
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" up --wait -d
 down:
-	@docker compose down
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" down
 docker-postgres:
-	@docker compose up --wait -d postgres
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" up --wait -d postgres
 docker-clean:
-	@docker compose down --volumes
-docker-run:
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" down --volumes
+docker-build:
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" build
+docker-run: docker-build
 	@FILEMANAGER_DATABASE_HOST=0.0.0.0 FILEMANAGER_DATABASE_PORT=0 \
-	docker compose run -d --service-ports postgres | xargs -I {} docker port {} $(FILEMANAGER_DATABASE_PORT)
+	docker compose -p "$(DOCKER_PROJECT_NAME)" run -d --service-ports postgres | xargs -I {} docker port {} 4321
 
 ## Build related commands
 build: docker-postgres
