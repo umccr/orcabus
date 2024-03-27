@@ -76,7 +76,7 @@ def handler(event, context):
         "instrument_run_id"
     ]:
         assert (
-            event.get(event_key),
+            event.get(event_key, None) is not None,
             f"{event_key} key is not set in the event"
         )
 

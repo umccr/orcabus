@@ -82,7 +82,7 @@ def handler(event, context):
     )
 
     # Get current time
-    timestamp = datetime.now(timezone.utc).timestamp()
+    timestamp = str(int(datetime.now(timezone.utc).timestamp()))
 
     samplesheet_name = f"SampleSheet.V2.{timestamp}.csv"
 
