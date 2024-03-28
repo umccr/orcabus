@@ -1,30 +1,31 @@
-# Sequence Run Manager
+# Metadata Manager
 
-```
-Namespace: orcabus.srm
-```
-
-## How to run SRM locally
+## How to run MM locally
 
 ### Ready Check
 
 - Go to Django project root
+
 ```
 cd lib/workload/stateless/app
 ```
-_*If you are PyCharmer and opening the whole `orcabus` project (i.e. not doing sparse checkout or not opening directly at this level) then annotate this level `app` directory as "source" directory in the project structure dialog._
+
+_*If you are PyCharmer and opening the whole `orcabus` project (i.e. not doing sparse checkout or not opening directly
+at this level) then annotate this level `app` directory as "source" directory in the project structure dialog._
 
 ### Python
 
 - Setup Python environment (conda or venv)
+
 ```
-conda create -n app python=3.12
-conda activate app
+conda create -n orcabus_mm python=3.12
+conda activate orcabus_mm
 ```
 
 ### Make
 
 - At app root, perform
+
 ```
 make install
 make up
@@ -51,7 +52,7 @@ python manage.py help generate_mock_data
 ```
 
 ```
-python manage.py generate_mock_data
+python manage.py insert_mock_data
 ```
 
 #### Generate BSSH Event
@@ -110,6 +111,7 @@ curl -s http://localhost:8000/sequence/1 | jq
 ```
 
 Or visit in browser:
+
 - http://localhost:8000
 - http://localhost:8000/sequence
 - http://localhost:8000/sequence/1

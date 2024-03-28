@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 DEBUG = False
 
-secret_id = os.environ.get("SECRET_ID", "orcabus/metadata_manager/rdsLoginCredential")
+secret_id = os.environ.get("RDS_CRED_SECRET_NAME", "orcabus/metadata_manager/rdsLoginCredential")
 
 try:
     secret_str = libsm.get_secret(secret_id)  # this will be lru cached throughout exec lifetime
