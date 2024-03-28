@@ -95,19 +95,18 @@ export class Function extends Construct {
       `/` +
       `${props.databaseSecret.secretValueFromJson('dbname').unsafeUnwrap()}`;
 
-    const workspacePath = path.join(__dirname, '..', '..', '..');
-    const manifestPath =  path.join(workspacePath, props.package, 'Cargo.toml');
+    const manifestPath =  path.join(__dirname, '..', '..', '..');
     const uuid = randomUUID();
 
     // This starts the container running postgres in order to compile queries using sqlx.
     // It needs to be executed outside `beforeBundling`, because `beforeBundling` runs inside
     // the container context, and docker compose needs to run outside of this context.
+    print(`running filemanager \`make -s docker-run DOCKER_PROJECT_NAME=${uuid}\``);
     const output = exec(
       'make',
       ['-s', 'docker-run', `DOCKER_PROJECT_NAME=${uuid}`],
-      { cwd: workspacePath, shell: true }
+      { cwd: manifestPath, shell: true }
     );
-    print(`running filemanager \`make -s docker-run DOCKER_PROJECT_NAME=${uuid}\``);
 
     // Grab the last line only in case there are other outputs.
     const address = output.stdout.toString().trim().match('.*$')?.pop();
@@ -120,11 +119,11 @@ export class Function extends Construct {
       bundling: {
         environment: {
           ...props.buildEnvironment,
-          // Avoid permission issues by creating another target directory.
-          CARGO_TARGET_DIR: "target-cdk-docker-bundling",
+          // Avoid concurrency errors by creating another target directory.
+          CARGO_TARGET_DIR: `target-cdk-bundling-${uuid}`,
           // The bundling container needs to be able to connect to the container running postgres.
           DATABASE_URL: localDatabaseUrl,
-        },
+        }
       },
       memorySize: 128,
       timeout: Duration.seconds(28),
