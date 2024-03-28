@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 from django.core.management import BaseCommand
 
@@ -17,4 +18,5 @@ class Command(BaseCommand):
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
         result = persist_lab_metadata(metadata_pd)
 
+        print(json.dumps(result, indent=4))
         print("insert mock data completed")

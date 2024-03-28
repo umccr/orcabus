@@ -1,9 +1,10 @@
 import os
 import re
+from typing import List
+
 import pandas as pd
 import numpy as np
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.management import call_command
 from django.db import transaction
 
 from libumccr import libgdrive, libjson
@@ -17,14 +18,11 @@ from proc.service.utils import clean_model_history
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# This will tell from which year the system should query the worksheet
-YEAR_START = 2017
-
 SSM_NAME_TRACKING_SHEET_ID = os.environ['SSM_NAME_TRACKING_SHEET_ID']
 SSM_NAME_GDRIVE_ACCOUNT = os.environ['SSM_NAME_GDRIVE_ACCOUNT']
 
 
-def download_tracking_sheet():
+def download_tracking_sheet(year_array: List[str]) -> pd.DataFrame:
     """
     Download the full original metadata from google tracking sheet
     """
@@ -32,19 +30,17 @@ def download_tracking_sheet():
     account_info = libssm.get_secret(SSM_NAME_GDRIVE_ACCOUNT)
 
     frames = []
-    year = YEAR_START
-    while True:
-        year_str = str(year)
+    for i in year_array:
+        year_str = str(i)
         logger.info(f"Downloading {year_str} sheet")
         sheet_df = libgdrive.download_sheet(account_info, sheet_id, year_str)
+        sheet_df = sanitize_lab_metadata_df(sheet_df)
 
         # the year might be in the future therefore it does not exist
         if sheet_df.empty:
             break
 
         frames.append(sheet_df)
-
-        year += 1
 
     df: pd.DataFrame = pd.concat(frames)
     return df
@@ -111,22 +107,16 @@ def persist_lab_metadata(df: pd.DataFrame):
     for record in df.to_dict('records'):
         try:
             # 1. update or create all data in the model from the given record
-            library, is_lib_created = Library.objects.update_or_create(
-                internal_id=record.get('library_id'),
+            subject, is_sub_created = Subject.objects.update_or_create(
+                internal_id=record.get('subject_id'),
                 defaults={
-                    'internal_id': record.get('library_id'),
-                    'phenotype': record.get('phenotype'),
-                    'workflow': record.get('workflow'),
-                    'quality': record.get('quality'),
-                    'type': record.get('type'),
-                    'assay': record.get('assay'),
-                    'coverage': record.get('coverage')
+                    "internal_id": record.get('subject_id')
                 }
             )
-            if is_lib_created:
-                library_created.append(library)
+            if is_sub_created:
+                subject_created.append(subject)
             else:
-                library_updated.append(library)
+                subject_updated.append(subject)
 
             specimen, is_spc_created = Specimen.objects.update_or_create(
                 internal_id=record.get('sample_id'),
@@ -140,16 +130,30 @@ def persist_lab_metadata(df: pd.DataFrame):
             else:
                 specimen_updated.append(specimen)
 
-            subject, is_sub_created = Subject.objects.update_or_create(
-                internal_id=record.get('subject_id'),
+            # making sure coverage is float-able
+            lib_coverage = None
+            try:
+                lib_coverage = float(record.get('coverage'))
+            except (ValueError, TypeError):
+                pass
+
+            library, is_lib_created = Library.objects.update_or_create(
+                internal_id=record.get('library_id'),
                 defaults={
-                    "internal_id": record.get('subject_id')
+                    'internal_id': record.get('library_id'),
+                    'phenotype': record.get('phenotype'),
+                    'workflow': record.get('workflow'),
+                    'quality': record.get('quality'),
+                    'type': record.get('type'),
+                    'assay': record.get('assay'),
+                    'coverage': lib_coverage,
+                    'specimen_id': specimen.id
                 }
             )
-            if is_sub_created:
-                subject_created.append(subject)
+            if is_lib_created:
+                library_created.append(library)
             else:
-                subject_updated.append(subject)
+                library_updated.append(library)
 
             # 2. linking or updating model to each other based on the record
 
@@ -198,17 +202,31 @@ def sanitize_lab_metadata_df(df: pd.DataFrame):
     """
     sanitize record by renaming columns, and clean df cells
     """
-    # some warning for duplicates
 
-    dup_lib_list = df[df.duplicated(keep='last')]["LibraryID"].tolist()
-    if len(dup_lib_list) > 0:
-        logger.warning(f"data contain duplicate libraries: {', '.join(dup_lib_list)}")
     df = clean_columns(df)
     df = df.map(_clean_data_cell)
-    df = df.drop_duplicates(keep='last')
-    df = df.reset_index(drop=True)
 
+    # dropping any rows that library_id == ''
+    df = df.drop(df[df.library_id.isnull()].index, errors='ignore')
+
+    # dropping column that has empty column heading
+    df = df.drop('', axis='columns', errors='ignore')
+
+    df = df.reset_index(drop=True)
     return df
+
+
+def warn_drop_duplicated_library(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    log warning messages if duplicated library_id found
+    """
+    # some warning for duplicates
+    dup_lib_list = df[df.duplicated(subset=['library_id'], keep='last')]["library_id"].tolist()
+    print('dup_lib_list', dup_lib_list)
+    if len(dup_lib_list) > 0:
+        logger.warning(f"data contain duplicate libraries: {', '.join(dup_lib_list)}")
+
+    return df.drop_duplicates(subset=['library_id'], keep='last')
 
 
 def clean_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -234,7 +252,7 @@ def _clean_data_cell(value):
         value = value.strip()
 
     # python NaNs are != to themselves
-    if value == '_' or value == '-' or value == np.nan or value != value:
-        value = ''
+    if value == 'NA' or value == '_' or value == '-' or value == '' or value != value or value == np.nan:
+        value = None
 
     return value
