@@ -146,7 +146,7 @@ def persist_lab_metadata(df: pd.DataFrame):
                     'quality': record.get('quality'),
                     'type': record.get('type'),
                     'assay': record.get('assay'),
-                    'coverage': lib_coverage,
+                    'coverage': f"{lib_coverage}",
                     'specimen_id': specimen.id
                 }
             )

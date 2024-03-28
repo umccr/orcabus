@@ -49,7 +49,7 @@ class MetadataTestCase(TestCase):
         """
         python manage.py test app.tests.test_models.MetadataTestCase.test_get_simple_model
         """
-        logger.info("Test get on lab models")
+        logger.info("Test get on simple lab models")
 
         indiv_one = Individual.objects.get(internal_id="I001")
         self.assertEqual(indiv_one.internal_id, "I001", "incorrect 'id' from given internal individual id")

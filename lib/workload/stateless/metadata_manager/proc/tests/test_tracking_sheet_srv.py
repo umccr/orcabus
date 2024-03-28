@@ -47,7 +47,7 @@ RECORD_2 = {
     "Assay": "ctTSO",
     "OverrideCycles": "Y151;I8U12;I8;Y151",
     "Workflow": "research",
-    "Coverage (X)": "25.8",
+    "Coverage (X)": "25.25",
     "TruSeq Index, unless stated": "",
     "Run#": "P101",
     "Comments": "",
