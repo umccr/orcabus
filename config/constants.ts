@@ -50,13 +50,12 @@ const orcaBusStatefulConfig = {
     securityGroupDescription: 'allow within same SecurityGroup and rds SG',
   },
   icaEventPipeProps: {
-    icaEventPipeName: 'IcaEventPipe',
-    icaQueueName: 'IcaEventQueue',
+    icaEventPipeName: 'orcabus-ica-event-pipe',
+    icaQueueName: 'orcabus-ica-event-queue',
     icaQueueVizTimeout: 30,
-    slackChannelConfigurationName: 'IcaEventDLQNotification',
-    slackWorkspaceIdSSMParam: '/orcabus/ica-event-pipe/slack-workspace-id',
-    slackChannelIdSSMParam: '/orcabus/ica-event-pipe/slack-channel-id',
     eventBusName: eventBusName,
+    slackTopicArn: 'AwsChatBotTopic',
+    dlqMessageThreshold: 1,
   },
 };
 
@@ -171,6 +170,7 @@ export const getEnvironmentConfig = (
             eventSourceProps: eventSourceConfig(devBucket),
             icaEventPipeProps: {
               ...orcaBusStatefulConfig.icaEventPipeProps,
+              slackTopicArn: 'arn:aws:sns:ap-southeast-2:843407916570:AwsChatBotTopic',
             },
           },
           orcaBusStatelessConfig: {
@@ -208,6 +208,7 @@ export const getEnvironmentConfig = (
             eventSourceProps: eventSourceConfig(stgBucket),
             icaEventPipeProps: {
               ...orcaBusStatefulConfig.icaEventPipeProps,
+              slackTopicArn: 'arn:aws:sns:ap-southeast-2:455634345446:AwsChatBotTopic',
             },
           },
           orcaBusStatelessConfig: {
@@ -243,6 +244,7 @@ export const getEnvironmentConfig = (
             eventSourceProps: eventSourceConfig(prodBucket),
             icaEventPipeProps: {
               ...orcaBusStatefulConfig.icaEventPipeProps,
+              slackTopicArn: 'arn:aws:sns:ap-southeast-2:472057503814:AwsChatBotTopic',
             },
           },
           orcaBusStatelessConfig: {

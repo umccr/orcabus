@@ -1,23 +1,20 @@
 import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
 import { IEventBus, EventBus } from 'aws-cdk-lib/aws-events';
-import { IMessagingProvider, MonitoredQueue } from 'sqs-dlq-monitoring';
+import { MonitoredQueue } from 'sqs-dlq-monitoring';
 import { Topic } from 'aws-cdk-lib/aws-sns';
-import { IQueue, Queue, DeadLetterQueue } from 'aws-cdk-lib/aws-sqs';
+import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { SqsSource } from '@aws-cdk/aws-pipes-sources-alpha';
 import * as pipes from '@aws-cdk/aws-pipes-alpha';
-import * as chatbot from 'aws-cdk-lib/aws-chatbot';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 export interface IcaEventPipeProps {
   icaEventPipeName: string;
   icaQueueName: string;
   icaQueueVizTimeout: number;
-  slackChannelConfigurationName: string;
-  slackWorkspaceIdSSMParam: string;
-  slackChannelIdSSMParam: string;
   eventBusName: string;
+  slackTopicArn: string;
+  dlqMessageThreshold: number;
 }
 
 export class IcaEventPipeConstruct extends Construct {
@@ -28,53 +25,49 @@ export class IcaEventPipeConstruct extends Construct {
     super(scope, id);
     this.icaQueue = this.createMonitoredQueue(id, props).queue;
     this.mainBus = EventBus.fromEventBusName(this, id + 'EventBus', props.eventBusName);
+    this.createPipe();
   }
 
+  // Create the INPUT SQS queue that will receive the ICA events
+  // This should have a DLQ and be monitored via CloudWatch alarm and Slack notifications
   private createMonitoredQueue(id: string, props: IcaEventPipeProps) {
-    const slackWorkspaceId = StringParameter.fromStringParameterName(this, id + 'SlackWorkspaceId', props.slackWorkspaceIdSSMParam).stringValue;
-    const slackChannelId = StringParameter.fromStringParameterName(this, id + 'slackChannelId', props.slackChannelIdSSMParam).stringValue;
-
-    const queue = new Queue(this, id + 'DLQ', {
-      queueName: props.icaQueueName + '-dlq',
-      enforceSSL: true,
-      visibilityTimeout: Duration.seconds(props.icaQueueVizTimeout),
-    });
-
-    const deadLetterQueue: DeadLetterQueue = {
-      queue: queue,
-      maxReceiveCount: 3,
-    };
+    const topic: Topic = Topic.fromTopicArn(this, id + 'slackTopic', props.slackTopicArn) as Topic;
 
     const mq = new MonitoredQueue(this, props.icaEventPipeName, {
       queueProps: {
         queueName: props.icaQueueName,
-        deadLetterQueue: deadLetterQueue,
         enforceSSL: true,
         visibilityTimeout: Duration.seconds(props.icaQueueVizTimeout),
       },
-      messagingProviders: [
-        new ChatbotMessageProvider(
-          props.slackChannelConfigurationName,
-          slackWorkspaceId,
-          slackChannelId,
-        ),
-      ],
+      dlqProps: {
+        queueName: props.icaQueueName + '-dlq',
+        enforceSSL: true,
+        visibilityTimeout: Duration.seconds(props.icaQueueVizTimeout),
+      },
+      messageThreshold: props.dlqMessageThreshold,
+      topic: topic,
     });
 
     return mq;
   }
 
+  // Create the Pipe passing the ICA event from the SQS queue to our OrcaBus event bus
   private createPipe() {
-    // const inputTransfrom = new pipes.InputTransformation()
+    const targetInputTransformation = pipes.InputTransformation.fromObject({
+      'ica-event': pipes.DynamicInput.fromEventPath('$.body'),
+    });
     return new pipes.Pipe(this, 'Pipe', {
       source: new SqsSource(this.icaQueue),
-      target: new EventBusTarget(this.mainBus),
-      // target: new EventBusTarget(this.mainBus, {inputTransformation: inputTransfrom}), // TODO implement
+      // target: new EventBusTarget(this.mainBus),
+      target: new EventBusTarget(this.mainBus, { inputTransformation: targetInputTransformation }),
     });
   }
 }
 
+// Creates a pipe TARGET wrapping an EventBus
 class EventBusTarget implements pipes.ITarget {
+  // No official EventBusTarget implementations exist (yet). This is following recommendations from:
+  // https://constructs.dev/packages/@aws-cdk/aws-pipes-alpha/v/2.133.0-alpha.0?lang=typescript#example-target-implementation
   targetArn: string;
   private inputTransformation: pipes.IInputTransformation | undefined;
 
@@ -99,30 +92,3 @@ class EventBusTarget implements pipes.ITarget {
     this.eventBus.grantPutEventsTo(pipeRole);
   }
 }
-
-class ChatbotMessageProvider implements IMessagingProvider {
-  readonly slackChannelConfigurationName: string;
-  readonly slackWorkspaceId: string;
-  readonly slackChannelId: string;
-
-  constructor(
-    slackChannelConfigurationName: string,
-    slackWorkspaceId: string,
-    slackChannelId: string
-  ) {
-    this.slackChannelConfigurationName = slackChannelConfigurationName;
-    this.slackWorkspaceId = slackWorkspaceId;
-    this.slackChannelId = slackChannelId;
-  }
-
-  deployProvider(scope: Construct, topic: Topic) {
-    new chatbot.SlackChannelConfiguration(scope, 'id', {
-      slackChannelConfigurationName: this.slackChannelConfigurationName,
-      slackWorkspaceId: this.slackWorkspaceId,
-      slackChannelId: this.slackChannelId,
-      notificationTopics: [topic],
-    });
-  }
-}
-
-
