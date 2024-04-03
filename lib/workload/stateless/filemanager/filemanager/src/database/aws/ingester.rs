@@ -252,11 +252,12 @@ impl Ingest for Ingester {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::ops::Add;
+
     use chrono::{DateTime, Utc};
     use itertools::Itertools;
     use sqlx::postgres::PgRow;
     use sqlx::{Executor, PgPool, Row};
-    use std::ops::Add;
     use tokio::time::Instant;
 
     use crate::database::aws::ingester::Ingester;

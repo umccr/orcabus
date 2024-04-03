@@ -1,10 +1,10 @@
 //! Handle environment variables.
 //!
 
-use dotenvy::dotenv;
 use std::ffi::OsStr;
 use std::{env, fmt};
 
+use dotenvy::dotenv;
 use tracing::{error, info};
 
 use crate::error::Error::MissingEnvironmentVariable;

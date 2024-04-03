@@ -1,4 +1,4 @@
-use aws_config::{defaults, BehaviorVersion, Region, SdkConfig};
+use aws_config::{defaults, BehaviorVersion, SdkConfig};
 use aws_credential_types::provider::error::CredentialsError;
 use aws_credential_types::provider::ProvideCredentials;
 use aws_credential_types::Credentials;
@@ -33,10 +33,8 @@ impl Config {
     }
 
     /// Get the region used by the config.
-    // This lifetime is required because of the way automock generates the mock struct.
-    #[allow(clippy::needless_lifetimes)]
-    pub fn region<'a>(&'a self) -> Option<&'a Region> {
-        self.inner().region()
+    pub fn region(&self) -> Option<String> {
+        self.inner().region().map(ToString::to_string)
     }
 
     pub fn inner(&self) -> &SdkConfig {

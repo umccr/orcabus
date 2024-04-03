@@ -1,8 +1,9 @@
-use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
-use crate::uuid::UuidGenerator;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
+
+use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
+use crate::uuid::UuidGenerator;
 
 #[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
 #[sqlx(type_name = "event_type")]
@@ -155,13 +156,14 @@ impl From<Message> for FlatS3EventMessages {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use crate::events::aws::tests::{
         assert_flat_s3_event, expected_event_bridge_record, expected_sqs_record,
         EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_VERSION_ID,
     };
     use crate::events::aws::EventType::Deleted;
     use crate::events::aws::FlatS3EventMessages;
-    use serde_json::json;
 
     #[test]
     fn deserialize_sqs_message() {

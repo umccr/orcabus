@@ -2,9 +2,9 @@ import { Construct } from 'constructs';
 import { IngestFunction, IngestFunctionProps } from '../constructs/functions/ingest';
 import { MigrateFunction } from '../constructs/functions/migrate';
 import * as fn from '../constructs/functions/function';
+import { DatabaseProps } from '../constructs/functions/function';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
-import { DatabaseProps } from '../constructs/functions/function';
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { CdkResourceInvoke } from '../../../../components/cdk_resource_invoke';
 
