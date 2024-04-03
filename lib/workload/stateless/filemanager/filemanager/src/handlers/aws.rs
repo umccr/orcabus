@@ -11,7 +11,7 @@ use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::database::aws::ingester::Ingester;
-use crate::database::{Client, Ingest};
+use crate::database::{Client, CredentialGenerator, Ingest};
 use crate::events::aws::collecter::CollecterBuilder;
 use crate::events::aws::FlatS3EventMessages;
 use crate::events::Collect;
@@ -23,6 +23,7 @@ pub async fn receive_and_ingest(
     sqs_client: SQSClient,
     sqs_url: Option<impl Into<String>>,
     database_client: Option<Client>,
+    generator: Option<impl CredentialGenerator>,
 ) -> Result<Ingester, Error> {
     let events = CollecterBuilder::default()
         .with_s3_client(s3_client)
@@ -36,7 +37,7 @@ pub async fn receive_and_ingest(
     let ingester = if let Some(database_client) = database_client {
         Ingester::new(database_client)
     } else {
-        Ingester::with_defaults().await?
+        Ingester::with_defaults(generator).await?
     };
 
     ingester.ingest(events).await?;
@@ -44,11 +45,12 @@ pub async fn receive_and_ingest(
     Ok(ingester)
 }
 
-/// Handle SQS events that through an SqsEvent.
+/// Handle SQS events that go through an SqsEvent.
 pub async fn ingest_event(
     event: SqsEvent,
     s3_client: S3Client,
     database_client: Option<Client>,
+    generator: Option<impl CredentialGenerator>,
 ) -> Result<Ingester, Error> {
     trace!("received event: {:?}", event);
 
@@ -78,7 +80,7 @@ pub async fn ingest_event(
     let ingester = if let Some(database_client) = database_client {
         Ingester::new(database_client)
     } else {
-        Ingester::with_defaults().await?
+        Ingester::with_defaults(generator).await?
     };
 
     trace!("ingester: {:?}", ingester);
@@ -89,6 +91,7 @@ pub async fn ingest_event(
 
 #[cfg(test)]
 mod tests {
+    use crate::database::aws::credentials::IamGenerator;
     use aws_lambda_events::sqs::SqsMessage;
     use sqlx::PgPool;
 
@@ -109,10 +112,15 @@ mod tests {
         set_sqs_client_expectations(&mut sqs_client);
         set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
 
-        let ingester =
-            receive_and_ingest(s3_client, sqs_client, Some("url"), Some(Client::new(pool)))
-                .await
-                .unwrap();
+        let ingester = receive_and_ingest(
+            s3_client,
+            sqs_client,
+            Some("url"),
+            Some(Client::new(pool)),
+            None::<IamGenerator>,
+        )
+        .await
+        .unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -134,9 +142,14 @@ mod tests {
             }],
         };
 
-        let ingester = ingest_event(event, s3_client, Some(Client::new(pool)))
-            .await
-            .unwrap();
+        let ingester = ingest_event(
+            event,
+            s3_client,
+            Some(Client::new(pool)),
+            None::<IamGenerator>,
+        )
+        .await
+        .unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 

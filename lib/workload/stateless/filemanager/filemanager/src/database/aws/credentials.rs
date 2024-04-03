@@ -1,6 +1,7 @@
 //! A module for generating RDS IAM credentials.
 //!
 
+use async_trait::async_trait;
 use std::iter::empty;
 use std::time::{Duration, SystemTime};
 
@@ -12,17 +13,71 @@ use url::Url;
 
 #[double]
 use crate::clients::aws::config::Config;
+use crate::database::CredentialGenerator;
+use crate::env::read_env;
 use crate::error::Error::CredentialGeneratorError;
 use crate::error::Result;
 
+/// The builder for the IamGenerator.
+#[derive(Debug, Default)]
+pub struct IamGeneratorBuilder {
+    config: Option<Config>,
+    host: Option<String>,
+    user: Option<String>,
+}
+
+impl IamGeneratorBuilder {
+    /// Set the config. If not set, uses the default config.
+    pub fn with_config(mut self, config: Config) -> Self {
+        self.config = Some(config);
+        self
+    }
+
+    /// Build with a host. If not set, tries to source this from PGHOST.
+    pub fn with_host(mut self, host: String) -> Self {
+        self.host = Some(host);
+        self
+    }
+
+    /// Build with a user. If not set, tries to source this from PGUSER.
+    pub fn with_user(mut self, user: String) -> Self {
+        self.user = Some(user);
+        self
+    }
+
+    /// Build the credential generator.
+    pub async fn build(self) -> Result<IamGenerator> {
+        let config = if let Some(config) = self.config {
+            config
+        } else {
+            Config::with_defaults().await
+        };
+
+        let host = if let Some(host) = self.host {
+            host
+        } else {
+            read_env("PGHOST")?
+        };
+
+        let user = if let Some(user) = self.user {
+            user
+        } else {
+            read_env("PGUSER")?
+        };
+
+        Ok(IamGenerator::new(config, host, user))
+    }
+}
+
+/// A struct to generate RDS IAM database credentials.
 #[derive(Debug)]
-pub struct IamCredentialGenerator {
+pub struct IamGenerator {
     config: Config,
     host: String,
     user: String,
 }
 
-impl IamCredentialGenerator {
+impl IamGenerator {
     /// Create a new credential generator.
     pub fn new(config: Config, host: String, user: String) -> Self {
         Self { config, host, user }
@@ -93,10 +148,19 @@ impl IamCredentialGenerator {
     }
 }
 
+#[async_trait]
+impl CredentialGenerator for IamGenerator {
+    async fn generate_password(&self) -> Result<String> {
+        self.generate_iam_token().await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
     use std::collections::HashMap;
+    use std::env::set_var;
+    use std::future::Future;
 
     use aws_credential_types::Credentials;
 
@@ -106,15 +170,47 @@ mod tests {
 
     #[tokio::test]
     async fn generate_iam_token() {
+        test_generate_iam_token(|config| async {
+            IamGeneratorBuilder::default()
+                .with_config(config)
+                .with_host("127.0.0.1".to_string())
+                .with_user("filemanager".to_string())
+                .build()
+                .await
+                .unwrap()
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn generate_iam_token_env() {
+        set_var("PGHOST", "127.0.0.1");
+        set_var("PGUSER", "filemanager");
+
+        test_generate_iam_token(|config| async {
+            IamGeneratorBuilder::default()
+                .with_config(config)
+                .build()
+                .await
+                .unwrap()
+        })
+        .await;
+    }
+
+    async fn test_generate_iam_token<F, Fut>(create_generator: F)
+    where
+        F: FnOnce(Config) -> Fut,
+        Fut: Future<Output = IamGenerator>,
+    {
         let mut config = MockConfig::default();
 
         config.expect_provide_credentials().once().returning(|| {
             Some(Ok(Credentials::new(
-                "access_key_id",
-                "secret_access_key",
-                Some("session_token".to_string()),
+                "access-key-id",
+                "secret-access-key",
+                Some("session-token".to_string()),
                 Some(SystemTime::UNIX_EPOCH),
-                "provider_name",
+                "provider-name",
             )))
         });
         config
@@ -122,9 +218,7 @@ mod tests {
             .once()
             .returning(|| Some("ap-southeast-2".to_string()));
 
-        let generator =
-            IamCredentialGenerator::new(config, "127.0.0.1".to_string(), "filemanager".to_string());
-
+        let generator = create_generator(config).await;
         // Add the scheme back in so that the url can be parsed.
         let mut url = "https://".to_string();
         url.push_str(&generator.generate_iam_token().await.unwrap());
@@ -139,12 +233,12 @@ mod tests {
         assert_eq!(queries.get("DBUser"), Some(&"filemanager".into()));
         assert_eq!(
             queries.get("X-Amz-Security-Token"),
-            Some(&"session_token".into())
+            Some(&"session-token".into())
         );
 
         let credentials = queries.get("X-Amz-Credential").unwrap();
 
-        assert!(credentials.contains("access_key_id"));
+        assert!(credentials.contains("access-key-id"));
         assert!(credentials.contains("ap-southeast-2"));
         assert!(credentials.contains("rds-db"));
     }

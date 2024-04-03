@@ -4,7 +4,7 @@ use sqlx::{query_file, query_file_as};
 use tracing::{debug, trace};
 use uuid::Uuid;
 
-use crate::database::{Client, Ingest};
+use crate::database::{Client, CredentialGenerator, Ingest};
 use crate::error::Result;
 use crate::events::aws::message::EventType;
 use crate::events::aws::{Events, TransposedS3EventMessages};
@@ -32,9 +32,9 @@ impl Ingester {
     }
 
     /// Create a new ingester with a default database client.
-    pub async fn with_defaults() -> Result<Self> {
+    pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
         Ok(Self {
-            client: Client::default().await?,
+            client: Client::with_defaults(generator).await?,
         })
     }
 

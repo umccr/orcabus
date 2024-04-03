@@ -6,6 +6,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 use filemanager::clients::aws::s3::Client as S3Client;
 use filemanager::clients::aws::sqs::Client as SQSClient;
+use filemanager::database::aws::credentials::IamGeneratorBuilder;
 use filemanager::handlers::aws::receive_and_ingest;
 
 #[tokio::main]
@@ -23,6 +24,7 @@ async fn main() -> Result<(), Error> {
             SQSClient::with_defaults().await,
             None::<String>,
             None,
+            Some(IamGeneratorBuilder::default().build().await?),
         )
         .await?;
 

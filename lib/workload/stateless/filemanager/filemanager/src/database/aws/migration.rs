@@ -3,7 +3,7 @@ use sqlx::migrate;
 use sqlx::migrate::Migrator;
 use tracing::trace;
 
-use crate::database::{Client, Migrate};
+use crate::database::{Client, CredentialGenerator, Migrate};
 use crate::error::Error::MigrateError;
 use crate::error::Result;
 
@@ -20,9 +20,9 @@ impl Migration {
     }
 
     /// Create a new migration with a default database client.
-    pub async fn with_defaults() -> Result<Self> {
+    pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
         Ok(Self {
-            client: Client::default().await?,
+            client: Client::with_defaults(generator).await?,
         })
     }
 

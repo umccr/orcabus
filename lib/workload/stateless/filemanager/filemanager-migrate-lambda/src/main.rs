@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use filemanager::database::aws::credentials::IamGeneratorBuilder;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -19,7 +20,10 @@ async fn main() -> Result<(), Error> {
 
     run(service_fn(
         |_: LambdaEvent<HashMap<String, String>>| async move {
-            Migration::with_defaults().await?.migrate().await
+            Migration::with_defaults(Some(IamGeneratorBuilder::default().build().await?))
+                .await?
+                .migrate()
+                .await
         },
     ))
     .await

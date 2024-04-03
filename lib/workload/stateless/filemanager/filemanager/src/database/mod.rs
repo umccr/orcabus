@@ -2,6 +2,7 @@
 //!
 
 use async_trait::async_trait;
+use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
 
 use crate::env::read_env;
@@ -9,6 +10,13 @@ use crate::error::Result;
 use crate::events::EventSourceType;
 
 pub mod aws;
+
+/// A trait which can generate database credentials.
+#[async_trait]
+pub trait CredentialGenerator {
+    /// Generate the password used to connect to the database.
+    async fn generate_password(&self) -> Result<String>;
+}
 
 /// A database client handles database interaction.
 #[derive(Debug)]
@@ -23,9 +31,33 @@ impl Client {
     }
 
     /// Create a database with default DATABASE_URL connection.
-    pub async fn default() -> Result<Self> {
+    pub async fn from_database_url(url: String) -> Result<Self> {
         Ok(Self {
-            pool: PgPool::connect(&read_env("DATABASE_URL")?).await?,
+            pool: PgPool::connect(&url).await?,
+        })
+    }
+
+    /// Create a database using default credential loading logic.
+    /// First, tries to load a DATABASE_URL environment variable to connect.
+    /// Then, uses the generator if it is not None and PGPASSWORD is not set.
+    /// Otherwise, uses default logic defined in PgConnectOptions::default.
+    pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
+        // If the DATABASE_URL is defined, use that
+        if let Ok(url) = read_env("DATABASE_URL") {
+            return Self::from_database_url(url).await;
+        }
+
+        let options = match generator {
+            // Only use generator is PGPASSWORD is not set.
+            Some(generator) if read_env("PGPASSWORD").is_err() => {
+                PgConnectOptions::default().password(&generator.generate_password().await?)
+            }
+            // Otherwise try the default credentials.
+            _ => PgConnectOptions::default(),
+        };
+
+        Ok(Self {
+            pool: PgPool::connect_with(options).await?,
         })
     }
 
