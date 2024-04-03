@@ -4,37 +4,126 @@
   "States": {
     "move_workflow_inputs": {
       "Type": "Pass",
-      "Next": "add_technical_tags",
+      "Next": "check_portal_run_id_in_db",
       "Parameters": {
         "workflow_inputs.$": "$"
       }
     },
-    "add_technical_tags": {
-      "Type": "Pass",
-      "Next": "DynamoDB PutItem",
+    "check_portal_run_id_in_db": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
-        "technical_tags": {
-          "portal_run_id.$": "$.workflow_inputs.portal_run_id",
-          "step_execution_arn.$": "$$.Execution.Id"
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.workflow_inputs.portal_run_id"
+          },
+          "id_type": {
+            "S": "portal_run_id"
+          }
         }
       },
-      "ResultPath": "$.add_technical_tags_step"
+      "Next": "is_portal_run_id_in_db",
+      "ResultPath": "$.portal_run_id_in_db_step",
+      "ResultSelector": {
+        "db_response.$": "$"
+      }
     },
-    "DynamoDB PutItem": {
+    "is_portal_run_id_in_db": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.portal_run_id_in_db_step.db_response.Item",
+            "IsPresent": true
+          },
+          "Next": "generate_db_uuid"
+        }
+      ],
+      "Default": "get_database_entry"
+    },
+    "generate_db_uuid": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_db_uuid__}",
+        "Payload": {
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "db_uuid.$": "$.Payload.db_uuid"
+      },
+      "ResultPath": "$.create_db_uuid_step",
+      "Next": "initialise_db_item"
+    },
+    "initialise_db_item": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:putItem",
       "Parameters": {
         "TableName": "${__table_name__}",
         "Item": {
+          "id.$": "$.create_db_uuid_step.db_uuid",
+          "id_type": "db_uuid",
           "portal_run_id": {
-              "S.$": "$.workflow_inputs.portal_run_id"
+            "S.$": "$.workflow_inputs.portal_run_id"
+          },
+          "state_machine_execution_arn": {
+            "S.$": "$$.Execution.Id"
           },
           "analysis_status": {
-              "S": "PRE_LAUNCH"
+            "S": "PRE_LAUNCH"
+          },
+          "analysis_id": {
+            "S": ""
+          },
+          "analysis_return_payload": {
+            "S":  ""
+          },
+          "analysis_launch_payload": {
+            "S":  ""
           }
         }
       },
       "ResultPath": "$.dynamo_db_put_item_step",
+      "Next": "put_portal_partition_key_item"
+    },
+    "put_portal_partition_key_item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.workflow_inputs.portal_run_id",
+          "id_type": "portal_run_id",
+          "db_uuid": {
+            "S.$": "$.create_db_uuid_step.db_uuid"
+          }
+        }
+      },
+      "ResultPath": "$.dynamo_db_put_item_step",
+      "Next": "add_technical_tags"
+    },
+    "add_technical_tags": {
+      "Type": "Pass",
+      "Parameters": {
+        "technical_tags": {
+          "portal_run_id.$": "$.workflow_inputs.portal_run_id"
+        }
+      },
+      "ResultPath": "$.add_technical_tags_step",
       "Next": "launch_interop_qc_step"
     },
     "launch_interop_qc_step": {
@@ -66,7 +155,7 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "DynamoDB UpdateItem",
+      "Next": "update_entry",
       "ResultSelector": {
         "analysis_id.$": "$.Payload.analysis_id",
         "analysis_status.$": "$.Payload.analysis_status",
@@ -75,17 +164,20 @@
       },
       "ResultPath": "$.launch_interop_qc_step"
     },
-    "DynamoDB UpdateItem": {
+    "update_entry": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:updateItem",
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "portal_run_id": {
-              "S.$": "$.workflow_inputs.portal_run_id"
+          "id": {
+            "S.$": "$.create_db_uuid_step.db_uuid"
+          },
+          "id_type": {
+            "S": "db_uuid"
           }
         },
-        "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload, state_machine_execution_arn = :state_machine_execution_arn",
+        "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload",
         "ExpressionAttributeValues": {
           ":analysis_id": {
             "S.$": "$.launch_interop_qc_step.analysis_id"
@@ -98,13 +190,63 @@
           },
           ":analysis_launch_payload": {
             "S.$": "States.JsonToString($.launch_interop_qc_step.analysis_launch_payload)"
-          },
-          ":state_machine_execution_arn": {
-            "S.$": "$$.Execution.Id"
           }
         }
       },
-      "ResultPath": "$.dynamodb_update_item_step",
+      "Next": "add_icav2_partition_entry"
+    },
+    "add_icav2_partition_entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.launch_interop_qc_step.analysis_id",
+          "id_type": "icav2_analysis_id",
+          "db_uuid": {
+            "S.$": "$.create_db_uuid_step.db_uuid"
+          }
+        }
+      },
+      "ResultPath": "$.dynamo_db_put_item_step",
+      "Next": "get_database_entry"
+    },
+    "get_database_entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.create_db_uuid_step.db_uuid"
+          }
+        }
+      },
+      "Next": "put_launch_event",
+      "ResultPath": "$.database_event_data",
+      "ResultSelector": {
+        "portal_run_id.$": "$.Item.portal_run_id.S",
+        "analysis_id.$": "$.Item.analysis_id.S",
+        "analysis_launch_payload.$": "$.Item.analysis_launch_payload.S",
+        "analysis_status": "$.Item.analysis_status.S",
+        "analysis_return_payload": "$.Item.analysis_return_payload.S",
+        "state_machine_execution_arn": "$.Item.state_machine_execution_arn.S"
+      }
+    },
+    "put_launch_event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail.$": "$.database_event_data",
+            "DetailType": "BCLConvertInterOpQcStateChange",
+            "EventBusName": "OrcaBus",
+            "Source": "orcabus.bclconvert_interop_qc",
+            "Resources": []
+          }
+        ]
+      },
       "End": true
     }
   }

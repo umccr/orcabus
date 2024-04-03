@@ -44,11 +44,11 @@ def get_ssm_parameter_value(parameter_path) -> str:
     return get_ssm_client().get_parameter(Name=parameter_path)["Parameter"]["Value"]
 
 
-def get_secret(secret_arn: str) -> str:
+def get_secret(secret_id: str) -> str:
     """
     Return secret value
     """
-    return get_secrets_manager_client().get_secret_value(SecretId=secret_arn)["SecretString"]
+    return get_secrets_manager_client().get_secret_value(SecretId=secret_id)["SecretString"]
 
 
 # Set the icav2 environment variables
@@ -59,7 +59,7 @@ def set_icav2_env_vars():
     """
     environ["ICAV2_BASE_URL"] = ICAV2_BASE_URL
     environ["ICAV2_ACCESS_TOKEN"] = get_secret(
-        get_ssm_parameter_value(ICAV2_ACCESS_TOKEN_URN_SSM_PATH)
+        environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
     )
 
 

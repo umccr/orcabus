@@ -1,0 +1,43 @@
+{
+  "userReference": "umccr_trial__orcabus_semi_automated__bclconvert_qc_pipeline__20240403abcd1234",
+  "pipelineId": "f606f580-d476-47a8-9679-9ddb39fcb0a8",
+  "tags": {
+    "technicalTags": [
+      "portal_run_id=20240403abcd1234"
+    ],
+    "userTags": [
+      "instrument_run_id=231116_A01052_0172_BHVLM5DSX7"
+    ],
+    "referenceTags": []
+  },
+  "analysisInput": {
+    "objectType": "JSON",
+    "inputJson": "{\n  \"bclconvert_report_directory\": {\n    \"class\": \"Directory\",\n    \"location\": \"7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.81ad1cb41b92470d530608dc3cf57419/Reports\"\n  },\n  \"interop_directory\": {\n    \"class\": \"Directory\",\n    \"location\": \"7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.454782a16e9342b9e4e808dc388cff32/InterOp\"\n  },\n  \"run_id\": \"231116_A01052_0172_BHVLM5DSX7\"\n}",
+    "mounts": [
+      {
+        "dataId": "fol.81ad1cb41b92470d530608dc3cf57419",
+        "mountPath": "7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.81ad1cb41b92470d530608dc3cf57419/Reports"
+      },
+      {
+        "dataId": "fol.454782a16e9342b9e4e808dc388cff32",
+        "mountPath": "7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.454782a16e9342b9e4e808dc388cff32/InterOp"
+      }
+    ],
+    "externalData": [],
+    "dataIds": [
+      "fol.81ad1cb41b92470d530608dc3cf57419",
+      "fol.454782a16e9342b9e4e808dc388cff32"
+    ]
+  },
+  "activationCodeDetailId": "7f03a57e-2cfc-4b35-9cbb-d19e6ce9984b",
+  "analysisStorageId": "6e1b6c8f-f913-48b2-9bd0-7fc13eda0fd0",
+  "outputParentFolderId": null,
+  "analysisOutput": [
+    {
+      "sourcePath": "out/",
+      "targetProjectId": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
+      "targetPath": "/bclconvert_interop-qc/1_3_1__1_21__20240312031410/20240403abcd1234/",
+      "type": "FOLDER"
+    }
+  ]
+}

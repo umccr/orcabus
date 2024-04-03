@@ -1,0 +1,109 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "save_payload",
+  "States": {
+    "save_payload": {
+      "Type": "Pass",
+      "Parameters": {
+        "payload.$": "$"
+      },
+      "Next": "get_uuid",
+      "ResultPath": "$.save_payload_step"
+    },
+    "get_uuid": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S": "$.id"
+          },
+          "id_type": {
+            "S": "icav2_analysis_id"
+          }
+        }
+      },
+      "Next": "check_uuid_in_db",
+      "ResultPath": "$.get_uuid_step"
+    },
+    "check_uuid_in_db": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.get_uuid_step.Item",
+            "IsPresent": true
+          },
+          "Next": "Success"
+        }
+      ],
+      "Default": "get_uuid_row"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "get_uuid_row": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.get_uuid_step.db_uuid"
+          },
+          "id_type": {
+            "S": "db_uuid"
+          }
+        }
+      },
+      "Next": "update_db_uuid_row"
+    },
+    "update_db_uuid_row": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "analysis_status": {
+            "S.$": "$.status"
+          },
+          "analysis_return_payload": {
+            "S.$": "$.save_payload_step.payload"
+          }
+        }
+      },
+      "ResultPath": "$.update_db_uuid_row_step",
+      "Next": "get_updated_uuid_db_row",
+      "Comment": "Update the analysis status"
+    },
+    "get_updated_uuid_db_row": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.update_db_uuid_row_step.Item.id.S"
+          }
+        }
+      },
+      "Next": "put_internal_event"
+    },
+    "put_internal_event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail.$": "$.save_payload_step.payload",
+            "DetailType": "BCLConvertInterOpQcStateChange",
+            "EventBusName": "OrcaBus",
+            "Source": "orcabus.bclconvert_interop_qc"
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}
