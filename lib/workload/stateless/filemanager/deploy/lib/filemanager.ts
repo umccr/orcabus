@@ -11,7 +11,7 @@ import { CdkResourceInvoke } from '../../../../components/cdk_resource_invoke';
 /**
  * Stateful config for filemanager.
  */
-export type FilemanagerConfig = {
+export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & {
   /**
    * Queue name used by the EventSource construct.
    */
@@ -21,9 +21,9 @@ export type FilemanagerConfig = {
    */
   eventSourceBuckets: string[];
   /**
-   * Database secret name for the filemanager.
+   * The parameter name that contains the database cluster identifier.
    */
-  databaseSecretName: string;
+  databaseClusterIdentifierParameter: string;
 }
 
 /**
@@ -64,8 +64,11 @@ export class Filemanager extends Stack {
         },
         functionProps: {
           vpc: props.vpc,
-          databaseSecret: props.databaseSecret,
-          databaseSecurityGroup: props.databaseSecurityGroup,
+          host: props.host,
+          port: props.port,
+          user: props.user,
+          database: props.database,
+          securityGroup: props.securityGroup,
           buildEnvironment: props?.buildEnvironment,
           rustLog: props?.rustLog,
         },
@@ -76,8 +79,11 @@ export class Filemanager extends Stack {
 
     new IngestFunction(this, 'IngestLambda', {
       vpc: props.vpc,
-      databaseSecret: props.databaseSecret,
-      databaseSecurityGroup: props.databaseSecurityGroup,
+      host: props.host,
+      port: props.port,
+      user: props.user,
+      database: props.database,
+      securityGroup: props.securityGroup,
       eventSources: props.eventSources,
       buckets: props.buckets,
       buildEnvironment: props?.buildEnvironment,

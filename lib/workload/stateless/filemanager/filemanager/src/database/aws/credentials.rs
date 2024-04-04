@@ -18,6 +18,10 @@ use crate::env::read_env;
 use crate::error::Error::CredentialGeneratorError;
 use crate::error::Result;
 
+/// Number of seconds that the IAM credentials expire in.
+/// Equals the max Lambda timeout.
+pub const CREDENTIAL_EXPIRES_IN_SECONDS: u64 = 900;
+
 /// The builder for the IamGenerator.
 #[derive(Debug, Default)]
 pub struct IamGeneratorBuilder {
@@ -118,7 +122,7 @@ impl IamGenerator {
             .ok_or_else(|| CredentialGeneratorError("missing region".to_string()))?;
 
         let mut signing_settings = SigningSettings::default();
-        signing_settings.expires_in = Some(Duration::from_secs(900));
+        signing_settings.expires_in = Some(Duration::from_secs(CREDENTIAL_EXPIRES_IN_SECONDS));
         signing_settings.signature_location = QueryParams;
 
         let signing_params = SigningParams::builder()

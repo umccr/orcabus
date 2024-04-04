@@ -3,7 +3,6 @@ import { Duration } from 'aws-cdk-lib';
 import { ISecurityGroup, IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Architecture, Version } from 'aws-cdk-lib/aws-lambda';
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { RustFunction } from 'cargo-lambda-cdk';
 import path from 'path';
 import { exec } from 'cargo-lambda-cdk/lib/util';
@@ -15,13 +14,25 @@ import { print } from 'aws-cdk/lib/logging';
  */
 export type DatabaseProps = {
   /**
-   * The database secret.
+   * The host of the database.
    */
-  readonly databaseSecret: ISecret;
+  readonly host: string;
+  /**
+   * The port to connect with.
+   */
+  readonly port: number;
+  /**
+   * The name of the database.
+   */
+  readonly database: string;
+  /**
+   * The user to connect with.
+   */
+  readonly user: string;
   /**
    * The database security group.
    */
-  readonly databaseSecurityGroup: ISecurityGroup;
+  readonly securityGroup: ISecurityGroup;
 }
 
 /**
@@ -82,19 +93,6 @@ export class Function extends Construct {
       description: 'Security group that allows a filemanager Lambda function to egress out.',
     });
 
-    // Todo use secrets manager for this and query for password within Lambda functions.
-    const unsafeConnection =
-      `postgres://` +
-      `${props.databaseSecret.secretValueFromJson('username').unsafeUnwrap()}` +
-      `:` +
-      `${props.databaseSecret.secretValueFromJson('password').unsafeUnwrap()}` +
-      `@` +
-      `${props.databaseSecret.secretValueFromJson('host').unsafeUnwrap()}` +
-      ':' +
-      `${props.databaseSecret.secretValueFromJson('port').unsafeUnwrap()}` +
-      `/` +
-      `${props.databaseSecret.secretValueFromJson('dbname').unsafeUnwrap()}`;
-
     const manifestPath =  path.join(__dirname, '..', '..', '..');
     const uuid = randomUUID();
 
@@ -128,7 +126,11 @@ export class Function extends Construct {
       memorySize: 128,
       timeout: Duration.seconds(28),
       environment: {
-        DATABASE_URL: unsafeConnection,
+        // No password here, using RDS IAM to generate credentials.
+        PGHOST: props.host,
+        PGPORT: props.port.toString(),
+        PGDATABASE: props.database,
+        PGUSER: props.user,
         RUST_LOG:
           props.rustLog ?? `info,${props.package.replace('-', '_')}=trace,filemanager=trace`,
       },
@@ -139,7 +141,7 @@ export class Function extends Construct {
       securityGroups: [
         securityGroup,
         // Allow access to database.
-        props.databaseSecurityGroup
+        props.securityGroup
       ],
       functionName: props.functionName,
     });

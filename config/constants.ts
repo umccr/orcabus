@@ -20,6 +20,9 @@ const prodBucket = 'org.umccr.data.oncoanalyser';
 // Note, this should not end with a hyphen and 6 characters, otherwise secrets manager won't be
 // able to find the secret using a partial ARN.
 const rdsMasterSecretName = 'orcabus/master-rds'; // pragma: allowlist secret
+const databasePort = 5432;
+
+const filemanagerName = 'filemanager';
 
 const orcaBusStatefulConfig = {
   schemaRegistryProps: {
@@ -38,7 +41,7 @@ const orcaBusStatefulConfig = {
     version: AuroraPostgresEngineVersion.VER_15_4,
     parameterGroupName: 'default.aurora-postgresql15',
     username: 'postgres',
-    dbPort: 5432,
+    dbPort: databasePort,
     masterSecretName: rdsMasterSecretName,
     monitoring: {
       cloudwatchLogsExports: ['orcabus-postgresql'],
@@ -85,7 +88,7 @@ const orcaBusStatelessConfig = {
         name: 'metadata_manager',
         authType: DbAuthType.USERNAME_PASSWORD,
       },
-      { name: 'filemanager', authType: DbAuthType.RDS_IAM },
+      { name: filemanagerName, authType: DbAuthType.RDS_IAM },
     ],
   },
 };
@@ -105,7 +108,10 @@ const eventSourceConfig = (bucket: string): EventSourceProps => {
 const filemanagerConfig = (bucket: string): FilemanagerConfig => {
   return {
     eventSourceQueueName: eventSourceQueueName,
-    databaseSecretName: orcaBusStatefulConfig.databaseProps.masterSecretName,
+    databaseClusterIdentifierParameter: orcaBusStatefulConfig.databaseProps.masterSecretName,
+    database: filemanagerName,
+    user: filemanagerName,
+    port: databasePort,
     eventSourceBuckets: [bucket],
   };
 };
