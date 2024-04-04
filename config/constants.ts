@@ -13,6 +13,7 @@ const dbClusterIdentifier = 'orcabus-db';
 const dbClusterResourceIdParameterName = '/orcabus/db-cluster-resource-id';
 
 const eventSourceQueueName = 'orcabus-event-source-queue';
+const eventSourceDLQName = 'orcabus-event-source-dlq';
 const devBucket = 'umccr-temp-dev';
 const stgBucket = 'umccr-temp-stg';
 const prodBucket = 'org.umccr.data.oncoanalyser';
@@ -96,6 +97,7 @@ const orcaBusStatelessConfig = {
 const eventSourceConfig = (bucket: string): EventSourceProps => {
   return {
     queueName: eventSourceQueueName,
+    deadLetterQueueName: eventSourceDLQName,
     maxReceiveCount: 3,
     rules: [
       {

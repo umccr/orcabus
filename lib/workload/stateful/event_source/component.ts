@@ -34,6 +34,10 @@ export type EventSourceProps = {
    */
   queueName: string;
   /**
+   * The name of the dead letter queue to construct.
+   */
+  deadLetterQueueName: string;
+  /**
    * The maximum number of times a message can be unsuccessfully received before
    * pushing it to the DLQ.
    */
@@ -55,7 +59,10 @@ export class EventSource extends Construct {
   constructor(scope: Construct, id: string, props: EventSourceProps) {
     super(scope, id);
 
-    this.deadLetterQueue = new Queue(this, 'DeadLetterQueue', { enforceSSL: true });
+    this.deadLetterQueue = new Queue(this, 'DeadLetterQueue', {
+      queueName: props.deadLetterQueueName,
+      enforceSSL: true,
+    });
     this.queue = new Queue(this, 'Queue', {
       queueName: props.queueName,
       enforceSSL: true,
