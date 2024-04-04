@@ -112,7 +112,7 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     );
 
     // Add state machine execution permissions to stateMachineBatch role
-    stateMachineSingle.grantStartSyncExecution(
+    stateMachineSingle.grantStartExecution(
       stateMachineBatch.role
     )
 
