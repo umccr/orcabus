@@ -170,9 +170,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id": {
-            "S.$": "$.create_db_uuid_step.db_uuid"
-          },
+          "id.$": "$.create_db_uuid_step.db_uuid",
           "id_type": "db_uuid"
         },
         "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload",
