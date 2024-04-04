@@ -20,10 +20,11 @@ interface ctTSOv2LaunchStepFunctionConstructProps {
   icav2_copy_batch_state_machine_obj: sfn.IStateMachine,
   ssm_parameter_obj_list: ssm.IStringParameter[]; // List of parameters the workflow session state machine will need access to
   /* Lambdas paths */
+  generate_db_uuid_lambda_path: string; // __dirname + '/../../../lambdas/generate_db_uuid'
   generate_trimmed_samplesheet_lambda_path: string; // __dirname + '/../../../lambdas/generate_trimmed_samplesheet_lambda_path'
-  upload_samplesheet_to_cache_dir_lambda_path: string; // __dirname + '/../../../lambdas/get_cttso_cache_and_output_paths'
-  generate_copy_manifest_dict_lambda_path: string; // __dirname + '/../../../lambdas/get_cttso_cache_and_output_paths'
-  launch_cttso_nextflow_pipeline_lambda_path: string; // __dirname + '/../../../lambdas/get_cttso_cache_and_output_paths'
+  upload_samplesheet_to_cache_dir_lambda_path: string; // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir'
+  generate_copy_manifest_dict_lambda_path: string; // __dirname + '/../../../lambdas/generate_copy_manifest_dict'
+  launch_cttso_nextflow_pipeline_lambda_path: string; // __dirname + '/../../../lambdas/launch_cttso_nextflow_pipeline'
   /* Step function templates */
   workflow_definition_body_path: string; // __dirname + '/../../../step_functions_templates/cttso_v2_launch_step_function.json'
 }
@@ -70,6 +71,24 @@ export class ctTSOv2LaunchStepFunctionStateMachineConstruct extends Construct {
           <iam.IRole>launch_cttso_nextflow_pipeline_lambda_obj.role
         )
       },
+    );
+
+    // generate_db_uuid_lambda_path lambda
+    // Doesnt need any ssm parameters
+    const generate_db_uuid_lambda_obj = new PythonFunction(
+      this,
+      'generate_db_uuid_lambda_python_function',
+      {
+        entry: props.generate_db_uuid_lambda_path,
+        runtime: lambda.Runtime.PYTHON_3_11,
+        index: 'handler.py',
+        handler: 'handler',
+        memorySize: 1024,
+        // @ts-ignore
+        layers: [props.lambda_layer_obj.lambda_layer_version_obj],
+        // @ts-ignore
+        timeout: Duration.seconds(60),
+      }
     );
 
     // generate_copy_manifest_dict lambda
@@ -150,6 +169,7 @@ export class ctTSOv2LaunchStepFunctionStateMachineConstruct extends Construct {
       definitionBody: DefinitionBody.fromFile(props.workflow_definition_body_path),
       // definitionSubstitutions
       definitionSubstitutions: {
+        '__generate_db_uuid__': generate_db_uuid_lambda_obj.functionArn,
         '__launch_cttso_nextflow_pipeline__': launch_cttso_nextflow_pipeline_lambda_obj.functionArn,
         '__generate_copy_manifest_dict__': generate_copy_manifest_dict_lambda_obj.functionArn,
         '__generate_trimmed_samplesheet__': generate_trimmed_samplesheet_lambda_obj.functionArn,
@@ -159,7 +179,9 @@ export class ctTSOv2LaunchStepFunctionStateMachineConstruct extends Construct {
       },
     });
 
+    // Grant lambda invoke permissions to the state machine
     [
+      generate_db_uuid_lambda_obj,
       launch_cttso_nextflow_pipeline_lambda_obj,
       generate_copy_manifest_dict_lambda_obj,
       generate_trimmed_samplesheet_lambda_obj,
@@ -171,6 +193,11 @@ export class ctTSOv2LaunchStepFunctionStateMachineConstruct extends Construct {
           <iam.IRole>stateMachine.role
         )
       }
+    )
+
+    // Allow state machine to read/write to dynamodb table
+    props.dynamodb_table_obj.grantReadWriteData(
+      stateMachine.role
     )
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
@@ -191,7 +218,7 @@ export class ctTSOv2LaunchStepFunctionStateMachineConstruct extends Construct {
     );
 
     // Add state machine execution permissions to stateMachine role
-    props.icav2_copy_batch_state_machine_obj.grantStartSyncExecution(
+    props.icav2_copy_batch_state_machine_obj.grantStartExecution(
       stateMachine.role
     )
 

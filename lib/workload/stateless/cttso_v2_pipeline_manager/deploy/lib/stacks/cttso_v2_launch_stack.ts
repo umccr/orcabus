@@ -73,7 +73,6 @@ export class ctTSOV2LaunchStateMachineStack extends cdk.Stack {
       ),
     );
 
-
     const cttso_v2_launch_state_machine = new ctTSOv2LaunchStepFunctionStateMachineConstruct(
       this,
       id,
@@ -85,6 +84,7 @@ export class ctTSOV2LaunchStateMachineStack extends cdk.Stack {
         icav2_copy_batch_state_machine_obj: icav2_copy_batch_stack_state_machine_obj,
         ssm_parameter_obj_list: ssm_parameter_obj_list,
         /* Lambdas paths */
+        generate_db_uuid_lambda_path: __dirname + '/../../../lambdas/generate_db_uuid', // __dirname + '/../../../lambdas/generate_uuid'
         generate_trimmed_samplesheet_lambda_path: __dirname + '/../../../lambdas/generate_and_trim_cttso_samplesheet_dict', // __dirname + '/../../../lambdas/generate_and_trim_cttso_samplesheet_dict'
         upload_samplesheet_to_cache_dir_lambda_path: __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir', // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir'
         generate_copy_manifest_dict_lambda_path: __dirname + '/../../../lambdas/generate_copy_manifest_dict', // __dirname + '/../../../lambdas/generate_copy_manifest_dict'
