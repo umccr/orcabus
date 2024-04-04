@@ -1,7 +1,7 @@
 
 const STATEFUL_ROOT_SSM_PARAMETER_PATH = "/umccr/orcabus/stateful/cttso_v2_pipeline_dynamo_db";
 export const DYNAMODB_TABLE_ARN_SSM_PARAMETER_PATH = `${STATEFUL_ROOT_SSM_PARAMETER_PATH}/analysis_table_arn`;
-export const DYNAMODB_TABLE_NAME_SSM_PARAMETER_PATH = `$STATEFUL_{ROOT_SSM_PARAMETER_PATH}/analysis_table_name`;
+export const DYNAMODB_TABLE_NAME_SSM_PARAMETER_PATH = `${STATEFUL_ROOT_SSM_PARAMETER_PATH}/analysis_table_name`;
 
 export const ICAV2_ACCESS_TOKEN_SECRET_ID = "ICAv2Jwticav2-credentials-umccr-service-user-trial"
 export const ICAV2_COPY_BATCH_UTILITY_STATE_MACHINE_ARN_SSM_PARAMETER_PATH = "/icav2_copy_batch_utility/state_machine_arn_batch"

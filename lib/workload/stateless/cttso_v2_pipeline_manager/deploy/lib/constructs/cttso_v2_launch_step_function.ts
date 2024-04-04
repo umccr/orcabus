@@ -84,7 +84,7 @@ export class ctTSOv2LaunchStepFunctionStateMachineConstruct extends Construct {
         handler: 'handler',
         memorySize: 1024,
         // @ts-ignore
-        layers: [lambda_layer.lambda_layer_version_obj],
+        layers: [props.lambda_layer_obj.lambda_layer_version_obj],
         // @ts-ignore
         timeout: Duration.seconds(60),
       }
@@ -102,7 +102,7 @@ export class ctTSOv2LaunchStepFunctionStateMachineConstruct extends Construct {
         handler: 'handler',
         memorySize: 1024,
         // @ts-ignore
-        layers: [lambda_layer.lambda_layer_version_obj],
+        layers: [props.lambda_layer_obj.lambda_layer_version_obj],
         // @ts-ignore
         timeout: Duration.seconds(60),
       }
@@ -119,7 +119,7 @@ export class ctTSOv2LaunchStepFunctionStateMachineConstruct extends Construct {
         handler: 'handler',
         memorySize: 1024,
         // @ts-ignore
-        layers: [lambda_layer.lambda_layer_version_obj],
+        layers: [props.lambda_layer_obj.lambda_layer_version_obj],
         // @ts-ignore
         timeout: Duration.seconds(60),
         environment: {
