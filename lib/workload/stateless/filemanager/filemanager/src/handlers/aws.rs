@@ -86,6 +86,16 @@ pub async fn create_database_pool() -> Result<PgPool, Error> {
     Ok(Client::create_pool(Some(IamGeneratorBuilder::default().build().await?)).await?)
 }
 
+/// Update connection options with new credentials.
+/// Todo, replace this with sqlx `before_connect` once it is implemented.
+pub async fn update_credentials(pool: &PgPool) -> Result<(), Error> {
+    pool.set_connect_options(
+        Client::connect_options(Some(IamGeneratorBuilder::default().build().await?)).await?,
+    );
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use aws_lambda_events::sqs::SqsMessage;

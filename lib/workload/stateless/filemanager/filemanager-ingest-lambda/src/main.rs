@@ -6,7 +6,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 use filemanager::clients::aws::s3::Client;
 use filemanager::database::Client as DbClient;
-use filemanager::handlers::aws::{create_database_pool, ingest_event};
+use filemanager::handlers::aws::{create_database_pool, ingest_event, update_credentials};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -19,6 +19,8 @@ async fn main() -> Result<(), Error> {
 
     let options = &create_database_pool().await?;
     run(service_fn(|event: LambdaEvent<SqsEvent>| async move {
+        update_credentials(options).await?;
+
         ingest_event(
             event.payload,
             Client::with_defaults().await,
