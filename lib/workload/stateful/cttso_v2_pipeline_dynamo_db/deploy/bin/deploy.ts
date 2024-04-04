@@ -1,38 +1,24 @@
+#!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
-import { Construct } from 'constructs';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
-import { DYNAMODB_SSM_PARAMETER_PATH } from '../constants';
-export class ctTSOV2DynamoDBTable extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
+import { ctTSOV2DynamoDBTable } from '../lib/cttso-v2-dynamodb-table';
 
-    // The code that defines your stack goes here
+const app = new cdk.App();
+new ctTSOV2DynamoDBTable(app, 'ctTSOV2DynamoDBTable', {
+  /* If you don't specify 'env', this stack will be environment-agnostic.
+   * Account/Region-dependent features and context lookups will not work,
+   * but a single synthesized template can be deployed anywhere. */
 
-    // example resource
-    // const queue = new sqs.Queue(this, 'DeployQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
+  /* Uncomment the next line to specialize this stack for the AWS Account
+   * and Region that are implied by the current CLI configuration. */
+  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
 
-    /*
-    Initialise dynamodb table, where portal_run_id is the primary sort key
-    */
-    const dynamodb_table = new dynamodb.Table(this, 'ctTSOV2DynamoDBTable', {
-      partitionKey: {
-        name: 'portal_run_id',
-        type: dynamodb.AttributeType.STRING,
-      },
-      tableName: 'ctTSOV2ICAv2AnalysesDynamoDBTable',
-      removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
-    });
+  /* Uncomment the next line if you know exactly what Account and Region you
+   * want to deploy the stack to. */
+  // env: { account: '123456789012', region: 'us-east-1' },
 
-    /*
-    Generate a ssm parameter to store the table arn so it can be referred to be other stacks
-    */
-    const dynamodb_table_ssm_parameter = new ssm.StringParameter(this, 'ctTSOV2DynamoDBTableArn', {
-      parameterName: DYNAMODB_SSM_PARAMETER_PATH,
-      stringValue: dynamodb_table.tableArn,
-    });
-  }
-}
+  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+  env: {
+    account: process.env.CDK_DEFAULT_ACCOUNT,
+    region: process.env.CDK_DEFAULT_REGION,
+  },
+});

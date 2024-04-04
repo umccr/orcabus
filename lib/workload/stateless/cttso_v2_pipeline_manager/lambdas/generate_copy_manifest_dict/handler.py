@@ -9,8 +9,7 @@ This will be launched in a downstream step
 Given
 
 {
-    "cache_path": "/path/to/cache",
-    "project_id": "project_id",
+    "cache_uri": "/path/to/cache",
     "sample_id": "sample_id",
     "fastq_list_rows": [ { "RGID": "...", "RGLB": "...", "RGSM": "sample_id", "Read1FileURI": "icav2://", "...", "Read1FileURISrc": "icav2://"} ]
     /* Except fastq list rows is b64gz encoded */
@@ -21,11 +20,11 @@ Return a manifest list
 {
     "manifest_list": [
       {
-        "fastq_list_rows[0].Read1FileURISrc": [  # BSSH trial
-            "icav2://{project_id}{cache_path}",  # dest_uri
+        "fastq_list_rows[0].Read1FileURI": [  # trial
+            "cache_uri",  # dest_uri
         ],
-        "fastq_list_rows[0].Read2FileURISrc": [  # BSSH trial
-            "icav2://{project_id}{cache_path}",  # dest_uri
+        "fastq_list_rows[0].Read2FileURI": [  # trial
+            "cache_uri",  # dest_uri
         ],
         ...
       }
@@ -35,6 +34,7 @@ Return a manifest list
 from functools import reduce
 from pathlib import Path
 from typing import Dict, List
+from urllib.parse import urlparse
 
 from wrapica.enums import DataType
 from wrapica.project_data import convert_project_id_and_data_path_to_icav2_uri
@@ -56,28 +56,23 @@ def handler(event, context):
     """
 
     # Get the cache path
-    cache_path = event.get("cache_path", None)
+    cache_uri = event.get("cache_uri", None)
+    # Check cache path
+    if cache_uri is None:
+        raise ValueError("Cache uri is required")
+
+    project_id = urlparse(cache_uri).netloc
+    cache_path = Path(urlparse(cache_uri).path)
 
     # Get sample id
     sample_id = event.get("sample_id", None)
 
-    # Get the project id
-    project_id = event.get("project_id", None)
-
     # Get fastq list rows
     fastq_list_rows_compressed_str = event.get("fastq_list_rows_b64gz", None)
-
-    # Check cache path
-    if cache_path is None:
-        raise ValueError("Cache path is required")
 
     # Check sample id
     if sample_id is None:
         raise ValueError("Sample id is required")
-
-    # Check project id
-    if project_id is None:
-        raise ValueError("Project id is required")
 
     # Check fastq list rows
     if fastq_list_rows_compressed_str is None:
@@ -108,8 +103,8 @@ def handler(event, context):
             lambda row_iter_1, row_iter_2: row_iter_1 + row_iter_2,
             map(
                 lambda fastq_list_row_iter: [
-                    fastq_list_row_iter.get("Read1FileURISrc"),
-                    fastq_list_row_iter.get("Read2FileURISrc")
+                    fastq_list_row_iter.get("Read1FileURI"),
+                    fastq_list_row_iter.get("Read2FileURI")
                 ],
                 fastq_list_rows
             )

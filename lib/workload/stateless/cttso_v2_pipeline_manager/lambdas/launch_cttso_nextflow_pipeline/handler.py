@@ -211,7 +211,8 @@ def handler(event, context):
     return {
         "analysis_id": analysis_launch_obj.id,
         "analysis_return_payload": recursively_build_open_api_body_from_libica_item(analysis_launch_obj),
-        "analysis_launch_payload": analysis_launch_payload
+        "analysis_launch_payload": analysis_launch_payload,
+        "analysis_status": analysis_launch_obj.status
     }
 
 

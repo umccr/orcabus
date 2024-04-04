@@ -1,35 +1,54 @@
 {
   "Comment": "Move inputs to workflow_inputs",
-  "StartAt": "Move Inputs",
+  "StartAt": "move_inputs",
   "States": {
-    "Move Inputs": {
+    "move_inputs": {
       "Type": "Pass",
-      "Next": "set_technical_tags",
+      "Next": "check_portal_run_id_in_db",
       "Parameters": {
         "workflow_inputs.$": "$"
       },
-      "Comment": "We expect the inputs:\n* \"samplesheet_b64gz\"\n* \"project_id\"\n* \"portal_run_id\"\n* \"sample_id\"\n* \"fastq_list_rows_b64gz\"\n\nPlus the following workflow input parameters\n* user_reference\n* user_tags\n"
+      "Comment": "We expect the inputs:\n* \"samplesheet_b64gz\"\n* \"project_id\"\n* \"portal_run_id\"\n* \"sample_id\"\n* \"fastq_list_rows_b64gz\"\n \"cache_uri\"\n* \"output_uri\"\n* \nPlus the following workflow input parameters\n* user_reference\n* user_tags\n"
     },
-    "set_technical_tags": {
-      "Type": "Pass",
-      "Next": "get_cache_and_output_paths",
+    "check_portal_run_id_in_db": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
-        "technical_tags": {
-          "portal_run_id.$": "$.workflow_inputs.portal_run_id",
-          "step_functions_execution_arn.$": "$$.Execution.Id"
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.workflow_inputs.portal_run_id"
+          },
+          "id_type": {
+            "S": "portal_run_id"
+          }
         }
       },
-      "ResultPath": "$.get_technical_tags_step"
+      "Next": "is_portal_run_id_in_db",
+      "ResultPath": "$.portal_run_id_in_db_step",
+      "ResultSelector": {
+        "db_response.$": "$"
+      }
     },
-    "get_cache_and_output_paths": {
+    "is_portal_run_id_in_db": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.portal_run_id_in_db_step.db_response.Item",
+            "IsPresent": true
+          },
+          "Next": "generate_db_uuid"
+        }
+      ],
+      "Default": "get_database_entry"
+    },
+    "generate_db_uuid": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
-        "FunctionName": "${__get_cttso_cache_and_output_paths__}",
+        "FunctionName": "${__generate_db_uuid__}",
         "Payload": {
-          "project_id.$": "$.workflow_inputs.project_id",
-          "portal_run_id.$": "$.workflow_inputs.portal_run_id",
-          "sample_id.$": "$.workflow_inputs.sample_id"
         }
       },
       "Retry": [
@@ -45,15 +64,88 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "copy_files_to_cache_directory",
-      "Comment": "Takes in: \n* project id\n* portal run id \n* sample id\n\nOutputs\n* cache_path\n* output_path\n* cache_uri\n* output_uri\n\nvarious downstream steps will need a combination of these",
-      "ResultPath": "$.get_cache_and_output_paths_step",
       "ResultSelector": {
-        "cache_path.$": "$.Payload.cache_path",
-        "output_path.$": "$.Payload.output_path",
-        "cache_uri.$": "$.Payload.cache_uri",
-        "output_uri.$": "$.Payload.output_uri"
-      }
+        "db_uuid.$": "$.Payload.db_uuid"
+      },
+      "ResultPath": "$.create_db_uuid_step",
+      "Next": "initialise_db_item"
+    },
+    "initialise_db_item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.create_db_uuid_step.db_uuid",
+          "id_type": "db_uuid",
+          "portal_run_id": {
+            "S.$": "$.workflow_inputs.portal_run_id"
+          },
+          "state_machine_execution_arn": {
+            "S.$": "$$.Execution.Id"
+          },
+          "analysis_status": {
+            "S": "PRE_LAUNCH"
+          },
+          "analysis_id": {
+            "S": ""
+          },
+          "analysis_return_payload": {
+            "S": ""
+          },
+          "analysis_launch_payload": {
+            "S": ""
+          }
+        }
+      },
+      "ResultPath": "$.dynamo_db_put_item_step",
+      "Next": "put_portal_partition_key_item"
+    },
+    "put_portal_partition_key_item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.workflow_inputs.portal_run_id",
+          "id_type": "portal_run_id",
+          "db_uuid": {
+            "S.$": "$.create_db_uuid_step.db_uuid"
+          }
+        }
+      },
+      "ResultPath": "$.dynamo_db_put_item_step",
+      "Next": "add_technical_tags"
+    },
+    "add_technical_tags": {
+      "Type": "Pass",
+      "Parameters": {
+        "technical_tags": {
+          "portal_run_id.$": "$.workflow_inputs.portal_run_id",
+          "step_functions_execution_arn.$": "$$.Execution.Id"
+        }
+      },
+      "ResultPath": "$.add_technical_tags_step",
+      "Next": "update_entry_pre_fastq_copy"
+    },
+    "update_entry_pre_fastq_copy": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.create_db_uuid_step.db_uuid",
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET analysis_status = :analysis_status",
+        "ExpressionAttributeValues": {
+          ":analysis_status": {
+            "S": "CACHE_COPY_IN_PROGRESS"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_pre_fastq",
+      "Next": "copy_files_to_cache_directory"
     },
     "copy_files_to_cache_directory": {
       "Type": "Parallel",
@@ -97,8 +189,7 @@
               "Parameters": {
                 "FunctionName": "${__upload_samplesheet_to_cache_dir__}",
                 "Payload": {
-                  "cache_path.$": "$.get_cache_and_output_paths_step.cache_path",
-                  "project_id.$": "$.workflow_inputs.project_id",
+                  "cache_uri.$": "$.workflow_inputs.cache_uri",
                   "samplesheet_dict_b64gz.$": "$.generate_trimmed_samplesheet_step.samplesheet_b64gz"
                 }
               },
@@ -134,8 +225,7 @@
               "Parameters": {
                 "FunctionName": "${__generate_copy_manifest_dict__}",
                 "Payload": {
-                  "cache_path.$": "$.get_cache_and_output_paths_step.cache_path",
-                  "project_id.$": "$.workflow_inputs.project_id",
+                  "cache_uri.$": "$.workflow_inputs.cache_uri",
                   "sample_id.$": "$.workflow_inputs.sample_id",
                   "fastq_list_rows_b64gz.$": "$.workflow_inputs.fastq_list_rows_b64gz"
                 }
@@ -178,7 +268,7 @@
           }
         }
       ],
-      "Next": "launch_nextflow_object",
+      "Next": "update_entry_post_fastq_copy",
       "ResultSelector": {
         "trimmed_samplesheet_b64gz.$": "$.[0].generate_trimmed_samplesheet_step.samplesheet_b64gz",
         "samplesheet_file_id.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_id",
@@ -187,20 +277,38 @@
       },
       "ResultPath": "$.copy_files_to_cache_directory_step"
     },
+    "update_entry_post_fastq_copy": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.create_db_uuid_step.db_uuid",
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET analysis_status = :analysis_status",
+        "ExpressionAttributeValues": {
+          ":analysis_status": {
+            "S": "CACHE_COPY_COMPLETE"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_fastq",
+      "Next": "launch_nextflow_object"
+    },
     "launch_nextflow_object": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "OutputPath": "$.Payload",
       "Parameters": {
         "FunctionName": "${__launch_cttso_nextflow_pipeline__}",
         "Payload": {
           "project_id.$": "$.workflow_inputs.project_id",
           "user_reference.$": "$.workflow_inputs.user_reference",
-          "run_folder_uri.$": "$.get_cache_and_output_paths_step.cache_uri",
+          "run_folder_uri.$": "$.workflow_inputs.cache_uri",
           "samplesheet_uri.$": "$.copy_files_to_cache_directory_step.samplesheet_file_uri",
           "sample_id.$": "$.workflow_inputs.sample_id",
-          "analysis_output_uri.$": "$.get_cache_and_output_paths_step.output_uri",
-          "technical_tags.$": "$.get_technical_tags_step.technical_tags",
+          "analysis_output_uri.$": "$.workflow_inputs.output_uri",
+          "technical_tags.$": "$.add_technical_tags_step.technical_tags",
           "user_tags.$": "$.workflow_inputs.user_tags"
         }
       },
@@ -217,6 +325,96 @@
           "BackoffRate": 2
         }
       ],
+      "ResultPath": "$.launch_nextflow_object_step",
+      "ResultSelector": {
+        "analysis_id.$": "$.Payload.analysis_id",
+        "analysis_status.$": "$.Payload.analysis_status",
+        "analysis_return_payload.$": "$.Payload.analysis_return_payload",
+        "analysis_launch_payload.$": "$.Payload.analysis_launch_payload"
+      },
+      "Next": "update_entry_post_launch"
+    },
+    "update_entry_post_launch": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.create_db_uuid_step.db_uuid"
+          },
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload",
+        "ExpressionAttributeValues": {
+          ":analysis_id": {
+            "S.$": "$.launch_nextflow_object_step.analysis_id"
+          },
+          ":analysis_status": {
+            "S.$": "$.launch_nextflow_object_step.analysis_status"
+          },
+          ":analysis_return_payload": {
+            "S.$": "States.JsonToString($.launch_nextflow_object_step.analysis_return_payload)"
+          },
+          ":analysis_launch_payload": {
+            "S.$": "States.JsonToString($.launch_nextflow_object_step.analysis_launch_payload)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "add_icav2_partition_entry"
+    },
+    "add_icav2_partition_entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.launch_nextflow_object_step.analysis_id",
+          "id_type": "icav2_analysis_id",
+          "db_uuid": {
+            "S.$": "$.create_db_uuid_step.db_uuid"
+          }
+        }
+      },
+      "ResultPath": "$.dynamo_db_put_item_step",
+      "Next": "get_database_entry"
+    },
+    "get_database_entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.create_db_uuid_step.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "Next": "put_launch_event",
+      "ResultPath": "$.database_event_data",
+      "ResultSelector": {
+        "portal_run_id.$": "$.Item.portal_run_id.S",
+        "analysis_id.$": "$.Item.analysis_id.S",
+        "analysis_launch_payload.$": "$.Item.analysis_launch_payload.S",
+        "analysis_status": "$.Item.analysis_status.S",
+        "analysis_return_payload": "$.Item.analysis_return_payload.S",
+        "state_machine_execution_arn": "$.Item.state_machine_execution_arn.S"
+      }
+    },
+    "put_launch_event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail.$": "$.database_event_data",
+            "DetailType": "ctTSOv2StateChange",
+            "EventBusName": "OrcaBus",
+            "Source": "orcabus.cttso_v2",
+            "Resources": []
+          }
+        ]
+      },
       "End": true
     }
   }

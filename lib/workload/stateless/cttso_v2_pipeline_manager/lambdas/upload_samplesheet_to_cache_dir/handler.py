@@ -6,8 +6,7 @@ Upload samplesheet csv to cache path
 Takes in a compressed samplesheet dict, generates the samplesheet as a CSV and then uploads it to the cache path
 
 {
-    "cache_path": "/path/to/cache",
-    "project_id": "project_id",
+    "cache_uri": "icav2://project_id/path/to/cache",
     "samplesheet_dict_b64gz": "H4sIAAAAAAAA/8tJLS5RsjI2VrJSSU1RyC9KTS7J"
 }
 
@@ -22,6 +21,7 @@ Returns the file id of the uploaded samplesheet
 # Standard imports
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from urllib.parse import urlparse
 
 from wrapica.project_data import (
     write_icav2_file_contents,
@@ -48,16 +48,15 @@ def handler(event, context):
     """
 
     # Check inputs are present
-    cache_path = event.get("cache_path")
-    project_id = event.get("project_id")
+    cache_uri = event.get("cache_uri")
+    project_id = urlparse(cache_uri).netloc
+    cache_path = Path(urlparse(cache_uri).path)
+
     samplesheet_dict_b64gz = event.get("samplesheet_dict_b64gz")
 
     # Check cache path
-    if not cache_path:
-        raise ValueError("cache_path is required")
-    # Check project id
-    if not project_id:
-        raise ValueError("project_id is required")
+    if not cache_uri:
+        raise ValueError("cache_uri is required")
     # CHeck samplesheet dict
     if not samplesheet_dict_b64gz:
         raise ValueError("samplesheet_dict_b64gz is required")
@@ -76,7 +75,7 @@ def handler(event, context):
         # Generate the samplesheet as a csv
         samplesheet_file_id = write_icav2_file_contents(
             project_id=project_id,
-            data_path=Path(cache_path) / "SampleSheet.csv",
+            data_path=cache_path / "SampleSheet.csv",
             file_stream_or_path=Path(samplesheet_tmp_h.name)
         )
 
@@ -108,7 +107,7 @@ def handler(event, context):
 #         json.dumps(
 #             handler(
 #                 event={
-#                     "cache_path": "/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache",
+#                     "cache_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache",
 #                     "project_id": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
 #                     "samplesheet_dict_b64gz": samplesheet_dict_b64gz
 #                 },
