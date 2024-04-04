@@ -14,8 +14,8 @@ use crate::uuid::UuidGenerator;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
-pub struct Ingester {
-    client: Client,
+pub struct Ingester<'a> {
+    client: Client<'a>,
 }
 
 /// The type representing an insert query.
@@ -25,16 +25,16 @@ struct Insert {
     number_duplicate_events: i32,
 }
 
-impl Ingester {
+impl<'a> Ingester<'a> {
     /// Create a new ingester.
-    pub fn new(client: Client) -> Self {
+    pub fn new(client: Client<'a>) -> Self {
         Self { client }
     }
 
     /// Create a new ingester with a default database client.
     pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
         Ok(Self {
-            client: Client::with_defaults(generator).await?,
+            client: Client::from_generator(generator).await?,
         })
     }
 
@@ -242,7 +242,7 @@ impl Ingester {
 }
 
 #[async_trait]
-impl Ingest for Ingester {
+impl<'a> Ingest for Ingester<'a> {
     async fn ingest(&self, events: EventSourceType) -> Result<()> {
         match events {
             EventSourceType::S3(events) => self.ingest_events(events).await,
@@ -1503,7 +1503,7 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) async fn fetch_results(ingester: &Ingester) -> (Vec<PgRow>, Vec<PgRow>) {
+    pub(crate) async fn fetch_results<'a>(ingester: &'a Ingester<'a>) -> (Vec<PgRow>, Vec<PgRow>) {
         (
             sqlx::query("select * from object")
                 .fetch_all(ingester.client.pool())
@@ -1589,7 +1589,7 @@ pub(crate) mod tests {
         update_test_events(expected_events_simple())
     }
 
-    pub(crate) fn test_ingester(pool: PgPool) -> Ingester {
+    pub(crate) fn test_ingester<'a>(pool: PgPool) -> Ingester<'a> {
         Ingester::new(Client::new(pool))
     }
 }

@@ -9,20 +9,20 @@ use crate::error::Result;
 
 /// A struct to perform database migrations.
 #[derive(Debug)]
-pub struct Migration {
-    client: Client,
+pub struct Migration<'a> {
+    client: Client<'a>,
 }
 
-impl Migration {
+impl<'a> Migration<'a> {
     /// Create a new migration.
-    pub fn new(client: Client) -> Self {
+    pub fn new(client: Client<'a>) -> Self {
         Self { client }
     }
 
     /// Create a new migration with a default database client.
     pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
         Ok(Self {
-            client: Client::with_defaults(generator).await?,
+            client: Client::from_generator(generator).await?,
         })
     }
 
@@ -38,7 +38,7 @@ impl Migration {
 }
 
 #[async_trait]
-impl Migrate for Migration {
+impl<'a> Migrate for Migration<'a> {
     async fn migrate(&self) -> Result<()> {
         trace!("applying migrations");
         Self::migrator()

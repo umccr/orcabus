@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 
-use filemanager::database::aws::credentials::IamGeneratorBuilder;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
 
 use filemanager::database::aws::migration::Migration;
+use filemanager::database::Client as DbClient;
 use filemanager::database::Migrate;
+use filemanager::handlers::aws::create_database_pool;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -18,12 +19,10 @@ async fn main() -> Result<(), Error> {
         .with(env_filter)
         .init();
 
+    let options = &create_database_pool().await?;
     run(service_fn(
         |_: LambdaEvent<HashMap<String, String>>| async move {
-            Migration::with_defaults(Some(IamGeneratorBuilder::default().build().await?))
-                .await?
-                .migrate()
-                .await
+            Migration::new(DbClient::from_ref(options)).migrate().await
         },
     ))
     .await

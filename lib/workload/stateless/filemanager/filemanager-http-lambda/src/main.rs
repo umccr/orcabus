@@ -6,8 +6,8 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 use filemanager::clients::aws::s3::Client as S3Client;
 use filemanager::clients::aws::sqs::Client as SQSClient;
-use filemanager::database::aws::credentials::IamGeneratorBuilder;
-use filemanager::handlers::aws::receive_and_ingest;
+use filemanager::database::Client as DbClient;
+use filemanager::handlers::aws::{create_database_pool, receive_and_ingest};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -18,13 +18,13 @@ async fn main() -> Result<(), Error> {
         .with(env_filter)
         .init();
 
+    let options = &create_database_pool().await?;
     run(service_fn(|_: LambdaEvent<()>| async move {
         receive_and_ingest(
             S3Client::with_defaults().await,
             SQSClient::with_defaults().await,
             None::<String>,
-            None,
-            Some(IamGeneratorBuilder::default().build().await?),
+            DbClient::from_ref(options),
         )
         .await?;
 
