@@ -1,4 +1,4 @@
--r requirements.txt
+-r requirements-full.txt
 pytest==7.4.4
 factory_boy==3.3.0
 pytz==2024.1

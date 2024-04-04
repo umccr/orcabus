@@ -33,17 +33,18 @@ class Quality(models.TextChoices):
 
 class LibraryType(models.TextChoices):
     TEN_X = '10X'
+    BIMODAL = 'BiModal'
     CT_DNA = 'ctDNA'
     CT_TSO = 'ctTSO'
     EXOME = 'exome'
+    ME_DIP = 'MeDIP'
     METAGENM = 'Metagenm'
     METHYL_SEQ = 'MethylSeq'
+    OTHER = 'other'
     TSO_DNA = 'TSO-DNA'
     TSO_RNA = 'TSO-RNA'
     WGS = 'WGS'
     WTS = 'WTS'
-    BIMODAL = 'BiModal'
-    OTHER = 'other'
 
 
 class LibraryManager(BaseManager):

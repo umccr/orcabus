@@ -130,23 +130,16 @@ def persist_lab_metadata(df: pd.DataFrame):
             else:
                 specimen_updated.append(specimen)
 
-            # making sure coverage is float-able
-            lib_coverage = None
-            try:
-                lib_coverage = float(record.get('coverage'))
-            except (ValueError, TypeError):
-                pass
-
             library, is_lib_created = Library.objects.update_or_create(
                 internal_id=record.get('library_id'),
                 defaults={
                     'internal_id': record.get('library_id'),
                     'phenotype': record.get('phenotype'),
                     'workflow': record.get('workflow'),
-                    'quality': record.get('quality'),
+                    'quality': sanitize_library_quality(record.get('quality')),
                     'type': record.get('type'),
                     'assay': record.get('assay'),
-                    'coverage': f"{lib_coverage}",
+                    'coverage': sanitize_library_coverage(record.get('coverage')),
                     'specimen_id': specimen.id
                 }
             )
@@ -222,7 +215,6 @@ def warn_drop_duplicated_library(df: pd.DataFrame) -> pd.DataFrame:
     """
     # some warning for duplicates
     dup_lib_list = df[df.duplicated(subset=['library_id'], keep='last')]["library_id"].tolist()
-    print('dup_lib_list', dup_lib_list)
     if len(dup_lib_list) > 0:
         logger.warning(f"data contain duplicate libraries: {', '.join(dup_lib_list)}")
 
@@ -256,3 +248,26 @@ def _clean_data_cell(value):
         value = None
 
     return value
+
+
+def sanitize_library_quality(value: str):
+    """
+    convert value that is valid in the tracking sheet to return a value that is recognizable by the Django Model
+    """
+
+    if value == 'VeryPoor':
+        return 'very-poor'
+    return value
+
+
+def sanitize_library_coverage(value: str):
+    """
+    convert value that is valid in the tracking sheet to return a value that is recognizable by the Django Model
+    """
+    try:
+        # making coverage is float-able type
+        lib_coverage = float(value)
+        return f'{lib_coverage}'
+    
+    except (ValueError, TypeError):
+        return None

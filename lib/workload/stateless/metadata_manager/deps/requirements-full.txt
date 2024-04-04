@@ -1,0 +1,9 @@
+# The full requirement dependencies to do any complex action (e.g. sync from gsheet requiring pandas)
+
+-r requirements-slim.txt
+
+pandas==2.2.1
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+gspread==5.12.4
+gspread-pandas==3.3.0
