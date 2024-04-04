@@ -53,6 +53,9 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
       layers: [props.lambdas_layer.lambda_layer_version_obj],
       // @ts-ignore // We go through at least 10 jobs now to check if they're completed
       timeout: Duration.seconds(300),
+      environment: {
+        "ICAV2_ACCESS_TOKEN_SECRET_ID": props.icav2_jwt_secret_parameter_obj.secretName
+      },
     });
 
     // Specify the single statemachine and replace the arn placeholders with the lambda arns defined above

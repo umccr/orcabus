@@ -59,5 +59,5 @@ def set_icav2_env_vars():
     """
     environ["ICAV2_BASE_URL"] = ICAV2_BASE_URL
     environ["ICAV2_ACCESS_TOKEN"] = get_secret(
-        get_ssm_parameter_value(ICAV2_ACCESS_TOKEN_URN_SSM_PATH)
+        environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
     )
