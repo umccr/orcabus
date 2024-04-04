@@ -56,3 +56,6 @@ Brewfile.lock.json
 *.xml
 
 target/
+
+.coverage
+htmlcov/

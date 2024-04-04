@@ -6,7 +6,7 @@ services:
     # Use version that align with upper bound of AWS Aurora PostgreSQL LTS
     # https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Updates.LTS.html
     # See container image doc https://gallery.ecr.aws/docker/library/postgres for more settings
-    image: public.ecr.aws/docker/library/postgres:14
+    image: public.ecr.aws/docker/library/postgres:15.4
     container_name: orcabus_db
     restart: always
     environment:

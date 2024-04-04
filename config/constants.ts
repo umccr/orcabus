@@ -1,18 +1,21 @@
 import { OrcaBusStatefulConfig } from '../lib/workload/orcabus-stateful-stack';
 import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
-import {
-  FilemanagerDependencies,
-  OrcaBusStatelessConfig,
-} from '../lib/workload/orcabus-stateless-stack';
+import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
 import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
+import { FilemanagerConfig } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
 const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
 const dbClusterIdentifier = 'orcabus-db';
 const dbClusterResourceIdParameterName = '/orcabus/db-cluster-resource-id';
+
+const eventSourceQueueName = 'orcabus-event-source-queue';
+const devBucket = 'umccr-temp-dev';
+const stgBucket = 'umccr-temp-stg';
+const prodBucket = 'org.umccr.data.oncoanalyser';
 
 // Note, this should not end with a hyphen and 6 characters, otherwise secrets manager won't be
 // able to find the secret using a partial ARN.
@@ -88,20 +91,24 @@ const orcaBusStatelessConfig = {
   metadataManagerConfig: {},
 };
 
-const eventSourceConfig: EventSourceProps = {
-  queueName: 'orcabus-event-source-queue',
-  maxReceiveCount: 3,
-  rules: [
-    {
-      bucket: 'umccr-temp-dev',
-    },
-  ],
+const eventSourceConfig = (bucket: string): EventSourceProps => {
+  return {
+    queueName: eventSourceQueueName,
+    maxReceiveCount: 3,
+    rules: [
+      {
+        bucket,
+      },
+    ],
+  };
 };
 
-const filemanagerDependencies: FilemanagerDependencies = {
-  eventSourceBuckets: ['umccr-temp-dev'],
-  eventSourceQueueName: eventSourceConfig.queueName,
-  databaseSecretName: orcaBusStatefulConfig.databaseProps.masterSecretName,
+const filemanagerConfig = (bucket: string): FilemanagerConfig => {
+  return {
+    eventSourceQueueName: eventSourceQueueName,
+    databaseSecretName: orcaBusStatefulConfig.databaseProps.masterSecretName,
+    eventSourceBuckets: [bucket],
+  };
 };
 
 interface EnvironmentConfig {
@@ -153,11 +160,11 @@ export const getEnvironmentConfig = (
             securityGroupProps: {
               ...orcaBusStatefulConfig.securityGroupProps,
             },
-            eventSourceProps: eventSourceConfig,
+            eventSourceProps: eventSourceConfig(devBucket),
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
-            filemanagerDependencies: filemanagerDependencies,
+            filemanagerConfig: filemanagerConfig(devBucket),
           },
         },
       };
@@ -187,8 +194,12 @@ export const getEnvironmentConfig = (
             securityGroupProps: {
               ...orcaBusStatefulConfig.securityGroupProps,
             },
+            eventSourceProps: eventSourceConfig(stgBucket),
           },
-          orcaBusStatelessConfig: orcaBusStatelessConfig,
+          orcaBusStatelessConfig: {
+            ...orcaBusStatelessConfig,
+            filemanagerConfig: filemanagerConfig(stgBucket),
+          },
         },
       };
       break;
@@ -215,8 +226,12 @@ export const getEnvironmentConfig = (
             securityGroupProps: {
               ...orcaBusStatefulConfig.securityGroupProps,
             },
+            eventSourceProps: eventSourceConfig(prodBucket),
           },
-          orcaBusStatelessConfig: orcaBusStatelessConfig,
+          orcaBusStatelessConfig: {
+            ...orcaBusStatelessConfig,
+            filemanagerConfig: filemanagerConfig(prodBucket),
+          },
         },
       };
       break;

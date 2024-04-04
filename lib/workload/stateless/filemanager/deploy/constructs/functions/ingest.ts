@@ -34,8 +34,8 @@ export class IngestFunction extends fn.Function {
     });
     props.buckets.map((bucket) => {
       this.addToPolicy(new PolicyStatement({
-        actions: ['s3:List*', 's3:Get*'],
-        resources: [`arn:aws:s3:::${bucket}/*`],
+        actions: ['s3:ListBucket', 's3:GetObject'],
+        resources: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
       }));
     })
   }

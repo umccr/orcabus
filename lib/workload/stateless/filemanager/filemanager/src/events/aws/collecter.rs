@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::primitives;
 use aws_sdk_s3::types::StorageClass::Standard;
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use futures::future::join_all;
 use mockall_double::double;
 use tracing::trace;
@@ -133,8 +133,7 @@ impl Collecter {
     /// Converts an AWS datetime to a standard database format.
     pub fn convert_datetime(datetime: Option<primitives::DateTime>) -> Option<DateTime<Utc>> {
         if let Some(head) = datetime {
-            let date = NaiveDateTime::from_timestamp_opt(head.secs(), head.subsec_nanos())?;
-            Some(DateTime::from_naive_utc_and_offset(date, Utc))
+            DateTime::from_timestamp(head.secs(), head.subsec_nanos())
         } else {
             None
         }
