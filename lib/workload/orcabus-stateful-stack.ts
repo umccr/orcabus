@@ -6,6 +6,10 @@ import { ConfigurableDatabaseProps, Database } from './stateful/database/compone
 import { SecurityGroupConstruct, SecurityGroupProps } from './stateful/securitygroup/component';
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './stateful/schemaregistry/component';
 import { EventSource, EventSourceProps } from './stateful/event_source/component';
+import {
+  TokenServiceProps,
+  TokenServiceStack,
+} from './stateful/token_service/deploy/token-service-stack';
 
 export interface OrcaBusStatefulConfig {
   schemaRegistryProps: SchemaRegistryProps;
@@ -13,6 +17,7 @@ export interface OrcaBusStatefulConfig {
   databaseProps: ConfigurableDatabaseProps;
   securityGroupProps: SecurityGroupProps;
   eventSourceProps?: EventSourceProps;
+  tokenServiceProps: TokenServiceProps;
 }
 
 export class OrcaBusStatefulStack extends cdk.Stack {
@@ -21,6 +26,9 @@ export class OrcaBusStatefulStack extends cdk.Stack {
   readonly securityGroup: SecurityGroupConstruct;
   readonly schemaRegistry: SchemaRegistryConstruct;
   readonly eventSource?: EventSource;
+
+  // stateful stacks
+  statefulStackArray: cdk.Stack[] = [];
 
   constructor(scope: Construct, id: string, props: cdk.StackProps & OrcaBusStatefulConfig) {
     super(scope, id, props);
@@ -55,5 +63,15 @@ export class OrcaBusStatefulStack extends cdk.Stack {
     if (props.eventSourceProps) {
       this.eventSource = new EventSource(this, 'EventSourceConstruct', props.eventSourceProps);
     }
+
+    this.statefulStackArray.push(this.createTokenServiceStack(props));
+  }
+
+  private createTokenServiceStack(props: cdk.StackProps & OrcaBusStatefulConfig) {
+    return new TokenServiceStack(this, 'TokenServiceStack', {
+      // reduce the props to the stack needs
+      env: props.env,
+      ...props.tokenServiceProps,
+    });
   }
 }

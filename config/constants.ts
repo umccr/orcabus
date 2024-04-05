@@ -6,6 +6,15 @@ import { EventSourceProps } from '../lib/workload/stateful/event_source/componen
 import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
 import { FilemanagerConfig } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
 
+const vpcName = 'main-vpc';
+const vpcStackName = 'networking';
+const vpcProps = {
+  vpcName: vpcName,
+  tags: {
+    Stack: vpcStackName,
+  },
+};
+
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
 const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
@@ -20,6 +29,9 @@ const prodBucket = 'org.umccr.data.oncoanalyser';
 // Note, this should not end with a hyphen and 6 characters, otherwise secrets manager won't be
 // able to find the secret using a partial ARN.
 const rdsMasterSecretName = 'orcabus/master-rds'; // pragma: allowlist secret
+
+const serviceUserSecretName = 'orcabus/token-service-user'; // pragma: allowlist secret
+const jwtSecretName = 'orcabus/token-service-jwt'; // pragma: allowlist secret
 
 const orcaBusStatefulConfig = {
   schemaRegistryProps: {
@@ -48,6 +60,11 @@ const orcaBusStatefulConfig = {
   securityGroupProps: {
     securityGroupName: lambdaSecurityGroupName,
     securityGroupDescription: 'allow within same SecurityGroup and rds SG',
+  },
+  tokenServiceProps: {
+    serviceUserSecretName: serviceUserSecretName,
+    jwtSecretName: jwtSecretName,
+    vpcProps: vpcProps,
   },
 };
 
@@ -160,6 +177,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(devBucket),
+            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -194,6 +212,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(stgBucket),
+            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -226,6 +245,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(prodBucket),
+            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
