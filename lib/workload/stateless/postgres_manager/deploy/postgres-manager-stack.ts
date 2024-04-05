@@ -41,7 +41,6 @@ export class PostgresManagerStack extends Stack {
 
     const dependencyLayer = new lambda.LayerVersion(this, 'DependenciesLayer', {
       code: lambda.Code.fromDockerBuild(__dirname + '/../', {
-        cacheDisabled: true,
         file: 'deploy/construct/layer/node_module.Dockerfile',
         imagePath: 'home/node/app/output',
       }),
