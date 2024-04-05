@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
 use std::borrow::Cow;
+use tracing::debug;
 
 use crate::env::read_env;
 use crate::error::Result;
@@ -73,6 +74,7 @@ impl<'a> Client<'a> {
         // Otherwise use generator if it is available.
         match generator {
             Some(generator) => {
+                debug!("generating credentials to connect to database");
                 Ok(PgConnectOptions::default().password(&generator.generate_password().await?))
             }
             None => Ok(PgConnectOptions::default()),

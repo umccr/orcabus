@@ -34,10 +34,6 @@ export type EventSourceProps = {
    */
   queueName: string;
   /**
-   * The name of the dead letter queue to construct.
-   */
-  deadLetterQueueName: string;
-  /**
    * The maximum number of times a message can be unsuccessfully received before
    * pushing it to the DLQ.
    */
@@ -60,7 +56,7 @@ export class EventSource extends Construct {
     super(scope, id);
 
     this.deadLetterQueue = new Queue(this, 'DeadLetterQueue', {
-      queueName: props.deadLetterQueueName,
+      queueName: 'orcabus-event-source-dlq',
       enforceSSL: true,
     });
     this.queue = new Queue(this, 'Queue', {

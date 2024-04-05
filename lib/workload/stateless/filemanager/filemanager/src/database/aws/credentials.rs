@@ -27,6 +27,7 @@ pub const CREDENTIAL_EXPIRES_IN_SECONDS: u64 = 900;
 pub struct IamGeneratorBuilder {
     config: Option<Config>,
     host: Option<String>,
+    port: Option<u16>,
     user: Option<String>,
 }
 
@@ -40,6 +41,12 @@ impl IamGeneratorBuilder {
     /// Build with a host. If not set, tries to source this from PGHOST.
     pub fn with_host(mut self, host: String) -> Self {
         self.host = Some(host);
+        self
+    }
+
+    /// Build with a port. If not set, tries to source this from PGPORT.
+    pub fn with_port(mut self, port: u16) -> Self {
+        self.port = Some(port);
         self
     }
 
@@ -63,13 +70,21 @@ impl IamGeneratorBuilder {
             read_env("PGHOST")?
         };
 
+        let port = if let Some(port) = self.port {
+            port
+        } else {
+            read_env("PGPORT")?.parse().map_err(|_| {
+                CredentialGeneratorError("failed to parse port from PGPORT".to_string())
+            })?
+        };
+
         let user = if let Some(user) = self.user {
             user
         } else {
             read_env("PGUSER")?
         };
 
-        Ok(IamGenerator::new(config, host, user))
+        Ok(IamGenerator::new(config, host, port, user))
     }
 }
 
@@ -78,18 +93,24 @@ impl IamGeneratorBuilder {
 pub struct IamGenerator {
     config: Config,
     host: String,
+    port: u16,
     user: String,
 }
 
 impl IamGenerator {
     /// Create a new credential generator.
-    pub fn new(config: Config, host: String, user: String) -> Self {
-        Self { config, host, user }
+    pub fn new(config: Config, host: String, port: u16, user: String) -> Self {
+        Self {
+            config,
+            host,
+            port,
+            user,
+        }
     }
 
     /// Create a new credential generator with default config.
-    pub async fn with_defaults(host: String, user: String) -> Self {
-        Self::new(Config::with_defaults().await, host, user)
+    pub async fn with_defaults(host: String, port: u16, user: String) -> Self {
+        Self::new(Config::with_defaults().await, host, port, user)
     }
 
     /// Get the config.
@@ -100,6 +121,11 @@ impl IamGenerator {
     /// Get the host address.
     pub fn host(&self) -> &str {
         &self.host
+    }
+
+    /// Get the port.
+    pub fn port(&self) -> u16 {
+        self.port
     }
 
     /// Get the user.
@@ -134,7 +160,10 @@ impl IamGenerator {
             .build()
             .map_err(|err| CredentialGeneratorError(err.to_string()))?;
 
-        let url = format!("https://{}/?Action=connect&DBUser={}", self.host, self.user);
+        let url = format!(
+            "https://{}:{}/?Action=connect&DBUser={}",
+            self.host, self.port, self.user
+        );
 
         let signable_request = SignableRequest::new("GET", &url, empty(), SignableBody::Bytes(&[]))
             .map_err(|err| CredentialGeneratorError(err.to_string()))?;
@@ -178,6 +207,7 @@ mod tests {
             IamGeneratorBuilder::default()
                 .with_config(config)
                 .with_host("127.0.0.1".to_string())
+                .with_port(5432)
                 .with_user("filemanager".to_string())
                 .build()
                 .await
@@ -189,6 +219,7 @@ mod tests {
     #[tokio::test]
     async fn generate_iam_token_env() {
         set_var("PGHOST", "127.0.0.1");
+        set_var("PGPORT", "5432");
         set_var("PGUSER", "filemanager");
 
         test_generate_iam_token(|config| async {
@@ -229,6 +260,7 @@ mod tests {
         let url = Url::parse(&url).unwrap();
 
         assert_eq!(url.host().unwrap().to_string(), "127.0.0.1");
+        assert_eq!(url.port().unwrap(), 5432);
         assert_eq!(url.path(), "/");
 
         let queries: HashMap<Cow<str>, Cow<str>> = HashMap::from_iter(url.query_pairs());

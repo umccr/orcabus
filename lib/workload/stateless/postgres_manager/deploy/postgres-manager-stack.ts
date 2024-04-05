@@ -88,7 +88,7 @@ export class PostgresManagerStack extends Stack {
     for (const microservice of microserviceDbConfig) {
       if (microservice.authType == DbAuthType.RDS_IAM) {
         const iamPolicy = new iam.ManagedPolicy(this, `${microservice.name}RdsIamPolicy`, {
-          managedPolicyName: `orcabus-rds-connect-${microservice.name}`,
+          managedPolicyName: PostgresManagerStack.formatRdsPolicyName(microservice.name),
         });
 
         const dbCluster = rds.DatabaseCluster.fromDatabaseClusterAttributes(
@@ -131,5 +131,13 @@ export class PostgresManagerStack extends Stack {
       functionName: 'orcabus-alter-pg-db-owner',
     });
     masterSecret.grantRead(alterDbPgOwnerLambda);
+  }
+
+  /**
+   * Format the name of the managed policy which is created for a microservice using RDS credentials.
+   * @param microserviceName the name of the microservice
+   */
+  static formatRdsPolicyName(microserviceName: string) {
+    return `orcabus-rds-connect-${microserviceName}`;
   }
 }

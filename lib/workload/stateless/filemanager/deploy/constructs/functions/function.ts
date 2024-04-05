@@ -8,6 +8,8 @@ import path from 'path';
 import { exec } from 'cargo-lambda-cdk/lib/util';
 import { randomUUID } from 'node:crypto';
 import { print } from 'aws-cdk/lib/logging';
+import { PostgresManagerStack } from '../../../../postgres_manager/deploy/postgres-manager-stack';
+import { FILEMANAGER_SERVICE_NAME } from '../../lib/filemanager';
 
 /**
  * Properties for the database.
@@ -21,14 +23,6 @@ export type DatabaseProps = {
    * The port to connect with.
    */
   readonly port: number;
-  /**
-   * The name of the database.
-   */
-  readonly database: string;
-  /**
-   * The user to connect with.
-   */
-  readonly user: string;
   /**
    * The database security group.
    */
@@ -83,7 +77,9 @@ export class Function extends Construct {
       description: 'Lambda execution role for ' + id,
     });
     // Lambda needs VPC access if it is created in a VPC.
-    this.addManagedPolicy('service-role/AWSLambdaVPCAccessExecutionRole');
+    this.addAwsManagedPolicy('service-role/AWSLambdaVPCAccessExecutionRole');
+    // Using RDS IAM credentials, so we add the managed policy created by the postgres manager.
+    this.addCustomerManagedPolicy(PostgresManagerStack.formatRdsPolicyName(FILEMANAGER_SERVICE_NAME));
 
     // Lambda needs to be able to reach out to access S3, security manager (eventually), etc.
     // Could this use an endpoint instead?
@@ -108,7 +104,7 @@ export class Function extends Construct {
 
     // Grab the last line only in case there are other outputs.
     const address = output.stdout.toString().trim().match('.*$')?.pop();
-    const localDatabaseUrl = `postgresql://filemanager:filemanager@${address}/filemanager`; // pragma: allowlist secret
+    const localDatabaseUrl = `postgresql://${FILEMANAGER_SERVICE_NAME}:${FILEMANAGER_SERVICE_NAME}@${address}/${FILEMANAGER_SERVICE_NAME}`; // pragma: allowlist secret
     print(`the local filemanager database url is: ${localDatabaseUrl}`);
 
     this._function = new RustFunction(this, 'RustFunction', {
@@ -118,7 +114,7 @@ export class Function extends Construct {
         environment: {
           ...props.buildEnvironment,
           // Avoid concurrency errors by creating another target directory.
-          CARGO_TARGET_DIR: `target-cdk-bundling-${uuid}`,
+          CARGO_TARGET_DIR: `target/cdk-bundling-${uuid}`,
           // The bundling container needs to be able to connect to the container running postgres.
           DATABASE_URL: localDatabaseUrl,
         }
@@ -129,8 +125,8 @@ export class Function extends Construct {
         // No password here, using RDS IAM to generate credentials.
         PGHOST: props.host,
         PGPORT: props.port.toString(),
-        PGDATABASE: props.database,
-        PGUSER: props.user,
+        PGDATABASE: FILEMANAGER_SERVICE_NAME,
+        PGUSER: FILEMANAGER_SERVICE_NAME,
         RUST_LOG:
           props.rustLog ?? `info,${props.package.replace('-', '_')}=trace,filemanager=trace`,
       },
@@ -150,10 +146,17 @@ export class Function extends Construct {
   }
 
   /**
-   * Add a managed policy to the function's role.
+   * Add an AWS managed policy to the function's role.
    */
-  addManagedPolicy(policyName: string) {
+  addAwsManagedPolicy(policyName: string) {
     this._role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName(policyName));
+  }
+
+  /**
+   * Add a customer managed policy to the function's role.
+   */
+  addCustomerManagedPolicy(policyName: string) {
+    this._role.addManagedPolicy(ManagedPolicy.fromManagedPolicyName(this, 'Policy', policyName));
   }
 
   /**

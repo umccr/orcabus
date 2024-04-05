@@ -4,7 +4,10 @@ import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack'
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
 import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
-import { FilemanagerConfig } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
+import {
+  FILEMANAGER_SERVICE_NAME,
+  FilemanagerConfig,
+} from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
@@ -13,7 +16,6 @@ const dbClusterIdentifier = 'orcabus-db';
 const dbClusterResourceIdParameterName = '/orcabus/db-cluster-resource-id';
 
 const eventSourceQueueName = 'orcabus-event-source-queue';
-const eventSourceDLQName = 'orcabus-event-source-dlq';
 const devBucket = 'umccr-temp-dev';
 const stgBucket = 'umccr-temp-stg';
 const prodBucket = 'org.umccr.data.oncoanalyser';
@@ -22,8 +24,6 @@ const prodBucket = 'org.umccr.data.oncoanalyser';
 // able to find the secret using a partial ARN.
 const rdsMasterSecretName = 'orcabus/master-rds'; // pragma: allowlist secret
 const databasePort = 5432;
-
-const filemanagerName = 'filemanager';
 
 const orcaBusStatefulConfig = {
   schemaRegistryProps: {
@@ -89,7 +89,7 @@ const orcaBusStatelessConfig = {
         name: 'metadata_manager',
         authType: DbAuthType.USERNAME_PASSWORD,
       },
-      { name: filemanagerName, authType: DbAuthType.RDS_IAM },
+      { name: FILEMANAGER_SERVICE_NAME, authType: DbAuthType.RDS_IAM },
     ],
   },
 };
@@ -97,7 +97,6 @@ const orcaBusStatelessConfig = {
 const eventSourceConfig = (bucket: string): EventSourceProps => {
   return {
     queueName: eventSourceQueueName,
-    deadLetterQueueName: eventSourceDLQName,
     maxReceiveCount: 3,
     rules: [
       {
@@ -111,8 +110,6 @@ const filemanagerConfig = (bucket: string): FilemanagerConfig => {
   return {
     eventSourceQueueName: eventSourceQueueName,
     databaseClusterIdentifierParameter: orcaBusStatefulConfig.databaseProps.masterSecretName,
-    database: filemanagerName,
-    user: filemanagerName,
     port: databasePort,
     eventSourceBuckets: [bucket],
   };

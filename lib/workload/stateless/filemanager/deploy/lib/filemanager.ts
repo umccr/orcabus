@@ -8,6 +8,8 @@ import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { CdkResourceInvoke } from '../../../../components/cdk_resource_invoke';
 
+export const FILEMANAGER_SERVICE_NAME = 'filemanager';
+
 /**
  * Stateful config for filemanager.
  */
@@ -66,8 +68,6 @@ export class Filemanager extends Stack {
           vpc: props.vpc,
           host: props.host,
           port: props.port,
-          user: props.user,
-          database: props.database,
           securityGroup: props.securityGroup,
           buildEnvironment: props?.buildEnvironment,
           rustLog: props?.rustLog,
@@ -81,8 +81,6 @@ export class Filemanager extends Stack {
       vpc: props.vpc,
       host: props.host,
       port: props.port,
-      user: props.user,
-      database: props.database,
       securityGroup: props.securityGroup,
       eventSources: props.eventSources,
       buckets: props.buckets,
