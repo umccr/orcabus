@@ -11,11 +11,17 @@ import {
 } from 'aws-cdk-lib/aws-lambda';
 
 type LambdaProps = {
+  /**
+   * The basic common lambda properties that it should inherit from
+   */
   basicLambdaConfig: Partial<DockerImageFunctionProps>;
+  /**
+   * The secret for the db connection where the lambda will need access to
+   */
   dbConnectionSecret: ISecret;
 };
 
-export class SyncGsheetLambdaConstruct extends Construct {
+export class LambdaSyncGsheetConstruct extends Construct {
   private readonly GDRIVE_CRED_PARAM_NAME = '/umccr/google/drive/lims_service_account_json';
   private readonly GDRIVE_SHEET_ID_PARAM_NAME = '/umccr/google/drive/tracking_sheet_id';
 
@@ -35,7 +41,7 @@ export class SyncGsheetLambdaConstruct extends Construct {
       vpcSubnets: lambdaProps.basicLambdaConfig.vpcSubnets,
       architecture: lambdaProps.basicLambdaConfig.architecture,
       code: DockerImageCode.fromImageAsset(path.join(__dirname, '../../../'), {
-        file: 'deploy/construct/sync-gsheet-lambda-construct/lambda.Dockerfile',
+        file: 'deploy/construct/lambda-sync-gsheet/lambda.Dockerfile',
       }),
       timeout: Duration.minutes(15),
     });

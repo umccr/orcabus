@@ -3,7 +3,6 @@
 from .lab.library import Library
 from .lab.specimen import Specimen
 from .lab.subject import Subject
-from .lab.individual import Individual
 
 # Disabled
 # from .pipeline.library_run import LibraryRun

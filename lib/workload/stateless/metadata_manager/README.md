@@ -1,175 +1,127 @@
 # Metadata Manager
 
-## How to run MM locally
+One of the microservices in the OrcaBus that handles all the metadata information.
 
-### Ready Check
+The metadata manager uses the Django framework.
 
-- Go to Django project root
+## Schema
 
+This is the current (WIP) schema that reflects the current implementation.
+
+![schema](docs/model/schema.drawio.svg)
+
+## How things work
+
+### How Syncing The Data Works
+
+In the near future, we might introduce different ways to load data into the application. For the time being, we are
+loading data
+from the Google tracking sheet and mapping it to its respective model as follows.
+
+| Sheet Header | Table      | Field Name |
+|--------------|------------|------------|
+| SubjectID    | `Subject`  | internalId |
+| SampleID     | `Specimen` | internalId |
+| Source       | `Specimen` | source     |
+| LibraryID    | `Library`  | internalId |
+| Phenotype    | `Library`  | phenotype  |
+| Workflow     | `Library`  | workflow   |
+| Quality      | `Library`  | quality    |
+| Type         | `Library`  | type       |
+| Coverage (X) | `Library`  | coverage   |
+| Assay        | `Library`  | assay      |
+
+Some important notes of the sync:
+
+1. The Sync will always check all data from the `2017` tab up to the current year.
+2. The tracking sheet is the single source of truth, any deletion/update on any record (including the record that has
+   been
+   loaded) will also apply to the existing data.
+3. `LibraryId` is treated as a unique value in the tracking sheet, so for any duplicated value (including from other
+   tabs) it will only recognize the last appearance
+
+Please refer to the [traking-sheet-service](proc/service/tracking_sheet_srv.py) implementation.
+
+### Audit Data
+
+The application is configured with [django-simple-history](https://django-simple-history.readthedocs.io/en/latest/)
+so that each update to a particular record will have an audit trail. This extension will create an additional table
+one-to-one with the original table with `historical` prefixing of the table name. The historical table will have
+additional attributes that would indicate addition/update/deletion.
+
+## Running Locally
+
+Requirement:
+
+- Python
+- Docker
+
+```bash
+docker -v
+Docker version 20.10.12, build e91ed5707e
+
+python3 --version
+Python 3.12.2
 ```
-cd lib/workload/stateless/app
+
+You would need to go this microservice app directory from the root project
+
+```bash
+cd lib/workload/stateless/metadata_manager
 ```
 
-_*If you are PyCharmer and opening the whole `orcabus` project (i.e. not doing sparse checkout or not opening directly
-at this level) then annotate this level `app` directory as "source" directory in the project structure dialog._
+### Setup
 
-### Python
+You would need to set up the Python environment (conda or venv)
 
-- Setup Python environment (conda or venv)
-
-```
+```bash
 conda create -n orcabus_mm python=3.12
 conda activate orcabus_mm
 ```
 
-### Make
+or with venv as an alternative
 
-- At app root, perform
-
+```bash
+python3 -mvenv .venv
+source .venv/bin/activate
 ```
+
+Before starting the app we need to install the dependencies
+
+```bash
 make install
-make up
-make ps
 ```
 
-### Migration
+### Start
 
-```
-python manage.py help
-python manage.py showmigrations
-python manage.py migrate
-```
+To start the application run the start command. This will run the server at `http://localhost:8000/`
 
-### Mock Data
-
-_^^^ please make sure to run `python manage.py migrate` first! ^^^_
-
-#### Generate Sequence Record
-
-```
-python manage.py help generate_mock_data
-    > Generate mock Sequence run data into database for local development and testing
+```bash
+make start
 ```
 
-```
-python manage.py insert_mock_data
+To insert some mock data to be inserted, run the following command while the server is running.
+
+```bash
+mock insert-data
 ```
 
-#### Generate BSSH Event
+### Stop
 
-```
-python manage.py help generate_mock_bssh_event
-    > Generate mock BSSH SQS event in JSON format for local development and testing
-```
+To stop the running server, simply use the `make stop` command
 
-```
-python manage.py generate_mock_bssh_event | jq
-```
+### Testing
 
-#### Generate Domain Event
+To run the test from scratch use `make test`, but if you want to test with a running database you could use `make suite`
+.
 
-```
-python manage.py help generate_mock_domain_event
+### Development
 
-    Generate mock Sequence domain event for local development and testing
-    
-    options:
-      -h, --help            show this help message and exit
-      --domain              Deserialized form of Sequence entity in SequenceRunStateChange
-      --envelope            SequenceRunStateChange wrap in AWSEvent envelope
-      --boto                AWSEvent to Boto PutEvent API envelope
+From time to time the model of the app will change and to run and apply migrations, you could use the following command.
+
+```bash
+make makemigrations
+make migrate
 ```
 
-```
-python manage.py generate_mock_domain_event | jq
-```
-
-```
-python manage.py generate_mock_domain_event --domain | jq
-```
-
-```
-python manage.py generate_mock_domain_event --envelope | jq
-```
-
-```
-python manage.py generate_mock_domain_event --boto | jq
-```
-
-### Run API
-
-```
-python manage.py runserver_plus
-```
-
-```
-curl -s http://localhost:8000/sequence | jq
-```
-
-```
-curl -s http://localhost:8000/sequence/1 | jq
-```
-
-Or visit in browser:
-
-- http://localhost:8000
-- http://localhost:8000/sequence
-- http://localhost:8000/sequence/1
-
-### API Doc
-
-#### Swagger
-
-- http://localhost:8000/swagger
-- http://localhost:8000/swagger.json
-- http://localhost:8000/swagger.yaml
-
-#### Redoc
-
-- http://localhost:8000/redoc/
-
-#### OpenAPI v3
-
-```
-python manage.py generateschema > orcabus.srm.openapi.yaml
-```
-
-## Testing
-
-### Run test suite
-
-```
-python manage.py test
-```
-
-### Unit test
-
-```
-python manage.py test app.tests.test_viewsets.SequenceViewSetTestCase.test_get_api
-```
-
-```
-python manage.py test sequence_run_manager_proc.tests.test_bssh_event.BSSHEventUnitTests.test_sqs_handler
-```
-
-```
-python manage.py test sequence_run_manager_proc.tests.test_sequence_domain.SequenceDomainUnitTests.test_marshall
-```
-
-```
-python manage.py test sequence_run_manager_proc.tests.test_sequence_domain.SequenceDomainUnitTests.test_unmarshall
-```
-
-```
-python manage.py test sequence_run_manager_proc.tests.test_sequence_domain.SequenceDomainUnitTests.test_aws_event_serde
-```
-
-```
-python manage.py test sequence_run_manager_proc.tests.test_sequence_domain.SequenceDomainUnitTests.test_put_events_request_entry
-```
-
-## Tear Down
-
-```
-make down
-```
+To quickly run raw sql queries to the database, `make `psql` will log in to the psql server.

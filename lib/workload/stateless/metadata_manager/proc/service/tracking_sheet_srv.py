@@ -22,30 +22,6 @@ SSM_NAME_TRACKING_SHEET_ID = os.environ['SSM_NAME_TRACKING_SHEET_ID']
 SSM_NAME_GDRIVE_ACCOUNT = os.environ['SSM_NAME_GDRIVE_ACCOUNT']
 
 
-def download_tracking_sheet(year_array: List[str]) -> pd.DataFrame:
-    """
-    Download the full original metadata from google tracking sheet
-    """
-    sheet_id = libssm.get_secret(SSM_NAME_TRACKING_SHEET_ID)
-    account_info = libssm.get_secret(SSM_NAME_GDRIVE_ACCOUNT)
-
-    frames = []
-    for i in year_array:
-        year_str = str(i)
-        logger.info(f"Downloading {year_str} sheet")
-        sheet_df = libgdrive.download_sheet(account_info, sheet_id, year_str)
-        sheet_df = sanitize_lab_metadata_df(sheet_df)
-
-        # the year might be in the future therefore it does not exist
-        if sheet_df.empty:
-            break
-
-        frames.append(sheet_df)
-
-    df: pd.DataFrame = pd.concat(frames)
-    return df
-
-
 @transaction.atomic
 def persist_lab_metadata(df: pd.DataFrame):
     """
@@ -85,6 +61,7 @@ def persist_lab_metadata(df: pd.DataFrame):
 
     # adding relation between specimen and subject could be done per library records
     # but removal will need all records to consider before the removing
+    # this `spc_sbj_df` will convert mapping between `sample_id` to all related `subject_id` as list
     spc_sbj_df = df.loc[:, df.columns.isin(['sample_id', 'subject_id'])] \
         .groupby('sample_id')['subject_id'] \
         .apply(list) \
@@ -191,6 +168,30 @@ def persist_lab_metadata(df: pd.DataFrame):
     }
 
 
+def download_tracking_sheet(year_array: List[str]) -> pd.DataFrame:
+    """
+    Download the full original metadata from google tracking sheet
+    """
+    sheet_id = libssm.get_secret(SSM_NAME_TRACKING_SHEET_ID)
+    account_info = libssm.get_secret(SSM_NAME_GDRIVE_ACCOUNT)
+
+    frames = []
+    for i in year_array:
+        year_str = str(i)
+        logger.info(f"Downloading {year_str} sheet")
+        sheet_df = libgdrive.download_sheet(account_info, sheet_id, year_str)
+        sheet_df = sanitize_lab_metadata_df(sheet_df)
+
+        # the year might be in the future therefore it does not exist
+        if sheet_df.empty:
+            break
+
+        frames.append(sheet_df)
+
+    df: pd.DataFrame = pd.concat(frames)
+    return df
+
+
 def sanitize_lab_metadata_df(df: pd.DataFrame):
     """
     sanitize record by renaming columns, and clean df cells
@@ -268,6 +269,6 @@ def sanitize_library_coverage(value: str):
         # making coverage is float-able type
         lib_coverage = float(value)
         return f'{lib_coverage}'
-    
+
     except (ValueError, TypeError):
         return None

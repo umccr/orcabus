@@ -31,7 +31,7 @@ test-stateless:
 # 	Python (conda or venv), Rust and Cargo, TypeScript and Node environment, Docker and Container runtimes
 test-suite:
 	@(cd lib/workload/stateless/sequence_run_manager && $(MAKE) test)
-	@(cd lib/workload/stateless/metadata_manager && $(MAKE) test)
+	@(cd lib/workload/stateless/metadata-manager && $(MAKE) test)
 	@(cd lib/workload/stateless/filemanager && $(MAKE) test)
 
 # The default outer `test` target only run the top level cdk application unit tests under `./test`

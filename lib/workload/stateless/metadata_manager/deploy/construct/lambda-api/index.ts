@@ -6,12 +6,21 @@ import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 
 type LambdaProps = {
+  /**
+   * The basic common lambda properties that it should inherit from
+   */
   basicLambdaConfig: PythonFunctionProps;
+  /**
+   * The secret for the db connection where the lambda will need access to
+   */
   dbConnectionSecret: ISecret;
+  /**
+   * The api-gw where  the lambda will have the integration
+   */
   apiGW: IHttpApi;
 };
 
-export class APILambdaConstruct extends Construct {
+export class LambdaAPIConstruct extends Construct {
   private readonly lambda: PythonFunction;
 
   constructor(scope: Construct, id: string, lambdaProps: LambdaProps) {

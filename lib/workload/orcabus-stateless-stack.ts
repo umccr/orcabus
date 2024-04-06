@@ -14,7 +14,7 @@ import {
 import {
   MetadataManagerStack,
   MetadataManagerConfig,
-} from './stateless/metadata_manager/deploy/metadata-manager-stack';
+} from './stateless/metadata_manager/deploy/stack';
 import { SequenceRunManagerStack } from './stateless/sequence_run_manager/deploy/component';
 import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
 

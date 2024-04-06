@@ -1,6 +1,6 @@
 import factory
 
-from app.models import Individual, Subject, Specimen, Library
+from app.models import Subject, Specimen, Library
 
 INDIVIDUAL_1 = {
     "internal_id": "I001"
@@ -25,13 +25,6 @@ LIBRARY_1 = {
     "assay": "NebRNA",
     "coverage": 6.0
 }
-
-
-class IndividualFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = Individual
-
-    internal_id = INDIVIDUAL_1['internal_id']
 
 
 class SubjectFactory(factory.django.DjangoModelFactory):
