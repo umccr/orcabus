@@ -1,7 +1,6 @@
 //! Handle environment variables.
 //!
 
-use std::ffi::OsStr;
 use std::{env, fmt};
 
 use dotenvy::dotenv;
@@ -40,8 +39,8 @@ pub fn load_env() -> AppEnv {
 }
 
 /// Read an environment variable into a string.
-pub fn read_env<K: AsRef<OsStr>>(key: K) -> Result<String> {
-    env::var(key).map_err(|err| MissingEnvironmentVariable(err.to_string()))
+pub fn read_env<K: AsRef<str>>(key: K) -> Result<String> {
+    env::var(key.as_ref()).map_err(|err| MissingEnvironmentVariable(err.to_string()))
 }
 
 impl fmt::Display for AppEnv {

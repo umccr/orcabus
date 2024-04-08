@@ -12,7 +12,7 @@ import {
 } from './stateless/postgres_manager/deploy/postgres-manager-stack';
 import { SequenceRunManagerStack } from './stateless/sequence_run_manager/deploy/component';
 import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
-import { ISecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
@@ -27,7 +27,6 @@ export class OrcaBusStatelessStack extends cdk.Stack {
   private readonly vpc: IVpc;
   private readonly lambdaSecurityGroup: ISecurityGroup;
   private readonly mainBus: IEventBus;
-  private readonly rdsMasterSecret: ISecret;
 
   // microservice stacks
   microserviceStackArray: cdk.Stack[] = [];
@@ -44,11 +43,6 @@ export class OrcaBusStatelessStack extends cdk.Stack {
       'OrcaBusLambdaSecurityGroup',
       props.lambdaSecurityGroupName,
       this.vpc
-    );
-    this.rdsMasterSecret = Secret.fromSecretNameV2(
-      this,
-      'FilemanagerDatabaseSecret',
-      props.rdsMasterSecretName
     );
 
     this.mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.eventBusName);
@@ -98,7 +92,10 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     return new Filemanager(this, 'Filemanager', {
       buckets: config.eventSourceBuckets,
       buildEnvironment: {},
-      host: this.rdsMasterSecret.secretValueFromJson('host').unsafeUnwrap(),
+      host: StringParameter.valueForStringParameter(
+        this,
+        config.databaseClusterEndpointHostParameter
+      ),
       port: config.port,
       securityGroup: this.lambdaSecurityGroup,
       eventSources: [queue],

@@ -14,6 +14,7 @@ const eventBusName = 'OrcaBusMain';
 const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
 const dbClusterIdentifier = 'orcabus-db';
 const dbClusterResourceIdParameterName = '/orcabus/db-cluster-resource-id';
+const dbClusterEndpointHostParameterName = '/orcabus/db-cluster-endpoint-host';
 
 const eventSourceQueueName = 'orcabus-event-source-queue';
 const devBucket = 'umccr-temp-dev';
@@ -48,6 +49,7 @@ const orcaBusStatefulConfig = {
       cloudwatchLogsExports: ['orcabus-postgresql'],
     },
     clusterResourceIdParameterName: dbClusterResourceIdParameterName,
+    clusterEndpointHostParameterName: dbClusterEndpointHostParameterName,
   },
   securityGroupProps: {
     securityGroupName: lambdaSecurityGroupName,
@@ -109,7 +111,8 @@ const eventSourceConfig = (bucket: string): EventSourceProps => {
 const filemanagerConfig = (bucket: string): FilemanagerConfig => {
   return {
     eventSourceQueueName: eventSourceQueueName,
-    databaseClusterIdentifierParameter: orcaBusStatefulConfig.databaseProps.masterSecretName,
+    databaseClusterEndpointHostParameter:
+      orcaBusStatefulConfig.databaseProps.clusterEndpointHostParameterName,
     port: databasePort,
     eventSourceBuckets: [bucket],
   };

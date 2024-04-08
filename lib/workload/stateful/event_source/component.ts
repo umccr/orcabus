@@ -56,7 +56,7 @@ export class EventSource extends Construct {
     super(scope, id);
 
     this.deadLetterQueue = new Queue(this, 'DeadLetterQueue', {
-      queueName: 'orcabus-event-source-dlq',
+      queueName: `${props.queueName}-dlq`,
       enforceSSL: true,
     });
     this.queue = new Queue(this, 'Queue', {

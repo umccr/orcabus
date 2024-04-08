@@ -77,9 +77,13 @@ export type ConfigurableDatabaseProps = MonitoringProps & {
    */
   removalPolicy: RemovalPolicy;
   /**
-   * The ssm parameter name to store the cluster resource id
+   * The ssm parameter name to store the cluster resource id.
    */
   clusterResourceIdParameterName: string;
+  /**
+   * The ssm parameter name to store the cluster endpoint
+   */
+  clusterEndpointHostParameterName: string;
 };
 
 /**
@@ -160,6 +164,13 @@ export class Database extends Construct {
       stringValue: this.cluster.clusterResourceIdentifier,
       description: 'cluster resource id at the orcabus rds cluster',
       parameterName: props.clusterResourceIdParameterName,
+    });
+
+    // Save the endpoint so that it can be used by the stateless services.
+    new ssm.StringParameter(this, 'DbClusterEndpointHostSSM', {
+      stringValue: this.cluster.clusterEndpoint.hostname,
+      description: 'orcabus rds writer cluster endpoint host',
+      parameterName: props.clusterEndpointHostParameterName,
     });
   }
 }

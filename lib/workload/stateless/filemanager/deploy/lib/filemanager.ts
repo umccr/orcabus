@@ -23,9 +23,9 @@ export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & 
    */
   eventSourceBuckets: string[];
   /**
-   * The parameter name that contains the database cluster identifier.
+   * The parameter name that contains the database cluster endpoint.
    */
-  databaseClusterIdentifierParameter: string;
+  databaseClusterEndpointHostParameter: string;
 }
 
 /**
