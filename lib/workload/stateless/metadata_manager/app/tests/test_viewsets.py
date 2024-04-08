@@ -2,7 +2,7 @@ import logging
 
 from django.test import TestCase
 
-from app.tests.factories import INDIVIDUAL_1, LIBRARY_1, SUBJECT_1, SPECIMEN_1
+from app.tests.factories import LIBRARY_1, SUBJECT_1, SPECIMEN_1
 from app.tests.utils import insert_mock_1
 
 logger = logging.getLogger()
@@ -31,10 +31,6 @@ class LabViewSetTestCase(TestCase):
             {
                 "path": "subject",
                 "props": SUBJECT_1
-            },
-            {
-                "path": "individual",
-                "props": INDIVIDUAL_1
             }
         ]
 

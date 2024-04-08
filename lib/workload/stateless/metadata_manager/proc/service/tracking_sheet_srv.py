@@ -18,8 +18,8 @@ from proc.service.utils import clean_model_history
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-SSM_NAME_TRACKING_SHEET_ID = os.environ['SSM_NAME_TRACKING_SHEET_ID']
-SSM_NAME_GDRIVE_ACCOUNT = os.environ['SSM_NAME_GDRIVE_ACCOUNT']
+SSM_NAME_TRACKING_SHEET_ID = os.getenv('SSM_NAME_TRACKING_SHEET_ID', '')
+SSM_NAME_GDRIVE_ACCOUNT = os.getenv('SSM_NAME_GDRIVE_ACCOUNT', '')
 
 
 @transaction.atomic

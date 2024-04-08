@@ -1,5 +1,5 @@
-from app.models import Individual, Subject, Specimen, Library
-from app.tests.factories import LibraryFactory, SubjectFactory, SpecimenFactory, IndividualFactory
+from app.models import Subject, Specimen, Library
+from app.tests.factories import LibraryFactory, SubjectFactory, SpecimenFactory
 
 
 def clear_all_data():
@@ -7,7 +7,6 @@ def clear_all_data():
     Library.objects.all().delete()
     Specimen.objects.all().delete()
     Subject.objects.all().delete()
-    Individual.objects.all().delete()
 
 
 def insert_mock_1():
@@ -19,7 +18,6 @@ def insert_mock_1():
     library = LibraryFactory()
     specimen = SpecimenFactory()
     subject = SubjectFactory()
-    individual = IndividualFactory()
 
     # Linking
     library.specimen = specimen
@@ -27,6 +25,3 @@ def insert_mock_1():
 
     specimen.subjects.add(subject)
     specimen.save()
-
-    subject.individual = individual
-    subject.save()

@@ -1,9 +1,8 @@
 import logging
-import json
 
 from django.test import TestCase
 
-from app.models import Individual, Subject, Specimen, Library
+from app.models import Subject, Specimen, Library
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -11,15 +10,8 @@ logger.setLevel(logging.INFO)
 
 class MetadataTestCase(TestCase):
     def setUp(self):
-        individual = Individual.objects.create(
-            internal_id='I001',
-        )
-        individual.full_clean()
-        individual.save()
-
         subject = Subject.objects.create(
             internal_id='SBJ001',
-            individual=individual
         )
         subject.full_clean()
         subject.save()
@@ -50,9 +42,6 @@ class MetadataTestCase(TestCase):
         python manage.py test app.tests.test_models.MetadataTestCase.test_get_simple_model
         """
         logger.info("Test get on simple lab models")
-
-        indiv_one = Individual.objects.get(internal_id="I001")
-        self.assertEqual(indiv_one.internal_id, "I001", "incorrect 'id' from given internal individual id")
 
         lib_one = Library.objects.get(internal_id="L001")
         self.assertEqual(lib_one.internal_id, "L001", "incorrect 'id' from given internal library id")
