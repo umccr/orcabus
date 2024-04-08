@@ -94,6 +94,7 @@ const orcaBusStatelessConfig = {
       { name: FILEMANAGER_SERVICE_NAME, authType: DbAuthType.RDS_IAM },
     ],
   },
+  metadataManagerConfig: {},
 };
 
 const eventSourceConfig = (bucket: string): EventSourceProps => {
