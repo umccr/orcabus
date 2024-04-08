@@ -5,7 +5,7 @@ import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import path from 'path';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
-import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { AnyPrincipal, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { IUserPool, UserPool } from 'aws-cdk-lib/aws-cognito';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
 import { IVpc, Vpc } from 'aws-cdk-lib/aws-ec2';
@@ -22,7 +22,6 @@ export class TokenServiceStack extends Stack {
   private readonly userPool: IUserPool;
   private readonly lambdaEnv;
   private readonly lambdaRuntimePythonVersion: aws_lambda.Runtime = aws_lambda.Runtime.PYTHON_3_12;
-  private serviceUserSecret: Secret;
 
   constructor(scope: Construct, id: string, props: StackProps & TokenServiceProps) {
     super(scope, id, props);
@@ -45,11 +44,14 @@ export class TokenServiceStack extends Stack {
       USER_POOL_APP_CLIENT_ID: userPoolAppClientId,
     };
 
-    this.createServiceUserSecretWithRotation();
-    this.createJWTSecretWithRotation();
+    const userRotationFn: PythonFunction = this.createServiceUserRotationFn();
+    const jwtRotationFn: PythonFunction = this.createJWTRotationFn();
+
+    this.createServiceUserSecret(userRotationFn, jwtRotationFn);
+    this.createJWTSecret(jwtRotationFn);
   }
 
-  private createServiceUserSecretWithRotation() {
+  private createServiceUserRotationFn() {
     const lambdaRole = new Role(this, 'ServiceUserRole', {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
       description: 'Lambda execution role for ' + 'ServiceUserRole',
@@ -76,35 +78,17 @@ export class TokenServiceStack extends Stack {
     this.userPool.grant(
       userRotationFn,
       'cognito-idp:DescribeUserPool',
-      // 'cognito-idp:AdminConfirmSignUp',
-      // 'cognito-idp:AdminDeleteUser',
-      // 'cognito-idp:AdminDisableUser',
-      // 'cognito-idp:AdminEnableUser',
       'cognito-idp:AdminGetUser',
       'cognito-idp:AdminSetUserPassword',
       'cognito-idp:InitiateAuth',
       'cognito-idp:ListUserPools',
-      'cognito-idp:ListUsers',
-      'cognito-idp:SignUp'
+      'cognito-idp:ListUsers'
     );
 
-    // create token service user secret
-    const serviceUserSecret: Secret = new Secret(this, 'ServiceUserSecret', {
-      // just create a blank secret container first
-      // the admin should populate after enrolling the service user registration elsewhere
-      secretName: this.props.serviceUserSecretName,
-    });
-
-    serviceUserSecret.addRotationSchedule('ServiceUserRotationSchedule', {
-      rotationLambda: userRotationFn,
-      automaticallyAfter: Duration.days(7), // rotate service user cred every 7 days
-      rotateImmediatelyOnUpdate: true,
-    });
-
-    this.serviceUserSecret = serviceUserSecret;
+    return userRotationFn;
   }
 
-  private createJWTSecretWithRotation() {
+  private createJWTRotationFn() {
     const lambdaRole = new Role(this, 'JWTRole', {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
       description: 'Lambda execution role for ' + 'JWTRole',
@@ -134,19 +118,7 @@ export class TokenServiceStack extends Stack {
 
     this.userPool.grant(jwtRotationFn, 'cognito-idp:InitiateAuth');
 
-    // create token service user jwt secret
-    const jwtSecret: Secret = new Secret(this, 'JWTSecret', {
-      // it should get populated by rotation
-      secretName: this.props.jwtSecretName,
-    });
-
-    jwtSecret.addRotationSchedule('ServiceUserRotationSchedule', {
-      rotationLambda: jwtRotationFn,
-      automaticallyAfter: Duration.hours(12), // rotate JWT every 12 hours
-      rotateImmediatelyOnUpdate: true,
-    });
-
-    this.serviceUserSecret.grantRead(jwtRotationFn.role as Role); // allow read to service user secret
+    return jwtRotationFn;
   }
 
   private getUserPoolId(): IStringParameter {
@@ -177,5 +149,50 @@ export class TokenServiceStack extends Stack {
       'CognitoPortalClientIdParameter',
       SSM_PORTAL_CLIENT_ID
     );
+  }
+
+  private createServiceUserSecret(userRotationFn: PythonFunction, jwtRotationFn: PythonFunction) {
+    // create token service user secret
+    const serviceUserSecret: Secret = new Secret(this, 'ServiceUserSecret', {
+      // just create a blank secret container first
+      // the admin should populate after enrolling the service user registration elsewhere
+      secretName: this.props.serviceUserSecretName,
+    });
+
+    serviceUserSecret.addRotationSchedule('ServiceUserRotationSchedule', {
+      rotationLambda: userRotationFn,
+      automaticallyAfter: Duration.days(7), // rotate service user cred every 7 days
+      rotateImmediatelyOnUpdate: true,
+    });
+
+    // No one except rotation function role should access to service user secret
+    serviceUserSecret.addToResourcePolicy(
+      new PolicyStatement({
+        principals: [new AnyPrincipal()],
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: ['*'],
+        conditions: {
+          'ForAllValues:StringNotEquals': {
+            'aws:PrincipalArn': [userRotationFn.role?.roleArn, jwtRotationFn.role?.roleArn],
+          },
+        },
+      })
+    );
+
+    serviceUserSecret.grantRead(jwtRotationFn.role as Role); // allow read to service user secret
+  }
+
+  private createJWTSecret(jwtRotationFn: PythonFunction) {
+    // create token service user jwt secret
+    const jwtSecret: Secret = new Secret(this, 'JWTSecret', {
+      // it should get populated by rotation
+      secretName: this.props.jwtSecretName,
+    });
+
+    jwtSecret.addRotationSchedule('ServiceUserRotationSchedule', {
+      rotationLambda: jwtRotationFn,
+      automaticallyAfter: Duration.hours(12), // rotate JWT every 12 hours
+      rotateImmediatelyOnUpdate: true,
+    });
   }
 }

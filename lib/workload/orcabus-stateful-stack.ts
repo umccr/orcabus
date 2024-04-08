@@ -6,10 +6,7 @@ import { ConfigurableDatabaseProps, Database } from './stateful/database/compone
 import { SecurityGroupConstruct, SecurityGroupProps } from './stateful/securitygroup/component';
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './stateful/schemaregistry/component';
 import { EventSource, EventSourceProps } from './stateful/event_source/component';
-import {
-  TokenServiceProps,
-  TokenServiceStack,
-} from './stateful/token_service/deploy/token-service-stack';
+import { TokenServiceProps, TokenServiceStack } from './stateful/token_service/deploy/stack';
 
 export interface OrcaBusStatefulConfig {
   schemaRegistryProps: SchemaRegistryProps;

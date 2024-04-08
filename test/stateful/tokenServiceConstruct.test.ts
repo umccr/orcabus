@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { getEnvironmentConfig } from '../../config/constants';
-import { TokenServiceStack } from '../../lib/workload/stateful/token_service/deploy/token-service-stack';
+import { TokenServiceStack } from '../../lib/workload/stateful/token_service/deploy/stack';
 
 const constructConfig = getEnvironmentConfig('beta');
 if (!constructConfig) throw new Error('No construct config for the test');
