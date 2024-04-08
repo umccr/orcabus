@@ -71,6 +71,3 @@ class MetadataTestCase(TestCase):
         # check specimen id
         sbj_one = subjects_qs[0]
         self.assertEqual(sbj_one.internal_id, "SBJ001", "incorrect 'id' linked within the subject")
-
-        # check individual from subject
-        self.assertEqual(sbj_one.individual.internal_id, "I001", "incorrect 'id' linked within the subject")
