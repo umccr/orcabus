@@ -105,7 +105,7 @@ make start
 To insert some mock data to be inserted, run the following command while the server is running.
 
 ```bash
-mock insert-data
+make insert-data
 ```
 
 ### Stop
