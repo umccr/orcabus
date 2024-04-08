@@ -6,6 +6,7 @@ import { EventSourceProps } from '../lib/workload/stateful/event_source/componen
 import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
 import { FilemanagerConfig } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
 
+// upstream infra: vpc
 const vpcName = 'main-vpc';
 const vpcStackName = 'networking';
 const vpcProps = {
@@ -14,6 +15,10 @@ const vpcProps = {
     Stack: vpcStackName,
   },
 };
+
+// upstream infra: cognito
+const cognitoUserPoolIdParameterName = '/data_portal/client/cog_user_pool_id';
+const cognitoPortalAppClientIdParameterName = '/data_portal/client/data2/cog_app_client_id_stage';
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
@@ -65,6 +70,8 @@ const orcaBusStatefulConfig = {
     serviceUserSecretName: serviceUserSecretName,
     jwtSecretName: jwtSecretName,
     vpcProps: vpcProps,
+    cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
+    cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
   },
 };
 

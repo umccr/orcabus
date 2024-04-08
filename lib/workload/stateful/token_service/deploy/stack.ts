@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
-import { IStringParameter } from 'aws-cdk-lib/aws-ssm';
-import { aws_lambda, aws_ssm, Duration, Stack, StackProps } from 'aws-cdk-lib';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { aws_lambda, Duration, Stack, StackProps } from 'aws-cdk-lib';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import path from 'path';
@@ -14,6 +14,8 @@ export interface TokenServiceProps {
   serviceUserSecretName: string;
   jwtSecretName: string;
   vpcProps: object;
+  cognitoUserPoolIdParameterName: string;
+  cognitoPortalAppClientIdParameterName: string;
 }
 
 export class TokenServiceStack extends Stack {
@@ -34,8 +36,17 @@ export class TokenServiceStack extends Stack {
     // AAI infrastructure. Having pre-existed Cognito resource setup within the target environment
     // is implicitly assumed. If this is no avail then fail it early with the Token Service
     // deployment. This is intentional.
-    const userPoolId = this.getUserPoolId().stringValue;
-    const userPoolAppClientId = this.getUserPoolAppClientId().stringValue;
+    const userPoolId = StringParameter.fromStringParameterName(
+      this,
+      'CognitoUserPoolIdParameter',
+      props.cognitoUserPoolIdParameterName
+    ).stringValue;
+
+    const userPoolAppClientId = StringParameter.fromStringParameterName(
+      this,
+      'CognitoPortalAppClientIdParameter',
+      props.cognitoPortalAppClientIdParameterName
+    ).stringValue;
 
     this.userPool = UserPool.fromUserPoolId(this, 'UserPool', userPoolId);
 
@@ -119,36 +130,6 @@ export class TokenServiceStack extends Stack {
     this.userPool.grant(jwtRotationFn, 'cognito-idp:InitiateAuth');
 
     return jwtRotationFn;
-  }
-
-  private getUserPoolId(): IStringParameter {
-    /**
-     * FIXME One fine day in future when we have proper Cognito AAI setup.
-     *  For the moment, we leverage Portal and established Cognito infrastructure.
-     *  See https://github.com/umccr/orcabus/issues/102
-     */
-    const SSM_USER_POOL_ID: string = '/data_portal/client/cog_user_pool_id';
-
-    return aws_ssm.StringParameter.fromStringParameterName(
-      this,
-      'CognitoUserPoolIdParameter',
-      SSM_USER_POOL_ID
-    );
-  }
-
-  private getUserPoolAppClientId(): IStringParameter {
-    /**
-     * FIXME One fine day in future when we have proper Cognito AAI setup.
-     *  For the moment, we leverage Portal and established Cognito infrastructure.
-     *  See https://github.com/umccr/orcabus/issues/102
-     */
-    const SSM_PORTAL_CLIENT_ID: string = '/data_portal/client/data2/cog_app_client_id_stage';
-
-    return aws_ssm.StringParameter.fromStringParameterName(
-      this,
-      'CognitoPortalClientIdParameter',
-      SSM_PORTAL_CLIENT_ID
-    );
   }
 
   private createServiceUserSecret(userRotationFn: PythonFunction, jwtRotationFn: PythonFunction) {
