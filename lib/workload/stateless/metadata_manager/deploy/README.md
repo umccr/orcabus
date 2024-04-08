@@ -1,3 +1,26 @@
-# Metadata Manager (MM) Deploy
+# Metadata Manager Deployment Center
 
-...
+The IaC for this microservice is written in AWS CDK Typescript. The deployment stack named `MetadataManagerStack` is in the
+`stack.ts` file in the `./deploy` directory. This will construct the relevant resources.
+
+## Architecture
+
+![arch](../docs/deploy/architecture.drawio.svg)
+
+## Construct
+
+### APIGW
+
+- Create an API Gateway to be used for this application
+
+### APILambda
+
+- The Lambda is responsible for dealing with API Request from API Gateway
+
+### MigrationLambda
+
+- Responsible for executing migration to the database
+
+### SyncGsheetLambda
+
+- Load tracking sheet data in Google Drive and map it to the Application model

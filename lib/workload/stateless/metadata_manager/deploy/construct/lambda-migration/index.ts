@@ -24,7 +24,7 @@ export class LambdaMigrationConstruct extends Construct {
       ...lambdaProps.basicLambdaConfig,
       index: 'handler/migrate.py',
       handler: 'handler',
-      timeout: Duration.seconds(28),
+      timeout: Duration.minutes(2),
     });
     lambdaProps.dbConnectionSecret.grantRead(this.lambda);
   }

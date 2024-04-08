@@ -64,7 +64,7 @@ python3 --version
 Python 3.12.2
 ```
 
-You would need to go this microservice app directory from the root project
+You would need to go to this microservice app directory from the root project
 
 ```bash
 cd lib/workload/stateless/metadata_manager
@@ -112,16 +112,24 @@ To stop the running server, simply use the `make stop` command
 
 ### Testing
 
-To run the test from scratch use `make test`, but if you want to test with a running database you could use `make suite`
-.
+To run the test from scratch use `make test`, but if you want to test with a running database you could use `make suite`.
 
 ### Development
 
-From time to time the model of the app will change and to run and apply migrations, you could use the following command.
+#### Migrations
+
+From time to time the model of the app will need to change and apply the migrations. The following command will create
+the migration changes and apply the migration respectively.
 
 ```bash
 make makemigrations
 make migrate
 ```
 
-To quickly run raw sql queries to the database, `make `psql` will log in to the psql server.
+#### SQL Queries
+
+To quickly run raw sql queries to the database, `make psql` will log in to the psql server.
+
+### Deployment
+
+View the deployment docs [here](./deploy/README.md).
