@@ -41,6 +41,8 @@ pub enum Error {
     ConfigError(String),
     #[error("Ingester error: `{0}`")]
     IngesterError(String),
+    #[error("credential generator error: `{0}`")]
+    CredentialGeneratorError(String),
 }
 
 impl From<sqlx::Error> for Error {

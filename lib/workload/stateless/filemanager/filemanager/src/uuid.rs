@@ -22,8 +22,9 @@ impl UuidGenerator {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use itertools::Itertools;
+
+    use super::*;
 
     #[test]
     fn generate_n() {

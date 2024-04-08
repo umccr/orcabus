@@ -4,10 +4,11 @@
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use chrono::{DateTime, Utc};
 use itertools::{izip, Itertools};
-use message::EventMessage;
 use serde::Deserialize;
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use uuid::Uuid;
+
+use message::EventMessage;
 
 use crate::events::aws::message::EventType;
 use crate::events::aws::EventType::{Created, Deleted, Other};

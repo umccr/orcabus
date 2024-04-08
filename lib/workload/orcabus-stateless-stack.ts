@@ -6,13 +6,13 @@ import { MultiSchemaConstructProps } from './stateless/schema/component';
 import { IVpc, ISecurityGroup, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Filemanager, FilemanagerConfig } from './stateless/filemanager/deploy/lib/filemanager';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
-import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import {
   PostgresManagerStack,
   PostgresManagerConfig,
 } from './stateless/postgres_manager/deploy/postgres-manager-stack';
 import { SequenceRunManagerStack } from './stateless/sequence_run_manager/deploy/component';
 import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
@@ -88,17 +88,16 @@ export class OrcaBusStatelessStack extends cdk.Stack {
         this
       )
     );
-    const databaseSecret = Secret.fromSecretNameV2(
-      this,
-      'FilemanagerDatabaseSecret',
-      config.databaseSecretName
-    );
 
     return new Filemanager(this, 'Filemanager', {
       buckets: config.eventSourceBuckets,
       buildEnvironment: {},
-      databaseSecret,
-      databaseSecurityGroup: this.lambdaSecurityGroup,
+      host: StringParameter.valueForStringParameter(
+        this,
+        config.databaseClusterEndpointHostParameter
+      ),
+      port: config.port,
+      securityGroup: this.lambdaSecurityGroup,
       eventSources: [queue],
       migrateDatabase: true,
       vpc: this.vpc,
