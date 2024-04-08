@@ -12,7 +12,6 @@ import {
 } from './stateless/postgres_manager/deploy/postgres-manager-stack';
 import { SequenceRunManagerStack } from './stateless/sequence_run_manager/deploy/component';
 import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
-import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
@@ -92,10 +91,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     return new Filemanager(this, 'Filemanager', {
       buckets: config.eventSourceBuckets,
       buildEnvironment: {},
-      host: StringParameter.valueForStringParameter(
-        this,
-        config.databaseClusterEndpointHostParameter
-      ),
+      databaseClusterEndpointHostParameter: config.databaseClusterEndpointHostParameter,
       port: config.port,
       securityGroup: this.lambdaSecurityGroup,
       eventSources: [queue],

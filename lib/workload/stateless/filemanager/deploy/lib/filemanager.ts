@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { IngestFunction, IngestFunctionProps } from '../constructs/functions/ingest';
+import { EventSourceProps, IngestFunction, IngestFunctionProps } from '../constructs/functions/ingest';
 import { MigrateFunction } from '../constructs/functions/migrate';
 import * as fn from '../constructs/functions/function';
 import { DatabaseProps } from '../constructs/functions/function';
@@ -7,6 +7,7 @@ import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { CdkResourceInvoke } from '../../../../components/cdk_resource_invoke';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 
@@ -31,7 +32,7 @@ export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & 
 /**
  * Props for the filemanager stack.
  */
-type FilemanagerProps = StackProps & IngestFunctionProps & DatabaseProps & {
+export type FilemanagerProps = StackProps & EventSourceProps & fn.FunctionPropsNoPackage & Omit<DatabaseProps, 'host'> & {
     /**
      * VPC to use for filemanager.
      */
@@ -41,14 +42,9 @@ type FilemanagerProps = StackProps & IngestFunctionProps & DatabaseProps & {
      */
     readonly migrateDatabase?: boolean;
     /**
-     * Event sources to use for the filemanager
+     * The parameter name that contains the database cluster endpoint.
      */
-    readonly eventSources: IQueue[];
-    /**
-     * The buckets that the filemanager is expected to process. This will add policies to access the buckets via
-     * 's3:List*' and 's3:Get*'.
-     */
-    readonly buckets: string[];
+    readonly databaseClusterEndpointHostParameter: string;
 };
 
 /**
@@ -58,15 +54,20 @@ export class Filemanager extends Stack {
   constructor(scope: Construct, id: string, props: FilemanagerProps) {
     super(scope, id, props);
 
+    const host = StringParameter.valueForStringParameter(
+      this,
+      props.databaseClusterEndpointHostParameter
+    );
+
     if (props?.migrateDatabase) {
       new CdkResourceInvoke(this, 'MigrateDatabase', {
         vpc: props.vpc,
-        createFunction: (scope: Construct, id: string, props: fn.FunctionPropsNoPackage) => {
+        createFunction: (scope: Construct, id: string, props: fn.FunctionPropsNoPackage & DatabaseProps) => {
           return new MigrateFunction(scope, id, props);
         },
         functionProps: {
           vpc: props.vpc,
-          host: props.host,
+          host: host,
           port: props.port,
           securityGroup: props.securityGroup,
           buildEnvironment: props?.buildEnvironment,
@@ -79,7 +80,7 @@ export class Filemanager extends Stack {
 
     new IngestFunction(this, 'IngestLambda', {
       vpc: props.vpc,
-      host: props.host,
+      host: host,
       port: props.port,
       securityGroup: props.securityGroup,
       eventSources: props.eventSources,

@@ -32,7 +32,7 @@ export type DatabaseProps = {
 /**
  * Props for a Rust function without the package.
  */
-export type FunctionPropsNoPackage = DatabaseProps & {
+export type FunctionPropsNoPackage = {
   /**
    * Additional build environment variables when building the Lambda function.
    */
@@ -50,7 +50,7 @@ export type FunctionPropsNoPackage = DatabaseProps & {
 /**
  * Props for the Rust function.
  */
-export type FunctionProps = FunctionPropsNoPackage & {
+export type FunctionProps = FunctionPropsNoPackage & DatabaseProps & {
   /**
    * The package to build for this function.
    */
