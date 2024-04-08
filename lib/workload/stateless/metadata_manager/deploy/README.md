@@ -5,7 +5,9 @@ The IaC for this microservice is written in AWS CDK Typescript. The deployment s
 
 ## Architecture
 
-![arch](../docs/deploy/architecture.drawio.svg)
+![arch](../docs/architecture.drawio.svg)
+
+To modify the diagram, open the `docs/architecture.drawio.svg` with [diagrams.net](https://app.diagrams.net/?src=about).
 
 ## Construct
 
@@ -24,3 +26,6 @@ The IaC for this microservice is written in AWS CDK Typescript. The deployment s
 ### SyncGsheetLambda
 
 - Load tracking sheet data in Google Drive and map it to the Application model
+- (PLANNED) periodically trigger the sync every 24 hour
+
+

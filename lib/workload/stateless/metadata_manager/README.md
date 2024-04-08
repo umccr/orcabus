@@ -8,7 +8,9 @@ The metadata manager uses the Django framework.
 
 This is the current (WIP) schema that reflects the current implementation.
 
-![schema](docs/model/schema.drawio.svg)
+![schema](docs/schema.drawio.svg)
+
+To modify the diagram, open the `docs/schema.drawio.svg` with [diagrams.net](https://app.diagrams.net/?src=about).
 
 ## How things work
 
