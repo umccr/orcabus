@@ -9,19 +9,18 @@ use tracing::trace;
 
 #[double]
 use crate::clients::aws::s3::Client;
-use crate::error::Error::S3Error;
-use crate::error::Result;
-use crate::events::aws::{
-    EventType, Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass,
-};
-use crate::events::{Collect, EventSourceType};
-
 #[double]
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::env::read_env;
+use crate::error::Error::S3Error;
 use crate::error::Error::{DeserializeError, SQSReceiveError};
+use crate::error::Result;
+use crate::events::aws::{
+    EventType, Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass,
+};
+use crate::events::{Collect, EventSourceType};
 
 /// Build an AWS collector struct.
 #[derive(Default, Debug)]
@@ -240,10 +239,9 @@ pub(crate) mod tests {
 
     use crate::events::aws::tests::{expected_event_record_simple, expected_flat_events_simple};
     use crate::events::aws::StorageClass::IntelligentTiering;
+    use crate::events::Collect;
 
     use super::*;
-
-    use crate::events::Collect;
 
     #[tokio::test]
     async fn receive() {

@@ -2,16 +2,18 @@ import { Construct } from 'constructs';
 import { IngestFunction, IngestFunctionProps } from '../constructs/functions/ingest';
 import { MigrateFunction } from '../constructs/functions/migrate';
 import * as fn from '../constructs/functions/function';
+import { DatabaseProps } from '../constructs/functions/function';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
-import { DatabaseProps } from '../constructs/functions/function';
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { CdkResourceInvoke } from '../../../../components/cdk_resource_invoke';
+
+export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 
 /**
  * Stateful config for filemanager.
  */
-export type FilemanagerConfig = {
+export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & {
   /**
    * Queue name used by the EventSource construct.
    */
@@ -21,9 +23,9 @@ export type FilemanagerConfig = {
    */
   eventSourceBuckets: string[];
   /**
-   * Database secret name for the filemanager.
+   * The parameter name that contains the database cluster endpoint.
    */
-  databaseSecretName: string;
+  databaseClusterEndpointHostParameter: string;
 }
 
 /**
@@ -64,8 +66,9 @@ export class Filemanager extends Stack {
         },
         functionProps: {
           vpc: props.vpc,
-          databaseSecret: props.databaseSecret,
-          databaseSecurityGroup: props.databaseSecurityGroup,
+          host: props.host,
+          port: props.port,
+          securityGroup: props.securityGroup,
           buildEnvironment: props?.buildEnvironment,
           rustLog: props?.rustLog,
         },
@@ -76,8 +79,9 @@ export class Filemanager extends Stack {
 
     new IngestFunction(this, 'IngestLambda', {
       vpc: props.vpc,
-      databaseSecret: props.databaseSecret,
-      databaseSecurityGroup: props.databaseSecurityGroup,
+      host: props.host,
+      port: props.port,
+      securityGroup: props.securityGroup,
       eventSources: props.eventSources,
       buckets: props.buckets,
       buildEnvironment: props?.buildEnvironment,

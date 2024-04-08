@@ -26,7 +26,7 @@ export class IngestFunction extends fn.Function {
   constructor(scope: Construct, id: string, props: IngestFunctionProps) {
     super(scope, id, { package: 'filemanager-ingest-lambda', ...props });
 
-    this.addManagedPolicy('service-role/AWSLambdaSQSQueueExecutionRole');
+    this.addAwsManagedPolicy('service-role/AWSLambdaSQSQueueExecutionRole');
 
     props.eventSources.forEach((source) => {
       const eventSource = new SqsEventSource(source);

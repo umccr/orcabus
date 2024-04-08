@@ -55,7 +55,10 @@ export class EventSource extends Construct {
   constructor(scope: Construct, id: string, props: EventSourceProps) {
     super(scope, id);
 
-    this.deadLetterQueue = new Queue(this, 'DeadLetterQueue', { enforceSSL: true });
+    this.deadLetterQueue = new Queue(this, 'DeadLetterQueue', {
+      queueName: `${props.queueName}-dlq`,
+      enforceSSL: true,
+    });
     this.queue = new Queue(this, 'Queue', {
       queueName: props.queueName,
       enforceSSL: true,
