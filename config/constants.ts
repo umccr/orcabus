@@ -4,7 +4,10 @@ import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack'
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
 import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
-import { FilemanagerConfig } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
+import {
+  FILEMANAGER_SERVICE_NAME,
+  FilemanagerConfig,
+} from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
 import { IcaEventPipeStackProps } from '../lib/workload/stateful/ica_event_pipe/stack';
 
 const regName = 'OrcaBusSchemaRegistry';
@@ -12,6 +15,7 @@ const eventBusName = 'OrcaBusMain';
 const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
 const dbClusterIdentifier = 'orcabus-db';
 const dbClusterResourceIdParameterName = '/orcabus/db-cluster-resource-id';
+const dbClusterEndpointHostParameterName = '/orcabus/db-cluster-endpoint-host';
 
 const eventSourceQueueName = 'orcabus-event-source-queue';
 const devBucket = 'umccr-temp-dev';
@@ -21,6 +25,7 @@ const prodBucket = 'org.umccr.data.oncoanalyser';
 // Note, this should not end with a hyphen and 6 characters, otherwise secrets manager won't be
 // able to find the secret using a partial ARN.
 const rdsMasterSecretName = 'orcabus/master-rds'; // pragma: allowlist secret
+const databasePort = 5432;
 
 const icaEventPipeProps: IcaEventPipeStackProps = {
   name: 'IcaEventPipeStack',
@@ -45,12 +50,13 @@ const orcaBusStatefulConfig = {
     version: AuroraPostgresEngineVersion.VER_15_4,
     parameterGroupName: 'default.aurora-postgresql15',
     username: 'postgres',
-    dbPort: 5432,
+    dbPort: databasePort,
     masterSecretName: rdsMasterSecretName,
     monitoring: {
       cloudwatchLogsExports: ['orcabus-postgresql'],
     },
     clusterResourceIdParameterName: dbClusterResourceIdParameterName,
+    clusterEndpointHostParameterName: dbClusterEndpointHostParameterName,
   },
   securityGroupProps: {
     securityGroupName: lambdaSecurityGroupName,
@@ -93,7 +99,7 @@ const orcaBusStatelessConfig = {
         name: 'metadata_manager',
         authType: DbAuthType.USERNAME_PASSWORD,
       },
-      { name: 'filemanager', authType: DbAuthType.RDS_IAM },
+      { name: FILEMANAGER_SERVICE_NAME, authType: DbAuthType.RDS_IAM },
     ],
   },
 };
@@ -113,7 +119,9 @@ const eventSourceConfig = (bucket: string): EventSourceProps => {
 const filemanagerConfig = (bucket: string): FilemanagerConfig => {
   return {
     eventSourceQueueName: eventSourceQueueName,
-    databaseSecretName: orcaBusStatefulConfig.databaseProps.masterSecretName,
+    databaseClusterEndpointHostParameter:
+      orcaBusStatefulConfig.databaseProps.clusterEndpointHostParameterName,
+    port: databasePort,
     eventSourceBuckets: [bucket],
   };
 };

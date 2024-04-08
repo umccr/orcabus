@@ -1,10 +1,11 @@
 import { Construct } from 'constructs';
 import * as fn from './function';
+import { DatabaseProps } from './function';
 
 /**
  * Props for the migrate function.
  */
-export type MigrateFunctionProps = fn.FunctionPropsNoPackage;
+export type MigrateFunctionProps = fn.FunctionPropsNoPackage & DatabaseProps;
 
 /**
  * A construct for the Lambda migrate function.

@@ -25,7 +25,7 @@ impl Client {
 
     /// Create an S3 client with default config.
     pub async fn with_defaults() -> Self {
-        Self::new(s3::Client::new(&Config::with_defaults().load().await))
+        Self::new(s3::Client::new(&Config::with_defaults().await.load()))
     }
 
     /// Execute the `ListBuckets` operation.
