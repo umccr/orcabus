@@ -7,7 +7,9 @@ These stateful resources usually have a unique name that could act as an Id for 
 defined at the CDK config file where it could be passed in both stateful and stateless stack. The stateless stack can
 use the resource by the CDK lookup.
 
-## Database
+
+## Shared
+### Database
 
 An Amazon Aurora Serverless PostgreSQL is provisioned to be used across microservices.
 
@@ -24,5 +26,19 @@ database. You could choose the type of the authentication upon creating a role a
 Please check the: [PostgresManager](../../lib/workload/stateless/postgres_manager/README.md)
 
 
-## Eventbridge
- ... 
+### Event Source
+
+### Eventbridge
+
+## ICA Event Pipe
+
+This stack creates the necessary infrastructure to allow external (ICA) events to flow onto our internal Event Bus.
+
+Details see [here](../../lib/workload/stateful/ica_event_pipe/README.md)
+
+
+## Schema Registry
+
+## SecurityGroup
+
+## VPC

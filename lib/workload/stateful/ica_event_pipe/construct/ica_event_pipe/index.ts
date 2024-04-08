@@ -8,12 +8,21 @@ import { SqsSource } from '@aws-cdk/aws-pipes-sources-alpha';
 import * as pipes from '@aws-cdk/aws-pipes-alpha';
 import * as iam from 'aws-cdk-lib/aws-iam';
 
-export interface IcaEventPipeProps {
+/**
+ * Definition of the IcaEventPipe properties.
+ */
+export interface IcaEventPipeConstructProps {
+  /** The name for the Event Pipe */
   icaEventPipeName: string;
+  /** The name for the incoming SQS queue (the DLQ with use this name with a "-dlq" postfix) */
   icaQueueName: string;
+  /** The visibility timeout for the queue */
   icaQueueVizTimeout: number;
+  /** The name of the Event Bus to forward events to (used to lookup the Event Bus) */
   eventBusName: string;
+  /** The ARN of the SNS Topic to receive DLQ notifications from CloudWatch */
   slackTopicArn: string;
+  /** The CloudWatch Alarm threshold to use before raising an alarm */
   dlqMessageThreshold: number;
 }
 
@@ -21,17 +30,19 @@ export class IcaEventPipeConstruct extends Construct {
   readonly icaQueue: IQueue;
   readonly mainBus: IEventBus;
 
-  constructor(scope: Construct, id: string, props: IcaEventPipeProps) {
+  constructor(scope: Construct, id: string, props: IcaEventPipeConstructProps) {
     super(scope, id);
     this.icaQueue = this.createMonitoredQueue(id, props).queue;
-    this.mainBus = EventBus.fromEventBusName(this, id + 'EventBus', props.eventBusName);
+    this.mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
     this.createPipe();
   }
 
   // Create the INPUT SQS queue that will receive the ICA events
   // This should have a DLQ and be monitored via CloudWatch alarm and Slack notifications
-  private createMonitoredQueue(id: string, props: IcaEventPipeProps) {
-    const topic: Topic = Topic.fromTopicArn(this, id + 'slackTopic', props.slackTopicArn) as Topic;
+  private createMonitoredQueue(id: string, props: IcaEventPipeConstructProps) {
+    // Note: the construct MonitoredQueue demands a "Topic" construct as it usually modifies the topic adding subscriptions.
+    // However, our use case, as we don't add any additional subscriptions, does not require topic modification, so we can pass on an "ITopic" as "Topic".
+    const topic: Topic = Topic.fromTopicArn(this, 'SlackTopic', props.slackTopicArn) as Topic;
 
     const mq = new MonitoredQueue(this, props.icaEventPipeName, {
       queueProps: {
@@ -58,7 +69,6 @@ export class IcaEventPipeConstruct extends Construct {
     });
     return new pipes.Pipe(this, 'Pipe', {
       source: new SqsSource(this.icaQueue),
-      // target: new EventBusTarget(this.mainBus),
       target: new EventBusTarget(this.mainBus, { inputTransformation: targetInputTransformation }),
     });
   }

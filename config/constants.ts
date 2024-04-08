@@ -5,6 +5,7 @@ import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
 import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
 import { FilemanagerConfig } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
+import { IcaEventPipeStackProps } from '../lib/workload/stateful/ica_event_pipe/stack';
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
@@ -20,6 +21,12 @@ const prodBucket = 'org.umccr.data.oncoanalyser';
 // Note, this should not end with a hyphen and 6 characters, otherwise secrets manager won't be
 // able to find the secret using a partial ARN.
 const rdsMasterSecretName = 'orcabus/master-rds'; // pragma: allowlist secret
+
+const icaEventPipeProps: IcaEventPipeStackProps = {
+  name: 'IcaEventPipeStack',
+  eventBusName: eventBusName,
+  slackTopicName: 'AwsChatBotTopic',
+};
 
 const orcaBusStatefulConfig = {
   schemaRegistryProps: {
@@ -49,14 +56,7 @@ const orcaBusStatefulConfig = {
     securityGroupName: lambdaSecurityGroupName,
     securityGroupDescription: 'allow within same SecurityGroup and rds SG',
   },
-  icaEventPipeProps: {
-    icaEventPipeName: 'orcabus-ica-event-pipe',
-    icaQueueName: 'orcabus-ica-event-queue',
-    icaQueueVizTimeout: 30,
-    eventBusName: eventBusName,
-    slackTopicArn: 'AwsChatBotTopic',
-    dlqMessageThreshold: 1,
-  },
+  icaEventPipeProps: icaEventPipeProps,
 };
 
 const orcaBusStatelessConfig = {
@@ -168,10 +168,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(devBucket),
-            icaEventPipeProps: {
-              ...orcaBusStatefulConfig.icaEventPipeProps,
-              slackTopicArn: 'arn:aws:sns:ap-southeast-2:843407916570:AwsChatBotTopic',
-            },
+            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -206,10 +203,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(stgBucket),
-            icaEventPipeProps: {
-              ...orcaBusStatefulConfig.icaEventPipeProps,
-              slackTopicArn: 'arn:aws:sns:ap-southeast-2:455634345446:AwsChatBotTopic',
-            },
+            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -242,10 +236,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(prodBucket),
-            icaEventPipeProps: {
-              ...orcaBusStatefulConfig.icaEventPipeProps,
-              slackTopicArn: 'arn:aws:sns:ap-southeast-2:472057503814:AwsChatBotTopic',
-            },
+            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,

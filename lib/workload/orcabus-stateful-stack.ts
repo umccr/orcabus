@@ -6,7 +6,7 @@ import { ConfigurableDatabaseProps, Database } from './stateful/database/compone
 import { SecurityGroupConstruct, SecurityGroupProps } from './stateful/securitygroup/component';
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './stateful/schemaregistry/component';
 import { EventSource, EventSourceProps } from './stateful/event_source/component';
-import { IcaEventPipeConstruct, IcaEventPipeProps } from './stateful/ica_event_pipe/component';
+import { IcaEventPipeStack, IcaEventPipeStackProps } from './stateful/ica_event_pipe/stack';
 
 export interface OrcaBusStatefulConfig {
   schemaRegistryProps: SchemaRegistryProps;
@@ -14,7 +14,7 @@ export interface OrcaBusStatefulConfig {
   databaseProps: ConfigurableDatabaseProps;
   securityGroupProps: SecurityGroupProps;
   eventSourceProps?: EventSourceProps;
-  icaEventPipeProps: IcaEventPipeProps;
+  icaEventPipeProps: IcaEventPipeStackProps;
 }
 
 export class OrcaBusStatefulStack extends cdk.Stack {
@@ -54,6 +54,12 @@ export class OrcaBusStatefulStack extends cdk.Stack {
       new EventSource(this, 'EventSourceConstruct', props.eventSourceProps);
     }
 
-    new IcaEventPipeConstruct(this, 'IcaEventPipeConstruct', props.icaEventPipeProps);
+    new IcaEventPipeStack(this, props.icaEventPipeProps.name, {
+      env: {
+        account: props.env?.account,
+        region: 'ap-southeast-2',
+      },
+      ...props.icaEventPipeProps,
+    });
   }
 }
