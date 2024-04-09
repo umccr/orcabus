@@ -162,8 +162,16 @@ export class TokenServiceStack extends Stack {
   private createJWTSecret(jwtRotationFn: PythonFunction) {
     // create token service user jwt secret
     const jwtSecret: Secret = new Secret(this, 'JWTSecret', {
-      // it should get populated by rotation
+      // it should get replaced by rotation
       secretName: this.props.jwtSecretName,
+      // We need the initial random generated value in the JSON format. Rather than the plaintext
+      // random string. Otherwise, the rotation function Python json.loads(..) break before even
+      // it can make the first rotation to replace with the proper one.
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({}),
+        generateStringKey: 'id_token',
+        excludeCharacters: '/@"',
+      },
     });
 
     jwtSecret.addRotationSchedule('ServiceUserRotationSchedule', {
