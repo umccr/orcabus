@@ -65,8 +65,9 @@ export class OrcaBusStatefulStack extends cdk.Stack {
         region: 'ap-southeast-2',
       },
       ...props.icaEventPipeProps,
- 
-      this.statefulStackArray.push(this.createTokenServiceStack(props));
+    });
+
+    this.statefulStackArray.push(this.createTokenServiceStack(props));
   }
 
   private createTokenServiceStack(props: cdk.StackProps & OrcaBusStatefulConfig) {
