@@ -25,12 +25,6 @@ describe('cdk-nag-stateful-stack', () => {
     Aspects.of(stack).add(new AwsSolutionsChecks());
 
     // Suppress CDK-NAG for secret rotation
-    NagSuppressions.addResourceSuppressionsByPath(
-      stack,
-      `/${stack.stackName}/OrcaBusDatabaseConstruct/OrcaBusDatabaseConstructDbSecret/Resource`,
-      [{ id: 'AwsSolutions-SMG4', reason: 'Dont require secret rotation' }]
-    );
-
     NagSuppressions.addStackSuppressions(stack, [
       { id: 'AwsSolutions-APIG1', reason: 'See https://github.com/aws/aws-cdk/issues/11100' },
     ]);

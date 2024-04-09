@@ -11,6 +11,7 @@ import { LambdaSyncGsheetConstruct } from './construct/lambda-sync-gsheet';
 import { LambdaMigrationConstruct } from './construct/lambda-migration';
 import { LambdaAPIConstruct } from './construct/lambda-api';
 import { ApiGatewayConstruct } from './construct/api-gw';
+import { PostgresManagerStack } from '../../postgres_manager/deploy/postgres-manager-stack';
 
 /**
  * this config should be configured at the top (root) cdk app
@@ -37,8 +38,8 @@ export type MetadataManagerProps = MetadataManagerConfig & {
 };
 
 export class MetadataManagerStack extends Stack {
-  // Follow by naming convention. See https://github.com/umccr/orcabus/pull/149
-  private readonly MM_RDS_CRED_SECRET_NAME = 'orcabus/metadata_manager/rdsLoginCredential'; // pragma: allowlist secret
+  private readonly MM_RDS_CRED_SECRET_NAME =
+    PostgresManagerStack.formatDbSecretManagerName('metadata_manager');
 
   constructor(scope: Construct, id: string, props: StackProps & MetadataManagerProps) {
     super(scope, id);
