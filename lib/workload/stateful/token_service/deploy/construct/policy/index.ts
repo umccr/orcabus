@@ -104,19 +104,22 @@ export function getCognitoJWTPolicy(resources: string[]) {
 export function getServiceUserSecretResourcePolicy(resources: string[]) {
   /**
    * NOTE: This policy rule is deny all & conditional exception on pass-in principal ARN resources.
+   *
    * No one except rotation function role should have access to get service user secret
+   *
+   * REF:
+   * https://github.com/umccr/infrastructure/blob/b731a87561cee99bf27545c65e98a38f1035f987/cdk/apps/ica_credentials/secrets/infrastructure.py#L85-L123
+   * https://stackoverflow.com/questions/63915906/aws-secrets-manager-resource-policy-to-deny-all-roles-except-one-role
    */
   return new PolicyStatement({
     principals: [new AnyPrincipal()],
     effect: Effect.DENY,
     actions: ['secretsmanager:GetSecretValue'],
     resources: ['*'],
-    conditions: [
-      {
-        'ForAllValues:StringNotEquals': {
-          'aws:PrincipalArn': resources,
-        },
+    conditions: {
+      'ForAllValues:StringNotEquals': {
+        'aws:PrincipalArn': resources,
       },
-    ],
+    },
   });
 }
