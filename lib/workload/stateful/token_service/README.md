@@ -59,6 +59,18 @@ After then, the scheduled secret rotation should carry on rotating password, eve
 
 ## Stack
 
+### TL;DR
+
+```
+cd lib/workload/stateful/token_service
+make install
+make test
+make template
+make lint
+make code
+make stack
+```
+
 ### Rotation Lambda
 The stack contains 2 Lambda Python code that do secret rotation. This code is derived from AWS secret manager rotation code template for PostgreSQL. See details in each Python module file docstring. 
 
