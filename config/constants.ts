@@ -9,6 +9,20 @@ import {
   FilemanagerConfig,
 } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
 
+// upstream infra: vpc
+const vpcName = 'main-vpc';
+const vpcStackName = 'networking';
+const vpcProps = {
+  vpcName: vpcName,
+  tags: {
+    Stack: vpcStackName,
+  },
+};
+
+// upstream infra: cognito
+const cognitoUserPoolIdParameterName = '/data_portal/client/cog_user_pool_id';
+const cognitoPortalAppClientIdParameterName = '/data_portal/client/data2/cog_app_client_id_stage';
+
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
 const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
@@ -25,6 +39,9 @@ const prodBucket = 'org.umccr.data.oncoanalyser';
 // able to find the secret using a partial ARN.
 const rdsMasterSecretName = 'orcabus/master-rds'; // pragma: allowlist secret
 const databasePort = 5432;
+
+const serviceUserSecretName = 'orcabus/token-service-user'; // pragma: allowlist secret
+const jwtSecretName = 'orcabus/token-service-jwt'; // pragma: allowlist secret
 
 const orcaBusStatefulConfig = {
   schemaRegistryProps: {
@@ -54,6 +71,13 @@ const orcaBusStatefulConfig = {
   securityGroupProps: {
     securityGroupName: lambdaSecurityGroupName,
     securityGroupDescription: 'allow within same SecurityGroup and rds SG',
+  },
+  tokenServiceProps: {
+    serviceUserSecretName: serviceUserSecretName,
+    jwtSecretName: jwtSecretName,
+    vpcProps: vpcProps,
+    cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
+    cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
   },
 };
 
@@ -169,6 +193,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(devBucket),
+            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -203,6 +228,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(stgBucket),
+            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -235,6 +261,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(prodBucket),
+            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
