@@ -5,10 +5,16 @@ import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import path from 'path';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
-import { AnyPrincipal, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { IUserPool, UserPool } from 'aws-cdk-lib/aws-cognito';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
 import { IVpc, Vpc } from 'aws-cdk-lib/aws-ec2';
+import {
+  getCognitoAdminActions,
+  getCognitoJWTActions,
+  getLambdaVPCPolicy,
+  getServiceUserSecretResourcePolicy,
+} from './construct/policy';
 
 export interface TokenServiceProps {
   serviceUserSecretName: string;
@@ -86,15 +92,9 @@ export class TokenServiceStack extends Stack {
     });
     lambdaLogGroup.grantWrite(userRotationFn);
 
-    this.userPool.grant(
-      userRotationFn,
-      'cognito-idp:DescribeUserPool',
-      'cognito-idp:AdminGetUser',
-      'cognito-idp:AdminSetUserPassword',
-      'cognito-idp:InitiateAuth',
-      'cognito-idp:ListUserPools',
-      'cognito-idp:ListUsers'
-    );
+    this.userPool.grant(userRotationFn, ...getCognitoAdminActions());
+
+    userRotationFn.addToRolePolicy(getLambdaVPCPolicy([this.vpc.vpcArn]));
 
     return userRotationFn;
   }
@@ -127,7 +127,9 @@ export class TokenServiceStack extends Stack {
     });
     lambdaLogGroup.grantWrite(jwtRotationFn);
 
-    this.userPool.grant(jwtRotationFn, 'cognito-idp:InitiateAuth');
+    this.userPool.grant(jwtRotationFn, ...getCognitoJWTActions());
+
+    jwtRotationFn.addToRolePolicy(getLambdaVPCPolicy([this.vpc.vpcArn]));
 
     return jwtRotationFn;
   }
@@ -148,16 +150,10 @@ export class TokenServiceStack extends Stack {
 
     // No one except rotation function role should access to service user secret
     serviceUserSecret.addToResourcePolicy(
-      new PolicyStatement({
-        principals: [new AnyPrincipal()],
-        actions: ['secretsmanager:GetSecretValue'],
-        resources: ['*'],
-        conditions: {
-          'ForAllValues:StringNotEquals': {
-            'aws:PrincipalArn': [userRotationFn.role?.roleArn, jwtRotationFn.role?.roleArn],
-          },
-        },
-      })
+      getServiceUserSecretResourcePolicy([
+        (userRotationFn.role as Role).roleArn,
+        (jwtRotationFn.role as Role).roleArn,
+      ])
     );
 
     serviceUserSecret.grantRead(jwtRotationFn.role as Role); // allow read to service user secret
