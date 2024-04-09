@@ -19,8 +19,14 @@ export function getLambdaBasicExecPolicy(resources: string[]) {
   });
 }
 
-export function getLambdaVPCPolicy(resources: string[]) {
+export function getLambdaVPCPolicy() {
   /**
+   * NOTE: It is a bit challenging to restrict the ec2 resources here. These resourcs are nested
+   * under specific VPC. The simply restricting to VPC ARN won't do. See below:
+   * https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonec2.html
+   *
+   * So, we have to allow '*' this case. Something to catch up in next AWS meetup, perhaps! ~victor
+   *
    * Based on managed policies:
    * https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSLambdaVPCAccessExecutionRole.html
    */
@@ -35,7 +41,7 @@ export function getLambdaVPCPolicy(resources: string[]) {
       'ec2:AssignPrivateIpAddresses',
       'ec2:UnassignPrivateIpAddresses',
     ],
-    resources: resources,
+    resources: ['*'], // see docstring ^^
   });
 }
 
