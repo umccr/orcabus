@@ -10,6 +10,7 @@ import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { SRMApiGatewayConstruct } from './apigw/component';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
+import { PostgresManagerStack } from '../../postgres_manager/deploy/postgres-manager-stack';
 
 export interface SequenceRunManagerProps {
   securityGroups: ISecurityGroup[];
@@ -18,8 +19,7 @@ export interface SequenceRunManagerProps {
 }
 
 export class SequenceRunManagerStack extends Stack {
-  // Follow by naming convention. See https://github.com/umccr/orcabus/pull/149
-  private readonly secretId: string = 'orcabus/sequence_run_manager/rdsLoginCredential';
+  private readonly secretId: string = PostgresManagerStack.formatDbSecretManagerName('sequence_run_manager');
   private readonly apiName: string = 'SequenceRunManager';  // apiNamespace `/srm/v1` is handled by Django Router
   private readonly id: string;
   private readonly props: SequenceRunManagerProps;

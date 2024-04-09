@@ -50,6 +50,7 @@ const orcaBusStatefulConfig = {
     },
     clusterResourceIdParameterName: dbClusterResourceIdParameterName,
     clusterEndpointHostParameterName: dbClusterEndpointHostParameterName,
+    secretRotationSchedule: Duration.days(7),
   },
   securityGroupProps: {
     securityGroupName: lambdaSecurityGroupName,
@@ -82,6 +83,7 @@ const orcaBusStatelessConfig = {
     masterSecretName: rdsMasterSecretName,
     dbClusterIdentifier: dbClusterIdentifier,
     clusterResourceIdParameterName: dbClusterResourceIdParameterName,
+    dbPort: databasePort,
     microserviceDbConfig: [
       {
         name: 'sequence_run_manager',
@@ -93,6 +95,7 @@ const orcaBusStatelessConfig = {
       },
       { name: FILEMANAGER_SERVICE_NAME, authType: DbAuthType.RDS_IAM },
     ],
+    secretRotationSchedule: Duration.days(7),
   },
   metadataManagerConfig: {},
 };
