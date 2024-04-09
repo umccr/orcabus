@@ -6,8 +6,8 @@ import { DatabaseProps } from '../constructs/functions/function';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { Stack, StackProps } from 'aws-cdk-lib';
-import { CdkResourceInvoke } from '../../../../components/cdk_resource_invoke';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { ProviderFunction } from '../../../../components/provider_function';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 
@@ -60,21 +60,18 @@ export class Filemanager extends Stack {
     );
 
     if (props?.migrateDatabase) {
-      new CdkResourceInvoke(this, 'MigrateDatabase', {
+      const migrateFunction = new MigrateFunction(this, 'MigrateFunction', {
         vpc: props.vpc,
-        createFunction: (scope: Construct, id: string, props: fn.FunctionPropsNoPackage & DatabaseProps) => {
-          return new MigrateFunction(scope, id, props);
-        },
-        functionProps: {
-          vpc: props.vpc,
-          host: host,
-          port: props.port,
-          securityGroup: props.securityGroup,
-          buildEnvironment: props?.buildEnvironment,
-          rustLog: props?.rustLog,
-        },
-        id: 'MigrateFunction',
-        // Assuming no dependencies because the database will already exist.
+        host: host,
+        port: props.port,
+        securityGroup: props.securityGroup,
+        buildEnvironment: props?.buildEnvironment,
+        rustLog: props?.rustLog,
+      });
+
+      new ProviderFunction(this, 'MigrationProviderFunction', {
+        vpc: props.vpc,
+        function: migrateFunction.function,
       });
     }
 

@@ -19,7 +19,7 @@ fetch additional object data such as storage classes.
 
 The filemanager expects a dedicated database within the shared database cluster, which it can use to store data.
 Initially, the filemanager-migrate-lambda function is deployed to perform database table migrations using the
-cdk_resource_invoke.ts construct. Then, the other Lambda functions are deployed normally within the filemanager
+provider_function.ts construct. Then, the other Lambda functions are deployed normally within the filemanager
 construct.
 
 ### Building

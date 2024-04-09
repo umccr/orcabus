@@ -44,7 +44,7 @@ async fn main() -> Result<(), Error> {
         update_credentials(options).await?;
 
         // Migrate depending on the type of lifecycle event using the CDK provider framework:
-        // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.custom_resources-readme.html
+        // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.custom_resources-readme.html#provider-framework
         //
         // Note, we don't care what's contained within the event, as the action will always be
         // to try and migrate unless this is a Delete event.

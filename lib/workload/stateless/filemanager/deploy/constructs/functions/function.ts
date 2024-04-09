@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { print } from 'aws-cdk/lib/logging';
 import { PostgresManagerStack } from '../../../../postgres_manager/deploy/postgres-manager-stack';
 import { FILEMANAGER_SERVICE_NAME } from '../../lib/filemanager';
+import * as fs from 'fs';
 
 /**
  * Properties for the database.
@@ -114,10 +115,10 @@ export class Function extends Construct {
         environment: {
           ...props.buildEnvironment,
           // Avoid concurrency errors by creating another target directory.
-          CARGO_TARGET_DIR: `target/cdk-bundling-${uuid}`,
+          // CARGO_TARGET_DIR: `target/cdk-bundling-${uuid}`,
           // The bundling container needs to be able to connect to the container running postgres.
           DATABASE_URL: localDatabaseUrl,
-        }
+        },
       },
       memorySize: 128,
       timeout: Duration.seconds(28),
