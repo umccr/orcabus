@@ -94,7 +94,7 @@ export class TokenServiceStack extends Stack {
 
     this.userPool.grant(userRotationFn, ...getCognitoAdminActions());
 
-    userRotationFn.addToRolePolicy(getLambdaVPCPolicy([this.vpc.vpcArn]));
+    userRotationFn.addToRolePolicy(getLambdaVPCPolicy());
 
     return userRotationFn;
   }
@@ -129,7 +129,7 @@ export class TokenServiceStack extends Stack {
 
     this.userPool.grant(jwtRotationFn, ...getCognitoJWTActions());
 
-    jwtRotationFn.addToRolePolicy(getLambdaVPCPolicy([this.vpc.vpcArn]));
+    jwtRotationFn.addToRolePolicy(getLambdaVPCPolicy());
 
     return jwtRotationFn;
   }
