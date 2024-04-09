@@ -3,6 +3,7 @@ import { RemovalPolicy, Duration } from 'aws-cdk-lib';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as sm from 'aws-cdk-lib/aws-secretsmanager';
 import { SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { DatabaseCluster } from 'aws-cdk-lib/aws-rds';
 
@@ -84,6 +85,10 @@ export type ConfigurableDatabaseProps = MonitoringProps & {
    * The ssm parameter name to store the cluster endpoint
    */
   clusterEndpointHostParameterName: string;
+  /**
+   * The schedule (in Duration) that will rotate the master secret
+   */
+  secretRotationSchedule: Duration;
 };
 
 /**
@@ -156,6 +161,20 @@ export class Database extends Construct {
       writer: rds.ClusterInstance.serverlessV2('WriterClusterInstance', {
         enablePerformanceInsights: props.enablePerformanceInsights,
       }),
+    });
+
+    new sm.SecretRotation(this, 'MasterDbSecretRotation', {
+      application: sm.SecretRotationApplication.POSTGRES_ROTATION_SINGLE_USER,
+      // From default: https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.DatabaseSecret.html#excludecharacters
+      excludeCharacters: '" %+~`#$&()|[]{}:;' + `<>?!'/@"\\")*`,
+      secret: dbSecret,
+      target: this.cluster,
+      automaticallyAfter: Duration.days(1),
+      securityGroup: props.allowedInboundSG,
+      vpc: props.vpc,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+      },
     });
 
     // saving the cluster id to be used in stateless stack on rds-iam
