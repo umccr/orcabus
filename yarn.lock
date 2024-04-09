@@ -53,6 +53,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aws-cdk/aws-pipes-alpha@npm:^2.133.0-alpha.0":
+  version: 2.133.0-alpha.0
+  resolution: "@aws-cdk/aws-pipes-alpha@npm:2.133.0-alpha.0"
+  peerDependencies:
+    aws-cdk-lib: ^2.133.0
+    constructs: ^10.0.0
+  checksum: 6375e98944bb68cc56268a63b2d3ed88c40fd424848457a6d6e46659bf806eeff88c193a25f19e51c487ecd5b757655902379e7371c7fdf70271618aea4a82c7
+  languageName: node
+  linkType: hard
+
+"@aws-cdk/aws-pipes-sources-alpha@npm:^2.133.0-alpha.0":
+  version: 2.133.0-alpha.0
+  resolution: "@aws-cdk/aws-pipes-sources-alpha@npm:2.133.0-alpha.0"
+  peerDependencies:
+    "@aws-cdk/aws-pipes-alpha": 2.133.0-alpha.0
+    aws-cdk-lib: ^2.133.0
+    constructs: ^10.0.0
+  checksum: 99cdaae18ab87aa816ea08b7c674e037d0e605085ebb4c3f06c9effabf254d4f951a27a092f5a210f32bac4793026e5bd9b8cc7d293a4648e6c8b9b80508a82c
+  languageName: node
+  linkType: hard
+
 "@babel/code-frame@npm:^7.0.0, @babel/code-frame@npm:^7.12.13, @babel/code-frame@npm:^7.22.13, @babel/code-frame@npm:^7.23.5":
   version: 7.23.5
   resolution: "@babel/code-frame@npm:7.23.5"
@@ -1444,6 +1465,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"asynckit@npm:^0.4.0":
+  version: 0.4.0
+  resolution: "asynckit@npm:0.4.0"
+  checksum: 7b78c451df768adba04e2d02e63e2d0bf3b07adcd6e42b4cf665cb7ce899bedd344c69a1dcbce355b5f972d597b25aaa1c1742b52cffd9caccb22f348114f6be
+  languageName: node
+  linkType: hard
+
 "aws-cdk-lib@npm:^2.133.0":
   version: 2.133.0
   resolution: "aws-cdk-lib@npm:2.133.0"
@@ -1479,6 +1507,17 @@ __metadata:
   bin:
     cdk: bin/cdk
   checksum: bdeaf2b0d9246a07e21a13f23d04a189a84d7d7a9352765754c99563ee8199b2543cf35a35804c5e3ff0ca834eb090a43504a716957d87c0123ef2da6659b823
+  languageName: node
+  linkType: hard
+
+"axios@npm:^1.6.7":
+  version: 1.6.8
+  resolution: "axios@npm:1.6.8"
+  dependencies:
+    follow-redirects: ^1.15.6
+    form-data: ^4.0.0
+    proxy-from-env: ^1.1.0
+  checksum: bf007fa4b207d102459300698620b3b0873503c6d47bf5a8f6e43c0c64c90035a4f698b55027ca1958f61ab43723df2781c38a99711848d232cad7accbcdfcdd
   languageName: node
   linkType: hard
 
@@ -1836,6 +1875,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"combined-stream@npm:^1.0.8":
+  version: 1.0.8
+  resolution: "combined-stream@npm:1.0.8"
+  dependencies:
+    delayed-stream: ~1.0.0
+  checksum: 49fa4aeb4916567e33ea81d088f6584749fc90c7abec76fd516bf1c5aa5c79f3584b5ba3de6b86d26ddd64bae5329c4c7479343250cfe71c75bb366eae53bb7c
+  languageName: node
+  linkType: hard
+
 "concat-map@npm:0.0.1":
   version: 0.0.1
   resolution: "concat-map@npm:0.0.1"
@@ -1934,6 +1982,13 @@ __metadata:
   version: 4.3.1
   resolution: "deepmerge@npm:4.3.1"
   checksum: 2024c6a980a1b7128084170c4cf56b0fd58a63f2da1660dcfe977415f27b17dbe5888668b59d0b063753f3220719d5e400b7f113609489c90160bb9a5518d052
+  languageName: node
+  linkType: hard
+
+"delayed-stream@npm:~1.0.0":
+  version: 1.0.0
+  resolution: "delayed-stream@npm:1.0.0"
+  checksum: 46fe6e83e2cb1d85ba50bd52803c68be9bd953282fa7096f51fc29edd5d67ff84ff753c51966061e5ba7cb5e47ef6d36a91924eddb7f3f3483b1c560f77a0020
   languageName: node
   linkType: hard
 
@@ -2386,6 +2441,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"follow-redirects@npm:^1.15.6":
+  version: 1.15.6
+  resolution: "follow-redirects@npm:1.15.6"
+  peerDependenciesMeta:
+    debug:
+      optional: true
+  checksum: a62c378dfc8c00f60b9c80cab158ba54e99ba0239a5dd7c81245e5a5b39d10f0c35e249c3379eae719ff0285fff88c365dd446fab19dee771f1d76252df1bbf5
+  languageName: node
+  linkType: hard
+
 "foreground-child@npm:^3.1.0":
   version: 3.1.1
   resolution: "foreground-child@npm:3.1.1"
@@ -2393,6 +2458,17 @@ __metadata:
     cross-spawn: ^7.0.0
     signal-exit: ^4.0.1
   checksum: 139d270bc82dc9e6f8bc045fe2aae4001dc2472157044fdfad376d0a3457f77857fa883c1c8b21b491c6caade9a926a4bed3d3d2e8d3c9202b151a4cbbd0bcd5
+  languageName: node
+  linkType: hard
+
+"form-data@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "form-data@npm:4.0.0"
+  dependencies:
+    asynckit: ^0.4.0
+    combined-stream: ^1.0.8
+    mime-types: ^2.1.12
+  checksum: 01135bf8675f9d5c61ff18e2e2932f719ca4de964e3be90ef4c36aacfc7b9cb2fceb5eca0b7e0190e3383fe51c5b37f4cb80b62ca06a99aaabfcfd6ac7c9328c
   languageName: node
   linkType: hard
 
@@ -3640,7 +3716,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mime-types@npm:^2.1.35":
+"mime-types@npm:^2.1.12, mime-types@npm:^2.1.35":
   version: 2.1.35
   resolution: "mime-types@npm:2.1.35"
   dependencies:
@@ -3886,6 +3962,8 @@ __metadata:
   resolution: "orcabus@workspace:."
   dependencies:
     "@aws-cdk/aws-lambda-python-alpha": 2.126.0-alpha.0
+    "@aws-cdk/aws-pipes-alpha": ^2.133.0-alpha.0
+    "@aws-cdk/aws-pipes-sources-alpha": ^2.133.0-alpha.0
     "@types/jest": ^29.5.2
     "@types/node": ^20.4.0
     "@typescript-eslint/eslint-plugin": ^6.19.1
@@ -3903,6 +3981,7 @@ __metadata:
     jest-junit: ^16.0.0
     prettier: ^3.2.4
     source-map-support: ^0.5.21
+    sqs-dlq-monitoring: ^1.2.0
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
     typescript: ^5.1.6
@@ -4117,6 +4196,13 @@ __metadata:
     kleur: ^3.0.3
     sisteransi: ^1.0.5
   checksum: d8fd1fe63820be2412c13bfc5d0a01909acc1f0367e32396962e737cb2fc52d004f3302475d5ce7d18a1e8a79985f93ff04ee03007d091029c3f9104bffc007d
+  languageName: node
+  linkType: hard
+
+"proxy-from-env@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "proxy-from-env@npm:1.1.0"
+  checksum: ed7fcc2ba0a33404958e34d95d18638249a68c430e30fcb6c478497d72739ba64ce9810a24f53a7d921d0c065e5b78e3822759800698167256b04659366ca4d4
   languageName: node
   linkType: hard
 
@@ -4398,6 +4484,18 @@ __metadata:
   version: 1.0.3
   resolution: "sprintf-js@npm:1.0.3"
   checksum: 19d79aec211f09b99ec3099b5b2ae2f6e9cdefe50bc91ac4c69144b6d3928a640bb6ae5b3def70c2e85a2c3d9f5ec2719921e3a59d3ca3ef4b2fd1a4656a0df3
+  languageName: node
+  linkType: hard
+
+"sqs-dlq-monitoring@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "sqs-dlq-monitoring@npm:1.2.0"
+  dependencies:
+    axios: ^1.6.7
+  peerDependencies:
+    aws-cdk-lib: ^2.60.0
+    constructs: ^10.0.5
+  checksum: f892160824f2d539048ea13bdf66d2f04d47e2149ea60b61ce266b34d181e988aa24e6596b79d03c00eb87da36ceb2570ae185c167c35c993d69daabaf19c0ce
   languageName: node
   linkType: hard
 

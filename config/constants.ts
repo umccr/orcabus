@@ -8,6 +8,7 @@ import {
   FILEMANAGER_SERVICE_NAME,
   FilemanagerConfig,
 } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
+import { IcaEventPipeStackProps } from '../lib/workload/stateful/ica_event_pipe/stack';
 
 // upstream infra: vpc
 const vpcName = 'main-vpc';
@@ -39,6 +40,12 @@ const prodBucket = 'org.umccr.data.oncoanalyser';
 // able to find the secret using a partial ARN.
 const rdsMasterSecretName = 'orcabus/master-rds'; // pragma: allowlist secret
 const databasePort = 5432;
+
+const icaEventPipeProps: IcaEventPipeStackProps = {
+  name: 'IcaEventPipeStack',
+  eventBusName: eventBusName,
+  slackTopicName: 'AwsChatBotTopic',
+};
 
 const serviceUserSecretName = 'orcabus/token-service-user'; // pragma: allowlist secret
 const jwtSecretName = 'orcabus/token-service-jwt'; // pragma: allowlist secret
@@ -72,6 +79,7 @@ const orcaBusStatefulConfig = {
     securityGroupName: lambdaSecurityGroupName,
     securityGroupDescription: 'allow within same SecurityGroup and rds SG',
   },
+  icaEventPipeProps: icaEventPipeProps,
   tokenServiceProps: {
     serviceUserSecretName: serviceUserSecretName,
     jwtSecretName: jwtSecretName,
@@ -193,6 +201,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(devBucket),
+            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
             tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
@@ -228,6 +237,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(stgBucket),
+            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
             tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
@@ -261,6 +271,7 @@ export const getEnvironmentConfig = (
               ...orcaBusStatefulConfig.securityGroupProps,
             },
             eventSourceProps: eventSourceConfig(prodBucket),
+            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
             tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
