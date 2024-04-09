@@ -114,7 +114,14 @@ yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/OrcaBusStatefu
 Or
 
 ```
-yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/OrcaBusStatefulStack/TokenServiceStack > template.yml && code template.yml
+mkdir -p .local
+
+yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/OrcaBusStatefulStack/TokenServiceStack > .local/template.yml && code .local/template.yml
+```
+
+Then, do CloudFormation lint check:
+```
+cfn-lint .local/template.yml
 ```
 
 If that all good, then you may diff e & push straight to dev for giving it the WIP a try...
