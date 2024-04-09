@@ -10,6 +10,20 @@ import {
 } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
 import { IcaEventPipeStackProps } from '../lib/workload/stateful/ica_event_pipe/stack';
 
+// upstream infra: vpc
+const vpcName = 'main-vpc';
+const vpcStackName = 'networking';
+const vpcProps = {
+  vpcName: vpcName,
+  tags: {
+    Stack: vpcStackName,
+  },
+};
+
+// upstream infra: cognito
+const cognitoUserPoolIdParameterName = '/data_portal/client/cog_user_pool_id';
+const cognitoPortalAppClientIdParameterName = '/data_portal/client/data2/cog_app_client_id_stage';
+
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
 const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
@@ -32,6 +46,9 @@ const icaEventPipeProps: IcaEventPipeStackProps = {
   eventBusName: eventBusName,
   slackTopicName: 'AwsChatBotTopic',
 };
+
+const serviceUserSecretName = 'orcabus/token-service-user'; // pragma: allowlist secret
+const jwtSecretName = 'orcabus/token-service-jwt'; // pragma: allowlist secret
 
 const orcaBusStatefulConfig = {
   schemaRegistryProps: {
@@ -63,6 +80,13 @@ const orcaBusStatefulConfig = {
     securityGroupDescription: 'allow within same SecurityGroup and rds SG',
   },
   icaEventPipeProps: icaEventPipeProps,
+  tokenServiceProps: {
+    serviceUserSecretName: serviceUserSecretName,
+    jwtSecretName: jwtSecretName,
+    vpcProps: vpcProps,
+    cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
+    cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
+  },
 };
 
 const orcaBusStatelessConfig = {
@@ -102,6 +126,7 @@ const orcaBusStatelessConfig = {
       { name: FILEMANAGER_SERVICE_NAME, authType: DbAuthType.RDS_IAM },
     ],
   },
+  metadataManagerConfig: {},
 };
 
 const eventSourceConfig = (bucket: string): EventSourceProps => {
@@ -177,6 +202,7 @@ export const getEnvironmentConfig = (
             },
             eventSourceProps: eventSourceConfig(devBucket),
             icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
+            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -212,6 +238,7 @@ export const getEnvironmentConfig = (
             },
             eventSourceProps: eventSourceConfig(stgBucket),
             icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
+            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -245,6 +272,7 @@ export const getEnvironmentConfig = (
             },
             eventSourceProps: eventSourceConfig(prodBucket),
             icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
+            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,

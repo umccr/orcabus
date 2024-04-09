@@ -10,6 +10,10 @@ import {
   PostgresManagerStack,
   PostgresManagerConfig,
 } from './stateless/postgres_manager/deploy/postgres-manager-stack';
+import {
+  MetadataManagerStack,
+  MetadataManagerConfig,
+} from './stateless/metadata_manager/deploy/stack';
 import { SequenceRunManagerStack } from './stateless/sequence_run_manager/deploy/component';
 import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
 
@@ -19,6 +23,7 @@ export interface OrcaBusStatelessConfig {
   lambdaSecurityGroupName: string;
   rdsMasterSecretName: string;
   postgresManagerConfig: PostgresManagerConfig;
+  metadataManagerConfig: MetadataManagerConfig;
   filemanagerConfig: FilemanagerConfig;
 }
 
@@ -54,6 +59,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
 
     this.microserviceStackArray.push(this.createSequenceRunManager(props));
     this.microserviceStackArray.push(this.createPostgresManager(props.postgresManagerConfig));
+    this.microserviceStackArray.push(this.createMetadataManager(props.metadataManagerConfig));
     this.microserviceStackArray.push(this.createFilemanager(props.filemanagerConfig));
   }
 
@@ -71,6 +77,14 @@ export class OrcaBusStatelessStack extends cdk.Stack {
       ...config,
       vpc: this.vpc,
       lambdaSecurityGroup: this.lambdaSecurityGroup,
+    });
+  }
+
+  private createMetadataManager(config: MetadataManagerConfig) {
+    return new MetadataManagerStack(this, 'MetadataManager', {
+      vpc: this.vpc,
+      lambdaSecurityGroups: this.lambdaSecurityGroup,
+      ...config,
     });
   }
 
