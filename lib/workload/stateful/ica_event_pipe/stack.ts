@@ -49,6 +49,6 @@ export class IcaEventPipeStack extends Stack {
     if (!props.env.region) {
       throw new Error('No region');
     }
-    return 'arn:aws:sns:' + props.env.account + ':' + props.env.region + ':' + props.slackTopicName;
+    return 'arn:aws:sns:' + props.env.region + ':' + props.env.account + ':' + props.slackTopicName;
   }
 }
