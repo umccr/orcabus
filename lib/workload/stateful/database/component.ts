@@ -169,7 +169,7 @@ export class Database extends Construct {
       excludeCharacters: '" %+~`#$&()|[]{}:;' + `<>?!'/@"\\")*`,
       secret: dbSecret,
       target: this.cluster,
-      automaticallyAfter: Duration.days(1),
+      automaticallyAfter: props.secretRotationSchedule,
       securityGroup: props.allowedInboundSG,
       vpc: props.vpc,
       vpcSubnets: {
