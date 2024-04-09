@@ -1,10 +1,9 @@
 import { Construct } from 'constructs';
-import { EventSourceProps, IngestFunction, IngestFunctionProps } from '../constructs/functions/ingest';
+import { EventSourceProps, IngestFunction } from '../constructs/functions/ingest';
 import { MigrateFunction } from '../constructs/functions/migrate';
 import * as fn from '../constructs/functions/function';
 import { DatabaseProps } from '../constructs/functions/function';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { ProviderFunction } from '../../../../components/provider_function';
@@ -69,7 +68,7 @@ export class Filemanager extends Stack {
         rustLog: props?.rustLog,
       });
 
-      new ProviderFunction(this, 'MigrationProviderFunction', {
+      new ProviderFunction(this, 'MigrateProviderFunction', {
         vpc: props.vpc,
         function: migrateFunction.function,
       });

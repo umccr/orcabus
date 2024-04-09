@@ -10,7 +10,6 @@ import { randomUUID } from 'node:crypto';
 import { print } from 'aws-cdk/lib/logging';
 import { PostgresManagerStack } from '../../../../postgres_manager/deploy/postgres-manager-stack';
 import { FILEMANAGER_SERVICE_NAME } from '../../lib/filemanager';
-import * as fs from 'fs';
 
 /**
  * Properties for the database.
@@ -82,7 +81,7 @@ export class Function extends Construct {
     // Using RDS IAM credentials, so we add the managed policy created by the postgres manager.
     this.addCustomerManagedPolicy(PostgresManagerStack.formatRdsPolicyName(FILEMANAGER_SERVICE_NAME));
 
-    // Lambda needs to be able to reach out to access S3, security manager (eventually), etc.
+    // Lambda needs to be able to reach out to access S3, security manager, etc.
     // Could this use an endpoint instead?
     const securityGroup = new SecurityGroup(this, 'SecurityGroup', {
       vpc: props.vpc,
@@ -92,21 +91,7 @@ export class Function extends Construct {
 
     const manifestPath =  path.join(__dirname, '..', '..', '..');
     const uuid = randomUUID();
-
-    // This starts the container running postgres in order to compile queries using sqlx.
-    // It needs to be executed outside `beforeBundling`, because `beforeBundling` runs inside
-    // the container context, and docker compose needs to run outside of this context.
-    print(`running filemanager \`make -s docker-run DOCKER_PROJECT_NAME=${uuid}\``);
-    const output = exec(
-      'make',
-      ['-s', 'docker-run', `DOCKER_PROJECT_NAME=${uuid}`],
-      { cwd: manifestPath, shell: true }
-    );
-
-    // Grab the last line only in case there are other outputs.
-    const address = output.stdout.toString().trim().match('.*$')?.pop();
-    const localDatabaseUrl = `postgresql://${FILEMANAGER_SERVICE_NAME}:${FILEMANAGER_SERVICE_NAME}@${address}/${FILEMANAGER_SERVICE_NAME}`; // pragma: allowlist secret
-    print(`the local filemanager database url is: ${localDatabaseUrl}`);
+    const localDatabaseUrl = this.resolveLocalDatabaseUrl(uuid, manifestPath);
 
     this._function = new RustFunction(this, 'RustFunction', {
       manifestPath: manifestPath,
@@ -114,9 +99,7 @@ export class Function extends Construct {
       bundling: {
         environment: {
           ...props.buildEnvironment,
-          // Avoid concurrency errors by creating another target directory.
-          // CARGO_TARGET_DIR: `target/cdk-bundling-${uuid}`,
-          // The bundling container needs to be able to connect to the container running postgres.
+          // The bundling process needs to be able to connect to the container running postgres.
           DATABASE_URL: localDatabaseUrl,
         },
       },
@@ -144,6 +127,43 @@ export class Function extends Construct {
     });
 
     // Todo this should probably connect to an RDS proxy rather than directly to the database.
+  }
+
+  /**
+   * Resolve the local database url for checking compiled queries.
+   */
+  private resolveLocalDatabaseUrl(uuid: string, manifestPath: string) {
+    const execMake = (commandArgs: string) => {
+      print(`running \`make ${commandArgs}\``);
+      return exec(
+        'make',
+        [commandArgs],
+        { cwd: manifestPath, shell: true }
+      );
+    }
+
+    print('trying to find running filemanager container');
+
+    // Check to see if there is a running database, no need to create these unnecessarily.
+    let commandArgs = `-s docker-find DOCKER_PROJECT_NAME=${FILEMANAGER_SERVICE_NAME}`;
+    let output = execMake(commandArgs);
+
+    if (!output.stdout.toString()) {
+      print('could not find a running filemanager container, starting a new one');
+
+      // This starts the container running postgres in order to compile queries using sqlx.
+      // It needs to be executed outside `beforeBundling`, because `beforeBundling` can run inside
+      // the container context, and docker compose needs to run outside of this context.
+      commandArgs = `-s docker-run DOCKER_PROJECT_NAME=${FILEMANAGER_SERVICE_NAME}-${uuid}`;
+      output = execMake(commandArgs);
+    }
+
+    // Grab the last line only in case there are other outputs.
+    const address = output.stdout.toString().trim().match('.*$')?.pop();
+    const localDatabaseUrl = `postgresql://${FILEMANAGER_SERVICE_NAME}:${FILEMANAGER_SERVICE_NAME}@${address}/${FILEMANAGER_SERVICE_NAME}`; // pragma: allowlist secret
+    print(`the local filemanager database url is: ${localDatabaseUrl}`);
+
+    return localDatabaseUrl;
   }
 
   /**

@@ -142,7 +142,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       );
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
-        `/TestStack/Filemanager/MigrateDatabase/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,
+        `/TestStack/Filemanager/MigrateProviderFunction/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,
         [
           {
             id: 'AwsSolutions-IAM5',
