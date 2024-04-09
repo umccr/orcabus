@@ -66,7 +66,7 @@ export class Icav2EventTranslatorLaunchStepFunctionStateMachineConstruct extends
     // Specify the statemachine
     const launchStateMachine = new sfn.StateMachine(
       this,
-      'bclconvert_interop_launch_step_functions_state_machine',
+      'icav2_event_translator_step_functions_state_machine',
       {
         // defintion template
         definitionBody: DefinitionBody.fromChainable(

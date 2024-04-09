@@ -184,6 +184,7 @@ The AWS Step functions returns the following parameters:
 
 ## Step function for event translation
 
+![stepfunctions_graph](./images/stepfunctions_graph.png "stepfunctions_graph")
 ### Translate ICAv2 event to Orcabus internal event
 combine the iput and anylsis result to generat the orcabus internal event.
 
