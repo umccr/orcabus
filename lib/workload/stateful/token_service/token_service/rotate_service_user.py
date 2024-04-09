@@ -18,8 +18,8 @@ import os
 
 import boto3
 
-from token_service.cognitor import CognitoTokenService, ServiceUserDto
-from token_service.helper import get_secret_dict
+from cognitor import CognitoTokenService, ServiceUserDto
+from helper import get_secret_dict
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

@@ -5,7 +5,7 @@ from datetime import datetime
 import botocore
 from botocore.stub import Stubber
 
-from token_service.cognitor import CognitoTokenService, ServiceUserDto
+from . import CognitoTokenService, ServiceUserDto
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
