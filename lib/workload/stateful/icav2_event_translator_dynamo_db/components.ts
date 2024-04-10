@@ -23,12 +23,12 @@ export class ICAv2EventTranslatorDynamoDBTable extends cdk.Stack {
     const dynamodb_table = new dynamodb.Table(this, 'ICAv2EventTranslatorDynamoDBTable', {
       /* Either a db_uuid or an icav2 event id or a portal run id */
       partitionKey: {
-        name: 'projectId',
+        name: 'id',
         type: dynamodb.AttributeType.STRING,
       },
       /* translate event created time stamp */
       sortKey: {
-        name: 'timeCreated',
+        name: 'icav2_analysis_id',
         type: dynamodb.AttributeType.STRING,
       },
       tableName: DYNAMODB_TABLE_NAME,

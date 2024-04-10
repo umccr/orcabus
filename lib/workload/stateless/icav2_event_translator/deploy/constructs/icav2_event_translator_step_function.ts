@@ -128,6 +128,9 @@ export class Icav2EventTranslatorLaunchStepFunctionStateMachineConstruct extends
       {
         table,
         item: {
+          id: sfn_tasks.DynamoAttributeValue.fromString(
+            sfn.JsonPath.stringAt('$.Payload.payload.id')
+          ),
           projectId: sfn_tasks.DynamoAttributeValue.fromString(
             sfn.JsonPath.stringAt('$.Payload.projectId')
           ),
@@ -137,7 +140,9 @@ export class Icav2EventTranslatorLaunchStepFunctionStateMachineConstruct extends
           instrumentRunId: sfn_tasks.DynamoAttributeValue.fromString(
             sfn.JsonPath.stringAt('$.Payload.instrumentRunId')
           ),
-          timeCreated: sfn_tasks.DynamoAttributeValue.fromString(new Date().toLocaleTimeString()), // get current time
+          timeCreated: sfn_tasks.DynamoAttributeValue.fromString(
+            new Date().toLocaleTimeString().toString()
+          ), // get current time as timestamp
           status: sfn_tasks.DynamoAttributeValue.fromString('Event translated successfully.'),
         },
       }
