@@ -1,14 +1,16 @@
-import { OrcaBusStatefulConfig } from '../lib/workload/orcabus-stateful-stack';
 import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
-import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
+import { EventSourceProps } from '../lib/workload/stateful/stacks/shared/constructs/event_source';
 import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
 import {
   FILEMANAGER_SERVICE_NAME,
   FilemanagerConfig,
 } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
-import { IcaEventPipeStackProps } from '../lib/workload/stateful/ica_event_pipe/stack';
+import { IcaEventPipeStackProps } from '../lib/workload/stateful/stacks/ica_event_pipe/stack';
+import { StatefulStackCollectionProps } from '../lib/workload/stateful/stateful-stack-collection-class';
+
+const region = 'ap-southeast-2';
 
 // upstream infra: vpc
 const vpcName = 'main-vpc';
@@ -76,9 +78,8 @@ const orcaBusStatefulConfig = {
     clusterEndpointHostParameterName: dbClusterEndpointHostParameterName,
     secretRotationSchedule: Duration.days(7),
   },
-  securityGroupProps: {
+  computeConfig: {
     securityGroupName: lambdaSecurityGroupName,
-    securityGroupDescription: 'allow within same SecurityGroup and rds SG',
   },
   icaEventPipeProps: icaEventPipeProps,
   tokenServiceProps: {
@@ -156,9 +157,10 @@ const filemanagerConfig = (bucket: string): FilemanagerConfig => {
 
 interface EnvironmentConfig {
   name: string;
+  region: string;
   accountId: string;
   stackProps: {
-    orcaBusStatefulConfig: OrcaBusStatefulConfig;
+    statefulConfig: StatefulStackCollectionProps;
     orcaBusStatelessConfig: OrcaBusStatelessConfig;
   };
 }
@@ -182,30 +184,27 @@ export const getEnvironmentConfig = (
     case 'beta':
       config = {
         name: 'beta',
+        region,
         accountId: '843407916570', // umccr_development
         stackProps: {
-          orcaBusStatefulConfig: {
-            schemaRegistryProps: {
-              ...orcaBusStatefulConfig.schemaRegistryProps,
+          statefulConfig: {
+            sharedStackProps: {
+              schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
+              eventBusProps: orcaBusStatefulConfig.eventBusProps,
+              databaseProps: {
+                ...orcaBusStatefulConfig.databaseProps,
+                numberOfInstance: 1,
+                minACU: 0.5,
+                maxACU: 16,
+                enhancedMonitoringInterval: Duration.seconds(60),
+                enablePerformanceInsights: true,
+                removalPolicy: RemovalPolicy.DESTROY,
+              },
+              computeConfig: orcaBusStatefulConfig.computeConfig,
+              eventSourceProps: eventSourceConfig(devBucket),
             },
-            eventBusProps: {
-              ...orcaBusStatefulConfig.eventBusProps,
-            },
-            databaseProps: {
-              ...orcaBusStatefulConfig.databaseProps,
-              numberOfInstance: 1,
-              minACU: 0.5,
-              maxACU: 16,
-              enhancedMonitoringInterval: Duration.seconds(60),
-              enablePerformanceInsights: true,
-              removalPolicy: RemovalPolicy.DESTROY,
-            },
-            securityGroupProps: {
-              ...orcaBusStatefulConfig.securityGroupProps,
-            },
-            eventSourceProps: eventSourceConfig(devBucket),
-            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
-            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
+            tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
+            icaEventPipeStackProps: orcaBusStatefulConfig.icaEventPipeProps,
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -218,30 +217,27 @@ export const getEnvironmentConfig = (
     case 'gamma':
       config = {
         name: 'gamma',
+        region,
         accountId: '455634345446', // umccr_staging
         stackProps: {
-          orcaBusStatefulConfig: {
-            schemaRegistryProps: {
-              ...orcaBusStatefulConfig.schemaRegistryProps,
+          statefulConfig: {
+            sharedStackProps: {
+              schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
+              eventBusProps: orcaBusStatefulConfig.eventBusProps,
+              databaseProps: {
+                ...orcaBusStatefulConfig.databaseProps,
+                numberOfInstance: 1,
+                minACU: 0.5,
+                maxACU: 16,
+                enhancedMonitoringInterval: Duration.seconds(60),
+                enablePerformanceInsights: true,
+                removalPolicy: RemovalPolicy.DESTROY,
+              },
+              computeConfig: orcaBusStatefulConfig.computeConfig,
+              eventSourceProps: eventSourceConfig(stgBucket),
             },
-            eventBusProps: {
-              ...orcaBusStatefulConfig.eventBusProps,
-            },
-            databaseProps: {
-              ...orcaBusStatefulConfig.databaseProps,
-              numberOfInstance: 1,
-              minACU: 0.5,
-              maxACU: 16,
-              enhancedMonitoringInterval: Duration.seconds(60),
-              enablePerformanceInsights: true,
-              removalPolicy: RemovalPolicy.DESTROY,
-            },
-            securityGroupProps: {
-              ...orcaBusStatefulConfig.securityGroupProps,
-            },
-            eventSourceProps: eventSourceConfig(stgBucket),
-            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
-            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
+            tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
+            icaEventPipeStackProps: orcaBusStatefulConfig.icaEventPipeProps,
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -254,28 +250,25 @@ export const getEnvironmentConfig = (
     case 'prod':
       config = {
         name: 'prod',
+        region,
         accountId: '472057503814', // umccr_production
         stackProps: {
-          orcaBusStatefulConfig: {
-            schemaRegistryProps: {
-              ...orcaBusStatefulConfig.schemaRegistryProps,
+          statefulConfig: {
+            sharedStackProps: {
+              schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
+              eventBusProps: orcaBusStatefulConfig.eventBusProps,
+              databaseProps: {
+                ...orcaBusStatefulConfig.databaseProps,
+                numberOfInstance: 1,
+                minACU: 0.5,
+                maxACU: 16,
+                removalPolicy: RemovalPolicy.RETAIN,
+              },
+              computeConfig: orcaBusStatefulConfig.computeConfig,
+              eventSourceProps: eventSourceConfig(prodBucket),
             },
-            eventBusProps: {
-              ...orcaBusStatefulConfig.eventBusProps,
-            },
-            databaseProps: {
-              ...orcaBusStatefulConfig.databaseProps,
-              numberOfInstance: 1,
-              minACU: 0.5,
-              maxACU: 16,
-              removalPolicy: RemovalPolicy.RETAIN,
-            },
-            securityGroupProps: {
-              ...orcaBusStatefulConfig.securityGroupProps,
-            },
-            eventSourceProps: eventSourceConfig(prodBucket),
-            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
-            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
+            tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
+            icaEventPipeStackProps: orcaBusStatefulConfig.icaEventPipeProps,
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -286,7 +279,7 @@ export const getEnvironmentConfig = (
       break;
   }
 
-  validateSecretName(config.stackProps.orcaBusStatefulConfig.databaseProps.masterSecretName);
+  // validateSecretName(config.stackProps.orcaBusStatefulConfig.databaseProps.masterSecretName);
 
   return config;
 };

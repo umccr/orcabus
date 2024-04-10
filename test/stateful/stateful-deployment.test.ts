@@ -2,7 +2,7 @@ import { App, Aspects, Stack } from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { SynthesisMessage } from 'aws-cdk-lib/cx-api';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { OrcaBusStatefulStack } from '../../lib/workload/orcabus-stateful-stack';
+import { OrcaBusStatefulStack } from '../../lib/workload/stateful/stacks/shared/stack';
 import { getEnvironmentConfig } from '../../config/constants';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {

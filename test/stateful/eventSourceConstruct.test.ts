@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { EventSource } from '../../lib/workload/stateful/event_source/component';
+import { EventSource } from '../../lib/workload/stateful/stacks/shared/constructs/event_source';
 
 let stack: cdk.Stack;
 

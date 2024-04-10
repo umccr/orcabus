@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Arn } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { getVpc } from './stateful/vpc/component';
+import { getVpc } from './components/vpc';
 import { MultiSchemaConstructProps } from './stateless/schema/component';
 import { IVpc, ISecurityGroup, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Filemanager, FilemanagerConfig } from './stateless/filemanager/deploy/lib/filemanager';

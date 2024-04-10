@@ -112,7 +112,7 @@ export class Database extends Construct {
   constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
 
-    const dbSecret = new rds.DatabaseSecret(this, id + 'DbSecret', {
+    const dbSecret = new rds.DatabaseSecret(this, 'DbSecret', {
       username: props.username,
       secretName: props.masterSecretName,
     });
@@ -133,14 +133,14 @@ export class Database extends Construct {
       );
     }
 
-    this.cluster = new rds.DatabaseCluster(this, id + 'Cluster', {
+    this.cluster = new rds.DatabaseCluster(this, 'Cluster', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({ version: props.version }),
       clusterIdentifier: props.clusterIdentifier,
       credentials: rds.Credentials.fromSecret(dbSecret),
       defaultDatabaseName: props.defaultDatabaseName,
       parameterGroup: rds.ParameterGroup.fromParameterGroupName(
         this,
-        id + 'ParameterGroup',
+        'ParameterGroup',
         props.parameterGroupName
       ),
       port: props.dbPort,

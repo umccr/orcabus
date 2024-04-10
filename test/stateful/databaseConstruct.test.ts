@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { Database } from '../../lib/workload/stateful/database/component';
+import { Database } from '../../lib/workload/stateful/stacks/shared/constructs/database';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { getEnvironmentConfig } from '../../config/constants';
 
