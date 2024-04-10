@@ -16,7 +16,11 @@ const dbProps = constructConfig.stackProps.orcaBusStatefulConfig.databaseProps;
 beforeEach(() => {
   stack = new cdk.Stack();
   vpc = new ec2.Vpc(stack, 'MockExistingVPC', {
-    subnetConfiguration: [{ name: 'privateSubnet', subnetType: ec2.SubnetType.PRIVATE_ISOLATED }],
+    subnetConfiguration: [
+      { name: 'isolated', subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      { name: 'privateWithEgress', subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      { name: 'public', subnetType: ec2.SubnetType.PUBLIC },
+    ],
   });
 });
 
