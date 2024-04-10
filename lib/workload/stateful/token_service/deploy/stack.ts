@@ -11,7 +11,7 @@ import { LogGroup } from 'aws-cdk-lib/aws-logs';
 import { IVpc, Vpc } from 'aws-cdk-lib/aws-ec2';
 import {
   getCognitoAdminActions,
-  getCognitoJWTActions,
+  getCognitoJWTPolicy,
   getLambdaVPCPolicy,
   getServiceUserSecretResourcePolicy,
 } from './construct/policy';
@@ -127,8 +127,7 @@ export class TokenServiceStack extends Stack {
     });
     lambdaLogGroup.grantWrite(jwtRotationFn);
 
-    this.userPool.grant(jwtRotationFn, ...getCognitoJWTActions());
-
+    jwtRotationFn.addToRolePolicy(getCognitoJWTPolicy());
     jwtRotationFn.addToRolePolicy(getLambdaVPCPolicy());
 
     return jwtRotationFn;
