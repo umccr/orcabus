@@ -1,4 +1,4 @@
-//! Convert S3 events for the database.
+//! Handles parsing raw S3 event messages and converting them for the database.
 //!
 
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;
@@ -70,6 +70,7 @@ pub struct TransposedS3EventMessages {
     pub version_ids: Vec<String>,
     pub sizes: Vec<Option<i32>>,
     pub e_tags: Vec<Option<String>>,
+    pub sha256s: Vec<Option<String>>,
     pub sequencers: Vec<Option<String>>,
     pub storage_classes: Vec<Option<StorageClass>>,
     pub last_modified_dates: Vec<Option<DateTime<Utc>>>,
@@ -88,6 +89,7 @@ impl TransposedS3EventMessages {
             version_ids: Vec::with_capacity(capacity),
             sizes: Vec::with_capacity(capacity),
             e_tags: Vec::with_capacity(capacity),
+            sha256s: Vec::with_capacity(capacity),
             sequencers: Vec::with_capacity(capacity),
             storage_classes: Vec::with_capacity(capacity),
             last_modified_dates: Vec::with_capacity(capacity),
@@ -105,6 +107,7 @@ impl TransposedS3EventMessages {
             size,
             version_id,
             e_tag,
+            sha256,
             sequencer,
             storage_class,
             last_modified_date,
@@ -119,6 +122,7 @@ impl TransposedS3EventMessages {
         self.version_ids.push(version_id);
         self.sizes.push(size);
         self.e_tags.push(e_tag);
+        self.sha256s.push(sha256);
         self.sequencers.push(sequencer);
         self.storage_classes.push(storage_class);
         self.last_modified_dates.push(last_modified_date);
@@ -154,6 +158,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
             messages.version_ids,
             messages.sizes,
             messages.e_tags,
+            messages.sha256s,
             messages.sequencers,
             messages.storage_classes,
             messages.last_modified_dates,
@@ -168,6 +173,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                 version_id,
                 size,
                 e_tag,
+                sha256,
                 sequencer,
                 storage_class,
                 last_modified_date,
@@ -181,6 +187,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                     version_id,
                     size,
                     e_tag,
+                    sha256,
                     storage_class,
                     last_modified_date,
                     event_time,
@@ -330,6 +337,7 @@ impl FlatS3EventMessages {
                         &a.version_id,
                         &a.size,
                         &a.e_tag,
+                        &a.sha256,
                         &a.storage_class,
                         &a.last_modified_date,
                     )
@@ -342,6 +350,7 @@ impl FlatS3EventMessages {
                             &b.version_id,
                             &b.size,
                             &b.e_tag,
+                            &a.sha256,
                             &b.storage_class,
                             &b.last_modified_date,
                         ));
@@ -357,6 +366,7 @@ impl FlatS3EventMessages {
                 &a.version_id,
                 &a.size,
                 &a.e_tag,
+                &a.sha256,
                 &a.storage_class,
                 &a.last_modified_date,
             )
@@ -369,6 +379,7 @@ impl FlatS3EventMessages {
                     &b.version_id,
                     &b.size,
                     &b.e_tag,
+                    &a.sha256,
                     &b.storage_class,
                     &b.last_modified_date,
                 ))
@@ -388,6 +399,7 @@ pub struct FlatS3EventMessage {
     pub version_id: String,
     pub size: Option<i32>,
     pub e_tag: Option<String>,
+    pub sha256: Option<String>,
     pub storage_class: Option<StorageClass>,
     pub last_modified_date: Option<DateTime<Utc>>,
     pub event_time: Option<DateTime<Utc>>,
@@ -427,6 +439,14 @@ impl FlatS3EventMessage {
     /// Update the e_tag if not None.
     pub fn update_e_tag(mut self, e_tag: Option<String>) -> Self {
         e_tag.into_iter().for_each(|e_tag| self.e_tag = Some(e_tag));
+        self
+    }
+
+    /// Update the sha256 if not None.
+    pub fn update_sha256(mut self, sha256: Option<String>) -> Self {
+        sha256
+            .into_iter()
+            .for_each(|sha256| self.sha256 = Some(sha256));
         self
     }
 
@@ -533,6 +553,7 @@ pub(crate) mod tests {
     pub(crate) const EXPECTED_E_TAG: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
 
     pub(crate) const EXPECTED_VERSION_ID: &str = "096fKKXTRTtl3on89fVO.nfljtsv6qko";
+    pub(crate) const EXPECTED_SHA256: &str = "Y0sCextp4SQtQNU+MSs7SsdxD1W+gfKJtUlEbvZ3i+4="; // pragma: allowlist secret
 
     #[test]
     fn test_flat_events() {

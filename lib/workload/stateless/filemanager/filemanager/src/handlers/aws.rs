@@ -99,7 +99,6 @@ pub async fn update_credentials(pool: &PgPool) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use aws_lambda_events::sqs::SqsMessage;
-    use sqlx::PgPool;
 
     use crate::database::aws::ingester::tests::{assert_ingest_events, fetch_results};
     use crate::database::aws::migration::tests::MIGRATOR;

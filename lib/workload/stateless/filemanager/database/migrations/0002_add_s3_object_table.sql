@@ -34,8 +34,8 @@ create table s3_object (
     -- provenance - history of all objects and how they move?
     -- The size of the object.
     size integer default null,
-    -- A unique identifier for the object, if it is present.
-    checksum text default null,
+    -- A base64 encoded SHA256 checksum of the object.
+    sha256 text default null,
 
     -- AWS-specific fields
     -- The AWS last modified value.

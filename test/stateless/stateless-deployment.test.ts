@@ -134,11 +134,23 @@ function applyNagSuppression(stackId: string, stack: Stack) {
         [
           {
             id: 'AwsSolutions-IAM5',
-            reason: "'*' is required to access objects in the indexed bucket by filemanager",
+            reason: "'*' is required to access objects in the indexed bucket by filemanager.",
             appliesTo: ['Resource::arn:aws:s3:::org.umccr.data.oncoanalyser/*'],
           },
         ],
         true
+      );
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/TestStack/Filemanager/MigrateProviderFunction/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              'The provider function needs to be able to invoke the configured function. It uses' +
+              "`lambda.Function.grantInvoke` to achieve this which contains a '*' and is not changeable.",
+          },
+        ]
       );
       break;
 

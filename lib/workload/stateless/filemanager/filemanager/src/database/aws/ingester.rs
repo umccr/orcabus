@@ -1,3 +1,6 @@
+//! This module handles logic associated with event ingestion.
+//!
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{query_file, query_file_as};
@@ -124,7 +127,7 @@ impl<'a> Ingester<'a> {
             &object_created.keys,
             &object_created.event_times as &[Option<DateTime<Utc>>],
             &object_created.sizes as &[Option<i32>],
-            &vec![None; object_created.s3_object_ids.len()] as &[Option<String>],
+            &object_created.sha256s as &[Option<String>],
             &object_created.last_modified_dates as &[Option<DateTime<Utc>>],
             &object_created.e_tags as &[Option<String>],
             &object_created.storage_classes as &[Option<StorageClass>],
@@ -146,7 +149,7 @@ impl<'a> Ingester<'a> {
             &object_created.keys,
             &object_created.event_times as &[Option<DateTime<Utc>>],
             &object_created.sizes as &[Option<i32>],
-            &vec![None; object_created.s3_object_ids.len()] as &[Option<String>],
+            &object_created.sha256s as &[Option<String>],
             &object_created.last_modified_dates as &[Option<DateTime<Utc>>],
             &object_created.e_tags as &[Option<String>],
             &object_created.storage_classes as &[Option<StorageClass>],
@@ -201,7 +204,7 @@ impl<'a> Ingester<'a> {
             &object_deleted.keys,
             &object_deleted.event_times as &[Option<DateTime<Utc>>],
             &object_deleted.sizes as &[Option<i32>],
-            &vec![None; object_deleted.s3_object_ids.len()] as &[Option<String>],
+            &object_deleted.sha256s as &[Option<String>],
             &object_deleted.last_modified_dates as &[Option<DateTime<Utc>>],
             &object_deleted.e_tags as &[Option<String>],
             &object_deleted.storage_classes as &[Option<StorageClass>],
@@ -267,7 +270,8 @@ pub(crate) mod tests {
     use crate::events::aws::tests::{
         expected_events_simple, expected_flat_events_simple, EXPECTED_E_TAG,
         EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
-        EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_VERSION_ID,
+        EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_SHA256,
+        EXPECTED_VERSION_ID,
     };
     use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
     use crate::events::EventSourceType;
@@ -1493,12 +1497,12 @@ pub(crate) mod tests {
             .object_deleted
             .sequencers
             .iter_mut()
-            .for_each(|replace_sequencer| *replace_sequencer = sequencer.clone());
+            .for_each(|replace_sequencer| replace_sequencer.clone_from(&sequencer));
         events
             .object_created
             .sequencers
             .iter_mut()
-            .for_each(|replace_sequencer| *replace_sequencer = sequencer.clone());
+            .for_each(|replace_sequencer| replace_sequencer.clone_from(&sequencer));
 
         events
     }
@@ -1549,7 +1553,14 @@ pub(crate) mod tests {
             s3_object_results.get::<Option<String>, _>("deleted_sequencer")
         );
         assert_eq!(size, s3_object_results.get::<Option<i32>, _>("size"));
-        assert_eq!(EXPECTED_E_TAG, s3_object_results.get::<String, _>("e_tag"));
+        assert_eq!(
+            Some(EXPECTED_SHA256.to_string()),
+            s3_object_results.get::<Option<String>, _>("sha256")
+        );
+        assert_eq!(
+            Some(EXPECTED_E_TAG.to_string()),
+            s3_object_results.get::<Option<String>, _>("e_tag")
+        );
         assert_eq!(
             DateTime::<Utc>::default(),
             s3_object_results.get::<DateTime<Utc>, _>("last_modified_date")
@@ -1575,12 +1586,19 @@ pub(crate) mod tests {
                 *storage_class = Some(StorageClass::Standard);
             });
         };
+        let update_sha256 = |sha256s: &mut Vec<Option<String>>| {
+            sha256s.iter_mut().for_each(|sha256| {
+                *sha256 = Some(EXPECTED_SHA256.to_string());
+            });
+        };
 
         update_last_modified(&mut events.object_created.last_modified_dates);
         update_storage_class(&mut events.object_created.storage_classes);
+        update_sha256(&mut events.object_created.sha256s);
 
         update_last_modified(&mut events.object_deleted.last_modified_dates);
         update_storage_class(&mut events.object_deleted.storage_classes);
+        update_sha256(&mut events.object_deleted.sha256s);
 
         events
     }

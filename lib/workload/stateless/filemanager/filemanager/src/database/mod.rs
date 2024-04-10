@@ -7,9 +7,9 @@ use sqlx::PgPool;
 use std::borrow::Cow;
 use tracing::debug;
 
-use crate::env::read_env;
 use crate::error::Result;
 use crate::events::EventSourceType;
+use crate::read_env;
 
 pub mod aws;
 
