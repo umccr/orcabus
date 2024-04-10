@@ -187,6 +187,7 @@ impl Collecter {
                         last_modified,
                         content_length,
                         e_tag,
+                        checksum_sha256,
                         ..
                     } = head;
 
@@ -198,7 +199,8 @@ impl Collecter {
                         ))
                         .update_last_modified_date(Self::convert_datetime(last_modified))
                         .update_size(content_length.map(|value| value as i32))
-                        .update_e_tag(e_tag);
+                        .update_e_tag(e_tag)
+                        .update_sha256(checksum_sha256);
                 }
 
                 Ok(event)
@@ -237,7 +239,9 @@ pub(crate) mod tests {
     use chrono::{DateTime, Utc};
     use mockall::predicate::eq;
 
-    use crate::events::aws::tests::{expected_event_record_simple, expected_flat_events_simple};
+    use crate::events::aws::tests::{
+        expected_event_record_simple, expected_flat_events_simple, EXPECTED_SHA256,
+    };
     use crate::events::aws::StorageClass::IntelligentTiering;
     use crate::events::Collect;
 
@@ -406,6 +410,7 @@ pub(crate) mod tests {
                     .unwrap(),
             )
             .storage_class(types::StorageClass::IntelligentTiering)
+            .checksum_sha256(EXPECTED_SHA256)
             .build()
     }
 

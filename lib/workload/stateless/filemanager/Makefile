@@ -37,17 +37,17 @@ docker-find:
 ## Build related commands
 build: docker-postgres
 	@cargo build --all-features --all-targets
-watch:
+watch: docker-postgres
 	@cargo watch -w *.toml -w *.rs
-test:
+test: docker-postgres
 	@cargo test --all-features --all-targets
-test-ignored:
+test-ignored: docker-postgres
 	@cargo test --all-features --all-targets -- --ignored
 lint:
 	@cargo fmt --check
 lint-fix:
 	@cargo fmt
-clippy:
+clippy: docker-postgres
 	cargo clippy --all-targets --all-features
 check: lint clippy
 check-fix: lint-fix clippy

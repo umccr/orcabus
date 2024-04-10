@@ -6,7 +6,7 @@ insert into s3_object (
     key,
     created_date,
     size,
-    checksum,
+    sha256,
     last_modified_date,
     e_tag,
     storage_class,

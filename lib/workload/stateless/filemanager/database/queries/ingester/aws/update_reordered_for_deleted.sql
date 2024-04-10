@@ -86,6 +86,7 @@ select
     deleted_date as event_time,
     last_modified_date,
     e_tag,
+    sha256,
     storage_class as "storage_class?: StorageClass",
     version_id as "version_id!",
     deleted_sequencer as sequencer,
