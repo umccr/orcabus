@@ -9,6 +9,7 @@ import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { DatabaseProps } from '../constructs/functions/function';
 import { HttpApi, HttpMethod } from '@aws-cdk/aws-apigatewayv2-alpha';
 import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
+import { HttpJwtAuthorizer } from '@aws-cdk/aws-apigatewayv2-authorizers-alpha';
 
 /**
  * Props for the filemanager stack.
@@ -31,6 +32,21 @@ type FilemanagerProps = IngestFunctionProps & DatabaseProps & {
      * 's3:List*' and 's3:Get*'.
      */
     readonly buckets: string[];
+};
+
+/**
+ * JWT authorization settings.
+ */
+export type FilemanagerJwtAuthSettings = {
+  /**
+   * The JWT audience.
+   */
+  jwtAudience?: string[];
+
+  /**
+   * The cognito user pool id for the authorizer. If this is not set, then a new user pool is created.
+   */
+  cogUserPoolId?: string;
 };
 
 /**
@@ -78,11 +94,31 @@ export class Filemanager extends Construct {
       rustLog: props?.rustLog, 
     });
 
+    // Add an authorizer if auth is required.
+    let authorizer = undefined;
+    if (!settings.jwtAuthorizer.public) {
+      // If the cog user pool id is not specified, create a new one.
+      if (settings.jwtAuthorizer.cogUserPoolId === undefined) {
+        const pool = new UserPool(this, "userPool", {
+          userPoolName: "HtsgetRsUserPool",
+        });
+        settings.jwtAuthorizer.cogUserPoolId = pool.userPoolId;
+      }
+
+      authorizer = new HttpJwtAuthorizer(
+        id + "HtsgetAuthorizer",
+        `https://cognito-idp.${this.region}.amazonaws.com/${settings.jwtAuthorizer.cogUserPoolId}`,
+        {
+          identitySource: ["$request.header.Authorization"],
+          jwtAudience: settings.jwtAuthorizer.jwtAudience ?? [],
+        },
+      );
+    }    
     // API Gateway v2 endpoints for querying data
-    const api = new HttpApi(this, 'HttpApi');
+    const api = new HttpApi(this, 'FileManagerAPI');
 
     const ObjectsQueryFunctionIntegration = new HttpLambdaIntegration(
-      id + "HtsgetIntegration",
+      id + "FilemanagerIntegration",
       objectsQuery.function
     );
 

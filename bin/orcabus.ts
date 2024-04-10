@@ -32,7 +32,7 @@ new OrcaBusStatefulStack(app, 'OrcaBusStatefulStack', {
   ...props,
 });
 
-new OrcaBusStatelessStack(app, 'OrcaBusStatelessStack', {
+new OrcaBusStatelessStack(app, 'OrcaBusStatelessStack-Roman', {
   ...config.stackProps.orcaBusStatelessConfig,
   ...props,
 });

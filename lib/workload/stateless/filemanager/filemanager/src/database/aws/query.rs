@@ -20,6 +20,7 @@ impl Query {
     }
 
     /// Creates a new filemanager query client with default connection settings.
+    /// -- FIXME: Should not trust user input, should be a bit more robust than like/similar to
     pub async fn query_objects(&self, query: String) -> Result<QueryResults> {
 
         let mut tx = self.client.pool().begin().await?;
