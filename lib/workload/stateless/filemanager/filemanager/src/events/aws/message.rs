@@ -1,3 +1,6 @@
+//! Raw event message definitions from AWS S3, either through EventBridge or SQS directly.
+//!
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};

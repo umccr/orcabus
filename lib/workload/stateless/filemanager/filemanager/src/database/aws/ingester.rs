@@ -1,3 +1,6 @@
+//! This module handles logic associated with event ingestion.
+//!
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{query_file, query_file_as};
@@ -1494,12 +1497,12 @@ pub(crate) mod tests {
             .object_deleted
             .sequencers
             .iter_mut()
-            .for_each(|replace_sequencer| *replace_sequencer = sequencer.clone());
+            .for_each(|replace_sequencer| replace_sequencer.clone_from(&sequencer));
         events
             .object_created
             .sequencers
             .iter_mut()
-            .for_each(|replace_sequencer| *replace_sequencer = sequencer.clone());
+            .for_each(|replace_sequencer| replace_sequencer.clone_from(&sequencer));
 
         events
     }

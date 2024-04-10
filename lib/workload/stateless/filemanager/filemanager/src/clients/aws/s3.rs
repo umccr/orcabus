@@ -1,9 +1,13 @@
+//! A mockable wrapper around the S3 client.
+//!
+
 use std::result;
 
 use aws_sdk_s3 as s3;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::operation::list_buckets::{ListBucketsError, ListBucketsOutput};
+use aws_sdk_s3::types::ChecksumMode::Enabled;
 use mockall::automock;
 
 use crate::clients::aws::config::Config;
@@ -41,6 +45,7 @@ impl Client {
     ) -> Result<HeadObjectOutput, HeadObjectError> {
         self.inner
             .head_object()
+            .checksum_mode(Enabled)
             .key(key)
             .bucket(bucket)
             .send()

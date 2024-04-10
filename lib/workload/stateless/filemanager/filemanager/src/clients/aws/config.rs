@@ -1,3 +1,6 @@
+//! A mockable wrapper around SdkConfig.
+//!
+
 use aws_config::{defaults, BehaviorVersion, SdkConfig};
 use aws_credential_types::provider::error::CredentialsError;
 use aws_credential_types::provider::ProvideCredentials;

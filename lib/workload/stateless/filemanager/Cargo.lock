@@ -974,7 +974,6 @@ dependencies = [
  "aws-smithy-runtime-api",
  "aws_lambda_events",
  "chrono",
- "dotenvy",
  "filemanager",
  "futures",
  "itertools",
@@ -988,6 +987,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "tracing-subscriber",
  "url",
  "uuid",
 ]
@@ -1001,7 +1001,6 @@ dependencies = [
  "lambda_runtime",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1013,7 +1012,6 @@ dependencies = [
  "lambda_runtime",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1027,7 +1025,6 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

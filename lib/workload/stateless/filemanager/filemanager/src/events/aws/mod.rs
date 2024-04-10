@@ -1,4 +1,4 @@
-//! Convert S3 events for the database.
+//! Handles parsing raw S3 event messages and converting them for the database.
 //!
 
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;

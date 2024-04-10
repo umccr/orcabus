@@ -1,9 +1,6 @@
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use serde::de::IgnoredAny;
 use serde::Deserialize;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{fmt, EnvFilter};
 
 use crate::CloudFormationRequest::Delete;
 use crate::Event::Provider;
@@ -11,6 +8,7 @@ use filemanager::database::aws::migration::Migration;
 use filemanager::database::Client as DbClient;
 use filemanager::database::Migrate;
 use filemanager::handlers::aws::{create_database_pool, update_credentials};
+use filemanager::handlers::init_tracing;
 
 /// The lambda event for this function. This is normally a CloudFormationCustomResourceRequest.
 /// If anything else is present, the migrate lambda will still attempt to perform a migration.
@@ -32,12 +30,7 @@ pub enum CloudFormationRequest {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    tracing_subscriber::registry()
-        .with(fmt::layer().json().without_time())
-        .with(env_filter)
-        .init();
+    init_tracing();
 
     let options = &create_database_pool().await?;
     run(service_fn(|event: LambdaEvent<Event>| async move {
