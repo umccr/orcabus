@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Stack, Environment } from 'aws-cdk-lib';
+import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 
 import { SharedStack, SharedStackProps } from './stacks/shared/stack';
 import { TokenServiceProps, TokenServiceStack } from './stacks/token_service/deploy/stack';
@@ -22,18 +22,25 @@ export class StatefulStackCollection {
     env: Environment,
     statefulConfiguration: StatefulStackCollectionProps
   ) {
-    this.sharedStack = new SharedStack(scope, 'SharedStack', {
+    const stackPropsTemplate: StackProps = {
       env: env,
+      tags: {
+        'umccr-org:Product': 'OrcaBus',
+      },
+    };
+
+    this.sharedStack = new SharedStack(scope, 'SharedStack', {
+      ...stackPropsTemplate,
       ...statefulConfiguration.sharedStackProps,
     });
 
     this.tokenServiceStack = new TokenServiceStack(scope, 'TokenServiceStack', {
-      env: env,
+      ...stackPropsTemplate,
       ...statefulConfiguration.tokenServiceStackProps,
     });
 
     this.icaEventPipeStack = new IcaEventPipeStack(scope, 'IcaEventPipeStack', {
-      env: env,
+      ...stackPropsTemplate,
       ...statefulConfiguration.icaEventPipeStackProps,
     });
   }

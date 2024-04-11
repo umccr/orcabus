@@ -166,6 +166,7 @@ class OrcaBusStatefulDeploymentStage extends cdk.Stage {
     env: cdk.Environment
   ) {
     super(scope, environmentName, { env: env });
+
     new StatefulStackCollection(this, env, statefulStackCollectionProps);
   }
 }
