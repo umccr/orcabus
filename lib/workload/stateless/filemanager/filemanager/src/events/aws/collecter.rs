@@ -1,3 +1,6 @@
+//! Definition and implementation of the aws Collecter.
+//!
+
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::primitives;
@@ -13,14 +16,14 @@ use crate::clients::aws::s3::Client;
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
-use crate::env::read_env;
 use crate::error::Error::S3Error;
-use crate::error::Error::{DeserializeError, SQSReceiveError};
+use crate::error::Error::{DeserializeError, SQSError};
 use crate::error::Result;
 use crate::events::aws::{
     EventType, Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass,
 };
 use crate::events::{Collect, EventSourceType};
+use crate::read_env;
 
 /// Build an AWS collector struct.
 #[derive(Default, Debug)]
@@ -68,7 +71,7 @@ impl CollecterBuilder {
         let message_output = client
             .receive_message(url)
             .await
-            .map_err(|err| SQSReceiveError(err.into_service_error().to_string()))?;
+            .map_err(|err| SQSError(err.into_service_error().to_string()))?;
 
         let event_messages: FlatS3EventMessages = message_output
             .messages
@@ -82,7 +85,7 @@ impl CollecterBuilder {
                         .map_err(|err| DeserializeError(err.to_string()))?;
                     Ok(events.unwrap_or_default())
                 } else {
-                    Err(SQSReceiveError("No body in SQS message".to_string()))
+                    Err(SQSError("No body in SQS message".to_string()))
                 }
             })
             .collect::<Result<Vec<FlatS3EventMessages>>>()?
@@ -187,6 +190,7 @@ impl Collecter {
                         last_modified,
                         content_length,
                         e_tag,
+                        checksum_sha256,
                         ..
                     } = head;
 
@@ -198,7 +202,8 @@ impl Collecter {
                         ))
                         .update_last_modified_date(Self::convert_datetime(last_modified))
                         .update_size(content_length.map(|value| value as i32))
-                        .update_e_tag(e_tag);
+                        .update_e_tag(e_tag)
+                        .update_sha256(checksum_sha256);
                 }
 
                 Ok(event)
@@ -234,12 +239,12 @@ pub(crate) mod tests {
     use aws_sdk_sqs::types::builders::MessageBuilder;
     use aws_smithy_runtime_api::client::orchestrator::HttpResponse;
     use aws_smithy_runtime_api::client::result::ServiceError;
-    use chrono::{DateTime, Utc};
     use mockall::predicate::eq;
 
-    use crate::events::aws::tests::{expected_event_record_simple, expected_flat_events_simple};
+    use crate::events::aws::tests::{
+        expected_event_record_simple, expected_flat_events_simple, EXPECTED_SHA256,
+    };
     use crate::events::aws::StorageClass::IntelligentTiering;
-    use crate::events::Collect;
 
     use super::*;
 
@@ -406,6 +411,7 @@ pub(crate) mod tests {
                     .unwrap(),
             )
             .storage_class(types::StorageClass::IntelligentTiering)
+            .checksum_sha256(EXPECTED_SHA256)
             .build()
     }
 

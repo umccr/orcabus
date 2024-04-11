@@ -1,3 +1,6 @@
+//! Raw event message definitions from AWS S3, either through EventBridge or SQS directly.
+//!
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
@@ -133,6 +136,7 @@ impl From<Record> for FlatS3EventMessages {
             // Head fields are fetched later.
             storage_class: None,
             last_modified_date: None,
+            sha256: None,
             event_type: detail_type.as_str().into(),
             number_reordered: 0,
             number_duplicate_events: 0,

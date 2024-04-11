@@ -14,9 +14,9 @@ use url::Url;
 #[double]
 use crate::clients::aws::config::Config;
 use crate::database::CredentialGenerator;
-use crate::env::read_env;
 use crate::error::Error::CredentialGeneratorError;
 use crate::error::Result;
+use crate::read_env;
 
 /// Number of seconds that the IAM credentials expire in.
 /// Equals the max Lambda timeout.

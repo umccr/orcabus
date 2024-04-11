@@ -19,7 +19,6 @@ import os
 import boto3
 
 from cognitor import CognitoTokenService, ServiceUserDto
-from helper import get_secret_dict
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -117,11 +116,11 @@ def create_secret(service_client, arn, token):
 
     """
     # Make sure the current secret exists
-    current_dict = get_secret_dict(service_client, arn, "AWSCURRENT")
+    current_dict = _get_secret_dict(service_client, arn, "AWSCURRENT")
 
     # Now try to get the secret version, if that fails, put a new secret
     try:
-        get_secret_dict(service_client, arn, "AWSPENDING", token)
+        _get_secret_dict(service_client, arn, "AWSPENDING", token)
         logger.info("createSecret: Successfully retrieved secret for %s." % arn)
     except service_client.exceptions.ResourceNotFoundException:
         # Generate a random password
@@ -154,17 +153,19 @@ def set_secret(service_client, arn, token):
 
     """
     try:
-        previous_dict = get_secret_dict(service_client, arn, "AWSPREVIOUS")
+        previous_dict = _get_secret_dict(service_client, arn, "AWSPREVIOUS")
     except (service_client.exceptions.ResourceNotFoundException, KeyError):
         previous_dict = None
-    current_dict = get_secret_dict(service_client, arn, "AWSCURRENT")
-    pending_dict = get_secret_dict(service_client, arn, "AWSPENDING", token)
+    current_dict = _get_secret_dict(service_client, arn, "AWSCURRENT")
+    pending_dict = _get_secret_dict(service_client, arn, "AWSPENDING", token)
 
-    # First try to login with the pending secret, if it succeeds, return
-    tokens = _generate_new_tokens_for(pending_dict)
-    if _is_valid(tokens):
+    # First try to rotate using pending secret, if it succeeds, return
+    is_rotated = _rotate(pending_dict, arn)
+    if is_rotated:
         logger.info("setSecret: AWSPENDING secret is already set as password in Cognito User for secret arn %s." % arn)
         return
+
+    # If rotation with pending secret didn't work then fall back to current secret
 
     # Make sure the user from current and pending match
     if current_dict['username'] != pending_dict['username']:
@@ -172,30 +173,22 @@ def set_secret(service_client, arn, token):
         raise ValueError("Attempting to modify user %s other than current user %s" % (pending_dict['username'], current_dict['username']))
 
     # Now try the current password
-    tokens = _generate_new_tokens_for(current_dict)
+    is_rotated = _rotate(current_dict, arn)
 
-    # If both current and pending do not work, try previous
-    if not _is_valid(tokens) and previous_dict:
-
-        tokens = _generate_new_tokens_for(previous_dict)
+    # If both current and pending do not work, try previous as last resort
+    if not is_rotated and previous_dict:
 
         # Make sure the user/host from previous and pending match
         if previous_dict['username'] != pending_dict['username']:
             logger.error("setSecret: Attempting to modify user %s other than previous valid user %s" % (pending_dict['username'], previous_dict['username']))
             raise ValueError("Attempting to modify user %s other than previous valid user %s" % (pending_dict['username'], previous_dict['username']))
 
+        is_rotated = _rotate(previous_dict, arn)
+
     # If we still don't have a connection, raise a ValueError
-    if not _is_valid(tokens):
+    if not is_rotated:
         logger.error("setSecret: Unable to log into Cognito with previous, current, or pending secret of secret arn %s" % arn)
         raise ValueError("Unable to log into Cognito with previous, current, or pending secret of secret arn %s" % arn)
-
-    # Now set the password to the pending password
-    token_srv.rotate_service_user_password(user_dto=ServiceUserDto(
-        username=pending_dict['username'],
-        password=pending_dict['password'],
-        email=pending_dict['email'],
-    ))
-    logger.info("setSecret: Successfully set password for user %s in Cognitor for secret arn %s." % (pending_dict['username'], arn))
 
 
 def test_secret(service_client, arn, token):
@@ -220,8 +213,8 @@ def test_secret(service_client, arn, token):
 
     """
     # Try to login with the pending secret, if it succeeds, return
-    pending_dict = get_secret_dict(service_client, arn, "AWSPENDING", token)
-    tokens = _generate_new_tokens_for(pending_dict)
+    pending_dict = _get_secret_dict(service_client, arn, "AWSPENDING", token)
+    tokens = _generate_new_tokens_for(pending_dict)  # test whether we can generate tokens using pending secret
     if _is_valid(tokens):
         # Being able to generate tokens using pending username/password consider success.
         logger.info("testSecret: Successfully signed into Cognito with AWSPENDING secret in %s." % arn)
@@ -262,6 +255,66 @@ def finish_secret(service_client, arn, token):
 
 
 # --- module internal functions
+
+
+def _get_secret_dict(service_client, arn, stage, token=None):
+    """Gets the secret dictionary corresponding for the secret arn, stage, and token
+
+    This helper function gets credentials for the arn and stage passed in and returns the dictionary by parsing the
+    JSON string
+
+    Args:
+        service_client (client): The secrets manager service client
+
+        arn (string): The secret ARN or other identifier
+
+        token (string): The ClientRequestToken associated with the secret version, or None if no validation is desired
+
+        stage (string): The stage identifying the secret version
+
+    Returns:
+        SecretDictionary: Secret dictionary
+
+    Raises:
+        ResourceNotFoundException: If the secret with the specified arn and stage does not exist
+
+        ValueError: If the secret is not valid JSON
+
+    """
+    required_fields = ['username', 'password']
+
+    # Only do VersionId validation against the stage if a token is passed in
+    if token:
+        secret = service_client.get_secret_value(SecretId=arn, VersionId=token, VersionStage=stage)
+    else:
+        secret = service_client.get_secret_value(SecretId=arn, VersionStage=stage)
+    plaintext = secret['SecretString']
+    secret_dict = json.loads(plaintext)
+
+    # Run validations against the secret
+    for field in required_fields:
+        if field not in secret_dict:
+            raise KeyError("%s key is missing from secret JSON" % field)
+
+    # Parse and return the secret JSON string
+    return secret_dict
+
+
+def _rotate(this_dict, arn) -> bool:
+    """
+    Try to rotate user password in Cognito. If any exception is raised, returns False. Otherwise, returns True.
+    """
+    try:
+        token_srv.rotate_service_user_password(user_dto=ServiceUserDto(
+            username=this_dict['username'],
+            password=this_dict['password'],
+            email=this_dict['email'],
+        ))
+        logger.info("setSecret: Successfully set password for user %s in Cognitor for secret arn %s." % (this_dict['username'], arn))
+        return True
+    except Exception as e:
+        logger.error(e)
+        return False
 
 
 def _generate_new_tokens_for(this_dict: dict) -> dict:

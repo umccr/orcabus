@@ -1,3 +1,6 @@
+//! A mockable wrapper around the SQS client.
+//!
+
 use std::result;
 
 use aws_sdk_sqs as sqs;

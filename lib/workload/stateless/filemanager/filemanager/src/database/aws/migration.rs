@@ -1,3 +1,6 @@
+//! Database migration logic.
+//!
+
 use async_trait::async_trait;
 use sqlx::migrate;
 use sqlx::migrate::Migrator;
