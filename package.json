@@ -20,7 +20,7 @@
     "prettier": "prettier --check .",
     "prettier-fix": "prettier --write .",
     "cdk-stateless": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/stateless-pipeline.ts'",
-    "cdk-stateful": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/stateful-pipeline.ts'"
+    "cdk-stateful": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/statefulPipeline.ts'"
   },
   "dependencies": {
     "@aws-cdk/aws-lambda-python-alpha": "2.126.0-alpha.0",

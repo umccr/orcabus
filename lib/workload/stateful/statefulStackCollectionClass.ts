@@ -12,7 +12,7 @@ export interface StatefulStackCollectionProps {
 }
 
 export class StatefulStackCollection {
-  // Only defined stacks
+  // Defined stateful stacks here
   readonly sharedStack: Stack;
   readonly tokenServiceStack: Stack;
   readonly icaEventPipeStack: Stack;
