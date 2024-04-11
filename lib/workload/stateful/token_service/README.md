@@ -2,7 +2,9 @@
 
 This service provides the JWT token for API authentication and authorization (AAI) purpose. We use the Cognito as AAI service broker and, it is set up at our infrastructure repo. This service maintains 2 secrets with rotation enabled.
 
-## JWT
+## User Guide
+
+### JWT
 
 For most cases, you would want to lookup JWT token from the secret manager at the following coordinate.
 ```
@@ -17,7 +19,7 @@ import boto3
 
 sm_client = boto3.client('secretsmanager')
 
-resp = sm_client().get_secret_value(SecretId='orcabus/token-service-jwt')
+resp = sm_client.get_secret_value(SecretId='orcabus/token-service-jwt')
 
 jwt_json = resp['SecretString']
 jwt_dict = json.loads(jwt_json)
@@ -34,7 +36,7 @@ from libumccr.aws import libsm
 tok = json.loads(libsm.get_secret('orcabus/token-service-jwt'))['id_token']
 ```
 
-## Service User
+### Service User
 
 As an admin, you must register the service user. This has to be done at Cognito AAI terraform stack. Please follow `AdminCreateUser` [flow noted](https://github.com/umccr/infrastructure/pull/412/files) in `users.tf` at upstream infrastructure repo.
 
@@ -55,9 +57,7 @@ aws secretsmanager put-secret-value \
 
 After then, the scheduled secret rotation should carry on rotating password, every set days.
 
----
-
-## Stack
+## Development
 
 ### TL;DR
 
@@ -77,7 +77,7 @@ The stack contains 2 Lambda Python code that do secret rotation. This code is de
 ### Cognitor
 And, there is the thin service layer package called `cognitor` for interfacing with AWS Cognito through boto3 - in fact it just [a façade](https://www.google.com/search?q=fa%C3%A7ade+pattern) of boto3 for Cognito. See its test cases for how to use and operate it.
 
-### Local Dev
+### Local DX
 
 #### App
 
@@ -136,7 +136,7 @@ Then, do CloudFormation lint check:
 cfn-lint .local/template.yml
 ```
 
-If that all good, then you may diff e & push straight to dev for giving it the WIP a try...
+If that all good, then you may `diff -e` & `deploy -e` straight to dev for giving it the WIP a try...
 
 ```
 export AWS_PROFILE=umccr-dev-admin

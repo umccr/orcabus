@@ -12,7 +12,6 @@ export function getLambdaBasicExecPolicy(resources: string[]) {
    * https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSLambdaBasicExecutionRole.html
    */
   return new PolicyStatement({
-    sid: 'LambdaBasicExecStmt1711498867457',
     effect: Effect.ALLOW,
     actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
     resources: resources,
@@ -31,7 +30,6 @@ export function getLambdaVPCPolicy() {
    * https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSLambdaVPCAccessExecutionRole.html
    */
   return new PolicyStatement({
-    sid: 'LambdaVPCStmt1711498867457',
     effect: Effect.ALLOW,
     actions: [
       'ec2:CreateNetworkInterface',
@@ -51,7 +49,6 @@ export function getSSMPolicy(resources: string[]) {
    * https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonSSMReadOnlyAccess.html
    */
   return new PolicyStatement({
-    sid: 'SSMStmt1711498867457',
     effect: Effect.ALLOW,
     actions: ['ssm:Describe*', 'ssm:Get*', 'ssm:List*'],
     resources: resources,
@@ -70,8 +67,6 @@ export const getCognitoAdminActions = () => {
     'cognito-idp:DescribeUserPool',
     'cognito-idp:AdminGetUser',
     'cognito-idp:AdminSetUserPassword',
-    'cognito-idp:InitiateAuth',
-    'cognito-idp:ListUserPools',
     'cognito-idp:ListUsers',
   ];
 };
@@ -81,29 +76,28 @@ export function getCognitoAdminPolicy(resources: string[]) {
    * The Cognito policy that specifically required for Token Service `cognitor.py` application
    */
   return new PolicyStatement({
-    sid: 'CognitoAdminStmt1711498867457',
     effect: Effect.ALLOW,
     actions: getCognitoAdminActions(),
     resources: resources,
   });
 }
 
-export const getCognitoJWTActions = () => {
+export function getCognitoJWTPolicy() {
   /**
-   * Always return new string array of permission flags that is allowed.
-   */
-  return ['cognito-idp:InitiateAuth'];
-};
-
-export function getCognitoJWTPolicy(resources: string[]) {
-  /**
+   * NOTE: This function only tailors to policy statement for `InitiateAuth` API call. This API
+   * endpoint is `public` call by design. See `Unauthenticated user operations` section, below.
+   * https://docs.aws.amazon.com/cognito/latest/developerguide/user-pools-API-operations.html
+   *
+   * Therefore, the resource-level permission filtering is not needed/supported. This is try with
+   * Policy Simulator. See thread in `#orcabus` channel for howto.
+   * https://umccr.slack.com/archives/C03ABJTSN7J/p1711576104287009
+   *
    * The Cognito policy that specifically required for Token Service `cognitor.py` application
    */
   return new PolicyStatement({
-    sid: 'CognitoJWTStmt1711498867457',
     effect: Effect.ALLOW,
-    actions: getCognitoJWTActions(),
-    resources: resources,
+    actions: ['cognito-idp:InitiateAuth'],
+    resources: ['*'], // see docstring ^^
   });
 }
 

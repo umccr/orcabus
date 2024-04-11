@@ -22,8 +22,14 @@ class CognitoTokenService:
 
     @staticmethod
     def generate_password(length: int = 32) -> str:
+        """
+        Must meet the Cognito password requirements policy
+        https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-policies.html
+        """
+        if length < 8:
+            raise ValueError('Length must be at least 8 characters or more better')
         return ''.join(
-            random.SystemRandom().choice(string.ascii_letters + string.digits + '!@#$%&.') for _ in range(length)
+            random.SystemRandom().choice(string.ascii_letters + string.digits + '_-!@#%&.') for _ in range(length)
         )
 
     def list_users(self, **kwargs) -> dict:
@@ -135,10 +141,7 @@ class CognitoTokenService:
         """
         Forced set Cognito Service User login credential info from pass-in dto
         """
-        if not self.username_exists(user_dto.username):
-            return
-
-        _ = self.client.admin_set_user_password(
+        self.client.admin_set_user_password(
             UserPoolId=self.user_pool_id,
             Username=user_dto.username,
             Password=user_dto.password,

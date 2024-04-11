@@ -194,7 +194,6 @@ class CognitorUnitTest(unittest.TestCase):
         python -m unittest token_service.cognitor.tests.CognitorUnitTest.test_rotate_service_user_password
         """
         with Stubber(self.mock_client) as stubber:
-            stubber.add_response('admin_get_user', {'Username': self.jjb_dto.username, })
             stubber.add_response('admin_set_user_password', {})
 
             self.srv.rotate_service_user_password(user_dto=self.jjb_dto)
