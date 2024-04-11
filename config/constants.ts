@@ -1,7 +1,7 @@
 import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
-import { EventSourceProps } from '../lib/workload/stateful/stacks/shared/constructs/event_source';
+import { EventSourceProps } from '../lib/workload/stateful/stacks/shared/constructs/event-source';
 import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
 import {
   FILEMANAGER_SERVICE_NAME,

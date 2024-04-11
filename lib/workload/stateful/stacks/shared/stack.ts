@@ -4,7 +4,7 @@ import { EventBusConstruct, EventBusProps } from './constructs/eventbridge';
 import { ConfigurableDatabaseProps, Database } from './constructs/database';
 import { ComputeConfig, ComputeConstruct } from './constructs/compute';
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './constructs/schemaregistry';
-import { EventSource, EventSourceProps } from './constructs/event_source';
+import { EventSource, EventSourceProps } from './constructs/event-source';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { getVpc } from '../../../components/vpc';
 
