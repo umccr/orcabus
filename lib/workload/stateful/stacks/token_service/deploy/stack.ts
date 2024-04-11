@@ -8,13 +8,14 @@ import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { IUserPool, UserPool } from 'aws-cdk-lib/aws-cognito';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
-import { IVpc, Vpc } from 'aws-cdk-lib/aws-ec2';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import {
   getCognitoAdminActions,
   getCognitoJWTActions,
   getLambdaVPCPolicy,
   getServiceUserSecretResourcePolicy,
 } from './construct/policy';
+import { getVpc } from '../../../../components/vpc';
 
 export interface TokenServiceProps {
   serviceUserSecretName: string;
@@ -35,7 +36,7 @@ export class TokenServiceStack extends Stack {
     super(scope, id, props);
     this.props = props;
 
-    this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
+    this.vpc = getVpc(this);
 
     // NOTE:
     // Token Service has very high dependency on the upstream Cognito User Pool OAuth2 broker

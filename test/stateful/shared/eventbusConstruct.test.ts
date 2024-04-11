@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { getEnvironmentConfig } from '../../config/constants';
-import { EventBusConstruct } from '../../lib/workload/stateful/stacks/shared/constructs/eventbridge';
+import { getEnvironmentConfig } from '../../../config/constants';
+import { EventBusConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/eventbridge';
 
 let stack: cdk.Stack;
 
@@ -13,9 +13,11 @@ beforeEach(() => {
 });
 
 test('Test EventBus Creation', () => {
-  new EventBusConstruct(stack, 'TestEventBusConstruct', {
-    ...constructConfig.stackProps.orcaBusStatefulConfig.eventBusProps,
-  });
+  new EventBusConstruct(
+    stack,
+    'TestEventBusConstruct',
+    constructConfig.stackProps.statefulConfig.sharedStackProps.eventBusProps
+  );
   const template = Template.fromStack(stack);
 
   template.hasResourceProperties('AWS::Events::EventBus', {

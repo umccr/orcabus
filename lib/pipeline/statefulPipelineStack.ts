@@ -11,7 +11,7 @@ import { getEnvironmentConfig } from '../../config/constants';
 import {
   StatefulStackCollectionProps,
   StatefulStackCollection,
-} from '../workload/stateful/stateful-stack-collection-class';
+} from '../workload/stateful/statefulStackCollectionClass';
 
 export class StatefulPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
@@ -123,7 +123,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(
         this,
-        'prodDeployment',
+        'ProdDeployment',
         prodConfig.stackProps.statefulConfig,
         {
           account: prodConfig.accountId,
@@ -165,7 +165,7 @@ class OrcaBusStatefulDeploymentStage extends cdk.Stage {
     statefulStackCollectionProps: StatefulStackCollectionProps,
     env: cdk.Environment
   ) {
-    super(scope, environmentName, { env: { account: env?.account, region: 'ap-southeast-2' } });
+    super(scope, environmentName, { env: env });
     new StatefulStackCollection(this, env, statefulStackCollectionProps);
   }
 }

@@ -1,8 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { Database } from '../../lib/workload/stateful/stacks/shared/constructs/database';
+import { Database } from '../../../lib/workload/stateful/stacks/shared/constructs/database';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { getEnvironmentConfig } from '../../config/constants';
+import { getEnvironmentConfig } from '../../../config/constants';
 
 let stack: cdk.Stack;
 let vpc: ec2.Vpc;
@@ -11,7 +11,7 @@ const constructConfig = getEnvironmentConfig('beta');
 if (!constructConfig) throw new Error('No construct config for the test');
 
 expect(constructConfig).toBeTruthy();
-const dbProps = constructConfig.stackProps.orcaBusStatefulConfig.databaseProps;
+const dbProps = constructConfig.stackProps.statefulConfig.sharedStackProps.databaseProps;
 
 beforeEach(() => {
   stack = new cdk.Stack();
@@ -27,7 +27,7 @@ beforeEach(() => {
 test('Test DBCluster created props', () => {
   new Database(stack, 'TestDatabaseConstruct', {
     vpc,
-    ...constructConfig.stackProps.orcaBusStatefulConfig.databaseProps,
+    ...dbProps,
   });
   const template = Template.fromStack(stack);
 
@@ -51,8 +51,8 @@ test('Test other SG Allow Ingress to DB SG', () => {
 
   new Database(stack, 'TestDatabaseConstruct', {
     vpc,
-    ...constructConfig.stackProps.orcaBusStatefulConfig.databaseProps,
     allowedInboundSG: allowedSG,
+    ...dbProps,
   });
   const template = Template.fromStack(stack);
 

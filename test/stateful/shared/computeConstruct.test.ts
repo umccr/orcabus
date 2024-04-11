@@ -1,8 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Template } from 'aws-cdk-lib/assertions';
-import { getEnvironmentConfig } from '../../config/constants';
-import { SecurityGroupConstruct } from '../../lib/workload/stateful/stacks/shared/constructs/compute';
+import { getEnvironmentConfig } from '../../../config/constants';
+import { ComputeConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/compute';
 
 let stack: cdk.Stack;
 let vpc: ec2.Vpc;
@@ -18,9 +18,12 @@ beforeEach(() => {
 });
 
 test('Test SchemaRegistry Creation', () => {
-  new SecurityGroupConstruct(stack, 'TestSGConstruct', vpc, {
-    ...constructConfig.stackProps.orcaBusStatefulConfig.ComputeConfig,
-  });
+  new ComputeConstruct(
+    stack,
+    'TestSGConstruct',
+    vpc,
+    constructConfig.stackProps.statefulConfig.sharedStackProps.computeConfig
+  );
   const template = Template.fromStack(stack);
 
   template.hasResourceProperties('AWS::EC2::SecurityGroup', {
