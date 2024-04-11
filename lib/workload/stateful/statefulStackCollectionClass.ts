@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 
 import { SharedStack, SharedStackProps } from './stacks/shared/stack';
-import { TokenServiceProps, TokenServiceStack } from './stacks/token_service/deploy/stack';
+import { TokenServiceProps, TokenServiceStack } from './stacks/token-service/deploy/stack';
 import { IcaEventPipeStack, IcaEventPipeStackProps } from './stacks/ica-event-pipe/stack';
 
 export interface StatefulStackCollectionProps {
