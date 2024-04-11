@@ -103,7 +103,7 @@ _Heads up: Polyglot programming environment. We shorten some trivial steps into 
 
 To develop your microservice application please read the [microservice guide](docs/developer/MICROSERVICE.md).
 
-Do note that we have some shared resources that is expected to be used across microservices at [shared resource docs](docs/developer/SHARED_RESOURCES.md).
+Do note that we have some shared resources that is expected to be used across microservices at [shared resource docs](./lib/workload/stateful/stacks/shared/README.md).
 
 ### Typography
 
