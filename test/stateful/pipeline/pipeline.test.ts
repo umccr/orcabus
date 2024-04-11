@@ -6,7 +6,7 @@ import { StatefulPipelineStack } from '../../../lib/pipeline/statefulPipelineSta
 
 // we are mocking the deployment stack here, as we have a dedicated cdk-nag test for deployment stack
 // see the ./stateless-deployment.test.ts
-jest.mock('../../../lib/workload/stateful/stateful-stack-collection-class', () => {
+jest.mock('../../../lib/workload/stateful/statefulStackCollectionClass', () => {
   return {
     StatefulStackCollection: jest.fn().mockImplementation((value) => {
       return new Stack(value, 'mockStack', {});

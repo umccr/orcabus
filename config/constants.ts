@@ -7,7 +7,7 @@ import {
   FILEMANAGER_SERVICE_NAME,
   FilemanagerConfig,
 } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
-import { IcaEventPipeStackProps } from '../lib/workload/stateful/stacks/ica_event_pipe/stack';
+import { IcaEventPipeStackProps } from '../lib/workload/stateful/stacks/ica-event-pipe/stack';
 import { StatefulStackCollectionProps } from '../lib/workload/stateful/statefulStackCollectionClass';
 
 const region = 'ap-southeast-2';

@@ -120,7 +120,7 @@ Guide](https://docs.aws.amazon.com/prescriptive-guidance/latest/best-practices-c
 - Use PascalCase for type names and enum names.
 - Name files with camelCase (for example, ebsVolumes.tsx or storage.tsb)
 
-For folder name, we will be using `snake_case`
+For folder name, we will be using `kebab-case`
 
 ### Toolchain
 
