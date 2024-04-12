@@ -12,7 +12,8 @@ export interface StatefulStackCollectionProps {
 }
 
 export class StatefulStackCollection {
-  // Defined stateful stacks here
+  // You could add more stack here and initiate it at the constructor. See example below for reference
+
   readonly sharedStack: Stack;
   readonly tokenServiceStack: Stack;
   readonly icaEventPipeStack: Stack;
@@ -38,6 +39,13 @@ export class StatefulStackCollection {
     });
   }
 
+  /**
+   * This output the StackProps that each stack should have on deployment
+   *
+   * @param env The environment which each stack should deploy to
+   * @param serviceName The service name
+   * @returns StackProps that will be included as template
+   */
   private createTemplateProps(env: Environment, serviceName: string): StackProps {
     return {
       env: env,
