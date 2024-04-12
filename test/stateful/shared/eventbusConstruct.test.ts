@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { getEnvironmentConfig } from '../../../config/constants';
-import { EventBusConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/eventbridge';
+import { EventBusConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/event-bus';
 
 let stack: cdk.Stack;
 
@@ -12,7 +12,7 @@ beforeEach(() => {
   stack = new cdk.Stack();
 });
 
-test('Test EventBus Creation', () => {
+test('Test EventBusConstruct Creation', () => {
   new EventBusConstruct(
     stack,
     'TestEventBusConstruct',

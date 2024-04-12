@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
-export interface ComputeConfig {
+export interface ComputeProps {
   /**
    * The security group name for the shared security group
    */
@@ -14,7 +14,7 @@ export interface ComputeConfig {
 export class ComputeConstruct extends Construct {
   readonly securityGroup: ec2.SecurityGroup;
 
-  constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: ComputeConfig) {
+  constructor(scope: Construct, id: string, vpc: ec2.IVpc, props: ComputeProps) {
     super(scope, id);
 
     this.securityGroup = new ec2.SecurityGroup(this, 'SecurityGroup', {

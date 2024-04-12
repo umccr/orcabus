@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { getEnvironmentConfig } from '../../../config/constants';
-import { SchemaRegistryConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/schemaregistry';
+import { SchemaRegistryConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
 
 let stack: cdk.Stack;
 
@@ -12,7 +12,7 @@ beforeEach(() => {
   stack = new cdk.Stack();
 });
 
-test('Test SchemaRegistry Creation', () => {
+test('Test SchemaRegistryConstruct Creation', () => {
   new SchemaRegistryConstruct(
     stack,
     'TestSchemaRegistryConstruct',

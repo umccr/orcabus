@@ -17,12 +17,12 @@ beforeEach(() => {
   });
 });
 
-test('Test SchemaRegistry Creation', () => {
+test('Test SchemaRegistryConstruct Creation', () => {
   new ComputeConstruct(
     stack,
     'TestSGConstruct',
     vpc,
-    constructConfig.stackProps.statefulConfig.sharedStackProps.computeConfig
+    constructConfig.stackProps.statefulConfig.sharedStackProps.computeProps
   );
   const template = Template.fromStack(stack);
 

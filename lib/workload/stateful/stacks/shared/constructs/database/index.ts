@@ -105,7 +105,7 @@ export type DatabaseProps = ConfigurableDatabaseProps & {
   allowedInboundSG?: ec2.SecurityGroup;
 };
 
-export class Database extends Construct {
+export class DatabaseConstruct extends Construct {
   readonly securityGroup: SecurityGroup;
   readonly cluster: DatabaseCluster;
 

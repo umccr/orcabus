@@ -23,7 +23,7 @@ Please check the: [PostgresManager](../../../stateless/postgres_manager/README.m
 
 ## Schema Registry
 
-## Compute
+## ComputeConstruct
 
 This construct contains resources that could be shared/attached to a compute resource.
 

@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { Database } from '../../../lib/workload/stateful/stacks/shared/constructs/database';
+import { DatabaseConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/database';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { getEnvironmentConfig } from '../../../config/constants';
 
@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 
 test('Test DBCluster created props', () => {
-  new Database(stack, 'TestDatabaseConstruct', {
+  new DatabaseConstruct(stack, 'TestDatabaseConstruct', {
     vpc,
     ...dbProps,
   });
@@ -49,7 +49,7 @@ test('Test other SG Allow Ingress to DB SG', () => {
   });
   const sgLogicalId = stack.getLogicalId(allowedSG.node.defaultChild as ec2.CfnSecurityGroup);
 
-  new Database(stack, 'TestDatabaseConstruct', {
+  new DatabaseConstruct(stack, 'TestDatabaseConstruct', {
     vpc,
     allowedInboundSG: allowedSG,
     ...dbProps,

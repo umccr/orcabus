@@ -22,26 +22,30 @@ export class StatefulStackCollection {
     env: Environment,
     statefulConfiguration: StatefulStackCollectionProps
   ) {
-    const stackPropsTemplate: StackProps = {
-      env: env,
-      tags: {
-        'umccr-org:Product': 'OrcaBus',
-      },
-    };
-
     this.sharedStack = new SharedStack(scope, 'SharedStack', {
-      ...stackPropsTemplate,
+      ...this.createTemplateProps(env, 'SharedStack'),
       ...statefulConfiguration.sharedStackProps,
     });
 
     this.tokenServiceStack = new TokenServiceStack(scope, 'TokenServiceStack', {
-      ...stackPropsTemplate,
+      ...this.createTemplateProps(env, 'TokenServiceStack'),
       ...statefulConfiguration.tokenServiceStackProps,
     });
 
     this.icaEventPipeStack = new IcaEventPipeStack(scope, 'IcaEventPipeStack', {
-      ...stackPropsTemplate,
+      ...this.createTemplateProps(env, 'IcaEventPipeStack'),
       ...statefulConfiguration.icaEventPipeStackProps,
     });
+  }
+
+  private createTemplateProps(env: Environment, serviceName: string): StackProps {
+    return {
+      env: env,
+      tags: {
+        'umccr-org:Product': 'OrcaBus',
+        'umccr-org:Creator': 'CDK',
+        'umccr-org:Service': serviceName,
+      },
+    };
   }
 }

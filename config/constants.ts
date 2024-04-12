@@ -9,13 +9,14 @@ import {
 } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
 import { IcaEventPipeStackProps } from '../lib/workload/stateful/stacks/ica-event-pipe/stack';
 import { StatefulStackCollectionProps } from '../lib/workload/stateful/statefulStackCollectionClass';
+import { VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 
 const region = 'ap-southeast-2';
 
 // upstream infra: vpc
 const vpcName = 'main-vpc';
 const vpcStackName = 'networking';
-const vpcProps = {
+const vpcProps: VpcLookupOptions = {
   vpcName: vpcName,
   tags: {
     Stack: vpcStackName,
@@ -78,7 +79,7 @@ const orcaBusStatefulConfig = {
     clusterEndpointHostParameterName: dbClusterEndpointHostParameterName,
     secretRotationSchedule: Duration.days(7),
   },
-  computeConfig: {
+  computeProps: {
     securityGroupName: lambdaSecurityGroupName,
   },
   icaEventPipeProps: icaEventPipeProps,
@@ -189,6 +190,7 @@ export const getEnvironmentConfig = (
         stackProps: {
           statefulConfig: {
             sharedStackProps: {
+              vpcProps,
               schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
               eventBusProps: orcaBusStatefulConfig.eventBusProps,
               databaseProps: {
@@ -200,7 +202,7 @@ export const getEnvironmentConfig = (
                 enablePerformanceInsights: true,
                 removalPolicy: RemovalPolicy.DESTROY,
               },
-              computeConfig: orcaBusStatefulConfig.computeConfig,
+              computeProps: orcaBusStatefulConfig.computeProps,
               eventSourceProps: eventSourceConfig(devBucket),
             },
             tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
@@ -222,6 +224,7 @@ export const getEnvironmentConfig = (
         stackProps: {
           statefulConfig: {
             sharedStackProps: {
+              vpcProps,
               schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
               eventBusProps: orcaBusStatefulConfig.eventBusProps,
               databaseProps: {
@@ -233,7 +236,7 @@ export const getEnvironmentConfig = (
                 enablePerformanceInsights: true,
                 removalPolicy: RemovalPolicy.DESTROY,
               },
-              computeConfig: orcaBusStatefulConfig.computeConfig,
+              computeProps: orcaBusStatefulConfig.computeProps,
               eventSourceProps: eventSourceConfig(stgBucket),
             },
             tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
@@ -255,6 +258,7 @@ export const getEnvironmentConfig = (
         stackProps: {
           statefulConfig: {
             sharedStackProps: {
+              vpcProps,
               schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
               eventBusProps: orcaBusStatefulConfig.eventBusProps,
               databaseProps: {
@@ -264,7 +268,7 @@ export const getEnvironmentConfig = (
                 maxACU: 16,
                 removalPolicy: RemovalPolicy.RETAIN,
               },
-              computeConfig: orcaBusStatefulConfig.computeConfig,
+              computeProps: orcaBusStatefulConfig.computeProps,
               eventSourceProps: eventSourceConfig(prodBucket),
             },
             tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
