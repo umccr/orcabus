@@ -35,7 +35,7 @@ export class TokenServiceStack extends Stack {
     super(scope, id, props);
     this.props = props;
 
-    this.vpc = Vpc.fromLookup(scope, 'MainVpc', props.vpcProps);
+    this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
 
     // NOTE:
     // Token Service has very high dependency on the upstream Cognito User Pool OAuth2 broker

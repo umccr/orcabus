@@ -38,7 +38,7 @@ export class SharedStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps & SharedStackProps) {
     super(scope, id, props);
 
-    const mainVpc = Vpc.fromLookup(scope, 'MainVpc', props.vpcProps);
+    const mainVpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
 
     const computeResources = new ComputeConstruct(
       this,
