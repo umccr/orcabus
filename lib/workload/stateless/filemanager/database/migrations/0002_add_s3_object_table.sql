@@ -33,7 +33,7 @@ create table s3_object (
     deleted_date timestamptz default null,
     -- provenance - history of all objects and how they move?
     -- The size of the object.
-    size integer default null,
+    size bigint default null,
     -- A base64 encoded SHA256 checksum of the object.
     sha256 text default null,
 
@@ -49,9 +49,9 @@ create table s3_object (
     -- A sequencer value for when the object was deleted. Used to synchronise out of order and duplicate events.
     deleted_sequencer text default null,
     -- Record the number of times this event has been considered out of order, useful for debugging.
-    number_reordered integer not null default 0,
+    number_reordered bigint not null default 0,
     -- Record the number of duplicate events received for this object, useful for debugging.
-    number_duplicate_events integer not null default 0,
+    number_duplicate_events bigint not null default 0,
 
     -- The sequencers should be unique with the bucket, key, and its version, otherwise this is a duplicate event.
     constraint created_sequencer_unique unique (bucket, key, version_id, created_sequencer),
