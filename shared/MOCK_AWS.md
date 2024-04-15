@@ -1,7 +1,7 @@
 # AWS Mock using Localstack
 
-
 From your compose stack root, preform:
+
 ```
 docker compose up -d
 docker compose ps

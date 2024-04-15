@@ -8,7 +8,7 @@ import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { IUserPool, UserPool } from 'aws-cdk-lib/aws-cognito';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
-import { IVpc, Vpc } from 'aws-cdk-lib/aws-ec2';
+import { IVpc, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import {
   getCognitoAdminActions,
   getCognitoJWTPolicy,
@@ -16,22 +16,22 @@ import {
   getServiceUserSecretResourcePolicy,
 } from './construct/policy';
 
-export interface TokenServiceProps {
+export interface TokenServiceStackProps {
   serviceUserSecretName: string;
   jwtSecretName: string;
-  vpcProps: object;
+  vpcProps: VpcLookupOptions;
   cognitoUserPoolIdParameterName: string;
   cognitoPortalAppClientIdParameterName: string;
 }
 
 export class TokenServiceStack extends Stack {
-  private readonly props: TokenServiceProps;
+  private readonly props: TokenServiceStackProps;
   private readonly vpc: IVpc;
   private readonly userPool: IUserPool;
   private readonly lambdaEnv;
   private readonly lambdaRuntimePythonVersion: aws_lambda.Runtime = aws_lambda.Runtime.PYTHON_3_12;
 
-  constructor(scope: Construct, id: string, props: StackProps & TokenServiceProps) {
+  constructor(scope: Construct, id: string, props: StackProps & TokenServiceStackProps) {
     super(scope, id, props);
     this.props = props;
 

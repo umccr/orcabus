@@ -26,7 +26,7 @@ export type EventSourceRule = {
 };
 
 /**
- * Properties for the EventSource construct.
+ * Properties for the EventSourceConstruct.
  */
 export type EventSourceProps = {
   /**
@@ -47,7 +47,7 @@ export type EventSourceProps = {
 /**
  * A construct that defines an SQS S3 event source, along with a DLQ and CloudWatch alarms.
  */
-export class EventSource extends Construct {
+export class EventSourceConstruct extends Construct {
   readonly queue: Queue;
   readonly deadLetterQueue: Queue;
   readonly alarm: Alarm;

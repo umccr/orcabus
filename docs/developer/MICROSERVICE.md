@@ -76,7 +76,7 @@ Most probably you microservice stack should only create new stateless resources 
 be provisioned from the shared stateful stack. For example, your application may need an RDS cluster for its database,
 but the shared stack has an existing RDS cluster that is intended to be used across microservices.
 
-See [SHARED_RESOURCES.md](./SHARED_RESOURCES.md) for more shared resources detail.
+See [README.md](../../lib/workload/stateful/stacks/shared/README.md) in the stateful shared stack for more detail.
 
 Useful resources:
 

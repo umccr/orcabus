@@ -1,19 +1,22 @@
-import { OrcaBusStatefulConfig } from '../lib/workload/orcabus-stateful-stack';
 import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
-import { EventSourceProps } from '../lib/workload/stateful/event_source/component';
+import { EventSourceProps } from '../lib/workload/stateful/stacks/shared/constructs/event-source';
 import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
 import {
   FILEMANAGER_SERVICE_NAME,
   FilemanagerConfig,
 } from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
-import { IcaEventPipeStackProps } from '../lib/workload/stateful/ica_event_pipe/stack';
+import { IcaEventPipeStackProps } from '../lib/workload/stateful/stacks/ica-event-pipe/stack';
+import { StatefulStackCollectionProps } from '../lib/workload/stateful/statefulStackCollectionClass';
+import { VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
+
+const region = 'ap-southeast-2';
 
 // upstream infra: vpc
 const vpcName = 'main-vpc';
 const vpcStackName = 'networking';
-const vpcProps = {
+const vpcProps: VpcLookupOptions = {
   vpcName: vpcName,
   tags: {
     Stack: vpcStackName,
@@ -26,7 +29,7 @@ const cognitoPortalAppClientIdParameterName = '/data_portal/client/data2/cog_app
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
-const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
+const computeSecurityGroupName = 'OrcaBusSharedComputeSecurityGroup';
 const dbClusterIdentifier = 'orcabus-db';
 const dbClusterResourceIdParameterName = '/orcabus/db-cluster-resource-id';
 const dbClusterEndpointHostParameterName = '/orcabus/db-cluster-endpoint-host';
@@ -76,9 +79,8 @@ const orcaBusStatefulConfig = {
     clusterEndpointHostParameterName: dbClusterEndpointHostParameterName,
     secretRotationSchedule: Duration.days(7),
   },
-  securityGroupProps: {
-    securityGroupName: lambdaSecurityGroupName,
-    securityGroupDescription: 'allow within same SecurityGroup and rds SG',
+  computeProps: {
+    securityGroupName: computeSecurityGroupName,
   },
   icaEventPipeProps: icaEventPipeProps,
   tokenServiceProps: {
@@ -109,7 +111,7 @@ const orcaBusStatelessConfig = {
     ],
   },
   eventBusName: eventBusName,
-  lambdaSecurityGroupName: lambdaSecurityGroupName,
+  computeSecurityGroupName: computeSecurityGroupName,
   rdsMasterSecretName: rdsMasterSecretName,
   postgresManagerConfig: {
     masterSecretName: rdsMasterSecretName,
@@ -156,9 +158,10 @@ const filemanagerConfig = (bucket: string): FilemanagerConfig => {
 
 interface EnvironmentConfig {
   name: string;
+  region: string;
   accountId: string;
   stackProps: {
-    orcaBusStatefulConfig: OrcaBusStatefulConfig;
+    statefulConfig: StatefulStackCollectionProps;
     orcaBusStatelessConfig: OrcaBusStatelessConfig;
   };
 }
@@ -182,30 +185,28 @@ export const getEnvironmentConfig = (
     case 'beta':
       config = {
         name: 'beta',
+        region,
         accountId: '843407916570', // umccr_development
         stackProps: {
-          orcaBusStatefulConfig: {
-            schemaRegistryProps: {
-              ...orcaBusStatefulConfig.schemaRegistryProps,
+          statefulConfig: {
+            sharedStackProps: {
+              vpcProps,
+              schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
+              eventBusProps: orcaBusStatefulConfig.eventBusProps,
+              databaseProps: {
+                ...orcaBusStatefulConfig.databaseProps,
+                numberOfInstance: 1,
+                minACU: 0.5,
+                maxACU: 16,
+                enhancedMonitoringInterval: Duration.seconds(60),
+                enablePerformanceInsights: true,
+                removalPolicy: RemovalPolicy.DESTROY,
+              },
+              computeProps: orcaBusStatefulConfig.computeProps,
+              eventSourceProps: eventSourceConfig(devBucket),
             },
-            eventBusProps: {
-              ...orcaBusStatefulConfig.eventBusProps,
-            },
-            databaseProps: {
-              ...orcaBusStatefulConfig.databaseProps,
-              numberOfInstance: 1,
-              minACU: 0.5,
-              maxACU: 16,
-              enhancedMonitoringInterval: Duration.seconds(60),
-              enablePerformanceInsights: true,
-              removalPolicy: RemovalPolicy.DESTROY,
-            },
-            securityGroupProps: {
-              ...orcaBusStatefulConfig.securityGroupProps,
-            },
-            eventSourceProps: eventSourceConfig(devBucket),
-            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
-            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
+            tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
+            icaEventPipeStackProps: orcaBusStatefulConfig.icaEventPipeProps,
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -218,30 +219,28 @@ export const getEnvironmentConfig = (
     case 'gamma':
       config = {
         name: 'gamma',
+        region,
         accountId: '455634345446', // umccr_staging
         stackProps: {
-          orcaBusStatefulConfig: {
-            schemaRegistryProps: {
-              ...orcaBusStatefulConfig.schemaRegistryProps,
+          statefulConfig: {
+            sharedStackProps: {
+              vpcProps,
+              schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
+              eventBusProps: orcaBusStatefulConfig.eventBusProps,
+              databaseProps: {
+                ...orcaBusStatefulConfig.databaseProps,
+                numberOfInstance: 1,
+                minACU: 0.5,
+                maxACU: 16,
+                enhancedMonitoringInterval: Duration.seconds(60),
+                enablePerformanceInsights: true,
+                removalPolicy: RemovalPolicy.DESTROY,
+              },
+              computeProps: orcaBusStatefulConfig.computeProps,
+              eventSourceProps: eventSourceConfig(stgBucket),
             },
-            eventBusProps: {
-              ...orcaBusStatefulConfig.eventBusProps,
-            },
-            databaseProps: {
-              ...orcaBusStatefulConfig.databaseProps,
-              numberOfInstance: 1,
-              minACU: 0.5,
-              maxACU: 16,
-              enhancedMonitoringInterval: Duration.seconds(60),
-              enablePerformanceInsights: true,
-              removalPolicy: RemovalPolicy.DESTROY,
-            },
-            securityGroupProps: {
-              ...orcaBusStatefulConfig.securityGroupProps,
-            },
-            eventSourceProps: eventSourceConfig(stgBucket),
-            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
-            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
+            tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
+            icaEventPipeStackProps: orcaBusStatefulConfig.icaEventPipeProps,
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -254,28 +253,26 @@ export const getEnvironmentConfig = (
     case 'prod':
       config = {
         name: 'prod',
+        region,
         accountId: '472057503814', // umccr_production
         stackProps: {
-          orcaBusStatefulConfig: {
-            schemaRegistryProps: {
-              ...orcaBusStatefulConfig.schemaRegistryProps,
+          statefulConfig: {
+            sharedStackProps: {
+              vpcProps,
+              schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
+              eventBusProps: orcaBusStatefulConfig.eventBusProps,
+              databaseProps: {
+                ...orcaBusStatefulConfig.databaseProps,
+                numberOfInstance: 1,
+                minACU: 0.5,
+                maxACU: 16,
+                removalPolicy: RemovalPolicy.RETAIN,
+              },
+              computeProps: orcaBusStatefulConfig.computeProps,
+              eventSourceProps: eventSourceConfig(prodBucket),
             },
-            eventBusProps: {
-              ...orcaBusStatefulConfig.eventBusProps,
-            },
-            databaseProps: {
-              ...orcaBusStatefulConfig.databaseProps,
-              numberOfInstance: 1,
-              minACU: 0.5,
-              maxACU: 16,
-              removalPolicy: RemovalPolicy.RETAIN,
-            },
-            securityGroupProps: {
-              ...orcaBusStatefulConfig.securityGroupProps,
-            },
-            eventSourceProps: eventSourceConfig(prodBucket),
-            icaEventPipeProps: orcaBusStatefulConfig.icaEventPipeProps,
-            tokenServiceProps: { ...orcaBusStatefulConfig.tokenServiceProps },
+            tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
+            icaEventPipeStackProps: orcaBusStatefulConfig.icaEventPipeProps,
           },
           orcaBusStatelessConfig: {
             ...orcaBusStatelessConfig,
@@ -286,7 +283,7 @@ export const getEnvironmentConfig = (
       break;
   }
 
-  validateSecretName(config.stackProps.orcaBusStatefulConfig.databaseProps.masterSecretName);
+  // validateSecretName(config.stackProps.orcaBusStatefulConfig.databaseProps.masterSecretName);
 
   return config;
 };

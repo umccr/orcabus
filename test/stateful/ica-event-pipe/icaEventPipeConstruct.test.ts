@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { IcaEventPipeConstruct } from '../../lib/workload/stateful/ica_event_pipe/construct/ica_event_pipe';
+import { IcaEventPipeConstruct } from '../../../lib/workload/stateful/stacks/ica-event-pipe/construct/ica_event_pipe';
 
 const topicArn = 'arn:aws:sns:region-1:123456789123:TopicName';
 let stack: cdk.Stack;

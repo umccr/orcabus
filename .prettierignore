@@ -30,7 +30,6 @@ config/event_schemas/
 skel/
 docs/
 openapi/
-shared/
 venv/
 
 # TODO still early days let ignore prettier them (microservice apps) for now

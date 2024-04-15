@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { getEnvironmentConfig } from '../../config/constants';
-import { SchemaRegistryConstruct } from '../../lib/workload/stateful/schemaregistry/component';
+import { getEnvironmentConfig } from '../../../config/constants';
+import { SchemaRegistryConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
 
 let stack: cdk.Stack;
 
@@ -12,10 +12,12 @@ beforeEach(() => {
   stack = new cdk.Stack();
 });
 
-test('Test SchemaRegistry Creation', () => {
-  new SchemaRegistryConstruct(stack, 'TestSchemaRegistryConstruct', {
-    ...constructConfig.stackProps.orcaBusStatefulConfig.schemaRegistryProps,
-  });
+test('Test SchemaRegistryConstruct Creation', () => {
+  new SchemaRegistryConstruct(
+    stack,
+    'TestSchemaRegistryConstruct',
+    constructConfig.stackProps.statefulConfig.sharedStackProps.schemaRegistryProps
+  );
   const template = Template.fromStack(stack);
 
   template.hasResourceProperties('AWS::EventSchemas::Registry', {

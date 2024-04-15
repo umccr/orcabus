@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { EventSource } from '../../lib/workload/stateful/event_source/component';
+import { EventSourceConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/event-source';
 
 let stack: cdk.Stack;
 
@@ -37,8 +37,8 @@ beforeEach(() => {
   stack = new cdk.Stack();
 });
 
-test('Test EventSource created props', () => {
-  new EventSource(stack, 'TestEventSourceConstruct', {
+test('Test EventSourceConstruct created props', () => {
+  new EventSourceConstruct(stack, 'TestEventSourceConstruct', {
     queueName: 'queue',
     maxReceiveCount: 100,
     rules: [
@@ -54,8 +54,8 @@ test('Test EventSource created props', () => {
   assert_common(template);
 });
 
-test('Test EventSource created props with event types', () => {
-  new EventSource(stack, 'TestEventSourceConstruct', {
+test('Test EventSourceConstruct created props with event types', () => {
+  new EventSourceConstruct(stack, 'TestEventSourceConstruct', {
     queueName: 'queue',
     maxReceiveCount: 100,
     rules: [
@@ -75,8 +75,8 @@ test('Test EventSource created props with event types', () => {
   });
 });
 
-test('Test EventSource created props with prefix', () => {
-  new EventSource(stack, 'TestEventSourceConstruct', {
+test('Test EventSourceConstruct created props with prefix', () => {
+  new EventSourceConstruct(stack, 'TestEventSourceConstruct', {
     queueName: 'queue',
     maxReceiveCount: 100,
     rules: [
@@ -104,8 +104,8 @@ test('Test EventSource created props with prefix', () => {
   });
 });
 
-test('Test EventSource created props with rules matching any bucket', () => {
-  new EventSource(stack, 'TestEventSourceConstruct', {
+test('Test EventSourceConstruct created props with rules matching any bucket', () => {
+  new EventSourceConstruct(stack, 'TestEventSourceConstruct', {
     queueName: 'queue',
     maxReceiveCount: 100,
     rules: [{}],

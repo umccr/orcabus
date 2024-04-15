@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Arn } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { getVpc } from './stateful/vpc/component';
+import { getVpc } from './components/vpc';
 import { MultiSchemaConstructProps } from './stateless/schema/component';
 import { IVpc, ISecurityGroup, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Filemanager, FilemanagerConfig } from './stateless/filemanager/deploy/lib/filemanager';
@@ -20,7 +20,7 @@ import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
   eventBusName: string;
-  lambdaSecurityGroupName: string;
+  computeSecurityGroupName: string;
   rdsMasterSecretName: string;
   postgresManagerConfig: PostgresManagerConfig;
   metadataManagerConfig: MetadataManagerConfig;
@@ -45,7 +45,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     this.lambdaSecurityGroup = SecurityGroup.fromLookupByName(
       this,
       'OrcaBusLambdaSecurityGroup',
-      props.lambdaSecurityGroupName,
+      props.computeSecurityGroupName,
       this.vpc
     );
 

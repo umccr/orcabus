@@ -1,6 +1,7 @@
 # Mock DB using PostgreSQL
 
 From your compose stack root, preform:
+
 ```
 docker compose up -d
 docker compose ps

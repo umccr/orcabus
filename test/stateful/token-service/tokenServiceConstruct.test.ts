@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { getEnvironmentConfig } from '../../config/constants';
-import { TokenServiceStack } from '../../lib/workload/stateful/token_service/deploy/stack';
+import { getEnvironmentConfig } from '../../../config/constants';
+import { TokenServiceStack } from '../../../lib/workload/stateful/stacks/token-service/deploy/stack';
 
 const constructConfig = getEnvironmentConfig('beta');
 if (!constructConfig) throw new Error('No construct config for the test');
@@ -13,7 +13,7 @@ const stack = new TokenServiceStack(mockApp, 'TestTokenServiceStack', {
     account: '123456789',
     region: 'ap-southeast-2',
   },
-  ...constructConfig.stackProps.orcaBusStatefulConfig.tokenServiceProps,
+  ...constructConfig.stackProps.statefulConfig.tokenServiceStackProps,
 });
 
 beforeEach(() => {

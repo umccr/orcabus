@@ -103,11 +103,24 @@ _Heads up: Polyglot programming environment. We shorten some trivial steps into 
 
 To develop your microservice application please read the [microservice guide](docs/developer/MICROSERVICE.md).
 
-Do note that we have some shared resources that is expected to be used across microservices at [shared resource docs](docs/developer/SHARED_RESOURCES.md).
+Do note that we have some shared resources that is expected to be used across microservices at [shared resource docs](./lib/workload/stateful/stacks/shared/README.md).
 
 ### Typography
 
 When possible, please use either `OrcaBus` (camel case) or `orcabus` (all lower case).
+
+#### Typescript
+
+When using typescript we will use the convention defined in [AWS
+Guide](https://docs.aws.amazon.com/prescriptive-guidance/latest/best-practices-cdk-typescript-iac/typescript-best-practices.html#naming-conventions).
+
+- Use camelCase for variable and function names.
+- Use PascalCase for class names and interface names.
+- Use camelCase for interface members.
+- Use PascalCase for type names and enum names.
+- Name files with camelCase (for example, ebsVolumes.tsx or storage.tsb)
+
+For folder name, we will be using `kebab-case` as this is the common convention in TypeScript project.
 
 ### Toolchain
 
