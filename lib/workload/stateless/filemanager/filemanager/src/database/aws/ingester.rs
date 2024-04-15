@@ -300,7 +300,7 @@ pub(crate) mod tests {
             .object_created
             .sizes
             .iter_mut()
-            .for_each(|size| *size = Some(373588380934135341));
+            .for_each(|size| *size = Some(i64::MAX));
 
         let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
@@ -311,7 +311,7 @@ pub(crate) mod tests {
         assert_eq!(s3_object_results.len(), 1);
         assert_with(
             &s3_object_results[0],
-            Some(373588380934135341),
+            Some(i64::MAX),
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),

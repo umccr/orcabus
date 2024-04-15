@@ -191,7 +191,7 @@ mod tests {
                     }},
                     "object": {{
                         "key": "key",
-                        "size": 373588380934135341,
+                        "size": {},
                         "etag": "{EXPECTED_E_TAG}",
                         "sequencer": "{EXPECTED_SEQUENCER_DELETED_ONE}"
                     }},
@@ -200,7 +200,8 @@ mod tests {
                     "source-ip-address": "127.0.0.1",
                     "reason": "CompleteMultipartUpload"
                 }}
-            }}"#
+            }}"#,
+            i64::MAX,
         );
 
         let result: FlatS3EventMessages = serde_json::from_str(&message).unwrap();
@@ -210,7 +211,7 @@ mod tests {
             first_message,
             &Created,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            Some(373588380934135341),
+            Some(i64::MAX),
             "null".to_string(),
         );
     }

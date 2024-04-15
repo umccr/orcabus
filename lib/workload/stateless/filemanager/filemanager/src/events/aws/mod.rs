@@ -671,7 +671,7 @@ pub(crate) mod tests {
         assert_eq!(event.key, "key");
         assert_eq!(event.version_id, version_id);
         assert_eq!(event.size, size);
-        assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string())); // pragma: allowlist secret
+        assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string()));
         assert_eq!(event.sequencer, sequencer);
         assert_eq!(event.storage_class, None);
         assert_eq!(event.last_modified_date, None);
