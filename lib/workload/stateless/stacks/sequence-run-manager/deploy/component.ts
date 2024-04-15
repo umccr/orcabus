@@ -2,37 +2,48 @@ import path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import { aws_lambda, aws_secretsmanager, Duration, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { ISecurityGroup, IVpc } from 'aws-cdk-lib/aws-ec2';
-import { IEventBus } from 'aws-cdk-lib/aws-events';
+import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
+import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { SRMApiGatewayConstruct } from './apigw/component';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
-import { PostgresManagerStack } from '../../postgres_manager/deploy/postgres-manager-stack';
+import { PostgresManagerStack } from '../../postgres-manager/deploy/stack';
 
-export interface SequenceRunManagerProps {
-  securityGroups: ISecurityGroup[];
-  vpc: IVpc;
-  mainBus: IEventBus;
+export interface SequenceRunManagerStackProps {
+  lambdaSecurityGroupName: string;
+  vpcProps: VpcLookupOptions;
+  mainBusName: string;
 }
 
 export class SequenceRunManagerStack extends Stack {
-  private readonly secretId: string = PostgresManagerStack.formatDbSecretManagerName('sequence_run_manager');
-  private readonly apiName: string = 'SequenceRunManager';  // apiNamespace `/srm/v1` is handled by Django Router
+  private readonly secretId: string =
+    PostgresManagerStack.formatDbSecretManagerName('sequence_run_manager');
+  private readonly apiName: string = 'SequenceRunManager'; // apiNamespace `/srm/v1` is handled by Django Router
   private readonly id: string;
-  private readonly props: SequenceRunManagerProps;
   private readonly baseLayer: PythonLayerVersion;
   private readonly lambdaEnv;
   private readonly lambdaRuntimePythonVersion: aws_lambda.Runtime = aws_lambda.Runtime.PYTHON_3_12;
   private readonly lambdaRole: Role;
+  private readonly vpc: IVpc;
+  private readonly lambdaSG: ISecurityGroup;
+  private readonly mainBus: IEventBus;
 
-  constructor(scope: Construct, id: string, props: cdk.StackProps & SequenceRunManagerProps) {
-    super(scope, id);
+  constructor(scope: Construct, id: string, props: cdk.StackProps & SequenceRunManagerStackProps) {
+    super(scope, id, props);
 
     this.id = id;
-    this.props = props;
+
+    this.mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.mainBusName);
+    this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
+    this.lambdaSG = SecurityGroup.fromLookupByName(
+      this,
+      'LambdaSecurityGroup',
+      props.lambdaSecurityGroupName,
+      this.vpc
+    );
 
     this.lambdaRole = new Role(this, this.id + 'Role', {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
@@ -42,21 +53,25 @@ export class SequenceRunManagerStack extends Stack {
     //  we should improve this at some point down the track.
     //  See https://github.com/umccr/orcabus/issues/174
     this.lambdaRole.addManagedPolicy(
-      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
     );
     this.lambdaRole.addManagedPolicy(
-      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'),
+      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
     );
     this.lambdaRole.addManagedPolicy(
-      ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMReadOnlyAccess'),
+      ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMReadOnlyAccess')
     );
 
-    const dbSecret = aws_secretsmanager.Secret.fromSecretNameV2(this, this.id + 'dbSecret', this.secretId);
+    const dbSecret = aws_secretsmanager.Secret.fromSecretNameV2(
+      this,
+      this.id + 'dbSecret',
+      this.secretId
+    );
     dbSecret.grantRead(this.lambdaRole);
 
     this.lambdaEnv = {
       DJANGO_SETTINGS_MODULE: 'sequence_run_manager.settings.aws',
-      EVENT_BUS_NAME: this.props.mainBus.eventBusName,
+      EVENT_BUS_NAME: this.mainBus.eventBusName,
       SECRET_ID: this.secretId,
     };
 
@@ -77,9 +92,9 @@ export class SequenceRunManagerStack extends Stack {
       runtime: this.lambdaRuntimePythonVersion,
       layers: [this.baseLayer],
       environment: this.lambdaEnv,
-      securityGroups: this.props.securityGroups,
-      vpc: this.props.vpc,
-      vpcSubnets: { subnets: this.props.vpc.privateSubnets },
+      securityGroups: [this.lambdaSG],
+      vpc: this.vpc,
+      vpcSubnets: { subnets: this.vpc.privateSubnets },
       role: this.lambdaRole,
       architecture: Architecture.ARM_64,
       ...props,
@@ -101,7 +116,12 @@ export class SequenceRunManagerStack extends Stack {
       timeout: Duration.seconds(28),
     });
 
-    const srmApi = new SRMApiGatewayConstruct(this, this.id + 'SRMApiGatewayConstruct', this.apiName, this.region);
+    const srmApi = new SRMApiGatewayConstruct(
+      this,
+      this.id + 'SRMApiGatewayConstruct',
+      this.apiName,
+      this.region
+    );
     const httpApi = srmApi.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration(this.id + 'ApiIntegration', apiFn);
@@ -120,7 +140,7 @@ export class SequenceRunManagerStack extends Stack {
       timeout: Duration.minutes(2),
     });
 
-    this.props.mainBus.grantPutEventsTo(procSqsFn);
+    this.mainBus.grantPutEventsTo(procSqsFn);
     // this.setupEventRule(procSqsFn);  // TODO comment this out for now
   }
 

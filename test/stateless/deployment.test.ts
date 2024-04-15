@@ -2,8 +2,8 @@ import { App, Aspects, Stack } from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { SynthesisMessage } from 'aws-cdk-lib/cx-api';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { OrcaBusStatelessStack } from '../../lib/workload/orcabus-stateless-stack';
 import { getEnvironmentConfig } from '../../config/constants';
+import { StatelessStackCollection } from '../../lib/workload/stateless/statelessStackCollectionClass';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {
   return `${sm.entry.data} [${sm.id}]`;
@@ -14,53 +14,40 @@ const config = getEnvironmentConfig('prod')!;
 
 describe('cdk-nag-stateless-stack', () => {
   const app: App = new App({});
-  const stack: OrcaBusStatelessStack = new OrcaBusStatelessStack(app, 'TestStack', {
-    env: {
-      account: '12345678',
+
+  const stackCollection = new StatelessStackCollection(
+    app,
+    {
+      account: '123456789',
       region: 'ap-southeast-2',
     },
-    ...config.stackProps.orcaBusStatelessConfig,
-  });
+    config.stackProps.statelessConfig
+  );
 
-  // stateless stack cdk-nag test
-  Aspects.of(stack).add(new AwsSolutionsChecks());
-  applyNagSuppression(stack.node.id, stack);
+  for (const key in stackCollection) {
+    if (Object.prototype.hasOwnProperty.call(stackCollection, key)) {
+      const stack = stackCollection[key as keyof StatelessStackCollection];
 
-  test(`OrcaBusStatelessStack: cdk-nag AwsSolutions Pack errors`, () => {
-    const errors = Annotations.fromStack(stack)
-      .findError('*', Match.stringLikeRegexp('AwsSolutions-.*'))
-      .map(synthesisMessageToString);
-    expect(errors).toHaveLength(0);
-  });
+      const stackId = stack.node.id;
 
-  test(`OrcaBusStatelessStack: cdk-nag AwsSolutions Pack warnings`, () => {
-    const warnings = Annotations.fromStack(stack)
-      .findWarning('*', Match.stringLikeRegexp('AwsSolutions-.*'))
-      .map(synthesisMessageToString);
-    expect(warnings).toHaveLength(0);
-  });
+      Aspects.of(stack).add(new AwsSolutionsChecks());
 
-  // microservice cdk-nag test
-  for (const ms_stack of stack.microserviceStackArray) {
-    const stackId = ms_stack.node.id;
+      applyNagSuppression(stackId, stack);
 
-    Aspects.of(ms_stack).add(new AwsSolutionsChecks());
+      test(`${stackId}: cdk-nag AwsSolutions Pack errors`, () => {
+        const errors = Annotations.fromStack(stack)
+          .findError('*', Match.stringLikeRegexp('AwsSolutions-.*'))
+          .map(synthesisMessageToString);
+        expect(errors).toHaveLength(0);
+      });
 
-    applyNagSuppression(stackId, ms_stack);
-
-    test(`${stackId}: cdk-nag AwsSolutions Pack errors`, () => {
-      const errors = Annotations.fromStack(ms_stack)
-        .findError('*', Match.stringLikeRegexp('AwsSolutions-.*'))
-        .map(synthesisMessageToString);
-      expect(errors).toHaveLength(0);
-    });
-
-    test(`${stackId}: cdk-nag AwsSolutions Pack warnings`, () => {
-      const warnings = Annotations.fromStack(ms_stack)
-        .findWarning('*', Match.stringLikeRegexp('AwsSolutions-.*'))
-        .map(synthesisMessageToString);
-      expect(warnings).toHaveLength(0);
-    });
+      test(`${stackId}: cdk-nag AwsSolutions Pack warnings`, () => {
+        const warnings = Annotations.fromStack(stack)
+          .findWarning('*', Match.stringLikeRegexp('AwsSolutions-.*'))
+          .map(synthesisMessageToString);
+        expect(warnings).toHaveLength(0);
+      });
+    }
   }
 });
 

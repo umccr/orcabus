@@ -2,7 +2,7 @@
 import 'source-map-support/register';
 
 import * as cdk from 'aws-cdk-lib';
-import { StatelessPipelineStack } from '../lib/pipeline/orcabus-stateless-pipeline-stack';
+import { StatelessPipelineStack } from '../lib/pipeline/statelessPipelineStack';
 
 const AWS_TOOLCHAIN_ACCOUNT = '383856791668'; // Bastion
 const AWS_TOOLCHAIN_REGION = 'ap-southeast-2';

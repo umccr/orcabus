@@ -33,5 +33,5 @@ openapi/
 venv/
 
 # TODO still early days let ignore prettier them (microservice apps) for now
-lib/workload/stateless/filemanager/
-lib/workload/stateless/sequence_run_manager/
+lib/workload/stateless/stacks/filemanager/
+lib/workload/stateless/stacks/sequence-run-manager/

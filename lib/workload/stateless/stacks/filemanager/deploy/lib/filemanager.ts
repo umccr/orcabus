@@ -3,10 +3,11 @@ import { EventSourceProps, IngestFunction } from '../constructs/functions/ingest
 import { MigrateFunction } from '../constructs/functions/migrate';
 import * as fn from '../constructs/functions/function';
 import { DatabaseProps } from '../constructs/functions/function';
-import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { Stack, StackProps } from 'aws-cdk-lib';
+import { Vpc, SecurityGroup, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
+import { Arn, Stack, StackProps } from 'aws-cdk-lib';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
-import { ProviderFunction } from '../../../../components/provider_function';
+import { ProviderFunction } from '../../../../../components/provider_function';
+import { Queue } from 'aws-cdk-lib/aws-sqs';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 
@@ -26,25 +27,24 @@ export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & 
    * The parameter name that contains the database cluster endpoint.
    */
   databaseClusterEndpointHostParameter: string;
+  /**
+   * The parameter name that contains the database cluster endpoint.
+   */
+  vpcProps: VpcLookupOptions;
+  /**
+   * Whether to initialize a database migration.
+   */
+  migrateDatabase?: boolean;
+  /**
+   * The security group name to be attached to lambdas. 
+   */
+  securityGroupName: string;
 }
 
 /**
  * Props for the filemanager stack.
  */
-export type FilemanagerProps = StackProps & EventSourceProps & fn.FunctionPropsNoPackage & Omit<DatabaseProps, 'host'> & {
-    /**
-     * VPC to use for filemanager.
-     */
-    readonly vpc: IVpc,
-    /**
-     * Whether to initialize a database migration.
-     */
-    readonly migrateDatabase?: boolean;
-    /**
-     * The parameter name that contains the database cluster endpoint.
-     */
-    readonly databaseClusterEndpointHostParameter: string;
-};
+export type FilemanagerProps = StackProps & FilemanagerConfig;
 
 /**
  * Construct used to configure the filemanager.
@@ -53,6 +53,15 @@ export class Filemanager extends Stack {
   constructor(scope: Construct, id: string, props: FilemanagerProps) {
     super(scope, id, props);
 
+    const vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
+
+    const lambdaSecurityGroup = SecurityGroup.fromLookupByName(
+      this,
+      'OrcaBusLambdaSecurityGroup',
+      props.securityGroupName,
+      vpc
+    );
+
     const host = StringParameter.valueForStringParameter(
       this,
       props.databaseClusterEndpointHostParameter
@@ -60,29 +69,41 @@ export class Filemanager extends Stack {
 
     if (props?.migrateDatabase) {
       const migrateFunction = new MigrateFunction(this, 'MigrateFunction', {
-        vpc: props.vpc,
+        vpc: vpc,
         host: host,
         port: props.port,
-        securityGroup: props.securityGroup,
-        buildEnvironment: props?.buildEnvironment,
-        rustLog: props?.rustLog,
+        securityGroup: lambdaSecurityGroup,
+        buildEnvironment: {},
+        // rustLog: props?.rustLog,
       });
 
       new ProviderFunction(this, 'MigrateProviderFunction', {
-        vpc: props.vpc,
+        vpc: vpc,
         function: migrateFunction.function,
       });
     }
 
+    const queue = Queue.fromQueueArn(
+      this,
+      'FilemanagerQueue',
+      Arn.format(
+        {
+          resource: props.eventSourceQueueName,
+          service: 'sqs',
+        },
+        this
+      )
+    );
+
     new IngestFunction(this, 'IngestLambda', {
-      vpc: props.vpc,
+      vpc: vpc,
       host: host,
       port: props.port,
-      securityGroup: props.securityGroup,
-      eventSources: props.eventSources,
-      buckets: props.buckets,
-      buildEnvironment: props?.buildEnvironment,
-      rustLog: props?.rustLog,
+      securityGroup: lambdaSecurityGroup,
+      eventSources: [queue],
+      buckets: props.eventSourceBuckets,
+      buildEnvironment: {},
+      // rustLog: props?.rustLog,
     });
   }
 }
