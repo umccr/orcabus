@@ -1,6 +1,6 @@
 include:
   - path:
-      - ../../../../shared/mock-ica.yml
+#      - ../../../../shared/mock-ica.yml
       - ../../../../shared/mock-aws.yml
       - ../../../../shared/mock-db.yml
 

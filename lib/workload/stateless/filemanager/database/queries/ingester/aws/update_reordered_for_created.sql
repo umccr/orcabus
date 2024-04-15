@@ -10,7 +10,7 @@ with input as (
         $2::text[],
         $3::text[],
         $4::timestamptz[],
-        $5::integer[],
+        $5::bigint[],
         $6::text[],
         $7::timestamptz[],
         $8::text[],
@@ -23,7 +23,7 @@ with input as (
         key,
         created_date,
         size,
-        checksum,
+        sha256,
         last_modified_date,
         e_tag,
         storage_class,
@@ -42,7 +42,7 @@ current_objects as (
         input.created_sequencer as input_created_sequencer,
         input.created_date as input_created_date,
         input.size as input_size,
-        input.checksum as input_checksum,
+        input.sha256 as input_sha256,
         input.last_modified_date as input_last_modified_date,
         input.e_tag as input_e_tag,
         input.storage_class as input_storage_class
@@ -51,7 +51,7 @@ current_objects as (
     join input on
         input.bucket = s3_object.bucket and
         input.key = s3_object.key and
-        input.version_id is not distinct from s3_object.version_id
+        input.version_id = s3_object.version_id
     -- Lock this pre-emptively for the update.
     for update
 ),
@@ -70,12 +70,17 @@ objects_to_update as (
             -- If a sequencer already exists this event should be reprocessed because this
             -- sequencer could belong to another object.
             current_objects.created_sequencer < current_objects.input_created_sequencer
-        )
+        ) and
         -- And there should not be any objects with a created sequencer that is the same as the input created
         -- sequencer because this is a duplicate event that would cause a constraint error in the update.
-        and current_objects.input_created_sequencer not in (
+        current_objects.input_created_sequencer not in (
             select created_sequencer from current_objects where created_sequencer is not null
         )
+    -- Only one event entry should be updated, and that entry must be the one with the
+    -- deleted sequencer that is minimum, i.e. closest to the created sequencer which
+    -- is going to be inserted.
+    order by current_objects.deleted_sequencer asc
+    limit 1
 ),
 -- Finally, update the required objects.
 update as (
@@ -83,7 +88,7 @@ update as (
     set created_sequencer = objects_to_update.input_created_sequencer,
         created_date = objects_to_update.input_created_date,
         size = coalesce(objects_to_update.input_size, objects_to_update.size),
-        checksum = coalesce(objects_to_update.input_checksum, objects_to_update.checksum),
+        sha256 = coalesce(objects_to_update.input_sha256, objects_to_update.sha256),
         last_modified_date = coalesce(objects_to_update.input_last_modified_date, objects_to_update.last_modified_date),
         e_tag = coalesce(objects_to_update.e_tag, objects_to_update.e_tag),
         storage_class = objects_to_update.storage_class,
@@ -106,8 +111,9 @@ select
     created_date as event_time,
     last_modified_date,
     e_tag,
+    sha256,
     storage_class as "storage_class?: StorageClass",
-    version_id,
+    version_id as "version_id!",
     created_sequencer as sequencer,
     number_reordered,
     number_duplicate_events,

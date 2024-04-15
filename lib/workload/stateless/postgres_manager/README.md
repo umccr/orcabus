@@ -50,9 +50,18 @@ There are 4 lambdas in this stack:
 
 2. `orcabus-create-pg-login-role`
 
-    Create a role with login credentials used for this microservice.
+    Create a role with login credentials used for the microservice to use.
     The name of the role would be the microservice name itself, and the credential will be saved into the secret
-    manager. The secret manager name is saved to `orcabus/microservice/${microserviceName}`.
+    manager. The secret manager name is saved to `orcabus/${microserviceName}/rds-login-credential`.
+    You could make use of the static function called `formatDbSecretManagerName` in the `PostgresManagerStack` to get
+    the secret name, and you could pass this secret name to your app as an environment
+    variable when needed.
+
+    e.g.
+
+    ```typescript
+    const secretName = PostgresManagerStack.formatDbSecretManagerName('metadata_manager')
+    ```
 
     Note: this will only work if the DbAuthType is configured to `USERNAME_PASSWORD`.
 
@@ -69,7 +78,17 @@ There are 4 lambdas in this stack:
     Create a new role and assign `rds_iam` role to this role to be able to connect over IAM database authentication.
 
     A new managed policy will be created and the policy name
-    will be `orcabus-rds-connect-${microservice_name}`. This could be attached to your compute role for access to the RDS and the token needed. Follow the documentation from AWS to connect to the RDS [here](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.Connecting.html).
+    will be `orcabus-rds-connect-${microservice_name}`. This could be attached to your compute role for access to the
+    RDS and the token needed. Follow the documentation from AWS to connect to the RDS
+    [here](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.Connecting.html).
+    You could make use of the static function called `formatRdsPolicyName` in the `PostgresManagerStack` to get
+    the policy name that contains the correct permission.
+
+    e.g.
+
+    ```typescript
+    const rdsPolicyName = PostgresManagerStack.formatRdsPolicyName('metadata_manager')
+    ```
 
     Note: this will only work if the microservice DbAuthType is configured to `RDS_IAM`.
 

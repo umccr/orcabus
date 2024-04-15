@@ -1,6 +1,6 @@
 # OrcaBus
 
-UMCCR Orchestration Bus that leverage AWS EventBridge as Event Bus to automate the BioInformatics Workflows Pipeline.
+UMCCR OrcaBus (Orchestration Bus) leverages AWS EventBridge as an Event Bus to automate the BioInformatics Workflows Pipeline.
 
 ## CDK
 
@@ -10,57 +10,117 @@ Please note; this is the _INVERSE_ of some typical standalone project setup such
 
 In this repo, we flip this view such that the Git repo root is the TypeScript CDK project; that wraps our applications into `./lib/` directory. You may [sparse checkout](https://git-scm.com/docs/git-sparse-checkout) or directly open subdirectory to set up the application project alone if you wish; e.g. `webstorm lib/workload/stateless/metadata_manager` or `code lib/workload/stateless/metadata_manager` or `pycharm lib/workload/stateless/sequence_run_manager` or `rustrover lib/workload/stateless/filemanager`. However, `code .` is a CDK TypeScript project.
 
-This root level CDK app contains 4 major stacks: `stateful-pipeline`,`stateless-pipeline` , `stateful` and `stateless`. Pipeline stack is the CI/CD automation with CodePipeline setup. The `stateful` stack holds and manages some long-running AWS infrastructure resources. The `stateless` stack manages self-mutating CodePipeline reusable CDK Constructs for the [MicroService Applications](docs/developer/MICROSERVICE.md). In terms of CDK deployment point-of-view, the microservice application will be "stateless" application such that it will be changing/mutating over time; whereas "the data" its holds like PostgreSQL server infrastructure won't be changing that frequent. When updating "stateful" resources, there involves additional cares, steps and ops-procedures such as backing up database, downtime planning and so on; hence stateful. We use [configuration constants](./config) to decouple the reference between `stateful` and `stateless` AWS resources.
+There are 2 CDK apps here:
 
-In most cases, we deploy with automation across operational target environments or AWS accounts: `beta`, `gamma`, `prod`. For some particular purpose (such as onboarding procedure, isolated experimentation), we can spin up the whole infrastructure into some unique isolated AWS account. These key CDK entrypoints are documented in the following sections: Automation and Manual.
+- Stateful
+  
+  This holds and manages long-running AWS stateful resources. The resources will typically be something that won't be
+  changing frequently and could not be torn down easily. For example, the RDS Cluster which contains application data. When
+  updating "stateful" resources, additional care is needed such as backing up the database, downtime planning and so on;
+  hence stateful.
+
+- Stateless
+
+  As the opposite of stateful resources, stateless resources will have the ability to redeploy quickly without worrying
+  about any retainable data. For example, AWS lambdas and API Gateway have no retainable data when destroyed and spin up
+  easily. The [MicroService Applications](docs/developer/MICROSERVICE.md) resources will usually be here and they will
+  have a lookup from stateful resources when needed.
+
+You could access the CDK command for each app via `yarn cdk-stateless` or `yarn cdk-stateful`. The `cdk-*` is
+just a CDK alias that points to a specific app, so you could use `cdk` command natively for each app (e.g. `yarn cdk-stateless --help`).
+
+We use [configuration constants](./config) to reference constants between the `stateful` and `stateless` CDK apps.
+
+In most cases, we deploy with automation across operational target environments or AWS accounts: `beta` (dev), `gamma` (staging),
+`prod`. For some particular purpose (such as onboarding procedure, or isolated experimentation), we can spin up the
+whole infrastructure into some unique isolated AWS account.
 
 ### Automation
 
-_CI/CD through CodePipeline automation from AWS toolchain account_
+_CI/CD through CodePipeline automation from the AWS toolchain account_
 
-There are 2 pipeline stacks in this project, one for the stateful and one for the stateless stack deployment. There is a
-script to access the `cdk` command for each pipeline:
--`cdk-stateless-pipeline` - for stateless pipeline
--`cdk-stateful-pipeline` - for stateful pipeline
+There are 2 pipeline stacks in this project, one for the `stateful` and one for the `stateless` stack deployment. Both
+pipelines are triggered from the `main` branch and configured as a self-mutating pipeline. The pipeline will automatically deploy
+CDK changes from `beta` -> `gamma` -> `prod` account, where each transition has an approval stage before deploying to the next account.
 
-```
+To access the pipeline's CDK you could do it within the app stack with the pipeline name either be
+`OrcaBusStatelessPipeline` or `OrcaBusStatefulPipeline` (e.g. `yarn cdk-stateless
+OrcaBusStatelessPipeline`).
+
+In general, you do **NOT** need to touch the pipeline stack at all, as changes to the deployment stack will be taken care of
+by the self-mutating pipeline. You might need to touch if there is a dependency in any of the build processes (unit
+testing or `cdk synth` ). For example, Rust installation is required to build the lambda asset.
+
+```sh
+# prerequisite before running cdk command to the OrcaBus Pipeline
 make install
-make check
-make test
+make test # This will test all tests available in this repo
 
-yarn cdk-stateless-pipeline synth
-yarn cdk-stateless-pipeline diff
-yarn cdk-stateless-pipeline deploy
+# accessing the stateless pipeline with cdk
+yarn cdk-stateless synth OrcaBusStatelessPipeline
+yarn cdk-stateless diff OrcaBusStatelessPipeline
+yarn cdk-stateless deploy OrcaBusStatelessPipeline
+
+# or for stateful pipeline
+yarn cdk-stateful synth OrcaBusStatefulPipeline
+yarn cdk-stateful diff OrcaBusStatefulPipeline
+yarn cdk-stateful deploy OrcaBusStatefulPipeline
 ```
+
+The pipeline is deployed on the toolchain/build account (bastion in the UMCCR AWS account).
 
 ### Manual
 
-_manual deploy to an isolated specific AWS account_
+_manual deployment from local computer to AWS account_
 
+You may want to see your resources deployed quickly without relying on the pipeline to do it for you. You could do so by
+deploying to the `beta` account by specifying the stack name with the relevant AWS Credentials.
+
+You could use the `yarn cdk-*` command described above to deploy the microservice. Remember you use the credential to
+where the resource will be deployed and **NOT** the pipeline (toolchain) credential.
+
+You could list the CDK stacks with the `cdk ls` command to look at the stackId given to your microservice app.
+
+```sh
+yarn cdk-stateless ls
+
+OrcaBusStatelessPipeline
+OrcaBusStatelessPipeline/BetaDeployment/MetadataManager
+...
 ```
-export AWS_PROFILE=dev
 
-make install
-make check
-make test
+For example, deploying the metadata manager stateless resources directly from your computer as follows.
 
-yarn orcabus --help
-
-yarn cdk-orcabus list
-yarn cdk-orcabus synth OrcaBusStatefulStack
-yarn cdk-orcabus diff OrcaBusStatefulStack
-yarn cdk-orcabus deploy OrcaBusStatefulStack
-yarn cdk-orcabus deploy --all
-yarn cdk-orcabus destroy --all
+```sh
+yarn cdk-stateless deploy OrcaBusStatelessPipeline/BetaDeployment/MetadataManager
 ```
+
+NOTE: If you deployed manually and the pipeline starts running (e.g. a new commit at the source branch) your stack will be overridden to what you have in the main branch.
 
 ## Development
 
 _Heads up: Polyglot programming environment. We shorten some trivial steps into `Makefile` target. You may deduce step-by-step from `Makefile`, if any._
 
+To develop your microservice application please read the [microservice guide](docs/developer/MICROSERVICE.md).
+
+Do note that we have some shared resources that is expected to be used across microservices at [shared resource docs](./lib/workload/stateful/stacks/shared/README.md).
+
 ### Typography
 
 When possible, please use either `OrcaBus` (camel case) or `orcabus` (all lower case).
+
+#### Typescript
+
+When using typescript we will use the convention defined in [AWS
+Guide](https://docs.aws.amazon.com/prescriptive-guidance/latest/best-practices-cdk-typescript-iac/typescript-best-practices.html#naming-conventions).
+
+- Use camelCase for variable and function names.
+- Use PascalCase for class names and interface names.
+- Use camelCase for interface members.
+- Use PascalCase for type names and enum names.
+- Name files with camelCase (for example, ebsVolumes.tsx or storage.tsb)
+
+For folder name, we will be using `kebab-case` as this is the common convention in TypeScript project.
 
 ### Toolchain
 

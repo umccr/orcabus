@@ -1,21 +1,44 @@
+.EXPORT_ALL_VARIABLES:
+DJANGO_SETTINGS_MODULE = sequence_run_manager.settings.local
+
 .PHONY: test suite
 
 install:
-	@pip install -r requirements-dev.txt
+	@pip install -r deps/requirements-dev.txt
 
 check: lint
 
 lint:
-	@black -t py312 --check ./src --exclude skel --exclude .venv
+	@black -t py312 --check . --exclude .venv
 
 lint-fix:
-	@black -t py312 ./src --exclude skel --exclude .venv
+	@black -t py312 . --exclude .venv
 
 # full mock suite test pipeline - install deps, bring up compose stack, run suite, bring down compose stack
 test: install up suite down
 
 suite:
 	@python manage.py test
+
+migrate:
+	@python manage.py migrate
+
+start: migrate
+	@python manage.py runserver_plus
+
+openapi:
+	@python manage.py generateschema > orcabus.srm.openapi.yaml
+
+validate: openapi
+	@python -m openapi_spec_validator orcabus.srm.openapi.yaml
+
+coverage: install up migrate
+	@echo $$DJANGO_SETTINGS_MODULE
+	@coverage run --source='.' manage.py test
+
+report:
+	@coverage report -m
+	@coverage html
 
 up:
 	@docker compose up --wait -d

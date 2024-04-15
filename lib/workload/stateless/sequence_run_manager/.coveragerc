@@ -1,0 +1,5 @@
+[run]
+omit = */tests/*,*tests*,sequence_run_manager/management/*,sequence_run_manager/migrations/*,sequence_run_manager/wsgi.py,migrate.py,manage.py
+
+[report]
+omit = */tests/*,*tests*,sequence_run_manager/management/*,sequence_run_manager/migrations/*,sequence_run_manager/wsgi.py,migrate.py,manage.py

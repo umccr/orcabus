@@ -36,7 +36,7 @@ current_objects as (
     join input on
         input.bucket = s3_object.bucket and
         input.key = s3_object.key and
-        input.version_id is not distinct from s3_object.version_id
+        input.version_id = s3_object.version_id
     -- Lock this pre-emptively for the update.
     for update
 ),
@@ -55,12 +55,17 @@ objects_to_update as (
             -- If a sequencer already exists this event should be reprocessed because this
             -- sequencer would belong to another object.
             current_objects.deleted_sequencer > current_objects.input_deleted_sequencer
-        )
+        ) and
         -- And there should not be any objects with a deleted sequencer that is the same as the input deleted
         -- sequencer because this is a duplicate event that would cause a constraint error in the update.
-        and current_objects.input_deleted_sequencer not in (
+        current_objects.input_deleted_sequencer not in (
             select deleted_sequencer from current_objects where deleted_sequencer is not null
         )
+    -- Only one event entry should be updated, and that entry must be the one with the
+    -- created sequencer that is maximum, i.e. closest to the deleted sequencer which
+    -- is going to be inserted.
+    order by current_objects.created_sequencer desc
+    limit 1
 ),
 -- Finally, update the required objects.
 update as (
@@ -81,8 +86,9 @@ select
     deleted_date as event_time,
     last_modified_date,
     e_tag,
+    sha256,
     storage_class as "storage_class?: StorageClass",
-    version_id,
+    version_id as "version_id!",
     deleted_sequencer as sequencer,
     number_reordered,
     number_duplicate_events,

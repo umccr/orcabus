@@ -1,6 +1,13 @@
-POSTGRES_DATABASE_URL ?= postgresql://filemanager:filemanager@localhost:4321/filemanager #pragma: allowlist secret
+.EXPORT_ALL_VARIABLES:
 
-export DATABASE_URL=$(POSTGRES_DATABASE_URL)
+## Database host ip address
+FILEMANAGER_DATABASE_HOST ?= 0.0.0.0
+## Database port
+FILEMANAGER_DATABASE_PORT ?= 4321
+## Database connection url
+DATABASE_URL ?= postgresql://filemanager:filemanager@${FILEMANAGER_DATABASE_HOST}:${FILEMANAGER_DATABASE_PORT}/filemanager #pragma: allowlist secret
+## Override the default project name
+DOCKER_PROJECT_NAME ?= filemanager
 
 ## Default target
 default: help
@@ -10,28 +17,37 @@ all: build
 
 ## Docker related targets
 up:
-	@docker compose up --wait -d
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" up --wait -d
 down:
-	@docker compose down
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" down
 docker-postgres:
-	@docker compose up --wait -d postgres
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" up --wait -d postgres
 docker-clean:
-	@docker compose down --volumes
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" down --volumes
+docker-build:
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" build
+docker-run: docker-build
+	# Run the filemanager postgres service using an arbitrary host and port.
+	@FILEMANAGER_DATABASE_HOST=0.0.0.0 FILEMANAGER_DATABASE_PORT=0 \
+	docker compose -p "$(DOCKER_PROJECT_NAME)" run -d --service-ports postgres | xargs -I {} docker port {} 4321
+docker-find:
+	# Find a running filemanager docker container.
+	@docker ps --filter name=$(DOCKER_PROJECT_NAME) --latest --format "{{.ID}}" | xargs -I {} docker port {} 4321
 
 ## Build related commands
 build: docker-postgres
 	@cargo build --all-features --all-targets
-watch: build
+watch: docker-postgres
 	@cargo watch -w *.toml -w *.rs
-test: build
+test: docker-postgres
 	@cargo test --all-features --all-targets
-test-ignored: build
+test-ignored: docker-postgres
 	@cargo test --all-features --all-targets -- --ignored
 lint:
 	@cargo fmt --check
 lint-fix:
 	@cargo fmt
-clippy: build
+clippy: docker-postgres
 	cargo clippy --all-targets --all-features
 check: lint clippy
 check-fix: lint-fix clippy
@@ -42,11 +58,7 @@ clean: docker-clean
 
 ## Database related targets
 psql:
-	@docker exec -it filemanager_db psql filemanager -U filemanager
-prepare:
-	cargo sqlx prepare --workspace -- --all-features --all-targets
-prepare-check:
-	cargo sqlx prepare --workspace --check -- --all-features --all-targets
+	@docker compose exec postgres psql filemanager -U filemanager
 
 ## Help text
 help:

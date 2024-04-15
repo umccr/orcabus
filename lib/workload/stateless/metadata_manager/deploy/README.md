@@ -1,14 +1,31 @@
-# Welcome to your CDK TypeScript project
+# Metadata Manager Deployment Center
 
-This is a blank project for CDK development with TypeScript.
+The IaC for this microservice is written in AWS CDK Typescript. The deployment stack named `MetadataManagerStack` is in the
+`stack.ts` file in the `./deploy` directory. This will construct the relevant resources.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+## Architecture
 
-## Useful commands
+![arch](../docs/architecture.drawio.svg)
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `cdk deploy`      deploy this stack to your default AWS account/region
-* `cdk diff`        compare deployed stack with current state
-* `cdk synth`       emits the synthesized CloudFormation template
+To modify the diagram, open the `docs/architecture.drawio.svg` with [diagrams.net](https://app.diagrams.net/?src=about).
+
+## Construct
+
+### APIGW
+
+- Create an API Gateway to be used for this application
+
+### APILambda
+
+- The Lambda is responsible for dealing with API Request from API Gateway
+
+### MigrationLambda
+
+- Responsible for executing migration to the database
+
+### SyncGsheetLambda
+
+- Load tracking sheet data in Google Drive and map it to the Application model
+- (PLANNED) periodically trigger the sync every 24 hour
+
+

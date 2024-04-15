@@ -1,3 +1,6 @@
+//! A mockable wrapper around the SQS client.
+//!
+
 use std::result;
 
 use aws_sdk_sqs as sqs;
@@ -25,7 +28,7 @@ impl Client {
 
     /// Create an SQS client with default config.
     pub async fn with_defaults() -> Self {
-        Self::new(sqs::Client::new(&Config::with_defaults().load().await))
+        Self::new(sqs::Client::new(&Config::with_defaults().await.load()))
     }
 
     /// Execute the `ReceiveMessage` operation.

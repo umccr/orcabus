@@ -1,16 +1,18 @@
-//! Convert S3 events for the database.
+//! Handles parsing raw S3 event messages and converting them for the database.
 //!
 
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use chrono::{DateTime, Utc};
 use itertools::{izip, Itertools};
-use message::EventMessage;
 use serde::Deserialize;
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use uuid::Uuid;
 
+use message::EventMessage;
+
 use crate::events::aws::message::EventType;
 use crate::events::aws::EventType::{Created, Deleted, Other};
+use crate::uuid::UuidGenerator;
 
 pub mod collecter;
 pub mod message;
@@ -65,9 +67,10 @@ pub struct TransposedS3EventMessages {
     pub event_times: Vec<Option<DateTime<Utc>>>,
     pub buckets: Vec<String>,
     pub keys: Vec<String>,
-    pub version_ids: Vec<Option<String>>,
-    pub sizes: Vec<Option<i32>>,
+    pub version_ids: Vec<String>,
+    pub sizes: Vec<Option<i64>>,
     pub e_tags: Vec<Option<String>>,
+    pub sha256s: Vec<Option<String>>,
     pub sequencers: Vec<Option<String>>,
     pub storage_classes: Vec<Option<StorageClass>>,
     pub last_modified_dates: Vec<Option<DateTime<Utc>>>,
@@ -86,6 +89,7 @@ impl TransposedS3EventMessages {
             version_ids: Vec::with_capacity(capacity),
             sizes: Vec::with_capacity(capacity),
             e_tags: Vec::with_capacity(capacity),
+            sha256s: Vec::with_capacity(capacity),
             sequencers: Vec::with_capacity(capacity),
             storage_classes: Vec::with_capacity(capacity),
             last_modified_dates: Vec::with_capacity(capacity),
@@ -103,6 +107,7 @@ impl TransposedS3EventMessages {
             size,
             version_id,
             e_tag,
+            sha256,
             sequencer,
             storage_class,
             last_modified_date,
@@ -117,6 +122,7 @@ impl TransposedS3EventMessages {
         self.version_ids.push(version_id);
         self.sizes.push(size);
         self.e_tags.push(e_tag);
+        self.sha256s.push(sha256);
         self.sequencers.push(sequencer);
         self.storage_classes.push(storage_class);
         self.last_modified_dates.push(last_modified_date);
@@ -152,6 +158,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
             messages.version_ids,
             messages.sizes,
             messages.e_tags,
+            messages.sha256s,
             messages.sequencers,
             messages.storage_classes,
             messages.last_modified_dates,
@@ -166,6 +173,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                 version_id,
                 size,
                 e_tag,
+                sha256,
                 sequencer,
                 storage_class,
                 last_modified_date,
@@ -179,6 +187,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                     version_id,
                     size,
                     e_tag,
+                    sha256,
                     storage_class,
                     last_modified_date,
                     event_time,
@@ -328,6 +337,7 @@ impl FlatS3EventMessages {
                         &a.version_id,
                         &a.size,
                         &a.e_tag,
+                        &a.sha256,
                         &a.storage_class,
                         &a.last_modified_date,
                     )
@@ -340,6 +350,7 @@ impl FlatS3EventMessages {
                             &b.version_id,
                             &b.size,
                             &b.e_tag,
+                            &a.sha256,
                             &b.storage_class,
                             &b.last_modified_date,
                         ));
@@ -355,6 +366,7 @@ impl FlatS3EventMessages {
                 &a.version_id,
                 &a.size,
                 &a.e_tag,
+                &a.sha256,
                 &a.storage_class,
                 &a.last_modified_date,
             )
@@ -367,6 +379,7 @@ impl FlatS3EventMessages {
                     &b.version_id,
                     &b.size,
                     &b.e_tag,
+                    &a.sha256,
                     &b.storage_class,
                     &b.last_modified_date,
                 ))
@@ -383,21 +396,22 @@ pub struct FlatS3EventMessage {
     pub sequencer: Option<String>,
     pub bucket: String,
     pub key: String,
-    pub version_id: Option<String>,
-    pub size: Option<i32>,
+    pub version_id: String,
+    pub size: Option<i64>,
     pub e_tag: Option<String>,
+    pub sha256: Option<String>,
     pub storage_class: Option<StorageClass>,
     pub last_modified_date: Option<DateTime<Utc>>,
     pub event_time: Option<DateTime<Utc>>,
     pub event_type: EventType,
-    pub number_reordered: i32,
-    pub number_duplicate_events: i32,
+    pub number_reordered: i64,
+    pub number_duplicate_events: i64,
 }
 
 impl FlatS3EventMessage {
     /// Create an event with a newly generated s3_object_id.
     pub fn new_with_generated_id() -> Self {
-        Self::default().with_s3_object_id(Uuid::new_v4())
+        Self::default().with_s3_object_id(UuidGenerator::generate())
     }
 
     /// Update the storage class if not None.`
@@ -417,7 +431,7 @@ impl FlatS3EventMessage {
     }
 
     /// Update the size if not None.
-    pub fn update_size(mut self, size: Option<i32>) -> Self {
+    pub fn update_size(mut self, size: Option<i64>) -> Self {
         size.into_iter().for_each(|size| self.size = Some(size));
         self
     }
@@ -425,6 +439,14 @@ impl FlatS3EventMessage {
     /// Update the e_tag if not None.
     pub fn update_e_tag(mut self, e_tag: Option<String>) -> Self {
         e_tag.into_iter().for_each(|e_tag| self.e_tag = Some(e_tag));
+        self
+    }
+
+    /// Update the sha256 if not None.
+    pub fn update_sha256(mut self, sha256: Option<String>) -> Self {
+        sha256
+            .into_iter()
+            .for_each(|sha256| self.sha256 = Some(sha256));
         self
     }
 
@@ -453,13 +475,19 @@ impl FlatS3EventMessage {
     }
 
     /// Set the version id.
-    pub fn with_version_id(mut self, version_id: Option<String>) -> Self {
+    pub fn with_version_id(mut self, version_id: String) -> Self {
         self.version_id = version_id;
         self
     }
 
+    /// Set the version id.
+    pub fn with_default_version_id(mut self) -> Self {
+        self.version_id = Self::default_version_id();
+        self
+    }
+
     /// Set the size.
-    pub fn with_size(mut self, size: Option<i32>) -> Self {
+    pub fn with_size(mut self, size: Option<i64>) -> Self {
         self.size = size;
         self
     }
@@ -493,6 +521,10 @@ impl FlatS3EventMessage {
         self.event_type = event_type;
         self
     }
+
+    pub fn default_version_id() -> String {
+        "null".to_string()
+    }
 }
 
 impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
@@ -521,6 +553,8 @@ pub(crate) mod tests {
     pub(crate) const EXPECTED_E_TAG: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
 
     pub(crate) const EXPECTED_VERSION_ID: &str = "096fKKXTRTtl3on89fVO.nfljtsv6qko";
+    pub(crate) const EXPECTED_SHA256: &str = "Y0sCextp4SQtQNU+MSs7SsdxD1W+gfKJtUlEbvZ3i+4="; // pragma: allowlist secret
+    pub(crate) const EXPECTED_REQUEST_ID: &str = "C3D13FE58DE4C810"; // pragma: allowlist secret
 
     #[test]
     fn test_flat_events() {
@@ -533,7 +567,7 @@ pub(crate) mod tests {
             &EventType::Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
 
         let second = result.next().unwrap();
@@ -542,7 +576,7 @@ pub(crate) mod tests {
             &EventType::Created,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
 
         let third = result.next().unwrap();
@@ -551,7 +585,7 @@ pub(crate) mod tests {
             &EventType::Created,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
     }
 
@@ -566,7 +600,7 @@ pub(crate) mod tests {
             &EventType::Created,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
 
         let second = result.next().unwrap();
@@ -575,7 +609,7 @@ pub(crate) mod tests {
             &EventType::Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
     }
 
@@ -590,7 +624,7 @@ pub(crate) mod tests {
                 .first()
                 .unwrap()
                 .clone()
-                .with_version_id(Some("version_id".to_string())),
+                .with_version_id("version_id".to_string()),
         );
 
         let result = FlatS3EventMessages(result).sort_and_dedup();
@@ -602,7 +636,7 @@ pub(crate) mod tests {
             &EventType::Created,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
 
         let second = result.next().unwrap();
@@ -611,7 +645,7 @@ pub(crate) mod tests {
             &EventType::Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
-            Some(EXPECTED_VERSION_ID.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
         );
 
         let third = result.next().unwrap();
@@ -620,7 +654,7 @@ pub(crate) mod tests {
             &EventType::Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
-            Some("version_id".to_string()),
+            "version_id".to_string(),
         );
     }
 
@@ -628,8 +662,8 @@ pub(crate) mod tests {
         event: FlatS3EventMessage,
         event_type: &EventType,
         sequencer: Option<String>,
-        size: Option<i32>,
-        version_id: Option<String>,
+        size: Option<i64>,
+        version_id: String,
     ) {
         assert_eq!(event.event_time, Some(DateTime::<Utc>::default()));
         assert_eq!(&event.event_type, event_type);
@@ -637,7 +671,7 @@ pub(crate) mod tests {
         assert_eq!(event.key, "key");
         assert_eq!(event.version_id, version_id);
         assert_eq!(event.size, size);
-        assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string())); // pragma: allowlist secret
+        assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string()));
         assert_eq!(event.sequencer, sequencer);
         assert_eq!(event.storage_class, None);
         assert_eq!(event.last_modified_date, None);
@@ -646,7 +680,7 @@ pub(crate) mod tests {
     fn assert_object(
         events: &TransposedS3EventMessages,
         position: usize,
-        size: Option<i32>,
+        size: Option<i64>,
         bucket: &str,
         key: &str,
         sequencer: &str,
@@ -656,7 +690,7 @@ pub(crate) mod tests {
         assert_eq!(events.sizes[position], size);
         assert_eq!(
             events.version_ids[position],
-            Some(EXPECTED_VERSION_ID.to_string())
+            EXPECTED_VERSION_ID.to_string()
         );
         assert_eq!(events.e_tags[position], Some(EXPECTED_E_TAG.to_string()));
         assert_eq!(events.sequencers[position], Some(sequencer.to_string()));
@@ -761,7 +795,7 @@ pub(crate) mod tests {
                     "version-id": EXPECTED_VERSION_ID,
                     "sequencer": EXPECTED_SEQUENCER_DELETED_ONE,
                 },
-                "request-id": "C3D13FE58DE4C810", // pragma: allowlist secret
+                "request-id": EXPECTED_REQUEST_ID,
                 "requester": "123456789012",
                 "source-ip-address": "127.0.0.1",
                 "reason": "DeleteObject",

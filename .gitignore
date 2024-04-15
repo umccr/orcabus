@@ -55,7 +55,11 @@ data/
 Brewfile.lock.json
 *.xml
 
+.coverage
+htmlcov/
+
 # Filemanager-specific
+.sqlx
 target/
 lib/workload/stateful/filemanager/volume
 skel/rust-api/Cargo.lock

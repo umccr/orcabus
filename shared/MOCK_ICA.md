@@ -5,6 +5,7 @@ Using through `libica` or otherwise, any calling to ICA interfacing logic will b
 ## ICA v1 Mock Service
 
 From your compose stack root, preform:
+
 ```
 docker compose up -d
 docker compose ps
@@ -13,8 +14,9 @@ docker compose ps
 ### WES
 
 - In one terminal, monitor WES endpoint as follows.
+
 ```
-docker logs orcabus_wes -f 
+docker logs orcabus_wes -f
 [11:05:13 AM] › [CLI] …  awaiting  Starting Prism…
 [11:05:40 AM] › [CLI] ✔  success   GET        http://0.0.0.0:4010/v1/workflows
 [11:05:40 AM] › [CLI] ✔  success   POST       http://0.0.0.0:4010/v1/workflows
@@ -29,6 +31,7 @@ docker logs orcabus_wes -f
 ```
 
 - Open another terminal, query mock REST endpoint as follows.
+
 ```
 curl -s -H "Authorization: Bearer Test" -X GET http://localhost/v1/workflows | jq
 curl -s -H "Authorization: Bearer Test" -X GET http://localhost/v1/workflows/wfr.123456789abcd | jq
@@ -65,6 +68,7 @@ docker logs orcabus_gds -f
 ```
 
 - Open another terminal, query mock REST endpoint as follows.
+
 ```
 curl -s -H "Authorization: Bearer Test" -X GET http://localhost/v1/files | jq
 ```
@@ -78,7 +82,7 @@ curl -s -H "Authorization: Bearer Test" -X GET 'http://localhost/v1/files?volume
 Yup. Same.
 
 ```
-docker logs orcabus_ica_v2 -f          
+docker logs orcabus_ica_v2 -f
 [11:12:40 AM] › [CLI] …  awaiting  Starting Prism…
 [11:13:13 AM] › [CLI] ✔  success   GET        http://0.0.0.0:4010/api/analysisStorages
 [11:13:13 AM] › [CLI] ✔  success   POST       http://0.0.0.0:4010/api/bundles
@@ -101,6 +105,7 @@ docker logs orcabus_ica_v2 -f
 ```
 
 - Open another terminal, query mock REST endpoint as follows.
+
 ```
 curl -s -H "Authorization: Bearer Test" -X GET http://localhost/api/bundles | jq
 ```

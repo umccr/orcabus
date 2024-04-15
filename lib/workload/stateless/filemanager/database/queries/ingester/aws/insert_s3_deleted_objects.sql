@@ -6,7 +6,7 @@ insert into s3_object (
     key,
     deleted_date,
     size,
-    checksum,
+    sha256,
     last_modified_date,
     e_tag,
     storage_class,
@@ -20,14 +20,14 @@ values (
     unnest($3::text[]),
     unnest($4::text[]),
     unnest($5::timestamptz[]),
-    unnest($6::integer[]),
+    unnest($6::bigint[]),
     unnest($7::text[]),
     unnest($8::timestamptz[]),
     unnest($9::text[]),
     unnest($10::storage_class[]),
     unnest($11::text[]),
     unnest($12::text[]),
-    unnest($13::integer[])
+    unnest($13::bigint[])
 ) on conflict on constraint deleted_sequencer_unique do update
     set number_duplicate_events = s3_object.number_duplicate_events + 1
     returning object_id, number_duplicate_events;

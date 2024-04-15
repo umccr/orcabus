@@ -24,6 +24,8 @@ describe('cdk-nag-stateless-stack', () => {
 
   // stateless stack cdk-nag test
   Aspects.of(stack).add(new AwsSolutionsChecks());
+  applyNagSuppression(stack.node.id, stack);
+
   test(`OrcaBusStatelessStack: cdk-nag AwsSolutions Pack errors`, () => {
     const errors = Annotations.fromStack(stack)
       .findError('*', Match.stringLikeRegexp('AwsSolutions-.*'))
@@ -68,12 +70,50 @@ describe('cdk-nag-stateless-stack', () => {
  * @param stack
  */
 function applyNagSuppression(stackId: string, stack: Stack) {
+  // all stacks widely
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [{ id: 'AwsSolutions-IAM4', reason: 'allow to use AWS managed policy' }],
+    true
+  );
+
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-APIG1',
+        reason: 'See https://github.com/aws/aws-cdk/issues/11100',
+      },
+    ],
+    true
+  );
+
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-APIG4',
+        reason: 'We have the default Cognito UserPool authorizer',
+      },
+    ],
+    true
+  );
+
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-L1',
+        reason: "'AwsCustomResource' is out of date",
+      },
+    ],
+    true
+  );
+
+  // for each stack specific
+
   switch (stackId) {
     case 'PostgresManager':
-      NagSuppressions.addStackSuppressions(stack, [
-        { id: 'AwsSolutions-IAM4', reason: 'allow to use AWS managed policy' },
-      ]);
-
       // suppress by resource
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
@@ -83,6 +123,32 @@ function applyNagSuppression(stackId: string, stack: Stack) {
             id: 'AwsSolutions-IAM5',
             reason:
               "'*' is required for secretsmanager:GetRandomPassword and new SM ARN will contain random character",
+          },
+        ]
+      );
+      break;
+
+    case 'Filemanager':
+      NagSuppressions.addResourceSuppressions(
+        stack,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason: "'*' is required to access objects in the indexed bucket by filemanager.",
+            appliesTo: ['Resource::arn:aws:s3:::org.umccr.data.oncoanalyser/*'],
+          },
+        ],
+        true
+      );
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/TestStack/Filemanager/MigrateProviderFunction/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              'The provider function needs to be able to invoke the configured function. It uses' +
+              "`lambda.Function.grantInvoke` to achieve this which contains a '*' and is not changeable.",
           },
         ]
       );

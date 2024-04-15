@@ -2,23 +2,24 @@
 
 There are two high level tasks.
 
-1. **uApp** : create your app using your favourite dev stack and toolchain. This should typically be in `./lib/workload/stateless/`
-2. **CDK**  : write up the deployment "CDK Construct" of your app; to wire up with the root level infrastructure "CDK App".
+1. **µApp** : create your app using your favourite dev stack and toolchain. This should typically be in `./lib/workload/stateless/`
+2. **CDK**  : write up the deployment CDK Stack of your app
 
 > NOTE: 
 > * We only have one CDK project at outer level of the Git repository root; i.e. a CDK project in TypeScript. 
-> 
-> * Nested CDK projects are discouraged to avoid confusion. If you need a specific CDK `App()` object instance for some experimentation, say building a `demo` CDK app, you can instantiate one through project root level `./bin/demo.ts` and, assemble your demo CDK Stack/Construct(s) under `./lib/` directory. Then, wire up as `yarn` target in project root `package.json > script` entry e.g. `"demo": "cdk --app 'npx ts-node --prefer-ts-exts bin/demo.ts'",` Then, call as `yarn demo list` and `yarn demo deploy --all` and so on so ford.
 
 Either tasks _(developing an app and/or cdk deployment constructs)_; we promote code reuse for some boilerplate and common best practise patterns. Please give time to read articles/concepts in the `Reading` section below for developer background technical alignment. We also share knowledge-based (KB) discussion, revise and harmonise these high level technical concepts through our routine OrcaBus catchup meetings.
 
-## uApp
+## µApp
 
-_uApp = microservice app_
+µApp = microservice app
+
+_Mac user: Option + M for the µ symbol_
+
 
 ### Native Bootstrap
 
-You may also just simply use "native toolchain boostrap" method. This could be the typical "getting started" of respective tool or framework. Some examples as follows.
+You may also just simply use "native toolchain bootstrap" method. This could be the typical "getting started" of respective tool or framework. Some examples as follows.
 
 ```
 cargo init
@@ -48,29 +49,41 @@ Think of; it is "the origin" of where your _now_ very complex application to dat
 
 ## CDK
 
-Since it is the single CDK Project, all CDK dependencies are managed centrally at `package.json` at the Git repo project root and, the CDK CLI version is harmonised with localised Node.js execution through Yarn e.g. `yarn cdk list`. With this way, every developer's local dev environment and, automation CodePipeline environment will have the same CDK version, enforced.
-
-### Infrastructure as Code for microservice
-
-- Encourage to use CDK with TypeScript.
-- You could write one CDK construct from scratch. However, prefer use Construct Library whenever possible.
-- In the order of preference; please browse and make use of Construct patterns from the following.
-  1. https://docs.aws.amazon.com/solutions/latest/constructs/welcome.html
-  2. https://serverlessland.com
-  3. https://constructs.dev
-- Please check existing microservice implementations for reference.
+Since it is the single CDK Project, all CDK dependencies are managed centrally at `package.json` at the Git repo project root and, the CDK CLI version is harmonised with localised Node.js execution through Yarn. With this way, every developer's local dev environment and, automation CodePipeline environment will have the same CDK version, enforced.
 
 For example, to use https://docs.aws.amazon.com/solutions/latest/constructs/aws-cognito-apigateway-lambda.html
 
-- At project root, execute as follows:
-```
+At project root, execute as follows:
+
+```sh
 yarn add @aws-solutions-constructs/aws-cognito-apigateway-lambda
 ```
 
-- Or, to remove:
-```
+Or, to remove:
+
+```sh
 yarn remove @aws-solutions-constructs/aws-cognito-apigateway-lambda
 ```
+
+### Infrastructure as Code for microservice
+
+You are encouraged to use CDK with TypeScript.
+
+In general the microservice application should be deployed as an independent stack. Having your CDK as a stack allow to deploy
+your microservice app without touching other microservices app.
+
+Most probably you microservice stack should only create new stateless resources as most of the stateful part may already
+be provisioned from the shared stateful stack. For example, your application may need an RDS cluster for its database,
+but the shared stack has an existing RDS cluster that is intended to be used across microservices.
+
+See [README.md](../../lib/workload/stateful/stacks/shared/README.md) in the stateful shared stack for more detail.
+
+Useful resources:
+
+  1. https://docs.aws.amazon.com/solutions/latest/constructs/welcome.html
+  2. https://serverlessland.com
+  3. https://constructs.dev
+
 
 ## Reading
 
