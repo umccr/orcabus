@@ -1,0 +1,237 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "move_inputs",
+  "States": {
+    "move_inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      },
+      "Next": "generate_uuid"
+    },
+    "generate_uuid": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${__generate_uuid_lambda__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.generate_uuid_step",
+      "ResultSelector": {
+        "db_uuid.$": "$.Payload.uuid"
+      },
+      "Next": "generate_pieriandx_objects"
+    },
+    "generate_pieriandx_objects": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_pieriandx_dx_objects_lambda__}",
+        "Payload.$": "$.workflow_inputs"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.generate_pieriandx_objects_step",
+      "ResultSelector": {
+        "case_creation_obj.$": "$.Payload.case_creation_obj",
+        "sequencerrun_creation_obj.$": "$.Payload.sequencerrun_creation_obj",
+        "informaticsjob_creation_obj.$": "$.Payload.informaticsjob_creation_obj",
+        "data_files.$": "$.Payload.data_files",
+        "sequencerrun_s3_path.$": "$.Payload.sequencerrun_s3_path"
+      },
+      "Next": "add_pieriandx_db_entries"
+    },
+    "add_pieriandx_db_entries": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "add_portal_run_id_partition_key",
+          "States": {
+            "add_portal_run_id_partition_key": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__pieriandx_case_table_name__}",
+                "Item": {
+                  "id.$": "$.workflow_inputs.portal_run_id",
+                  "id_type": "portal_run_id",
+                  "db_uuid": {
+                    "S.$": "$.generate_uuid_step.db_uuid"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "add_case_accession_number_partition_key",
+          "States": {
+            "add_case_accession_number_partition_key": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__pieriandx_case_table_name__}",
+                "Item": {
+                  "id.$": "$.workflow_inputs.case_metadata.case_accession_number",
+                  "id_type": "case_accession_number",
+                  "db_uuid": {
+                    "S.$": "$.generate_uuid_step.db_uuid"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "add_db_uuid_partition_key",
+          "States": {
+            "add_db_uuid_partition_key": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__pieriandx_case_table_name__}",
+                "Item": {
+                  "id.$": "$.generate_uuid_step.db_uuid",
+                  "id_type": "db_uuid",
+                  "portal_run_id": {
+                    "S.$": "$.workflow_inputs.portal_run_id"
+                  },
+                  "state_machine_execution_arn": {
+                    "S.$": "$$.Execution.Id"
+                  },
+                  "case_accession_number": {
+                    "S.$": "$.workflow_inputs.case_metadata.case_accession_number"
+                  },
+                  "data_files": {
+                    "S.$": "States.JsonToString($.generate_pieriandx_objects_step.data_files)"
+                  },
+                  "samplesheet_b64gz": {
+                    "S.$": "$.workflow_inputs.samplesheet_b64gz"
+                  },
+                  "sequencerrun_s3_path": {
+                    "S.$": "$.generate_pieriandx_objects_step.sequencerrun_s3_path"
+                  },
+                  "case_creation_obj": {
+                    "S.$": "States.JsonToString($.generate_pieriandx_objects_step.case_creation_obj)"
+                  },
+                  "case_id": {
+                    "N": "-1"
+                  },
+                  "sequencerrun_creation_obj": {
+                    "S.$": "States.JsonToString($.generate_pieriandx_objects_step.sequencerrun_creation_obj)"
+                  },
+                  "sequencerrun_id": {
+                    "N": "-1"
+                  },
+                  "informaticsjob_creation_obj": {
+                    "S.$": "States.JsonToString($.generate_pieriandx_objects_step.informaticsjob_creation_obj)"
+                  },
+                  "informaticsjob_id": {
+                    "N": "-1"
+                  },
+                  "report_id": {
+                    "N": "-1"
+                  },
+                  "job_status": {
+                    "S": ""
+                  },
+                  "report_status": {
+                    "S": ""
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.add_pieriandx_db_entries_step",
+      "Next": "wait_one_second"
+    },
+    "wait_one_second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Allow the database to sync\n",
+      "Next": "create_pieriandx_prelaunch_objects"
+    },
+    "create_pieriandx_prelaunch_objects": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "create_case_execution",
+          "States": {
+            "create_case_execution": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "${__create_case_sfn__}",
+                "Input": {
+                  "db_uuid.$": "$.generate_uuid_step.db_uuid"
+                }
+              },
+              "ResultPath": "$.create_case_execution_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "create_sequencerrun_execution",
+          "States": {
+            "create_sequencerrun_execution": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "${__create_sequencerrun_sfn__}",
+                "Input": {
+                  "db_uuid.$": "$.generate_uuid_step.db_uuid"
+                }
+              },
+              "ResultPath": "$.create_sequencerrun_execution_step",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.create_pieriandx_prelaunch_objects_step",
+      "Next": "create_informaticsjob_execution"
+    },
+    "create_informaticsjob_execution": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::states:startExecution.sync:2",
+        "Parameters": {
+          "StateMachineArn": "${__create_informaticsjob_sfn__}",
+          "Input": {
+            "db_uuid.$": "$.generate_uuid_step.db_uuid"
+          }
+        },
+        "End": true,
+        "ResultPath": "$.create_informaticsjob_execution_step"
+      }
+  }
+}

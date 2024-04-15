@@ -1,0 +1,116 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "move_inputs",
+  "States": {
+    "move_inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      },
+      "Next": "get_informaticsjob_object"
+    },
+    "get_informaticsjob_object": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__pieriandx_case_table_name__}",
+        "Key": {
+          "id.$": "$.workflow_inputs.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "ResultSelector": {
+        "db_uuid.$": "$.Item.id.S",
+        "informaticsjob_creation_obj.$": "States.StringToJson($.Item.informaticsjob_creation_obj.S)",
+        "case_id.$": "$.Item.case_id.N"
+      },
+      "Next": "generate_informaticsjob",
+      "ResultPath": "$.get_informaticsjob_object"
+    },
+    "generate_informaticsjob": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "TimeoutSeconds": 30,
+      "Parameters": {
+        "FunctionName": "${__generate_informaticsjob_lambda__}",
+        "Payload": {
+          "informaticsjob_creation_obj.$": "$.get_informaticsjob_object.informaticsjob_creation_obj",
+          "case_id.$": "$.get_informaticsjob_object.case_id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "update_database",
+      "ResultSelector": {
+        "informaticsjob_id.$": "$.Payload.jobId"
+      },
+      "ResultPath": "$.generate_informaticsjob_step"
+    },
+    "update_database": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "add_informaticsjob_id_partition_key",
+          "States": {
+            "add_informaticsjob_id_partition_key": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__pieriandx_case_table_name__}",
+                "Item": {
+                  "id.$": "$.generate_informaticsjob_step.informaticsjob_id",
+                  "id_type": "informaticsjob_id",
+                  "db_uuid": {
+                    "S.$": "$.workflow_inputs.db_uuid"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "DynamoDB UpdateItem",
+          "States": {
+            "DynamoDB UpdateItem": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__pieriandx_case_table_name__}",
+                "Key": {
+                  "id.$": "$.workflow_inputs.db_uuid",
+                  "id_type": "db_uuid"
+                },
+                "UpdateExpression": "SET informaticsjob_id = :informaticsjob_id",
+                "ExpressionAttributeValues": {
+                  ":informaticsjob_id": {
+                    "N.$": "$.generate_informaticsjob_step.informaticsjob_id"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.update_database",
+      "Next": "wait_one_second"
+    },
+    "wait_one_second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "End": true
+    }
+  }
+}
