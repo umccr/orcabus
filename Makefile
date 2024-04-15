@@ -30,9 +30,9 @@ test-stateless:
 # Note by running `make suite` target from repo root means your local dev env is okay with all app toolchains i.e.
 # 	Python (conda or venv), Rust and Cargo, TypeScript and Node environment, Docker and Container runtimes
 test-suite:
-	@(cd lib/workload/stateless/sequence-run-manager && $(MAKE) test)
-	@(cd lib/workload/stateless/metadata-manager && $(MAKE) test)
-	@(cd lib/workload/stateless/filemanager && $(MAKE) test)
+	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) test)
+	@(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) test)
+	@(cd lib/workload/stateless/stacks/filemanager && $(MAKE) test)
 
 # The default outer `test` target only run the top level cdk application unit tests under `./test`
 test: test-stateless test-stateful test-suite

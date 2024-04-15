@@ -34,17 +34,15 @@ export class StatelessStackCollection {
     env: Environment,
     statefulConfiguration: StatelessStackCollectionProps
   ) {
-    console.log('the env:', env);
-
     this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
       ...this.createTemplateProps(env, 'PostgresManagerStack'),
       ...statefulConfiguration.postgresManagerStackProps,
     });
 
-    // this.fileManagerStack = new Filemanager(scope, 'FileManagerStack', {
-    //   ...this.createTemplateProps(env, 'FileManagerStack'),
-    //   ...statefulConfiguration.fileManagerStackProps,
-    // });
+    this.fileManagerStack = new Filemanager(scope, 'FileManagerStack', {
+      ...this.createTemplateProps(env, 'FileManagerStack'),
+      ...statefulConfiguration.fileManagerStackProps,
+    });
 
     this.metadataManagerStack = new MetadataManagerStack(scope, 'MetadataManagerStack', {
       ...this.createTemplateProps(env, 'MetadataManagerStack'),

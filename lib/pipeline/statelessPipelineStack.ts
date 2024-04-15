@@ -119,41 +119,41 @@ export class StatelessPipelineStack extends cdk.Stack {
     // to prevent cdk from looking up for non existence resource. Currently the stateful resource is only deployed in
     // dev
 
-    /**
-     * Deployment to Gamma (Staging) account
-     */
-    const gammaConfig = getEnvironmentConfig('gamma');
-    if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(
-        this,
-        'GammaDeployment',
-        gammaConfig.stackProps.statelessConfig,
-        {
-          account: gammaConfig.accountId,
-          region: gammaConfig.region,
-        }
-      ),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
-    );
+    // /**
+    //  * Deployment to Gamma (Staging) account
+    //  */
+    // const gammaConfig = getEnvironmentConfig('gamma');
+    // if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
+    // pipeline.addStage(
+    //   new OrcaBusStatelessDeploymentStage(
+    //     this,
+    //     'GammaDeployment',
+    //     gammaConfig.stackProps.statelessConfig,
+    //     {
+    //       account: gammaConfig.accountId,
+    //       region: gammaConfig.region,
+    //     }
+    //   ),
+    //   { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
+    // );
 
-    /**
-     * Deployment to Prod account
-     */
-    const prodConfig = getEnvironmentConfig('prod');
-    if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(
-        this,
-        'ProdDeployment',
-        prodConfig.stackProps.statelessConfig,
-        {
-          account: prodConfig.accountId,
-          region: prodConfig.region,
-        }
-      ),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
-    );
+    // /**
+    //  * Deployment to Prod account
+    //  */
+    // const prodConfig = getEnvironmentConfig('prod');
+    // if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
+    // pipeline.addStage(
+    //   new OrcaBusStatelessDeploymentStage(
+    //     this,
+    //     'ProdDeployment',
+    //     prodConfig.stackProps.statelessConfig,
+    //     {
+    //       account: prodConfig.accountId,
+    //       region: prodConfig.region,
+    //     }
+    //   ),
+    //   { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+    // );
 
     // need to build pipeline so we could add notification at the pipeline construct
     pipeline.buildPipeline();
