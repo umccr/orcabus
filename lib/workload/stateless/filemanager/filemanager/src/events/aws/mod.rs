@@ -68,7 +68,7 @@ pub struct TransposedS3EventMessages {
     pub buckets: Vec<String>,
     pub keys: Vec<String>,
     pub version_ids: Vec<String>,
-    pub sizes: Vec<Option<i32>>,
+    pub sizes: Vec<Option<i64>>,
     pub e_tags: Vec<Option<String>>,
     pub sha256s: Vec<Option<String>>,
     pub sequencers: Vec<Option<String>>,
@@ -397,15 +397,15 @@ pub struct FlatS3EventMessage {
     pub bucket: String,
     pub key: String,
     pub version_id: String,
-    pub size: Option<i32>,
+    pub size: Option<i64>,
     pub e_tag: Option<String>,
     pub sha256: Option<String>,
     pub storage_class: Option<StorageClass>,
     pub last_modified_date: Option<DateTime<Utc>>,
     pub event_time: Option<DateTime<Utc>>,
     pub event_type: EventType,
-    pub number_reordered: i32,
-    pub number_duplicate_events: i32,
+    pub number_reordered: i64,
+    pub number_duplicate_events: i64,
 }
 
 impl FlatS3EventMessage {
@@ -431,7 +431,7 @@ impl FlatS3EventMessage {
     }
 
     /// Update the size if not None.
-    pub fn update_size(mut self, size: Option<i32>) -> Self {
+    pub fn update_size(mut self, size: Option<i64>) -> Self {
         size.into_iter().for_each(|size| self.size = Some(size));
         self
     }
@@ -487,7 +487,7 @@ impl FlatS3EventMessage {
     }
 
     /// Set the size.
-    pub fn with_size(mut self, size: Option<i32>) -> Self {
+    pub fn with_size(mut self, size: Option<i64>) -> Self {
         self.size = size;
         self
     }
@@ -554,6 +554,7 @@ pub(crate) mod tests {
 
     pub(crate) const EXPECTED_VERSION_ID: &str = "096fKKXTRTtl3on89fVO.nfljtsv6qko";
     pub(crate) const EXPECTED_SHA256: &str = "Y0sCextp4SQtQNU+MSs7SsdxD1W+gfKJtUlEbvZ3i+4="; // pragma: allowlist secret
+    pub(crate) const EXPECTED_REQUEST_ID: &str = "C3D13FE58DE4C810"; // pragma: allowlist secret
 
     #[test]
     fn test_flat_events() {
@@ -661,7 +662,7 @@ pub(crate) mod tests {
         event: FlatS3EventMessage,
         event_type: &EventType,
         sequencer: Option<String>,
-        size: Option<i32>,
+        size: Option<i64>,
         version_id: String,
     ) {
         assert_eq!(event.event_time, Some(DateTime::<Utc>::default()));
@@ -670,7 +671,7 @@ pub(crate) mod tests {
         assert_eq!(event.key, "key");
         assert_eq!(event.version_id, version_id);
         assert_eq!(event.size, size);
-        assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string())); // pragma: allowlist secret
+        assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string()));
         assert_eq!(event.sequencer, sequencer);
         assert_eq!(event.storage_class, None);
         assert_eq!(event.last_modified_date, None);
@@ -679,7 +680,7 @@ pub(crate) mod tests {
     fn assert_object(
         events: &TransposedS3EventMessages,
         position: usize,
-        size: Option<i32>,
+        size: Option<i64>,
         bucket: &str,
         key: &str,
         sequencer: &str,
@@ -794,7 +795,7 @@ pub(crate) mod tests {
                     "version-id": EXPECTED_VERSION_ID,
                     "sequencer": EXPECTED_SEQUENCER_DELETED_ONE,
                 },
-                "request-id": "C3D13FE58DE4C810", // pragma: allowlist secret
+                "request-id": EXPECTED_REQUEST_ID,
                 "requester": "123456789012",
                 "source-ip-address": "127.0.0.1",
                 "reason": "DeleteObject",

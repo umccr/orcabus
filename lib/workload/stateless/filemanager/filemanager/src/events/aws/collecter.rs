@@ -201,7 +201,7 @@ impl Collecter {
                             storage_class.unwrap_or(Standard),
                         ))
                         .update_last_modified_date(Self::convert_datetime(last_modified))
-                        .update_size(content_length.map(|value| value as i32))
+                        .update_size(content_length)
                         .update_e_tag(e_tag)
                         .update_sha256(checksum_sha256);
                 }

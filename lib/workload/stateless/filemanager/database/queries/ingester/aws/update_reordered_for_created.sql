@@ -10,7 +10,7 @@ with input as (
         $2::text[],
         $3::text[],
         $4::timestamptz[],
-        $5::integer[],
+        $5::bigint[],
         $6::text[],
         $7::timestamptz[],
         $8::text[],
