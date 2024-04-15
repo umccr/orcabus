@@ -5,17 +5,17 @@ use crate::error::Result;
 
 /// Query the filemanager via REST interface.
 #[derive(Debug)]
-pub struct Query {
-    client: Client,
+pub struct Query<'a> {
+    client: Client<'a>,
 }
 
 pub struct QueryResults {
-    results: Vec<String>, // FIXME: Adjust return type
+    _results: Vec<String>, // FIXME: Adjust return type
 }
 
-impl Query {
+impl<'a> Query<'a> {
     /// Creates a new filemanager query client.
-    pub fn new(client: Client) -> Self {
+    pub fn new(client: Client<'a>) -> Self {
         Self { client }
     }
 
