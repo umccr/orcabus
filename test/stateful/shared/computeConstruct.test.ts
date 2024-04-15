@@ -27,6 +27,7 @@ test('Test SchemaRegistryConstruct Creation', () => {
   const template = Template.fromStack(stack);
 
   template.hasResourceProperties('AWS::EC2::SecurityGroup', {
-    GroupName: 'OrcaBusLambdaSecurityGroup',
+    GroupName:
+      constructConfig.stackProps.statefulConfig.sharedStackProps.computeProps.securityGroupName,
   });
 });
