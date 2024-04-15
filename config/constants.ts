@@ -29,7 +29,7 @@ const cognitoPortalAppClientIdParameterName = '/data_portal/client/data2/cog_app
 
 const regName = 'OrcaBusSchemaRegistry';
 const eventBusName = 'OrcaBusMain';
-const lambdaSecurityGroupName = 'OrcaBusLambdaSecurityGroup';
+const computeSecurityGroupName = 'OrcaBusSharedComputeSecurityGroup';
 const dbClusterIdentifier = 'orcabus-db';
 const dbClusterResourceIdParameterName = '/orcabus/db-cluster-resource-id';
 const dbClusterEndpointHostParameterName = '/orcabus/db-cluster-endpoint-host';
@@ -80,7 +80,7 @@ const orcaBusStatefulConfig = {
     secretRotationSchedule: Duration.days(7),
   },
   computeProps: {
-    securityGroupName: lambdaSecurityGroupName,
+    securityGroupName: computeSecurityGroupName,
   },
   icaEventPipeProps: icaEventPipeProps,
   tokenServiceProps: {
@@ -111,7 +111,7 @@ const orcaBusStatelessConfig = {
     ],
   },
   eventBusName: eventBusName,
-  lambdaSecurityGroupName: lambdaSecurityGroupName,
+  computeSecurityGroupName: computeSecurityGroupName,
   rdsMasterSecretName: rdsMasterSecretName,
   postgresManagerConfig: {
     masterSecretName: rdsMasterSecretName,

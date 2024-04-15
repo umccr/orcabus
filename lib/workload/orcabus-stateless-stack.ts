@@ -20,7 +20,7 @@ import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
 export interface OrcaBusStatelessConfig {
   multiSchemaConstructProps: MultiSchemaConstructProps;
   eventBusName: string;
-  lambdaSecurityGroupName: string;
+  computeSecurityGroupName: string;
   rdsMasterSecretName: string;
   postgresManagerConfig: PostgresManagerConfig;
   metadataManagerConfig: MetadataManagerConfig;
@@ -45,7 +45,7 @@ export class OrcaBusStatelessStack extends cdk.Stack {
     this.lambdaSecurityGroup = SecurityGroup.fromLookupByName(
       this,
       'OrcaBusLambdaSecurityGroup',
-      props.lambdaSecurityGroupName,
+      props.computeSecurityGroupName,
       this.vpc
     );
 

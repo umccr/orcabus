@@ -16,7 +16,7 @@ import {
   getServiceUserSecretResourcePolicy,
 } from './construct/policy';
 
-export interface TokenServiceProps {
+export interface TokenServiceStackProps {
   serviceUserSecretName: string;
   jwtSecretName: string;
   vpcProps: VpcLookupOptions;
@@ -25,13 +25,13 @@ export interface TokenServiceProps {
 }
 
 export class TokenServiceStack extends Stack {
-  private readonly props: TokenServiceProps;
+  private readonly props: TokenServiceStackProps;
   private readonly vpc: IVpc;
   private readonly userPool: IUserPool;
   private readonly lambdaEnv;
   private readonly lambdaRuntimePythonVersion: aws_lambda.Runtime = aws_lambda.Runtime.PYTHON_3_12;
 
-  constructor(scope: Construct, id: string, props: StackProps & TokenServiceProps) {
+  constructor(scope: Construct, id: string, props: StackProps & TokenServiceStackProps) {
     super(scope, id, props);
     this.props = props;
 
