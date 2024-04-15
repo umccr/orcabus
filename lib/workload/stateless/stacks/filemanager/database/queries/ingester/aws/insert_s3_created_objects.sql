@@ -19,7 +19,7 @@ values (
     unnest($3::text[]),
     unnest($4::text[]),
     unnest($5::timestamptz[]),
-    unnest($6::integer[]),
+    unnest($6::bigint[]),
     unnest($7::text[]),
     unnest($8::timestamptz[]),
     unnest($9::text[]),

@@ -25,7 +25,7 @@ pub struct Ingester<'a> {
 #[derive(Debug)]
 struct Insert {
     object_id: Uuid,
-    number_duplicate_events: i32,
+    number_duplicate_events: i64,
 }
 
 impl<'a> Ingester<'a> {
@@ -126,7 +126,7 @@ impl<'a> Ingester<'a> {
             &object_created.buckets,
             &object_created.keys,
             &object_created.event_times as &[Option<DateTime<Utc>>],
-            &object_created.sizes as &[Option<i32>],
+            &object_created.sizes as &[Option<i64>],
             &object_created.sha256s as &[Option<String>],
             &object_created.last_modified_dates as &[Option<DateTime<Utc>>],
             &object_created.e_tags as &[Option<String>],
@@ -148,7 +148,7 @@ impl<'a> Ingester<'a> {
             &object_created.buckets,
             &object_created.keys,
             &object_created.event_times as &[Option<DateTime<Utc>>],
-            &object_created.sizes as &[Option<i32>],
+            &object_created.sizes as &[Option<i64>],
             &object_created.sha256s as &[Option<String>],
             &object_created.last_modified_dates as &[Option<DateTime<Utc>>],
             &object_created.e_tags as &[Option<String>],
@@ -203,7 +203,7 @@ impl<'a> Ingester<'a> {
             &object_deleted.buckets,
             &object_deleted.keys,
             &object_deleted.event_times as &[Option<DateTime<Utc>>],
-            &object_deleted.sizes as &[Option<i32>],
+            &object_deleted.sizes as &[Option<i64>],
             &object_deleted.sha256s as &[Option<String>],
             &object_deleted.last_modified_dates as &[Option<DateTime<Utc>>],
             &object_deleted.e_tags as &[Option<String>],
@@ -292,6 +292,35 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_object_created_large_size(pool: PgPool) {
+        let mut events = test_events();
+        events.object_deleted = Default::default();
+
+        events
+            .object_created
+            .sizes
+            .iter_mut()
+            .for_each(|size| *size = Some(i64::MAX));
+
+        let ingester = test_ingester(pool);
+        ingester.ingest_events(events).await.unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 1);
+        assert_eq!(s3_object_results.len(), 1);
+        assert_with(
+            &s3_object_results[0],
+            Some(i64::MAX),
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            None,
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            None,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_removed(pool: PgPool) {
         let events = test_events();
 
@@ -337,7 +366,7 @@ pub(crate) mod tests {
         assert_eq!(s3_object_results.len(), 1);
         assert_eq!(
             2,
-            s3_object_results[0].get::<i32, _>("number_duplicate_events")
+            s3_object_results[0].get::<i64, _>("number_duplicate_events")
         );
         assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
     }
@@ -437,7 +466,7 @@ pub(crate) mod tests {
         assert_eq!(s3_object_results.len(), 1);
         assert_eq!(
             2,
-            s3_object_results[0].get::<i32, _>("number_duplicate_events")
+            s3_object_results[0].get::<i64, _>("number_duplicate_events")
         );
         assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
     }
@@ -464,7 +493,7 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_eq!(2, s3_object_results[0].get::<i32, _>("number_reordered"));
+        assert_eq!(2, s3_object_results[0].get::<i64, _>("number_reordered"));
         assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
     }
 
@@ -493,14 +522,14 @@ pub(crate) mod tests {
         assert_eq!(s3_object_results.len(), 2);
         assert_eq!(
             0,
-            s3_object_results[0].get::<i32, _>("number_duplicate_events")
+            s3_object_results[0].get::<i64, _>("number_duplicate_events")
         );
-        assert_eq!(0, s3_object_results[0].get::<i32, _>("number_reordered"));
+        assert_eq!(0, s3_object_results[0].get::<i64, _>("number_reordered"));
         assert_eq!(
             1,
-            s3_object_results[1].get::<i32, _>("number_duplicate_events")
+            s3_object_results[1].get::<i64, _>("number_duplicate_events")
         );
-        assert_eq!(1, s3_object_results[1].get::<i32, _>("number_reordered"));
+        assert_eq!(1, s3_object_results[1].get::<i64, _>("number_reordered"));
         assert_with(
             &s3_object_results[0],
             Some(0),
@@ -544,7 +573,7 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_eq!(0, s3_object_results[0].get::<i32, _>("number_reordered"));
+        assert_eq!(0, s3_object_results[0].get::<i64, _>("number_reordered"));
         assert_ingest_events(
             &s3_object_results[0],
             &FlatS3EventMessage::default_version_id(),
@@ -569,7 +598,7 @@ pub(crate) mod tests {
         assert_eq!(s3_object_results.len(), 1);
         assert_eq!(
             2,
-            s3_object_results[0].get::<i32, _>("number_duplicate_events")
+            s3_object_results[0].get::<i64, _>("number_duplicate_events")
         );
         assert_ingest_events(
             &s3_object_results[0],
@@ -606,7 +635,7 @@ pub(crate) mod tests {
         assert_eq!(s3_object_results.len(), 1);
         assert_eq!(
             2,
-            s3_object_results[0].get::<i32, _>("number_duplicate_events")
+            s3_object_results[0].get::<i64, _>("number_duplicate_events")
         );
         assert_ingest_events(
             &s3_object_results[0],
@@ -637,7 +666,7 @@ pub(crate) mod tests {
 
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
-        assert_eq!(2, s3_object_results[0].get::<i32, _>("number_reordered"));
+        assert_eq!(2, s3_object_results[0].get::<i64, _>("number_reordered"));
         assert_with(
             &s3_object_results[0],
             Some(0),
@@ -674,14 +703,14 @@ pub(crate) mod tests {
         assert_eq!(s3_object_results.len(), 2);
         assert_eq!(
             0,
-            s3_object_results[0].get::<i32, _>("number_duplicate_events")
+            s3_object_results[0].get::<i64, _>("number_duplicate_events")
         );
-        assert_eq!(0, s3_object_results[0].get::<i32, _>("number_reordered"));
+        assert_eq!(0, s3_object_results[0].get::<i64, _>("number_reordered"));
         assert_eq!(
             2,
-            s3_object_results[1].get::<i32, _>("number_duplicate_events")
+            s3_object_results[1].get::<i64, _>("number_duplicate_events")
         );
-        assert_eq!(0, s3_object_results[1].get::<i32, _>("number_reordered"));
+        assert_eq!(0, s3_object_results[1].get::<i64, _>("number_reordered"));
         assert_with(
             &s3_object_results[1],
             Some(0),
@@ -1534,7 +1563,7 @@ pub(crate) mod tests {
 
     pub(crate) fn assert_with(
         s3_object_results: &PgRow,
-        size: Option<i32>,
+        size: Option<i64>,
         created_sequencer: Option<String>,
         deleted_sequencer: Option<String>,
         version_id: String,
@@ -1552,7 +1581,7 @@ pub(crate) mod tests {
             deleted_sequencer,
             s3_object_results.get::<Option<String>, _>("deleted_sequencer")
         );
-        assert_eq!(size, s3_object_results.get::<Option<i32>, _>("size"));
+        assert_eq!(size, s3_object_results.get::<Option<i64>, _>("size"));
         assert_eq!(
             Some(EXPECTED_SHA256.to_string()),
             s3_object_results.get::<Option<String>, _>("sha256")
