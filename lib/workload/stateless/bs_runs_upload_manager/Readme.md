@@ -59,7 +59,7 @@ This uses the ssbackend API in order to generate the V2 samplesheet since some m
 {
   "gds_folder_path": "/Runs/240315_A01052_0186_AH5HM5DSXC_r.YpC_0U_7-06Oom1cFl9Y5A",
   "gds_volume_name": "bssh.acddbfda498038ed99fa94fe79523959",
-  "samplesheet_name": "SampleSheet.csv",
+  "samplesheet_name": "SampleSheet.csv"
 }
 ```
 
