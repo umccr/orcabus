@@ -13,11 +13,11 @@ def handler(event, context):
     
     # Current timestamp
     now = datetime.now(timezone.utc)
-    time_stamp = now.strftime("%H_%M_%S") # for object name
+    time_stamp = str(now.timestamp()) # for object name
     time_stamp_details = now.strftime("%Y-%m-%d__%H-%M-%S") # for tagging
     
-    # Extract the event title (type), reference from the event_schemas example
-    event_title = event.get('detail', {}).get('info', {}).get('title', 'OtherEvents')
+    # Extract the event title (type) from detail type
+    event_title = event.get('detail-type', 'undefinedEvent')
     
     # Formatting the S3 key with year/month/day partitioning
     key = f'events/{now.year}/{now.month:02}/{now.day:02}/{event_title+'_'+time_stamp}.json'
