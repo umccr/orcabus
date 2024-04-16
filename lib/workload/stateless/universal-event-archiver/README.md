@@ -16,22 +16,22 @@ Parameters:
 * s3bucket
 * eventBus
 
-Example Input: schema from config/event_schemas/WorkflowRequest.json
+Example Input: general Event structure
 
 ```json5
 {
-  "openapi": "3.0.0",
-  "info": {
-    "version": "1.0.0",
-    "title": "WorkflowRequest"
-  },
-  "paths": {},
-  "components": {
-    "schemas": {
-      "Event": {
-        ...
-      }
-    }
+  "version": "0",
+  "id": "UUID",
+  "detail-type": "event_name",
+  "source": "event source",
+  "account": "ARN",
+  "time": "timestamp",
+  "region": "region",
+  "resources": [
+    "ARN"
+  ],
+  "detail": {
+    ...
   }
 }
 
@@ -40,6 +40,6 @@ Example Input: schema from config/event_schemas/WorkflowRequest.json
 ## Outputs
 
 S3 object of that event archived in dedicated s3 bucket.\
-URI: s3://{bucket_name}/events/{year}/{month}/{day}/{event_type}_{hour_minutes_seconds}.json \
-Example Outputs: ```s3://{bucket_name}/events/2024/04/16/WorkflowRequest_00_02_32.json```
+URI: s3://{bucket_name}/events/{year}/{month}/{day}/{event_type}_{totalSeconds.microsecond}.json \
+Example Outputs: ```s3://{bucket_name}/events/2024/04/16/WorkflowRequest_1713252338.243297.json```
 
