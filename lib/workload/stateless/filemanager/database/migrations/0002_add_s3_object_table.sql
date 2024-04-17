@@ -18,6 +18,9 @@ create table s3_object (
     s3_object_id uuid not null primary key,
     -- This is initially deferred because we want to create an s3_object before an object to check for duplicates/order.
     object_id uuid not null references object (object_id) deferrable initially deferred,
+    -- The public id for this object which can be referred to externally to filemanager. Note, there is no public id
+    -- on an `object` because objects can be merged which complicates having a permanent public id.
+    public_id uuid not null,
 
     -- General fields
     -- The bucket of the object.
