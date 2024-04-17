@@ -73,8 +73,6 @@ export class Filemanager extends Stack {
         host: host,
         port: props.port,
         securityGroup: lambdaSecurityGroup,
-        buildEnvironment: {},
-        // rustLog: props?.rustLog,
       });
 
       new ProviderFunction(this, 'MigrateProviderFunction', {
@@ -102,8 +100,6 @@ export class Filemanager extends Stack {
       securityGroup: lambdaSecurityGroup,
       eventSources: [queue],
       buckets: props.eventSourceBuckets,
-      buildEnvironment: {},
-      // rustLog: props?.rustLog,
     });
   }
 }

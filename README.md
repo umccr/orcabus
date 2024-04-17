@@ -8,7 +8,7 @@ At the top level, the Git repository root is _the CDK TypeScript project_. It is
 
 Please note; this is the _INVERSE_ of some typical standalone project setup such that the repo root of the project is your app toolchain codebase and the deployment code are arranged under some arbitrary subdirectory like `./deploy/<cdk app root>`. We **do not** do this in this repo as we anticipate that we are going to deploy multiple of closely related micro applications.
 
-In this repo, we flip this view such that the Git repo root is the TypeScript CDK project; that wraps our applications into `./lib/` directory. You may [sparse checkout](https://git-scm.com/docs/git-sparse-checkout) or directly open subdirectory to set up the application project alone if you wish; e.g. `webstorm lib/workload/stateless/metadata-manager` or `code lib/workload/stateless/metadata-manager` or `pycharm lib/workload/stateless/sequence-run-manager` or `rustrover lib/workload/stateless/filemanager`. However, `code .` is a CDK TypeScript project.
+In this repo, we flip this view such that the Git repo root is the TypeScript CDK project; that wraps our applications into `./lib/` directory. You may [sparse checkout](https://git-scm.com/docs/git-sparse-checkout) or directly open subdirectory to set up the application project alone if you wish; e.g. `webstorm lib/workload/stateless/stacks/metadata-manager` or `code lib/workload/stateless/stacks/metadata-manager` or `pycharm lib/workload/stateless/stacks/sequence-run-manager` or `rustrover lib/workload/stateless/stacks/filemanager`. However, `code .` is a CDK TypeScript project.
 
 There are 2 CDK apps here:
 
@@ -85,7 +85,7 @@ You could list the CDK stacks with the `cdk ls` command to look at the stackId g
 yarn cdk-stateless ls
 
 OrcaBusStatelessPipeline
-OrcaBusStatelessPipeline/BetaDeployment/MetadataManager
+OrcaBusStatelessPipeline/BetaDeployment/MetadataManagerStack
 ...
 ```
 

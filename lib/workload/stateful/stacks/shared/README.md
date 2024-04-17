@@ -15,7 +15,7 @@ task on PostgreSQL.
 
 RDS IAM is enabled for the cluster and, therefore is encouraged to be used rather than relying on username-password approach to log into your database. You could choose the type of authentication upon creating a role at the RDS when using the `PostgresManager`.
 
-Please check the: [PostgresManager](../../../stateless/postgres-manager/README.md)
+Please check: [PostgresManager](../../../stateless/stacks/postgres-manager/README.md)
 
 ## Event Source
 
