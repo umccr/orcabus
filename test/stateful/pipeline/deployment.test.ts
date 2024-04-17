@@ -3,7 +3,7 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { SynthesisMessage } from 'aws-cdk-lib/cx-api';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 
-import { getEnvironmentConfig } from '../../../config/constants';
+import { getEnvironmentConfig } from '../../../config/config';
 import { StatefulStackCollection } from '../../../lib/workload/stateful/statefulStackCollectionClass';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {

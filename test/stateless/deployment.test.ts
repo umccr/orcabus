@@ -2,7 +2,7 @@ import { App, Aspects, Stack } from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { SynthesisMessage } from 'aws-cdk-lib/cx-api';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { getEnvironmentConfig } from '../../config/constants';
+import { getEnvironmentConfig } from '../../config/config';
 import { StatelessStackCollection } from '../../lib/workload/stateless/statelessStackCollectionClass';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {
