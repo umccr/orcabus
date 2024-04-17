@@ -56,6 +56,9 @@ create table s3_object (
     -- Record the number of duplicate events received for this object, useful for debugging.
     number_duplicate_events bigint not null default 0,
 
+    -- Attributes on a single s3_object.
+    attributes jsonb default null,
+
     -- The sequencers should be unique with the bucket, key, and its version, otherwise this is a duplicate event.
     constraint created_sequencer_unique unique (bucket, key, version_id, created_sequencer),
     constraint deleted_sequencer_unique unique (bucket, key, version_id, deleted_sequencer)
