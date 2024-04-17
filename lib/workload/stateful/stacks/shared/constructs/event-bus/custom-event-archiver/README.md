@@ -46,8 +46,8 @@ Example Input: general Event structure
 ### Outputs
 
 S3 object of that event archived in dedicated s3 bucket.\
-URI: s3://{bucket_name}/events/{year}/{month}/{day}/{event_type}_{totalSeconds.microsecond}.json \
-Example Outputs: ```s3://{bucket_name}/events/2024/04/16/WorkflowRequest_1713252338.243297.json```
+URI: s3://{bucket_name}/events/year={year}/month={month}/day={day}/{event_type}_{totalSeconds.microsecond}.json \
+Example Outputs: ```s3://{bucket_name}/events/year=2024/month=04/day=16/WorkflowRequest_1713252338.243297.json```
 
 
 ## Sanitize for object key

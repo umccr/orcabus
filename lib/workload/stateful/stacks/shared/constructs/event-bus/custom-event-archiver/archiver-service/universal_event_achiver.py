@@ -8,30 +8,31 @@ from datetime import datetime, timezone
 # Initialize S3 client
 s3 = boto3.client('s3')
 
-# The name of the bucket
-BUCKET_NAME = os.getenv('BUCKET_NAME')
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 def handler(event, context):
+    #assert the environment variable is set
+    assert os.getenv('BUCKET_NAME'), "BUCKET_NAME environment variable is not set"
+    
+    BUCKET_NAME = os.getenv('BUCKET_NAME')
     
     # Current timestamp
     now = datetime.now(timezone.utc)
     time_stamp = str(now.timestamp()) # for object name
-    time_stamp_details = now.strftime("%Y-%m-%d__%H-%M-%S") # for tagging
+    time_stamp_formated = now.strftime("%Y-%m-%d__%H-%M-%S") # for tagging
     
     # Extract the event title (type) from detail type
-    event_title = sanitize_string(event.get('detail-type', 'undefinedEvent'))
+    event_type = sanitize_string(event.get('detail-type', 'undefinedEvent'))
     
     # Formatting the S3 key with year/month/day partitioning
-    key = f'events/year={now.year}/month={now.month:02}/day={now.day:02}/{event_title+'_'+time_stamp}.json'
+    key = f'events/year={now.year}/month={now.month:02}/day={now.day:02}/{event_type+'_'+time_stamp}.json'
 
     # Convert the event to JSON
     event_json = json.dumps(event)
     default_tags = {
-        'event_type': event_title,
-        'event_time': time_stamp_details,
+        'event_type': event_type,
+        'event_time': time_stamp_formated,
     }
 
     # Write the JSON to an S3 bucket

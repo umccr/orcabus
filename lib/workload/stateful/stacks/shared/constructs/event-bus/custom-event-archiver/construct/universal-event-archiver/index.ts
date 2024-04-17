@@ -7,10 +7,11 @@ import { Construct } from 'constructs';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { IEventBus, Rule } from 'aws-cdk-lib/aws-events';
-import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { IVpc, ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 
 export interface UniversalEventArchiverConstructProps {
   vpc: IVpc;
+  lambdaSG: ISecurityGroup;
   archiveBucket: IBucket;
   eventBus: IEventBus;
 }
@@ -26,6 +27,7 @@ export class UniversalEventArchiverConstruct extends Construct {
 
     const eventBus = props.eventBus;
     const archiveBucket = props.archiveBucket;
+    const lambdaSG = props.lambdaSG;
 
     const archiveEventFunction = new PythonFunction(this, 'UniversalEventArchiver', {
       entry: path.join(__dirname, '../../archiver-service'),
@@ -35,6 +37,7 @@ export class UniversalEventArchiverConstruct extends Construct {
       },
       vpc: props.vpc,
       vpcSubnets: { subnets: props.vpc.privateSubnets },
+      securityGroups: [lambdaSG],
       architecture: Architecture.ARM_64,
       timeout: Duration.seconds(28),
       index: 'universal_event_achiver.py',
@@ -43,17 +46,18 @@ export class UniversalEventArchiverConstruct extends Construct {
 
     archiveBucket.grantReadWrite(archiveEventFunction);
 
-    const rule = new Rule(this, 'Rule', {
+    const rule = new Rule(this, this.id + 'EventRule', {
+      ruleName: 'UniversalEventArchiverRule',
+      description: 'Rule to archive all events to S3',
       eventBus,
       eventPattern: {
-        //account: [cdk.Aws.ACCOUNT_ID],
         account: [Stack.of(this).account],
       },
     });
 
     rule.addTarget(
       new LambdaFunction(archiveEventFunction, {
-        maxEventAge: Duration.seconds(28), // Maximum age for an event to be retried
+        maxEventAge: Duration.seconds(60), // Maximum age must have value greater than or equal to 60 (Service: EventBridge)
         retryAttempts: 3, // Retry up to 3 times
       })
     );
