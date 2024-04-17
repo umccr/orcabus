@@ -69,7 +69,7 @@ Python 3.12.2
 You would need to go to this microservice app directory from the root project
 
 ```bash
-cd lib/workload/stateless/metadata_manager
+cd lib/workload/stateless/stacks/metadata-manager
 ```
 
 ### Setup
