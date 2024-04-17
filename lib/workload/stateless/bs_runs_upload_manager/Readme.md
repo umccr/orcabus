@@ -25,6 +25,8 @@ The two steps of the statemachine are:
 1. Generate a V2 Samplesheet and reupload it
 2. Launch an ICAv1 tes task that runs the bs runs upload command
 
+This statemachine will subscribe to the orcabus.srm events and trigger the statemachine when a new run is detected.
+
 ![](images/bs_runs_upload_manager.png)
 
 ## Inputs
@@ -96,3 +98,15 @@ This lambda will launch a tes task that will run the bs runs upload command.
   "task_run_id": "trn.4fd3414f98fe47c3a6cfc31a67b7418a"
 }
 ```
+
+#### External parameters
+
+The following properites are required in order to deploy the statemachine / stack:
+
+* SecretsManager: 
+  * ICA Access Token: `IcaSecretsPortal`
+  * Portal Token: `orcabus/token-service-jwt`
+  * BaseSpace Token Secret ID: `/manual/BaseSpaceAccessTokenSecret`
+* Strings
+  * gds system files path root (where to do the TES logs go?)
+  * EventBus Name: `OrcabusMain`

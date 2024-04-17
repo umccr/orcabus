@@ -4,6 +4,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as events_targets from 'aws-cdk-lib/aws-events-targets';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
@@ -137,6 +138,16 @@ export class BsRunsUploadManagerConstruct extends Construct {
         detailType: ['SequenceRunStateChange'],
       },
     });
+
+    // Add target of event to be the state machine
+    rule.addTarget(
+      new events_targets.SfnStateMachine(
+        stateMachine,
+        {
+          input: events.RuleTargetInput.fromEventPath('$.detail')
+        }
+      )
+    )
 
     // Set outputs
     this.bs_runs_upload_event_state_machine_arn = stateMachine.stateMachineArn;
