@@ -2,7 +2,7 @@
 # any complex functionalities (e.g. sync from gsheet) will require to install dependency from the full verison
 
 aws-xray-sdk # intentionally leave out version, the daily release of this dep is ok
-Django==5.0.0
+Django==5.0.3
 djangorestframework==3.15.0
 django-cors-headers==4.3.1
 django-environ==0.11.2
