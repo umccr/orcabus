@@ -2,13 +2,13 @@ import { App, Aspects, Stack } from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { SynthesisMessage } from 'aws-cdk-lib/cx-api';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { StatelessPipelineStack } from '../../lib/pipeline/orcabus-stateless-pipeline-stack';
+import { StatelessPipelineStack } from '../../lib/pipeline/statelessPipelineStack';
 
 // we are mocking the deployment stack here, as we have a dedicated cdk-nag test for deployment stack
 // see the ./stateless-deployment.test.ts
-jest.mock('../../lib/workload/orcabus-stateless-stack', () => {
+jest.mock('../../lib/workload/stateless/statelessStackCollectionClass', () => {
   return {
-    OrcaBusStatelessStack: jest.fn().mockImplementation((value) => {
+    StatelessStackCollection: jest.fn().mockImplementation((value) => {
       return new Stack(value, 'mockStack', {});
     }),
   };

@@ -1,15 +1,18 @@
 import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
-import { OrcaBusStatelessConfig } from '../lib/workload/orcabus-stateless-stack';
+import { VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { EventSourceProps } from '../lib/workload/stateful/stacks/shared/constructs/event-source';
-import { DbAuthType } from '../lib/workload/stateless/postgres_manager/function/type';
+import { DbAuthType } from '../lib/workload/stateless/stacks/postgres-manager/function/type';
 import {
   FILEMANAGER_SERVICE_NAME,
   FilemanagerConfig,
-} from '../lib/workload/stateless/filemanager/deploy/lib/filemanager';
+} from '../lib/workload/stateless/stacks/filemanager/deploy/lib/filemanager';
 import { IcaEventPipeStackProps } from '../lib/workload/stateful/stacks/ica-event-pipe/stack';
 import { StatefulStackCollectionProps } from '../lib/workload/stateful/statefulStackCollectionClass';
-import { VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
+import { StatelessStackCollectionProps } from '../lib/workload/stateless/statelessStackCollectionClass';
+import { SequenceRunManagerStackProps } from '../lib/workload/stateless/stacks/sequence-run-manager/deploy/component';
+import { MetadataManagerStackProps } from '../lib/workload/stateless/stacks/metadata-manager/deploy/stack';
+import { PostgresManagerStackProps } from '../lib/workload/stateless/stacks/postgres-manager/deploy/stack';
 
 const region = 'ap-southeast-2';
 
@@ -53,7 +56,7 @@ const icaEventPipeProps: IcaEventPipeStackProps = {
 const serviceUserSecretName = 'orcabus/token-service-user'; // pragma: allowlist secret
 const jwtSecretName = 'orcabus/token-service-jwt'; // pragma: allowlist secret
 
-const orcaBusStatefulConfig = {
+const statefulConfig = {
   schemaRegistryProps: {
     registryName: regName,
     description: 'Registry for OrcaBus Events',
@@ -92,47 +95,60 @@ const orcaBusStatefulConfig = {
   },
 };
 
-const orcaBusStatelessConfig = {
-  multiSchemaConstructProps: {
-    registryName: regName,
-    schemas: [
-      {
-        schemaName: 'BclConvertWorkflowRequest',
-        schemaDescription: 'Request event for BclConvertWorkflow',
-        schemaType: 'OpenApi3',
-        schemaLocation: __dirname + '/event_schemas/BclConvertWorkflowRequest.json',
-      },
-      {
-        schemaName: 'DragenWgsQcWorkflowRequest',
-        schemaDescription: 'Request event for DragenWgsQcWorkflowRequest',
-        schemaType: 'OpenApi3',
-        schemaLocation: __dirname + '/event_schemas/DragenWgsQcWorkflowRequest.json',
-      },
-    ],
-  },
-  eventBusName: eventBusName,
-  computeSecurityGroupName: computeSecurityGroupName,
-  rdsMasterSecretName: rdsMasterSecretName,
-  postgresManagerConfig: {
-    masterSecretName: rdsMasterSecretName,
-    dbClusterIdentifier: dbClusterIdentifier,
-    clusterResourceIdParameterName: dbClusterResourceIdParameterName,
-    dbPort: databasePort,
-    microserviceDbConfig: [
-      {
-        name: 'sequence_run_manager',
-        authType: DbAuthType.USERNAME_PASSWORD,
-      },
-      {
-        name: 'metadata_manager',
-        authType: DbAuthType.USERNAME_PASSWORD,
-      },
-      { name: FILEMANAGER_SERVICE_NAME, authType: DbAuthType.RDS_IAM },
-    ],
-    secretRotationSchedule: Duration.days(7),
-  },
-  metadataManagerConfig: {},
+const sequenceRunManagerStackProps: SequenceRunManagerStackProps = {
+  vpcProps,
+  lambdaSecurityGroupName: computeSecurityGroupName,
+  mainBusName: eventBusName,
 };
+
+const metadataManagerStackProps: MetadataManagerStackProps = {
+  vpcProps,
+  lambdaSecurityGroupName: computeSecurityGroupName,
+};
+
+const postgresManagerStackProps: PostgresManagerStackProps = {
+  vpcProps,
+  lambdaSecurityGroupName: computeSecurityGroupName,
+  masterSecretName: rdsMasterSecretName,
+  dbClusterIdentifier: dbClusterIdentifier,
+  clusterResourceIdParameterName: dbClusterResourceIdParameterName,
+  dbPort: databasePort,
+  microserviceDbConfig: [
+    {
+      name: 'sequence_run_manager',
+      authType: DbAuthType.USERNAME_PASSWORD,
+    },
+    {
+      name: 'metadata_manager',
+      authType: DbAuthType.USERNAME_PASSWORD,
+    },
+    { name: FILEMANAGER_SERVICE_NAME, authType: DbAuthType.RDS_IAM },
+  ],
+  secretRotationSchedule: Duration.days(7),
+};
+
+// const statelessConfig = {
+//   multiSchemaConstructProps: {
+//     registryName: regName,
+//     schemas: [
+//       {
+//         schemaName: 'BclConvertWorkflowRequest',
+//         schemaDescription: 'Request event for BclConvertWorkflow',
+//         schemaType: 'OpenApi3',
+//         schemaLocation: __dirname + '/event_schemas/BclConvertWorkflowRequest.json',
+//       },
+//       {
+//         schemaName: 'DragenWgsQcWorkflowRequest',
+//         schemaDescription: 'Request event for DragenWgsQcWorkflowRequest',
+//         schemaType: 'OpenApi3',
+//         schemaLocation: __dirname + '/event_schemas/DragenWgsQcWorkflowRequest.json',
+//       },
+//     ],
+//   },
+//   eventBusName: eventBusName,
+//   computeSecurityGroupName: computeSecurityGroupName,
+//   rdsMasterSecretName: rdsMasterSecretName,
+// };
 
 const eventSourceConfig = (bucket: string): EventSourceProps => {
   return {
@@ -148,11 +164,14 @@ const eventSourceConfig = (bucket: string): EventSourceProps => {
 
 const filemanagerConfig = (bucket: string): FilemanagerConfig => {
   return {
+    securityGroupName: computeSecurityGroupName,
+    vpcProps,
     eventSourceQueueName: eventSourceQueueName,
     databaseClusterEndpointHostParameter:
-      orcaBusStatefulConfig.databaseProps.clusterEndpointHostParameterName,
+      statefulConfig.databaseProps.clusterEndpointHostParameterName,
     port: databasePort,
     eventSourceBuckets: [bucket],
+    migrateDatabase: true,
   };
 };
 
@@ -162,7 +181,7 @@ interface EnvironmentConfig {
   accountId: string;
   stackProps: {
     statefulConfig: StatefulStackCollectionProps;
-    orcaBusStatelessConfig: OrcaBusStatelessConfig;
+    statelessConfig: StatelessStackCollectionProps;
   };
 }
 
@@ -191,10 +210,10 @@ export const getEnvironmentConfig = (
           statefulConfig: {
             sharedStackProps: {
               vpcProps,
-              schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
-              eventBusProps: orcaBusStatefulConfig.eventBusProps,
+              schemaRegistryProps: statefulConfig.schemaRegistryProps,
+              eventBusProps: statefulConfig.eventBusProps,
               databaseProps: {
-                ...orcaBusStatefulConfig.databaseProps,
+                ...statefulConfig.databaseProps,
                 numberOfInstance: 1,
                 minACU: 0.5,
                 maxACU: 16,
@@ -202,15 +221,17 @@ export const getEnvironmentConfig = (
                 enablePerformanceInsights: true,
                 removalPolicy: RemovalPolicy.DESTROY,
               },
-              computeProps: orcaBusStatefulConfig.computeProps,
+              computeProps: statefulConfig.computeProps,
               eventSourceProps: eventSourceConfig(devBucket),
             },
-            tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
-            icaEventPipeStackProps: orcaBusStatefulConfig.icaEventPipeProps,
+            tokenServiceStackProps: statefulConfig.tokenServiceProps,
+            icaEventPipeStackProps: statefulConfig.icaEventPipeProps,
           },
-          orcaBusStatelessConfig: {
-            ...orcaBusStatelessConfig,
-            filemanagerConfig: filemanagerConfig(devBucket),
+          statelessConfig: {
+            postgresManagerStackProps: postgresManagerStackProps,
+            metadataManagerStackProps: metadataManagerStackProps,
+            sequenceRunManagerStackProps: sequenceRunManagerStackProps,
+            fileManagerStackProps: filemanagerConfig(devBucket),
           },
         },
       };
@@ -225,10 +246,10 @@ export const getEnvironmentConfig = (
           statefulConfig: {
             sharedStackProps: {
               vpcProps,
-              schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
-              eventBusProps: orcaBusStatefulConfig.eventBusProps,
+              schemaRegistryProps: statefulConfig.schemaRegistryProps,
+              eventBusProps: statefulConfig.eventBusProps,
               databaseProps: {
-                ...orcaBusStatefulConfig.databaseProps,
+                ...statefulConfig.databaseProps,
                 numberOfInstance: 1,
                 minACU: 0.5,
                 maxACU: 16,
@@ -236,15 +257,17 @@ export const getEnvironmentConfig = (
                 enablePerformanceInsights: true,
                 removalPolicy: RemovalPolicy.DESTROY,
               },
-              computeProps: orcaBusStatefulConfig.computeProps,
+              computeProps: statefulConfig.computeProps,
               eventSourceProps: eventSourceConfig(stgBucket),
             },
-            tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
-            icaEventPipeStackProps: orcaBusStatefulConfig.icaEventPipeProps,
+            tokenServiceStackProps: statefulConfig.tokenServiceProps,
+            icaEventPipeStackProps: statefulConfig.icaEventPipeProps,
           },
-          orcaBusStatelessConfig: {
-            ...orcaBusStatelessConfig,
-            filemanagerConfig: filemanagerConfig(stgBucket),
+          statelessConfig: {
+            postgresManagerStackProps: postgresManagerStackProps,
+            metadataManagerStackProps: metadataManagerStackProps,
+            sequenceRunManagerStackProps: sequenceRunManagerStackProps,
+            fileManagerStackProps: filemanagerConfig(stgBucket),
           },
         },
       };
@@ -259,31 +282,33 @@ export const getEnvironmentConfig = (
           statefulConfig: {
             sharedStackProps: {
               vpcProps,
-              schemaRegistryProps: orcaBusStatefulConfig.schemaRegistryProps,
-              eventBusProps: orcaBusStatefulConfig.eventBusProps,
+              schemaRegistryProps: statefulConfig.schemaRegistryProps,
+              eventBusProps: statefulConfig.eventBusProps,
               databaseProps: {
-                ...orcaBusStatefulConfig.databaseProps,
+                ...statefulConfig.databaseProps,
                 numberOfInstance: 1,
                 minACU: 0.5,
                 maxACU: 16,
                 removalPolicy: RemovalPolicy.RETAIN,
               },
-              computeProps: orcaBusStatefulConfig.computeProps,
+              computeProps: statefulConfig.computeProps,
               eventSourceProps: eventSourceConfig(prodBucket),
             },
-            tokenServiceStackProps: orcaBusStatefulConfig.tokenServiceProps,
-            icaEventPipeStackProps: orcaBusStatefulConfig.icaEventPipeProps,
+            tokenServiceStackProps: statefulConfig.tokenServiceProps,
+            icaEventPipeStackProps: statefulConfig.icaEventPipeProps,
           },
-          orcaBusStatelessConfig: {
-            ...orcaBusStatelessConfig,
-            filemanagerConfig: filemanagerConfig(prodBucket),
+          statelessConfig: {
+            postgresManagerStackProps: postgresManagerStackProps,
+            metadataManagerStackProps: metadataManagerStackProps,
+            sequenceRunManagerStackProps: sequenceRunManagerStackProps,
+            fileManagerStackProps: filemanagerConfig(prodBucket),
           },
         },
       };
       break;
   }
 
-  // validateSecretName(config.stackProps.orcaBusStatefulConfig.databaseProps.masterSecretName);
+  // validateSecretName(config.stackProps.statefulConfig.databaseProps.masterSecretName);
 
   return config;
 };
