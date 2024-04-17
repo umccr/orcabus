@@ -42,7 +42,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
       handler: 'handler',
       memorySize: 1024,
       // @ts-ignore
-      layers: [lambda_layer.lambda_layer_version_obj],
+      layers: [props.lambda_layer_obj.lambda_layer_version_obj],
       // @ts-ignore
       timeout: Duration.seconds(60),
       environment: {
@@ -61,7 +61,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
         handler: 'handler',
         memorySize: 1024,
         // @ts-ignore
-        layers: [lambda_layer.lambda_layer_version_obj],
+        layers: [props.lambda_layer_obj.lambda_layer_version_obj],
         // @ts-ignore
         timeout: Duration.seconds(60),
         environment: {
@@ -128,6 +128,15 @@ export class BsRunsUploadManagerConstruct extends Construct {
         },
       ),
     );
+
+    // Trigger state machine on event
+    const rule = new events.Rule(this, 'bs_runs_upload_event_rule', {
+      eventBus: props.event_bus_obj,
+      eventPattern: {
+        source: ['orcabus.srm'],
+        detailType: ['SequenceRunStateChange'],
+      },
+    });
 
     // Set outputs
     this.bs_runs_upload_event_state_machine_arn = stateMachine.stateMachineArn;

@@ -11,9 +11,9 @@ export interface BsRunsUploadManagerStackProps extends cdk.StackProps {
   // Define construct properties here
   ica_token_secret_id: string; // IcaSecretsPortal
   portal_token_secret_id: string; // orcabus/token-service-jwt
-  basespace_token_secret_id: string; // BaseSpaceAccessTokenSecret
+  basespace_token_secret_id: string; // /manual/BaseSpaceAccessTokenSecret
   gds_system_files_path: string; // gds://development/primary_data/temp/bs_runs_upload_tes/
-  eventbus_name_ssm_parameter_path: string; // /umccr/orcabus/stateful/eventbridge
+  eventbus_name: string; // /umccr/orcabus/stateful/eventbridge
 }
 
 export class BsRunsUploadManagerStack extends cdk.Stack {
@@ -37,22 +37,14 @@ export class BsRunsUploadManagerStack extends cdk.Stack {
       props.portal_token_secret_id,
     );
 
-    const basespace_secret_obj = new secretsManager.Secret(
+    const basespace_secret_obj = secretsManager.Secret.fromSecretNameV2(
       this, 'BaseSpaceAccessTokenSecret',
-      {
-        secretName: props.basespace_token_secret_id
-      }
+      props.basespace_token_secret_id
     )
 
-    /* Get event bus construct */
-    const event_bus_name_str = ssm.StringParameter.fromStringParameterName(
-      this,
-      'event_bus_name',
-      props.eventbus_name_ssm_parameter_path
-    ).stringValue;
     const event_bus_obj = events.EventBus.fromEventBusName(
       this, 'event_bus',
-      event_bus_name_str
+      props.eventbus_name
     );
 
 
