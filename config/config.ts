@@ -28,10 +28,9 @@ interface EnvironmentConfig {
 export const getEnvironmentConfig = (
   accountName: 'beta' | 'gamma' | 'prod'
 ): EnvironmentConfig | null => {
-  let config = null;
   switch (accountName) {
     case 'beta':
-      config = {
+      return {
         name: 'beta',
         region,
         accountId: '843407916570', // umccr_development
@@ -52,7 +51,7 @@ export const getEnvironmentConfig = (
       break;
 
     case 'gamma':
-      config = {
+      return {
         name: 'gamma',
         region,
         accountId: '455634345446', // umccr_staging
@@ -73,7 +72,7 @@ export const getEnvironmentConfig = (
       break;
 
     case 'prod':
-      config = {
+      return {
         name: 'prod',
         region,
         accountId: '472057503814', // umccr_production
@@ -91,8 +90,5 @@ export const getEnvironmentConfig = (
           },
         },
       };
-      break;
   }
-
-  return config;
 };
