@@ -5,21 +5,16 @@
   * [Inputs](#inputs)
     * [Example Input](#example-input)
   * [Outputs](#outputs)
-  * [Step function for event translation](#Step-function-for-event-translation)
-    * [Translate ICAv2 event to Orcabus internal event](#Translate-ICAv2-event-to-Orcabus-internal-event)
+  * [lambda function for event translation](#lambda-function-for-event-translation)
+    * [Receive and Translate ICAv2 event to Orcabus internal event](#Receive-and-Translate-ICAv2-event-to-Orcabus-internal-event)
     * [Save this translation to dynamoDB](#Save-this-translation-to-dynamoDB)
     * [Publish the Orcabus event to event bus](#Publish-the-Orcabus-event-to-event-bus)
-  * [Lambda in this directory](#lambda-in-this-directory)
-    * [Verify the input event](#Verify-the-input-event)
-    * [Generate the rquired event metadate](#Generate-the-rquired-event-metadate)
-  * [SSM Parameters](#ssm-parameters)
-    * [External Parameters required by CDK](#external-parameters-required-by-cdk)
 <!-- TOC -->
 
 
 ## Inputs
 
-The AWS Step functions takes in the following parameters and verify specific parmaters:
+The AWS lambda functions takes ```ICAV2_EXTERNAL_EVENT``` events with following parameters and verify specific parmaters pattern.
 
 * eventCode is ICA_EXEC_028
 * eventParameters.analysisStatus is SUCCEEDED
@@ -27,7 +22,7 @@ The AWS Step functions takes in the following parameters and verify specific par
 * Can use a regex on the userReference attribute like `(\d{6}_[A|B]\d+_\d{4}_\w+)`
 
 ### Example Input
-
+This event is icav2 event without EventBus wrapper. General Event Bridge event will be with [standard wrapper format](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-events-structure.html) with payload in the detail.
 ```json5
 {
   "correlationId": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
@@ -56,15 +51,11 @@ The AWS Step functions takes in the following parameters and verify specific par
       ...
       "status": "INPROGRESS",
       "startDate": "2024-03-25T07:57:48Z",
-      "summary": "",
       "tags": {
         ...
       }
     },
     "status": "SUCCEEDED",
-    "startDate": "2024-03-25T08:04:51Z",
-    "endDate": "2024-03-25T10:07:05Z",
-    "summary": "",
     "analysisStorage": {
       ....
     },
@@ -75,48 +66,39 @@ The AWS Step functions takes in the following parameters and verify specific par
 
 ## Outputs
 
-The AWS Step functions returns the following parameters:
+The AWS lambda functions return ```ICAV2_INTERNAL_EVENT``` with the following parameters:
 
 * projectId ->  "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx"
 * analysisId->  "0xxxxxxx-ddxxx-xxxxx-bxx-5xxxxxxx" (payload.id)
 * instrumentRunId -> "2xxxxxxxxx_Axxxxxx_0xxxx_Bxxxx" (from userReference)
-
-* tags (workflow session tags)
+* tags (payloadTags, workflow session tags)
 ```json5
 {
   "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
   "analysisId": "0xxxxxxx-ddxxx-xxxxx-bxx-5xxxxxxx",
   "instrumentRunId": "2xxxxxxxxx_Axxxxxx_0xxxx_Bxxxx",
-  
   "tags": {
         ...
       }
 }
 ```
 
-## Step function for event translation
+## lambda function for event translation
 
-![stepfunctions_graph](./images/stepfunctions_graph.png "stepfunctions_graph")
-### Translate ICAv2 event to Orcabus internal event
-combine the iput and anylsis result to generat the orcabus internal event.
+### Receive and Translate ICAv2 event to Orcabus internal event
+Combine the iput and anylsis result to generat the orcabus internal event.
 
 ### Save this translation process to dynamoDB
-send the input and orcabus event to the dynao db for recording of the process
+Send the orignal input and orcabus event after translation to the dynao db for recording of the process. 
+```json5
+{
+  id: analysisId,
+  id_type: "icav2_analysis_id",
+  original_external_event: orignal input,
+  translated_internal_event: orcabus event after translation,
+  timestamp: datetime.datetime.now().isoformat()
+}
+ ```
 
 ### Publish the Orcabus event to event bus
-publish the Orcabus event back the event bridge
-
-
-## Lambda in this directory
-
-### Verify the input event
-
-### Generate the rquired event metadate
-
-## SSM Parameters 
-
-### External Parameters required by CDK
-
-```
-/umccr/orcabus/stateful/eventbridge
-```
+publish the Orcabus event back the event bus.
