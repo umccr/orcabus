@@ -171,6 +171,7 @@ const filemanagerConfig = (bucket: string): FilemanagerConfig => {
       statefulConfig.databaseProps.clusterEndpointHostParameterName,
     port: databasePort,
     eventSourceBuckets: [bucket],
+    migrateDatabase: true,
   };
 };
 

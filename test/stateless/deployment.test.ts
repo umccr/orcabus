@@ -27,11 +27,9 @@ describe('cdk-nag-stateless-stack', () => {
   for (const key in stackCollection) {
     if (Object.prototype.hasOwnProperty.call(stackCollection, key)) {
       const stack = stackCollection[key as keyof StatelessStackCollection];
-
       const stackId = stack.node.id;
 
       Aspects.of(stack).add(new AwsSolutionsChecks());
-
       applyNagSuppression(stackId, stack);
 
       test(`${stackId}: cdk-nag AwsSolutions Pack errors`, () => {
@@ -100,22 +98,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
   // for each stack specific
 
   switch (stackId) {
-    case 'PostgresManager':
-      // suppress by resource
-      NagSuppressions.addResourceSuppressionsByPath(
-        stack,
-        `/TestStack/PostgresManager/CreateUserPassPostgresLambda/ServiceRole/DefaultPolicy/Resource`,
-        [
-          {
-            id: 'AwsSolutions-IAM5',
-            reason:
-              "'*' is required for secretsmanager:GetRandomPassword and new SM ARN will contain random character",
-          },
-        ]
-      );
-      break;
-
-    case 'Filemanager':
+    case 'FileManagerStack':
       NagSuppressions.addResourceSuppressions(
         stack,
         [
@@ -129,7 +112,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       );
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
-        `/TestStack/Filemanager/MigrateProviderFunction/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,
+        `/FileManagerStack/MigrateProviderFunction/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,
         [
           {
             id: 'AwsSolutions-IAM5',
