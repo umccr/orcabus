@@ -1,5 +1,4 @@
 import path from 'path';
-import * as cdk from 'aws-cdk-lib';
 import { IBucket } from 'aws-cdk-lib/aws-s3';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
@@ -7,46 +6,42 @@ import { aws_lambda, Duration, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
-import { ISecurityGroup, IVpc } from 'aws-cdk-lib/aws-ec2';
 import { IEventBus, Rule } from 'aws-cdk-lib/aws-events';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
 
-export interface UniversalEventArchiverProps {
-  securityGroups: ISecurityGroup[];
+export interface UniversalEventArchiverConstructProps {
   vpc: IVpc;
   archiveBucket: IBucket;
-  mainBus: IEventBus;
+  eventBus: IEventBus;
 }
 
-export class UniversalEventArchiverStack extends cdk.Stack {
+export class UniversalEventArchiverConstruct extends Construct {
   private readonly id: string;
-  private readonly props: UniversalEventArchiverProps;
   private readonly lambdaRuntimePythonVersion: aws_lambda.Runtime = aws_lambda.Runtime.PYTHON_3_12;
 
-  constructor(scope: Construct, id: string, props: cdk.StackProps & UniversalEventArchiverProps) {
-    super(scope, id, props);
+  constructor(scope: Construct, id: string, props: UniversalEventArchiverConstructProps) {
+    super(scope, id);
 
     this.id = id;
-    this.props = props;
 
-    const eventBus = this.props.mainBus;
-    const auditBucket = this.props.archiveBucket;
+    const eventBus = props.eventBus;
+    const archiveBucket = props.archiveBucket;
 
     const archiveEventFunction = new PythonFunction(this, 'UniversalEventArchiver', {
-      entry: path.join(__dirname, '../function'),
+      entry: path.join(__dirname, '../../archiver-service'),
       runtime: this.lambdaRuntimePythonVersion,
       environment: {
-        BUCKET_NAME: auditBucket.bucketName,
+        BUCKET_NAME: archiveBucket.bucketName,
       },
-      securityGroups: this.props.securityGroups,
-      vpc: this.props.vpc,
-      vpcSubnets: { subnets: this.props.vpc.privateSubnets },
+      vpc: props.vpc,
+      vpcSubnets: { subnets: props.vpc.privateSubnets },
       architecture: Architecture.ARM_64,
-      timeout: Duration.minutes(5),
-      index: 'archiver.py',
+      timeout: Duration.seconds(28),
+      index: 'universal_event_achiver.py',
       handler: 'handler',
     });
 
-    auditBucket.grantReadWrite(archiveEventFunction);
+    archiveBucket.grantReadWrite(archiveEventFunction);
 
     const rule = new Rule(this, 'Rule', {
       eventBus,
@@ -58,7 +53,7 @@ export class UniversalEventArchiverStack extends cdk.Stack {
 
     rule.addTarget(
       new LambdaFunction(archiveEventFunction, {
-        maxEventAge: Duration.minutes(10), // Maximum age for an event to be retried
+        maxEventAge: Duration.seconds(28), // Maximum age for an event to be retried
         retryAttempts: 3, // Retry up to 3 times
       })
     );
@@ -67,7 +62,7 @@ export class UniversalEventArchiverStack extends cdk.Stack {
     archiveEventFunction.addToRolePolicy(
       new PolicyStatement({
         actions: ['s3:PutObject'],
-        resources: [auditBucket.bucketArn + '/*'],
+        resources: [archiveBucket.bucketArn + '/*'],
       })
     );
   }

@@ -1,9 +1,9 @@
 import json
 import boto3
-from datetime import datetime, timezone
 import os
 import re
 import logging
+from datetime import datetime, timezone
 
 # Initialize S3 client
 s3 = boto3.client('s3')
@@ -25,7 +25,7 @@ def handler(event, context):
     event_title = sanitize_string(event.get('detail-type', 'undefinedEvent'))
     
     # Formatting the S3 key with year/month/day partitioning
-    key = f'events/{now.year}/{now.month:02}/{now.day:02}/{event_title+'_'+time_stamp}.json'
+    key = f'events/year={now.year}/month={now.month:02}/day={now.day:02}/{event_title+'_'+time_stamp}.json'
 
     # Convert the event to JSON
     event_json = json.dumps(event)
