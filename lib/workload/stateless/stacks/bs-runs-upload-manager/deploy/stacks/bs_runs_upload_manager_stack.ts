@@ -54,14 +54,19 @@ export class BsRunsUploadManagerStack extends cdk.Stack {
       basespace_secret_obj: basespace_secret_obj,
       event_bus_obj: event_bus_obj,
       /* Lambda paths */
-      upload_v2_samplesheet_to_gds_bssh_lambda_path:
-        path.join(__dirname, '/../../../lambdas/upload_v2_samplesheet_to_gds_bssh'),
-      launch_bs_runs_upload_tes_lambda_path:
-        path.join(__dirname, '/../../../lambdas/launch_bs_runs_upload_tes'),
+      upload_v2_samplesheet_to_gds_bssh_lambda_path: path.join(
+        __dirname,
+        '/../../../lambdas/upload_v2_samplesheet_to_gds_bssh'
+      ),
+      launch_bs_runs_upload_tes_lambda_path: path.join(
+        __dirname,
+        '/../../../lambdas/launch_bs_runs_upload_tes'
+      ),
       /* Step functions templates */
-      workflow_definition_body_path:
-        path.join(__dirname,
-        '/../../../step_functions_templates/bs_runs_upload_step_functions_template.json'),
+      workflow_definition_body_path: path.join(
+        __dirname,
+        '/../../../step_functions_templates/bs_runs_upload_step_functions_template.json'
+      ),
       /* Miscell */
       gds_system_files_path: props.gds_system_files_path,
     });
