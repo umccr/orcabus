@@ -28,6 +28,10 @@ export const devBucket = 'umccr-temp-dev';
 export const stgBucket = 'umccr-temp-stg';
 export const prodBucket = 'org.umccr.data.oncoanalyser';
 
+export const devGdsBsRunsUploadLogPath = 'gds://development/primary_data/temp/bs_runs_upload_tes/';
+export const stgGdsBsRunsUploadLogPath = 'gds://staging/primary_data/temp/bs_runs_upload_tes/';
+export const prodGdsBsRunsUploadLogPath = 'gds://production/primary_data/temp/bs_runs_upload_tes/';
+
 /**
  * Validate the secret name so that it doesn't end with 6 characters and a hyphen.
  *

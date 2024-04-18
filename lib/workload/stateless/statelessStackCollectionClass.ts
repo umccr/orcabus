@@ -14,12 +14,14 @@ import {
   SequenceRunManagerStack,
   SequenceRunManagerStackProps,
 } from './stacks/sequence-run-manager/deploy/stack';
+import { BsRunsUploadManagerStackProps } from './bs_runs_upload_manager/deploy/lib/stacks/bs_runs_upload_manager_stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
   metadataManagerStackProps: MetadataManagerStackProps;
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
+  bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
 }
 
 export class StatelessStackCollection {

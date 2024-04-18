@@ -7,7 +7,7 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
-export interface BsRunsUploadManagerStackProps extends cdk.StackProps {
+export interface BsRunsUploadManagerConfig {
   // Define construct properties here
   ica_token_secret_id: string; // IcaSecretsPortal
   portal_token_secret_id: string; // orcabus/token-service-jwt
@@ -15,6 +15,8 @@ export interface BsRunsUploadManagerStackProps extends cdk.StackProps {
   gds_system_files_path: string; // gds://development/primary_data/temp/bs_runs_upload_tes/
   eventbus_name: string; // /umccr/orcabus/stateful/eventbridge
 }
+
+export type BsRunsUploadManagerStackProps = BsRunsUploadManagerConfig & cdk.StackProps
 
 export class BsRunsUploadManagerStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: BsRunsUploadManagerStackProps) {
