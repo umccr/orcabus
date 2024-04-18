@@ -32,26 +32,26 @@ export class StatelessStackCollection {
   constructor(
     scope: Construct,
     env: Environment,
-    statefulConfiguration: StatelessStackCollectionProps
+    statelessConfiguration: StatelessStackCollectionProps
   ) {
     this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
       ...this.createTemplateProps(env, 'PostgresManagerStack'),
-      ...statefulConfiguration.postgresManagerStackProps,
+      ...statelessConfiguration.postgresManagerStackProps,
     });
 
     this.fileManagerStack = new Filemanager(scope, 'FileManagerStack', {
       ...this.createTemplateProps(env, 'FileManagerStack'),
-      ...statefulConfiguration.fileManagerStackProps,
+      ...statelessConfiguration.fileManagerStackProps,
     });
 
     this.metadataManagerStack = new MetadataManagerStack(scope, 'MetadataManagerStack', {
       ...this.createTemplateProps(env, 'MetadataManagerStack'),
-      ...statefulConfiguration.metadataManagerStackProps,
+      ...statelessConfiguration.metadataManagerStackProps,
     });
 
     this.sequenceRunManagerStack = new SequenceRunManagerStack(scope, 'SequenceRunManagerStack', {
       ...this.createTemplateProps(env, 'SequenceRunManagerStack'),
-      ...statefulConfiguration.sequenceRunManagerStackProps,
+      ...statelessConfiguration.sequenceRunManagerStackProps,
     });
   }
 
