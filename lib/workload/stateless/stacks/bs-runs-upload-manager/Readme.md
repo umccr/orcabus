@@ -41,9 +41,9 @@ The AWS Step functions takes in the following parameters
 
 ```json
 {
-  "gdsFolderPath": "/Runs/231109_A01052_0171_BHLJW7DSX7_r.NULhvzxcSEWmqZw8QljXfQ",
-  "gdsVolumeName": "bssh.acddbfda498038ed99fa94fe79523959",
-  "sampleSheetName": "SampleSheet.csv"
+  "run_folder_path": "/Runs/231109_A01052_0171_BHLJW7DSX7_r.NULhvzxcSEWmqZw8QljXfQ",
+  "run_volume_name": "bssh.acddbfda498038ed99fa94fe79523959",
+  "sample_sheet_name": "SampleSheet.csv"
 }
 ```
 

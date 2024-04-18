@@ -16,9 +16,9 @@
       "Parameters": {
         "FunctionName": "${__upload_v2_samplesheet_to_gds_bssh_function_arn__}",
         "Payload": {
-          "gds_folder_path.$": "$.workflow_inputs.gdsFolderPath",
-          "gds_volume_name.$": "$.workflow_inputs.gdsVolumeName",
-          "samplesheet_name.$": "$.workflow_inputs.sampleSheetName"
+          "gds_folder_path.$": "$.workflow_inputs.run_folder_path",
+          "gds_volume_name.$": "$.workflow_inputs.run_folder_name",
+          "samplesheet_name.$": "$.workflow_inputs.sample_sheet_name"
         }
       },
       "Retry": [
@@ -47,10 +47,10 @@
       "Parameters": {
         "FunctionName": "${__launch_bs_runs_upload_tes_function_arn__}",
         "Payload": {
-          "gds_folder_path.$": "$.workflow_inputs.gdsFolderPath",
-          "gds_volume_name.$": "$.workflow_inputs.gdsVolumeName",
+          "gds_folder_path.$": "$.workflow_inputs.run_folder_path",
+          "gds_volume_name.$": "$.workflow_inputs.run_folder_name",
           "samplesheet_name.$": "$.upload_v2_samplesheet_to_gds_bssh_step.samplesheet_name",
-          "instrument_run_id.$": "$.workflow_inputs.instrumentRunId"
+          "instrument_run_id.$": "$.workflow_inputs.instrument_run_id"
         }
       },
       "ResultSelector": {

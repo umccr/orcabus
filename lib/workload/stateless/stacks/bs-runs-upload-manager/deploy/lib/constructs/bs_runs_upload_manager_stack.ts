@@ -13,11 +13,11 @@ import { IRole } from 'aws-cdk-lib/aws-iam';
 
 interface BsRunsUploadManagerConstructProps {
   /* Stack objects */
-  lambda_layer_obj: LambdaLayerConstruct,
-  ica_token_secret_obj: secretsManager.ISecret,
-  portal_token_secret_obj: secretsManager.ISecret,
-  basespace_secret_obj: secretsManager.ISecret,
-  event_bus_obj: events.IEventBus,
+  lambda_layer_obj: LambdaLayerConstruct;
+  ica_token_secret_obj: secretsManager.ISecret;
+  portal_token_secret_obj: secretsManager.ISecret;
+  basespace_secret_obj: secretsManager.ISecret;
+  event_bus_obj: events.IEventBus;
   /* Lambda layer paths */
   upload_v2_samplesheet_to_gds_bssh_lambda_path: string; // __dirname + '/../../../lambdas/upload_v2_samplesheet_to_gds_bssh'
   launch_bs_runs_upload_tes_lambda_path: string; // __dirname + '/../../../lambdas/launch_bs_runs_upload_tes'
@@ -28,33 +28,37 @@ interface BsRunsUploadManagerConstructProps {
 }
 
 export class BsRunsUploadManagerConstruct extends Construct {
-
   public readonly bs_runs_upload_event_state_machine_arn: string;
 
   constructor(scope: Construct, id: string, props: BsRunsUploadManagerConstructProps) {
     super(scope, id);
 
-
     // V2 Upload lambda
-    const upload_v2_samplesheet_to_gds_bssh_lambda = new PythonFunction(this, 'upload_v2_samplesheet_to_gds_bssh_lambda', {
-      entry: props.upload_v2_samplesheet_to_gds_bssh_lambda_path,
-      runtime: lambda.Runtime.PYTHON_3_11,
-      index: 'handler.py',
-      handler: 'handler',
-      memorySize: 1024,
-      // @ts-ignore
-      layers: [props.lambda_layer_obj.lambda_layer_version_obj],
-      // @ts-ignore
-      timeout: Duration.seconds(60),
-      environment: {
-        ICA_BASE_URL: 'https://aps2.platform.illumina.com',
-        ICA_ACCESS_TOKEN_SECRET_ID: props.ica_token_secret_obj.secretName,
-        PORTAL_TOKEN_SECRET_ID: props.portal_token_secret_obj.secretName,
-      },
-    });
+    const upload_v2_samplesheet_to_gds_bssh_lambda = new PythonFunction(
+      this,
+      'upload_v2_samplesheet_to_gds_bssh_lambda',
+      {
+        entry: props.upload_v2_samplesheet_to_gds_bssh_lambda_path,
+        runtime: lambda.Runtime.PYTHON_3_11,
+        index: 'handler.py',
+        handler: 'handler',
+        memorySize: 1024,
+        // @ts-ignore
+        layers: [props.lambda_layer_obj.lambda_layer_version_obj],
+        // @ts-ignore
+        timeout: Duration.seconds(60),
+        environment: {
+          ICA_BASE_URL: 'https://aps2.platform.illumina.com',
+          ICA_ACCESS_TOKEN_SECRET_ID: props.ica_token_secret_obj.secretName,
+          PORTAL_TOKEN_SECRET_ID: props.portal_token_secret_obj.secretName,
+        },
+      }
+    );
 
     // Launch BS Runs Upload TES lambda
-    const launch_bs_runs_upload_tes_lambda = new PythonFunction(this, 'launch_bs_runs_upload_tes_lambda',
+    const launch_bs_runs_upload_tes_lambda = new PythonFunction(
+      this,
+      'launch_bs_runs_upload_tes_lambda',
       {
         entry: props.launch_bs_runs_upload_tes_lambda_path,
         runtime: lambda.Runtime.PYTHON_3_11,
@@ -72,36 +76,33 @@ export class BsRunsUploadManagerConstruct extends Construct {
           ICA_ACCESS_TOKEN_SECRET_ID: props.ica_token_secret_obj.secretName,
           GDS_SYSTEM_FILES_PATH: props.gds_system_files_path,
         },
-      },
+      }
     );
 
     // Give the lambda permission to read the ICA ACCESS TOKEN secret
-    [
-      launch_bs_runs_upload_tes_lambda,
-      upload_v2_samplesheet_to_gds_bssh_lambda,
-    ].forEach(
+    [launch_bs_runs_upload_tes_lambda, upload_v2_samplesheet_to_gds_bssh_lambda].forEach(
       (lambda_obj) => {
         props.ica_token_secret_obj.grantRead(
           // @ts-ignore
-          <IRole>lambda_obj.role,
+          <IRole>lambda_obj.role
         );
         props.portal_token_secret_obj.grantRead(
           // @ts-ignore
-          <IRole>lambda_obj.role,
+          <IRole>lambda_obj.role
         );
-      },
+      }
     );
 
     // Give the lambda permission to read the PORTAL TOKEN secret
     props.portal_token_secret_obj.grantRead(
       // @ts-ignore
-      <IRole>upload_v2_samplesheet_to_gds_bssh_lambda.role,
+      <IRole>upload_v2_samplesheet_to_gds_bssh_lambda.role
     );
 
     // Give basespace upload lambda permission to read the basespace access token secret
     props.basespace_secret_obj.grantRead(
       // @ts-ignore
-      <IRole>launch_bs_runs_upload_tes_lambda.role,
+      <IRole>launch_bs_runs_upload_tes_lambda.role
     );
 
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
@@ -110,24 +111,21 @@ export class BsRunsUploadManagerConstruct extends Construct {
       definitionBody: DefinitionBody.fromFile(props.workflow_definition_body_path),
       // definitionSubstitutions
       definitionSubstitutions: {
-        '__upload_v2_samplesheet_to_gds_bssh_function_arn__': upload_v2_samplesheet_to_gds_bssh_lambda.functionArn,
-        '__launch_bs_runs_upload_tes_function_arn__': launch_bs_runs_upload_tes_lambda.functionArn,
+        __upload_v2_samplesheet_to_gds_bssh_function_arn__:
+          upload_v2_samplesheet_to_gds_bssh_lambda.functionArn,
+        __launch_bs_runs_upload_tes_function_arn__: launch_bs_runs_upload_tes_lambda.functionArn,
       },
     });
 
     // Add execution permissions to stateMachine role
     stateMachine.addToRolePolicy(
-      new iam.PolicyStatement(
-        {
-          resources: [
-            upload_v2_samplesheet_to_gds_bssh_lambda.functionArn,
-            launch_bs_runs_upload_tes_lambda.functionArn,
-          ],
-          actions: [
-            'lambda:InvokeFunction',
-          ],
-        },
-      ),
+      new iam.PolicyStatement({
+        resources: [
+          upload_v2_samplesheet_to_gds_bssh_lambda.functionArn,
+          launch_bs_runs_upload_tes_lambda.functionArn,
+        ],
+        actions: ['lambda:InvokeFunction'],
+      })
     );
 
     // Trigger state machine on event
@@ -136,21 +134,20 @@ export class BsRunsUploadManagerConstruct extends Construct {
       eventPattern: {
         source: ['orcabus.srm'],
         detailType: ['SequenceRunStateChange'],
+        detail: {
+          status: ['succeeded'],
+        },
       },
     });
 
     // Add target of event to be the state machine
     rule.addTarget(
-      new events_targets.SfnStateMachine(
-        stateMachine,
-        {
-          input: events.RuleTargetInput.fromEventPath('$.detail')
-        }
-      )
-    )
+      new events_targets.SfnStateMachine(stateMachine, {
+        input: events.RuleTargetInput.fromEventPath('$.detail'),
+      })
+    );
 
     // Set outputs
     this.bs_runs_upload_event_state_machine_arn = stateMachine.stateMachineArn;
   }
-
 }
