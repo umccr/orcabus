@@ -4,14 +4,17 @@ import {
   stgGdsBsRunsUploadLogPath,
   prodGdsBsRunsUploadLogPath,
   AccountName,
+  icaAccessTokenSecretName,
+  jwtSecretName, basespaceAccessTokenSecretName,
+  eventBusName,
 } from '../constants';
 
 export const getBsRunsUploadManagerStackProps = (n: AccountName): BsRunsUploadManagerConfig => {
   const baseConfig = {
-    ica_token_secret_id: 'IcaSecretsPortal',
-    portal_token_secret_id: 'orcabus/token-service-jwt',
-    basespace_token_secret_id: '/manual/BaseSpaceAccessTokenSecret',
-    eventbus_name: '/umccr/orcabus/stateful/eventbridge',
+    ica_token_secret_id: icaAccessTokenSecretName,
+    portal_token_secret_id: jwtSecretName,
+    basespace_token_secret_id: basespaceAccessTokenSecretName,
+    eventbus_name: eventBusName,
   };
 
   switch (n) {

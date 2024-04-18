@@ -68,6 +68,9 @@ export const eventSourceQueueName = 'orcabus-event-source-queue';
 
 export const serviceUserSecretName = 'orcabus/token-service-user'; // pragma: allowlist secret
 export const jwtSecretName = 'orcabus/token-service-jwt'; // pragma: allowlist secret
+export const icaAccessTokenSecretName = 'IcaSecretsPortal'; // pragma: allowlist secret
+
+export const basespaceAccessTokenSecretName = '/manual/BaseSpaceAccessTokenSecret'; // pragma: allowlist secret
 
 // const statelessConfig = {
 //   multiSchemaConstructProps: {
