@@ -75,7 +75,6 @@ def handler(event, context):
 
     # Extract relevant fields from the event payload
     eventDetails = event.get("detail", {})
-    logger.info(f"Received ICAv2 event: {json.dumps(eventDetails)}")
     
     projectId = eventDetails.get("projectId", '')
     eventCode = eventDetails.get("eventCode")
@@ -138,7 +137,10 @@ def handler(event, context):
     except Exception as e:
         raise Exception("Failed to store event in the DynamoDB table. Error: ", e)
 
-    return internal_event
+    return {
+        "statusCode": 200,
+        "body": json.dumps("Internal event sent to the event bus and both msg stored in the DynamoDB table.")
+    }
 
 
 # ICAv2 Event condition:
