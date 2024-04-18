@@ -8,7 +8,7 @@ export const ICAV2_COPY_BATCH_UTILITY_STATE_MACHINE_NAME_SSM_PARAMETER_PATH = "/
 export const PIPELINE_ID_SSM_PARAMETER_PATH = "/icav2/umccr-prod/tso500_ctdna_2.1_pipeline_id"
 export const CTTSO_V2_LAUNCH_STATE_MACHINE_ARN_SSM_PARAMETER_PATH = "/icav2/umccr-prod/cttso_launch_state_machine_arn"
 export const CTTSO_V2_LAUNCH_STATE_MACHINE_NAME_SSM_PARAMETER_PATH = "/icav2/umccr-prod/cttso_launch_state_machine_name"
-
+export const ORCABUS_EVENT_NAME = "OrcaBusMain"
 
 export const SSM_PARAMETER_LIST_FOR_CTTSO_LAUNCH_LAMBDAS = [
     PIPELINE_ID_SSM_PARAMETER_PATH

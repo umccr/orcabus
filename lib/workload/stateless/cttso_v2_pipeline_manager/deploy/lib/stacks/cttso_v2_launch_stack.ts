@@ -4,6 +4,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
+import * as events from 'aws-cdk-lib/aws-events';
 import { ctTSOv2LaunchStepFunctionStateMachineConstruct } from '../constructs/cttso_v2_launch_step_function';
 import { LambdaLayerConstruct } from '../constructs/lambda_layer';
 
@@ -14,6 +15,7 @@ interface ctTSOV2LaunchStateMachineStackProps extends cdk.StackProps {
   cttso_v2_launch_state_machine_arn_ssm_parameter_path: string;
   cttso_v2_launch_state_machine_name_ssm_parameter_path: string;
   dynamodb_table_ssm_parameter_path: string;
+  eventbus_name: string;
 }
 
 export class ctTSOV2LaunchStateMachineStack extends cdk.Stack {
@@ -73,6 +75,13 @@ export class ctTSOV2LaunchStateMachineStack extends cdk.Stack {
       ),
     );
 
+    // Get event bus
+    const eventbus_obj = events.EventBus.fromEventBusName(
+      this,
+      'eventbus',
+      props.eventbus_name,
+    );
+
     const cttso_v2_launch_state_machine = new ctTSOv2LaunchStepFunctionStateMachineConstruct(
       this,
       id,
@@ -83,6 +92,7 @@ export class ctTSOV2LaunchStateMachineStack extends cdk.Stack {
         lambda_layer_obj: lambda_layer_obj,
         icav2_copy_batch_state_machine_obj: icav2_copy_batch_stack_state_machine_obj,
         ssm_parameter_obj_list: ssm_parameter_obj_list,
+        eventbus_obj: eventbus_obj,
         /* Lambdas paths */
         generate_db_uuid_lambda_path: __dirname + '/../../../lambdas/generate_db_uuid', // __dirname + '/../../../lambdas/generate_uuid'
         generate_trimmed_samplesheet_lambda_path: __dirname + '/../../../lambdas/generate_and_trim_cttso_samplesheet_dict', // __dirname + '/../../../lambdas/generate_and_trim_cttso_samplesheet_dict'
@@ -90,7 +100,7 @@ export class ctTSOV2LaunchStateMachineStack extends cdk.Stack {
         generate_copy_manifest_dict_lambda_path: __dirname + '/../../../lambdas/generate_copy_manifest_dict', // __dirname + '/../../../lambdas/generate_copy_manifest_dict'
         launch_cttso_nextflow_pipeline_lambda_path: __dirname + '/../../../lambdas/launch_cttso_nextflow_pipeline', // __dirname + '../launch_cttso_nextflow_pipeline'
         /* Step function templates */
-        workflow_definition_body_path: __dirname + '/../../../step_functions_templates/cttso_v2_launch_workflow_state_machine.json', // __dirname + '/../../../step_functions_templates/cttso_v2_launch_workflow_state_machine.json'
+        workflow_definition_body_path: __dirname + '/../../../step_functions_templates/cttso_v2_launch_workflow_state_machine.asl.json', // __dirname + '/../../../step_functions_templates/cttso_v2_launch_workflow_state_machine.asl.json'
       },
     );
 

@@ -409,7 +409,7 @@
           {
             "Detail.$": "$.database_event_data",
             "DetailType": "ctTSOv2StateChange",
-            "EventBusName": "OrcaBus",
+            "EventBusName": "${__eventbus_name__}",
             "Source": "orcabus.cttso_v2",
             "Resources": []
           }

@@ -7,6 +7,8 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager'
+import * as events from 'aws-cdk-lib/aws-events';
+import * as events_targets from 'aws-cdk-lib/aws-events-targets';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
@@ -19,6 +21,7 @@ interface ctTSOv2LaunchStepFunctionConstructProps {
   lambda_layer_obj: LambdaLayerConstruct,
   icav2_copy_batch_state_machine_obj: sfn.IStateMachine,
   ssm_parameter_obj_list: ssm.IStringParameter[]; // List of parameters the workflow session state machine will need access to
+  eventbus_obj: events.IEventBus;
   /* Lambdas paths */
   generate_db_uuid_lambda_path: string; // __dirname + '/../../../lambdas/generate_db_uuid'
   generate_trimmed_samplesheet_lambda_path: string; // __dirname + '/../../../lambdas/generate_trimmed_samplesheet_lambda_path'
@@ -169,13 +172,18 @@ export class ctTSOv2LaunchStepFunctionStateMachineConstruct extends Construct {
       definitionBody: DefinitionBody.fromFile(props.workflow_definition_body_path),
       // definitionSubstitutions
       definitionSubstitutions: {
+        /* Lambda arns */
         '__generate_db_uuid__': generate_db_uuid_lambda_obj.functionArn,
         '__launch_cttso_nextflow_pipeline__': launch_cttso_nextflow_pipeline_lambda_obj.functionArn,
         '__generate_copy_manifest_dict__': generate_copy_manifest_dict_lambda_obj.functionArn,
         '__generate_trimmed_samplesheet__': generate_trimmed_samplesheet_lambda_obj.functionArn,
         '__upload_samplesheet_to_cache_dir__': upload_samplesheet_to_cache_dir_lambda_obj.functionArn,
+        /* Subfunction state machines */
         '__copy_batch_data_state_machine_arn__': props.icav2_copy_batch_state_machine_obj.stateMachineArn,
-        '__table_name__': props.dynamodb_table_obj.tableName
+        /* Dynamodb tables */
+        '__table_name__': props.dynamodb_table_obj.tableName,
+        /* Event bus to push to */
+        '__eventbus_name__': props.eventbus_obj.eventBusName
       },
     });
 
@@ -221,6 +229,32 @@ export class ctTSOv2LaunchStepFunctionStateMachineConstruct extends Construct {
     props.icav2_copy_batch_state_machine_obj.grantStartExecution(
       stateMachine.role
     )
+
+    // Trigger state machine on event
+    const rule = new events.Rule(this, 'cttso_v2_launch_step_function_rule', {
+      eventBus: props.eventbus_obj,
+      eventPattern: {
+        source: ['orcabus.wfm'],
+        detailType: ['WorkflowRunStateChange'],
+        /*
+        FIXME - nothing is set in stone yet
+        */
+        detail: {
+          status: ['ready_to_run'],
+          workflow: ['cttso_v2_launch'],
+        },
+      },
+    });
+
+    // Add target of event to be the state machine
+    rule.addTarget(
+      new events_targets.SfnStateMachine(stateMachine, {
+        input: events.RuleTargetInput.fromEventPath('$.detail'),
+      })
+    );
+
+    props.eventbus_obj.grantPutEventsTo(stateMachine.role);
+
 
     // Set outputs
     this.cttso_v2_launch_state_machine_name = stateMachine.stateMachineName;

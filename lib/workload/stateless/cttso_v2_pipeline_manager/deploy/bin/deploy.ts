@@ -7,7 +7,7 @@ import {
   CTTSO_V2_LAUNCH_STATE_MACHINE_NAME_SSM_PARAMETER_PATH,
   DYNAMODB_TABLE_NAME_SSM_PARAMETER_PATH,
   ICAV2_ACCESS_TOKEN_SECRET_ID,
-  ICAV2_COPY_BATCH_UTILITY_STATE_MACHINE_NAME_SSM_PARAMETER_PATH,
+  ICAV2_COPY_BATCH_UTILITY_STATE_MACHINE_NAME_SSM_PARAMETER_PATH, ORCABUS_EVENT_NAME,
   SSM_PARAMETER_LIST_FOR_CTTSO_LAUNCH_LAMBDAS,
 } from '../constants';
 
@@ -19,6 +19,7 @@ new ctTSOV2LaunchStateMachineStack(app, 'ctTSOv2LaunchStatemachineStack', {
   cttso_v2_launch_state_machine_arn_ssm_parameter_path: CTTSO_V2_LAUNCH_STATE_MACHINE_ARN_SSM_PARAMETER_PATH,
   cttso_v2_launch_state_machine_name_ssm_parameter_path: CTTSO_V2_LAUNCH_STATE_MACHINE_NAME_SSM_PARAMETER_PATH,
   dynamodb_table_ssm_parameter_path: DYNAMODB_TABLE_NAME_SSM_PARAMETER_PATH,
+  eventbus_name: ORCABUS_EVENT_NAME,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION
