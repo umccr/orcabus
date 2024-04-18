@@ -83,12 +83,12 @@ def handler(event, context):
 
             upload_file(dest_bucket, dest_key, output_path)
 
-
-if __name__ == "__main__":
-    handler(
-        {
-            "contents": "[Header]\nFileFormatVersion,2\nRunName,Tsqn-NebRNA231113-MLeeSTR_16Nov23\nInstrumentType,NovaSeq\n\n[Reads]\nRead1Cycles,151\nRead2Cycles,151\nIndex1Cycles,10\nIndex2Cycles,10\n\n[TSO500L_Settings]\nAdapterRead1,CTGTCTCTTATACACATCT\nAdapterRead2,CTGTCTCTTATACACATCT\nAdapterBehaviour,trim\nMinimumTrimmedReadLength,35\nMaskShortReads,35\nOverrideCycles,U7N1Y143;I10;I10;U7N1Y143\n\n[TSO500L_Data]\nSample_ID,Sample_Type,Lane,Index,Index2,I7_Index_ID,I5_Index_ID\nL2301368,DNA,1,GACTGAGTAG,CACTATCAAC,UDP0009,UDP0009\n",
-            "dest_uri": "s3://pdx-cgwxfer-test/melbournetest/231116_A01052_0172_BHVLM5DSX7__SBJ04405__L2301368__ot__003__20240415abcd0001/SampleSheet.csv"
-        },
-        None
-    )
+#
+# if __name__ == "__main__":
+#     handler(
+#         {
+#             "contents": "[Header]\nFileFormatVersion,2\nRunName,Tsqn-NebRNA231113-MLeeSTR_16Nov23\nInstrumentType,NovaSeq\n\n[Reads]\nRead1Cycles,151\nRead2Cycles,151\nIndex1Cycles,10\nIndex2Cycles,10\n\n[TSO500L_Settings]\nAdapterRead1,CTGTCTCTTATACACATCT\nAdapterRead2,CTGTCTCTTATACACATCT\nAdapterBehaviour,trim\nMinimumTrimmedReadLength,35\nMaskShortReads,35\nOverrideCycles,U7N1Y143;I10;I10;U7N1Y143\n\n[TSO500L_Data]\nSample_ID,Sample_Type,Lane,Index,Index2,I7_Index_ID,I5_Index_ID\nL2301368,DNA,1,GACTGAGTAG,CACTATCAAC,UDP0009,UDP0009\n",
+#             "dest_uri": "s3://pdx-cgwxfer-test/melbournetest/231116_A01052_0172_BHVLM5DSX7__SBJ04405__L2301368__ot__003__20240415abcd0001/SampleSheet.csv"
+#         },
+#         None
+#     )

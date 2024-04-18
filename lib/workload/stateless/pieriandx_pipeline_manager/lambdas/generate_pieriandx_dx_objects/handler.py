@@ -233,184 +233,184 @@ def handler(event, context):
         "sequencerrun_s3_path": sequencerrun_s3_path
     }
 
-
-if __name__ == "__main__":
-    import json
-    print(
-        json.dumps(
-            handler(
-                {
-                    "dag": {
-                        "name": "dagname",
-                        "description": "dagdescription"
-                    },
-                    "case_metadata": {
-                        "panel_name": "panelname",
-                        "specimen_label": "primarySpecimen",
-                        "sample_type": "patientcare",
-                        "indication": "indication",
-                        "disease": {
-                            "code": "diseasecode",
-                            "label": "diseaselabel"
-                        },
-                        "is_identified": True,
-                        "case_accession_number": "caseaccessionnumber",
-                        "specimen_type": {
-                            "code": "specimentypecode",
-                            "label": "specimentypelabel"
-                        },
-                        "external_specimen_id": "externalspecimenid",
-                        "date_accessioned": "2021-01-01T00:00:00Z",
-                        "date_collected": "2021-01-01T00:00:00Z",
-                        "date_received": "2021-01-01T00:00:00Z",
-                        "date_of_birth": "1970-01-01",
-                        "first_name": "John",
-                        "last_name": "Doe",
-                        "medical_record_numbers": {
-                            "mrn": "mrn",
-                            "medical_facility": {
-                                "facility": "facility",
-                                "hospital_number": "hospitalnumber"
-                            }
-                        },
-                        "requesting_physician": {
-                            "first_name": "Meredith",
-                            "last_name": "Gray"
-                        }
-                    },
-                    "data_files": {
-                        "microsat_output": "icav2://project-id/path/to/sample-microsat_output.txt",
-                        "tmb_metrics": "icav2://project-id/path/to/sample-tmb_metrics.txt",
-                        "cnv": "icav2://project-id/path/to/sample-cnv.txt",
-                        "hard_filtered": "icav2://project-id/path/to/sample-hard_filtered.txt",
-                        "fusions": "icav2://project-id/path/to/sample-fusions.txt",
-                        "metrics_output": "icav2://project-id/path/to/sample-metrics_output.txt",
-                    },
-                    "samplesheet_b64gz": "H4sIAAAAAAAAA42SX0vDMBTF3/cpRp4VktY5/zyFCUXQIto9iEjI7N0abNItyYZj7Lt7065rh3uQ0tLc37npybndDYZDUoDMwZK74Q5XuJ6rEsS8slp6sQHrVGUQRhcNtWsjjNSAJZK5lblMYfaa8ihmjMWXz08Ab9mrYNdptYlicmhSxnm71mC88Ntl3YtcvsGKoGAfVMSiDde5CEvBxNf2q4RQZiN20SPROaJMDj8nTfSE9Jvo8cPeVSNKS+HAe2UWPQ8yl0sPVjRegutJlmQTvDKe8Qle+Nqe8UQc/VM8g0JuVLUO8RNvlW4FWhml11qEmoa82bUEs/AFSuNRK5PuW7iisl60+R1ZhcOzKofu0GQ6Ttk7u4rvHxmt77ZA/qSRSy+x5aPeq8kDqZN6iX+HysNuT1FMWXx9c/Dc4XbGDynvWClNKLJjoZ5JkCUck+JJxhNyCpsUkWJ0nE96dCyaiTZGpg8vlNLbHh+d5TXe4/NzsB/8AvJdybj8AgAA",
-                    "sequencerrun_s3_path_root": "s3://pieriandx/melbourne",
-                    "instrument_run_id": "20201203_A00123_0001_BHJGJFDS",
-                    "portal_run_id": "20240411235959",
-                },
-                None
-            ),
-            indent=2
-        )
-    )
-# Yields
-# {
-#   "case_creation_obj": {
-#     "identified": true,
-#     "indication": "indication",
-#     "panelName": "panelname",
-#     "sampleType": "patientcare",
-#     "specimens": [
-#       {
-#         "accessionNumber": "caseaccessionnumber",
-#         "dateAccessioned": "2021-01-01T00:00:00Z",
-#         "dateReceived": "2021-01-01T00:00:00Z",
-#         "datecollected": "2021-01-01T00:00:00Z",
-#         "ethnicity": "unknown",
-#         "externalSpecimenId": "externalspecimenid",
-#         "gender": "unknown",
-#         "name": "primarySpecimen",
-#         "race": "unknown",
-#         "type": {
-#           "code": "specimentypecode",
-#           "label": "specimentypelabel"
-#         },
-#         "firstName": "John",
-#         "lastName": "Doe",
-#         "dateOfBirth": "1970-01-01",
-#         "medicalRecordNumbers": [
-#           {
-#             "mrn": "mrn",
-#             "medicalFacility": {
-#               "facility": "facility",
-#               "hospitalNumber": "hospitalnumber"
-#             }
-#           }
-#         ]
-#       }
-#     ],
-#     "dagDescription": "dagdescription",
-#     "dagName": "dagname",
-#     "disease": {
-#       "code": "diseasecode",
-#       "label": "diseaselabel"
-#     },
-#     "physicians": [
-#       {
-#         "firstName": "Meredith",
-#         "lastName": "Gray"
-#       }
-#     ]
-#   },
-#   "sequencerrun_creation_obj": {
-#     "runId": "20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959",
-#     "specimens": [
-#       {
-#         "accessionNumber": "caseaccessionnumber",
-#         "barcode": "GACTGAGTAG+CACTATCAAC",
-#         "lane": "1",
-#         "sampleId": "L2301368",
-#         "sampleType": "DNA"
-#       }
-#     ],
-#     "type": "pairedEnd"
-#   },
-#   "informaticsjob_creation_obj": {
-#     "input": [
-#       {
-#         "accessionNumber": "caseaccessionnumber",
-#         "sequencerRunInfos": [
-#           {
-#             "accessionNumber": "caseaccessionnumber",
-#             "barcode": "GACTGAGTAG+CACTATCAAC",
-#             "lane": "1",
-#             "sampleId": "L2301368",
-#             "sampleType": "DNA"
-#           }
-#         ]
-#       }
-#     ]
-#   },
-#   "data_files": [
-#     {
-#       "src_uri": "icav2://project-id/path/to/sample-microsat_output.txt",
-#       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368.microsat_output.json",
-#       "needs_decompression": false,
-#       "contents": null
-#     },
-#     {
-#       "src_uri": "icav2://project-id/path/to/sample-tmb_metrics.txt",
-#       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368.tmb.metrics.csv",
-#       "needs_decompression": false,
-#       "contents": null
-#     },
-#     {
-#       "src_uri": "icav2://project-id/path/to/sample-cnv.txt",
-#       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368_cnv.vcf",
-#       "needs_decompression": false,
-#       "contents": null
-#     },
-#     {
-#       "src_uri": "icav2://project-id/path/to/sample-hard_filtered.txt",
-#       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368.hard-filtered.vcf",
-#       "needs_decompression": false,
-#       "contents": null
-#     },
-#     {
-#       "src_uri": "icav2://project-id/path/to/sample-fusions.txt",
-#       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368.fusions.csv",
-#       "needs_decompression": false,
-#       "contents": null
-#     },
-#     {
-#       "src_uri": "icav2://project-id/path/to/sample-metrics_output.txt",
-#       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368_MetricsOutput.tsv",
-#       "needs_decompression": false,
-#       "contents": null
-#     }
-#   ],
-#   "sequencerrun_s3_path": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959"
-# }
+#
+# if __name__ == "__main__":
+#     import json
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "dag": {
+#                         "name": "dagname",
+#                         "description": "dagdescription"
+#                     },
+#                     "case_metadata": {
+#                         "panel_name": "panelname",
+#                         "specimen_label": "primarySpecimen",
+#                         "sample_type": "patientcare",
+#                         "indication": "indication",
+#                         "disease": {
+#                             "code": "diseasecode",
+#                             "label": "diseaselabel"
+#                         },
+#                         "is_identified": True,
+#                         "case_accession_number": "caseaccessionnumber",
+#                         "specimen_type": {
+#                             "code": "specimentypecode",
+#                             "label": "specimentypelabel"
+#                         },
+#                         "external_specimen_id": "externalspecimenid",
+#                         "date_accessioned": "2021-01-01T00:00:00Z",
+#                         "date_collected": "2021-01-01T00:00:00Z",
+#                         "date_received": "2021-01-01T00:00:00Z",
+#                         "date_of_birth": "1970-01-01",
+#                         "first_name": "John",
+#                         "last_name": "Doe",
+#                         "medical_record_numbers": {
+#                             "mrn": "mrn",
+#                             "medical_facility": {
+#                                 "facility": "facility",
+#                                 "hospital_number": "hospitalnumber"
+#                             }
+#                         },
+#                         "requesting_physician": {
+#                             "first_name": "Meredith",
+#                             "last_name": "Gray"
+#                         }
+#                     },
+#                     "data_files": {
+#                         "microsat_output": "icav2://project-id/path/to/sample-microsat_output.txt",
+#                         "tmb_metrics": "icav2://project-id/path/to/sample-tmb_metrics.txt",
+#                         "cnv": "icav2://project-id/path/to/sample-cnv.txt",
+#                         "hard_filtered": "icav2://project-id/path/to/sample-hard_filtered.txt",
+#                         "fusions": "icav2://project-id/path/to/sample-fusions.txt",
+#                         "metrics_output": "icav2://project-id/path/to/sample-metrics_output.txt",
+#                     },
+#                     "samplesheet_b64gz": "H4sIAAAAAAAAA42SX0vDMBTF3/cpRp4VktY5/zyFCUXQIto9iEjI7N0abNItyYZj7Lt7065rh3uQ0tLc37npybndDYZDUoDMwZK74Q5XuJ6rEsS8slp6sQHrVGUQRhcNtWsjjNSAJZK5lblMYfaa8ihmjMWXz08Ab9mrYNdptYlicmhSxnm71mC88Ntl3YtcvsGKoGAfVMSiDde5CEvBxNf2q4RQZiN20SPROaJMDj8nTfSE9Jvo8cPeVSNKS+HAe2UWPQ8yl0sPVjRegutJlmQTvDKe8Qle+Nqe8UQc/VM8g0JuVLUO8RNvlW4FWhml11qEmoa82bUEs/AFSuNRK5PuW7iisl60+R1ZhcOzKofu0GQ6Ttk7u4rvHxmt77ZA/qSRSy+x5aPeq8kDqZN6iX+HysNuT1FMWXx9c/Dc4XbGDynvWClNKLJjoZ5JkCUck+JJxhNyCpsUkWJ0nE96dCyaiTZGpg8vlNLbHh+d5TXe4/NzsB/8AvJdybj8AgAA",
+#                     "sequencerrun_s3_path_root": "s3://pieriandx/melbourne",
+#                     "instrument_run_id": "20201203_A00123_0001_BHJGJFDS",
+#                     "portal_run_id": "20240411235959",
+#                 },
+#                 None
+#             ),
+#             indent=2
+#         )
+#     )
+# # Yields
+# # {
+# #   "case_creation_obj": {
+# #     "identified": true,
+# #     "indication": "indication",
+# #     "panelName": "panelname",
+# #     "sampleType": "patientcare",
+# #     "specimens": [
+# #       {
+# #         "accessionNumber": "caseaccessionnumber",
+# #         "dateAccessioned": "2021-01-01T00:00:00Z",
+# #         "dateReceived": "2021-01-01T00:00:00Z",
+# #         "datecollected": "2021-01-01T00:00:00Z",
+# #         "ethnicity": "unknown",
+# #         "externalSpecimenId": "externalspecimenid",
+# #         "gender": "unknown",
+# #         "name": "primarySpecimen",
+# #         "race": "unknown",
+# #         "type": {
+# #           "code": "specimentypecode",
+# #           "label": "specimentypelabel"
+# #         },
+# #         "firstName": "John",
+# #         "lastName": "Doe",
+# #         "dateOfBirth": "1970-01-01",
+# #         "medicalRecordNumbers": [
+# #           {
+# #             "mrn": "mrn",
+# #             "medicalFacility": {
+# #               "facility": "facility",
+# #               "hospitalNumber": "hospitalnumber"
+# #             }
+# #           }
+# #         ]
+# #       }
+# #     ],
+# #     "dagDescription": "dagdescription",
+# #     "dagName": "dagname",
+# #     "disease": {
+# #       "code": "diseasecode",
+# #       "label": "diseaselabel"
+# #     },
+# #     "physicians": [
+# #       {
+# #         "firstName": "Meredith",
+# #         "lastName": "Gray"
+# #       }
+# #     ]
+# #   },
+# #   "sequencerrun_creation_obj": {
+# #     "runId": "20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959",
+# #     "specimens": [
+# #       {
+# #         "accessionNumber": "caseaccessionnumber",
+# #         "barcode": "GACTGAGTAG+CACTATCAAC",
+# #         "lane": "1",
+# #         "sampleId": "L2301368",
+# #         "sampleType": "DNA"
+# #       }
+# #     ],
+# #     "type": "pairedEnd"
+# #   },
+# #   "informaticsjob_creation_obj": {
+# #     "input": [
+# #       {
+# #         "accessionNumber": "caseaccessionnumber",
+# #         "sequencerRunInfos": [
+# #           {
+# #             "accessionNumber": "caseaccessionnumber",
+# #             "barcode": "GACTGAGTAG+CACTATCAAC",
+# #             "lane": "1",
+# #             "sampleId": "L2301368",
+# #             "sampleType": "DNA"
+# #           }
+# #         ]
+# #       }
+# #     ]
+# #   },
+# #   "data_files": [
+# #     {
+# #       "src_uri": "icav2://project-id/path/to/sample-microsat_output.txt",
+# #       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368.microsat_output.json",
+# #       "needs_decompression": false,
+# #       "contents": null
+# #     },
+# #     {
+# #       "src_uri": "icav2://project-id/path/to/sample-tmb_metrics.txt",
+# #       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368.tmb.metrics.csv",
+# #       "needs_decompression": false,
+# #       "contents": null
+# #     },
+# #     {
+# #       "src_uri": "icav2://project-id/path/to/sample-cnv.txt",
+# #       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368_cnv.vcf",
+# #       "needs_decompression": false,
+# #       "contents": null
+# #     },
+# #     {
+# #       "src_uri": "icav2://project-id/path/to/sample-hard_filtered.txt",
+# #       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368.hard-filtered.vcf",
+# #       "needs_decompression": false,
+# #       "contents": null
+# #     },
+# #     {
+# #       "src_uri": "icav2://project-id/path/to/sample-fusions.txt",
+# #       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368.fusions.csv",
+# #       "needs_decompression": false,
+# #       "contents": null
+# #     },
+# #     {
+# #       "src_uri": "icav2://project-id/path/to/sample-metrics_output.txt",
+# #       "dest_uri": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959/L2301368_MetricsOutput.tsv",
+# #       "needs_decompression": false,
+# #       "contents": null
+# #     }
+# #   ],
+# #   "sequencerrun_s3_path": "s3://pieriandx/melbourne/20201203_A00123_0001_BHJGJFDS__caseaccessionnumber__20240411235959"
+# # }

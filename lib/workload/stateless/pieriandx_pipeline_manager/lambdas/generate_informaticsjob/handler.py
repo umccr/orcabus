@@ -57,34 +57,34 @@ def handler(event, context):
 
     return response.json()
 
-
-if __name__ == "__main__":
-    import json
-
-    print(
-        json.dumps(
-            handler(
-                {
-                    "informaticsjob_creation_obj": {
-                        "input": [
-                            {
-                                "accessionNumber": "SBJ04405__L2301368__ot__003",
-                                "sequencerRunInfos": [
-                                    {
-                                        "runId": "231116_A01052_0172_BHVLM5DSX7__SBJ04405__L2301368__ot__003__20240415abcd0001",
-                                        "barcode": "GACTGAGTAG-CACTATCAAC",
-                                        "lane": "1",
-                                        "sampleId": "L2301368",
-                                        "sampleType": "DNA"
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    "case_id": "100938"
-                },
-                None
-            ),
-            indent=2
-        )
-    )
+#
+# if __name__ == "__main__":
+#     import json
+#
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "informaticsjob_creation_obj": {
+#                         "input": [
+#                             {
+#                                 "accessionNumber": "SBJ04405__L2301368__ot__003",
+#                                 "sequencerRunInfos": [
+#                                     {
+#                                         "runId": "231116_A01052_0172_BHVLM5DSX7__SBJ04405__L2301368__ot__003__20240415abcd0001",
+#                                         "barcode": "GACTGAGTAG-CACTATCAAC",
+#                                         "lane": "1",
+#                                         "sampleId": "L2301368",
+#                                         "sampleType": "DNA"
+#                                     }
+#                                 ]
+#                             }
+#                         ]
+#                     },
+#                     "case_id": "100938"
+#                 },
+#                 None
+#             ),
+#             indent=2
+#         )
+#     )

@@ -55,34 +55,34 @@ def handler(event, context):
 
     return response.json()
 
-
-if __name__ == "__main__":
-    import json
-    print(
-        json.dumps(
-            handler(
-                {
-                    "sequencerrun_creation_obj": {
-                        "runId": "231116_A01052_0172_BHVLM5DSX7__SBJ04405__L2301368__ot__003__20240415abcd0001",
-                        "specimens": [
-                            {
-                                "accessionNumber": "SBJ04405__L2301368__ot__003",
-                                "barcode": "GACTGAGTAG-CACTATCAAC",
-                                "lane": "1",
-                                "sampleId": "L2301368",
-                                "sampleType": "DNA"
-                            }
-                        ],
-                        "type": "pairedEnd"
-                    }
-                },
-                None
-            ),
-            indent=2
-        )
-    )
-
-# Yields
-# {
-#   "id": "38862"
-# }
+#
+# if __name__ == "__main__":
+#     import json
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "sequencerrun_creation_obj": {
+#                         "runId": "231116_A01052_0172_BHVLM5DSX7__SBJ04405__L2301368__ot__003__20240415abcd0001",
+#                         "specimens": [
+#                             {
+#                                 "accessionNumber": "SBJ04405__L2301368__ot__003",
+#                                 "barcode": "GACTGAGTAG-CACTATCAAC",
+#                                 "lane": "1",
+#                                 "sampleId": "L2301368",
+#                                 "sampleType": "DNA"
+#                             }
+#                         ],
+#                         "type": "pairedEnd"
+#                     }
+#                 },
+#                 None
+#             ),
+#             indent=2
+#         )
+#     )
+#
+# # Yields
+# # {
+# #   "id": "38862"
+# # }

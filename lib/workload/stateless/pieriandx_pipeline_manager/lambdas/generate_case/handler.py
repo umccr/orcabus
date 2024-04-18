@@ -87,69 +87,69 @@ def handler(event, context):
 
     return response.json()
 
-
-if __name__ == "__main__":
-    import json
-
-    logging.basicConfig(level=logging.DEBUG)
-    print(
-        json.dumps(
-            handler(
-                {
-                    "case_creation_obj": {
-                        "identified": True,
-                        "indication": "Test",
-                        "panelName": "tso500_DRAGEN_ctDNA_v2_1_Universityofmelbourne",
-                        "sampleType": "patientcare",
-                        "specimens": [
-                            {
-                                "accessionNumber": "SBJ04405__L2301368__ot__002",
-                                "dateAccessioned": "2021-01-01T00:00:00Z",
-                                "dateReceived": "2021-01-01T00:00:00Z",
-                                "datecollected": "2024-02-20T20:17:00Z",
-                                "externalSpecimenId": "externalspecimenid",
-                                "name": "primarySpecimen",
-                                "type": {
-                                    "code": "122561005",
-                                    "label": "Blood specimen from patient"
-                                },
-                                "firstName": "John",
-                                "lastName": "Doe",
-                                "dateOfBirth": "1970-01-01",
-                                "medicalRecordNumbers": [
-                                    {
-                                        "mrn": "3069999",
-                                        "medicalFacility": {
-                                            "facility": "Not Available",
-                                            "hospitalNumber": "99"
-                                        }
-                                    }
-                                ]
-                            }
-                        ],
-                        "dagDescription": "tso500_ctdna_workflow",
-                        "dagName": "cromwell_tso500_ctdna_workflow_1.0.4",
-                        "disease": {
-                            "code": "64572001",
-                            "label": "Disease"
-                        },
-                        "physicians": [
-                            {
-                                "firstName": "Meredith",
-                                "lastName": "Gray"
-                            }
-                        ]
-                    }
-                },
-                None
-            ),
-            indent=2
-        )
-    )
-
-# Yields
-# {
-#   'id': '100937',
-#   'accessionNumber': 'SBJ04405__L2301368__ot__002',
-#   'dateCreated': '2024-04-14'
-# }
+#
+# if __name__ == "__main__":
+#     import json
+#
+#     logging.basicConfig(level=logging.DEBUG)
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "case_creation_obj": {
+#                         "identified": True,
+#                         "indication": "Test",
+#                         "panelName": "tso500_DRAGEN_ctDNA_v2_1_Universityofmelbourne",
+#                         "sampleType": "patientcare",
+#                         "specimens": [
+#                             {
+#                                 "accessionNumber": "SBJ04405__L2301368__ot__002",
+#                                 "dateAccessioned": "2021-01-01T00:00:00Z",
+#                                 "dateReceived": "2021-01-01T00:00:00Z",
+#                                 "datecollected": "2024-02-20T20:17:00Z",
+#                                 "externalSpecimenId": "externalspecimenid",
+#                                 "name": "primarySpecimen",
+#                                 "type": {
+#                                     "code": "122561005",
+#                                     "label": "Blood specimen from patient"
+#                                 },
+#                                 "firstName": "John",
+#                                 "lastName": "Doe",
+#                                 "dateOfBirth": "1970-01-01",
+#                                 "medicalRecordNumbers": [
+#                                     {
+#                                         "mrn": "3069999",
+#                                         "medicalFacility": {
+#                                             "facility": "Not Available",
+#                                             "hospitalNumber": "99"
+#                                         }
+#                                     }
+#                                 ]
+#                             }
+#                         ],
+#                         "dagDescription": "tso500_ctdna_workflow",
+#                         "dagName": "cromwell_tso500_ctdna_workflow_1.0.4",
+#                         "disease": {
+#                             "code": "64572001",
+#                             "label": "Disease"
+#                         },
+#                         "physicians": [
+#                             {
+#                                 "firstName": "Meredith",
+#                                 "lastName": "Gray"
+#                             }
+#                         ]
+#                     }
+#                 },
+#                 None
+#             ),
+#             indent=2
+#         )
+#     )
+#
+# # Yields
+# # {
+# #   'id': '100937',
+# #   'accessionNumber': 'SBJ04405__L2301368__ot__002',
+# #   'dateCreated': '2024-04-14'
+# # }
