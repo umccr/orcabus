@@ -1,13 +1,14 @@
-import { BsRunsUploadManagerConfig } from '../../lib/workload/stateless/stacks/bs-runs-upload-manager/deploy/lib/stacks/bs_runs_upload_manager_stack';
 import {
   devGdsBsRunsUploadLogPath,
   stgGdsBsRunsUploadLogPath,
   prodGdsBsRunsUploadLogPath,
   AccountName,
   icaAccessTokenSecretName,
-  jwtSecretName, basespaceAccessTokenSecretName,
+  jwtSecretName,
+  basespaceAccessTokenSecretName,
   eventBusName,
 } from '../constants';
+import { BsRunsUploadManagerConfig } from '../../lib/workload/stateless/stacks/bs-runs-upload-manager/deploy/stacks/bs_runs_upload_manager_stack';
 
 export const getBsRunsUploadManagerStackProps = (n: AccountName): BsRunsUploadManagerConfig => {
   const baseConfig = {
