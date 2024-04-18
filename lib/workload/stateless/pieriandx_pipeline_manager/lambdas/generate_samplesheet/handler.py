@@ -27,8 +27,20 @@ def handler(event, context) -> Dict[str, str]:
     # Decompress dict
     samplesheet_dict = decompress_dict(samplesheet_b64gz)
 
+    # Convert to string
+    samplesheet_str = str(v2_samplesheet_writer(samplesheet_dict).read())
+
+    # Replace TSO500L_Data header line
+    # Sample_ID,Sample_Type,Lane,Index,Index2,I7_Index_ID,I5_Index_ID
+    # With
+    # Sample_ID,Sample_Type,Lane,index,index2,I7_Index_ID,I5_Index_ID
+    # Without changing the Index1Cycles and Index2Cycles of the Reads section
+    # Hacky and dirty workaround required because PierianDx is not able to handle Index / Index2 in uppercase
+    # Assumes Index and Index2 fall within the middle of the index line
+    samplesheet_str = samplesheet_str.replace(',Index', ',index')
+
     return {
-        "samplesheet_str": str(v2_samplesheet_writer(samplesheet_dict).read())
+        "samplesheet_str": samplesheet_str
     }
 
 
