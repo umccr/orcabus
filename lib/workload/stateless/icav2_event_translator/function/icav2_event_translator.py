@@ -95,7 +95,7 @@ def handler(event, context):
     
     # Check conditions for the event to be processed: 
     if (not icav2_event_checker(eventCode, analysisStatus, pipeline_id, userReference)):
-        logger.error("Illegal event received. Event code, analysis status, pipeline id, user reference: ", eventCode, analysisStatus, pipeline_id, userReference)
+        logger.error("Illegal ICAV2 event received. Event code, analysis status, pipeline id, user reference: ", eventCode, analysisStatus, pipeline_id, userReference)
         raise ValueError("Event does not meet ICAv2 transltor processing conditions.")
     
     # Generate internal event with required attributes
@@ -106,40 +106,38 @@ def handler(event, context):
         "tags": tags
         }
 
-        # send the internal event to the event bus
-    response = events.put_events(
+    # send the internal event to the event bus
+    try:
+      events.put_events(
         Entries=[
             {
-                "Source": 'icav2_event_translator',
+                "Source": 'ocranus.iet', # icav2 event translator
                 "DetailType": "ICAV2_INTERNAL_EVENT",
                 "Detail": json.dumps(internal_event),
                 "EventBusName": eventBusName
             }
         ]
-    )
-    # check if the event was successfully sent to the event bus, raise Exception if not
-    if response['FailedEntryCount'] != 0:
-        raise Exception("Failed to send event to the event bus.")
-    
-    logger.info(f"Internal event sent to the event bus. {json.dumps(internal_event)}")
+      )
+      logger.info(f"Internal event sent to the event bus. {json.dumps(internal_event)}")
+    except Exception as e:
+        raise Exception("Failed to send event to the event bus. Error: ", e)
     
     # Store the internal event in the DynamoDB table
-    table = dynamodb.Table(table_name)
-    table.put_item(
-        Item={
-            'id': analysisId,
-            'id_type': 'icav2_analysis_id',
-            'original_external_event': json.dumps(event),
-            'translated_internal_event': json.dumps(internal_event),
-            'timestamp': datetime.datetime.now().isoformat()
-        }
-    )
-    
-    # check if the event was successfully stored in the DynamoDB table, raise Exception if not
-    if response['FailedEntryCount'] != 0:
-        raise Exception("Failed to store event in the DynamoDB table.")
-    
-    logger.info(f"Internal event stored in the DynamoDB table.")
+    try: 
+      table = dynamodb.Table(table_name)
+      table.put_item(
+          Item={
+              'id': analysisId,
+              'id_type': 'icav2_analysis_id',
+              'original_external_event': json.dumps(event),
+              'translated_internal_event': json.dumps(internal_event),
+              'timestamp': datetime.datetime.now().isoformat()
+          }
+      )
+      logger.info(f"Original and Internal events stored in the DynamoDB table.")
+    except Exception as e:
+        raise Exception("Failed to store event in the DynamoDB table. Error: ", e)
+
     return internal_event
 
 

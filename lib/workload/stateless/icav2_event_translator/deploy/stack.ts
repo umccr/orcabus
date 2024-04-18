@@ -11,15 +11,11 @@ import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
 
 interface Icav2EventTranslatorStackProps extends cdk.StackProps {
+  /** dynamodb name and event bus name */
   icav2EventTranslatorDynamodbTableName: string;
   eventBusName: string;
-  /**
-   * VPC (lookup props) that will be used by resources
-   */
+  /** vpc ann SG for lambda function */
   vpcProps: VpcLookupOptions;
-  /**
-   * Existing security group name to be attached on lambdas
-   */
   lambdaSecurityGroupName: string;
 }
 
