@@ -63,7 +63,7 @@ export class StatelessStackCollection {
       'BsRunsUploadManagerStack',
       {
         ...this.createTemplateProps(env, 'BsRunsUploadManagerStack'),
-        ...statefulConfiguration.bsRunsUploadManagerStackProps,
+        ...statelessConfiguration.bsRunsUploadManagerStackProps,
       }
     );
   }
