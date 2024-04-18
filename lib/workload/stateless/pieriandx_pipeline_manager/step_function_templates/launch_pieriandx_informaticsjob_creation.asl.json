@@ -81,9 +81,9 @@
           }
         },
         {
-          "StartAt": "DynamoDB UpdateItem",
+          "StartAt": "update_db_uuid_partition_key_with_informaticsjob_id",
           "States": {
-            "DynamoDB UpdateItem": {
+            "update_db_uuid_partition_key_with_informaticsjob_id": {
               "Type": "Task",
               "Resource": "arn:aws:states:::dynamodb:updateItem",
               "Parameters": {
@@ -92,10 +92,13 @@
                   "id.$": "$.workflow_inputs.db_uuid",
                   "id_type": "db_uuid"
                 },
-                "UpdateExpression": "SET informaticsjob_id = :informaticsjob_id",
+                "UpdateExpression": "SET informaticsjob_id = :informaticsjob_id, job_status = :job_status",
                 "ExpressionAttributeValues": {
                   ":informaticsjob_id": {
                     "N.$": "$.generate_informaticsjob_step.informaticsjob_id"
+                  },
+                  ":job_status": {
+                    "S": "waiting"
                   }
                 }
               },
