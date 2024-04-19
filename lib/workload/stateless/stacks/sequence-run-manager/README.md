@@ -10,7 +10,7 @@ Namespace: orcabus.srm
 
 - Go to Django project root
 ```
-cd lib/workload/stateless/sequence_run_manager
+cd lib/workload/stateless/stacks/sequence_run_manager
 ```
 _*If you are PyCharmer and opening the whole `orcabus` project (i.e. not doing sparse checkout or not opening directly at this level) then annotate this level `sequence_run_manager` directory as "source" directory in the project structure dialog._
 

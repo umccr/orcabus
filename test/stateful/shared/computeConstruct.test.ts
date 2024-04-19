@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Template } from 'aws-cdk-lib/assertions';
-import { getEnvironmentConfig } from '../../../config/constants';
+import { getEnvironmentConfig } from '../../../config/config';
 import { ComputeConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/compute';
 
 let stack: cdk.Stack;

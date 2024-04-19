@@ -19,7 +19,7 @@
     "lint-fix": "eslint --fix .",
     "prettier": "prettier --check .",
     "prettier-fix": "prettier --write .",
-    "cdk-stateless": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/stateless-pipeline.ts'",
+    "cdk-stateless": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/statelessPipeline.ts'",
     "cdk-stateful": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/statefulPipeline.ts'"
   },
   "dependencies": {

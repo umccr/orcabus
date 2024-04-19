@@ -3,7 +3,7 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import { Vpc, VpcLookupOptions, SubnetType, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
@@ -11,7 +11,7 @@ import * as sm from 'aws-cdk-lib/aws-secretsmanager';
 import { MicroserviceConfig, DbAuthType } from '../function/type';
 import package_json from '../package.json';
 
-export type PostgresManagerConfig = {
+export type PostgresManagerStackProps = {
   masterSecretName: string;
   dbClusterIdentifier: string;
   microserviceDbConfig: MicroserviceConfig;
@@ -21,21 +21,30 @@ export type PostgresManagerConfig = {
    * The schedule (in Duration) that will rotate the microservice app secret
    */
   secretRotationSchedule: Duration;
-};
-
-export type PostgresManagerProps = PostgresManagerConfig & {
-  vpc: ec2.IVpc;
-  lambdaSecurityGroup: ec2.ISecurityGroup;
+  /**
+   * VPC (lookup props) that will be used by resources
+   */
+  vpcProps: VpcLookupOptions;
+  /**
+   * Existing security group name to be attached on lambdas
+   */
+  lambdaSecurityGroupName: string;
 };
 
 export class PostgresManagerStack extends Stack {
   // From default: https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.DatabaseSecret.html#excludecharacters
   readonly passExcludedCharacter = '" %+~`#$&()|[]{}:;' + `<>?!'/@"\\")*`;
 
-  constructor(scope: Construct, id: string, props: StackProps & PostgresManagerProps) {
-    super(scope, id);
+  constructor(scope: Construct, id: string, props: StackProps & PostgresManagerStackProps) {
+    super(scope, id, props);
 
-    const { dbClusterIdentifier, microserviceDbConfig } = props;
+    const vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
+    const lambdaSG = SecurityGroup.fromLookupByName(
+      this,
+      'LambdaSecurityGroup',
+      props.lambdaSecurityGroupName,
+      vpc
+    );
 
     const masterSecret = secretsmanager.Secret.fromSecretNameV2(
       this,
@@ -49,7 +58,7 @@ export class PostgresManagerStack extends Stack {
     );
 
     const dbCluster = rds.DatabaseCluster.fromDatabaseClusterAttributes(this, 'OrcabusDbCluster', {
-      clusterIdentifier: dbClusterIdentifier,
+      clusterIdentifier: props.dbClusterIdentifier,
       clusterResourceIdentifier: dbClusterResourceId,
       port: props.dbPort,
     });
@@ -75,11 +84,11 @@ export class PostgresManagerStack extends Stack {
         RDS_SECRET_MANAGER_NAME: masterSecret.secretName,
         MICROSERVICE_CONFIG: JSON.stringify(props.microserviceDbConfig),
       },
-      vpc: props.vpc,
+      vpc: vpc,
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        subnetType: SubnetType.PRIVATE_WITH_EGRESS,
       },
-      securityGroups: [props.lambdaSecurityGroup],
+      securityGroups: [lambdaSG],
     };
 
     // 1. lambda responsible on db creation
@@ -99,7 +108,7 @@ export class PostgresManagerStack extends Stack {
     masterSecret.grantRead(initiatePgRdsIam);
 
     // create iam-policy that could be assumed when using the rds-iam
-    for (const microservice of microserviceDbConfig) {
+    for (const microservice of props.microserviceDbConfig) {
       if (microservice.authType == DbAuthType.RDS_IAM) {
         const iamPolicy = new iam.ManagedPolicy(this, `${microservice.name}RdsIamPolicy`, {
           managedPolicyName: PostgresManagerStack.formatRdsPolicyName(microservice.name),
@@ -118,7 +127,7 @@ export class PostgresManagerStack extends Stack {
     };
 
     const secretManagerArray = [];
-    for (const microservice of microserviceDbConfig) {
+    for (const microservice of props.microserviceDbConfig) {
       if (microservice.authType == DbAuthType.USERNAME_PASSWORD) {
         // create secret manager for specific µ-app
         const microSM = new sm.Secret(this, `${microservice.name}UserPassCred`, {
@@ -143,10 +152,10 @@ export class PostgresManagerStack extends Stack {
           secret: microSM,
           target: dbCluster,
           automaticallyAfter: props.secretRotationSchedule,
-          securityGroup: props.lambdaSecurityGroup,
-          vpc: props.vpc,
+          securityGroup: lambdaSG,
+          vpc: vpc,
           vpcSubnets: {
-            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+            subnetType: SubnetType.PRIVATE_WITH_EGRESS,
           },
         });
 

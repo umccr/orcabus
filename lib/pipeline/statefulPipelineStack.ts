@@ -7,7 +7,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as chatbot from 'aws-cdk-lib/aws-chatbot';
 import * as codestarnotifications from 'aws-cdk-lib/aws-codestarnotifications';
-import { getEnvironmentConfig } from '../../config/constants';
+import { getEnvironmentConfig } from '../../config/config';
 import {
   StatefulStackCollectionProps,
   StatefulStackCollection,

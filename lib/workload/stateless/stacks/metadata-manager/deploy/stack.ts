@@ -1,7 +1,7 @@
 import path from 'path';
 import { Construct } from 'constructs';
 import { Stack, StackProps } from 'aws-cdk-lib';
-import { ISecurityGroup, IVpc } from 'aws-cdk-lib/aws-ec2';
+import { Vpc, VpcLookupOptions, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { Schedule } from 'aws-cdk-lib/aws-events';
 import { Code, Runtime, Architecture, LayerVersion } from 'aws-cdk-lib/aws-lambda';
@@ -11,38 +11,37 @@ import { LambdaSyncGsheetConstruct } from './construct/lambda-sync-gsheet';
 import { LambdaMigrationConstruct } from './construct/lambda-migration';
 import { LambdaAPIConstruct } from './construct/lambda-api';
 import { ApiGatewayConstruct } from './construct/api-gw';
-import { PostgresManagerStack } from '../../postgres_manager/deploy/postgres-manager-stack';
+import { PostgresManagerStack } from '../../postgres-manager/deploy/stack';
 
-/**
- * this config should be configured at the top (root) cdk app
- */
-export type MetadataManagerConfig = {
+export type MetadataManagerStackProps = {
+  /**
+   * VPC (lookup props) that will be used by resources
+   */
+  vpcProps: VpcLookupOptions;
+  /**
+   * Existing security group name to be attached on lambdas
+   */
+  lambdaSecurityGroupName: string;
   /**
    * the interval where the lambda conduct the sync from the single source of truth data
    */
   syncInterval?: Schedule;
 };
 
-/**
- * the props expected when the (metadata-manager) stack is constructed
- */
-export type MetadataManagerProps = MetadataManagerConfig & {
-  /**
-   * the special security group that will be attached to lambdas (e.g. SG allow to access db cluster)
-   */
-  lambdaSecurityGroups: ISecurityGroup;
-  /**
-   * vpc where the lambdas will deploy
-   */
-  vpc: IVpc;
-};
-
 export class MetadataManagerStack extends Stack {
   private readonly MM_RDS_CRED_SECRET_NAME =
     PostgresManagerStack.formatDbSecretManagerName('metadata_manager');
 
-  constructor(scope: Construct, id: string, props: StackProps & MetadataManagerProps) {
-    super(scope, id);
+  constructor(scope: Construct, id: string, props: StackProps & MetadataManagerStackProps) {
+    super(scope, id, props);
+
+    const vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
+    const lambdaSG = SecurityGroup.fromLookupByName(
+      this,
+      'LambdaSecurityGroup',
+      props.lambdaSecurityGroupName,
+      vpc
+    );
 
     // lookup the secret manager resource so we could give lambda permissions to read it
     const dbSecret = Secret.fromSecretNameV2(
@@ -69,13 +68,13 @@ export class MetadataManagerStack extends Stack {
         DJANGO_SETTINGS_MODULE: 'app.settings.aws',
         RDS_CRED_SECRET_NAME: this.MM_RDS_CRED_SECRET_NAME,
       },
-      securityGroups: [props.lambdaSecurityGroups],
-      vpc: props.vpc,
-      vpcSubnets: { subnets: props.vpc.privateSubnets },
+      securityGroups: [lambdaSG],
+      vpc: vpc,
+      vpcSubnets: { subnets: vpc.privateSubnets },
       architecture: Architecture.ARM_64,
     };
 
-    // There are 2 lambdas for this app
+    // There are 3 lambdas for this app
     // 1. To handle API calls from API-GW
     // 2. To do migrations
     // 3. To sync db with external sources (e.g. metadata in gsheet)

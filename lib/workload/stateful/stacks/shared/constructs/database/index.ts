@@ -14,19 +14,19 @@ type MonitoringProps = {
   /**
    * Add cloud watch exports.
    */
-  readonly cloudwatchLogsExports?: string[];
+  cloudwatchLogsExports?: string[];
   /**
    * Enable performance insights.
    */
-  readonly enablePerformanceInsights?: boolean;
+  enablePerformanceInsights?: boolean;
   /**
    * performance insights retention period.
    */
-  readonly performanceInsightsRetention?: rds.PerformanceInsightRetention;
+  performanceInsightsRetention?: rds.PerformanceInsightRetention;
   /**
    * Enable enhanced monitoring by specifying the interval.
    */
-  readonly enhancedMonitoringInterval?: Duration;
+  enhancedMonitoringInterval?: Duration;
 };
 
 /**

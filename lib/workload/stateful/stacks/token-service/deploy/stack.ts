@@ -139,6 +139,17 @@ export class TokenServiceStack extends Stack {
       // just create a blank secret container first
       // the admin should populate after enrolling the service user registration elsewhere
       secretName: this.props.serviceUserSecretName,
+      // We need the initial random generated value in the JSON format. Rather than the plaintext
+      // random string. Otherwise, the rotation function Python json.loads(..) break before even
+      // it can make the first rotation to replace with the proper one.
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          username: 'change.me',
+          email: 'change.me',
+        }),
+        generateStringKey: 'password',
+        excludeCharacters: '/@$"',
+      },
     });
 
     serviceUserSecret.addRotationSchedule('ServiceUserRotationSchedule', {
