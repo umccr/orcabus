@@ -5,13 +5,14 @@ import re
 import logging
 from datetime import datetime, timezone
 
-# Initialize S3 client
-s3 = boto3.client('s3')
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# Initialize S3 client
+s3 = boto3.client('s3')
+
 def handler(event, context):
+
     #assert the environment variable is set
     assert os.getenv('BUCKET_NAME'), "BUCKET_NAME environment variable is not set"
     
@@ -26,7 +27,7 @@ def handler(event, context):
     event_type = sanitize_string(event.get('detail-type', 'undefinedEvent'))
     
     # Formatting the S3 key with year/month/day partitioning
-    key = f'events/year={now.year}/month={now.month:02}/day={now.day:02}/{event_type+'_'+time_stamp}.json'
+    key = f'events/year={now.year}/month={now.month:02}/day={now.day:02}/{event_type+"_"+time_stamp}.json'
 
     # Convert the event to JSON
     event_json = json.dumps(event)
@@ -40,7 +41,7 @@ def handler(event, context):
         s3.put_object(Bucket=BUCKET_NAME, Key=key, Body=event_json, Tagging='&'.join([f'{k}={v}' for k, v in default_tags.items()]))
         logger.info("Event stored:", key)
     except Exception as e:
-        logger.error("Error storing event:", str(e))
+        logger.error("Error storing event: %s", str(e))
         raise e
 
     return {

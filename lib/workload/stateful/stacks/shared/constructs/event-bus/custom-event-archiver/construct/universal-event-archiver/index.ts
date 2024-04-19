@@ -30,7 +30,7 @@ export class UniversalEventArchiverConstruct extends Construct {
     const lambdaSG = props.lambdaSG;
 
     const archiveEventFunction = new PythonFunction(this, 'UniversalEventArchiver', {
-      entry: path.join(__dirname, '../../archiver-service'),
+      entry: path.join(__dirname, '../../archive_service'),
       runtime: this.lambdaRuntimePythonVersion,
       environment: {
         BUCKET_NAME: archiveBucket.bucketName,
@@ -40,7 +40,7 @@ export class UniversalEventArchiverConstruct extends Construct {
       securityGroups: [lambdaSG],
       architecture: Architecture.ARM_64,
       timeout: Duration.seconds(28),
-      index: 'universal_event_achiver.py',
+      index: 'universal_event_archiver.py',
       handler: 'handler',
     });
 
