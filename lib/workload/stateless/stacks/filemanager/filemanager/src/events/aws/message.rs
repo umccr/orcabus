@@ -104,7 +104,7 @@ pub struct Object {
     pub sequencer: Option<String>,
 }
 
-impl From<Record> for FlatS3EventMessages {
+impl From<Record> for FlatS3EventMessage {
     fn from(record: Record) -> Self {
         let Record {
             time,
@@ -124,7 +124,7 @@ impl From<Record> for FlatS3EventMessages {
             sequencer,
         } = object;
 
-        FlatS3EventMessages(vec![FlatS3EventMessage {
+        Self {
             s3_object_id: UuidGenerator::generate(),
             event_time: Some(time),
             bucket,
@@ -140,7 +140,13 @@ impl From<Record> for FlatS3EventMessages {
             event_type: detail_type.as_str().into(),
             number_reordered: 0,
             number_duplicate_events: 0,
-        }])
+        }
+    }
+}
+
+impl From<Record> for FlatS3EventMessages {
+    fn from(record: Record) -> Self {
+        FlatS3EventMessages(vec![record.into()])
     }
 }
 
