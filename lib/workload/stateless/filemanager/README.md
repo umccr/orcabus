@@ -33,12 +33,6 @@ from an `.env` file. E.g. see [`.env.example`][env-example].
 For development of the rust workspace, it's recommended to install a build cache (sccache) to improve compilation speeds:
 
 ```sh
-brew install sccache && export RUSTC_WRAPPER=`which sccache`
-```
-
-or
-
-```sh
 cargo install sccache && export RUSTC_WRAPPER=`which sccache`
 ```
 

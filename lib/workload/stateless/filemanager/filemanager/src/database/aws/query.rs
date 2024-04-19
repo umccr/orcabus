@@ -40,7 +40,7 @@ impl<'a> Query<'a> {
 }
 
 impl QueryResults {
-    pub fn new(results: Vec<String>) -> Self {
-        Self { results }
+    pub fn new(_results: Vec<String>) -> Self {
+        Self { _results }
     } 
 }
