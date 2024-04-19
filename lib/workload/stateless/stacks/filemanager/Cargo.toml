@@ -2,7 +2,8 @@
 resolver = "2"
 
 members = [
-    "filemanager", "filemanager-api",
+    "filemanager",
+    "filemanager-api",
     "filemanager-http-lambda",
     "filemanager-ingest-lambda",
     "filemanager-migrate-lambda"
