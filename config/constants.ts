@@ -4,6 +4,9 @@ export type AccountName = 'beta' | 'gamma' | 'prod';
 
 export const region = 'ap-southeast-2';
 
+// external ICA constants
+export const icaAwsAccountNumber = '079623148045';
+
 // upstream infra: vpc
 const vpcName = 'main-vpc';
 const vpcStackName = 'networking';
