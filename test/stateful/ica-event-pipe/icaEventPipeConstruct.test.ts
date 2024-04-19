@@ -1,5 +1,4 @@
 import * as cdk from 'aws-cdk-lib';
-import { AccountPrincipal } from 'aws-cdk-lib/aws-iam';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { IcaEventPipeConstruct } from '../../../lib/workload/stateful/stacks/ica-event-pipe/constructs/ica_event_pipe';
 
