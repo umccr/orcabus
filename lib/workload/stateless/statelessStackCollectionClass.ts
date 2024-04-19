@@ -13,7 +13,7 @@ import {
 import {
   SequenceRunManagerStack,
   SequenceRunManagerStackProps,
-} from './stacks/sequence-run-manager/deploy/component';
+} from './stacks/sequence-run-manager/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
