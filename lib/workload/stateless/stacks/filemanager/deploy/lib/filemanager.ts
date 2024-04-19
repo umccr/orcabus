@@ -1,13 +1,17 @@
 import { Construct } from 'constructs';
-import { EventSourceProps, IngestFunction } from '../constructs/functions/ingest';
+import { IngestFunction } from '../constructs/functions/ingest';
 import { MigrateFunction } from '../constructs/functions/migrate';
-import * as fn from '../constructs/functions/function';
+import { ObjectsQueryFunction } from '../constructs/functions/query';
 import { DatabaseProps } from '../constructs/functions/function';
 import { Vpc, SecurityGroup, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { Arn, Stack, StackProps } from 'aws-cdk-lib';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { ProviderFunction } from '../../../../../components/provider_function';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
+import { HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
+import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { UserPool } from 'aws-cdk-lib/aws-cognito';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 
@@ -117,41 +121,37 @@ export class Filemanager extends Stack {
       buckets: props.eventSourceBuckets,
     });
 
-    let objectsQuery = new ObjectsQueryFunction(this, 'ObjectsQueryFunction', {
-      vpc: props.vpc,
-      databaseSecret: props.databaseSecret,
-      databaseSecurityGroup: props.databaseSecurityGroup,
-      buildEnvironment: props?.buildEnvironment,
-      rustLog: props?.rustLog, 
+    let objectsQueryLambda = new ObjectsQueryFunction(this, 'ObjectsQueryFunction', {
+      vpc: vpc,
+      host: host,
+      port: props.port,
+      securityGroup: lambdaSecurityGroup
     });
 
-    // Add an authorizer if auth is required.
-    let authorizer = undefined;
-    if (!settings.jwtAuthorizer.public) {
-      // If the cog user pool id is not specified, create a new one.
-      if (settings.jwtAuthorizer.cogUserPoolId === undefined) {
-        const pool = new UserPool(this, "userPool", {
-          userPoolName: "HtsgetRsUserPool",
-        });
-        settings.jwtAuthorizer.cogUserPoolId = pool.userPoolId;
-      }
+    const ObjectsQueryFunctionIntegration = new HttpLambdaIntegration(
+      "FilemanagerQueryApiIntegration",
+      objectsQueryLambda.function
+    );
 
-      authorizer = new HttpJwtAuthorizer(
-        id + "HtsgetAuthorizer",
-        `https://cognito-idp.${this.region}.amazonaws.com/${settings.jwtAuthorizer.cogUserPoolId}`,
+    const pool = new UserPool(this, "userPool", {
+      userPoolName: "OrcaBusUserPool",
+    });
+
+    // JWT authorizer
+    const authorizer = new HttpJwtAuthorizer(
+        id + "FilemanagerQueryApiAuthorizer",
+        `https://cognito-idp.${this.region}.amazonaws.com/`,
         {
-          identitySource: ["$request.header.Authorization"],
-          jwtAudience: settings.jwtAuthorizer.jwtAudience ?? [],
+          identitySource: ["meow"], //["$request.header.Authorization"],
+          jwtAudience: ["aud"], // FIXME!!!
         },
       );
-    }    
-    // API Gateway v2 endpoints for querying data
-    const api = new HttpApi(this, 'FileManagerAPI');
 
-    const ObjectsQueryFunctionIntegration = new HttpLambdaIntegration(
-      id + "FilemanagerIntegration",
-      objectsQuery.function
-    );
+    // API Gateway v2 endpoints for querying data
+    const api = new HttpApi(this, 'FileManagerQueryApi', {
+      defaultAuthorizer: authorizer,
+      defaultIntegration: ObjectsQueryFunctionIntegration,
+    });
 
     // Add a route to the API
     api.addRoutes({
