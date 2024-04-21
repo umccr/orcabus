@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import botocore.session
 from botocore.stub import Stubber
 import os
@@ -13,7 +13,7 @@ class UniversalEventArchiverUnitTest(unittest.TestCase):
         self.stubber = Stubber(self.s3)
         self.stubber.activate()
         self.event = {
-            "detail-type": "Test Event Type",
+            "detail-type": "Test Event Type. ", # detail-type with withe space and special characters, testing sanitize_string
             "detail": {}
         }
         os.environ['BUCKET_NAME'] = 'test-bucket'
@@ -25,12 +25,13 @@ class UniversalEventArchiverUnitTest(unittest.TestCase):
         if 'BUCKET_NAME' in os.environ:
             del os.environ['BUCKET_NAME']
 
+    # freeze time for time stamp testing purposes
     @freeze_time("2024-01-1")
     def test_handler_success(self):
         
-        # freeze time for time stamp testing purposes
+        # expected time stamp (2024-01-01 00:00:00)
         expected_key = 'events/year=2024/month=01/day=01/Test_Event_Type_1704067200.0.json'
-        expected_tagging = f'event_type=Test_Event_Type&event_time=2024-01-01__00-00-00'
+        expected_tagging = 'event_type=Test_Event_Type&event_time=2024-01-01__00-00-00'
 
         # Mock the response and setup stubbing
         response = {}
