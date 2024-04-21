@@ -25,6 +25,8 @@ pub enum Error {
     S3Error(String),
     #[error("credential generator error: `{0}`")]
     CredentialGeneratorError(String),
+    #[error("s3 inventory error: `{0}`")]
+    S3InventoryError(String)
 }
 
 impl From<sqlx::Error> for Error {
