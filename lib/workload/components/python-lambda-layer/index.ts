@@ -24,6 +24,7 @@ export class PythonLambdaLayerConstruct extends Construct {
       description: props.layer_description,
       bundling: {
         commandHooks: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           beforeBundling(inputDir: string, outputDir: string): string[] {
             return [];
           },

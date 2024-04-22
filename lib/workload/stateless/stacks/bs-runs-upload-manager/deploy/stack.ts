@@ -4,7 +4,7 @@ import { BsRunsUploadManagerConstruct } from './constructs/bs-runs-upload-manage
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
 import path from 'path';
-import { PythonLambdaLayerConstruct } from '../../../constructs/python-lambda-layer';
+import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda-layer';
 
 export interface BsRunsUploadManagerConfig {
   // Define construct properties here
@@ -22,13 +22,10 @@ export class BsRunsUploadManagerStack extends cdk.Stack {
     super(scope, id, props);
 
     // Set lambda layer arn object
-    const lambda_layer_obj = new PythonLambdaLayerConstruct(
-      this,
-      'bssh_tools_lambda_layer',
-      {
-        layer_name: "BSSHToolsLambdaLayer",
-        layer_description: 'layer to enable the manager tools layer',
-        layer_directory: path.join(__dirname, '../layers')
+    const lambda_layer_obj = new PythonLambdaLayerConstruct(this, 'bssh_tools_lambda_layer', {
+      layer_name: 'BSSHToolsLambdaLayer',
+      layer_description: 'layer to enable the manager tools layer',
+      layer_directory: path.join(__dirname, '../layers'),
     });
 
     const ica_access_token_secret_obj = secretsManager.Secret.fromSecretNameV2(

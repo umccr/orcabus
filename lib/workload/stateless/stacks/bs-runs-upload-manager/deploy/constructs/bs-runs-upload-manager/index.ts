@@ -9,7 +9,7 @@ import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { IRole } from 'aws-cdk-lib/aws-iam';
-import { PythonLambdaLayerConstruct } from '../../../../../constructs/python-lambda-layer';
+import { PythonLambdaLayerConstruct } from '../../../../../../components/python-lambda-layer';
 
 interface BsRunsUploadManagerConstructProps {
   /* Stack objects */
