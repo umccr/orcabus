@@ -8,7 +8,7 @@ import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-a
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { SRMApiGatewayConstruct } from './apigw/component';
+import { SRMApiGatewayConstruct } from './constructs/api-gw';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { PostgresManagerStack } from '../../postgres-manager/deploy/stack';
 
@@ -16,13 +16,12 @@ export interface SequenceRunManagerStackProps {
   lambdaSecurityGroupName: string;
   vpcProps: VpcLookupOptions;
   mainBusName: string;
+  cognitoUserPoolIdParameterName: string;
+  cognitoPortalAppClientIdParameterName: string;
+  cognitoStatusPageAppClientIdParameterName: string;
 }
 
 export class SequenceRunManagerStack extends Stack {
-  private readonly secretId: string =
-    PostgresManagerStack.formatDbSecretManagerName('sequence_run_manager');
-  private readonly apiName: string = 'SequenceRunManager'; // apiNamespace `/srm/v1` is handled by Django Router
-  private readonly id: string;
   private readonly baseLayer: PythonLayerVersion;
   private readonly lambdaEnv;
   private readonly lambdaRuntimePythonVersion: aws_lambda.Runtime = aws_lambda.Runtime.PYTHON_3_12;
@@ -34,7 +33,7 @@ export class SequenceRunManagerStack extends Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps & SequenceRunManagerStackProps) {
     super(scope, id, props);
 
-    this.id = id;
+    const secretId: string = PostgresManagerStack.formatDbSecretManagerName('sequence_run_manager');
 
     this.mainBus = EventBus.fromEventBusName(this, 'OrcaBusMain', props.mainBusName);
     this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
@@ -45,9 +44,9 @@ export class SequenceRunManagerStack extends Stack {
       this.vpc
     );
 
-    this.lambdaRole = new Role(this, this.id + 'Role', {
+    this.lambdaRole = new Role(this, 'LambdaRole', {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-      description: 'Lambda execution role for ' + this.id,
+      description: 'Lambda execution role for ' + id,
     });
     // FIXME it is best practise to such that we do not use AWS managed policy
     //  we should improve this at some point down the track.
@@ -62,32 +61,28 @@ export class SequenceRunManagerStack extends Stack {
       ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMReadOnlyAccess')
     );
 
-    const dbSecret = aws_secretsmanager.Secret.fromSecretNameV2(
-      this,
-      this.id + 'dbSecret',
-      this.secretId
-    );
+    const dbSecret = aws_secretsmanager.Secret.fromSecretNameV2(this, 'DbSecret', secretId);
     dbSecret.grantRead(this.lambdaRole);
 
     this.lambdaEnv = {
       DJANGO_SETTINGS_MODULE: 'sequence_run_manager.settings.aws',
       EVENT_BUS_NAME: this.mainBus.eventBusName,
-      SECRET_ID: this.secretId,
+      SECRET_ID: secretId,
     };
 
-    this.baseLayer = new PythonLayerVersion(this, this.id + 'Layer', {
+    this.baseLayer = new PythonLayerVersion(this, 'BaseLayer', {
       entry: path.join(__dirname, '../deps'),
       compatibleRuntimes: [this.lambdaRuntimePythonVersion],
       compatibleArchitectures: [Architecture.ARM_64],
     });
 
     this.createMigrationHandler();
-    this.createApiHandlerAndIntegration();
+    this.createApiHandlerAndIntegration(props);
     this.createProcSqsHandler();
   }
 
   private createPythonFunction(name: string, props: object): PythonFunction {
-    return new PythonFunction(this, this.id + name, {
+    return new PythonFunction(this, name, {
       entry: path.join(__dirname, '../'),
       runtime: this.lambdaRuntimePythonVersion,
       layers: [this.baseLayer],
@@ -109,24 +104,22 @@ export class SequenceRunManagerStack extends Stack {
     });
   }
 
-  private createApiHandlerAndIntegration() {
+  private createApiHandlerAndIntegration(props: SequenceRunManagerStackProps) {
     const apiFn: PythonFunction = this.createPythonFunction('Api', {
       index: 'api.py',
       handler: 'handler',
       timeout: Duration.seconds(28),
     });
 
-    const srmApi = new SRMApiGatewayConstruct(
-      this,
-      this.id + 'SRMApiGatewayConstruct',
-      this.apiName,
-      this.region
-    );
+    const srmApi = new SRMApiGatewayConstruct(this, 'SRMApiGatewayConstruct', {
+      region: this.region,
+      ...props,
+    });
     const httpApi = srmApi.httpApi;
 
-    const apiIntegration = new HttpLambdaIntegration(this.id + 'ApiIntegration', apiFn);
+    const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
 
-    new HttpRoute(this, this.id + 'HttpRoute', {
+    new HttpRoute(this, 'HttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),

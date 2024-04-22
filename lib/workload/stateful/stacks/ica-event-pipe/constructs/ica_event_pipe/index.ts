@@ -24,6 +24,8 @@ export interface IcaEventPipeConstructProps {
   slackTopicArn: string;
   /** The CloudWatch Alarm threshold to use before raising an alarm */
   dlqMessageThreshold: number;
+  /** The ICA account to grant publish permissions to */
+  icaAwsAccountNumber: string;
 }
 
 export class IcaEventPipeConstruct extends Construct {
@@ -58,6 +60,7 @@ export class IcaEventPipeConstruct extends Construct {
       messageThreshold: props.dlqMessageThreshold,
       topic: topic,
     });
+    mq.queue.grantSendMessages(new iam.AccountPrincipal(props.icaAwsAccountNumber));
 
     return mq;
   }

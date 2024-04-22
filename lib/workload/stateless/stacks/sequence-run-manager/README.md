@@ -4,15 +4,19 @@
 Namespace: orcabus.srm
 ```
 
+## CDK
+
+See [deploy/README.md](deploy)
+
 ## How to run SRM locally
 
 ### Ready Check
 
 - Go to Django project root
 ```
-cd lib/workload/stateless/stacks/sequence_run_manager
+cd lib/workload/stateless/stacks/sequence-run-manager
 ```
-_*If you are PyCharmer and opening the whole `orcabus` project (i.e. not doing sparse checkout or not opening directly at this level) then annotate this level `sequence_run_manager` directory as "source" directory in the project structure dialog._
+_*If you are PyCharm-er and opening the whole `orcabus` project then annotate this level as "source" directory in the project structure dialog._
 
 ### Python
 
@@ -102,17 +106,17 @@ python manage.py runserver_plus
 ```
 
 ```
-curl -s http://localhost:8000/sequence | jq
+curl -s http://localhost:8000/srm/v1/sequence | jq
 ```
 
 ```
-curl -s http://localhost:8000/sequence/1 | jq
+curl -s http://localhost:8000/srm/v1/sequence/1 | jq
 ```
 
 Or visit in browser:
-- http://localhost:8000
-- http://localhost:8000/sequence
-- http://localhost:8000/sequence/1
+- http://localhost:8000/srm/v1
+- http://localhost:8000/srm/v1/sequence
+- http://localhost:8000/srm/v1/sequence/1
 
 ### API Doc
 

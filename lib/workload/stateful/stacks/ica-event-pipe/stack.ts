@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Stack, StackProps } from 'aws-cdk-lib';
-import { IcaEventPipeConstruct, IcaEventPipeConstructProps } from './construct/ica_event_pipe';
+import { IcaEventPipeConstruct, IcaEventPipeConstructProps } from './constructs/ica_event_pipe';
 
 const alarmThreshod: number = 1;
 const queueVizTimeout: number = 30;
@@ -15,6 +15,8 @@ export interface IcaEventPipeStackProps {
   eventBusName: string;
   /** The name of the SNS Topic to receive DLQ notifications from CloudWatch */
   slackTopicName: string;
+  /** The ICA account to grant publish permissions to */
+  icaAwsAccountNumber: string;
 }
 
 export class IcaEventPipeStack extends Stack {
@@ -35,6 +37,7 @@ export class IcaEventPipeStack extends Stack {
       eventBusName: props.eventBusName,
       dlqMessageThreshold: alarmThreshod,
       slackTopicArn: this.constructTopicArn(props),
+      icaAwsAccountNumber: props.icaAwsAccountNumber,
     };
     return new IcaEventPipeConstruct(scope, id, constructProps);
   }

@@ -59,10 +59,13 @@ After then, the scheduled secret rotation should carry on rotating password, eve
 
 ## Development
 
+```
+cd lib/workload/stateful/stacks/token-service
+```
+
 ### TL;DR
 
 ```
-cd lib/workload/stateful/token_service
 make install
 make test
 make template
@@ -85,8 +88,6 @@ No major dependencies except boto3 which is already avail in the Lambda Python r
 
 Do like so:
 ```
-cd lib/workload/stateful/token_service
-
 python -m venv venv
 source venv/bin/activate
 
@@ -98,16 +99,16 @@ deactivate
 
 #### CDK
 
-The deploy directory contains the CDK code for `TokenServiceStack`. It deploys the rotation Lambdas and, corresponding application artifact using `PythonFunction` (L4?) construct. It runs in the `main-vpc`. And, the secret permissions are bound to the allow resources strictly i.e. see those `grant(...)` flags. It has 1 unit test file and, cdk-nag test through CodePipeline.
+The `deploy` directory contains the CDK code for `TokenServiceStack`. It deploys the rotation Lambdas and, corresponding application artifact using `PythonFunction` (L4?) construct. It runs in the `main-vpc`. And, the secret permissions are bound to the allow resources strictly i.e. see those `grant(...)` flags. It has 1 unit test file and, cdk-nag test through CodePipeline.
 
 Do like so from the repo root:
 ```
-cd ../../../../
+cd ../../../../../
 ```
 
 ```
-yarn test --- test/stateful/tokenServiceConstruct.test.ts
-yarn test --- test/stateful/stateful-deployment.test.ts
+yarn test --- test/stateful/token-service/
+yarn test --- test/stateful/token-service/tokenServiceConstruct.test.ts
 yarn test --- test/stateful/
 ```
 
@@ -115,12 +116,12 @@ yarn test --- test/stateful/
 export AWS_PROFILE=umccr-dev-admin
 
 yarn cdk-stateful ls
-yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/OrcaBusStatefulStack/TokenServiceStack
+yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/TokenServiceStack
 ```
 
 Perhaps copy to clipboard and, paste it into VSCode new file buffer and, observe the CloudFormation template being generated.
 ```
-yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/OrcaBusStatefulStack/TokenServiceStack | pbcopy
+yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/TokenServiceStack | pbcopy
 ```
 
 Or
@@ -128,7 +129,7 @@ Or
 ```
 mkdir -p .local
 
-yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/OrcaBusStatefulStack/TokenServiceStack > .local/template.yml && code .local/template.yml
+yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/TokenServiceStack > .local/template.yml && code .local/template.yml
 ```
 
 Then, do CloudFormation lint check:
@@ -140,9 +141,9 @@ If that all good, then you may `diff -e` & `deploy -e` straight to dev for givin
 
 ```
 export AWS_PROFILE=umccr-dev-admin
-yarn cdk-stateful diff -e OrcaBusStatefulPipeline/BetaDeployment/OrcaBusStatefulStack/TokenServiceStack
-yarn cdk-stateful deploy -e OrcaBusStatefulPipeline/BetaDeployment/OrcaBusStatefulStack/TokenServiceStack
-yarn cdk-stateful destroy -e OrcaBusStatefulPipeline/BetaDeployment/OrcaBusStatefulStack/TokenServiceStack
+yarn cdk-stateful diff -e OrcaBusStatefulPipeline/BetaDeployment/TokenServiceStack
+yarn cdk-stateful deploy -e OrcaBusStatefulPipeline/BetaDeployment/TokenServiceStack
+yarn cdk-stateful destroy -e OrcaBusStatefulPipeline/BetaDeployment/TokenServiceStack
 ```
 
 Run it in dev, check cloudwatch logs to debug, tear it down; rinse & spin.!

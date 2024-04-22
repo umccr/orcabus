@@ -4,6 +4,9 @@ export type AccountName = 'beta' | 'gamma' | 'prod';
 
 export const region = 'ap-southeast-2';
 
+// external ICA constants
+export const icaAwsAccountNumber = '079623148045';
+
 // upstream infra: vpc
 const vpcName = 'main-vpc';
 const vpcStackName = 'networking';
@@ -18,6 +21,8 @@ export const vpcProps: VpcLookupOptions = {
 export const cognitoUserPoolIdParameterName = '/data_portal/client/cog_user_pool_id';
 export const cognitoPortalAppClientIdParameterName =
   '/data_portal/client/data2/cog_app_client_id_stage';
+export const cognitoStatusPageAppClientIdParameterName =
+  '/data_portal/status_page/cog_app_client_id_stage';
 
 export const devBucket = 'umccr-temp-dev';
 export const stgBucket = 'umccr-temp-stg';
