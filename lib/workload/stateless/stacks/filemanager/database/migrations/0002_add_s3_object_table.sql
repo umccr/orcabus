@@ -18,6 +18,9 @@ create table s3_object (
     s3_object_id uuid not null primary key,
     -- This is initially deferred because we want to create an s3_object before an object to check for duplicates/order.
     object_id uuid not null references object (object_id) deferrable initially deferred,
+    -- The public id for this object which can be referred to externally to filemanager. Note, there is no public id
+    -- on an `object` because objects can be merged which complicates having a permanent public id.
+    public_id uuid not null,
 
     -- General fields
     -- The bucket of the object.
@@ -52,6 +55,9 @@ create table s3_object (
     number_reordered bigint not null default 0,
     -- Record the number of duplicate events received for this object, useful for debugging.
     number_duplicate_events bigint not null default 0,
+
+    -- Attributes on a single s3_object.
+    attributes jsonb default null,
 
     -- The sequencers should be unique with the bucket, key, and its version, otherwise this is a duplicate event.
     constraint created_sequencer_unique unique (bucket, key, version_id, created_sequencer),

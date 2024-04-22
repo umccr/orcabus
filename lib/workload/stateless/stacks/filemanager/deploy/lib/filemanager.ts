@@ -1,12 +1,11 @@
 import { Construct } from 'constructs';
-import { EventSourceProps, IngestFunction } from '../constructs/functions/ingest';
+import { IngestFunction } from '../constructs/functions/ingest';
 import { MigrateFunction } from '../constructs/functions/migrate';
-import * as fn from '../constructs/functions/function';
 import { DatabaseProps } from '../constructs/functions/function';
 import { Vpc, SecurityGroup, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { Arn, Stack, StackProps } from 'aws-cdk-lib';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
-import { ProviderFunction } from '../../../../../components/provider_function';
+import { ProviderFunction } from '../../../../../components/provider-function';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
