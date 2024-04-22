@@ -102,6 +102,9 @@ export class Function extends Construct {
           // The bundling process needs to be able to connect to the container running postgres.
           DATABASE_URL: localDatabaseUrl,
         },
+        dockerOptions: {
+          network: 'host',
+        }
       },
       memorySize: 128,
       timeout: Duration.seconds(28),
