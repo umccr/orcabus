@@ -8,6 +8,8 @@ use crate::error::{Error, Result};
 use crate::events::aws::message::EventType::Created;
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::uuid::UuidGenerator;
+use aws_arn::known::Service;
+use aws_arn::ResourceName;
 use aws_sdk_s3::types::InventoryFormat;
 use chrono::{DateTime, Utc};
 use csv::{ReaderBuilder, StringRecord, Trim};
@@ -36,64 +38,81 @@ impl Inventory {
         Self::new(Client::with_defaults().await)
     }
 
+    /// Parse a CSV manifest file into records.
+    pub async fn parse_csv(&self, schema: &str, body: &[u8]) -> Result<Vec<Record>> {
+        let mut inventory_bytes = vec![];
+        MultiGzDecoder::new(BufReader::new(body))
+            .read_to_end(&mut inventory_bytes)
+            .map_err(|err| S3InventoryError(format!("decompressing CSV: {}", err)))?;
+
+        let mut header_record = StringRecord::new();
+        ReaderBuilder::new()
+            .trim(Trim::All)
+            .has_headers(false)
+            .from_reader(schema.as_bytes())
+            .read_record(&mut header_record)?;
+
+        let mut csv = ReaderBuilder::new()
+            .trim(Trim::All)
+            .from_reader(inventory_bytes.as_slice());
+        csv.set_headers(header_record);
+
+        Ok(csv.deserialize().collect::<result::Result<_, _>>()?)
+    }
+
     /// Parse a manifest into records.
     pub async fn parse_manifest(&self, manifest: Manifest) -> Result<Vec<Record>> {
-        match manifest.file_format {
-            InventoryFormat::Csv => {
-                // todo, fix to handle proper arns including accounts/regions.
-                let bucket = manifest
-                    .destination_bucket
-                    .strip_prefix("arn:aws:s3:::")
-                    .unwrap_or_else(|| &manifest.destination_bucket);
-                let inventories: Vec<Record> = join_all(manifest.files.iter().map(|file| async {
-                    let inventory = self
-                        .client
-                        .get_object(&file.key, bucket)
-                        .await
-                        .map_err(|err| S3InventoryError(format!("getting inventory: {}", err)))?;
+        let arn: ResourceName = manifest
+            .destination_bucket
+            .parse()
+            .map_err(|err| S3InventoryError(format!("parsing destination bucket arn: {}", err)))?;
 
-                    let mut inventory_bytes = vec![];
-                    MultiGzDecoder::new(BufReader::new(
-                        inventory
-                            .body
-                            .collect()
-                            .await
-                            .map_err(|_| {
-                                S3InventoryError("collecting inventory bytes".to_string())
-                            })?
-                            .to_vec()
-                            .as_slice(),
-                    ))
-                    .read_to_end(&mut inventory_bytes)
-                    .map_err(|err| S3InventoryError(format!("decompressing csv: {}", err)))?;
-
-                    let mut header_record = StringRecord::new();
-                    ReaderBuilder::new()
-                        .trim(Trim::All)
-                        .has_headers(false)
-                        .from_reader(manifest.file_schema.as_bytes())
-                        .read_record(&mut header_record)?;
-
-                    let mut csv = ReaderBuilder::new()
-                        .trim(Trim::All)
-                        .from_reader(inventory_bytes.as_slice());
-                    csv.set_headers(header_record);
-
-                    let records: result::Result<Vec<Record>, csv::Error> =
-                        csv.deserialize::<Record>().collect();
-                    Ok::<_, Error>(records?)
-                }))
-                .await
-                .into_iter()
-                .collect::<Result<Vec<Vec<Record>>>>()?
-                .into_iter()
-                .flatten()
-                .collect();
-
-                Ok(inventories)
-            }
-            _ => Err(S3InventoryError("unsupported format".to_string())),
+        if arn.service != Service::S3.into() {
+            return Err(S3InventoryError(
+                "destination bucket ARN is not S3".to_string(),
+            ));
         }
+
+        let bucket = arn.resource.to_string();
+
+        let inventories = join_all(manifest.files.iter().map(|file| async {
+            let inventory = self
+                .client
+                .get_object(&file.key, &bucket)
+                .await
+                .map_err(|err| S3InventoryError(format!("getting inventory: {}", err)))?;
+            let body = inventory
+                .body
+                .collect()
+                .await
+                .map_err(|_| S3InventoryError("collecting inventory bytes".to_string()))?
+                .to_vec();
+
+            if md5::compute(body.as_slice()).0
+                != hex::decode(&file.md5_checksum)
+                    .map_err(|err| S3InventoryError(format!("decoding hex string: {}", err)))?
+                    .as_slice()
+            {
+                return Err(S3InventoryError(
+                    "mismatched MD5 checksums in inventory manifest".to_string(),
+                ));
+            }
+
+            match manifest.file_format {
+                InventoryFormat::Csv => {
+                    self.parse_csv(&manifest.file_schema, body.as_slice()).await
+                }
+                _ => Err(S3InventoryError("unsupported type".to_string())),
+            }
+        }))
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .flatten()
+        .collect();
+
+        Ok(inventories)
     }
 }
 
@@ -199,7 +218,7 @@ mod tests {
         let data = concat!(
             r#""bucket","key1","0","2024-04-12T06:45:57.000Z","#,
             r#""d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","#, // pragma: allowlist secret
-            r#""acl","#, // pragma: allowlist secret
+            r#""acl","#,  // pragma: allowlist secret
             r#""owner""#, // pragma: allowlist secret
             "\n",
             r#""bucket","key2","69897","2024-04-12T06:46:10.000Z","0808c1cdcd44cd5f6fea91a79ad32dc8","#, // pragma: allowlist secret

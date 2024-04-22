@@ -32,6 +32,8 @@ itertools = "0.12"
 url = "2"
 csv = "1"
 flate2 = "1"
+md5 = "0.7"
+hex = "0.4"
 
 aws-sdk-sqs = "1"
 aws-config = "1"
