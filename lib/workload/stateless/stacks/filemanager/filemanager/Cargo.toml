@@ -31,6 +31,7 @@ mockall_double = "0.3"
 itertools = "0.12"
 url = "2"
 csv = "1"
+flate2 = "1"
 
 aws-sdk-sqs = "1"
 aws-config = "1"

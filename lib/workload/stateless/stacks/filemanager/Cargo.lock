@@ -1009,6 +1009,7 @@ dependencies = [
  "chrono",
  "csv",
  "filemanager",
+ "flate2",
  "futures",
  "itertools",
  "lambda_runtime",
