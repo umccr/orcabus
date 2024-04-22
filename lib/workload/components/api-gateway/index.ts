@@ -18,7 +18,7 @@ export class ApiGatewayConstruct extends Construct {
     super(scope, id);
 
     this._httpApi = new HttpApi(this, 'HttpApi', {
-      apiName: 'OrcaBusAPI-${service}', // FIXME: Props this from construct user
+      apiName: 'OrcaBusAPI-${id}',
       corsPreflight: {
         allowHeaders: ['Authorization'],
         allowMethods: [

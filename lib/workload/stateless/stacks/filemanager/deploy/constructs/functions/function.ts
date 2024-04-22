@@ -9,7 +9,7 @@ import { exec } from 'cargo-lambda-cdk/lib/util';
 import { randomUUID } from 'node:crypto';
 import { print } from 'aws-cdk/lib/logging';
 import { PostgresManagerStack } from '../../../../postgres-manager/deploy/stack';
-import { FILEMANAGER_SERVICE_NAME } from '../../lib/filemanager';
+import { FILEMANAGER_SERVICE_NAME } from '../../stack';
 
 /**
  * Properties for the database.
