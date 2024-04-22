@@ -1,14 +1,14 @@
 import { Construct } from 'constructs';
-import { IngestFunction } from './constructs/functions/ingest';
+import { IngestFunction, IngestFunctionProps } from './constructs/functions/ingest';
 import { MigrateFunction } from './constructs/functions/migrate';
 import { ObjectsQueryFunction } from './constructs/functions/query';
 import { DatabaseProps } from './constructs/functions/function';
-import { Vpc, SecurityGroup, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
+import { Vpc, SecurityGroup, VpcLookupOptions, IVpc, ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Arn, Stack, StackProps } from 'aws-cdk-lib';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { ProviderFunction } from '../../../../components/provider_function';
 import { ApiGatewayConstruct } from '../../../../components/api-gateway';
-import { Queue } from 'aws-cdk-lib/aws-sqs';
+import { IQueue, Queue } from 'aws-cdk-lib/aws-sqs';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 
@@ -38,38 +38,43 @@ export type FilemanagerProps = StackProps & FilemanagerConfig;
  * Construct used to configure the filemanager.
  */
 export class Filemanager extends Stack {
+  private readonly vpc: IVpc;
+  private readonly host: string;
+  private readonly securityGroup: ISecurityGroup;
+  private readonly queue: IQueue;
+  
   constructor(scope: Construct, id: string, props: FilemanagerProps) {
     super(scope, id, props);
 
-    const vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
+    this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
 
-    const lambdaSecurityGroup = SecurityGroup.fromLookupByName(
+    this.securityGroup = SecurityGroup.fromLookupByName(
       this,
       'OrcaBusLambdaSecurityGroup',
       props.securityGroupName,
-      vpc
+      this.vpc
     );
 
-    const host = StringParameter.valueForStringParameter(
+    this.host = StringParameter.valueForStringParameter(
       this,
       props.databaseClusterEndpointHostParameter
     );
 
     if (props?.migrateDatabase) {
       const migrateFunction = new MigrateFunction(this, 'MigrateFunction', {
-        vpc: vpc,
-        host: host,
+        vpc: this.vpc,
+        host: this.host,
         port: props.port,
-        securityGroup: lambdaSecurityGroup,
+        securityGroup: this.securityGroup,
       });
 
       new ProviderFunction(this, 'MigrateProviderFunction', {
-        vpc: vpc,
+        vpc: this.vpc,
         function: migrateFunction.function,
       });
     }
 
-    const queue = Queue.fromQueueArn(
+    this.queue = Queue.fromQueueArn(
       this,
       'FilemanagerQueue',
       Arn.format(
@@ -88,12 +93,24 @@ export class Filemanager extends Stack {
   /// Lambda function definitions and surrounding infra
   // Ingest function
   private createIngestFunction(props: FilemanagerProps) {
-    new IngestFunction(this, 'IngestFunction', props);
-  };
+    return new IngestFunction(this, 'IngestFunction', {
+      vpc: this.vpc,
+      host: this.host,
+      securityGroup: this.securityGroup,
+      eventSources: [this.queue],
+      buckets: props.eventSourceBuckets,
+      ...props
+    });
+  }
 
-  // Api Gateway fronting filemanager's query lambda
+  // Query function and API Gateway fronting the function
   private createQueryFunction(props: FilemanagerProps) {
-    let objectsQueryLambda = new ObjectsQueryFunction(this, 'ObjectsQueryFunction', props);
+    let objectsQueryLambda = new ObjectsQueryFunction(this, 'ObjectsQueryFunction', {
+      vpc: this.vpc,
+      host: this.host,
+      securityGroup: this.securityGroup,
+      ...props
+    });
 
     const ApiGateway = new ApiGatewayConstruct(this, 'ApiGatewayConstruct-'+props.stackName, {
       region: this.region,

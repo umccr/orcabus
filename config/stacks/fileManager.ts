@@ -9,6 +9,9 @@ import {
   prodBucket,
   stgBucket,
   vpcProps,
+  cognitoPortalAppClientIdParameterName,
+  cognitoStatusPageAppClientIdParameterName,
+  cognitoUserPoolIdParameterName,
 } from '../constants';
 
 export const getFileManagerStackProps = (n: AccountName): FilemanagerConfig => {
@@ -19,6 +22,9 @@ export const getFileManagerStackProps = (n: AccountName): FilemanagerConfig => {
     databaseClusterEndpointHostParameter: dbClusterEndpointHostParameterName,
     port: databasePort,
     migrateDatabase: true,
+    cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
+    cognitoStatusPageAppClientIdParameterName: cognitoStatusPageAppClientIdParameterName,
+    cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
   };
 
   switch (n) {
