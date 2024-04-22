@@ -8,7 +8,7 @@ import {
   basespaceAccessTokenSecretName,
   eventBusName,
 } from '../constants';
-import { BsRunsUploadManagerConfig } from '../../lib/workload/stateless/stacks/bs-runs-upload-manager/deploy/stacks/bs_runs_upload_manager_stack';
+import { BsRunsUploadManagerConfig } from '../../lib/workload/stateless/stacks/bs-runs-upload-manager/deploy/stack';
 
 export const getBsRunsUploadManagerStackProps = (n: AccountName): BsRunsUploadManagerConfig => {
   const baseConfig = {

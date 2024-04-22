@@ -8,12 +8,12 @@ import * as events_targets from 'aws-cdk-lib/aws-events-targets';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { LambdaLayerConstruct } from './lambda_layer';
 import { IRole } from 'aws-cdk-lib/aws-iam';
+import { PythonLambdaLayerConstruct } from '../../../../../constructs/python-lambda-layer';
 
 interface BsRunsUploadManagerConstructProps {
   /* Stack objects */
-  lambda_layer_obj: LambdaLayerConstruct;
+  lambda_layer_obj: PythonLambdaLayerConstruct;
   ica_token_secret_obj: secretsManager.ISecret;
   portal_token_secret_obj: secretsManager.ISecret;
   basespace_secret_obj: secretsManager.ISecret;

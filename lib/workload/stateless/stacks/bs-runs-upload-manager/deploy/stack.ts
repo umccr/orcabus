@@ -1,10 +1,10 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BsRunsUploadManagerConstruct } from '../constructs/bs_runs_upload_manager_stack';
-import { LambdaLayerConstruct } from '../constructs/lambda_layer';
+import { BsRunsUploadManagerConstruct } from './constructs/bs-runs-upload-manager';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
 import path from 'path';
+import { PythonLambdaLayerConstruct } from '../../../constructs/python-lambda-layer';
 
 export interface BsRunsUploadManagerConfig {
   // Define construct properties here
@@ -22,8 +22,13 @@ export class BsRunsUploadManagerStack extends cdk.Stack {
     super(scope, id, props);
 
     // Set lambda layer arn object
-    const lambda_layer_obj = new LambdaLayerConstruct(this, 'lambda_layer', {
-      layer_directory: __dirname + '/../../../layers',
+    const lambda_layer_obj = new PythonLambdaLayerConstruct(
+      this,
+      'bssh_tools_lambda_layer',
+      {
+        layer_name: "BSSHToolsLambdaLayer",
+        layer_description: 'layer to enable the manager tools layer',
+        layer_directory: path.join(__dirname, '../layers')
     });
 
     const ica_access_token_secret_obj = secretsManager.Secret.fromSecretNameV2(
@@ -56,16 +61,16 @@ export class BsRunsUploadManagerStack extends cdk.Stack {
       /* Lambda paths */
       upload_v2_samplesheet_to_gds_bssh_lambda_path: path.join(
         __dirname,
-        '/../../../lambdas/upload_v2_samplesheet_to_gds_bssh'
+        '../lambdas/upload_v2_samplesheet_to_gds_bssh'
       ),
       launch_bs_runs_upload_tes_lambda_path: path.join(
         __dirname,
-        '/../../../lambdas/launch_bs_runs_upload_tes'
+        '../lambdas/launch_bs_runs_upload_tes'
       ),
       /* Step functions templates */
       workflow_definition_body_path: path.join(
         __dirname,
-        '/../../../step_functions_templates/bs_runs_upload_step_functions_template.json'
+        '../step_functions_templates/bs_runs_upload_step_functions_template.json'
       ),
       /* Miscell */
       gds_system_files_path: props.gds_system_files_path,
