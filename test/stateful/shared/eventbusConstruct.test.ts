@@ -11,12 +11,16 @@ const constructConfig = getEnvironmentConfig('beta');
 if (!constructConfig) throw new Error('No construct config for the test');
 
 app = new cdk.App();
-// beforeEach(() => {
-//   stack = new cdk.Stack();
-// });
-
-test('Test EventBusConstruct Creation', () => {
+beforeEach(() => {
   stack = new cdk.Stack();
+});
+
+test('Test EventBusConstruct Creation With Custome Events Archiver', () => {
+  // define test stack account and region for vpc props define
+  stack = new cdk.Stack(app, 'TestEventBusStackWithCustomArchiver', {
+    env: { account: '123456789', region: 'ap-southeast-2' },
+  });
+
   new EventBusConstruct(
     stack,
     'TestEventBusConstruct',
@@ -27,34 +31,11 @@ test('Test EventBusConstruct Creation', () => {
   template.hasResourceProperties('AWS::Events::EventBus', {
     Name: 'OrcaBusMain',
   });
-});
-
-test('Test EventBusConstruct Creation with Custom Events Archiver', () => {
-  // define test stack account and region for vpc props define
-  stack = new cdk.Stack(app, 'TestEventBusStack', {
-    env: { account: '123456789', region: 'ap-southeast-2' },
-  });
-  const eventBusProps = {
-    ...constructConfig.stackProps.statefulConfig.sharedStackProps.eventBusProps,
-
-    // add custom event archiver
-    addCustomEventArchiver: true,
-    archiveBucketName: 'test-archive-bucket',
-    lambdaSecurityGroupName: 'test-lambda-security-group',
-    vpcProps,
-  };
-  new EventBusConstruct(stack, 'TestEventBusConstruct', eventBusProps);
-
-  const template = Template.fromStack(stack);
-
-  template.hasResourceProperties('AWS::Events::EventBus', {
-    Name: 'OrcaBusMain',
-  });
   template.hasResourceProperties('AWS::S3::Bucket', {
-    BucketName: 'test-archive-bucket',
+    BucketName: 'event-archive-bucket',
   });
   template.hasResourceProperties('AWS::EC2::SecurityGroup', {
-    GroupName: 'test-lambda-security-group',
+    GroupName: 'OrcaBusEventArchiveSecurityGroup',
   });
   template.hasResourceProperties('AWS::Lambda::Function', {
     Handler: 'universal_event_archiver.handler',
@@ -65,4 +46,26 @@ test('Test EventBusConstruct Creation with Custom Events Archiver', () => {
       account: ['123456789'],
     },
   });
+});
+
+test('Test EventBusConstruct Creation without Custom Events Archiver', () => {
+  const eventBusProps = {
+    ...constructConfig.stackProps.statefulConfig.sharedStackProps.eventBusProps,
+
+    // remove custom event archiver
+    addCustomEventArchiver: false,
+  };
+  new EventBusConstruct(stack, 'TestEventBusConstructWithoutCustomArchiver', eventBusProps);
+
+  const template = Template.fromStack(stack);
+
+  template.hasResourceProperties('AWS::Events::EventBus', {
+    Name: 'OrcaBusMain',
+  });
+
+  // check if the custom event archiver is not created
+  template.resourceCountIs('AWS::S3::Bucket', 0);
+  template.resourceCountIs('AWS::EC2::SecurityGroup', 0);
+  template.resourceCountIs('AWS::Lambda::Function', 0);
+  template.resourceCountIs('AWS::Events::Rule', 0);
 });

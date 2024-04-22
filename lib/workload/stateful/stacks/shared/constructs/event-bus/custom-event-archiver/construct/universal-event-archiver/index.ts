@@ -44,7 +44,7 @@ export class UniversalEventArchiverConstruct extends Construct {
       handler: 'handler',
     });
 
-    archiveBucket.grantReadWrite(archiveEventFunction);
+    archiveBucket.grantPut(archiveEventFunction);
 
     const rule = new Rule(this, this.id + 'EventRule', {
       ruleName: 'UniversalEventArchiverRule',
