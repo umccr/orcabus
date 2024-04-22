@@ -20,7 +20,7 @@ export interface ICAv2CopyBatchUtilityConstructProps {
   /* StateMachine paths */
   state_machine_name_single: string; // 'copy_single_state_machine'
   state_machine_name_batch: string; // 'copy_batch_state_machine'
-  state_machine_batch_definition_body_path: string; // __dirname + '/../../../step_functions_templates/copy_batch_state_machine.json'
+  state_machine_batch_definition_body_path: string; // __dirname + '/../../../step_functions_templates/copy_batch_state_machine.asl.json'
   state_machine_single_definition_body_path: string; // __dirname + '/../../../step_functions_templates/copy_single_state_machine.json'
 }
 

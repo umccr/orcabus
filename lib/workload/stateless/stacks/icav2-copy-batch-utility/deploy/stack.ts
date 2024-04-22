@@ -57,11 +57,11 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
         state_machine_name_single: props.icav2_copy_single_state_machine_name,
         state_machine_batch_definition_body_path: path.join(
           __dirname,
-          '../step_functions_templates/copy_batch_state_machine.json'
+          '../step_functions_templates/copy_batch_state_machine.asl.json'
         ),
         state_machine_single_definition_body_path: path.join(
           __dirname,
-          '../step_functions_templates/copy_single_job_state_machine.json'
+          '../step_functions_templates/copy_single_job_state_machine.asl.json'
         ),
       }
     );
