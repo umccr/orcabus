@@ -1,6 +1,0 @@
-export const ICAV2_TOKEN_SECRET_ID = "ICAv2Jwticav2-credentials-umccr-service-user-trial"
-
-export const ICAV2_COPY_BATCH_STATE_MACHINE_ARN_SSM_PARAMETER_PATH= "/icav2_copy_batch_utility/state_machine_arn_batch"
-export const ICAV2_COPY_BATCH_STATE_MACHINE_NAME_SSM_PARAMETER_PATH= "/icav2_copy_batch_utility/state_machine_name_batch"
-export const ICAV2_COPY_SINGLE_STATE_MACHINE_ARN_SSM_PARAMETER_PATH= "/icav2_copy_batch_utility/state_machine_arn_single"
-export const ICAV2_COPY_SINGLE_STATE_MACHINE_NAME_SSM_PARAMETER_PATH= "/icav2_copy_batch_utility/state_machine_name_single"
