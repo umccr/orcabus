@@ -13,13 +13,18 @@ import {
 import {
   SequenceRunManagerStack,
   SequenceRunManagerStackProps,
-} from './stacks/sequence-run-manager/deploy/component';
+} from './stacks/sequence-run-manager/deploy/stack';
+import {
+  BsRunsUploadManagerStack,
+  BsRunsUploadManagerStackProps,
+} from './stacks/bs-runs-upload-manager/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
   metadataManagerStackProps: MetadataManagerStackProps;
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
+  bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
 }
 
 export class StatelessStackCollection {
@@ -28,31 +33,41 @@ export class StatelessStackCollection {
   readonly fileManagerStack: Stack;
   readonly metadataManagerStack: Stack;
   readonly sequenceRunManagerStack: Stack;
+  readonly bsRunsUploadManagerStack: Stack;
 
   constructor(
     scope: Construct,
     env: Environment,
-    statefulConfiguration: StatelessStackCollectionProps
+    statelessConfiguration: StatelessStackCollectionProps
   ) {
     this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
       ...this.createTemplateProps(env, 'PostgresManagerStack'),
-      ...statefulConfiguration.postgresManagerStackProps,
+      ...statelessConfiguration.postgresManagerStackProps,
     });
 
     this.fileManagerStack = new Filemanager(scope, 'FileManagerStack', {
       ...this.createTemplateProps(env, 'FileManagerStack'),
-      ...statefulConfiguration.fileManagerStackProps,
+      ...statelessConfiguration.fileManagerStackProps,
     });
 
     this.metadataManagerStack = new MetadataManagerStack(scope, 'MetadataManagerStack', {
       ...this.createTemplateProps(env, 'MetadataManagerStack'),
-      ...statefulConfiguration.metadataManagerStackProps,
+      ...statelessConfiguration.metadataManagerStackProps,
     });
 
     this.sequenceRunManagerStack = new SequenceRunManagerStack(scope, 'SequenceRunManagerStack', {
       ...this.createTemplateProps(env, 'SequenceRunManagerStack'),
-      ...statefulConfiguration.sequenceRunManagerStackProps,
+      ...statelessConfiguration.sequenceRunManagerStackProps,
     });
+
+    this.bsRunsUploadManagerStack = new BsRunsUploadManagerStack(
+      scope,
+      'BsRunsUploadManagerStack',
+      {
+        ...this.createTemplateProps(env, 'BsRunsUploadManagerStack'),
+        ...statelessConfiguration.bsRunsUploadManagerStackProps,
+      }
+    );
   }
 
   /**

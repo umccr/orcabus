@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { getEnvironmentConfig } from '../../../config/constants';
+import { getEnvironmentConfig } from '../../../config/config';
 import { TokenServiceStack } from '../../../lib/workload/stateful/stacks/token-service/deploy/stack';
 
 const constructConfig = getEnvironmentConfig('beta');

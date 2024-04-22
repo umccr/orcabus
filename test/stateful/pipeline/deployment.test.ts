@@ -3,7 +3,7 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { SynthesisMessage } from 'aws-cdk-lib/cx-api';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 
-import { getEnvironmentConfig } from '../../../config/constants';
+import { getEnvironmentConfig } from '../../../config/config';
 import { StatefulStackCollection } from '../../../lib/workload/stateful/statefulStackCollectionClass';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {
@@ -83,6 +83,34 @@ function applyNagSuppression(stackId: string, stack: Stack) {
               'https://github.com/aws/aws-cdk/issues/7016 ' +
               'https://github.com/aws/aws-cdk/issues/26611 ' +
               'https://stackoverflow.com/questions/71929482/how-to-prevent-generating-default-policies-during-iam-role-creation-in-aws-cdk',
+          },
+        ]
+      );
+      break;
+    case 'SharedStack':
+      // suppress by resource
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        [
+          '/SharedStack/EventBusConstruct/UniversalEventArchiver/UniversalEventArchiver/ServiceRole/Resource',
+          '/SharedStack/EventBusConstruct/UniversalEventArchiver/UniversalEventArchiver/ServiceRole/DefaultPolicy/Resource',
+        ],
+        [
+          {
+            id: 'AwsSolutions-IAM4',
+            reason:
+              'AWSLambdaBasicExecutionRole,AWSLambdaVPCAccessExecutionRole are needed. See ' +
+              'https://stackoverflow.com/questions/45282492/s3-policy-to-allow-lambda ' +
+              'https://repost.aws/knowledge-center/lambda-execution-role-s3-bucket ' +
+              'https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html ',
+          },
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              'Permission to <EventBusConstructUniversalEventArchiveBucketxxxx.Arn>/* is needed. See ' +
+              'https://stackoverflow.com/questions/45282492/s3-policy-to-allow-lambda ' +
+              'https://repost.aws/knowledge-center/lambda-execution-role-s3-bucket ' +
+              'https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html ',
           },
         ]
       );
