@@ -35,6 +35,7 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     const manifest_inverter_lambda = new PythonFunction(this, 'manifest_inverter_lambda', {
       entry: props.manifest_handler_lambda_path,
       runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64,
       index: 'handler.py',
       handler: 'handler',
       memorySize: 1024,
@@ -46,6 +47,7 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     const check_or_launch_job_lambda = new PythonFunction(this, 'check_or_launch_job_lambda', {
       entry: props.check_or_launch_job_lambda_path,
       runtime: lambda.Runtime.PYTHON_3_11,
+      architecture: lambda.Architecture.ARM_64,
       index: 'handler.py',
       handler: 'handler',
       memorySize: 1024,
