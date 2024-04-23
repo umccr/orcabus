@@ -18,6 +18,10 @@ import {
   BsRunsUploadManagerStack,
   BsRunsUploadManagerStackProps,
 } from './stacks/bs-runs-upload-manager/deploy/stack';
+import {
+  ICAv2CopyBatchUtilityStack,
+  ICAv2CopyBatchUtilityStackProps,
+} from './stacks/icav2-copy-batch-utility/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
@@ -25,6 +29,7 @@ export interface StatelessStackCollectionProps {
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
   bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
+  icav2CopyBatchUtilityStackProps: ICAv2CopyBatchUtilityStackProps;
 }
 
 export class StatelessStackCollection {
@@ -34,6 +39,7 @@ export class StatelessStackCollection {
   readonly metadataManagerStack: Stack;
   readonly sequenceRunManagerStack: Stack;
   readonly bsRunsUploadManagerStack: Stack;
+  readonly icav2CopyBatchUtilityStack: Stack;
 
   constructor(
     scope: Construct,
@@ -66,6 +72,15 @@ export class StatelessStackCollection {
       {
         ...this.createTemplateProps(env, 'BsRunsUploadManagerStack'),
         ...statelessConfiguration.bsRunsUploadManagerStackProps,
+      }
+    );
+
+    this.icav2CopyBatchUtilityStack = new ICAv2CopyBatchUtilityStack(
+      scope,
+      'ICAv2CopyBatchUtilityStack',
+      {
+        ...this.createTemplateProps(env, 'ICAv2CopyBatchUtilityStack'),
+        ...statelessConfiguration.icav2CopyBatchUtilityStackProps,
       }
     );
   }
