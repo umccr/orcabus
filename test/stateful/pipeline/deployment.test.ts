@@ -92,10 +92,16 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
         [
+          '/SharedStack/EventBusConstruct/UniversalEventArchiveBucket/Resource',
           '/SharedStack/EventBusConstruct/UniversalEventArchiver/UniversalEventArchiver/ServiceRole/Resource',
           '/SharedStack/EventBusConstruct/UniversalEventArchiver/UniversalEventArchiver/ServiceRole/DefaultPolicy/Resource',
         ],
         [
+          {
+            id: 'AwsSolutions-S1',
+            reason:
+              'This is no necessity to retain the server access logs for Event Archiver Bucket.',
+          },
           {
             id: 'AwsSolutions-IAM4',
             reason:
