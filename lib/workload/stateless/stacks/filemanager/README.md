@@ -84,6 +84,24 @@ make psql
 
 Alternatively, just `brew install dbeaver-community` to easily browse the database contents (or any other DB viewer you prefer).
 
+
+### Compilation and migrations
+
+Locally, database schemas are updated by passing migration scripts to the special `/docker-entrypoint-initdb.d/` directory
+in the postgres [Dockerfile][dockerfile]. Locally, this is the most straight-forward solution as it doesn't require running
+sqlx-cli to perform migrations. Note, this is different to deployed filemanager instances, which do use sqlx to perform
+migrations.
+
+It's possible that when updating the postgres schema files, compilation will fail because the currently running local
+database is not up to date with the latest changes. By default, `make build` and other build-related commands will
+rebuild the docker image, however sometimes it might be necessary to completely stop the container and prune the docker
+system:
+
+```sh
+docker system prune -a --volumes
+```
+
+[dockerfile]: ./database/Dockerfile
 [deploy]: ./deploy
 [env-example]: .env.example
 

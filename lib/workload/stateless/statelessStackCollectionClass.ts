@@ -14,12 +14,17 @@ import {
   SequenceRunManagerStack,
   SequenceRunManagerStackProps,
 } from './stacks/sequence-run-manager/deploy/stack';
+import {
+  BsRunsUploadManagerStack,
+  BsRunsUploadManagerStackProps,
+} from './stacks/bs-runs-upload-manager/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
   metadataManagerStackProps: MetadataManagerStackProps;
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
+  bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
 }
 
 export class StatelessStackCollection {
@@ -28,6 +33,7 @@ export class StatelessStackCollection {
   readonly fileManagerStack: Stack;
   readonly metadataManagerStack: Stack;
   readonly sequenceRunManagerStack: Stack;
+  readonly bsRunsUploadManagerStack: Stack;
 
   constructor(
     scope: Construct,
@@ -53,6 +59,15 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'SequenceRunManagerStack'),
       ...statelessConfiguration.sequenceRunManagerStackProps,
     });
+
+    this.bsRunsUploadManagerStack = new BsRunsUploadManagerStack(
+      scope,
+      'BsRunsUploadManagerStack',
+      {
+        ...this.createTemplateProps(env, 'BsRunsUploadManagerStack'),
+        ...statelessConfiguration.bsRunsUploadManagerStackProps,
+      }
+    );
   }
 
   /**
