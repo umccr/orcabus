@@ -19,7 +19,7 @@ export class PythonLambdaLayerConstruct extends Construct {
       layerVersionName: props.layer_name,
       entry: props.layer_directory,
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_11],
-      compatibleArchitectures: [lambda.Architecture.X86_64],
+      compatibleArchitectures: [lambda.Architecture.ARM_64],
       license: 'GPL3',
       description: props.layer_description,
       bundling: {
