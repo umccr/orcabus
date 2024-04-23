@@ -6,10 +6,6 @@ export enum DbAuthType {
   USERNAME_PASSWORD,
 }
 
-export type EventType = {
-  microserviceName: string;
-};
-
 export type MicroserviceConfig = {
   name: string;
   authType: DbAuthType;
