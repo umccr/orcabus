@@ -12,10 +12,25 @@ import { MicroserviceConfig, DbAuthType } from '../function/type';
 import { ProviderFunction } from '../../../../components/provider_function';
 
 export type PostgresManagerStackProps = {
+  /**
+   * Secret name of the superuser credentials
+   */
   masterSecretName: string;
+  /**
+   * The Db cluster Id
+   */
   dbClusterIdentifier: string;
+  /**
+   * The microservice configuration
+   */
   microserviceDbConfig: MicroserviceConfig;
+  /**
+   * The SSM parameter name that contains the cluster resource id
+   */
   clusterResourceIdParameterName: string;
+  /**
+   * The port of the database
+   */
   dbPort: number;
   /**
    * The schedule (in Duration) that will rotate the microservice app secret
@@ -88,6 +103,7 @@ export class PostgresManagerStack extends Stack {
     new ProviderFunction(this, 'UpdatePgProviderFunction', {
       vpc: vpc,
       function: updatePgLambda,
+      additionalHash: JSON.stringify(props.microserviceDbConfig),
     });
 
     // each microservice will have its own role/SM to login
@@ -125,7 +141,6 @@ export class PostgresManagerStack extends Stack {
           secretName: PostgresManagerStack.formatDbSecretManagerName(microservice.name),
         });
 
-        // rotating these SM
         new sm.SecretRotation(this, `${microservice.name}DbSecretRotation`, {
           application: sm.SecretRotationApplication.POSTGRES_ROTATION_SINGLE_USER,
           excludeCharacters: this.passExcludedCharacter,

@@ -3,11 +3,15 @@ import { getMicroservicePassword } from './utils';
 import { getMicroserviceConfig, getRdsMasterSecret } from './utils';
 import { DbAuthType } from './type';
 import {
+  alterPassRole,
   createDatabase,
   createRdsIamLoginRole,
   createUserPassLoginRole,
+  grantRdsIamRole,
   listDatabase,
+  listRdsIamRole,
   listRole,
+  revokeRdsIamRole,
 } from './psql-commands';
 import { CdkCustomResourceEvent, CdkCustomResourceResponse, Context } from 'aws-lambda';
 
@@ -33,6 +37,7 @@ export const handler = async (
 
   try {
     const result = await updatePgDbAndRole();
+    console.info('result: ', result);
 
     return {
       ...resp,
@@ -58,7 +63,9 @@ export const updatePgDbAndRole = async () => {
     existingRoles: [],
     existingDatabases: [],
     newIamRole: [],
+    convertToIamRole: [],
     newUserPassRole: [],
+    convertToUserPassRole: [],
     newDatabase: [],
   };
 
@@ -74,27 +81,44 @@ export const updatePgDbAndRole = async () => {
   result.existingRoles.concat(roleList);
   result.existingDatabases.concat(dbList);
 
+  const rdsIamRole = await listRdsIamRole(pgClient);
+
   // iterate for each microservice name configured
   for (const m of microserviceConfig) {
-    // upsert role from the configuration file
-    if (!roleList.includes(m.name)) {
-      // create role based on the auth type
-      if (m.authType == DbAuthType.USERNAME_PASSWORD) {
-        const pass = await getMicroservicePassword(m.name);
-        await createUserPassLoginRole(pgClient, m.name, pass);
+    // upsert role based on the configuration file
+    if (m.authType == DbAuthType.USERNAME_PASSWORD) {
+      const pass = await getMicroservicePassword(m.name);
 
+      if (!roleList.includes(m.name)) {
+        // crete role if it does not exist
+
+        await createUserPassLoginRole(pgClient, m.name, pass);
         result.newUserPassRole.push(m.name);
-      } else if (m.authType == DbAuthType.RDS_IAM) {
+      } else if (rdsIamRole.includes(m.name)) {
+        // convert rdsIam role to username-password role
+
+        await revokeRdsIamRole(pgClient, m.name);
+        await alterPassRole(pgClient, m.name, pass);
+
+        result.convertToUserPassRole.push(m.name);
+      }
+    } else if (m.authType == DbAuthType.RDS_IAM) {
+      if (!roleList.includes(m.name)) {
+        // crete role if it does not exist
         await createRdsIamLoginRole(pgClient, m.name);
 
         result.newIamRole.push(m.name);
+      } else if (!rdsIamRole.includes(m.name)) {
+        // grant rds_iam to the role if it has not been granted
+
+        await grantRdsIamRole(pgClient, m.name);
+        result.convertToIamRole.push(m.name);
       }
     }
 
     // upsert database from the configuration environment
     if (!dbList.includes(m.name)) {
       await createDatabase(pgClient, m.name, m.name);
-
       result.newDatabase.push(m.name);
     }
   }
