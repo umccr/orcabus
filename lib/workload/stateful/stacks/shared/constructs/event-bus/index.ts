@@ -61,7 +61,6 @@ export class EventBusConstruct extends Construct {
     const archiveBucket = new Bucket(this, 'UniversalEventArchiveBucket', {
       bucketName: props.archiveBucketName,
       removalPolicy: RemovalPolicy.RETAIN,
-      serverAccessLogsPrefix: 'server-access-logs/',
       enforceSSL: true, //denies any request made via plain HTTP
     });
     // dedicated security group for the lambda function

@@ -39,7 +39,7 @@ def handler(event, context):
     # Write the JSON to an S3 bucket
     try:
         s3.put_object(Bucket=BUCKET_NAME, Key=key, Body=event_json, Tagging='&'.join([f'{k}={v}' for k, v in default_tags.items()]))
-        logger.info("Event stored:", key)
+        logger.info("Event stored: %s", str(key))
     except Exception as e:
         logger.error("Error storing event: %s", str(e))
         raise e
