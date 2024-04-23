@@ -56,6 +56,9 @@ describe('cdk-nag-stateless-stack', () => {
  */
 function applyNagSuppression(stackId: string, stack: Stack) {
   // all stacks widely
+
+  // FIXME one day we should remove this `AwsSolutions-IAM4` suppression and tackle any use of AWS managed policies
+  //  in all our stacks. See https://github.com/umccr/orcabus/issues/174
   NagSuppressions.addStackSuppressions(
     stack,
     [{ id: 'AwsSolutions-IAM4', reason: 'allow to use AWS managed policy' }],
@@ -84,16 +87,43 @@ function applyNagSuppression(stackId: string, stack: Stack) {
     true
   );
 
+  // NOTE
+  // This `AwsSolutions-L1` is tricky. Typically, it is okay to have one version less of the latest runtime
+  // version. Not every dependency (including transitive packages) aren't upto speed with latest runtime.
   NagSuppressions.addStackSuppressions(
     stack,
     [
       {
         id: 'AwsSolutions-L1',
-        reason: "'AwsCustomResource' is out of date",
+        reason:
+          'Use the latest available runtime for the targeted language to avoid technical debt. ' +
+          'Runtimes specific to a language or framework version are deprecated when the version ' +
+          'reaches end of life. This rule only applies to non-container Lambda functions.',
       },
     ],
     true
   );
+
+  NagSuppressions.addStackSuppressions(stack, [
+    {
+      id: 'AwsSolutions-SF1',
+      reason:
+        'We do not utilise StepFunction CloudWatch logging feature yet. ' +
+        'If turn this feature on, we will hit `AwsSolutions-IAM5` nag. FYI.' +
+        'See policy doc in https://docs.aws.amazon.com/step-functions/latest/dg/cw-logs.html',
+    },
+  ]);
+
+  NagSuppressions.addStackSuppressions(stack, [
+    {
+      id: 'AwsSolutions-SF2',
+      reason:
+        'We do not utilise StepFunction XRay tracing feature yet. ' +
+        'https://docs.aws.amazon.com/step-functions/latest/dg/concepts-xray-tracing.html ' +
+        'If turn this feature on, we will hit `AwsSolutions-IAM5` nag. FYI.' +
+        'See policy doc in https://docs.aws.amazon.com/step-functions/latest/dg/xray-iam.html',
+    },
+  ]);
 
   // for each stack specific
 

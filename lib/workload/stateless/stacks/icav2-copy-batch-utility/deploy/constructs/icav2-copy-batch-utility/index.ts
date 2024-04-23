@@ -85,15 +85,19 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     });
 
     // Add execution permissions to stateMachine role
-    manifest_inverter_lambda.grantInvoke(
-      // @ts-ignore
-      <iam.IRole>stateMachineBatch.role
+    stateMachineBatch.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [manifest_inverter_lambda.functionArn],
+        actions: ['lambda:InvokeFunction'],
+      })
     );
 
     // Add execution permissions to stateMachine role
-    check_or_launch_job_lambda.grantInvoke(
-      // @ts-ignore
-      <iam.IRole>stateMachineSingle.role
+    stateMachineSingle.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [check_or_launch_job_lambda.functionArn],
+        actions: ['lambda:InvokeFunction'],
+      })
     );
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
