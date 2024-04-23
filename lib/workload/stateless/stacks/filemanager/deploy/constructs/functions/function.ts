@@ -129,7 +129,7 @@ export class Function extends Construct {
       functionName: props.functionName,
     });
 
-    // Todo this should probably connect to an RDS proxy rather than directly to the database.
+    // TODO: this should probably connect to an RDS proxy rather than directly to the database.
   }
 
   /**
