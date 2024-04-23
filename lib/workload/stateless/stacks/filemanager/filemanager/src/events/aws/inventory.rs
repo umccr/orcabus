@@ -45,6 +45,16 @@ impl Inventory {
             .read_to_end(&mut inventory_bytes)
             .map_err(|err| S3InventoryError(format!("decompressing CSV: {}", err)))?;
 
+        // AWS seems to return extra newlines at the end of the CSV.
+        let end_pos = match inventory_bytes
+            .iter()
+            .rposition(|char| !char.is_ascii_whitespace())
+        {
+            Some(i) => i,
+            None => inventory_bytes.len(),
+        };
+        let inventory_bytes = &inventory_bytes[..end_pos];
+
         let mut header_record = StringRecord::new();
         ReaderBuilder::new()
             .trim(Trim::All)
@@ -54,7 +64,7 @@ impl Inventory {
 
         let mut csv = ReaderBuilder::new()
             .trim(Trim::All)
-            .from_reader(inventory_bytes.as_slice());
+            .from_reader(inventory_bytes);
         csv.set_headers(header_record);
 
         Ok(csv.deserialize().collect::<result::Result<_, _>>()?)
@@ -210,210 +220,265 @@ mod tests {
     use flate2::read::GzEncoder;
     use mockall::predicate::eq;
     use serde_json::json;
+    use serde_json::Value;
 
     use super::*;
+
+    const ORC_MANIFEST_SCHEMA: &str = "struct<bucket:string,key:string,version_id:string,\
+        is_latest:boolean,is_delete_marker:boolean,size:bigint,last_modified_date:timestamp,\
+        e_tag:string,storage_class:string,is_multipart_uploaded:boolean,replication_status:string,\
+        encryption_status:string,object_lock_retain_until_date:timestamp,object_lock_mode:string,\
+        object_lock_legal_hold_status:string,intelligent_tiering_access_tier:string,\
+        bucket_key_status:string,checksum_algorithm:string,\
+        object_access_control_list:string,object_owner:string>";
+
+    const PARQUET_MANIFEST_SCHEMA: &str =
+        "message s3.inventory {  required binary bucket (STRING);  \
+        required binary key (STRING);  optional binary version_id (STRING);  \
+        optional boolean is_latest;  optional boolean is_delete_marker;  \
+        optional int64 size;  optional int64 last_modified_date (TIMESTAMP(MILLIS,true));  \
+        optional binary e_tag (STRING);  optional binary storage_class (STRING);  \
+        optional boolean is_multipart_uploaded;  optional binary replication_status (STRING);  \
+        optional binary encryption_status (STRING);  \
+        optional int64 object_lock_retain_until_date (TIMESTAMP(MILLIS,true));  \
+        optional binary object_lock_mode (STRING);  \
+        optional binary object_lock_legal_hold_status (STRING);  \
+        optional binary intelligent_tiering_access_tier (STRING);  \
+        optional binary bucket_key_status (STRING);  optional binary checksum_algorithm (STRING);  \
+        optional binary object_access_control_list (STRING);  \
+        optional binary object_owner (STRING);}";
+
+    const CSV_MANIFEST_SCHEMA: &str = "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, \
+                LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, \
+                EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, \
+                ObjectLockLegalHoldStatus, IntelligentTieringAccessTier, BucketKeyStatus, \
+                ChecksumAlgorithm, ObjectAccessControlList, ObjectOwner";
+
+    const MANIFEST_KEY: &str = "Inventory/example-source-bucket/2016-11-06T21-32Z/files/939c6d46-85a9-4ba8-87bd-9db705a579ce";
+    const MANIFEST_BUCKET: &str = "example-inventory-destination-bucket";
+    const EXPECTED_CHECKSUM: &str = "f11166069f1990abeb9c97ace9cdfabc"; // pragma: allowlist secret
 
     #[tokio::test]
     async fn parse_csv_manifest() {
         let data = concat!(
-            r#""bucket","key1","0","2024-04-12T06:45:57.000Z","#,
-            r#""d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","#, // pragma: allowlist secret
-            r#""acl","#,  // pragma: allowlist secret
-            r#""owner""#, // pragma: allowlist secret
+            r#""bucket","inventory_test/","","true","false","0","2024-04-22T01:11:06.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
             "\n",
-            r#""bucket","key2","69897","2024-04-12T06:46:10.000Z","0808c1cdcd44cd5f6fea91a79ad32dc8","#, // pragma: allowlist secret
-            r#""STANDARD","false","","SSE-S3","","","","","DISABLED","","#,
-            r#""acl","#,
-            r#""owner""#
+            r#""bucket","inventory_test/key1","","true","false","0","2024-04-22T01:13:28.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
+            "\n",
+            r#""bucket","inventory_test/key2","","true","false","5","2024-04-22T01:14:53.000Z","d8e8fca2dc0f896fd7cb4cb0031ba249","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
+            "\n\n"
         );
 
-        println!("{:#?}", data);
         let mut bytes = vec![];
         let mut reader = GzEncoder::new(data.as_bytes(), Default::default());
         reader.read_to_end(&mut bytes).unwrap();
 
+        let checksum = hex::encode(md5::compute(bytes.as_slice()).0);
         let mut client = Client::default();
-        client.expect_get_object()
-            .with(eq("Inventory/example-source-bucket/2016-11-06T21-32Z/files/939c6d46-85a9-4ba8-87bd-9db705a579ce.csv.gz"), eq("example-inventory-destination-bucket"))
-            .once()
-            .returning(move |_, _| Ok(GetObjectOutput::builder().body(
-                ByteStream::from(bytes.clone())
-            ).build()));
+        set_s3_client_expectations(&InventoryFormat::Csv, &mut client, bytes);
 
         let inventory = Inventory::new(client);
-        let result = inventory.parse_manifest(Manifest {
-            destination_bucket: "arn:aws:s3:::example-inventory-destination-bucket".to_string(),
-            file_format: InventoryFormat::Csv,
-            file_schema: "Bucket, Key, Size, \
+        let result = inventory
+            .parse_manifest(expected_csv_manifest(checksum))
+            .await
+            .unwrap();
+
+        assert_csv_records(result.as_slice());
+    }
+
+    #[tokio::test]
+    async fn parse_csv_manifest_different_schema() {
+        let data = concat!(
+            r#""0","bucket","inventory_test/","","true","false","2024-04-22T01:11:06.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
+            "\n",
+            r#""0","bucket","inventory_test/key1","","true","false","2024-04-22T01:13:28.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
+            "\n",
+            r#""5","bucket","inventory_test/key2","","true","false","2024-04-22T01:14:53.000Z","d8e8fca2dc0f896fd7cb4cb0031ba249","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
+            "\n\n"
+        );
+
+        let mut bytes = vec![];
+        let mut reader = GzEncoder::new(data.as_bytes(), Default::default());
+        reader.read_to_end(&mut bytes).unwrap();
+
+        let checksum = hex::encode(md5::compute(bytes.as_slice()).0);
+        let mut client = Client::default();
+        set_s3_client_expectations(&InventoryFormat::Csv, &mut client, bytes);
+
+        let inventory = Inventory::new(client);
+        let result = inventory
+            .parse_manifest(expected_manifest(
+                "Size, Bucket, Key, VersionId, IsLatest, IsDeleteMarker, \
                 LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, \
                 EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, \
                 ObjectLockLegalHoldStatus, IntelligentTieringAccessTier, BucketKeyStatus, \
-                ChecksumAlgorithm, ObjectAccessControlList, ObjectOwner".to_string(),
-            files: vec![File {
-                key: "Inventory/example-source-bucket/2016-11-06T21-32Z/files/939c6d46-85a9-4ba8-87bd-9db705a579ce.csv.gz".to_string(),
-                md5_checksum: "f11166069f1990abeb9c97ace9cdfabc".to_string(), // pragma: allowlist secret
-            }]
-        }).await.unwrap();
+                ChecksumAlgorithm, ObjectAccessControlList, ObjectOwner"
+                    .to_string(),
+                InventoryFormat::Csv,
+                checksum,
+            ))
+            .await
+            .unwrap();
 
+        assert_csv_records(result.as_slice());
+    }
+
+    #[test]
+    fn deserialize_csv_manifest() {
+        let manifest = expected_json_manifest(&InventoryFormat::Csv);
+
+        let result: Manifest = serde_json::from_value(manifest).unwrap();
+        assert_eq!(result, expected_csv_manifest(EXPECTED_CHECKSUM.to_string()));
+    }
+
+    #[test]
+    fn deserialize_orc_manifest() {
+        let manifest = expected_json_manifest(&InventoryFormat::Orc);
+
+        let result: Manifest = serde_json::from_value(manifest).unwrap();
+        assert_eq!(result, expected_orc_manifest(EXPECTED_CHECKSUM.to_string()));
+    }
+
+    #[test]
+    fn deserialize_parquet_manifest() {
+        let manifest = expected_json_manifest(&InventoryFormat::Parquet);
+
+        let result: Manifest = serde_json::from_value(manifest).unwrap();
+        assert_eq!(
+            result,
+            expected_parquet_manifest(EXPECTED_CHECKSUM.to_string())
+        );
+    }
+
+    fn set_s3_client_expectations(
+        file_format: &InventoryFormat,
+        s3_client: &mut Client,
+        data: Vec<u8>,
+    ) {
+        let ending = ending_from_format(file_format);
+
+        s3_client
+            .expect_get_object()
+            .with(
+                eq(format!("{}{}", MANIFEST_KEY, ending)),
+                eq(MANIFEST_BUCKET),
+            )
+            .once()
+            .returning(move |_, _| {
+                Ok(GetObjectOutput::builder()
+                    .body(ByteStream::from(data.clone()))
+                    .build())
+            });
+    }
+
+    fn expected_json_manifest(format: &InventoryFormat) -> Value {
+        let schema = match format {
+            InventoryFormat::Csv => CSV_MANIFEST_SCHEMA,
+            InventoryFormat::Orc => ORC_MANIFEST_SCHEMA,
+            InventoryFormat::Parquet => PARQUET_MANIFEST_SCHEMA,
+            _ => "",
+        };
+
+        // Taken from https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory-location.html#storage-inventory-location-manifest
+        json!({
+            "sourceBucket": "example-source-bucket",
+            "destinationBucket": format!("arn:aws:s3:::{}", MANIFEST_BUCKET),
+            "version": "2016-11-30",
+            "creationTimestamp" : "1514944800000",
+            "fileFormat": format.as_str(),
+            "fileSchema": schema,
+            "files": [{
+                "key": format!("{}{}", MANIFEST_KEY, ending_from_format(format)),
+                "size": 2147483647,
+                "MD5checksum": EXPECTED_CHECKSUM
+            }]
+        })
+    }
+
+    fn expected_manifest(
+        file_schema: String,
+        file_format: InventoryFormat,
+        md5_checksum: String,
+    ) -> Manifest {
+        let ending = ending_from_format(&file_format);
+
+        Manifest {
+            destination_bucket: format!("arn:aws:s3:::{}", MANIFEST_BUCKET),
+            file_format: file_format.clone(),
+            file_schema,
+            files: vec![File {
+                key: format!("{}{}", MANIFEST_KEY, ending),
+                md5_checksum,
+            }],
+        }
+    }
+
+    fn ending_from_format(file_format: &InventoryFormat) -> &str {
+        let ending = match file_format {
+            InventoryFormat::Csv => ".csv.gz",
+            InventoryFormat::Orc => ".orc",
+            InventoryFormat::Parquet => ".parquet",
+            _ => "",
+        };
+        ending
+    }
+
+    fn expected_orc_manifest(checksum: String) -> Manifest {
+        expected_manifest(
+            ORC_MANIFEST_SCHEMA.to_string(),
+            InventoryFormat::Orc,
+            checksum,
+        )
+    }
+
+    fn expected_parquet_manifest(checksum: String) -> Manifest {
+        expected_manifest(
+            PARQUET_MANIFEST_SCHEMA.to_string(),
+            InventoryFormat::Parquet,
+            checksum,
+        )
+    }
+
+    fn expected_csv_manifest(checksum: String) -> Manifest {
+        expected_manifest(
+            CSV_MANIFEST_SCHEMA.to_string(),
+            InventoryFormat::Csv,
+            checksum,
+        )
+    }
+
+    fn assert_csv_records(result: &[Record]) {
         assert_eq!(
             result,
             vec![
                 Record {
                     bucket: "bucket".to_string(),
-                    key: "key1".to_string(),
+                    key: "inventory_test/".to_string(),
                     version_id: None,
                     size: Some(0),
-                    last_modified_date: Some("2024-04-12T06:45:57.000Z".parse().unwrap()),
+                    last_modified_date: Some("2024-04-22T01:11:06.000Z".parse().unwrap()),
                     e_tag: Some("d41d8cd98f00b204e9800998ecf8427e".to_string()),
                     storage_class: Some(StorageClass::Standard),
                 },
                 Record {
                     bucket: "bucket".to_string(),
-                    key: "key2".to_string(),
+                    key: "inventory_test/key1".to_string(),
                     version_id: None,
-                    size: Some(69897),
-                    last_modified_date: Some("2024-04-12T06:46:10.000Z".parse().unwrap()),
-                    e_tag: Some("0808c1cdcd44cd5f6fea91a79ad32dc8".to_string()),
+                    size: Some(0),
+                    last_modified_date: Some("2024-04-22T01:13:28.000Z".parse().unwrap()),
+                    e_tag: Some("d41d8cd98f00b204e9800998ecf8427e".to_string()),
+                    storage_class: Some(StorageClass::Standard),
+                },
+                Record {
+                    bucket: "bucket".to_string(),
+                    key: "inventory_test/key2".to_string(),
+                    version_id: None,
+                    size: Some(5),
+                    last_modified_date: Some("2024-04-22T01:14:53.000Z".parse().unwrap()),
+                    e_tag: Some("d8e8fca2dc0f896fd7cb4cb0031ba249".to_string()),
                     storage_class: Some(StorageClass::Standard),
                 },
             ]
         );
-    }
-
-    #[test]
-    fn deserialize_csv_manifest() {
-        // Taken from https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory-location.html#storage-inventory-location-manifest
-        let manifest = json!({
-            "sourceBucket": "example-source-bucket",
-            "destinationBucket": "arn:aws:s3:::example-inventory-destination-bucket",
-            "version": "2016-11-30",
-            "creationTimestamp" : "1514944800000",
-            "fileFormat": "CSV",
-            "fileSchema": "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, \
-                LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, \
-                EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, \
-                ObjectLockLegalHoldStatus, IntelligentTieringAccessTier, BucketKeyStatus, \
-                ChecksumAlgorithm, ObjectAccessControlList, ObjectOwner",
-            "files": [{
-                "key": "Inventory/example-source-bucket/2016-11-06T21-32Z/files/939c6d46-85a9-4ba8-87bd-9db705a579ce.csv.gz",
-                "size": 2147483647,
-                "MD5checksum": "f11166069f1990abeb9c97ace9cdfabc" // pragma: allowlist secret
-            }]
-        });
-
-        let result: Manifest = serde_json::from_value(manifest).unwrap();
-        assert_eq!(result, expected_csv_manifest());
-    }
-
-    #[test]
-    fn deserialize_orc_manifest() {
-        // Taken from https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory-location.html#storage-inventory-location-manifest
-        let manifest = json!({
-            "sourceBucket": "example-source-bucket",
-            "destinationBucket": "arn:aws:s3:::example-destination-bucket",
-            "version": "2016-11-30",
-            "creationTimestamp" : "1514944800000",
-            "fileFormat": "ORC",
-            "fileSchema": "struct<bucket:string,key:string,version_id:string,is_latest:boolean,\
-                is_delete_marker:boolean,size:bigint,last_modified_date:timestamp,e_tag:string,\
-                storage_class:string,is_multipart_uploaded:boolean,replication_status:string,\
-                encryption_status:string,object_lock_retain_until_date:timestamp,\
-                object_lock_mode:string,object_lock_legal_hold_status:string,\
-                intelligent_tiering_access_tier:string,bucket_key_status:string,\
-                checksum_algorithm:string,object_access_control_list:string,object_owner:string>",
-            "files": [{
-                "key": "inventory/example-source-bucket/data/d794c570-95bb-4271-9128-26023c8b4900.orc",
-                "size": 56291,
-                "MD5checksum": "5925f4e78e1695c2d020b9f6eexample"
-            }]
-        });
-
-        let result: Manifest = serde_json::from_value(manifest).unwrap();
-        assert_eq!(result, Manifest {
-            destination_bucket: "arn:aws:s3:::example-destination-bucket".to_string(),
-            file_format: InventoryFormat::Orc,
-            file_schema: "struct<bucket:string,key:string,version_id:string,is_latest:boolean,\
-                is_delete_marker:boolean,size:bigint,last_modified_date:timestamp,e_tag:string,\
-                storage_class:string,is_multipart_uploaded:boolean,replication_status:string,\
-                encryption_status:string,object_lock_retain_until_date:timestamp,\
-                object_lock_mode:string,object_lock_legal_hold_status:string,\
-                intelligent_tiering_access_tier:string,bucket_key_status:string,\
-                checksum_algorithm:string,object_access_control_list:string,object_owner:string>".to_string(),
-            files: vec![File {
-                key: "inventory/example-source-bucket/data/d794c570-95bb-4271-9128-26023c8b4900.orc".to_string(),
-                md5_checksum: "5925f4e78e1695c2d020b9f6eexample".to_string(),
-            }],
-        });
-    }
-
-    #[test]
-    fn deserialize_parquet_manifest() {
-        // Taken from https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory-location.html#storage-inventory-location-manifest
-        let manifest = json!({
-            "sourceBucket": "example-source-bucket",
-            "destinationBucket": "arn:aws:s3:::example-destination-bucket",
-            "version": "2016-11-30",
-            "creationTimestamp" : "1514944800000",
-            "fileFormat": "Parquet",
-            "fileSchema": "message s3.inventory { required binary bucket (UTF8); \
-                required binary key (UTF8); optional binary version_id (UTF8); \
-                optional boolean is_latest; optional boolean is_delete_marker; \
-                optional int64 size; optional int64 last_modified_date (TIMESTAMP_MILLIS); \
-                optional binary e_tag (UTF8); optional binary storage_class (UTF8); \
-                optional boolean is_multipart_uploaded; optional binary replication_status (UTF8); \
-                optional binary encryption_status (UTF8); \
-                optional int64 object_lock_retain_until_date (TIMESTAMP_MILLIS); \
-                optional binary object_lock_mode (UTF8); \
-                optional binary object_lock_legal_hold_status (UTF8); \
-                optional binary intelligent_tiering_access_tier (UTF8); \
-                optional binary bucket_key_status (UTF8); optional binary checksum_algorithm (UTF8); \
-                optional binary object_access_control_list (UTF8); \
-                optional binary object_owner (UTF8);}",
-            "files": [{
-                "key": "inventory/example-source-bucket/data/d754c470-85bb-4255-9218-47023c8b4910.parquet",
-                "size": 56291,
-                "MD5checksum": "5825f2e18e1695c2d030b9f6eexample"
-            }]
-        });
-
-        let result: Manifest = serde_json::from_value(manifest).unwrap();
-        assert_eq!(result, Manifest {
-            destination_bucket: "arn:aws:s3:::example-destination-bucket".to_string(),
-            file_format: InventoryFormat::Parquet,
-            file_schema: "message s3.inventory { required binary bucket (UTF8); \
-                required binary key (UTF8); optional binary version_id (UTF8); \
-                optional boolean is_latest; optional boolean is_delete_marker; \
-                optional int64 size; optional int64 last_modified_date (TIMESTAMP_MILLIS); \
-                optional binary e_tag (UTF8); optional binary storage_class (UTF8); \
-                optional boolean is_multipart_uploaded; optional binary replication_status (UTF8); \
-                optional binary encryption_status (UTF8); \
-                optional int64 object_lock_retain_until_date (TIMESTAMP_MILLIS); \
-                optional binary object_lock_mode (UTF8); \
-                optional binary object_lock_legal_hold_status (UTF8); \
-                optional binary intelligent_tiering_access_tier (UTF8); \
-                optional binary bucket_key_status (UTF8); optional binary checksum_algorithm (UTF8); \
-                optional binary object_access_control_list (UTF8); \
-                optional binary object_owner (UTF8);}".to_string(),
-            files: vec![File {
-                key: "inventory/example-source-bucket/data/d754c470-85bb-4255-9218-47023c8b4910.parquet".to_string(),
-                md5_checksum: "5825f2e18e1695c2d030b9f6eexample".to_string(),
-            }],
-        });
-    }
-
-    fn expected_csv_manifest() -> Manifest {
-        Manifest {
-            destination_bucket: "arn:aws:s3:::example-inventory-destination-bucket".to_string(),
-            file_format: InventoryFormat::Csv,
-            file_schema: "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, \
-                LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, \
-                EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, \
-                ObjectLockLegalHoldStatus, IntelligentTieringAccessTier, BucketKeyStatus, \
-                ChecksumAlgorithm, ObjectAccessControlList, ObjectOwner".to_string(),
-            files: vec![File {
-                key: "Inventory/example-source-bucket/2016-11-06T21-32Z/files/939c6d46-85a9-4ba8-87bd-9db705a579ce.csv.gz".to_string(),
-                md5_checksum: "f11166069f1990abeb9c97ace9cdfabc".to_string(), // pragma: allowlist secret
-            }]
-        }
     }
 }
