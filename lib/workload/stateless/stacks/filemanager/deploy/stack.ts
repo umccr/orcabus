@@ -1,12 +1,12 @@
 import { Construct } from 'constructs';
-import { IngestFunction, IngestFunctionProps } from './constructs/functions/ingest';
+import { IngestFunction } from './constructs/functions/ingest';
 import { MigrateFunction } from './constructs/functions/migrate';
 import { ObjectsQueryFunction } from './constructs/functions/query';
 import { DatabaseProps } from './constructs/functions/function';
 import { Vpc, SecurityGroup, VpcLookupOptions, IVpc, ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Arn, Stack, StackProps } from 'aws-cdk-lib';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
-import { ProviderFunction } from '../../../../components/provider_function';
+import { ProviderFunction } from '../../../../../components/provider-function';
 import { ApiGatewayConstruct } from '../../../../components/api-gateway';
 import { IQueue, Queue } from 'aws-cdk-lib/aws-sqs';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
