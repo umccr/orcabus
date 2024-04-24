@@ -2,7 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Function, Runtime, S3Code } from 'aws-cdk-lib/aws-lambda';
-import { ProviderFunction } from '../../lib/workload/components/provider_function';
+import { ProviderFunction } from '../../lib/workload/components/provider-function';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 
 let stack: cdk.Stack;

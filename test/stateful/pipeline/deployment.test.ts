@@ -87,6 +87,40 @@ function applyNagSuppression(stackId: string, stack: Stack) {
         ]
       );
       break;
+    case 'SharedStack':
+      // suppress by resource
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        [
+          '/SharedStack/EventBusConstruct/UniversalEventArchiveBucket/Resource',
+          '/SharedStack/EventBusConstruct/UniversalEventArchiver/UniversalEventArchiver/ServiceRole/Resource',
+          '/SharedStack/EventBusConstruct/UniversalEventArchiver/UniversalEventArchiver/ServiceRole/DefaultPolicy/Resource',
+        ],
+        [
+          {
+            id: 'AwsSolutions-S1',
+            reason:
+              'This is no necessity to retain the server access logs for Event Archiver Bucket.',
+          },
+          {
+            id: 'AwsSolutions-IAM4',
+            reason:
+              'AWSLambdaBasicExecutionRole,AWSLambdaVPCAccessExecutionRole are needed. See ' +
+              'https://stackoverflow.com/questions/45282492/s3-policy-to-allow-lambda ' +
+              'https://repost.aws/knowledge-center/lambda-execution-role-s3-bucket ' +
+              'https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html ',
+          },
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              'Permission to <EventBusConstructUniversalEventArchiveBucketxxxx.Arn>/* is needed. See ' +
+              'https://stackoverflow.com/questions/45282492/s3-policy-to-allow-lambda ' +
+              'https://repost.aws/knowledge-center/lambda-execution-role-s3-bucket ' +
+              'https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html ',
+          },
+        ]
+      );
+      break;
 
     default:
       break;

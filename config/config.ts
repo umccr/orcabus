@@ -8,6 +8,8 @@ import { getPostgresManagerStackProps } from './stacks/postgresManager';
 import { getMetadataManagerStackProps } from './stacks/metadataManager';
 import { getSequenceRunManagerStackProps } from './stacks/sequenceRunManager';
 import { getFileManagerStackProps } from './stacks/fileManager';
+import { getBsRunsUploadManagerStackProps } from './stacks/bsRunsUploadManager';
+import { getICAv2CopyBatchUtilityStackProps } from './stacks/icav2CopyBatchUtility';
 
 interface EnvironmentConfig {
   name: string;
@@ -45,10 +47,11 @@ export const getEnvironmentConfig = (
             metadataManagerStackProps: getMetadataManagerStackProps(),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(accountName),
+            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(accountName),
+            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(accountName),
           },
         },
       };
-      break;
 
     case 'gamma':
       return {
@@ -66,10 +69,11 @@ export const getEnvironmentConfig = (
             metadataManagerStackProps: getMetadataManagerStackProps(),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(accountName),
+            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(accountName),
+            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(accountName),
           },
         },
       };
-      break;
 
     case 'prod':
       return {
@@ -87,6 +91,8 @@ export const getEnvironmentConfig = (
             metadataManagerStackProps: getMetadataManagerStackProps(),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(accountName),
+            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(accountName),
+            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(accountName),
           },
         },
       };
