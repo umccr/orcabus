@@ -9,7 +9,7 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as sm from 'aws-cdk-lib/aws-secretsmanager';
 import { MicroserviceConfig, DbAuthType } from '../function/type';
-import { ProviderFunction } from '../../../../components/provider_function';
+import { ProviderFunction } from '../../../../components/provider-function';
 
 export type PostgresManagerStackProps = {
   /**
