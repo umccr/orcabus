@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 The icav2 event translator expects the following as inputs (without wrapper of eventbus)
 {
@@ -140,7 +138,7 @@ def generate_icav2_internal_event(event):
     
     # Check conditions for the event to be processed: 
     if (not check_icav2_event(eventCode, analysisStatus, pipeline_id, userReference)):
-        logger.error("Illegal ICAV2 event received. Event code, analysis status, pipeline id, user reference: ", eventCode, analysisStatus, pipeline_id, userReference)
+        logger.error("Illegal ICAV2 event received. Event code: %s, analysis status: %s, pipeline id: %s, user reference: %s", eventCode, analysisStatus, pipeline_id, userReference)
         raise ValueError("Event does not meet ICAv2 transltor processing conditions.")
     
     # Generate internal event with required attributes
