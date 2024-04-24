@@ -16,7 +16,7 @@ export interface EventBusProps {
   vpcProps?: VpcLookupOptions;
   lambdaSecurityGroupName?: string;
   archiveBucketName?: string;
-  enableBucketRetainPolicy?: boolean;
+  bucketRemovalPolicy?: RemovalPolicy;
 }
 
 export class EventBusConstruct extends Construct {
@@ -50,9 +50,14 @@ export class EventBusConstruct extends Construct {
   }
 
   private createUniversalEventArchiver(props: EventBusProps) {
-    if (!props.vpcProps || !props.archiveBucketName || !props.lambdaSecurityGroupName) {
+    if (
+      !props.vpcProps ||
+      !props.archiveBucketName ||
+      !props.lambdaSecurityGroupName ||
+      !props.bucketRemovalPolicy
+    ) {
       throw new Error(
-        'VPC, Security Group and Archive Bucket are required for custom event archiver function.'
+        'VPC, Security Group, Archive Bucket Name and Removal Policy are required for custom event archiver function.'
       );
     }
 
@@ -61,7 +66,7 @@ export class EventBusConstruct extends Construct {
     // dedicated bucket for archiving all events
     const archiveBucket = new Bucket(this, 'UniversalEventArchiveBucket', {
       bucketName: props.archiveBucketName,
-      removalPolicy: props.enableBucketRetainPolicy ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      removalPolicy: props.bucketRemovalPolicy,
       enforceSSL: true, //denies any request made via plain HTTP
     });
     // dedicated security group for the lambda function

@@ -50,21 +50,21 @@ const getEventBusConstructProps = (n: AccountName): EventBusProps => {
         ...baseConfig,
         addCustomEventArchiver: true,
         archiveBucketName: 'umccr-dev-' + archiveBucketNameSuffix,
-        enableBucketRetainPolicy: false,
+        bucketRemovalPolicy: RemovalPolicy.DESTROY,
       };
     case 'gamma':
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
         archiveBucketName: 'umccr-stg-' + archiveBucketNameSuffix,
-        enableBucketRetainPolicy: false,
+        bucketRemovalPolicy: RemovalPolicy.DESTROY,
       };
     case 'prod':
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
         archiveBucketName: 'umccr-prod-' + archiveBucketNameSuffix,
-        enableBucketRetainPolicy: true,
+        bucketRemovalPolicy: RemovalPolicy.RETAIN,
       };
   }
 };
