@@ -16,7 +16,7 @@ import {
   regName,
   stgBucket,
   vpcProps,
-  archiveBucketNameSuffix,
+  archiveBucketNamePrefix,
   archiveSecurityGroupName,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
@@ -49,21 +49,21 @@ const getEventBusConstructProps = (n: AccountName): EventBusProps => {
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        archiveBucketName: 'umccr-dev-' + archiveBucketNameSuffix,
+        archiveBucketName: archiveBucketNamePrefix + 'dev',
         bucketRemovalPolicy: RemovalPolicy.DESTROY,
       };
     case 'gamma':
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        archiveBucketName: 'umccr-stg-' + archiveBucketNameSuffix,
+        archiveBucketName: archiveBucketNamePrefix + 'stg',
         bucketRemovalPolicy: RemovalPolicy.DESTROY,
       };
     case 'prod':
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        archiveBucketName: 'umccr-prod-' + archiveBucketNameSuffix,
+        archiveBucketName: archiveBucketNamePrefix + 'prod',
         bucketRemovalPolicy: RemovalPolicy.RETAIN,
       };
   }
