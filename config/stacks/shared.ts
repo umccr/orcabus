@@ -16,7 +16,7 @@ import {
   regName,
   stgBucket,
   vpcProps,
-  archiveBucketName,
+  archiveBucketNameSuffix,
   archiveSecurityGroupName,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
@@ -33,19 +33,40 @@ const getSchemaRegistryConstructProps = (): SchemaRegistryProps => {
 };
 
 const getEventBusConstructProps = (n: AccountName): EventBusProps => {
-  return {
+  const baseConfig = {
     eventBusName: eventBusName,
     archiveName: 'OrcaBusMainArchive',
     archiveDescription: 'OrcaBus main event bus archive',
     archiveRetention: 365,
 
-    // add custom event archiver
-    addCustomEventArchiver: true,
+    // common config for custom event archiver
     vpcProps: vpcProps,
     lambdaSecurityGroupName: archiveSecurityGroupName,
-    archiveBucketName: archiveBucketName,
-    enableBucketRetainPolicy: n === 'prod',
   };
+
+  switch (n) {
+    case 'beta':
+      return {
+        ...baseConfig,
+        addCustomEventArchiver: true,
+        archiveBucketName: 'umccr-dev-' + archiveBucketNameSuffix,
+        enableBucketRetainPolicy: false,
+      };
+    case 'gamma':
+      return {
+        ...baseConfig,
+        addCustomEventArchiver: true,
+        archiveBucketName: 'umccr-stg-' + archiveBucketNameSuffix,
+        enableBucketRetainPolicy: false,
+      };
+    case 'prod':
+      return {
+        ...baseConfig,
+        addCustomEventArchiver: true,
+        archiveBucketName: 'umccr-prod-' + archiveBucketNameSuffix,
+        enableBucketRetainPolicy: true,
+      };
+  }
 };
 
 const getComputeConstructProps = (): ComputeProps => {
