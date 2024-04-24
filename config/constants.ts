@@ -64,7 +64,7 @@ export const eventSourceQueueName = 'orcabus-event-source-queue';
 
 // Event Archiver constants for EventBus Contruct in SharedStack
 export const archiveBucketNameSuffix = 'event-archive-bucket';
-export const archiveSecurityGroupName = 'OrcaBusShareEventBusEventArchiveSecurityGroup';
+export const archiveSecurityGroupName = 'OrcaBusSharedEventBusEventArchiveSecurityGroup';
 
 /**
  * Configuration for resources created in TokenServiceStack
