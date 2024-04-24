@@ -1,3 +1,4 @@
+import path from 'path';
 import { Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -79,8 +80,8 @@ export class PostgresManagerStack extends Stack {
     });
 
     const updatePgLambda = new nodejs.NodejsFunction(this, 'UpdatePostgresLambda', {
-      depsLockFilePath: __dirname + '/../yarn.lock',
-      entry: __dirname + '/../function/index.ts',
+      depsLockFilePath: path.join(__dirname + '/../yarn.lock'),
+      entry: path.join(__dirname + '/../function/index.ts'),
       timeout: Duration.minutes(10),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_20_X,
