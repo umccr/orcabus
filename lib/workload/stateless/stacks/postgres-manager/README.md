@@ -33,10 +33,10 @@ export enum DbAuthType {
 }
 ```
 
-Once the configuration has been added, the stack will create the relevant new database and roles specified. The SQL
-command is executed to the Db with AWS Custom Resource where the lambda is triggered on resource update.
+Once the configuration has been added, the stack will create the relevant new database and role specified. The SQL
+command is executed to the Db with AWS Custom Resource where the configuration has changed.
 
-Changing the microservice config will also execute changes to the role by updating the cloud formation stack props. E.g.
+Changing the microservice authType is also possible by updating the stack props configuration as above. E.g.
 the `metadata_manager` is set to `user-pass` connection and a new configuration where it changes to use
 `rds_iam`, the changes will update the login details in the database.
 

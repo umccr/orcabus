@@ -65,7 +65,7 @@ export const listRdsIamRole = async (client: Client): Promise<string[]> => {
     'FROM pg_roles r ' +
     'JOIN pg_auth_members m ON r.oid = m.member ' +
     'JOIN pg_roles rr ON m.roleid = rr.oid ' +
-    `WHERE rr.rolname = 'app_1';`;
+    `WHERE rr.rolname = 'rds_iam';`;
 
   console.info('QUERY: ', query);
 

@@ -35,27 +35,14 @@ export const handler = async (
     };
   }
 
-  try {
-    const result = await updatePgDbAndRole();
-    console.info('result: ', result);
+  const result = await updatePgDbAndRole();
+  console.info('result: ', result);
 
-    return {
-      ...resp,
-      Status: 'SUCCESS',
-      Data: result,
-    };
-  } catch (error) {
-    console.error(error);
-
-    if (error instanceof Error) {
-      resp.Reason = error.message;
-    }
-    return {
-      ...resp,
-      Status: 'FAILED',
-      Data: { Result: error },
-    };
-  }
+  return {
+    ...resp,
+    Status: 'SUCCESS',
+    Data: result,
+  };
 };
 
 export const updatePgDbAndRole = async () => {
