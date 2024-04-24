@@ -32,7 +32,7 @@ const getSchemaRegistryConstructProps = (): SchemaRegistryProps => {
   };
 };
 
-const getEventBusConstructProps = (): EventBusProps => {
+const getEventBusConstructProps = (n: AccountName): EventBusProps => {
   return {
     eventBusName: eventBusName,
     archiveName: 'OrcaBusMainArchive',
@@ -44,6 +44,7 @@ const getEventBusConstructProps = (): EventBusProps => {
     vpcProps: vpcProps,
     lambdaSecurityGroupName: archiveSecurityGroupName,
     archiveBucketName: archiveBucketName,
+    enableBucketRetainPolicy: n === 'prod',
   };
 };
 
@@ -138,7 +139,7 @@ export const getSharedStackProps = (n: AccountName): SharedStackProps => {
   return {
     vpcProps,
     schemaRegistryProps: getSchemaRegistryConstructProps(),
-    eventBusProps: getEventBusConstructProps(),
+    eventBusProps: getEventBusConstructProps(n),
     databaseProps: getDatabaseConstructProps(n),
     computeProps: getComputeConstructProps(),
     eventSourceProps: getEventSourceConstructProps(n),

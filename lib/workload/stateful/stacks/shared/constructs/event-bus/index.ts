@@ -16,6 +16,7 @@ export interface EventBusProps {
   vpcProps?: VpcLookupOptions;
   lambdaSecurityGroupName?: string;
   archiveBucketName?: string;
+  enableBucketRetainPolicy?: boolean;
 }
 
 export class EventBusConstruct extends Construct {
@@ -60,7 +61,7 @@ export class EventBusConstruct extends Construct {
     // dedicated bucket for archiving all events
     const archiveBucket = new Bucket(this, 'UniversalEventArchiveBucket', {
       bucketName: props.archiveBucketName,
-      removalPolicy: RemovalPolicy.RETAIN,
+      removalPolicy: props.enableBucketRetainPolicy ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
       enforceSSL: true, //denies any request made via plain HTTP
     });
     // dedicated security group for the lambda function
