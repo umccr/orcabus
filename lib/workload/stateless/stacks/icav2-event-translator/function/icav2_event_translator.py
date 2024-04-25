@@ -60,8 +60,8 @@ import logging
 import datetime
 import boto3
 
-events = boto3.client("events")
-dynamodb = boto3.resource('dynamodb')
+events = boto3.client("events", region_name='ap-southeast-2')
+dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -85,7 +85,7 @@ def handler(event, context):
       events.put_events(
         Entries=[
             {
-                "Source": 'ocranus.iet', # icav2 event translator
+                "Source": 'ocrabus.iet', # icav2 event translator
                 "DetailType": "ICAV2_INTERNAL_EVENT",
                 "Detail": json.dumps(internal_event),
                 "EventBusName": eventBusName
@@ -98,14 +98,15 @@ def handler(event, context):
     
     # Store the internal event in the DynamoDB table
     try: 
-      table = dynamodb.Table(table_name)
-      table.put_item(
+      # table = dynamodb.Table(table_name)
+      dynamodb.put_item(
+          TableName=table_name,
           Item={
-              'id': internal_event.get("analysisId"),
-              'id_type': 'icav2_analysis_id',
-              'original_external_event': json.dumps(event),
-              'translated_internal_event': json.dumps(internal_event),
-              'timestamp': datetime.datetime.now().isoformat()
+              'id': {'S': internal_event.get("analysisId")},
+              'id_type': {'S': 'icav2_analysis_id'},
+              'original_external_event': {'S': json.dumps(eventDetails)},
+              'translated_internal_event': {'S': json.dumps(internal_event)},
+              'timestamp': {'S': datetime.datetime.now().isoformat()}
           }
       )
       logger.info(f"Original and Internal events stored in the DynamoDB table.")

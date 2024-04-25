@@ -1,14 +1,15 @@
 # ICAv2 Event Translator
 
 <!-- TOC -->
-* [ICAv2 Event Translator](#ICAv2-Event-Translator)
+* [ICAv2 Event Translator](#icav2-event-translator)
   * [Inputs](#inputs)
     * [Example Input](#example-input)
   * [Outputs](#outputs)
   * [lambda function for event translation](#lambda-function-for-event-translation)
-    * [Receive and Translate ICAv2 event to Orcabus internal event](#Receive-and-Translate-ICAv2-event-to-Orcabus-internal-event)
-    * [Save this translation to dynamoDB](#Save-this-translation-to-dynamoDB)
-    * [Publish the Orcabus event to event bus](#Publish-the-Orcabus-event-to-event-bus)
+    * [Receive and Translate ICAv2 event to Orcabus internal event](#receive-and-translate-icav2-event-to-orcabus-internal-event)
+    * [Save this translation to dynamoDB](#save-this-translation-process-to-dynamodb)
+    * [Publish the Orcabus event to event bus](#publish-the-orcabus-event-to-event-bus)
+  * [Unit Test](#unit-test)
 <!-- TOC -->
 
 
@@ -94,11 +95,18 @@ Send the orignal input and orcabus event after translation to the dynao db for r
 {
   id: analysisId,
   id_type: "icav2_analysis_id",
-  original_external_event: orignal input,
-  translated_internal_event: orcabus event after translation,
+  original_external_event: {orignal input events},
+  translated_internal_event: {orcabus event after translation},
   timestamp: datetime.datetime.now().isoformat()
 }
  ```
 
 ### Publish the Orcabus event to event bus
 publish the Orcabus event back the event bus.
+
+## Unit Test
+
+```make install```
+This will install all necessary package.\
+```make test```
+Run unit testing for lambda function.
