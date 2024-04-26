@@ -1,7 +1,7 @@
 import path from 'path';
 import { Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Vpc, VpcLookupOptions, SubnetType, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
@@ -83,9 +83,22 @@ export class PostgresManagerStack extends Stack {
       depsLockFilePath: path.join(__dirname + '/../yarn.lock'),
       entry: path.join(__dirname + '/../function/index.ts'),
       timeout: Duration.minutes(10),
+      bundling: {
+        commandHooks: {
+          beforeBundling(inputDir: string, outputDir: string) {
+            return [`cd ${inputDir}`, 'yarn install --immutable'];
+          },
+          beforeInstall() {
+            return [];
+          },
+          afterBundling() {
+            return [];
+          },
+        },
+      },
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_20_X,
-      architecture: lambda.Architecture.ARM_64,
+      runtime: Runtime.NODEJS_20_X,
+      architecture: Architecture.ARM_64,
       vpc: vpc,
       vpcSubnets: {
         subnetType: SubnetType.PRIVATE_WITH_EGRESS,
