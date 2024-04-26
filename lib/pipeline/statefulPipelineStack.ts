@@ -138,14 +138,14 @@ export class StatefulPipelineStack extends cdk.Stack {
     pipeline.buildPipeline();
 
     // notification for success/failure
-    const arteriaDevSlackConfigArn = ssm.StringParameter.valueForStringParameter(
+    const alertsStageSlackConfigArn = ssm.StringParameter.valueForStringParameter(
       this,
       '/chatbot_arn/slack/alerts-stage'
     );
     const target = chatbot.SlackChannelConfiguration.fromSlackChannelConfigurationArn(
       this,
       'SlackChannelConfiguration',
-      arteriaDevSlackConfigArn
+      alertsStageSlackConfigArn
     );
 
     pipeline.pipeline.notifyOn('PipelineSlackNotification', target, {
