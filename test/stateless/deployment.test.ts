@@ -4,6 +4,7 @@ import { SynthesisMessage } from 'aws-cdk-lib/cx-api';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 import { getEnvironmentConfig } from '../../config/config';
 import { StatelessStackCollection } from '../../lib/workload/stateless/statelessStackCollectionClass';
+import { AppStage } from '../../config/constants';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {
   return `${sm.entry.data} [${sm.id}]`;

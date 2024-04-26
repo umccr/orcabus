@@ -2,7 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { getEnvironmentConfig } from '../../../config/config';
 import { EventBusConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/event-bus';
-import { vpcProps } from '../../../config/constants';
+import { AppStage, vpcProps } from '../../../config/constants';
 
 let app: cdk.App;
 let stack: cdk.Stack;

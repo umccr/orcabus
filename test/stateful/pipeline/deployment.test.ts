@@ -5,6 +5,7 @@ import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 
 import { getEnvironmentConfig } from '../../../config/config';
 import { StatefulStackCollection } from '../../../lib/workload/stateful/statefulStackCollectionClass';
+import { AppStage } from '../../../config/constants';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {
   return `${sm.entry.data} [${sm.id}]`;

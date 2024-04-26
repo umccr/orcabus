@@ -14,6 +14,7 @@ import {
 } from '../workload/stateless/statelessStackCollectionClass';
 
 import { getEnvironmentConfig } from '../../config/config';
+import { AppStage } from '../../config/constants';
 
 export class StatelessPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
