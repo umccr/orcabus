@@ -69,25 +69,10 @@ export class ApiGatewayConstruct extends Construct {
       }),
     };
 
-    const role = new iam.Role(this, 'ApiGWLogWriterRole', {
+    // Allow writing access logs, managed
+    new iam.Role(this, 'AmazonAPIGatewayPushToCloudWatchLogs', {
       assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
     });
-
-    const policy = new iam.PolicyStatement({
-      actions: [
-        'logs:CreateLogGroup',
-        'logs:CreateLogStream',
-        'logs:DescribeLogGroups',
-        'logs:DescribeLogStreams',
-        'logs:PutLogEvents',
-        'logs:GetLogEvents',
-        'logs:FilterLogEvents',
-      ],
-      resources: ['*'],
-    });
-
-    role.addToPolicy(policy);
-    accessLogs.grantWrite(role);
   }
 
   private getAuthorizer(props: ApiGatewayConstructProps): HttpJwtAuthorizer {
