@@ -88,7 +88,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(
         this,
-        'BetaDeployment',
+        'OrcaBusBeta',
         betaConfig.stackProps.statefulConfig,
         {
           account: betaConfig.accountId,
@@ -105,7 +105,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(
         this,
-        'GammaDeployment',
+        'OrcaBusGamma',
         gammaConfig.stackProps.statefulConfig,
         {
           account: gammaConfig.accountId,
@@ -123,7 +123,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(
         this,
-        'ProdDeployment',
+        'OrcaBusProd',
         prodConfig.stackProps.statefulConfig,
         {
           account: prodConfig.accountId,
