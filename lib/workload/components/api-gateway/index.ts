@@ -1,8 +1,10 @@
 import { Construct } from 'constructs';
 import { aws_ssm, Duration } from 'aws-cdk-lib';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
-import { CorsHttpMethod, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+import { CorsHttpMethod, HttpApi, CfnStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { IStringParameter } from 'aws-cdk-lib/aws-ssm';
+import { LogGroup } from 'aws-cdk-lib/aws-logs';
+import iam from 'aws-cdk-lib/aws-iam';
 
 export interface ApiGatewayConstructProps {
   region: string;
@@ -18,7 +20,7 @@ export class ApiGatewayConstruct extends Construct {
     super(scope, id);
 
     this._httpApi = new HttpApi(this, 'HttpApi', {
-      apiName: 'OrcaBusAPI-${id}',
+      apiName: 'OrcaBus-' + id,
       corsPreflight: {
         allowHeaders: ['Authorization'],
         allowMethods: [
@@ -34,9 +36,58 @@ export class ApiGatewayConstruct extends Construct {
       // defaultDomainMapping: ... TODO
     });
 
-    // TODO Configure access logging. See https://github.com/aws/aws-cdk/issues/11100
+    // LogGroups
+    this.setupAccessLogs();
 
-    // TODO setup cloud map service discovery perhaps
+    // CloudMap
+    // this.setupCloudServiceDiscovery()
+  }
+
+  // TODO: https://github.com/aws-samples/aws-cdk-service-discovery-example/tree/main
+  // private setupCloudServiceDiscovery() {
+  // }
+
+  // TODO: Taken from https://github.com/aws/aws-cdk/issues/11100#issuecomment-904627081
+  // Monitor for higher level CDK construct instead of leveraging CfnStage
+  private setupAccessLogs() {
+    const accessLogs = new LogGroup(this, 'OrcaBus-ApiGw-AccessLogs');
+    const stage = this.httpApi.defaultStage?.node.defaultChild as CfnStage;
+    stage.accessLogSettings = {
+      destinationArn: accessLogs.logGroupArn,
+      format: JSON.stringify({
+        requestId: '$context.requestId',
+        userAgent: '$context.identity.userAgent',
+        sourceIp: '$context.identity.sourceIp',
+        requestTime: '$context.requestTime',
+        requestTimeEpoch: '$context.requestTimeEpoch',
+        httpMethod: '$context.httpMethod',
+        path: '$context.path',
+        status: '$context.status',
+        protocol: '$context.protocol',
+        responseLength: '$context.responseLength',
+        domainName: '$context.domainName',
+      }),
+    };
+
+    const role = new iam.Role(this, 'ApiGWLogWriterRole', {
+      assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
+    });
+
+    const policy = new iam.PolicyStatement({
+      actions: [
+        'logs:CreateLogGroup',
+        'logs:CreateLogStream',
+        'logs:DescribeLogGroups',
+        'logs:DescribeLogStreams',
+        'logs:PutLogEvents',
+        'logs:GetLogEvents',
+        'logs:FilterLogEvents',
+      ],
+      resources: ['*'],
+    });
+
+    role.addToPolicy(policy);
+    accessLogs.grantWrite(role);
   }
 
   private getAuthorizer(props: ApiGatewayConstructProps): HttpJwtAuthorizer {
