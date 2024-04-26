@@ -1,6 +1,7 @@
 import { Construct } from 'constructs';
 import { IngestFunction } from '../constructs/functions/ingest';
 import { MigrateFunction } from '../constructs/functions/migrate';
+import { QueryFunction } from '../constructs/functions/query';
 import { DatabaseProps } from '../constructs/functions/function';
 import { Vpc, SecurityGroup, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { Arn, Stack, StackProps } from 'aws-cdk-lib';
@@ -99,6 +100,12 @@ export class Filemanager extends Stack {
       securityGroup: lambdaSecurityGroup,
       eventSources: [queue],
       buckets: props.eventSourceBuckets,
+    });
+    new QueryFunction(this, 'QueryLambda', {
+      vpc: vpc,
+      host: host,
+      port: props.port,
+      securityGroup: lambdaSecurityGroup
     });
   }
 }

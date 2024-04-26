@@ -10,8 +10,8 @@ export type ObjectsQueryFunctionProps = fn.FunctionPropsNoPackage & DatabaseProp
 /**
  * A construct for the Lambda query function.
  */
-export class ObjectsQueryFunction extends fn.Function {
+export class QueryFunction extends fn.Function {
   constructor(scope: Construct, id: string, props: ObjectsQueryFunctionProps) {
-    super(scope, id, { package: 'filemanager-query-lambda', ...props });
+    super(scope, id, { package: 'filemanager-api', ...props });
   }
 }

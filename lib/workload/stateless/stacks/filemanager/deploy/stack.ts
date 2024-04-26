@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { IngestFunction } from './constructs/functions/ingest';
 import { MigrateFunction } from './constructs/functions/migrate';
-import { ObjectsQueryFunction } from './constructs/functions/query';
+import { QueryFunction } from './constructs/functions/query';
 import { DatabaseProps } from './constructs/functions/function';
 import { Vpc, SecurityGroup, VpcLookupOptions, IVpc, ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Arn, Stack, StackProps } from 'aws-cdk-lib';
@@ -105,7 +105,7 @@ export class Filemanager extends Stack {
 
   // Query function and API Gateway fronting the function
   private createQueryFunction(props: FilemanagerProps) {
-    let objectsQueryLambda = new ObjectsQueryFunction(this, 'ObjectsQueryFunction', {
+    let objectsQueryLambda = new QueryFunction(this, 'ObjectsQueryFunction', {
       vpc: this.vpc,
       host: this.host,
       securityGroup: this.securityGroup,
