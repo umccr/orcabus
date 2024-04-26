@@ -20,7 +20,7 @@ export class ApiGatewayConstruct extends Construct {
     super(scope, id);
 
     this._httpApi = new HttpApi(this, 'HttpApi', {
-      apiName: 'OrcaBus-' + id,
+      apiName: 'OrcaBusAPI-' + id,
       corsPreflight: {
         allowHeaders: ['Authorization'],
         allowMethods: [
