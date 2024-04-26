@@ -2,14 +2,14 @@ import {
   icav2AccessTokenSecretNameDev,
   icav2AccessTokenSecretNameStg,
   icav2AccessTokenSecretNameProd,
-  AccountName,
+  AppStage,
   icav2CopyBatchSSMRoot,
 } from '../constants';
 
 import { ICAv2CopyBatchUtilityConfig } from '../../lib/workload/stateless/stacks/icav2-copy-batch-utility/deploy/stack';
 import path from 'path';
 
-export const getICAv2CopyBatchUtilityStackProps = (n: AccountName): ICAv2CopyBatchUtilityConfig => {
+export const getICAv2CopyBatchUtilityStackProps = (n: AppStage): ICAv2CopyBatchUtilityConfig => {
   const baseConfig = {
     icav2_copy_batch_state_machine_name: 'icav2_copy_batch_utility_sfn',
     icav2_copy_batch_state_machine_arn_ssm_parameter_path: path.join(
@@ -32,17 +32,17 @@ export const getICAv2CopyBatchUtilityStackProps = (n: AccountName): ICAv2CopyBat
   };
 
   switch (n) {
-    case 'beta':
+    case AppStage.BETA:
       return {
         ...baseConfig,
         icav2_token_secret_id: icav2AccessTokenSecretNameDev,
       };
-    case 'gamma':
+    case AppStage.GAMMA:
       return {
         ...baseConfig,
         icav2_token_secret_id: icav2AccessTokenSecretNameStg,
       };
-    case 'prod':
+    case AppStage.PROD:
       return {
         ...baseConfig,
         icav2_token_secret_id: icav2AccessTokenSecretNameProd,

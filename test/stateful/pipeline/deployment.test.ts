@@ -11,7 +11,7 @@ function synthesisMessageToString(sm: SynthesisMessage): string {
 }
 
 // Picking prod environment to test as it contain the sensitive data
-const config = getEnvironmentConfig('prod')!;
+const config = getEnvironmentConfig(AppStage.PROD)!;
 
 describe('cdk-nag-stateful-stack', () => {
   const app: App = new App();

@@ -2,7 +2,7 @@ import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { ConfigurableDatabaseProps } from '../../lib/workload/stateful/stacks/shared/constructs/database';
 import { SharedStackProps } from '../../lib/workload/stateful/stacks/shared/stack';
 import {
-  AccountName,
+  AppStage,
   computeSecurityGroupName,
   databasePort,
   dbClusterEndpointHostParameterName,
@@ -53,9 +53,9 @@ const getComputeConstructProps = (): ComputeProps => {
   };
 };
 
-const getEventSourceConstructProps = (n: AccountName): EventSourceProps => {
+const getEventSourceConstructProps = (n: AppStage): EventSourceProps => {
   switch (n) {
-    case 'beta':
+    case AppStage.BETA:
       return {
         queueName: eventSourceQueueName,
         maxReceiveCount: 3,
@@ -65,7 +65,7 @@ const getEventSourceConstructProps = (n: AccountName): EventSourceProps => {
           },
         ],
       };
-    case 'gamma':
+    case AppStage.GAMMA:
       return {
         queueName: eventSourceQueueName,
         maxReceiveCount: 3,
@@ -75,7 +75,7 @@ const getEventSourceConstructProps = (n: AccountName): EventSourceProps => {
           },
         ],
       };
-    case 'prod':
+    case AppStage.PROD:
       return {
         queueName: eventSourceQueueName,
         maxReceiveCount: 3,
@@ -88,7 +88,7 @@ const getEventSourceConstructProps = (n: AccountName): EventSourceProps => {
   }
 };
 
-const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps => {
+const getDatabaseConstructProps = (n: AppStage): ConfigurableDatabaseProps => {
   const baseConfig = {
     clusterIdentifier: dbClusterIdentifier,
     defaultDatabaseName: 'orcabus',
@@ -103,7 +103,7 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
   };
 
   switch (n) {
-    case 'beta':
+    case AppStage.BETA:
       return {
         ...baseConfig,
         numberOfInstance: 1,
@@ -113,7 +113,7 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
         enablePerformanceInsights: true,
         removalPolicy: RemovalPolicy.DESTROY,
       };
-    case 'gamma':
+    case AppStage.GAMMA:
       return {
         ...baseConfig,
         numberOfInstance: 1,
@@ -123,7 +123,7 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
         enablePerformanceInsights: true,
         removalPolicy: RemovalPolicy.DESTROY,
       };
-    case 'prod':
+    case AppStage.PROD:
       return {
         ...baseConfig,
         numberOfInstance: 1,
@@ -134,7 +134,7 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
   }
 };
 
-export const getSharedStackProps = (n: AccountName): SharedStackProps => {
+export const getSharedStackProps = (n: AppStage): SharedStackProps => {
   return {
     vpcProps,
     schemaRegistryProps: getSchemaRegistryConstructProps(),

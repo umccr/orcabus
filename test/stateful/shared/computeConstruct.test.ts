@@ -7,7 +7,7 @@ import { ComputeConstruct } from '../../../lib/workload/stateful/stacks/shared/c
 let stack: cdk.Stack;
 let vpc: ec2.Vpc;
 
-const constructConfig = getEnvironmentConfig('beta');
+const constructConfig = getEnvironmentConfig(AppStage.BETA);
 if (!constructConfig) throw new Error('No construct config for the test');
 
 beforeEach(() => {

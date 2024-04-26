@@ -7,7 +7,7 @@ import { vpcProps } from '../../../config/constants';
 let app: cdk.App;
 let stack: cdk.Stack;
 
-const constructConfig = getEnvironmentConfig('beta');
+const constructConfig = getEnvironmentConfig(AppStage.BETA);
 if (!constructConfig) throw new Error('No construct config for the test');
 
 app = new cdk.App();

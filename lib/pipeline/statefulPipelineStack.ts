@@ -12,6 +12,7 @@ import {
   StatefulStackCollectionProps,
   StatefulStackCollection,
 } from '../workload/stateful/statefulStackCollectionClass';
+import { AppStage } from '../../config/constants';
 
 export class StatefulPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
@@ -83,7 +84,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     /**
      * Deployment to Beta (Dev) account
      */
-    const betaConfig = getEnvironmentConfig('beta');
+    const betaConfig = getEnvironmentConfig(AppStage.BETA);
     if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(
@@ -100,7 +101,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     /**
      * Deployment to Gamma (Staging) account
      */
-    const gammaConfig = getEnvironmentConfig('gamma');
+    const gammaConfig = getEnvironmentConfig(AppStage.GAMMA);
     if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(
@@ -118,7 +119,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     /**
      * Deployment to Prod account (DISABLED)
      */
-    const prodConfig = getEnvironmentConfig('prod');
+    const prodConfig = getEnvironmentConfig(AppStage.PROD);
     if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(

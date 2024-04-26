@@ -1,6 +1,6 @@
 import { FilemanagerConfig } from '../../lib/workload/stateless/stacks/filemanager/deploy/lib/filemanager';
 import {
-  AccountName,
+  AppStage,
   computeSecurityGroupName,
   databasePort,
   dbClusterEndpointHostParameterName,
@@ -11,7 +11,7 @@ import {
   vpcProps,
 } from '../constants';
 
-export const getFileManagerStackProps = (n: AccountName): FilemanagerConfig => {
+export const getFileManagerStackProps = (n: AppStage): FilemanagerConfig => {
   const baseConfig = {
     securityGroupName: computeSecurityGroupName,
     vpcProps,
@@ -22,17 +22,17 @@ export const getFileManagerStackProps = (n: AccountName): FilemanagerConfig => {
   };
 
   switch (n) {
-    case 'beta':
+    case AppStage.BETA:
       return {
         ...baseConfig,
         eventSourceBuckets: [devBucket],
       };
-    case 'gamma':
+    case AppStage.GAMMA:
       return {
         ...baseConfig,
         eventSourceBuckets: [stgBucket],
       };
-    case 'prod':
+    case AppStage.PROD:
       return {
         ...baseConfig,
         eventSourceBuckets: [prodBucket],

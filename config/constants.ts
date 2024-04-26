@@ -1,6 +1,10 @@
 import { VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 
-export type AccountName = 'beta' | 'gamma' | 'prod';
+export enum AppStage {
+  BETA,
+  GAMMA,
+  PROD,
+}
 
 export const region = 'ap-southeast-2';
 
