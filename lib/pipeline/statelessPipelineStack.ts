@@ -175,7 +175,7 @@ export class StatelessPipelineStack extends cdk.Stack {
         codepipeline.PipelineNotificationEvents.PIPELINE_EXECUTION_FAILED,
         codepipeline.PipelineNotificationEvents.PIPELINE_EXECUTION_SUCCEEDED,
       ],
-      detailType: codestarnotifications.DetailType.BASIC,
+      detailType: codestarnotifications.DetailType.FULL,
       notificationRuleName: 'orcabus_stateless_pipeline_notification',
     });
   }
