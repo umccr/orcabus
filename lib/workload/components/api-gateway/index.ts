@@ -4,7 +4,7 @@ import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { CorsHttpMethod, HttpApi, CfnStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { IStringParameter } from 'aws-cdk-lib/aws-ssm';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
-import iam from 'aws-cdk-lib/aws-iam';
+import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
 export interface ApiGatewayConstructProps {
   region: string;
@@ -70,9 +70,11 @@ export class ApiGatewayConstruct extends Construct {
     };
 
     // Allow writing access logs, managed
-    new iam.Role(this, 'AmazonAPIGatewayPushToCloudWatchLogs', {
-      assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
+    const role = new Role(this, 'AmazonAPIGatewayPushToCloudWatchLogs', {
+      assumedBy: new ServicePrincipal('apigateway.amazonaws.com'),
     });
+
+    accessLogs.grantWrite(role);
   }
 
   private getAuthorizer(props: ApiGatewayConstructProps): HttpJwtAuthorizer {
