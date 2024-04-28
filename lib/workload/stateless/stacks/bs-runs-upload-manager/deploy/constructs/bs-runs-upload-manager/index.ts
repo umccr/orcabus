@@ -19,7 +19,8 @@ interface BsRunsUploadManagerConstructProps {
   basespace_secret_obj: secretsManager.ISecret;
   event_bus_obj: events.IEventBus;
   /* Lambda layer paths */
-  upload_v2_samplesheet_to_gds_bssh_lambda_path: string; // __dirname + '/../../../lambdas/upload_v2_samplesheet_to_gds_bssh'
+  upload_v2_samplesheet_to_gds_bssh_lambda_path: string; //
+  // __dirname + '/../../../lambdas/upload_v2_samplesheet_to_gds_bssh'
   launch_bs_runs_upload_tes_lambda_path: string; // __dirname + '/../../../lambdas/launch_bs_runs_upload_tes'
   /* Step function templates */
   gds_system_files_path: string; // gds://development/primary_data/temp/bs_runs_upload_tes/
@@ -44,9 +45,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        // @ts-ignore
         layers: [props.lambda_layer_obj.lambda_layer_version_obj],
-        // @ts-ignore
         timeout: Duration.seconds(60),
         environment: {
           ICA_BASE_URL: 'https://aps2.platform.illumina.com',
@@ -67,9 +66,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        // @ts-ignore
         layers: [props.lambda_layer_obj.lambda_layer_version_obj],
-        // @ts-ignore
         timeout: Duration.seconds(60),
         environment: {
           BASESPACE_API_SERVER: 'https://api.aps2.sh.basespace.illumina.com',
@@ -84,14 +81,8 @@ export class BsRunsUploadManagerConstruct extends Construct {
     // Give the lambda permission to read the ICA ACCESS TOKEN secret
     [launch_bs_runs_upload_tes_lambda, upload_v2_samplesheet_to_gds_bssh_lambda].forEach(
       (lambda_obj) => {
-        props.ica_token_secret_obj.grantRead(
-          // @ts-ignore
-          <IRole>lambda_obj.role
-        );
-        props.portal_token_secret_obj.grantRead(
-          // @ts-ignore
-          <IRole>lambda_obj.role
-        );
+        props.ica_token_secret_obj.grantRead(<IRole>lambda_obj.role);
+        props.portal_token_secret_obj.grantRead(<IRole>lambda_obj.role);
       }
     );
 

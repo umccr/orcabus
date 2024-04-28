@@ -73,7 +73,7 @@
           "basespace_run_id.$": "$.bclconvert_success_event_handler_step.basespace_run_id",
           "output_uri.$": "$.bclconvert_success_event_handler_step.output_uri",
           "fastq_list_rows_b64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz",
-          "manifest_b64gz.$":"$.bclconvert_success_event_handler_step.manifest_b64gz",
+          "manifest_b64gz.$": "$.bclconvert_success_event_handler_step.manifest_b64gz",
           "samplesheet_b64gz.$": "$.bclconvert_success_event_handler_step.samplesheet_b64gz",
           "icav2_copy_utility_job_execution_id.$": "$.state_machine_parameter.execution_id"
         }

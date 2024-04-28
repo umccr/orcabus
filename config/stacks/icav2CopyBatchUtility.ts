@@ -1,30 +1,29 @@
-import { AppStage, icav2CopyBatchSSMRoot, icav2AccessTokenSecretName } from '../constants';
+import {
+  AppStage,
+  icav2AccessTokenSecretNameDev,
+  icav2AccessTokenSecretNameStg,
+  icav2AccessTokenSecretNameProd,
+  AccountName,
+  icav2CopyBatchUtilityName,
+  icav2CopyBatchSSMBatchArn,
+  icav2CopySingleUtilityName,
+  icav2CopyBatchSSMBatchName,
+  icav2CopyBatchSSMSingleArn,
+  icav2CopyBatchSSMSingleName,
+} from '../constants';
 
 import { ICAv2CopyBatchUtilityConfig } from '../../lib/workload/stateless/stacks/icav2-copy-batch-utility/deploy/stack';
-import path from 'path';
 
 export const getICAv2CopyBatchUtilityStackProps = (
   stage: AppStage
 ): ICAv2CopyBatchUtilityConfig => {
-  return {
-    icav2_copy_batch_state_machine_name: 'icav2_copy_batch_utility_sfn',
-    icav2_copy_batch_state_machine_arn_ssm_parameter_path: path.join(
-      icav2CopyBatchSSMRoot,
-      'batch_sfn_arn'
-    ),
-    icav2_copy_batch_state_machine_name_ssm_parameter_path: path.join(
-      icav2CopyBatchSSMRoot,
-      'batch_sfn_name'
-    ),
-    icav2_copy_single_state_machine_name: 'icav2_single_batch_utility_sfn',
-    icav2_copy_single_state_machine_arn_ssm_parameter_path: path.join(
-      icav2CopyBatchSSMRoot,
-      'single_sfn_arn'
-    ),
-    icav2_copy_single_state_machine_name_ssm_parameter_path: path.join(
-      icav2CopyBatchSSMRoot,
-      'single_sfn_name'
-    ),
-    icav2_token_secret_id: icav2AccessTokenSecretName[stage],
+  return = {
+    icav2_copy_batch_state_machine_name: icav2CopyBatchUtilityName,
+    icav2_copy_batch_state_machine_arn_ssm_parameter_path: icav2CopyBatchSSMBatchArn,
+    icav2_copy_batch_state_machine_name_ssm_parameter_path: icav2CopyBatchSSMBatchName,
+    icav2_copy_single_state_machine_name: icav2CopySingleUtilityName,
+    icav2_copy_single_state_machine_arn_ssm_parameter_path: icav2CopyBatchSSMSingleArn,
+    icav2_copy_single_state_machine_name_ssm_parameter_path: icav2CopyBatchSSMSingleName,
+    icav2_token_secret_id: icav2AccessTokenSecretName[stage]
   };
 };

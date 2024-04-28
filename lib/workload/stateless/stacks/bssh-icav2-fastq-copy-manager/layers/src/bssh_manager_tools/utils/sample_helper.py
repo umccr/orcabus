@@ -81,7 +81,7 @@ def get_fastq_list_paths_from_bssh_output_and_fastq_list_csv(
               'TotalClustersPF': 467822276
             }
           },
-          'Path': 'output/Samples/Lane_1/TSPF-NA12878-10B-Rep1',
+          'Path': 'output/Samples/Lane_1/TSPF-NA12878-10B-Rep1',  // pragma: allowlist secret
           'Type': 'common.fastq',
           'Properties': [
             {
@@ -117,7 +117,7 @@ def get_fastq_list_paths_from_bssh_output_and_fastq_list_csv(
               'TotalClustersPF': 453649145
             }
           },
-          'Path': 'output/Samples/Lane_1/TSPF-NA12878-10B-Rep3',
+          'Path': 'output/Samples/Lane_1/TSPF-NA12878-10B-Rep3',  // pragma: allowlist secret
           'Type': 'common.fastq',
           'Properties': [
             {
@@ -145,7 +145,7 @@ def get_fastq_list_paths_from_bssh_output_and_fastq_list_csv(
               'TotalClustersPF': 450233660
             }
           },
-          'Path': 'output/Samples/Lane_1/TSPF-NA12878-10B-Rep2',
+          'Path': 'output/Samples/Lane_1/TSPF-NA12878-10B-Rep2',  // pragma: allowlist secret
           'Type': 'common.fastq',
           'Properties': [
             {

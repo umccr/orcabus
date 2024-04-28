@@ -11,9 +11,6 @@ import typing
 import boto3
 from os import environ
 
-# Local imports
-from .globals import ICAV2_BASE_URL, ICAV2_ACCESS_TOKEN_URN_SSM_PATH
-
 # Type checking, only available as dev dependencies
 if typing.TYPE_CHECKING:
     from mypy_boto3_ssm import SSMClient
@@ -57,7 +54,7 @@ def set_icav2_env_vars():
     Set the icav2 environment variables
     :return:
     """
-    environ["ICAV2_BASE_URL"] = ICAV2_BASE_URL
+    environ["ICAV2_BASE_URL"] = environ['ICAV2_BASE_URL']
     environ["ICAV2_ACCESS_TOKEN"] = get_secret(
-        get_ssm_parameter_value(ICAV2_ACCESS_TOKEN_URN_SSM_PATH)
+        environ['ICAV2_ACCESS_TOKEN_SECRET_ID']
     )
