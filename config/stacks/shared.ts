@@ -3,6 +3,7 @@ import { ConfigurableDatabaseProps } from '../../lib/workload/stateful/stacks/sh
 import { SharedStackProps } from '../../lib/workload/stateful/stacks/shared/stack';
 import {
   AccountName,
+  accountIdAlias,
   computeSecurityGroupName,
   databasePort,
   dbClusterEndpointHostParameterName,
@@ -16,7 +17,7 @@ import {
   regName,
   stgBucket,
   vpcProps,
-  archiveBucketNamePrefix,
+  archiveBucketNameSuffix,
   archiveSecurityGroupName,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
@@ -49,21 +50,21 @@ const getEventBusConstructProps = (n: AccountName): EventBusProps => {
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        archiveBucketName: archiveBucketNamePrefix + 'dev',
+        archiveBucketName: accountIdAlias[n] + archiveBucketNameSuffix,
         bucketRemovalPolicy: RemovalPolicy.DESTROY,
       };
     case 'gamma':
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        archiveBucketName: archiveBucketNamePrefix + 'stg',
+        archiveBucketName: accountIdAlias[n] + archiveBucketNameSuffix,
         bucketRemovalPolicy: RemovalPolicy.DESTROY,
       };
     case 'prod':
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        archiveBucketName: archiveBucketNamePrefix + 'prod',
+        archiveBucketName: accountIdAlias[n] + archiveBucketNameSuffix,
         bucketRemovalPolicy: RemovalPolicy.RETAIN,
       };
   }

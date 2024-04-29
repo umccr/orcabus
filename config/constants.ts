@@ -4,6 +4,20 @@ export type AccountName = 'beta' | 'gamma' | 'prod';
 
 export const region = 'ap-southeast-2';
 
+/**
+ * accountIdAlias: mapping from AccountName to AWS Account ID.
+ * accountIdAliasType to ensure that the accountId is always explicitly defined for each account.
+ */
+type accountIdAliasType = {
+  [K in AccountName]: string;
+};
+
+export const accountIdAlias: accountIdAliasType = {
+  beta: '843407916570', // umccr_development
+  gamma: '455634345446', // umccr_staging
+  prod: '472057503814', // umccr_production
+};
+
 // external ICA constants
 export const icaAwsAccountNumber = '079623148045';
 
@@ -63,7 +77,7 @@ export const eventBusName = 'OrcaBusMain';
 export const eventSourceQueueName = 'orcabus-event-source-queue';
 
 // Event Archiver constants for EventBus Contruct in SharedStack
-export const archiveBucketNamePrefix = 'orcabus-event-archive-';
+export const archiveBucketNameSuffix = '-orcabus-event-archive';
 export const archiveSecurityGroupName = 'OrcaBusSharedEventBusEventArchiveSecurityGroup';
 
 /**
