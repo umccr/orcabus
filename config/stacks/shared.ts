@@ -17,7 +17,7 @@ import {
   regName,
   stgBucket,
   vpcProps,
-  archiveBucketNameSuffix,
+  archiveBucketNamePrefix,
   archiveSecurityGroupName,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
@@ -43,6 +43,7 @@ const getEventBusConstructProps = (n: AccountName): EventBusProps => {
     // common config for custom event archiver
     vpcProps: vpcProps,
     lambdaSecurityGroupName: archiveSecurityGroupName,
+    archiveBucketName: archiveBucketNamePrefix + accountIdAlias[n],
   };
 
   switch (n) {
@@ -50,21 +51,18 @@ const getEventBusConstructProps = (n: AccountName): EventBusProps => {
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        archiveBucketName: accountIdAlias[n] + archiveBucketNameSuffix,
         bucketRemovalPolicy: RemovalPolicy.DESTROY,
       };
     case 'gamma':
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        archiveBucketName: accountIdAlias[n] + archiveBucketNameSuffix,
         bucketRemovalPolicy: RemovalPolicy.DESTROY,
       };
     case 'prod':
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        archiveBucketName: accountIdAlias[n] + archiveBucketNameSuffix,
         bucketRemovalPolicy: RemovalPolicy.RETAIN,
       };
   }
