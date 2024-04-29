@@ -11,7 +11,7 @@ import {
   vpcProps,
 } from '../constants';
 
-export const getFileManagerStackProps = (n: AppStage): FilemanagerConfig => {
+export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => {
   const baseConfig = {
     securityGroupName: computeSecurityGroupName,
     vpcProps,
@@ -21,7 +21,7 @@ export const getFileManagerStackProps = (n: AppStage): FilemanagerConfig => {
     migrateDatabase: true,
   };
 
-  switch (n) {
+  switch (stage) {
     case AppStage.BETA:
       return {
         ...baseConfig,

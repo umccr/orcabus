@@ -9,7 +9,9 @@ import {
 import { ICAv2CopyBatchUtilityConfig } from '../../lib/workload/stateless/stacks/icav2-copy-batch-utility/deploy/stack';
 import path from 'path';
 
-export const getICAv2CopyBatchUtilityStackProps = (n: AppStage): ICAv2CopyBatchUtilityConfig => {
+export const getICAv2CopyBatchUtilityStackProps = (
+  stage: AppStage
+): ICAv2CopyBatchUtilityConfig => {
   const baseConfig = {
     icav2_copy_batch_state_machine_name: 'icav2_copy_batch_utility_sfn',
     icav2_copy_batch_state_machine_arn_ssm_parameter_path: path.join(
@@ -31,7 +33,7 @@ export const getICAv2CopyBatchUtilityStackProps = (n: AppStage): ICAv2CopyBatchU
     ),
   };
 
-  switch (n) {
+  switch (stage) {
     case AppStage.BETA:
       return {
         ...baseConfig,

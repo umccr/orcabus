@@ -10,7 +10,7 @@ import {
 } from '../constants';
 import { BsRunsUploadManagerConfig } from '../../lib/workload/stateless/stacks/bs-runs-upload-manager/deploy/stack';
 
-export const getBsRunsUploadManagerStackProps = (n: AppStage): BsRunsUploadManagerConfig => {
+export const getBsRunsUploadManagerStackProps = (stage: AppStage): BsRunsUploadManagerConfig => {
   const baseConfig = {
     ica_token_secret_id: icaAccessTokenSecretName,
     portal_token_secret_id: jwtSecretName,
@@ -18,7 +18,7 @@ export const getBsRunsUploadManagerStackProps = (n: AppStage): BsRunsUploadManag
     eventbus_name: eventBusName,
   };
 
-  switch (n) {
+  switch (stage) {
     case AppStage.BETA:
       return {
         ...baseConfig,

@@ -53,8 +53,8 @@ const getComputeConstructProps = (): ComputeProps => {
   };
 };
 
-const getEventSourceConstructProps = (n: AppStage): EventSourceProps => {
-  switch (n) {
+const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
+  switch (stage) {
     case AppStage.BETA:
       return {
         queueName: eventSourceQueueName,
@@ -88,7 +88,7 @@ const getEventSourceConstructProps = (n: AppStage): EventSourceProps => {
   }
 };
 
-const getDatabaseConstructProps = (n: AppStage): ConfigurableDatabaseProps => {
+const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps => {
   const baseConfig = {
     clusterIdentifier: dbClusterIdentifier,
     defaultDatabaseName: 'orcabus',
@@ -102,7 +102,7 @@ const getDatabaseConstructProps = (n: AppStage): ConfigurableDatabaseProps => {
     secretRotationSchedule: Duration.days(7),
   };
 
-  switch (n) {
+  switch (stage) {
     case AppStage.BETA:
       return {
         ...baseConfig,
@@ -134,13 +134,13 @@ const getDatabaseConstructProps = (n: AppStage): ConfigurableDatabaseProps => {
   }
 };
 
-export const getSharedStackProps = (n: AppStage): SharedStackProps => {
+export const getSharedStackProps = (stage: AppStage): SharedStackProps => {
   return {
     vpcProps,
     schemaRegistryProps: getSchemaRegistryConstructProps(),
     eventBusProps: getEventBusConstructProps(),
-    databaseProps: getDatabaseConstructProps(n),
+    databaseProps: getDatabaseConstructProps(stage),
     computeProps: getComputeConstructProps(),
-    eventSourceProps: getEventSourceConstructProps(n),
+    eventSourceProps: getEventSourceConstructProps(stage),
   };
 };

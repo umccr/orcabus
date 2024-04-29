@@ -24,11 +24,11 @@ interface EnvironmentConfig {
 /**
  * The function will return the appropriate configuration for the given account
  *
- * @param s the name of account stage
+ * @param stage the name of account stage
  * @returns the configuration for the given app stage
  */
-export const getEnvironmentConfig = (s: AppStage): EnvironmentConfig | null => {
-  switch (s) {
+export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null => {
+  switch (stage) {
     case AppStage.BETA:
       return {
         name: 'beta',
@@ -36,7 +36,7 @@ export const getEnvironmentConfig = (s: AppStage): EnvironmentConfig | null => {
         accountId: '843407916570', // umccr_development
         stackProps: {
           statefulConfig: {
-            sharedStackProps: getSharedStackProps(s),
+            sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
           },
@@ -44,9 +44,9 @@ export const getEnvironmentConfig = (s: AppStage): EnvironmentConfig | null => {
             postgresManagerStackProps: getPostgresManagerStackProps(),
             metadataManagerStackProps: getMetadataManagerStackProps(),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
-            fileManagerStackProps: getFileManagerStackProps(s),
-            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(s),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(s),
+            fileManagerStackProps: getFileManagerStackProps(stage),
+            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
           },
         },
       };
@@ -58,7 +58,7 @@ export const getEnvironmentConfig = (s: AppStage): EnvironmentConfig | null => {
         accountId: '455634345446', // umccr_staging
         stackProps: {
           statefulConfig: {
-            sharedStackProps: getSharedStackProps(s),
+            sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
           },
@@ -66,9 +66,9 @@ export const getEnvironmentConfig = (s: AppStage): EnvironmentConfig | null => {
             postgresManagerStackProps: getPostgresManagerStackProps(),
             metadataManagerStackProps: getMetadataManagerStackProps(),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
-            fileManagerStackProps: getFileManagerStackProps(s),
-            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(s),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(s),
+            fileManagerStackProps: getFileManagerStackProps(stage),
+            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
           },
         },
       };
@@ -80,7 +80,7 @@ export const getEnvironmentConfig = (s: AppStage): EnvironmentConfig | null => {
         accountId: '472057503814', // umccr_production
         stackProps: {
           statefulConfig: {
-            sharedStackProps: getSharedStackProps(s),
+            sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
           },
@@ -88,9 +88,9 @@ export const getEnvironmentConfig = (s: AppStage): EnvironmentConfig | null => {
             postgresManagerStackProps: getPostgresManagerStackProps(),
             metadataManagerStackProps: getMetadataManagerStackProps(),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
-            fileManagerStackProps: getFileManagerStackProps(s),
-            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(s),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(s),
+            fileManagerStackProps: getFileManagerStackProps(stage),
+            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
           },
         },
       };
