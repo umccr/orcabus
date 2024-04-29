@@ -17,8 +17,6 @@ import {
   regName,
   stgBucket,
   vpcProps,
-  archiveBucketNamePrefix,
-  archiveSecurityGroupName,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { SchemaRegistryProps } from '../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
@@ -42,8 +40,8 @@ const getEventBusConstructProps = (n: AccountName): EventBusProps => {
 
     // common config for custom event archiver
     vpcProps: vpcProps,
-    lambdaSecurityGroupName: archiveSecurityGroupName,
-    archiveBucketName: archiveBucketNamePrefix + accountIdAlias[n],
+    archiveBucketName: 'orcabus-event-archive-' + accountIdAlias[n],
+    lambdaSecurityGroupName: 'OrcaBusSharedEventBusEventArchiveSecurityGroup',
   };
 
   switch (n) {
