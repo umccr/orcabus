@@ -2,7 +2,7 @@
 
 This directory contains CDK code that will be called and assembled by higher level class such as `lib/workload/stateless/statelessStackCollectionClass.ts`.
 
-Collectively, all CDK constructs created under this `deploy` directory forms as **one deployable stack**. Hence, just single `stack.ts` file might be sufficed if your app deployment is simple.
+Collectively, all CDK constructs created under this `deploy` directory forms as **one deployable stack**. Hence, just  a single `stack.ts` file should suffice if your app deployment is simple.
 
 ## TL;DR
 

@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Template, Match } from 'aws-cdk-lib/assertions';
 import { getEnvironmentConfig } from '../../../config/config';
 import { EventBusConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/event-bus';
 import { AppStage, vpcProps } from '../../../config/constants';
@@ -31,11 +31,12 @@ test('Test EventBusConstruct Creation With Custome Events Archiver', () => {
   template.hasResourceProperties('AWS::Events::EventBus', {
     Name: 'OrcaBusMain',
   });
-  template.hasResourceProperties('AWS::S3::Bucket', {
-    BucketName: 'event-archive-bucket',
-  });
+  template.hasResourceProperties(
+    'AWS::S3::Bucket',
+    Match.objectLike({ BucketName: Match.stringLikeRegexp('orcabus-universal-events-') })
+  );
   template.hasResourceProperties('AWS::EC2::SecurityGroup', {
-    GroupName: 'OrcaBusEventArchiveSecurityGroup',
+    GroupName: 'OrcaBusSharedEventBusUniversalEventArchiveSecurityGroup',
   });
   template.hasResourceProperties('AWS::Lambda::Function', {
     Handler: 'universal_event_archiver.handler',

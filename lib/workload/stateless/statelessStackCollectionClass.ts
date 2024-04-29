@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 
-import { FilemanagerProps, Filemanager } from './stacks/filemanager/deploy/lib/filemanager';
+import { FilemanagerProps, Filemanager } from './stacks/filemanager/deploy/stack';
 import {
   PostgresManagerStack,
   PostgresManagerStackProps,

@@ -1,4 +1,4 @@
-import { FilemanagerConfig } from '../../lib/workload/stateless/stacks/filemanager/deploy/lib/filemanager';
+import { FilemanagerConfig } from '../../lib/workload/stateless/stacks/filemanager/deploy/stack';
 import {
   AppStage,
   computeSecurityGroupName,
@@ -9,6 +9,9 @@ import {
   prodBucket,
   stgBucket,
   vpcProps,
+  cognitoPortalAppClientIdParameterName,
+  cognitoStatusPageAppClientIdParameterName,
+  cognitoUserPoolIdParameterName,
 } from '../constants';
 
 export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => {
@@ -19,6 +22,9 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     databaseClusterEndpointHostParameter: dbClusterEndpointHostParameterName,
     port: databasePort,
     migrateDatabase: true,
+    cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
+    cognitoStatusPageAppClientIdParameterName: cognitoStatusPageAppClientIdParameterName,
+    cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
   };
 
   switch (stage) {

@@ -1,4 +1,4 @@
-import { AppStage, region } from './constants';
+import { region, AppStage, accountIdAlias } from './constants';
 import { StatefulStackCollectionProps } from '../lib/workload/stateful/statefulStackCollectionClass';
 import { StatelessStackCollectionProps } from '../lib/workload/stateless/statelessStackCollectionClass';
 import { getSharedStackProps } from './stacks/shared';
@@ -33,7 +33,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       return {
         name: 'beta',
         region,
-        accountId: '843407916570', // umccr_development
+        accountId: accountIdAlias[stage], // umccr_development
         stackProps: {
           statefulConfig: {
             sharedStackProps: getSharedStackProps(stage),
@@ -55,7 +55,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       return {
         name: 'gamma',
         region,
-        accountId: '455634345446', // umccr_staging
+        accountId: accountIdAlias[stage], // umccr_staging
         stackProps: {
           statefulConfig: {
             sharedStackProps: getSharedStackProps(stage),
@@ -77,7 +77,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       return {
         name: 'prod',
         region,
-        accountId: '472057503814', // umccr_production
+        accountId: accountIdAlias[stage], // umccr_production
         stackProps: {
           statefulConfig: {
             sharedStackProps: getSharedStackProps(stage),

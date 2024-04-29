@@ -3,6 +3,7 @@ import { ConfigurableDatabaseProps } from '../../lib/workload/stateful/stacks/sh
 import { SharedStackProps } from '../../lib/workload/stateful/stacks/shared/stack';
 import {
   AppStage,
+  accountIdAlias,
   computeSecurityGroupName,
   databasePort,
   dbClusterEndpointHostParameterName,
@@ -16,12 +17,13 @@ import {
   regName,
   stgBucket,
   vpcProps,
-  archiveBucketName,
-  archiveSecurityGroupName,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { SchemaRegistryProps } from '../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
-import { EventBusProps } from '../../lib/workload/stateful/stacks/shared/constructs/event-bus';
+import {
+  EventBusProps,
+  EventBusArchiverProps,
+} from '../../lib/workload/stateful/stacks/shared/constructs/event-bus';
 import { ComputeProps } from '../../lib/workload/stateful/stacks/shared/constructs/compute';
 import { EventSourceProps } from '../../lib/workload/stateful/stacks/shared/constructs/event-source';
 
@@ -32,19 +34,44 @@ const getSchemaRegistryConstructProps = (): SchemaRegistryProps => {
   };
 };
 
-const getEventBusConstructProps = (): EventBusProps => {
-  return {
+const getEventBusConstructProps = (stage: AppStage): EventBusProps => {
+  const baseConfig = {
     eventBusName: eventBusName,
     archiveName: 'OrcaBusMainArchive',
     archiveDescription: 'OrcaBus main event bus archive',
     archiveRetention: 365,
-
-    // add custom event archiver
-    addCustomEventArchiver: true,
-    vpcProps: vpcProps,
-    lambdaSecurityGroupName: archiveSecurityGroupName,
-    archiveBucketName: archiveBucketName,
   };
+
+  const baseUniversalEventArchiverProps: EventBusArchiverProps = {
+    vpcProps: vpcProps,
+    archiveBucketName: 'orcabus-universal-events-archive-' + accountIdAlias[stage],
+    lambdaSecurityGroupName: 'OrcaBusSharedEventBusUniversalEventArchiveSecurityGroup',
+    bucketRemovalPolicy: RemovalPolicy.DESTROY,
+  };
+
+  switch (stage) {
+    case AppStage.BETA:
+      return {
+        ...baseConfig,
+        addCustomEventArchiver: true,
+        universalEventArchiverProps: baseUniversalEventArchiverProps,
+      };
+    case AppStage.GAMMA:
+      return {
+        ...baseConfig,
+        addCustomEventArchiver: true,
+        universalEventArchiverProps: baseUniversalEventArchiverProps,
+      };
+    case AppStage.PROD:
+      return {
+        ...baseConfig,
+        addCustomEventArchiver: true,
+        universalEventArchiverProps: {
+          ...baseUniversalEventArchiverProps,
+          bucketRemovalPolicy: RemovalPolicy.RETAIN,
+        },
+      };
+  }
 };
 
 const getComputeConstructProps = (): ComputeProps => {
@@ -138,7 +165,7 @@ export const getSharedStackProps = (stage: AppStage): SharedStackProps => {
   return {
     vpcProps,
     schemaRegistryProps: getSchemaRegistryConstructProps(),
-    eventBusProps: getEventBusConstructProps(),
+    eventBusProps: getEventBusConstructProps(stage),
     databaseProps: getDatabaseConstructProps(stage),
     computeProps: getComputeConstructProps(),
     eventSourceProps: getEventSourceConstructProps(stage),
