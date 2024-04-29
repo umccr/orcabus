@@ -40,7 +40,7 @@ const getEventBusConstructProps = (n: AccountName): EventBusProps => {
 
     // common config for custom event archiver
     vpcProps: vpcProps,
-    archiveBucketName: 'orcabus-event-archive-' + accountIdAlias[n],
+    archiveBucketName: 'orcabus-universal-events-archive-' + accountIdAlias[n],
     lambdaSecurityGroupName: 'OrcaBusSharedEventBusEventArchiveSecurityGroup',
   };
 
