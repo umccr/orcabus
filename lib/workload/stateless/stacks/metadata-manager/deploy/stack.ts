@@ -10,7 +10,7 @@ import { Code, Runtime, Architecture, LayerVersion } from 'aws-cdk-lib/aws-lambd
 import { LambdaSyncGsheetConstruct } from './construct/lambda-sync-gsheet';
 import { LambdaMigrationConstruct } from './construct/lambda-migration';
 import { LambdaAPIConstruct } from './construct/lambda-api';
-import { ApiGatewayConstruct } from './construct/api-gw';
+import { ApiGatewayConstruct } from '../../../../components/api-gateway';
 import { PostgresManagerStack } from '../../postgres-manager/deploy/stack';
 
 export type MetadataManagerStackProps = {
@@ -80,11 +80,18 @@ export class MetadataManagerStack extends Stack {
     // 3. To sync db with external sources (e.g. metadata in gsheet)
 
     // (1)
-    const apiGW = new ApiGatewayConstruct(this, 'APIGW').httpApi;
+    const apiGW = new ApiGatewayConstruct(this, 'OrcabusAPI-MetadataManager', {
+      region: this.region,
+      apiName: 'MetadataManager',
+      cognitoUserPoolIdParameterName: 'YOUR_USER_POOL_ID_PARAMETER_NAME',
+      cognitoPortalAppClientIdParameterName: 'YOUR_PORTAL_APP_CLIENT_ID_PARAMETER_NAME',
+      cognitoStatusPageAppClientIdParameterName: 'YOUR_STATUS_PAGE_APP_CLIENT_ID_PARAMETER_NAME',
+      ...props,
+    });
     new LambdaAPIConstruct(this, 'APILambda', {
       basicLambdaConfig: basicLambdaConfig,
       dbConnectionSecret: dbSecret,
-      apiGW: apiGW,
+      apiGW: apiGW.httpApi,
     });
 
     // (2)

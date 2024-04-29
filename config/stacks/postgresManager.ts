@@ -1,5 +1,5 @@
 import { Duration } from 'aws-cdk-lib';
-import { FILEMANAGER_SERVICE_NAME } from '../../lib/workload/stateless/stacks/filemanager/deploy/lib/filemanager';
+import { FILEMANAGER_SERVICE_NAME } from '../../lib/workload/stateless/stacks/filemanager/deploy/stack';
 import { PostgresManagerStackProps } from '../../lib/workload/stateless/stacks/postgres-manager/deploy/stack';
 import { DbAuthType } from '../../lib/workload/stateless/stacks/postgres-manager/function/type';
 import {

@@ -1,24 +1,27 @@
 import { Construct } from 'constructs';
 import { aws_ssm, Duration } from 'aws-cdk-lib';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
-import { CorsHttpMethod, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+import { CorsHttpMethod, HttpApi, CfnStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { IStringParameter } from 'aws-cdk-lib/aws-ssm';
+import { LogGroup } from 'aws-cdk-lib/aws-logs';
+import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
-export interface SRMApiGatewayConstructProps {
+export interface ApiGatewayConstructProps {
   region: string;
+  apiName: string | undefined;
   cognitoUserPoolIdParameterName: string;
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
 }
 
-export class SRMApiGatewayConstruct extends Construct {
+export class ApiGatewayConstruct extends Construct {
   private readonly _httpApi: HttpApi;
 
-  constructor(scope: Construct, id: string, props: SRMApiGatewayConstructProps) {
+  constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
     super(scope, id);
 
     this._httpApi = new HttpApi(this, 'HttpApi', {
-      apiName: 'OrcaBusAPI-SequenceRunManager',
+      apiName: 'OrcaBusAPI-' + props.apiName,
       corsPreflight: {
         allowHeaders: ['Authorization'],
         allowMethods: [
@@ -34,12 +37,48 @@ export class SRMApiGatewayConstruct extends Construct {
       // defaultDomainMapping: ... TODO
     });
 
-    // TODO Configure access logging. See https://github.com/aws/aws-cdk/issues/11100
+    // LogGroups
+    this.setupAccessLogs();
 
-    // TODO setup cloud map service discovery perhaps
+    // CloudMap
+    // this.setupCloudServiceDiscovery()
   }
 
-  private getAuthorizer(props: SRMApiGatewayConstructProps): HttpJwtAuthorizer {
+  // TODO: https://github.com/aws-samples/aws-cdk-service-discovery-example/tree/main
+  // private setupCloudServiceDiscovery() {
+  // }
+
+  // TODO: Taken from https://github.com/aws/aws-cdk/issues/11100#issuecomment-904627081
+  // Monitor for higher level CDK construct instead of leveraging CfnStage
+  private setupAccessLogs() {
+    const accessLogs = new LogGroup(this, 'OrcaBus-ApiGw-AccessLogs');
+    const stage = this.httpApi.defaultStage?.node.defaultChild as CfnStage;
+    stage.accessLogSettings = {
+      destinationArn: accessLogs.logGroupArn,
+      format: JSON.stringify({
+        requestId: '$context.requestId',
+        userAgent: '$context.identity.userAgent',
+        sourceIp: '$context.identity.sourceIp',
+        requestTime: '$context.requestTime',
+        requestTimeEpoch: '$context.requestTimeEpoch',
+        httpMethod: '$context.httpMethod',
+        path: '$context.path',
+        status: '$context.status',
+        protocol: '$context.protocol',
+        responseLength: '$context.responseLength',
+        domainName: '$context.domainName',
+      }),
+    };
+
+    // Allow writing access logs, managed
+    const role = new Role(this, 'AmazonAPIGatewayPushToCloudWatchLogs', {
+      assumedBy: new ServicePrincipal('apigateway.amazonaws.com'),
+    });
+
+    accessLogs.grantWrite(role);
+  }
+
+  private getAuthorizer(props: ApiGatewayConstructProps): HttpJwtAuthorizer {
     /**
      * FIXME One fine day in future when we have proper Cognito AAI setup.
      *  For the moment, we leverage Portal and established Cognito infrastructure.

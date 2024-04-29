@@ -8,7 +8,7 @@ import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-a
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { SRMApiGatewayConstruct } from './constructs/api-gw';
+import { ApiGatewayConstruct } from '../../../../components/api-gateway';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { PostgresManagerStack } from '../../postgres-manager/deploy/stack';
 
@@ -111,8 +111,9 @@ export class SequenceRunManagerStack extends Stack {
       timeout: Duration.seconds(28),
     });
 
-    const srmApi = new SRMApiGatewayConstruct(this, 'SRMApiGatewayConstruct', {
+    const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
       region: this.region,
+      apiName: 'SequenceRunManager',
       ...props,
     });
     const httpApi = srmApi.httpApi;
