@@ -1,25 +1,20 @@
 import { VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 
 export enum AppStage {
-  BETA,
-  GAMMA,
-  PROD,
+  BETA = 'beta',
+  GAMMA = 'gamma',
+  PROD = 'prod',
 }
 
 export const region = 'ap-southeast-2';
 
 /**
  * accountIdAlias: mapping from AccountName to AWS Account ID.
- * accountIdAliasType to ensure that the accountId is always explicitly defined for each account.
  */
-type accountIdAliasType = {
-  [K in AccountName]: string;
-};
-
-export const accountIdAlias: accountIdAliasType = {
-  beta: '843407916570', // umccr_development
-  gamma: '455634345446', // umccr_staging
-  prod: '472057503814', // umccr_production
+export const accountIdAlias: Record<AppStage, string> = {
+  [AppStage.BETA]: '843407916570', // umccr_development
+  [AppStage.GAMMA]: '455634345446', // umccr_staging
+  [AppStage.PROD]: '472057503814', // umccr_production
 };
 
 // external ICA constants
