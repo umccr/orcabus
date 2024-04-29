@@ -20,7 +20,10 @@ import {
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { SchemaRegistryProps } from '../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
-import { EventBusProps } from '../../lib/workload/stateful/stacks/shared/constructs/event-bus';
+import {
+  EventBusProps,
+  EventBusArchiverProps,
+} from '../../lib/workload/stateful/stacks/shared/constructs/event-bus';
 import { ComputeProps } from '../../lib/workload/stateful/stacks/shared/constructs/compute';
 import { EventSourceProps } from '../../lib/workload/stateful/stacks/shared/constructs/event-source';
 
@@ -37,11 +40,13 @@ const getEventBusConstructProps = (n: AccountName): EventBusProps => {
     archiveName: 'OrcaBusMainArchive',
     archiveDescription: 'OrcaBus main event bus archive',
     archiveRetention: 365,
+  };
 
-    // common config for custom event archiver
+  const baseUniversalEventArchiverProps: EventBusArchiverProps = {
     vpcProps: vpcProps,
     archiveBucketName: 'orcabus-universal-events-archive-' + accountIdAlias[n],
-    lambdaSecurityGroupName: 'OrcaBusSharedEventBusEventArchiveSecurityGroup',
+    lambdaSecurityGroupName: 'OrcaBusSharedEventBusUniversalEventArchiveSecurityGroup',
+    bucketRemovalPolicy: RemovalPolicy.DESTROY,
   };
 
   switch (n) {
@@ -49,19 +54,22 @@ const getEventBusConstructProps = (n: AccountName): EventBusProps => {
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        bucketRemovalPolicy: RemovalPolicy.DESTROY,
+        universalEventArchiverProps: baseUniversalEventArchiverProps,
       };
     case 'gamma':
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        bucketRemovalPolicy: RemovalPolicy.DESTROY,
+        universalEventArchiverProps: baseUniversalEventArchiverProps,
       };
     case 'prod':
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
-        bucketRemovalPolicy: RemovalPolicy.RETAIN,
+        universalEventArchiverProps: {
+          ...baseUniversalEventArchiverProps,
+          bucketRemovalPolicy: RemovalPolicy.RETAIN,
+        },
       };
   }
 };
