@@ -47,19 +47,19 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
       'icav2_copy_batch_state_machine',
       {
         /* Constructs */
-        icav2_jwt_secret_parameter_obj: icav2_access_token_secret_obj,
-        lambdas_layer: lambda_layer,
+        icav2JwtSecretParameterObj: icav2_access_token_secret_obj,
+        lambdasLayer: lambda_layer,
         /* Paths */
-        check_or_launch_job_lambda_path: path.join(__dirname, '../lambdas/check_or_launch_job'),
-        manifest_handler_lambda_path: path.join(__dirname, '../lambdas/manifest_handler'),
+        checkOrLaunchJobLambdaPath: path.join(__dirname, '../lambdas/check_or_launch_job'),
+        manifestHandlerLambdaPath: path.join(__dirname, '../lambdas/manifest_handler'),
         /* State Machines */
-        state_machine_name_batch: props.icav2_copy_batch_state_machine_name,
-        state_machine_name_single: props.icav2_copy_single_state_machine_name,
-        state_machine_batch_definition_body_path: path.join(
+        stateMachineNameBatch: props.icav2_copy_batch_state_machine_name,
+        stateMachineNameSingle: props.icav2_copy_single_state_machine_name,
+        stateMachineBatchDefinitionBodyPath: path.join(
           __dirname,
           '../step_functions_templates/copy_batch_state_machine.asl.json'
         ),
-        state_machine_single_definition_body_path: path.join(
+        stateMachineSingleDefinitionBodyPath: path.join(
           __dirname,
           '../step_functions_templates/copy_single_job_state_machine.asl.json'
         ),
@@ -71,7 +71,7 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
       props.icav2_copy_batch_state_machine_arn_ssm_parameter_path;
     this.set_ssm_parameter_obj_for_state_machine(
       this.icav2_copy_batch_state_machine_arn_ssm_parameter_path,
-      icav2_copy_batch_state_machine.icav2_copy_batch_state_machine.stateMachineArn,
+      icav2_copy_batch_state_machine.icav2CopyBatchStateMachine.stateMachineArn,
       'batch_arn'
     );
 
@@ -79,7 +79,7 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
       props.icav2_copy_single_state_machine_arn_ssm_parameter_path;
     this.set_ssm_parameter_obj_for_state_machine(
       this.icav2_copy_single_state_machine_arn_ssm_parameter_path,
-      icav2_copy_batch_state_machine.icav2_copy_single_state_machine.stateMachineArn,
+      icav2_copy_batch_state_machine.icav2CopySingleStateMachine.stateMachineArn,
       'single_arn'
     );
 
@@ -87,7 +87,7 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
       props.icav2_copy_batch_state_machine_name_ssm_parameter_path;
     this.set_ssm_parameter_obj_for_state_machine(
       this.icav2_copy_batch_state_machine_name_ssm_parameter_path,
-      icav2_copy_batch_state_machine.icav2_copy_batch_state_machine.stateMachineName,
+      icav2_copy_batch_state_machine.icav2CopyBatchStateMachine.stateMachineName,
       'batch_name'
     );
 
@@ -95,7 +95,7 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
       props.icav2_copy_single_state_machine_name_ssm_parameter_path;
     this.set_ssm_parameter_obj_for_state_machine(
       this.icav2_copy_single_state_machine_name_ssm_parameter_path,
-      icav2_copy_batch_state_machine.icav2_copy_single_state_machine.stateMachineName,
+      icav2_copy_batch_state_machine.icav2CopySingleStateMachine.stateMachineName,
       'single_name'
     );
   }

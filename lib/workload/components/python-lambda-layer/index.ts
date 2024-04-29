@@ -9,13 +9,13 @@ export interface PythonLambdaLayerConstructProps {
 }
 
 export class PythonLambdaLayerConstruct extends Construct {
-  public readonly lambda_layer_arn: string;
-  public readonly lambda_layer_version_obj: PythonLayerVersion;
+  public readonly lambdaLayerArn: string;
+  public readonly lambdaLayerVersionObj: PythonLayerVersion;
 
   constructor(scope: Construct, id: string, props: PythonLambdaLayerConstructProps) {
     super(scope, id);
 
-    this.lambda_layer_version_obj = new PythonLayerVersion(this, 'python_lambda_layer', {
+    this.lambdaLayerVersionObj = new PythonLayerVersion(this, 'python_lambda_layer', {
       layerVersionName: props.layer_name,
       entry: props.layer_directory,
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_11],
@@ -36,6 +36,6 @@ export class PythonLambdaLayerConstruct extends Construct {
     });
 
     // Set outputs
-    this.lambda_layer_arn = this.lambda_layer_version_obj.layerVersionArn;
+    this.lambdaLayerArn = this.lambdaLayerVersionObj.layerVersionArn;
   }
 }
