@@ -8,6 +8,7 @@ import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
 export interface ApiGatewayConstructProps {
   region: string;
+  apiName: string | undefined;
   cognitoUserPoolIdParameterName: string;
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
@@ -20,7 +21,7 @@ export class ApiGatewayConstruct extends Construct {
     super(scope, id);
 
     this._httpApi = new HttpApi(this, 'HttpApi', {
-      apiName: 'OrcaBusAPI-' + id,
+      apiName: 'OrcaBusAPI-' + props.apiName,
       corsPreflight: {
         allowHeaders: ['Authorization'],
         allowMethods: [

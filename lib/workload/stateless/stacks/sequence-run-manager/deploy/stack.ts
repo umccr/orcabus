@@ -111,8 +111,9 @@ export class SequenceRunManagerStack extends Stack {
       timeout: Duration.seconds(28),
     });
 
-    const srmApi = new ApiGatewayConstruct(this, 'SRMApiGatewayConstruct', {
+    const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
       region: this.region,
+      apiName: 'SequenceRunManager',
       ...props,
     });
     const httpApi = srmApi.httpApi;

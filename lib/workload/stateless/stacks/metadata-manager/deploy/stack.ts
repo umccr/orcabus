@@ -82,6 +82,7 @@ export class MetadataManagerStack extends Stack {
     // (1)
     const apiGW = new ApiGatewayConstruct(this, 'OrcabusAPI-MetadataManager', {
       region: this.region,
+      apiName: 'MetadataManager',
       cognitoUserPoolIdParameterName: 'YOUR_USER_POOL_ID_PARAMETER_NAME',
       cognitoPortalAppClientIdParameterName: 'YOUR_PORTAL_APP_CLIENT_ID_PARAMETER_NAME',
       cognitoStatusPageAppClientIdParameterName: 'YOUR_STATUS_PAGE_APP_CLIENT_ID_PARAMETER_NAME',

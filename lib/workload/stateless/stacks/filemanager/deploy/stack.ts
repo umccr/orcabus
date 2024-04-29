@@ -112,8 +112,9 @@ export class Filemanager extends Stack {
       ...props
     });
 
-    const ApiGateway = new ApiGatewayConstruct(this, 'ApiGateway-'+props.stackName, {
+    const ApiGateway = new ApiGatewayConstruct(this, 'ApiGateway', {
       region: this.region,
+      apiName: props.stackName,
       ...props,
     });
     const httpApi = ApiGateway.httpApi;
