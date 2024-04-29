@@ -25,7 +25,7 @@ interface EnvironmentConfig {
  * The function will return the appropriate configuration for the given account
  *
  * @param s the name of account stage
- * @returns the configuration for the given s
+ * @returns the configuration for the given app stage
  */
 export const getEnvironmentConfig = (s: AppStage): EnvironmentConfig | null => {
   switch (s) {
