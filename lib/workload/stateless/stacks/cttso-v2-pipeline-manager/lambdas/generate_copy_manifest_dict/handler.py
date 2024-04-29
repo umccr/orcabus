@@ -164,7 +164,7 @@ def handler(event, context):
 #         json.dumps(
 #             handler(
 #                 event={
-#                     "cache_path": "/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache",
+#                     "cache_path": "/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache",  # pragma: allowlist secret
 #                     "project_id": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
 #                     "sample_id": "L2301346_rerun",
 #                     "fastq_list_rows_b64gz": fastq_list_rows_b64gz

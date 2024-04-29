@@ -48,8 +48,7 @@
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
         "FunctionName": "${__generate_db_uuid__}",
-        "Payload": {
-        }
+        "Payload": {}
       },
       "Retry": [
         {

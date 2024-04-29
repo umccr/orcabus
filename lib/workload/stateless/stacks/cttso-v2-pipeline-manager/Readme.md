@@ -166,6 +166,5 @@ Take the fastq output locations, samplesheet location and metadata generated in 
 ### External Parameters required by CDK
 
 ```
-/icav2_copy_batch_utility/state_machine_arn_batch
 /icav2/umccr-prod/tso500_ctdna_2.1_pipeline_id
 ```
