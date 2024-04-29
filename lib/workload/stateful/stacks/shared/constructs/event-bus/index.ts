@@ -5,6 +5,14 @@ import { Vpc, VpcLookupOptions, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { UniversalEventArchiverConstruct } from './custom-event-archiver/construct/universal-event-archiver';
 
+// generic event bus archiver props
+export interface EventBusArchiverProps {
+  vpcProps: VpcLookupOptions;
+  lambdaSecurityGroupName: string;
+  archiveBucketName: string;
+  bucketRemovalPolicy: RemovalPolicy;
+}
+
 export interface EventBusProps {
   eventBusName: string;
   archiveName: string;
@@ -13,10 +21,7 @@ export interface EventBusProps {
 
   // Optional for custom event archiver
   addCustomEventArchiver?: boolean;
-  vpcProps?: VpcLookupOptions;
-  lambdaSecurityGroupName?: string;
-  archiveBucketName?: string;
-  bucketRemovalPolicy?: RemovalPolicy;
+  universalEventArchiverProps?: EventBusArchiverProps;
 }
 
 export class EventBusConstruct extends Construct {
@@ -28,7 +33,8 @@ export class EventBusConstruct extends Construct {
 
     // Optional for custom event archiver
     if (props.addCustomEventArchiver) {
-      this.createUniversalEventArchiver(props);
+      props.universalEventArchiverProps &&
+        this.createUniversalEventArchiver(props.universalEventArchiverProps);
     }
   }
 
@@ -49,18 +55,7 @@ export class EventBusConstruct extends Construct {
     return mainBus;
   }
 
-  private createUniversalEventArchiver(props: EventBusProps) {
-    if (
-      !props.vpcProps ||
-      !props.archiveBucketName ||
-      !props.lambdaSecurityGroupName ||
-      !props.bucketRemovalPolicy
-    ) {
-      throw new Error(
-        'VPC, Security Group, Archive Bucket Name and Removal Policy are required for custom event archiver function.'
-      );
-    }
-
+  private createUniversalEventArchiver(props: EventBusArchiverProps) {
     const vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
 
     // dedicated bucket for archiving all events
