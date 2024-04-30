@@ -2,12 +2,12 @@ import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { getEnvironmentConfig } from '../../../config/config';
 import { EventBusConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/event-bus';
-import { vpcProps } from '../../../config/constants';
+import { AppStage, vpcProps } from '../../../config/constants';
 
 let app: cdk.App;
 let stack: cdk.Stack;
 
-const constructConfig = getEnvironmentConfig('beta');
+const constructConfig = getEnvironmentConfig(AppStage.BETA);
 if (!constructConfig) throw new Error('No construct config for the test');
 
 app = new cdk.App();

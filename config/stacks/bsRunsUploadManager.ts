@@ -1,38 +1,19 @@
 import {
-  devGdsBsRunsUploadLogPath,
-  stgGdsBsRunsUploadLogPath,
-  prodGdsBsRunsUploadLogPath,
-  AccountName,
+  AppStage,
   icaAccessTokenSecretName,
   jwtSecretName,
   basespaceAccessTokenSecretName,
   eventBusName,
+  gdsBsRunsUploadLogPath,
 } from '../constants';
 import { BsRunsUploadManagerConfig } from '../../lib/workload/stateless/stacks/bs-runs-upload-manager/deploy/stack';
 
-export const getBsRunsUploadManagerStackProps = (n: AccountName): BsRunsUploadManagerConfig => {
-  const baseConfig = {
+export const getBsRunsUploadManagerStackProps = (stage: AppStage): BsRunsUploadManagerConfig => {
+  return {
     ica_token_secret_id: icaAccessTokenSecretName,
     portal_token_secret_id: jwtSecretName,
     basespace_token_secret_id: basespaceAccessTokenSecretName,
     eventbus_name: eventBusName,
+    gds_system_files_path: gdsBsRunsUploadLogPath[stage],
   };
-
-  switch (n) {
-    case 'beta':
-      return {
-        ...baseConfig,
-        gds_system_files_path: devGdsBsRunsUploadLogPath,
-      };
-    case 'gamma':
-      return {
-        ...baseConfig,
-        gds_system_files_path: stgGdsBsRunsUploadLogPath,
-      };
-    case 'prod':
-      return {
-        ...baseConfig,
-        gds_system_files_path: prodGdsBsRunsUploadLogPath,
-      };
-  }
 };

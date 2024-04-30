@@ -1,21 +1,19 @@
 import { FilemanagerConfig } from '../../lib/workload/stateless/stacks/filemanager/deploy/stack';
 import {
-  AccountName,
+  AppStage,
   computeSecurityGroupName,
   databasePort,
   dbClusterEndpointHostParameterName,
-  devBucket,
   eventSourceQueueName,
-  prodBucket,
-  stgBucket,
   vpcProps,
   cognitoPortalAppClientIdParameterName,
   cognitoStatusPageAppClientIdParameterName,
   cognitoUserPoolIdParameterName,
+  oncoanalyserBucket,
 } from '../constants';
 
-export const getFileManagerStackProps = (n: AccountName): FilemanagerConfig => {
-  const baseConfig = {
+export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => {
+  return {
     securityGroupName: computeSecurityGroupName,
     vpcProps,
     eventSourceQueueName: eventSourceQueueName,
@@ -25,23 +23,6 @@ export const getFileManagerStackProps = (n: AccountName): FilemanagerConfig => {
     cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
     cognitoStatusPageAppClientIdParameterName: cognitoStatusPageAppClientIdParameterName,
     cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
+    eventSourceBuckets: [oncoanalyserBucket[stage]],
   };
-
-  switch (n) {
-    case 'beta':
-      return {
-        ...baseConfig,
-        eventSourceBuckets: [devBucket],
-      };
-    case 'gamma':
-      return {
-        ...baseConfig,
-        eventSourceBuckets: [stgBucket],
-      };
-    case 'prod':
-      return {
-        ...baseConfig,
-        eventSourceBuckets: [prodBucket],
-      };
-  }
 };

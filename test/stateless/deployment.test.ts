@@ -4,13 +4,14 @@ import { SynthesisMessage } from 'aws-cdk-lib/cx-api';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 import { getEnvironmentConfig } from '../../config/config';
 import { StatelessStackCollection } from '../../lib/workload/stateless/statelessStackCollectionClass';
+import { AppStage } from '../../config/constants';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {
   return `${sm.entry.data} [${sm.id}]`;
 }
 
 // Picking prod environment to test as it contain the sensitive data
-const config = getEnvironmentConfig('prod')!;
+const config = getEnvironmentConfig(AppStage.PROD)!;
 
 describe('cdk-nag-stateless-stack', () => {
   const app: App = new App({});

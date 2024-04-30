@@ -1,4 +1,4 @@
-import { region, accountIdAlias } from './constants';
+import { region, AppStage, accountIdAlias } from './constants';
 import { StatefulStackCollectionProps } from '../lib/workload/stateful/statefulStackCollectionClass';
 import { StatelessStackCollectionProps } from '../lib/workload/stateless/statelessStackCollectionClass';
 import { getSharedStackProps } from './stacks/shared';
@@ -24,21 +24,19 @@ interface EnvironmentConfig {
 /**
  * The function will return the appropriate configuration for the given account
  *
- * @param accountName the name of account stage
- * @returns the configuration for the given accountName
+ * @param stage the name of account stage
+ * @returns the configuration for the given app stage
  */
-export const getEnvironmentConfig = (
-  accountName: 'beta' | 'gamma' | 'prod'
-): EnvironmentConfig | null => {
-  switch (accountName) {
-    case 'beta':
+export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null => {
+  switch (stage) {
+    case AppStage.BETA:
       return {
         name: 'beta',
         region,
-        accountId: accountIdAlias[accountName], // umccr_development
+        accountId: accountIdAlias[stage], // umccr_development
         stackProps: {
           statefulConfig: {
-            sharedStackProps: getSharedStackProps(accountName),
+            sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
           },
@@ -46,21 +44,21 @@ export const getEnvironmentConfig = (
             postgresManagerStackProps: getPostgresManagerStackProps(),
             metadataManagerStackProps: getMetadataManagerStackProps(),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
-            fileManagerStackProps: getFileManagerStackProps(accountName),
-            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(accountName),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(accountName),
+            fileManagerStackProps: getFileManagerStackProps(stage),
+            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
           },
         },
       };
 
-    case 'gamma':
+    case AppStage.GAMMA:
       return {
         name: 'gamma',
         region,
-        accountId: accountIdAlias[accountName], // umccr_staging
+        accountId: accountIdAlias[stage], // umccr_staging
         stackProps: {
           statefulConfig: {
-            sharedStackProps: getSharedStackProps(accountName),
+            sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
           },
@@ -68,21 +66,21 @@ export const getEnvironmentConfig = (
             postgresManagerStackProps: getPostgresManagerStackProps(),
             metadataManagerStackProps: getMetadataManagerStackProps(),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
-            fileManagerStackProps: getFileManagerStackProps(accountName),
-            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(accountName),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(accountName),
+            fileManagerStackProps: getFileManagerStackProps(stage),
+            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
           },
         },
       };
 
-    case 'prod':
+    case AppStage.PROD:
       return {
         name: 'prod',
         region,
-        accountId: accountIdAlias[accountName], // umccr_production
+        accountId: accountIdAlias[stage], // umccr_production
         stackProps: {
           statefulConfig: {
-            sharedStackProps: getSharedStackProps(accountName),
+            sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
           },
@@ -90,9 +88,9 @@ export const getEnvironmentConfig = (
             postgresManagerStackProps: getPostgresManagerStackProps(),
             metadataManagerStackProps: getMetadataManagerStackProps(),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
-            fileManagerStackProps: getFileManagerStackProps(accountName),
-            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(accountName),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(accountName),
+            fileManagerStackProps: getFileManagerStackProps(stage),
+            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
           },
         },
       };

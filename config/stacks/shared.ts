@@ -2,21 +2,19 @@ import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { ConfigurableDatabaseProps } from '../../lib/workload/stateful/stacks/shared/constructs/database';
 import { SharedStackProps } from '../../lib/workload/stateful/stacks/shared/stack';
 import {
-  AccountName,
+  AppStage,
   accountIdAlias,
   computeSecurityGroupName,
   databasePort,
   dbClusterEndpointHostParameterName,
   dbClusterIdentifier,
   dbClusterResourceIdParameterName,
-  devBucket,
   eventBusName,
   eventSourceQueueName,
-  prodBucket,
   rdsMasterSecretName,
   regName,
-  stgBucket,
   vpcProps,
+  oncoanalyserBucket,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { SchemaRegistryProps } from '../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
@@ -34,7 +32,7 @@ const getSchemaRegistryConstructProps = (): SchemaRegistryProps => {
   };
 };
 
-const getEventBusConstructProps = (n: AccountName): EventBusProps => {
+const getEventBusConstructProps = (stage: AppStage): EventBusProps => {
   const baseConfig = {
     eventBusName: eventBusName,
     archiveName: 'OrcaBusMainArchive',
@@ -44,25 +42,25 @@ const getEventBusConstructProps = (n: AccountName): EventBusProps => {
 
   const baseUniversalEventArchiverProps: EventBusArchiverProps = {
     vpcProps: vpcProps,
-    archiveBucketName: 'orcabus-universal-events-archive-' + accountIdAlias[n],
+    archiveBucketName: 'orcabus-universal-events-archive-' + accountIdAlias[stage],
     lambdaSecurityGroupName: 'OrcaBusSharedEventBusUniversalEventArchiveSecurityGroup',
     bucketRemovalPolicy: RemovalPolicy.DESTROY,
   };
 
-  switch (n) {
-    case 'beta':
+  switch (stage) {
+    case AppStage.BETA:
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
         universalEventArchiverProps: baseUniversalEventArchiverProps,
       };
-    case 'gamma':
+    case AppStage.GAMMA:
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
         universalEventArchiverProps: baseUniversalEventArchiverProps,
       };
-    case 'prod':
+    case AppStage.PROD:
       return {
         ...baseConfig,
         addCustomEventArchiver: true,
@@ -80,42 +78,19 @@ const getComputeConstructProps = (): ComputeProps => {
   };
 };
 
-const getEventSourceConstructProps = (n: AccountName): EventSourceProps => {
-  switch (n) {
-    case 'beta':
-      return {
-        queueName: eventSourceQueueName,
-        maxReceiveCount: 3,
-        rules: [
-          {
-            bucket: devBucket,
-          },
-        ],
-      };
-    case 'gamma':
-      return {
-        queueName: eventSourceQueueName,
-        maxReceiveCount: 3,
-        rules: [
-          {
-            bucket: stgBucket,
-          },
-        ],
-      };
-    case 'prod':
-      return {
-        queueName: eventSourceQueueName,
-        maxReceiveCount: 3,
-        rules: [
-          {
-            bucket: prodBucket,
-          },
-        ],
-      };
-  }
+const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
+  return {
+    queueName: eventSourceQueueName,
+    maxReceiveCount: 3,
+    rules: [
+      {
+        bucket: oncoanalyserBucket[stage],
+      },
+    ],
+  };
 };
 
-const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps => {
+const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps => {
   const baseConfig = {
     clusterIdentifier: dbClusterIdentifier,
     defaultDatabaseName: 'orcabus',
@@ -129,8 +104,8 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
     secretRotationSchedule: Duration.days(7),
   };
 
-  switch (n) {
-    case 'beta':
+  switch (stage) {
+    case AppStage.BETA:
       return {
         ...baseConfig,
         numberOfInstance: 1,
@@ -140,7 +115,7 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
         enablePerformanceInsights: true,
         removalPolicy: RemovalPolicy.DESTROY,
       };
-    case 'gamma':
+    case AppStage.GAMMA:
       return {
         ...baseConfig,
         numberOfInstance: 1,
@@ -150,7 +125,7 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
         enablePerformanceInsights: true,
         removalPolicy: RemovalPolicy.DESTROY,
       };
-    case 'prod':
+    case AppStage.PROD:
       return {
         ...baseConfig,
         numberOfInstance: 1,
@@ -161,13 +136,13 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
   }
 };
 
-export const getSharedStackProps = (n: AccountName): SharedStackProps => {
+export const getSharedStackProps = (stage: AppStage): SharedStackProps => {
   return {
     vpcProps,
     schemaRegistryProps: getSchemaRegistryConstructProps(),
-    eventBusProps: getEventBusConstructProps(n),
-    databaseProps: getDatabaseConstructProps(n),
+    eventBusProps: getEventBusConstructProps(stage),
+    databaseProps: getDatabaseConstructProps(stage),
     computeProps: getComputeConstructProps(),
-    eventSourceProps: getEventSourceConstructProps(n),
+    eventSourceProps: getEventSourceConstructProps(stage),
   };
 };
