@@ -4,18 +4,16 @@ import {
   computeSecurityGroupName,
   databasePort,
   dbClusterEndpointHostParameterName,
-  devBucket,
   eventSourceQueueName,
-  prodBucket,
-  stgBucket,
   vpcProps,
   cognitoPortalAppClientIdParameterName,
   cognitoStatusPageAppClientIdParameterName,
   cognitoUserPoolIdParameterName,
+  oncoanalyserBucket,
 } from '../constants';
 
 export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => {
-  const baseConfig = {
+  return {
     securityGroupName: computeSecurityGroupName,
     vpcProps,
     eventSourceQueueName: eventSourceQueueName,
@@ -25,23 +23,6 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
     cognitoStatusPageAppClientIdParameterName: cognitoStatusPageAppClientIdParameterName,
     cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
+    eventSourceBuckets: [oncoanalyserBucket[stage]],
   };
-
-  switch (stage) {
-    case AppStage.BETA:
-      return {
-        ...baseConfig,
-        eventSourceBuckets: [devBucket],
-      };
-    case AppStage.GAMMA:
-      return {
-        ...baseConfig,
-        eventSourceBuckets: [stgBucket],
-      };
-    case AppStage.PROD:
-      return {
-        ...baseConfig,
-        eventSourceBuckets: [prodBucket],
-      };
-  }
 };

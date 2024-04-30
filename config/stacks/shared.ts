@@ -9,14 +9,12 @@ import {
   dbClusterEndpointHostParameterName,
   dbClusterIdentifier,
   dbClusterResourceIdParameterName,
-  devBucket,
   eventBusName,
   eventSourceQueueName,
-  prodBucket,
   rdsMasterSecretName,
   regName,
-  stgBucket,
   vpcProps,
+  oncoanalyserBucket,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { SchemaRegistryProps } from '../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
@@ -81,38 +79,15 @@ const getComputeConstructProps = (): ComputeProps => {
 };
 
 const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
-  switch (stage) {
-    case AppStage.BETA:
-      return {
-        queueName: eventSourceQueueName,
-        maxReceiveCount: 3,
-        rules: [
-          {
-            bucket: devBucket,
-          },
-        ],
-      };
-    case AppStage.GAMMA:
-      return {
-        queueName: eventSourceQueueName,
-        maxReceiveCount: 3,
-        rules: [
-          {
-            bucket: stgBucket,
-          },
-        ],
-      };
-    case AppStage.PROD:
-      return {
-        queueName: eventSourceQueueName,
-        maxReceiveCount: 3,
-        rules: [
-          {
-            bucket: prodBucket,
-          },
-        ],
-      };
-  }
+  return {
+    queueName: eventSourceQueueName,
+    maxReceiveCount: 3,
+    rules: [
+      {
+        bucket: oncoanalyserBucket[stage],
+      },
+    ],
+  };
 };
 
 const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps => {
