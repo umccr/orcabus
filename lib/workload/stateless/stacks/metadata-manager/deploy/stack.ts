@@ -79,20 +79,20 @@ export class MetadataManagerStack extends Stack {
     // 2. To do migrations
     // 3. To sync db with external sources (e.g. metadata in gsheet)
 
-    // (1)
-    const apiGW = new ApiGatewayConstruct(this, 'OrcabusAPI-MetadataManager', {
-      region: this.region,
-      apiName: 'MetadataManager',
-      cognitoUserPoolIdParameterName: 'YOUR_USER_POOL_ID_PARAMETER_NAME',
-      cognitoPortalAppClientIdParameterName: 'YOUR_PORTAL_APP_CLIENT_ID_PARAMETER_NAME',
-      cognitoStatusPageAppClientIdParameterName: 'YOUR_STATUS_PAGE_APP_CLIENT_ID_PARAMETER_NAME',
-      ...props,
-    });
-    new LambdaAPIConstruct(this, 'APILambda', {
-      basicLambdaConfig: basicLambdaConfig,
-      dbConnectionSecret: dbSecret,
-      apiGW: apiGW.httpApi,
-    });
+    // // (1)
+    // const apiGW = new ApiGatewayConstruct(this, 'OrcabusAPI-MetadataManager', {
+    //   region: this.region,
+    //   apiName: 'MetadataManager',
+    //   cognitoUserPoolIdParameterName: 'YOUR_USER_POOL_ID_PARAMETER_NAME',
+    //   cognitoPortalAppClientIdParameterName: 'YOUR_PORTAL_APP_CLIENT_ID_PARAMETER_NAME',
+    //   cognitoStatusPageAppClientIdParameterName: 'YOUR_STATUS_PAGE_APP_CLIENT_ID_PARAMETER_NAME',
+    //   ...props,
+    // });
+    // new LambdaAPIConstruct(this, 'APILambda', {
+    //   basicLambdaConfig: basicLambdaConfig,
+    //   dbConnectionSecret: dbSecret,
+    //   apiGW: apiGW.httpApi,
+    // });
 
     // (2)
     new LambdaMigrationConstruct(this, 'MigrationLambda', {
