@@ -48,8 +48,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
-            bsshIcav2FastqCopyManagerStackProps:
-              getBsshIcav2FastqCopyManagerStackProps(stage),
+            bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
           },
         },
       };
@@ -72,8 +71,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
-            bsshIcav2FastqCopyManagerStackProps:
-              getBsshIcav2FastqCopyManagerStackProps(stage),
+            bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
           },
         },
       };
@@ -96,8 +94,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
-            bsshIcav2FastqCopyManagerStackProps:
-              getBsshIcav2FastqCopyManagerStackProps(stage),
+            bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
           },
         },
       };
