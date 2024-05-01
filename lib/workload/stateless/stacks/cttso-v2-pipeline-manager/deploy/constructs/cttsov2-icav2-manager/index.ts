@@ -12,6 +12,7 @@ import * as events_targets from 'aws-cdk-lib/aws-events-targets';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
+import { Icav2AnalysisEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-handle-event-change-sfn';
 
 interface Cttsov2Icav2ManagerConstructProps {
   /* Stack Objects */
@@ -19,7 +20,7 @@ interface Cttsov2Icav2ManagerConstructProps {
   icav2AccessTokenSecretObj: secretsManager.ISecret;
   lambdaLayerObj: lambda.ILayerVersion;
   icav2CopyBatchStateMachineObj: sfn.IStateMachine;
-  ssmParameterObjList: ssm.IStringParameter[]; // List of parameters the workflow session state machine will need access to
+  pipelineIdSSMParameterObj: ssm.IStringParameter; // List of parameters the workflow session state machine will need access to
   eventbusObj: events.IEventBus;
   /* Lambdas paths */
   generateDbUuidLambdaPath: string; // __dirname + '/../../../lambdas/generate_db_uuid'
@@ -63,9 +64,9 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     );
 
     // Add each of the ssm parameters to the lambda role policy
-    props.ssmParameterObjList.forEach((ssm_parameter_obj) => {
-      ssm_parameter_obj.grantRead(<iam.IRole>launch_cttso_nextflow_pipeline_lambda_obj.role);
-    });
+    props.pipelineIdSSMParameterObj.grantRead(
+      <iam.IRole>launch_cttso_nextflow_pipeline_lambda_obj.role
+    );
 
     // generate_db_uuid_lambda_path lambda
     // Doesnt need any ssm parameters
@@ -143,9 +144,9 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     );
 
     // Add each of the ssm parameters to the lambda role policy
-    props.ssmParameterObjList.forEach((ssm_parameter_obj) => {
-      ssm_parameter_obj.grantRead(<iam.IRole>upload_samplesheet_to_cache_dir_lambda_obj.role);
-    });
+    props.pipelineIdSSMParameterObj.grantRead(
+      <iam.IRole>upload_samplesheet_to_cache_dir_lambda_obj.role
+    );
 
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
     const stateMachine = new sfn.StateMachine(
@@ -227,6 +228,26 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
 
     // Allow the statemachine to submit events to the event bus
     props.eventbusObj.grantPutEventsTo(stateMachine.role);
+
+    // Create statemachine for handling any state changes of the pipeline
+    const statechange_statemachine = new Icav2AnalysisEventHandlerConstruct(
+      this,
+      'cttso_icav2_statechange_handler',
+      {
+        // Table name //
+        tableName: props.dynamodbTableObj.tableName,
+        // Name of future statemachine
+        stateMachineName: 'cttsov2Icav2StateChangeHandlerSfn',
+        // Statemachine substitutions we need to pass
+        // FIXME Also not set in stone
+        eventBusName: props.eventbusObj.eventBusName,
+        detailType: 'ctTSOv2StateChange',
+        source: 'orcabus.cttso_v2',
+        // Filters
+        // FIXME - if the pipeline ID changes, we need to redeploy the stack?
+        pipelineId: props.pipelineIdSSMParameterObj.stringValue,
+      }
+    );
 
     // Set outputs
     this.cttsov2LaunchStateMachineName = stateMachine.stateMachineName;

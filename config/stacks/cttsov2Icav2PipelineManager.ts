@@ -27,7 +27,7 @@ export const getCttsov2Icav2PipelineManagerStackProps = (
   stage: AppStage
 ): Cttsov2Icav2PipelineManagerConfig => {
   return {
-    ssmParameterList: [cttsov2Icav2PipelineIdSSMParameterPath],
+    pipelineIdSsmPath: cttsov2Icav2PipelineIdSSMParameterPath,
     icav2CopyBatchUtilityStateMachineName: icav2CopyBatchUtilityName,
     cttsov2LaunchStateMachineArnSsmParameterPath: cttsov2Icav2PipelineSfnSSMArn,
     cttsov2LaunchStateMachineNameSsmParameterPath: cttsov2Icav2PipelineSfnSSMName,

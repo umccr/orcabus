@@ -25,7 +25,7 @@ export class Cttsov2Icav2PipelineTable extends cdk.Stack {
       this,
       'cttsov2_icav2_pipeline_table',
       {
-        table_name: props.dynamodbTableName,
+        tableName: props.dynamodbTableName,
       }
     );
 
@@ -37,7 +37,7 @@ export class Cttsov2Icav2PipelineTable extends cdk.Stack {
       'cttsov2_icav2_pipeline_table_arn_ssm_path',
       {
         parameterName: props.cttsov2Icav2DynamodbTableArnSsmParameterPath,
-        stringValue: dynamodb_table.table_name_arn,
+        stringValue: dynamodb_table.tableNameArn,
       }
     ).parameterName;
 

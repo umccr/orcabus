@@ -11,7 +11,7 @@ import path from 'path';
 
 export interface Cttsov2Icav2PipelineManagerConfig {
   icav2TokenSecretId: string; // "/icav2/umccr-prod/service-production-jwt-token-secret-arn"
-  ssmParameterList: string[]; // List of parameters the workflow session state machine will need access to
+  pipelineIdSsmPath: string; // List of parameters the workflow session state machine will need access to
   icav2CopyBatchUtilityStateMachineName: string;
   cttsov2LaunchStateMachineArnSsmParameterPath: string;
   cttsov2LaunchStateMachineNameSsmParameterPath: string;
@@ -60,8 +60,10 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
     });
 
     // Set ssm parameter object list
-    const ssm_parameter_obj_list = props.ssmParameterList.map((ssm_parameter_path: string) =>
-      ssm.StringParameter.fromStringParameterName(this, ssm_parameter_path, ssm_parameter_path)
+    const pipeline_id_ssm_obj_list = ssm.StringParameter.fromStringParameterName(
+      this,
+      props.pipelineIdSsmPath,
+      props.pipelineIdSsmPath
     );
 
     // Get event bus
@@ -73,7 +75,7 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       icav2AccessTokenSecretObj: icav2_access_token_secret_obj,
       lambdaLayerObj: lambda_layer_obj.lambdaLayerVersionObj,
       icav2CopyBatchStateMachineObj: icav2_copy_batch_stack_state_machine_obj,
-      ssmParameterObjList: ssm_parameter_obj_list,
+      pipelineIdSSMParameterObj: pipeline_id_ssm_obj_list,
       eventbusObj: eventbus_obj,
       /* Lambdas paths */
       generateDbUuidLambdaPath: path.join(__dirname, '../lambdas/generate_db_uuid'), // __dirname + '/../../../lambdas/generate_uuid'
