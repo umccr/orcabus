@@ -3,9 +3,9 @@ import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 
 export interface PythonLambdaLayerConstructProps {
-  layer_name: string;
-  layer_directory: string;
-  layer_description: string;
+  layerName: string;
+  layerDirectory: string;
+  layerDescription: string;
 }
 
 export class PythonLambdaLayerConstruct extends Construct {
@@ -16,12 +16,12 @@ export class PythonLambdaLayerConstruct extends Construct {
     super(scope, id);
 
     this.lambdaLayerVersionObj = new PythonLayerVersion(this, 'python_lambda_layer', {
-      layerVersionName: props.layer_name,
-      entry: props.layer_directory,
+      layerVersionName: props.layerName,
+      entry: props.layerDirectory,
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_11],
       compatibleArchitectures: [lambda.Architecture.ARM_64],
       license: 'GPL3',
-      description: props.layer_description,
+      description: props.layerDescription,
       bundling: {
         commandHooks: {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars

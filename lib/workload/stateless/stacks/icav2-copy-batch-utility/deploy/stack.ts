@@ -36,9 +36,9 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
 
     // Generate lambda layer
     const lambda_layer = new PythonLambdaLayerConstruct(this, 'lambda_layer', {
-      layer_description: 'ICAv2 Copy Batch Utility Tools',
-      layer_directory: path.join(__dirname, '../layers'),
-      layer_name: 'icav2_copy_batch_utility_tools',
+      layerDescription: 'ICAv2 Copy Batch Utility Tools',
+      layerDirectory: path.join(__dirname, '../layers'),
+      layerName: 'icav2_copy_batch_utility_tools',
     });
 
     // Generate icav2 copy batch stack
