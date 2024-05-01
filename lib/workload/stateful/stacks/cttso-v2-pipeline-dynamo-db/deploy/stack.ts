@@ -4,9 +4,9 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { DynamodbIcav2PipelineConstruct } from '../../../../components/dynamodb-icav2-table';
 
 export interface Cttsov2Icav2PipelineTableConfig {
-  dynamodb_table_name: string;
-  cttsov2_icav2_dynamodb_table_arn_ssm_parameter_path: string;
-  cttsov2_icav2_dynamodb_table_name_ssm_parameter_path: string;
+  dynamodbTableName: string;
+  cttsov2Icav2DynamodbTableArnSsmParameterPath: string;
+  cttsov2Icav2DynamodbTableNameSsmParameterPath: string;
 }
 
 export type Cttsov2Icav2PipelineTableStackProps = Cttsov2Icav2PipelineTableConfig & cdk.StackProps;
@@ -25,7 +25,7 @@ export class Cttsov2Icav2PipelineTable extends cdk.Stack {
       this,
       'cttsov2_icav2_pipeline_table',
       {
-        table_name: props.dynamodb_table_name,
+        table_name: props.dynamodbTableName,
       }
     );
 
@@ -36,7 +36,7 @@ export class Cttsov2Icav2PipelineTable extends cdk.Stack {
       this,
       'cttsov2_icav2_pipeline_table_arn_ssm_path',
       {
-        parameterName: props.cttsov2_icav2_dynamodb_table_arn_ssm_parameter_path,
+        parameterName: props.cttsov2Icav2DynamodbTableArnSsmParameterPath,
         stringValue: dynamodb_table.table_name_arn,
       }
     ).parameterName;
@@ -45,8 +45,8 @@ export class Cttsov2Icav2PipelineTable extends cdk.Stack {
       this,
       'cttsov2_icav2_pipeline_table_name_ssm_path',
       {
-        parameterName: props.cttsov2_icav2_dynamodb_table_name_ssm_parameter_path,
-        stringValue: props.dynamodb_table_name,
+        parameterName: props.cttsov2Icav2DynamodbTableNameSsmParameterPath,
+        stringValue: props.dynamodbTableName,
       }
     ).parameterName;
   }

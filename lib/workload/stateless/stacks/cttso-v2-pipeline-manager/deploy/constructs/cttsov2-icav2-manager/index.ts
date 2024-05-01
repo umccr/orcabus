@@ -15,25 +15,25 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 
 interface Cttsov2Icav2ManagerConstructProps {
   /* Stack Objects */
-  dynamodb_table_obj: dynamodb.ITableV2;
-  icav2_access_token_secret_obj: secretsManager.ISecret;
-  lambda_layer_obj: lambda.ILayerVersion;
-  icav2_copy_batch_state_machine_obj: sfn.IStateMachine;
-  ssm_parameter_obj_list: ssm.IStringParameter[]; // List of parameters the workflow session state machine will need access to
-  eventbus_obj: events.IEventBus;
+  dynamodbTableObj: dynamodb.ITableV2;
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
+  lambdaLayerObj: lambda.ILayerVersion;
+  icav2CopyBatchStateMachineObj: sfn.IStateMachine;
+  ssmParameterObjList: ssm.IStringParameter[]; // List of parameters the workflow session state machine will need access to
+  eventbusObj: events.IEventBus;
   /* Lambdas paths */
-  generate_db_uuid_lambda_path: string; // __dirname + '/../../../lambdas/generate_db_uuid'
-  generate_trimmed_samplesheet_lambda_path: string; // __dirname + '/../../../lambdas/generate_trimmed_samplesheet_lambda_path'
-  upload_samplesheet_to_cache_dir_lambda_path: string; // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir'
-  generate_copy_manifest_dict_lambda_path: string; // __dirname + '/../../../lambdas/generate_copy_manifest_dict'
-  launch_cttso_nextflow_pipeline_lambda_path: string; // __dirname + '/../../../lambdas/launch_cttso_nextflow_pipeline'
+  generateDbUuidLambdaPath: string; // __dirname + '/../../../lambdas/generate_db_uuid'
+  generateTrimmedSamplesheetLambdaPath: string; // __dirname + '/../../../lambdas/generate_trimmed_samplesheet_lambda_path'
+  uploadSamplesheetToCacheDirLambdaPath: string; // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir'
+  generateCopyManifestDictLambdaPath: string; // __dirname + '/../../../lambdas/generate_copy_manifest_dict'
+  launchCttsov2NextflowPipelineLambdaPath: string; // __dirname + '/../../../lambdas/launch_cttso_nextflow_pipeline'
   /* Step function templates */
-  workflow_definition_body_path: string; // __dirname + '/../../../step_functions_templates/cttso_v2_launch_step_function.json'
+  workflowDefinitionBodyPath: string; // __dirname + '/../../../step_functions_templates/cttso_v2_launch_step_function.json'
 }
 
 export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
-  public readonly cttso_v2_launch_state_machine_name: string;
-  public readonly cttso_v2_launch_state_machine_arn: string;
+  public readonly cttsov2LaunchStateMachineName: string;
+  public readonly cttsov2LaunchStateMachineArn: string;
 
   constructor(scope: Construct, id: string, props: Cttsov2Icav2ManagerConstructProps) {
     super(scope, id);
@@ -43,27 +43,27 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       this,
       'launch_cttso_nextflow_pipeline_lambda_python_function',
       {
-        entry: props.launch_cttso_nextflow_pipeline_lambda_path,
+        entry: props.launchCttsov2NextflowPipelineLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        layers: [props.lambda_layer_obj],
+        layers: [props.lambdaLayerObj],
         timeout: Duration.seconds(60),
         environment: {
-          ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2_access_token_secret_obj.secretName,
+          ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
         },
       }
     );
 
     // Add icav2 secrets permissions to lambda
-    props.icav2_access_token_secret_obj.grantRead(
+    props.icav2AccessTokenSecretObj.grantRead(
       <iam.IRole>launch_cttso_nextflow_pipeline_lambda_obj.role
     );
 
     // Add each of the ssm parameters to the lambda role policy
-    props.ssm_parameter_obj_list.forEach((ssm_parameter_obj) => {
+    props.ssmParameterObjList.forEach((ssm_parameter_obj) => {
       ssm_parameter_obj.grantRead(<iam.IRole>launch_cttso_nextflow_pipeline_lambda_obj.role);
     });
 
@@ -73,13 +73,13 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       this,
       'generate_db_uuid_lambda_python_function',
       {
-        entry: props.generate_db_uuid_lambda_path,
+        entry: props.generateDbUuidLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        layers: [props.lambda_layer_obj],
+        layers: [props.lambdaLayerObj],
         timeout: Duration.seconds(60),
       }
     );
@@ -90,13 +90,13 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       this,
       'generate_copy_manifest_dict_lambda_python_function',
       {
-        entry: props.generate_copy_manifest_dict_lambda_path,
+        entry: props.generateCopyManifestDictLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        layers: [props.lambda_layer_obj],
+        layers: [props.lambdaLayerObj],
         timeout: Duration.seconds(60),
       }
     );
@@ -107,13 +107,13 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       this,
       'generate_trimmed_samplesheet_lambda_python_function',
       {
-        entry: props.generate_trimmed_samplesheet_lambda_path,
+        entry: props.generateTrimmedSamplesheetLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        layers: [props.lambda_layer_obj],
+        layers: [props.lambdaLayerObj],
         timeout: Duration.seconds(60),
       }
     );
@@ -123,27 +123,27 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       this,
       'upload_samplesheet_to_cache_dir_lambda_python_function',
       {
-        entry: props.upload_samplesheet_to_cache_dir_lambda_path,
+        entry: props.uploadSamplesheetToCacheDirLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        layers: [props.lambda_layer_obj],
+        layers: [props.lambdaLayerObj],
         timeout: Duration.seconds(60),
         environment: {
-          ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2_access_token_secret_obj.secretName,
+          ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
         },
       }
     );
 
     // Add icav2 secrets permissions to lambda
-    props.icav2_access_token_secret_obj.grantRead(
+    props.icav2AccessTokenSecretObj.grantRead(
       <iam.IRole>upload_samplesheet_to_cache_dir_lambda_obj.role
     );
 
     // Add each of the ssm parameters to the lambda role policy
-    props.ssm_parameter_obj_list.forEach((ssm_parameter_obj) => {
+    props.ssmParameterObjList.forEach((ssm_parameter_obj) => {
       ssm_parameter_obj.grantRead(<iam.IRole>upload_samplesheet_to_cache_dir_lambda_obj.role);
     });
 
@@ -153,7 +153,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       'cttso_v2_launch_step_functions_state_machine',
       {
         // defintiontemplate
-        definitionBody: DefinitionBody.fromFile(props.workflow_definition_body_path),
+        definitionBody: DefinitionBody.fromFile(props.workflowDefinitionBodyPath),
         // definitionSubstitutions
         definitionSubstitutions: {
           /* Lambda arns */
@@ -165,11 +165,11 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
             upload_samplesheet_to_cache_dir_lambda_obj.functionArn,
           /* Subfunction state machines */
           __copy_batch_data_state_machine_arn__:
-            props.icav2_copy_batch_state_machine_obj.stateMachineArn,
+            props.icav2CopyBatchStateMachineObj.stateMachineArn,
           /* Dynamodb tables */
-          __table_name__: props.dynamodb_table_obj.tableName,
+          __table_name__: props.dynamodbTableObj.tableName,
           /* Event bus to push to */
-          __eventbus_name__: props.eventbus_obj.eventBusName,
+          __eventbus_name__: props.eventbusObj.eventBusName,
         },
       }
     );
@@ -186,7 +186,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     });
 
     // Allow state machine to read/write to dynamodb table
-    props.dynamodb_table_obj.grantReadWriteData(stateMachine.role);
+    props.dynamodbTableObj.grantReadWriteData(stateMachine.role);
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -200,11 +200,11 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     );
 
     // Add state machine execution permissions to stateMachine role
-    props.icav2_copy_batch_state_machine_obj.grantStartExecution(stateMachine.role);
+    props.icav2CopyBatchStateMachineObj.grantStartExecution(stateMachine.role);
 
     // Trigger state machine on event
     const rule = new events.Rule(this, 'cttso_v2_launch_step_function_rule', {
-      eventBus: props.eventbus_obj,
+      eventBus: props.eventbusObj,
       eventPattern: {
         source: ['orcabus.wfm'],
         detailType: ['WorkflowRunStateChange'],
@@ -226,10 +226,10 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     );
 
     // Allow the statemachine to submit events to the event bus
-    props.eventbus_obj.grantPutEventsTo(stateMachine.role);
+    props.eventbusObj.grantPutEventsTo(stateMachine.role);
 
     // Set outputs
-    this.cttso_v2_launch_state_machine_name = stateMachine.stateMachineName;
-    this.cttso_v2_launch_state_machine_arn = stateMachine.stateMachineArn;
+    this.cttsov2LaunchStateMachineName = stateMachine.stateMachineName;
+    this.cttsov2LaunchStateMachineArn = stateMachine.stateMachineArn;
   }
 }
