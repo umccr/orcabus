@@ -15,12 +15,12 @@ export const getICAv2CopyBatchUtilityStackProps = (
   stage: AppStage
 ): ICAv2CopyBatchUtilityConfig => {
   return {
-    icav2_copy_batch_state_machine_name: icav2CopyBatchUtilityName,
-    icav2_copy_batch_state_machine_arn_ssm_parameter_path: icav2CopyBatchSSMBatchArn,
-    icav2_copy_batch_state_machine_name_ssm_parameter_path: icav2CopyBatchSSMBatchName,
-    icav2_copy_single_state_machine_name: icav2CopySingleUtilityName,
-    icav2_copy_single_state_machine_arn_ssm_parameter_path: icav2CopyBatchSSMSingleArn,
-    icav2_copy_single_state_machine_name_ssm_parameter_path: icav2CopyBatchSSMSingleName,
-    icav2_token_secret_id: icav2AccessTokenSecretName[stage],
+    Icav2CopyBatchStateMachineName: icav2CopyBatchUtilityName,
+    Icav2CopyBatchStateMachineArnSsmParameterPath: icav2CopyBatchSSMBatchArn,
+    Icav2CopyBatchStateMachineNameSsmParameterPath: icav2CopyBatchSSMBatchName,
+    Icav2CopySingleStateMachineName: icav2CopySingleUtilityName,
+    Icav2CopySingleStateMachineArnSsmParameterPath: icav2CopyBatchSSMSingleArn,
+    Icav2CopySingleStateMachineNameSsmParameterPath: icav2CopyBatchSSMSingleName,
+    Icav2TokenSecretId: icav2AccessTokenSecretName[stage],
   };
 };

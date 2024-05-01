@@ -7,13 +7,13 @@ import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda
 import path = require('path');
 
 export interface ICAv2CopyBatchUtilityConfig {
-  icav2_token_secret_id: string; //  "ICAv2Jwticav2-credentials-umccr-service-user-trial"
-  icav2_copy_batch_state_machine_name: string;
-  icav2_copy_batch_state_machine_name_ssm_parameter_path: string;
-  icav2_copy_batch_state_machine_arn_ssm_parameter_path: string;
-  icav2_copy_single_state_machine_name: string;
-  icav2_copy_single_state_machine_name_ssm_parameter_path: string;
-  icav2_copy_single_state_machine_arn_ssm_parameter_path: string;
+  Icav2TokenSecretId: string; //  "ICAv2Jwticav2-credentials-umccr-service-user-trial"
+  Icav2CopyBatchStateMachineName: string;
+  Icav2CopyBatchStateMachineNameSsmParameterPath: string;
+  Icav2CopyBatchStateMachineArnSsmParameterPath: string;
+  Icav2CopySingleStateMachineName: string;
+  Icav2CopySingleStateMachineNameSsmParameterPath: string;
+  Icav2CopySingleStateMachineArnSsmParameterPath: string;
 }
 
 export type ICAv2CopyBatchUtilityStackProps = ICAv2CopyBatchUtilityConfig & cdk.StackProps;
@@ -31,7 +31,7 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
     const icav2_access_token_secret_obj = secretsManager.Secret.fromSecretNameV2(
       this,
       'Icav2SecretsObject',
-      props.icav2_token_secret_id
+      props.Icav2TokenSecretId
     );
 
     // Generate lambda layer
@@ -53,8 +53,8 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
         checkOrLaunchJobLambdaPath: path.join(__dirname, '../lambdas/check_or_launch_job'),
         manifestHandlerLambdaPath: path.join(__dirname, '../lambdas/manifest_handler'),
         /* State Machines */
-        stateMachineNameBatch: props.icav2_copy_batch_state_machine_name,
-        stateMachineNameSingle: props.icav2_copy_single_state_machine_name,
+        stateMachineNameBatch: props.Icav2CopyBatchStateMachineName,
+        stateMachineNameSingle: props.Icav2CopySingleStateMachineName,
         stateMachineBatchDefinitionBodyPath: path.join(
           __dirname,
           '../step_functions_templates/copy_batch_state_machine.asl.json'
@@ -68,7 +68,7 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
 
     // Generate ssm parameters for batch and single state machines
     this.icav2_copy_batch_state_machine_arn_ssm_parameter_path =
-      props.icav2_copy_batch_state_machine_arn_ssm_parameter_path;
+      props.Icav2CopyBatchStateMachineArnSsmParameterPath;
     this.set_ssm_parameter_obj_for_state_machine(
       this.icav2_copy_batch_state_machine_arn_ssm_parameter_path,
       icav2_copy_batch_state_machine.icav2CopyBatchStateMachine.stateMachineArn,
@@ -76,7 +76,7 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
     );
 
     this.icav2_copy_single_state_machine_arn_ssm_parameter_path =
-      props.icav2_copy_single_state_machine_arn_ssm_parameter_path;
+      props.Icav2CopySingleStateMachineArnSsmParameterPath;
     this.set_ssm_parameter_obj_for_state_machine(
       this.icav2_copy_single_state_machine_arn_ssm_parameter_path,
       icav2_copy_batch_state_machine.icav2CopySingleStateMachine.stateMachineArn,
@@ -84,7 +84,7 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
     );
 
     this.icav2_copy_batch_state_machine_name_ssm_parameter_path =
-      props.icav2_copy_batch_state_machine_name_ssm_parameter_path;
+      props.Icav2CopyBatchStateMachineNameSsmParameterPath;
     this.set_ssm_parameter_obj_for_state_machine(
       this.icav2_copy_batch_state_machine_name_ssm_parameter_path,
       icav2_copy_batch_state_machine.icav2CopyBatchStateMachine.stateMachineName,
@@ -92,7 +92,7 @@ export class ICAv2CopyBatchUtilityStack extends cdk.Stack {
     );
 
     this.icav2_copy_single_state_machine_name_ssm_parameter_path =
-      props.icav2_copy_single_state_machine_name_ssm_parameter_path;
+      props.Icav2CopySingleStateMachineNameSsmParameterPath;
     this.set_ssm_parameter_obj_for_state_machine(
       this.icav2_copy_single_state_machine_name_ssm_parameter_path,
       icav2_copy_batch_state_machine.icav2CopySingleStateMachine.stateMachineName,
