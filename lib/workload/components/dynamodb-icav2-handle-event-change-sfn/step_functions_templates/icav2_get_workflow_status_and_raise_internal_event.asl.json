@@ -1,0 +1,97 @@
+{
+  "Comment": "Handle icav2 state change",
+  "StartAt": "Move event detail",
+  "States": {
+    "Move event detail": {
+      "Type": "Pass",
+      "Next": "DynamoDB Get UUID from ICAv2 Analysis ID",
+      "Parameters": {
+        "event_detail.$": "$"
+      }
+    },
+    "DynamoDB Get UUID from ICAv2 Analysis ID": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.event_detail.id",
+          "id_type": "icav2_analysis_id"
+        }
+      },
+      "Next": "Check Analysis ID in DataBase",
+      "ResultPath": "$.get_analysis_id_in_db_step",
+      "ResultSelector": {
+        "db_response.$": "$"
+      }
+    },
+    "Check Analysis ID in DataBase": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.get_analysis_id_in_db_step.db_response.Item",
+            "IsPresent": true
+          },
+          "Next": "Success"
+        }
+      ],
+      "Default": "DynamoDB Update Status"
+    },
+    "DynamoDB Update Status": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.get_analysis_id_in_db_step.db_response.db_uuid",
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET status = :status",
+        "ExpressionAttributeValues": {
+          ":status": {
+            "S.$": "$.get_analysis_id_in_db_step.db_response.status"
+          }
+        }
+      },
+      "Next": "Wait 1 Second",
+      "ResultPath": "$.update_analysis_id_in_db_step"
+    },
+    "Wait 1 Second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "DynamoDB Get UUID Row"
+    },
+    "DynamoDB Get UUID Row": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.get_analysis_id_in_db_step.db_response.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "Next": "PutEvent",
+      "ResultPath": "$.update_analysis_id_in_db_step"
+    },
+    "PutEvent": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail.$": "$.update_analysis_id_in_db_step",
+            "DetailType": "${__detail_type__}",
+            "EventBusName": "${__eventbus_name__}",
+            "Source": "${__eventsource__}"
+          }
+        ]
+      },
+      "Next": "Success"
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}
