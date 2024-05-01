@@ -4,6 +4,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import { BsshIcav2FastqCopyStateMachineConstruct } from './constructs/bssh-icav2-fastq-copy-manager';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as events from 'aws-cdk-lib/aws-events';
 import path from 'path';
 import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda-layer';
 
@@ -14,6 +15,7 @@ export interface BsshIcav2FastqCopyManagerConfig {
   BsshIcav2FastqCopyManagerStateMachineName: string; // "bssh_icav2_fastq_copy_manager"
   BsshIcav2FastqCopyManagerStateMachineNameSsmParameterPath: string; // "/bssh_icav2_fastq_copy/state_machine/name"
   BsshIcav2FastqCopyManagerStateMachineArnSsmParameterPath: string; // "/bssh_icav2_fastq_copy/state_machine/arn"
+  EventBusName: string; // OrcabusMain
 }
 
 export type BsshIcav2FastqCopyManagerStackProps = BsshIcav2FastqCopyManagerConfig & cdk.StackProps;
@@ -45,19 +47,23 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
       layer_directory: path.join(__dirname, '../layers'),
     });
 
+    // Get eventbus object
+    const event_bus_obj = events.EventBus.fromEventBusName(this, 'event_bus', props.EventBusName);
+
     const icav2_bclconvert_success_event_state_machine =
       new BsshIcav2FastqCopyStateMachineConstruct(this, id, {
         /* Stack objects */
-        icav2_copy_batch_state_machine_obj: icav2_copy_batch_stack_state_machine_arn_obj,
-        icav2_jwt_ssm_parameter_obj: icav2_jwt_ssm_parameter_obj,
-        lambdas_layer_obj: lambda_layer_obj.lambdaLayerVersionObj,
+        Icav2CopyBatchStateMachineObj: icav2_copy_batch_stack_state_machine_arn_obj,
+        Icav2JwtSsmParameterObj: icav2_jwt_ssm_parameter_obj,
+        LambdasLayerObj: lambda_layer_obj.lambdaLayerVersionObj,
+        EventBusObj: event_bus_obj,
         /* Lambda paths */
-        bclconvert_success_event_handler_lambda_path: path.join(
+        BclconvertSuccessEventHandlerLambdaPath: path.join(
           __dirname,
           '../lambdas/query_bclconvert_outputs_handler'
         ),
         /* State machine paths */
-        workflow_definition_body_path: path.join(
+        WorkflowDefinitionBodyPath: path.join(
           __dirname,
           '../step_functions_templates/bclconvert_success_event_state_machine.json'
         ),
@@ -65,7 +71,7 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
 
     // Set outputs
     this.BsshIcav2FastqCopyStateMachineArn =
-      icav2_bclconvert_success_event_state_machine.icav2_bclconvert_success_event_ssm_state_machine_obj.stateMachineArn;
+      icav2_bclconvert_success_event_state_machine.Icav2BclconvertSuccessEventSsmStateMachineObj.stateMachineArn;
 
     // Set ssm parameter paths
     new ssm.StringParameter(

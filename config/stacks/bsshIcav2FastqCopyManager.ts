@@ -6,6 +6,7 @@ import {
   bsshFastqCopyManagerSfnName,
   bsshFastqCopyManagerSSMName,
   bsshFastqCopyManagerSSMArn,
+  eventBusName,
 } from '../constants';
 import { BsshIcav2FastqCopyManagerConfig } from '../../lib/workload/stateless/stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
 
@@ -17,6 +18,7 @@ export const getBsshIcav2FastqCopyManagerStackProps = (
     BsshIcav2FastqCopyManagerStateMachineName: bsshFastqCopyManagerSfnName,
     BsshIcav2FastqCopyManagerStateMachineNameSsmParameterPath: bsshFastqCopyManagerSSMName,
     BsshIcav2FastqCopyManagerStateMachineArnSsmParameterPath: bsshFastqCopyManagerSSMArn,
+    EventBusName: eventBusName,
   };
 
   switch (n) {

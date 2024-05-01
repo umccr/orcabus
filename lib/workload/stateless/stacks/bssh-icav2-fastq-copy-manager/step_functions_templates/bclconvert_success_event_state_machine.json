@@ -66,9 +66,9 @@
     },
     "Set Workflow Outputs": {
       "Type": "Pass",
-      "Next": "Succeed",
+      "Next": "Submit Completion Event",
       "Parameters": {
-        "outputs": {
+        "workflow_outputs": {
           "instrument_run_id.$": "$.bclconvert_success_event_handler_step.instrument_run_id",
           "basespace_run_id.$": "$.bclconvert_success_event_handler_step.basespace_run_id",
           "output_uri.$": "$.bclconvert_success_event_handler_step.output_uri",
@@ -78,6 +78,21 @@
           "icav2_copy_utility_job_execution_id.$": "$.state_machine_parameter.execution_id"
         }
       }
+    },
+    "Submit Completion Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail.$": "$.workflow_outputs",
+            "DetailType": "bsshFastqCopyManagerComplete",
+            "EventBusName": "${__eventbus_name__}",
+            "Source": "orcabus.bssh_fastq_copy_manager"
+          }
+        ]
+      },
+      "Next": "Succeed"
     },
     "Succeed": {
       "Type": "Succeed"
