@@ -10,10 +10,10 @@ import { BsRunsUploadManagerConfig } from '../../lib/workload/stateless/stacks/b
 
 export const getBsRunsUploadManagerStackProps = (stage: AppStage): BsRunsUploadManagerConfig => {
   return {
-    ica_token_secret_id: icaAccessTokenSecretName,
-    portal_token_secret_id: jwtSecretName,
-    basespace_token_secret_id: basespaceAccessTokenSecretName,
-    eventbus_name: eventBusName,
-    gds_system_files_path: gdsBsRunsUploadLogPath[stage],
+    icaTokenSecretId: icaAccessTokenSecretName,
+    portalTokenSecretId: jwtSecretName,
+    basespaceTokenSecretId: basespaceAccessTokenSecretName,
+    eventbusName: eventBusName,
+    gdsSystemFilesPath: gdsBsRunsUploadLogPath[stage],
   };
 };

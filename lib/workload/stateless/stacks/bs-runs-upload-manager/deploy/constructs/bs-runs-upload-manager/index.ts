@@ -13,18 +13,18 @@ import { PythonLambdaLayerConstruct } from '../../../../../../components/python-
 
 interface BsRunsUploadManagerConstructProps {
   /* Stack objects */
-  lambda_layer_obj: PythonLambdaLayerConstruct;
-  ica_token_secret_obj: secretsManager.ISecret;
-  portal_token_secret_obj: secretsManager.ISecret;
-  basespace_secret_obj: secretsManager.ISecret;
-  event_bus_obj: events.IEventBus;
+  lambdaLayerObj: PythonLambdaLayerConstruct;
+  icaTokenSecretObj: secretsManager.ISecret;
+  portalTokenSecretObj: secretsManager.ISecret;
+  basespaceSecretObj: secretsManager.ISecret;
+  eventBusObj: events.IEventBus;
   /* Lambda layer paths */
-  upload_v2_samplesheet_to_gds_bssh_lambda_path: string; // __dirname + '/../../../lambdas/upload_v2_samplesheet_to_gds_bssh'
-  launch_bs_runs_upload_tes_lambda_path: string; // __dirname + '/../../../lambdas/launch_bs_runs_upload_tes'
+  uploadV2SamplesheetToGdsBsshLambdaPath: string; // __dirname + '/../../../lambdas/upload_v2_samplesheet_to_gds_bssh'
+  launchBsRunsUploadTesLambdaPath: string; // __dirname + '/../../../lambdas/launch_bs_runs_upload_tes'
   /* Step function templates */
-  gds_system_files_path: string; // gds://development/primary_data/temp/bs_runs_upload_tes/
+  gdsSystemFilesPath: string; // gds://development/primary_data/temp/bs_runs_upload_tes/
   /* Miscell */
-  workflow_definition_body_path: string; // __dirname + '/../../../step_functions_templates/bs_runs_upload_step_functions_template.json'
+  workflowDefinitionBodyPath: string; // __dirname + '/../../../step_functions_templates/bs_runs_upload_step_functions_template.json'
 }
 
 export class BsRunsUploadManagerConstruct extends Construct {
@@ -38,20 +38,18 @@ export class BsRunsUploadManagerConstruct extends Construct {
       this,
       'upload_v2_samplesheet_to_gds_bssh_lambda',
       {
-        entry: props.upload_v2_samplesheet_to_gds_bssh_lambda_path,
+        entry: props.uploadV2SamplesheetToGdsBsshLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        // @ts-ignore
-        layers: [props.lambda_layer_obj.lambda_layer_version_obj],
-        // @ts-ignore
+        layers: [props.lambdaLayerObj.lambdaLayerVersionObj],
         timeout: Duration.seconds(60),
         environment: {
           ICA_BASE_URL: 'https://aps2.platform.illumina.com',
-          ICA_ACCESS_TOKEN_SECRET_ID: props.ica_token_secret_obj.secretName,
-          PORTAL_TOKEN_SECRET_ID: props.portal_token_secret_obj.secretName,
+          ICA_ACCESS_TOKEN_SECRET_ID: props.icaTokenSecretObj.secretName,
+          PORTAL_TOKEN_SECRET_ID: props.portalTokenSecretObj.secretName,
         },
       }
     );
@@ -61,22 +59,20 @@ export class BsRunsUploadManagerConstruct extends Construct {
       this,
       'launch_bs_runs_upload_tes_lambda',
       {
-        entry: props.launch_bs_runs_upload_tes_lambda_path,
+        entry: props.launchBsRunsUploadTesLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        // @ts-ignore
-        layers: [props.lambda_layer_obj.lambda_layer_version_obj],
-        // @ts-ignore
+        layers: [props.lambdaLayerObj.lambdaLayerVersionObj],
         timeout: Duration.seconds(60),
         environment: {
           BASESPACE_API_SERVER: 'https://api.aps2.sh.basespace.illumina.com',
-          BASESPACE_ACCESS_TOKEN_SECRET_ID: props.basespace_secret_obj.secretName,
+          BASESPACE_ACCESS_TOKEN_SECRET_ID: props.basespaceSecretObj.secretName,
           ICA_BASE_URL: 'https://aps2.platform.illumina.com',
-          ICA_ACCESS_TOKEN_SECRET_ID: props.ica_token_secret_obj.secretName,
-          GDS_SYSTEM_FILES_PATH: props.gds_system_files_path,
+          ICA_ACCESS_TOKEN_SECRET_ID: props.icaTokenSecretObj.secretName,
+          GDS_SYSTEM_FILES_PATH: props.gdsSystemFilesPath,
         },
       }
     );
@@ -84,33 +80,24 @@ export class BsRunsUploadManagerConstruct extends Construct {
     // Give the lambda permission to read the ICA ACCESS TOKEN secret
     [launch_bs_runs_upload_tes_lambda, upload_v2_samplesheet_to_gds_bssh_lambda].forEach(
       (lambda_obj) => {
-        props.ica_token_secret_obj.grantRead(
-          // @ts-ignore
-          <IRole>lambda_obj.role
-        );
-        props.portal_token_secret_obj.grantRead(
-          // @ts-ignore
-          <IRole>lambda_obj.role
-        );
+        props.icaTokenSecretObj.grantRead(<IRole>lambda_obj.role);
+        props.portalTokenSecretObj.grantRead(<IRole>lambda_obj.role);
       }
     );
 
     // Give the lambda permission to read the PORTAL TOKEN secret
-    props.portal_token_secret_obj.grantRead(
+    props.portalTokenSecretObj.grantRead(
       // @ts-ignore
       <IRole>upload_v2_samplesheet_to_gds_bssh_lambda.role
     );
 
     // Give basespace upload lambda permission to read the basespace access token secret
-    props.basespace_secret_obj.grantRead(
-      // @ts-ignore
-      <IRole>launch_bs_runs_upload_tes_lambda.role
-    );
+    props.basespaceSecretObj.grantRead(<IRole>launch_bs_runs_upload_tes_lambda.role);
 
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
     const stateMachine = new sfn.StateMachine(this, 'bs_runs_upload_state_machine', {
       // defintiontemplate
-      definitionBody: DefinitionBody.fromFile(props.workflow_definition_body_path),
+      definitionBody: DefinitionBody.fromFile(props.workflowDefinitionBodyPath),
       // definitionSubstitutions
       definitionSubstitutions: {
         __upload_v2_samplesheet_to_gds_bssh_function_arn__:
@@ -132,7 +119,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
 
     // Trigger state machine on event
     const rule = new events.Rule(this, 'bs_runs_upload_event_rule', {
-      eventBus: props.event_bus_obj,
+      eventBus: props.eventBusObj,
       eventPattern: {
         source: ['orcabus.srm'],
         detailType: ['SequenceRunStateChange'],

@@ -1,30 +1,26 @@
-import { AppStage, icav2CopyBatchSSMRoot, icav2AccessTokenSecretName } from '../constants';
+import {
+  AppStage,
+  icav2AccessTokenSecretName,
+  icav2CopyBatchUtilityName,
+  icav2CopyBatchSSMBatchArn,
+  icav2CopySingleUtilityName,
+  icav2CopyBatchSSMBatchName,
+  icav2CopyBatchSSMSingleArn,
+  icav2CopyBatchSSMSingleName,
+} from '../constants';
 
 import { ICAv2CopyBatchUtilityConfig } from '../../lib/workload/stateless/stacks/icav2-copy-batch-utility/deploy/stack';
-import path from 'path';
 
 export const getICAv2CopyBatchUtilityStackProps = (
   stage: AppStage
 ): ICAv2CopyBatchUtilityConfig => {
   return {
-    icav2_copy_batch_state_machine_name: 'icav2_copy_batch_utility_sfn',
-    icav2_copy_batch_state_machine_arn_ssm_parameter_path: path.join(
-      icav2CopyBatchSSMRoot,
-      'batch_sfn_arn'
-    ),
-    icav2_copy_batch_state_machine_name_ssm_parameter_path: path.join(
-      icav2CopyBatchSSMRoot,
-      'batch_sfn_name'
-    ),
-    icav2_copy_single_state_machine_name: 'icav2_single_batch_utility_sfn',
-    icav2_copy_single_state_machine_arn_ssm_parameter_path: path.join(
-      icav2CopyBatchSSMRoot,
-      'single_sfn_arn'
-    ),
-    icav2_copy_single_state_machine_name_ssm_parameter_path: path.join(
-      icav2CopyBatchSSMRoot,
-      'single_sfn_name'
-    ),
-    icav2_token_secret_id: icav2AccessTokenSecretName[stage],
+    Icav2CopyBatchStateMachineName: icav2CopyBatchUtilityName,
+    Icav2CopyBatchStateMachineArnSsmParameterPath: icav2CopyBatchSSMBatchArn,
+    Icav2CopyBatchStateMachineNameSsmParameterPath: icav2CopyBatchSSMBatchName,
+    Icav2CopySingleStateMachineName: icav2CopySingleUtilityName,
+    Icav2CopySingleStateMachineArnSsmParameterPath: icav2CopyBatchSSMSingleArn,
+    Icav2CopySingleStateMachineNameSsmParameterPath: icav2CopyBatchSSMSingleName,
+    Icav2TokenSecretId: icav2AccessTokenSecretName[stage],
   };
 };
