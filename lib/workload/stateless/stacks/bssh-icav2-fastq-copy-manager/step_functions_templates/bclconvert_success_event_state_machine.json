@@ -41,7 +41,7 @@
       "ResultPath": "$.bclconvert_success_event_handler_step",
       "TimeoutSeconds": 60,
       "ResultSelector": {
-        "run_id.$": "$.Payload.run_id",
+        "instrument_run_id.$": "$.Payload.instrument_run_id",
         "basespace_run_id.$": "$.Payload.basespace_run_id",
         "output_uri.$": "$.Payload.output_uri",
         "fastq_list_rows_b64gz.$": "$.Payload.fastq_list_rows_b64gz",
@@ -69,7 +69,7 @@
       "Next": "Succeed",
       "Parameters": {
         "outputs": {
-          "run_id.$": "$.bclconvert_success_event_handler_step.run_id",
+          "instrument_run_id.$": "$.bclconvert_success_event_handler_step.instrument_run_id",
           "basespace_run_id.$": "$.bclconvert_success_event_handler_step.basespace_run_id",
           "output_uri.$": "$.bclconvert_success_event_handler_step.output_uri",
           "fastq_list_rows_b64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz",
