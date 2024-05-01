@@ -1,8 +1,7 @@
 import path from 'path';
 import { Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
-import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import { Function, Runtime, Architecture, Code } from 'aws-cdk-lib/aws-lambda';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Vpc, VpcLookupOptions, SubnetType, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -79,24 +78,13 @@ export class PostgresManagerStack extends Stack {
       port: props.dbPort,
     });
 
-    const updatePgLambda = new nodejs.NodejsFunction(this, 'UpdatePostgresLambda', {
-      depsLockFilePath: path.join(__dirname + '/../yarn.lock'),
-      entry: path.join(__dirname + '/../function/index.ts'),
+    const updatePgLambda = new Function(this, 'UpdatePostgresLambda', {
+      code: Code.fromDockerBuild(path.join(__dirname + '/../'), {
+        file: 'deploy/lambda-build.Dockerfile',
+        imagePath: 'usr/app/dist',
+      }),
       timeout: Duration.minutes(10),
-      bundling: {
-        commandHooks: {
-          beforeBundling(inputDir: string, outputDir: string) {
-            return [`cd ${inputDir}`, 'yarn install --immutable'];
-          },
-          beforeInstall() {
-            return [];
-          },
-          afterBundling() {
-            return [];
-          },
-        },
-      },
-      handler: 'handler',
+      handler: 'index.handler',
       runtime: Runtime.NODEJS_20_X,
       architecture: Architecture.ARM_64,
       vpc: vpc,
@@ -105,6 +93,7 @@ export class PostgresManagerStack extends Stack {
       },
       securityGroups: [lambdaSG],
       environment: {
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
         MICRO_SECRET_MANAGER_TEMPLATE_NAME: PostgresManagerStack.formatDbSecretManagerName(
           '{replace_microservice_name}'
         ),
