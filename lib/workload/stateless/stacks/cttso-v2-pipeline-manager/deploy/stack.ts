@@ -54,9 +54,9 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
 
     // Get lambda layer object
     const lambda_layer_obj = new PythonLambdaLayerConstruct(this, 'lambda_layer', {
-      layer_name: 'cttso-v2-launch-state-machine-layer',
-      layer_description: 'CTTSO v2 Launch State Machine Lambda Layer',
-      layer_directory: path.join(__dirname, '../layers/'),
+      layerName: 'cttso-v2-launch-state-machine-layer',
+      layerDescription: 'CTTSO v2 Launch State Machine Lambda Layer',
+      layerDirectory: path.join(__dirname, '../layers/'),
     });
 
     // Set ssm parameter object list
