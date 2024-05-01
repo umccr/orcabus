@@ -9,17 +9,17 @@ import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda
 
 export interface BsshIcav2FastqCopyManagerConfig {
   // Define construct properties here
-  icav2_jwt_secrets_manager_path: string; // "/icav2/umccr-prod/service-production-jwt-token-secret-arn"
-  icav2_copy_batch_utility_state_machine_name: string; // "/icav2/umccr-prod/copy-batch-state-machine/name"
-  bssh_icav2_fastq_copy_manager_state_machine_name: string; // "bssh_icav2_fastq_copy_manager"
-  bssh_icav2_fastq_copy_manager_state_machine_name_ssm_parameter_path: string; // "/bssh_icav2_fastq_copy/state_machine/name"
-  bssh_icav2_fastq_copy_manager_state_machine_arn_ssm_parameter_path: string; // "/bssh_icav2_fastq_copy/state_machine/arn"
+  Icav2JwtSecretsManagerPath: string; // "/icav2/umccr-prod/service-production-jwt-token-secret-arn"
+  Icav2CopyBatchUtilityStateMachineName: string; // "/icav2/umccr-prod/copy-batch-state-machine/name"
+  BsshIcav2FastqCopyManagerStateMachineName: string; // "bssh_icav2_fastq_copy_manager"
+  BsshIcav2FastqCopyManagerStateMachineNameSsmParameterPath: string; // "/bssh_icav2_fastq_copy/state_machine/name"
+  BsshIcav2FastqCopyManagerStateMachineArnSsmParameterPath: string; // "/bssh_icav2_fastq_copy/state_machine/arn"
 }
 
 export type BsshIcav2FastqCopyManagerStackProps = BsshIcav2FastqCopyManagerConfig & cdk.StackProps;
 
 export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
-  public readonly bssh_icav2_fastq_copy_state_machine_arn: string;
+  public readonly BsshIcav2FastqCopyStateMachineArn: string;
 
   constructor(scope: Construct, id: string, props: BsshIcav2FastqCopyManagerStackProps) {
     super(scope, id, props);
@@ -28,14 +28,14 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
     const icav2_copy_batch_stack_state_machine_arn_obj = sfn.StateMachine.fromStateMachineName(
       this,
       'icav2_copy_batch_state_machine',
-      props.icav2_copy_batch_utility_state_machine_name
+      props.Icav2CopyBatchUtilityStateMachineName
     );
 
     // Get the icav2 jwt secret from lookup
     const icav2_jwt_ssm_parameter_obj = secretsmanager.Secret.fromSecretNameV2(
       this,
-      'icav2_jwt_ssm_parameter',
-      props.icav2_jwt_secrets_manager_path
+      'icav2_jwt_secret',
+      props.Icav2JwtSecretsManagerPath
     );
 
     // Get the lambda layer object
@@ -50,7 +50,7 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
         /* Stack objects */
         icav2_copy_batch_state_machine_obj: icav2_copy_batch_stack_state_machine_arn_obj,
         icav2_jwt_ssm_parameter_obj: icav2_jwt_ssm_parameter_obj,
-        lambdas_layer_obj: lambda_layer_obj.lambda_layer_version_obj,
+        lambdas_layer_obj: lambda_layer_obj.lambdaLayerVersionObj,
         /* Lambda paths */
         bclconvert_success_event_handler_lambda_path: path.join(
           __dirname,
@@ -64,7 +64,7 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
       });
 
     // Set outputs
-    this.bssh_icav2_fastq_copy_state_machine_arn =
+    this.BsshIcav2FastqCopyStateMachineArn =
       icav2_bclconvert_success_event_state_machine.icav2_bclconvert_success_event_ssm_state_machine_obj.stateMachineArn;
 
     // Set ssm parameter paths
@@ -72,13 +72,13 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
       this,
       'bssh_icav2_fastq_copy_manager_state_machine_name_ssm_parameter',
       {
-        parameterName: props.bssh_icav2_fastq_copy_manager_state_machine_name_ssm_parameter_path,
-        stringValue: props.bssh_icav2_fastq_copy_manager_state_machine_name,
+        parameterName: props.BsshIcav2FastqCopyManagerStateMachineNameSsmParameterPath,
+        stringValue: props.BsshIcav2FastqCopyManagerStateMachineName,
       }
     );
     new ssm.StringParameter(this, 'bssh_icav2_fastq_copy_manager_state_machine_arn_ssm_parameter', {
-      parameterName: props.bssh_icav2_fastq_copy_manager_state_machine_arn_ssm_parameter_path,
-      stringValue: this.bssh_icav2_fastq_copy_state_machine_arn,
+      parameterName: props.BsshIcav2FastqCopyManagerStateMachineArnSsmParameterPath,
+      stringValue: this.BsshIcav2FastqCopyStateMachineArn,
     });
   }
 }
