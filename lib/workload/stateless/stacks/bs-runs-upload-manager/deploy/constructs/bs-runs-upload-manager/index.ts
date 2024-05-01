@@ -44,9 +44,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        // @ts-ignore
         layers: [props.lambdaLayerObj.lambdaLayerVersionObj],
-        // @ts-ignore
         timeout: Duration.seconds(60),
         environment: {
           ICA_BASE_URL: 'https://aps2.platform.illumina.com',
@@ -67,9 +65,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
         index: 'handler.py',
         handler: 'handler',
         memorySize: 1024,
-        // @ts-ignore
         layers: [props.lambdaLayerObj.lambdaLayerVersionObj],
-        // @ts-ignore
         timeout: Duration.seconds(60),
         environment: {
           BASESPACE_API_SERVER: 'https://api.aps2.sh.basespace.illumina.com',
@@ -84,14 +80,8 @@ export class BsRunsUploadManagerConstruct extends Construct {
     // Give the lambda permission to read the ICA ACCESS TOKEN secret
     [launch_bs_runs_upload_tes_lambda, upload_v2_samplesheet_to_gds_bssh_lambda].forEach(
       (lambda_obj) => {
-        props.icaTokenSecretObj.grantRead(
-          // @ts-ignore
-          <IRole>lambda_obj.role
-        );
-        props.portalTokenSecretObj.grantRead(
-          // @ts-ignore
-          <IRole>lambda_obj.role
-        );
+        props.icaTokenSecretObj.grantRead(<IRole>lambda_obj.role);
+        props.portalTokenSecretObj.grantRead(<IRole>lambda_obj.role);
       }
     );
 
@@ -102,10 +92,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
     );
 
     // Give basespace upload lambda permission to read the basespace access token secret
-    props.basespaceSecretObj.grantRead(
-      // @ts-ignore
-      <IRole>launch_bs_runs_upload_tes_lambda.role
-    );
+    props.basespaceSecretObj.grantRead(<IRole>launch_bs_runs_upload_tes_lambda.role);
 
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
     const stateMachine = new sfn.StateMachine(this, 'bs_runs_upload_state_machine', {

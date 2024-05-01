@@ -39,7 +39,6 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
       index: 'handler.py',
       handler: 'handler',
       memorySize: 1024,
-      // @ts-ignore
       layers: [props.lambdasLayer.lambdaLayerVersionObj],
     });
 
@@ -51,9 +50,7 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
       index: 'handler.py',
       handler: 'handler',
       memorySize: 1024,
-      // @ts-ignore
       layers: [props.lambdasLayer.lambdaLayerVersionObj],
-      // @ts-ignore // We go through at least 10 jobs now to check if they're completed
       timeout: Duration.seconds(300),
       environment: {
         ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2JwtSecretParameterObj.secretName,
@@ -115,10 +112,7 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     stateMachineSingle.grantStartExecution(stateMachineBatch.role);
 
     // Update lambda policies
-    props.icav2JwtSecretParameterObj.grantRead(
-      // @ts-ignore
-      check_or_launch_job_lambda.role
-    );
+    props.icav2JwtSecretParameterObj.grantRead(<iam.IRole>check_or_launch_job_lambda.role);
 
     // Set outputs
     this.icav2CopyBatchStateMachine = stateMachineBatch;
