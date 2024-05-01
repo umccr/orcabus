@@ -1,8 +1,6 @@
 import {
-  icav2AccessTokenSecretNameDev,
-  icav2AccessTokenSecretNameStg,
-  icav2AccessTokenSecretNameProd,
-  AccountName,
+  AppStage,
+  icav2AccessTokenSecretName,
   bsshFastqCopyManagerSfnName,
   bsshFastqCopyManagerSSMName,
   bsshFastqCopyManagerSSMArn,
@@ -11,31 +9,14 @@ import {
 import { BsshIcav2FastqCopyManagerConfig } from '../../lib/workload/stateless/stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
 
 export const getBsshIcav2FastqCopyManagerStackProps = (
-  n: AccountName
+  stage: AppStage
 ): BsshIcav2FastqCopyManagerConfig => {
-  const baseConfig = {
+  return {
     Icav2CopyBatchUtilityStateMachineName: bsshFastqCopyManagerSfnName,
     BsshIcav2FastqCopyManagerStateMachineName: bsshFastqCopyManagerSfnName,
     BsshIcav2FastqCopyManagerStateMachineNameSsmParameterPath: bsshFastqCopyManagerSSMName,
     BsshIcav2FastqCopyManagerStateMachineArnSsmParameterPath: bsshFastqCopyManagerSSMArn,
     EventBusName: eventBusName,
+    Icav2JwtSecretsManagerPath: icav2AccessTokenSecretName[stage],
   };
-
-  switch (n) {
-    case 'beta':
-      return {
-        ...baseConfig,
-        Icav2JwtSecretsManagerPath: icav2AccessTokenSecretNameDev,
-      };
-    case 'gamma':
-      return {
-        ...baseConfig,
-        Icav2JwtSecretsManagerPath: icav2AccessTokenSecretNameStg,
-      };
-    case 'prod':
-      return {
-        ...baseConfig,
-        Icav2JwtSecretsManagerPath: icav2AccessTokenSecretNameProd,
-      };
-  }
 };
