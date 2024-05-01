@@ -92,10 +92,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
     );
 
     // Give basespace upload lambda permission to read the basespace access token secret
-    props.basespaceSecretObj.grantRead(
-      // @ts-ignore
-      <IRole>launch_bs_runs_upload_tes_lambda.role
-    );
+    props.basespaceSecretObj.grantRead(<IRole>launch_bs_runs_upload_tes_lambda.role);
 
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
     const stateMachine = new sfn.StateMachine(this, 'bs_runs_upload_state_machine', {
