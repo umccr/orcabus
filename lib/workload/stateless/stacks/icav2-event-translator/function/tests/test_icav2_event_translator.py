@@ -71,8 +71,8 @@ class TestICAv2EventTranslator(unittest.TestCase):
         expected_params = {
             'Entries': [
                 {
-                    "Source": 'ocrabus.iet', # icav2 event translator
-                    "DetailType": "ICAV2_INTERNAL_EVENT",
+                    "Source": 'ocrabus.icav2_event_translator', # icav2 event translator
+                    "DetailType": "ICAV2 event translated to internal event.",
                     "Detail": json.dumps(internal_event),
                     "EventBusName": os.environ['EVENT_BUS_NAME']
                 }
