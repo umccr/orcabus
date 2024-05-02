@@ -56,9 +56,9 @@ class TestICAv2EventTranslator(unittest.TestCase):
         
         # expected internal event
         internal_event = {
-            'projectId': "valid_project_id",
-            'analysisId': "valid_payload_id",
-            'instrumentRunId': "123456_A1234_0000_TestingPattern",
+            'project_id': "valid_project_id",
+            'analysis_id': "valid_payload_id",
+            'instrument_run_id': "123456_A1234_0000_TestingPattern",
             'tags': {
                 'status': "",
                 'payloadTags': {},
@@ -82,7 +82,7 @@ class TestICAv2EventTranslator(unittest.TestCase):
         
         #expected dynamodb table item
         expected_item = {
-            'id': {'S': internal_event['analysisId']},
+            'id': {'S': internal_event['analysis_id']},
             'id_type': {'S': 'icav2_analysis_id'},
             'original_external_event': {'S': json.dumps(self.event['detail'])},
             'translated_internal_event': {'S': json.dumps(internal_event)},

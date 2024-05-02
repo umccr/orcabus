@@ -69,15 +69,17 @@ This event is icav2 event without EventBus wrapper. General Event Bridge event w
 
 The AWS lambda functions return ```ICAV2_INTERNAL_EVENT``` with the following parameters:
 
-* projectId ->  "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx"
-* analysisId->  "0xxxxxxx-ddxxx-xxxxx-bxx-5xxxxxxx" (payload.id)
-* instrumentRunId -> "2xxxxxxxxx_Axxxxxx_0xxxx_Bxxxx" (from userReference)
+* project_id ->  "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx"
+* analysis_id->  "0xxxxxxx-ddxxx-xxxxx-bxx-5xxxxxxx" (payload.id)
+* instrument_run_id -> "2xxxxxxxxx_Axxxxxx_0xxxx_Bxxxx", (from userReference)
+* portal_run_id ???
+* output_uri_prefix ???
 * tags (payloadTags, workflow session tags)
 ```json5
 {
-  "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
-  "analysisId": "0xxxxxxx-ddxxx-xxxxx-bxx-5xxxxxxx",
-  "instrumentRunId": "2xxxxxxxxx_Axxxxxx_0xxxx_Bxxxx",
+  "project_id": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
+  "analysis_id": "0xxxxxxx-ddxxx-xxxxx-bxx-5xxxxxxx",
+  "instrument_run_id": "2xxxxxxxxx_Axxxxxx_0xxxx_Bxxxx",
   "tags": {
         ...
       }
@@ -102,7 +104,7 @@ Send the orignal input and orcabus event after translation to the dynao db for r
  ```
 
 ### Publish the Orcabus event to event bus
-publish the Orcabus event back the event bus.
+publish the Orcabus (internal) event back the event bus.
 
 ## Unit Test
 

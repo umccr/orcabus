@@ -44,10 +44,9 @@ The icav2 event translator expects the following as inputs (without wrapper of e
 }
 The event tranlator then returns the following
 {
-  "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
-  "analysisId": "0xxxxxxx-ddxxx-xxxxx-bxx-5xxxxxxx",
-  "instrumentRunId": "2xxxxxxxxx_Axxxxxx_0xxxx_Bxxxx",
-  
+  "project_id": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
+  "analysis_id": "0xxxxxxx-ddxxx-xxxxx-bxx-5xxxxxxx",
+  "instrument_run_id": "2xxxxxxxxx_Axxxxxx_0xxxx_Bxxxx",
   "tags": {
         ...
     }
@@ -71,14 +70,14 @@ def handler(event, context):
     assert os.getenv("EVENT_BUS_NAME"), "EVENT_BUS_NAME environment variable is not set"
     assert os.getenv("TABLE_NAME"), "TABLE_NAME environment variable is not set"
   
-    eventBusName = os.getenv("EVENT_BUS_NAME")
+    event_bus_name = os.getenv("EVENT_BUS_NAME")
     table_name = os.getenv("TABLE_NAME")
 
     # Extract relevant fields from the event payload
-    eventDetails = event.get("detail", {})
+    event_details = event.get("detail", {})
     
     # Generate internal event with required attributes
-    internal_event = generate_icav2_internal_event(eventDetails)
+    internal_event = generate_icav2_internal_event(event_details)
 
     # send the internal event to the event bus
     try:
@@ -88,7 +87,7 @@ def handler(event, context):
                 "Source": 'ocrabus.iet', # icav2 event translator
                 "DetailType": "ICAV2_INTERNAL_EVENT",
                 "Detail": json.dumps(internal_event),
-                "EventBusName": eventBusName
+                "EventBusName": event_bus_name
             }
         ]
       )
@@ -102,9 +101,9 @@ def handler(event, context):
       dynamodb.put_item(
           TableName=table_name,
           Item={
-              'id': {'S': internal_event.get("analysisId")},
+              'id': {'S': internal_event.get("analysis_id")},
               'id_type': {'S': 'icav2_analysis_id'},
-              'original_external_event': {'S': json.dumps(eventDetails)},
+              'original_external_event': {'S': json.dumps(event_details)},
               'translated_internal_event': {'S': json.dumps(internal_event)},
               'timestamp': {'S': datetime.datetime.now().isoformat()}
           }
@@ -121,14 +120,14 @@ def handler(event, context):
 # generate ICAv2 internal event from external event
 def generate_icav2_internal_event(event):
   
-    projectId = event.get("projectId", '')
-    eventCode = event.get("eventCode")
-    analysisStatus = event.get("eventParameters", {}).get("analysisStatus", '')
+    project_id = event.get("projectId", '')
+    event_code = event.get("eventCode", '')
+    analysis_status = event.get("eventParameters", {}).get("analysisStatus", '')
     
     payload = event.get("payload", {})
-    analysisId = payload.get("id", '')
+    analysis_id = payload.get("id", '')
     pipeline_id = payload.get("pipeline", {}).get("id",'')
-    userReference = payload.get("userReference")
+    user_reference = payload.get("userReference")
 
     # define default event tags for internal event (from payload and workflow session)
     tags = {
@@ -138,15 +137,15 @@ def generate_icav2_internal_event(event):
         }
     
     # Check conditions for the event to be processed: 
-    if (not check_icav2_event(eventCode, analysisStatus, pipeline_id, userReference)):
-        logger.error("Illegal ICAV2 event received. Event code: %s, analysis status: %s, pipeline id: %s, user reference: %s", eventCode, analysisStatus, pipeline_id, userReference)
+    if (not check_icav2_event(event_code, analysis_status, pipeline_id, user_reference)):
+        logger.error("Illegal ICAV2 event received. Event code: %s, analysis status: %s, pipeline id: %s, user reference: %s", event_code, analysis_status, pipeline_id, user_reference)
         raise ValueError("Event does not meet ICAv2 transltor processing conditions.")
     
     # Generate internal event with required attributes
     return {
-        "projectId": projectId,
-        "analysisId": analysisId,
-        "instrumentRunId": '_'.join(userReference.split('_')[:4]),
+        "project_id": project_id,
+        "analysis_id": analysis_id,
+        "instrument_run_id": '_'.join(user_reference.split('_')[:4]),
         "tags": tags
         }
     
@@ -155,10 +154,10 @@ def generate_icav2_internal_event(event):
 # analysisStatus is SUCCEEDED,
 # payload.pipeline.id is "bf93b5cf-cb27-4dfa-846e-acd6eb081aca", 
 # and userReference matches the regex pattern
-def check_icav2_event(eventCode: str, analysisStatus: str, pipeline_id: str, userReference: str) -> bool:
+def check_icav2_event(event_code: str, analysis_status: str, pipeline_id: str, user_reference: str) -> bool:
     return (
-        eventCode == "ICA_EXEC_028" 
-        and analysisStatus == "SUCCEEDED" 
+        event_code == "ICA_EXEC_028" 
+        and analysis_status == "SUCCEEDED" 
         and pipeline_id == "bf93b5cf-cb27-4dfa-846e-acd6eb081aca"
-        and re.match(r"\d{6}_[A|B]\d+_\d{4}_\w+", userReference)
+        and re.match(r"\d{6}_[A|B]\d+_\d{4}_\w+", user_reference)
     )
