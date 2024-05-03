@@ -76,7 +76,7 @@ export const rdsMasterSecretName = 'orcabus/master-rds'; // pragma: allowlist se
 validateSecretName(rdsMasterSecretName);
 
 // Other constants that exist in the SharedStack
-export const regName = 'OrcaBusSchemaRegistry';
+export const regName = 'orcabus.events';
 export const eventBusName = 'OrcaBusMain';
 export const eventSourceQueueName = 'orcabus-event-source-queue';
 

@@ -26,6 +26,7 @@ import {
   BsshIcav2FastqCopyManagerStack,
   BsshIcav2FastqCopyManagerStackProps,
 } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
+import { SchemaStack, SchemaStackProps } from './stacks/schema/stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
@@ -35,6 +36,7 @@ export interface StatelessStackCollectionProps {
   bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
   icav2CopyBatchUtilityStackProps: ICAv2CopyBatchUtilityStackProps;
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
+  schemaStackProps: SchemaStackProps;
 }
 
 export class StatelessStackCollection {
@@ -46,12 +48,18 @@ export class StatelessStackCollection {
   readonly bsRunsUploadManagerStack: Stack;
   readonly icav2CopyBatchUtilityStack: Stack;
   readonly bsshIcav2FastqCopyManagerStack: Stack;
+  readonly schemaStack: Stack;
 
   constructor(
     scope: Construct,
     env: Environment,
     statelessConfiguration: StatelessStackCollectionProps
   ) {
+    this.schemaStack = new SchemaStack(scope, 'SchemaStack', {
+      ...this.createTemplateProps(env, 'SchemaStack'),
+      ...statelessConfiguration.schemaStackProps,
+    });
+
     this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
       ...this.createTemplateProps(env, 'PostgresManagerStack'),
       ...statelessConfiguration.postgresManagerStackProps,
