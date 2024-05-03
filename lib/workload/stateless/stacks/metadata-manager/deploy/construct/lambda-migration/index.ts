@@ -2,6 +2,8 @@ import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
 import { PythonFunction, PythonFunctionProps } from '@aws-cdk/aws-lambda-python-alpha';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
+import { ProviderFunction } from '../../../../../../components/provider-function';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
 
 type LambdaProps = {
   /**
@@ -12,20 +14,29 @@ type LambdaProps = {
    * The secret for the db connection where the lambda will need access to
    */
   dbConnectionSecret: ISecret;
+  /**
+   * VPC used for Custom Provider Function
+   */
+  vpc: IVpc;
 };
 
 export class LambdaMigrationConstruct extends Construct {
   private readonly lambda: PythonFunction;
 
-  constructor(scope: Construct, id: string, lambdaProps: LambdaProps) {
+  constructor(scope: Construct, id: string, props: LambdaProps) {
     super(scope, id);
 
     this.lambda = new PythonFunction(this, 'MigrationLambda', {
-      ...lambdaProps.basicLambdaConfig,
+      ...props.basicLambdaConfig,
       index: 'handler/migrate.py',
       handler: 'handler',
       timeout: Duration.minutes(2),
     });
-    lambdaProps.dbConnectionSecret.grantRead(this.lambda);
+    props.dbConnectionSecret.grantRead(this.lambda);
+
+    new ProviderFunction(this, 'AutoMigrateLambdaFunction', {
+      vpc: props.vpc,
+      function: this.lambda,
+    });
   }
 }

@@ -10,7 +10,7 @@ import { Code, Runtime, Architecture, LayerVersion } from 'aws-cdk-lib/aws-lambd
 import { LambdaSyncGsheetConstruct } from './construct/lambda-sync-gsheet';
 import { LambdaMigrationConstruct } from './construct/lambda-migration';
 import { LambdaAPIConstruct } from './construct/lambda-api';
-import { ApiGatewayConstruct } from '../../../../components/api-gateway';
+import { ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import { PostgresManagerStack } from '../../postgres-manager/deploy/stack';
 
 export type MetadataManagerStackProps = {
@@ -26,6 +26,10 @@ export type MetadataManagerStackProps = {
    * the interval where the lambda conduct the sync from the single source of truth data
    */
   syncInterval?: Schedule;
+  /**
+   * API Gateway props
+   */
+  apiGatewayCognitoProps: Omit<ApiGatewayConstructProps, 'region' | 'apiName'>;
 };
 
 export class MetadataManagerStack extends Stack {
@@ -75,29 +79,26 @@ export class MetadataManagerStack extends Stack {
     };
 
     // There are 3 lambdas for this app
-    // 1. To handle API calls from API-GW
+    // 1. To handle API calls
     // 2. To do migrations
     // 3. To sync db with external sources (e.g. metadata in gsheet)
 
-    // // (1)
-    // const apiGW = new ApiGatewayConstruct(this, 'OrcabusAPI-MetadataManager', {
-    //   region: this.region,
-    //   apiName: 'MetadataManager',
-    //   cognitoUserPoolIdParameterName: 'YOUR_USER_POOL_ID_PARAMETER_NAME',
-    //   cognitoPortalAppClientIdParameterName: 'YOUR_PORTAL_APP_CLIENT_ID_PARAMETER_NAME',
-    //   cognitoStatusPageAppClientIdParameterName: 'YOUR_STATUS_PAGE_APP_CLIENT_ID_PARAMETER_NAME',
-    //   ...props,
-    // });
-    // new LambdaAPIConstruct(this, 'APILambda', {
-    //   basicLambdaConfig: basicLambdaConfig,
-    //   dbConnectionSecret: dbSecret,
-    //   apiGW: apiGW.httpApi,
-    // });
+    // (1)
+    new LambdaAPIConstruct(this, 'APILambda', {
+      basicLambdaConfig: basicLambdaConfig,
+      dbConnectionSecret: dbSecret,
+      apiGatewayConstructProps: {
+        region: this.region,
+        apiName: 'MetadataManager',
+        ...props.apiGatewayCognitoProps,
+      },
+    });
 
     // (2)
     new LambdaMigrationConstruct(this, 'MigrationLambda', {
       basicLambdaConfig: basicLambdaConfig,
       dbConnectionSecret: dbSecret,
+      vpc: vpc,
     });
 
     // (3)
