@@ -12,7 +12,7 @@ import {
   eventBusName,
   eventSourceQueueName,
   rdsMasterSecretName,
-  regName,
+  schemaRegistryName,
   vpcProps,
   oncoanalyserBucket,
 } from '../constants';
@@ -27,8 +27,8 @@ import { EventSourceProps } from '../../lib/workload/stateful/stacks/shared/cons
 
 const getSchemaRegistryConstructProps = (): SchemaRegistryProps => {
   return {
-    registryName: regName,
-    description: 'Registry for OrcaBus Events',
+    registryName: schemaRegistryName,
+    description: 'Schema Registry for OrcaBus Events',
   };
 };
 

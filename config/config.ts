@@ -11,6 +11,7 @@ import { getFileManagerStackProps } from './stacks/fileManager';
 import { getBsRunsUploadManagerStackProps } from './stacks/bsRunsUploadManager';
 import { getICAv2CopyBatchUtilityStackProps } from './stacks/icav2CopyBatchUtility';
 import { getBsshIcav2FastqCopyManagerStackProps } from './stacks/bsshIcav2FastqCopyManager';
+import { getSchemaStackProps } from './stacks/schema';
 
 interface EnvironmentConfig {
   name: string;
@@ -49,6 +50,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
+            schemaStackProps: getSchemaStackProps(),
           },
         },
       };
@@ -72,6 +74,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
+            schemaStackProps: getSchemaStackProps(),
           },
         },
       };
@@ -95,6 +98,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
+            schemaStackProps: getSchemaStackProps(),
           },
         },
       };
