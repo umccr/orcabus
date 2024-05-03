@@ -1,5 +1,5 @@
 import { SchemaStackProps } from '../../lib/workload/stateless/stacks/schema/stack';
-import { regName } from '../constants';
+import { schemaRegistryName } from '../constants';
 import path from 'path';
 
 export const getSchemaStackProps = (): SchemaStackProps => {
@@ -9,7 +9,7 @@ export const getSchemaStackProps = (): SchemaStackProps => {
   };
 
   return {
-    registryName: regName,
+    registryName: schemaRegistryName,
     schemas: [
       // add your schema into this `schemas` array
       // adjust name, description, location accordingly

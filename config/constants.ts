@@ -76,7 +76,7 @@ export const rdsMasterSecretName = 'orcabus/master-rds'; // pragma: allowlist se
 validateSecretName(rdsMasterSecretName);
 
 // Other constants that exist in the SharedStack
-export const regName = 'orcabus.events';
+export const schemaRegistryName = 'orcabus.events';
 export const eventBusName = 'OrcaBusMain';
 export const eventSourceQueueName = 'orcabus-event-source-queue';
 
@@ -128,26 +128,3 @@ export const bsshFastqCopyManagerSSMArn = path.join(
   'state_machine_arn'
 );
 export const bsshFastqCopyManagerSfnName = 'bssh_fastq_copy_manager_sfn';
-
-// const statelessConfig = {
-//   multiSchemaConstructProps: {
-//     registryName: regName,
-//     schemas: [
-//       {
-//         schemaName: 'BclConvertWorkflowRequest',
-//         schemaDescription: 'Request event for BclConvertWorkflow',
-//         schemaType: 'OpenApi3',
-//         schemaLocation: __dirname + '/event_schemas/BclConvertWorkflowRequest.json',
-//       },
-//       {
-//         schemaName: 'DragenWgsQcWorkflowRequest',
-//         schemaDescription: 'Request event for DragenWgsQcWorkflowRequest',
-//         schemaType: 'OpenApi3',
-//         schemaLocation: __dirname + '/event_schemas/DragenWgsQcWorkflowRequest.json',
-//       },
-//     ],
-//   },
-//   eventBusName: eventBusName,
-//   computeSecurityGroupName: computeSecurityGroupName,
-//   rdsMasterSecretName: rdsMasterSecretName,
-// };
