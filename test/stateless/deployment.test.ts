@@ -129,6 +129,20 @@ function applyNagSuppression(stackId: string, stack: Stack) {
   // for each stack specific
 
   switch (stackId) {
+    case 'MetadataManagerStack':
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/MetadataManagerStack/MigrationLambda/AutoMigrateLambdaFunction/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              'The provider function needs to be able to invoke the configured function. It uses' +
+              "`lambda.Function.grantInvoke` to achieve this which contains a '*' and is not changeable.",
+          },
+        ]
+      );
+      break;
     case 'PostgresManagerStack':
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
