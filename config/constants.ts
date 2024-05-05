@@ -37,6 +37,11 @@ export const cognitoPortalAppClientIdParameterName =
   '/data_portal/client/data2/cog_app_client_id_stage';
 export const cognitoStatusPageAppClientIdParameterName =
   '/data_portal/status_page/cog_app_client_id_stage';
+export const cognitoApiGatewayProps = {
+  cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
+  cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
+  cognitoStatusPageAppClientIdParameterName: cognitoStatusPageAppClientIdParameterName,
+};
 
 export const oncoanalyserBucket: Record<AppStage, string> = {
   [AppStage.BETA]: 'umccr-temp-dev',
