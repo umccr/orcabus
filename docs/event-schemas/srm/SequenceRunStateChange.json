@@ -16,8 +16,6 @@
           "source",
           "time"
         ],
-        "x-amazon-events-detail-type": "Sequence Run State Change",
-        "x-amazon-events-source": "orcabus.srm",
         "properties": {
           "detail": {
             "$ref": "#/components/schemas/SequenceRunStateChange"
@@ -56,48 +54,44 @@
         "type": "object",
         "required": [
           "id",
-          "instrument_run_id"
+          "instrumentRunId",
+          "runVolumeName",
+          "runFolderPath",
+          "runDataUri",
+          "sampleSheetName",
+          "startTime",
+          "endTime",
+          "status"
         ],
         "properties": {
           "id": {
             "type": "integer"
           },
-          "instrument_run_id": {
+          "instrumentRunId": {
             "type": "string"
           },
-          "run_volume_name": {
+          "runVolumeName": {
             "type": "string"
           },
-          "run_folder_path": {
+          "runFolderPath": {
             "type": "string"
           },
-          "run_data_uri": {
+          "runDataUri": {
             "type": "string"
+          },
+          "sampleSheetName": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           },
           "status": {
-            "type": "string"
-          },
-          "start_time": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "end_time": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "reagent_barcode": {
-            "type": "string"
-          },
-          "flowcell_barcode": {
-            "type": "string"
-          },
-          "sample_sheet_name": {
-            "type": "string"
-          },
-          "sequence_run_id": {
-            "type": "string"
-          },
-          "sequence_run_name": {
             "type": "string"
           }
         }
