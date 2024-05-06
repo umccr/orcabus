@@ -19,6 +19,12 @@ export const getSchemaStackProps = (): SchemaStackProps => {
         schemaDescription: 'State change event for sequencing run',
         schemaLocation: path.join(__dirname, docBase + '/srm/SequenceRunStateChange.json'),
       },
+      {
+        ...defaultProps,
+        schemaName: 'orcabus.wfm@WorkflowRunStateChange',
+        schemaDescription: 'State change event for workflow run',
+        schemaLocation: path.join(__dirname, docBase + '/wfm/WorkflowRunStateChange.json'),
+      },
     ],
   };
 };
