@@ -36,7 +36,7 @@ export class IcaEventPipeConstruct extends Construct {
     super(scope, id);
     this.icaQueue = this.createMonitoredQueue(id, props).queue;
     this.mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
-    this.createPipe();
+    this.createPipe(props.icaEventPipeName);
   }
 
   // Create the INPUT SQS queue that will receive the ICA events
@@ -46,7 +46,7 @@ export class IcaEventPipeConstruct extends Construct {
     // However, our use case, as we don't add any additional subscriptions, does not require topic modification, so we can pass on an "ITopic" as "Topic".
     const topic: Topic = Topic.fromTopicArn(this, 'SlackTopic', props.slackTopicArn) as Topic;
 
-    const mq = new MonitoredQueue(this, props.icaEventPipeName, {
+    const mq = new MonitoredQueue(this, props.icaQueueName, {
       queueProps: {
         queueName: props.icaQueueName,
         enforceSSL: true,
@@ -66,11 +66,12 @@ export class IcaEventPipeConstruct extends Construct {
   }
 
   // Create the Pipe passing the ICA event from the SQS queue to our OrcaBus event bus
-  private createPipe() {
+  private createPipe(pipeName: string) {
     const targetInputTransformation = pipes.InputTransformation.fromObject({
       'ica-event': pipes.DynamicInput.fromEventPath('$.body'),
     });
     return new pipes.Pipe(this, 'Pipe', {
+      pipeName: pipeName,
       source: new SqsSource(this.icaQueue),
       target: new EventBusTarget(this.mainBus, { inputTransformation: targetInputTransformation }),
     });
