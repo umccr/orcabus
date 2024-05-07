@@ -15,6 +15,7 @@
     "workflowVersion": "4.2.7",
     "payload": {
       "refId": null,
+      "version": "0.1.0",
       "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
       "analysisId": "aaaaafe8-238c-4200-b632-d5dd8c8db94a",
       "userReference": "540424_A01001_0193_BBBBMMDRX5_c754de_bd822f",
@@ -24,7 +25,6 @@
       "pipelineCode": "BclConvert v4_2_7",
       "pipelineDescription": "This is an autolaunch BclConvert pipeline for use by the metaworkflow",
       "pipelineUrn": "urn:ilmn:ica:pipeline:bfffffff-cb27-4dfa-846e-acd6eb081aca#BclConvert_v4_2_7"
-    },
-    "serviceVersion": "0.1.0"
+    }
   }
 }

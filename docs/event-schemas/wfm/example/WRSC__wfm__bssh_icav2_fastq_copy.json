@@ -15,10 +15,10 @@
     "workflowVersion": "<fill-by-workflow-manager> e.g. 4.2.7",
     "payload": {
       "refId": "<fill-by-workflow-manager>",
+      "version": "0.1.0",
       "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
       "analysisId": "12345678-238c-4200-b632-d5dd8c8db94a",
       "outputUriPrefix": "icav2://12345678-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/"
-    },
-    "serviceVersion": "0.1.0"
+    }
   }
 }

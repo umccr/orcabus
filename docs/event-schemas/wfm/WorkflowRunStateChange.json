@@ -12,9 +12,7 @@
         "required": [
           "detail-type",
           "detail",
-          "id",
-          "source",
-          "time"
+          "source"
         ],
         "properties": {
           "detail": {
@@ -80,21 +78,22 @@
           },
           "payload": {
             "$ref": "#/components/schemas/Payload"
-          },
-          "serviceVersion": {
-            "type": "string"
           }
         }
       },
       "Payload": {
         "type": "object",
         "required": [
-          "refId"
+          "refId",
+          "version"
         ],
         "properties": {
           "refId": {
             "type": "string",
             "nullable": true
+          },
+          "version": {
+            "type": "string"
           }
         },
         "additionalProperties": true

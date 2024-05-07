@@ -15,6 +15,7 @@
     "workflowVersion": "<fill-by-this-service> e.g. 4.2.7",
     "payload": {
       "refId": null,
+      "version": "0.1.0",
       "instrumentRunId": "...",
       "icav2CopyUtilityJobExecutionId": "",
       "outputUri": "",
@@ -22,7 +23,6 @@
       "fastqListRowsB64Gz": "",
       "sampleSheetB64Gz": "...",
       "basespaceRunId": "12345678"
-    },
-    "serviceVersion": "0.1.0"
+    }
   }
 }
