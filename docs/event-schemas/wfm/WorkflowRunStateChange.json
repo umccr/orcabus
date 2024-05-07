@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "version": "1.0.0",
-    "title": "SequenceRunStateChange"
+    "title": "WorkflowRunStateChange"
   },
   "paths": {},
   "components": {
@@ -16,7 +16,7 @@
         ],
         "properties": {
           "detail": {
-            "$ref": "#/components/schemas/SequenceRunStateChange"
+            "$ref": "#/components/schemas/WorkflowRunStateChange"
           },
           "account": {
             "type": "string"
@@ -48,51 +48,55 @@
           }
         }
       },
-      "SequenceRunStateChange": {
+      "WorkflowRunStateChange": {
         "type": "object",
         "required": [
-          "id",
-          "instrumentRunId",
-          "runVolumeName",
-          "runFolderPath",
-          "runDataUri",
-          "sampleSheetName",
-          "startTime",
-          "endTime",
-          "status"
+          "portalRunId",
+          "timestamp",
+          "status",
+          "workflowType",
+          "workflowVersion",
+          "payload",
+          "serviceVersion"
         ],
         "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "instrumentRunId": {
+          "portalRunId": {
             "type": "string"
           },
-          "runVolumeName": {
-            "type": "string"
-          },
-          "runFolderPath": {
-            "type": "string"
-          },
-          "runDataUri": {
-            "type": "string"
-          },
-          "sampleSheetName": {
-            "type": "string"
-          },
-          "startTime": {
+          "timestamp": {
             "type": "string",
             "format": "date-time"
           },
-          "endTime": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
           "status": {
             "type": "string"
+          },
+          "workflowType": {
+            "type": "string"
+          },
+          "workflowVersion": {
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/Payload"
           }
         }
+      },
+      "Payload": {
+        "type": "object",
+        "required": [
+          "refId",
+          "version"
+        ],
+        "properties": {
+          "refId": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
       }
     }
   }
