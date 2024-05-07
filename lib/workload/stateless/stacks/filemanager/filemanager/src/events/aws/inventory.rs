@@ -6,7 +6,7 @@ use crate::clients::aws::s3::Client;
 use crate::error::Error::S3InventoryError;
 use crate::error::{Error, Result};
 use crate::events::aws::message::EventType::Created;
-use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
+use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages};
 use crate::uuid::UuidGenerator;
 use aws_arn::known::Service;
 use aws_arn::ResourceName;
@@ -19,7 +19,18 @@ use mockall_double::double;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::io::{BufReader, Read};
-use std::result;
+use std::{fs, result};
+use arrow::array::{Array, Int64Array, StringArray, TimestampMillisecondArray};
+use arrow::error::ArrowError;
+use arrow::array::RecordBatch;
+use bytes::Bytes;
+use chrono::format::Item;
+use futures::{Stream, TryStream, StreamExt};
+use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+use parquet::arrow::ArrowWriter;
+use parquet::basic::Compression;
+use parquet::errors::ParquetError;
+use parquet::file::properties::WriterProperties;
 
 /// Represents an S3 inventory including associated inventory fetching and parsing logic.
 #[derive(Debug)]
@@ -45,7 +56,7 @@ impl Inventory {
             .read_to_end(&mut inventory_bytes)
             .map_err(|err| S3InventoryError(format!("decompressing CSV: {}", err)))?;
 
-        // AWS seems to return extra newlines at the end of the CSV.
+        // AWS seems to return extra newlines at the end of the CSV, so we remove these
         let end_pos = match inventory_bytes
             .iter()
             .rposition(|char| !char.is_ascii_whitespace())
@@ -69,6 +80,82 @@ impl Inventory {
 
         Ok(csv.deserialize().collect::<result::Result<_, _>>()?)
     }
+    
+    /// Parse an arrow record batch from an incoming stream into messages for ingestion.
+    pub async fn parse_record_batch(&self, stream: impl Stream<Item = result::Result<RecordBatch, ArrowError>> + Unpin) -> impl Stream<Item = Result<TransposedS3EventMessages>> {
+        stream.map(|record| {
+            let mut messages = TransposedS3EventMessages {
+                s3_object_ids: vec![],
+                event_times: vec![],
+                buckets: vec![],
+                keys: vec![],
+                version_ids: vec![],
+                sizes: vec![],
+                e_tags: vec![],
+                sha256s: vec![],
+                sequencers: vec![],
+                storage_classes: vec![],
+                last_modified_dates: vec![],
+                event_types: vec![],
+            };
+            
+            record.into_iter().for_each(|record| {
+                let buckets = record.column_by_name("bucket").unwrap().as_any().downcast_ref::<StringArray>().unwrap();
+                let n_elements = buckets.len();
+                
+                messages.s3_object_ids.extend(UuidGenerator::generate_n(n_elements));
+                // We don't know when this object was created so there is no event time.
+                messages.event_times.extend(vec![None; n_elements]);
+                messages.buckets.extend(buckets.into_iter().map(|value| value.unwrap().to_string()));
+                messages.keys.extend(record.column_by_name("key").unwrap().as_any().downcast_ref::<StringArray>().unwrap().into_iter().map(|value| value.unwrap().to_string()));
+                messages.version_ids.extend(
+                    record.column_by_name("version_id").unwrap().as_any().downcast_ref::<StringArray>().unwrap()
+                        .into_iter().map(|value| value.map(|value| value.to_string()).unwrap_or_else(FlatS3EventMessage::default_version_id)));
+                messages.sizes.extend(record.column_by_name("size").unwrap().as_any().downcast_ref::<Int64Array>().unwrap().into_iter());
+                messages.e_tags.extend(record.column_by_name("e_tag").unwrap().as_any().downcast_ref::<StringArray>().unwrap().into_iter().map(|value| value.map(|value| value.to_string())));
+                messages.sha256s.extend(vec![None; n_elements]);
+                // Set this to the empty string so that any deleted events after this can bind to this
+                // created event, as they are always greater than this event.
+                messages.sequencers.extend(vec![Some("".to_string()); n_elements]);
+                messages.storage_classes.extend(
+                    record.column_by_name("storage_class").unwrap().as_any().downcast_ref::<StringArray>().unwrap().into_iter().map(|value| value.map(|value| serde_json::from_str(value).unwrap()))
+                );
+                messages.last_modified_dates.extend(
+                    record.column_by_name("last_modified_date").unwrap().as_any().downcast_ref::<TimestampMillisecondArray>().unwrap().into_iter()
+                        .map(|value| value.and_then(DateTime::from_timestamp_millis))
+                );
+                // Anything in an inventory report is always a created event.
+                messages.event_types.extend(vec![Created; n_elements]);
+            });
+            
+            
+            Ok(messages)
+        })
+    }
+
+    /// Parse a parquet manifest file into records.
+    pub async fn parse_parquet(&self, body: Vec<u8>) -> Result<Vec<Record>> {
+        let reader = ParquetRecordBatchReaderBuilder::try_new(Bytes::from(body))?
+            .build()?;
+
+        let batches = reader.collect::<result::Result<Vec<_>, _>>().map_err(|err| S3InventoryError(err.to_string()))?;
+        
+        // let file = fs::File::create("inventory.parquet").unwrap();
+        // let schema = batches.first().unwrap().schema();
+        // 
+        // let props = WriterProperties::builder()
+        //     .set_compression(Compression::SNAPPY)
+        //     .build();
+        // let mut writer = ArrowWriter::try_new(file, schema, Some(props)).unwrap();
+        
+        // for batch in batches {
+        //     writer.write(&batch).expect("Writing batch");
+        // }
+        // writer.close().unwrap();
+        // println!("{:#?}", batches);
+
+        Ok(vec![])
+    }
 
     /// Parse a manifest into records.
     pub async fn parse_manifest(&self, manifest: Manifest) -> Result<Vec<Record>> {
@@ -85,6 +172,7 @@ impl Inventory {
 
         let bucket = arn.resource.to_string();
 
+        // TODO: consider streaming a file and reading records without placing them into memory first.
         let inventories = join_all(manifest.files.iter().map(|file| async {
             let inventory = self
                 .client
@@ -109,9 +197,20 @@ impl Inventory {
             }
 
             match manifest.file_format {
-                InventoryFormat::Csv => {
-                    self.parse_csv(&manifest.file_schema, body.as_slice()).await
-                }
+                InventoryFormat::Csv => self.parse_csv(&manifest.file_schema, body.as_slice()).await,
+                InventoryFormat::Parquet => {
+                    // let builder = ParquetRecordBatchStreamBuilder::new(file)
+                    //     .await
+                    //     .unwrap()
+                    //     .with_batch_size(3);
+                    // let reader = ParquetRecordBatchReaderBuilder::try_new(Bytes::from(body))?
+                    //     .build()?;
+                    // 
+                    // let records = self.parse_record_batch(
+                    //     reader
+                    // )
+                    Err(S3InventoryError("unsupported type".to_string()))
+                },
                 _ => Err(S3InventoryError("unsupported type".to_string())),
             }
         }))
@@ -128,6 +227,12 @@ impl Inventory {
 
 impl From<csv::Error> for Error {
     fn from(error: csv::Error) -> Self {
+        S3InventoryError(error.to_string())
+    }
+}
+
+impl From<ParquetError> for Error {
+    fn from(error: ParquetError) -> Self {
         S3InventoryError(error.to_string())
     }
 }
@@ -214,13 +319,24 @@ impl From<Record> for FlatS3EventMessage {
 
 #[cfg(test)]
 mod tests {
-    use crate::events::aws::inventory::{File, Manifest};
+    use std::io::Cursor;
+    use std::sync::Arc;
+    use arrow::array::{ArrayRef, BooleanArray, Int32Array, Int64Array, StringArray, StringBuilder, TimestampMillisecondArray};
+    use crate::events::aws::inventory::Manifest;
     use aws_sdk_s3::operation::get_object::GetObjectOutput;
     use aws_sdk_s3::primitives::ByteStream;
     use flate2::read::GzEncoder;
     use mockall::predicate::eq;
     use serde_json::json;
     use serde_json::Value;
+    use tokio::fs;
+    use tokio::io::AsyncReadExt;
+    use arrow::record_batch::RecordBatch;
+    use parquet::arrow::ArrowWriter;
+    use parquet::basic::Compression;
+    use parquet::file::properties::WriterProperties;
+    use parquet::record::Field;
+    use parquet::schema::parser::parse_message_type;
 
     use super::*;
 
@@ -257,6 +373,31 @@ mod tests {
     const MANIFEST_KEY: &str = "Inventory/example-source-bucket/2016-11-06T21-32Z/files/939c6d46-85a9-4ba8-87bd-9db705a579ce";
     const MANIFEST_BUCKET: &str = "example-inventory-destination-bucket";
     const EXPECTED_CHECKSUM: &str = "f11166069f1990abeb9c97ace9cdfabc"; // pragma: allowlist secret
+
+    #[tokio::test]
+    async fn parse_parquet_manifest() {
+        // WriterProperties can be used to set Parquet file options
+        let props = WriterProperties::builder()
+            .set_compression(Compression::SNAPPY)
+            .build();
+
+        let mut data = Vec::new();
+        fs::File::open("/home/marki/Documents/projects/orcabus/5a6b2ca8-6eee-4eab-805a-fd7f82607812.parquet").await.unwrap().read_to_end(&mut data).await.unwrap();
+
+        let mut bytes = data;
+
+        let checksum = hex::encode(md5::compute(bytes.as_slice()).0);
+        let mut client = Client::default();
+        set_s3_client_expectations(&InventoryFormat::Parquet, &mut client, bytes);
+
+        let inventory = Inventory::new(client);
+        let result = inventory
+            .parse_manifest(expected_parquet_manifest(checksum))
+            .await
+            .unwrap();
+
+        // assert_csv_records(result.as_slice());
+    }
 
     #[tokio::test]
     async fn parse_csv_manifest() {
