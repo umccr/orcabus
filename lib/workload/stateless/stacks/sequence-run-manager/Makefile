@@ -23,6 +23,9 @@ suite:
 migrate:
 	@python manage.py migrate
 
+load: migrate
+	@python manage.py generate_mock_data
+
 start: migrate
 	@python manage.py runserver_plus
 
