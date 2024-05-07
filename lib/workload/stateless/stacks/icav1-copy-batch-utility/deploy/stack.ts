@@ -5,12 +5,15 @@ import path from 'path';
 import { aws_secretsmanager } from 'aws-cdk-lib';
 
 export interface ICAv1CopyBatchUtilityConfig {
+  AppName: string;
+  Icav1TokenSecretId: string;
   BucketForCopyDestination: string;
+  BucketForManifestOrInventory: string;
   BucketForBatchOpsReport: string;
-  TransferMaximumConcurrency: string;
-  SDKMaxPoolConnections: string;
-  SDKMaxErrorRetries: string;
-  MultiPartChunkSize: string;
+  TransferMaximumConcurrency: number;
+  TransferMaxPoolConnections: number;
+  TransferMaxErrorRetries: number;
+  TransferMultiPartChunkSize: number;
 }
 
 export type ICAv1CopyBatchUtilityStackProps = ICAv1CopyBatchUtilityConfig & cdk.StackProps;
@@ -22,11 +25,11 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     super(scope, id, props);
 
     // Get ICAv1 Access token secret object for construct
-    const icav1_access_token_secret_obj = aws_secretsmanager.Secret.fromSecretNameV2(
-      this,
-      'Icav1SecretsObject',
-      props.Icav1TokenSecretId
-    );
+    // const icav1_access_token_secret_obj = aws_secretsmanager.Secret.fromSecretNameV2(
+    //   this,
+    //   'Icav1SecretsObject',
+    //   props.Icav1TokenSecretId
+    // );
 
     // Generate lambda layer
     const lambda_layer = new PythonLambdaLayerConstruct(this, 'lambda_layer', {
@@ -35,6 +38,6 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       layerName: 'icav1_copy_batch_utility_tools',
     });
 
-    // Lauch S3 Batch Operations job
+    // Attach S3 Batch Operations job assumed roles and policies
   }
 }

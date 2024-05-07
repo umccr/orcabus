@@ -19,6 +19,10 @@ import {
   BsRunsUploadManagerStackProps,
 } from './stacks/bs-runs-upload-manager/deploy/stack';
 import {
+  ICAv1CopyBatchUtilityStack,
+  ICAv1CopyBatchUtilityStackProps,
+} from './stacks/icav1-copy-batch-utility/deploy/stack';
+import {
   ICAv2CopyBatchUtilityStack,
   ICAv2CopyBatchUtilityStackProps,
 } from './stacks/icav2-copy-batch-utility/deploy/stack';
@@ -34,6 +38,7 @@ export interface StatelessStackCollectionProps {
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
   bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
+  icav1CopyBatchUtilityStackProps: ICAv1CopyBatchUtilityStackProps;
   icav2CopyBatchUtilityStackProps: ICAv2CopyBatchUtilityStackProps;
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
   schemaStackProps: SchemaStackProps;
@@ -46,6 +51,7 @@ export class StatelessStackCollection {
   readonly metadataManagerStack: Stack;
   readonly sequenceRunManagerStack: Stack;
   readonly bsRunsUploadManagerStack: Stack;
+  readonly icav1CopyBatchUtilityStack: Stack;
   readonly icav2CopyBatchUtilityStack: Stack;
   readonly bsshIcav2FastqCopyManagerStack: Stack;
   readonly schemaStack: Stack;
@@ -88,7 +94,14 @@ export class StatelessStackCollection {
         ...statelessConfiguration.bsRunsUploadManagerStackProps,
       }
     );
-
+    this.icav1CopyBatchUtilityStack = new ICAv1CopyBatchUtilityStack(
+      scope,
+      'ICAv1CopyBatchUtilityStack',
+      {
+        ...this.createTemplateProps(env, 'ICAv1CopyBatchUtilityStack'),
+        ...statelessConfiguration.icav1CopyBatchUtilityStackProps,
+      }
+    );
     this.icav2CopyBatchUtilityStack = new ICAv2CopyBatchUtilityStack(
       scope,
       'ICAv2CopyBatchUtilityStack',

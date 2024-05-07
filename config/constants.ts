@@ -100,6 +100,24 @@ Resources required for BaseSpace TES stack
 export const basespaceAccessTokenSecretName = '/manual/BaseSpaceAccessTokenSecret'; // pragma: allowlist secret
 
 /*
+ICAv1 Resources
+ */
+export const icav1AccessTokenSecretName: Record<AppStage, string> = {
+  [AppStage.BETA]: 'ICAv1JWTKey-umccr-prod-service-trial', // pragma: allowlist secret
+  [AppStage.GAMMA]: 'ICAv1JWTKey-umccr-prod-service-staging', // pragma: allowlist secret
+  [AppStage.PROD]: 'ICAv1JWTKey-umccr-prod-service-prod', // pragma: allowlist secret
+};
+
+export const icav1CopyBatchUtilityName = 'icav1_copy_batch_utility';
+export const icav1BucketForCopyDestination = 'abucket';
+export const icav1BucketForManifestOrInventory = 'manifest';
+export const icav1BucketForBatchOpsReport = 'report';
+export const icav1TransferMaximumConcurrency = 940;
+export const icav1TransferMaxPoolConnections = 940;
+export const icav1TransferMaxErrorRetries = 100;
+export const icav1TransferMultiPartChunkSize = 16777216;
+
+/*
 ICAv2 Resources - required by various stacks
  */
 export const icav2AccessTokenSecretName: Record<AppStage, string> = {

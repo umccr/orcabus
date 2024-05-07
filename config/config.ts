@@ -9,6 +9,7 @@ import { getMetadataManagerStackProps } from './stacks/metadataManager';
 import { getSequenceRunManagerStackProps } from './stacks/sequenceRunManager';
 import { getFileManagerStackProps } from './stacks/fileManager';
 import { getBsRunsUploadManagerStackProps } from './stacks/bsRunsUploadManager';
+import { getICAv1CopyBatchUtilityStackProps } from './stacks/icav1CopyBatchUtility';
 import { getICAv2CopyBatchUtilityStackProps } from './stacks/icav2CopyBatchUtility';
 import { getBsshIcav2FastqCopyManagerStackProps } from './stacks/bsshIcav2FastqCopyManager';
 import { getSchemaStackProps } from './stacks/schema';
@@ -48,6 +49,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+            icav1CopyBatchUtilityStackProps: getICAv1CopyBatchUtilityStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
@@ -72,6 +74,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+            icav1CopyBatchUtilityStackProps: getICAv1CopyBatchUtilityStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
@@ -96,6 +99,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+            icav1CopyBatchUtilityStackProps: getICAv1CopyBatchUtilityStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),

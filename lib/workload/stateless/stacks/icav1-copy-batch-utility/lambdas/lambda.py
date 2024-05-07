@@ -38,7 +38,6 @@ s3Client = boto3.client('s3', config=config)
 
 def lambda_handler(event, context):
 # Parse job parameters from Amazon S3 batch operations
-    jobId = event['job']['id']
     invocationId = event['invocationId']
     invocationSchemaVersion = event['invocationSchemaVersion']
 
