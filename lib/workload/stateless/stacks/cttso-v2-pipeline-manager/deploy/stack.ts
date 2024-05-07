@@ -17,6 +17,9 @@ export interface Cttsov2Icav2PipelineManagerConfig {
   cttsov2LaunchStateMachineNameSsmParameterPath: string;
   dynamodbTableName: string;
   eventbusName: string;
+  workflowType: string;
+  workflowVersion: string;
+  serviceVersion: string;
 }
 
 export type cttsov2Icav2PipelineManagerStackProps = Cttsov2Icav2PipelineManagerConfig &
@@ -100,6 +103,9 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         __dirname,
         '../step_functions_templates/cttso_v2_launch_workflow_state_machine.asl.json'
       ), // __dirname + '/../../../step_functions_templates/cttso_v2_launch_workflow_state_machine.asl.json'
+      workflowType: props.workflowType,
+      workflowVersion: props.workflowVersion,
+      serviceVersion: props.serviceVersion,
     });
 
     // Set outputs

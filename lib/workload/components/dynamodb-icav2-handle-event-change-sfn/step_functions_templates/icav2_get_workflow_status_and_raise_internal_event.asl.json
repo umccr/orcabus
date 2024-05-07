@@ -73,7 +73,22 @@
         }
       },
       "Next": "PutEvent",
-      "ResultPath": "$.update_analysis_id_in_db_step"
+      "ResultPath": "$.update_analysis_id_in_db_step",
+      "ResultSelector": {
+        "portalRunId.$": "$.Item.portal_run_id.S",
+        "timestamp.$": "$$.State.EnteredTime",
+        "status": "$.Item.analysis_status.S",
+        "workflowType": "${__workflow_type__}",
+        "workflowVersion": "${__workflow_version__}",
+        "payload": {
+          "refId": "",
+          "analysisLaunchPayload.$": "$.Item.analysis_launch_payload.S",
+          "analysisReturnPayload": "$.Item.analysis_return_payload.S",
+          "stateMachineExecutionArn": "$.Item.state_machine_execution_arn.S",
+          "analysisId.$": "$.Item.analysis_id.S"
+        },
+        "serviceVersion": "${__service_version__}"
+      }
     },
     "PutEvent": {
       "Type": "Task",
@@ -82,7 +97,7 @@
         "Entries": [
           {
             "Detail.$": "$.update_analysis_id_in_db_step",
-            "DetailType": "${__detail_type__}",
+            "DetailType": "workflowRunStateChange",
             "EventBusName": "${__eventbus_name__}",
             "Source": "${__eventsource__}"
           }

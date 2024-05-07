@@ -17,7 +17,7 @@
         "TableName": "${__table_name__}",
         "Key": {
           "id": {
-            "S.$": "$.workflow_inputs.portal_run_id"
+            "S.$": "$.workflow_inputs.portalRunId"
           },
           "id_type": {
             "S": "portal_run_id"
@@ -78,7 +78,7 @@
           "id.$": "$.create_db_uuid_step.db_uuid",
           "id_type": "db_uuid",
           "portal_run_id": {
-            "S.$": "$.workflow_inputs.portal_run_id"
+            "S.$": "$.workflow_inputs.portalRunId"
           },
           "state_machine_execution_arn": {
             "S.$": "$$.Execution.Id"
@@ -106,7 +106,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Item": {
-          "id.$": "$.workflow_inputs.portal_run_id",
+          "id.$": "$.workflow_inputs.portalRunId",
           "id_type": "portal_run_id",
           "db_uuid": {
             "S.$": "$.create_db_uuid_step.db_uuid"
@@ -120,7 +120,7 @@
       "Type": "Pass",
       "Parameters": {
         "technical_tags": {
-          "portal_run_id.$": "$.workflow_inputs.portal_run_id",
+          "portal_run_id.$": "$.workflow_inputs.portalRunId",
           "step_functions_execution_arn.$": "$$.Execution.Id"
         }
       },
@@ -158,8 +158,8 @@
               "Parameters": {
                 "FunctionName": "${__generate_trimmed_samplesheet__}",
                 "Payload": {
-                  "samplesheet_b64gz.$": "$.workflow_inputs.samplesheet_b64gz",
-                  "sample_id.$": "$.workflow_inputs.sample_id"
+                  "samplesheet_b64gz.$": "$.workflow_inputs.samplesheetB64gz",
+                  "sample_id.$": "$.workflow_inputs.sampleId"
                 }
               },
               "Retry": [
@@ -188,7 +188,7 @@
               "Parameters": {
                 "FunctionName": "${__upload_samplesheet_to_cache_dir__}",
                 "Payload": {
-                  "cache_uri.$": "$.workflow_inputs.cache_uri",
+                  "cache_uri.$": "$.workflow_inputs.cacheUri",
                   "samplesheet_dict_b64gz.$": "$.generate_trimmed_samplesheet_step.samplesheet_b64gz"
                 }
               },
@@ -224,9 +224,9 @@
               "Parameters": {
                 "FunctionName": "${__generate_copy_manifest_dict__}",
                 "Payload": {
-                  "cache_uri.$": "$.workflow_inputs.cache_uri",
-                  "sample_id.$": "$.workflow_inputs.sample_id",
-                  "fastq_list_rows_b64gz.$": "$.workflow_inputs.fastq_list_rows_b64gz"
+                  "cache_uri.$": "$.workflow_inputs.cacheUri",
+                  "sample_id.$": "$.workflow_inputs.sampleId",
+                  "fastq_list_rows_b64gz.$": "$.workflow_inputs.fastqListRowsB64gz"
                 }
               },
               "Retry": [
@@ -301,14 +301,14 @@
       "Parameters": {
         "FunctionName": "${__launch_cttso_nextflow_pipeline__}",
         "Payload": {
-          "project_id.$": "$.workflow_inputs.project_id",
-          "user_reference.$": "$.workflow_inputs.user_reference",
-          "run_folder_uri.$": "$.workflow_inputs.cache_uri",
+          "project_id.$": "$.workflow_inputs.projectId",
+          "user_reference.$": "$.workflow_inputs.userReference",
+          "run_folder_uri.$": "$.workflow_inputs.cacheUri",
           "samplesheet_uri.$": "$.copy_files_to_cache_directory_step.samplesheet_file_uri",
-          "sample_id.$": "$.workflow_inputs.sample_id",
-          "analysis_output_uri.$": "$.workflow_inputs.output_uri",
+          "sample_id.$": "$.workflow_inputs.sampleId",
+          "analysis_output_uri.$": "$.workflow_inputs.outputUri",
           "technical_tags.$": "$.add_technical_tags_step.technical_tags",
-          "user_tags.$": "$.workflow_inputs.user_tags"
+          "user_tags.$": "$.workflow_inputs.userTags"
         }
       },
       "Retry": [
@@ -392,12 +392,19 @@
       "Next": "put_launch_event",
       "ResultPath": "$.database_event_data",
       "ResultSelector": {
-        "portal_run_id.$": "$.Item.portal_run_id.S",
-        "analysis_id.$": "$.Item.analysis_id.S",
-        "analysis_launch_payload.$": "$.Item.analysis_launch_payload.S",
-        "analysis_status": "$.Item.analysis_status.S",
-        "analysis_return_payload": "$.Item.analysis_return_payload.S",
-        "state_machine_execution_arn": "$.Item.state_machine_execution_arn.S"
+        "portalRunId.$": "$.Item.portal_run_id.S",
+        "timestamp.$": "$$.State.EnteredTime",
+        "status": "$.Item.analysis_status.S",
+        "workflowType": "${__workflow_type__}",
+        "workflowVersion": "${__workflow_version__}",
+        "payload": {
+          "refId": "",
+          "analysisLaunchPayload.$": "$.Item.analysis_launch_payload.S",
+          "analysisReturnPayload": "$.Item.analysis_return_payload.S",
+          "stateMachineExecutionArn": "$.Item.state_machine_execution_arn.S",
+          "analysisId.$": "$.Item.analysis_id.S"
+        },
+        "serviceVersion": "${__service_version__}"
       }
     },
     "put_launch_event": {
@@ -407,7 +414,7 @@
         "Entries": [
           {
             "Detail.$": "$.database_event_data",
-            "DetailType": "ctTSOv2StateChange",
+            "DetailType": "workflowRunStateChange",
             "EventBusName": "${__eventbus_name__}",
             "Source": "orcabus.cttso_v2",
             "Resources": []

@@ -17,8 +17,10 @@ export interface Icav2AnalysisEventHandlerConstructProps {
   eventBusName: string; // Detail of the eventbus to push the event to
   source: string; // Source of the event we push
 
-  /* Event filter rule */
-  pipelineId: string;
+  /* Internal workflowRunStateChange event details */
+  workflowType: string;
+  workflowVersion: string;
+  serviceVersion: string;
 }
 
 export class Icav2AnalysisEventHandlerConstruct extends Construct {
@@ -53,6 +55,10 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
         __detail_type__: props.detailType,
         __eventbus_name__: props.eventBusName,
         __eventsource__: props.source,
+        /* Put event details */
+        __workflow_type__: props.workflowType,
+        __workflow_version__: props.workflowVersion,
+        __service_version_: props.serviceVersion,
       },
     });
 
@@ -66,9 +72,6 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
       eventPattern: {
         source: [props.source],
         detailType: [props.detailType],
-        detail: {
-          'pipeline.id': props.pipelineId,
-        },
       },
     });
 

@@ -165,3 +165,7 @@ export const cttsov2Icav2PipelineSfnSSMArn = path.join(
   cttsov2Icav2PipelineManagerSSMRoot,
   'state_machine_arn'
 );
+
+export const cttsov2Icav2PipelineWorkflowType = 'cttsov2';
+export const cttsov2Icav2PipelineWorkflowTypeVersion = '2.1.1';
+export const cttsov2Icav2ServiceVersion = '2024.05.07';

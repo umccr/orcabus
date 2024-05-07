@@ -55,8 +55,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
-            cttsov2Icav2PipelineManagerStackProps:
-              getCttsov2Icav2PipelineManagerStackProps(stage),
+            cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
           },
         },
@@ -82,8 +81,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
-            cttsov2Icav2PipelineManagerStackProps:
-              getCttsov2Icav2PipelineManagerStackProps(stage),
+            cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
           },
         },
@@ -109,8 +107,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
-            cttsov2Icav2PipelineManagerStackProps:
-              getCttsov2Icav2PipelineManagerStackProps(stage),
+            cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
           },
         },

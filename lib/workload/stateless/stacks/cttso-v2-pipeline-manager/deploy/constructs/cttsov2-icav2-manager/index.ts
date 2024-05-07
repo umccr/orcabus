@@ -30,11 +30,18 @@ interface Cttsov2Icav2ManagerConstructProps {
   launchCttsov2NextflowPipelineLambdaPath: string; // __dirname + '/../../../lambdas/launch_cttso_nextflow_pipeline'
   /* Step function templates */
   workflowDefinitionBodyPath: string; // __dirname + '/../../../step_functions_templates/cttso_v2_launch_step_function.json'
+  /* Event bus parameters */
+  workflowType: string; // The workflow type cttso_v2
+  workflowVersion: string; // The workflow version (2.1.1)
+  serviceVersion: string; // The service version (2024.05.07)
 }
 
 export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
   public readonly cttsov2LaunchStateMachineName: string;
   public readonly cttsov2LaunchStateMachineArn: string;
+
+  public readonly cttsov2CaptureIcav2EventsStateMachineName: string;
+  public readonly cttsov2CaptureIcav2EventsStateMachineArn: string;
 
   constructor(scope: Construct, id: string, props: Cttsov2Icav2ManagerConstructProps) {
     super(scope, id);
@@ -171,6 +178,10 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
           __table_name__: props.dynamodbTableObj.tableName,
           /* Event bus to push to */
           __eventbus_name__: props.eventbusObj.eventBusName,
+          /* Event bus parameters */
+          __workflow_type__: props.workflowType,
+          __workflow_version__: props.workflowVersion,
+          __service_version_: props.serviceVersion,
         },
       }
     );
@@ -208,12 +219,12 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       eventBus: props.eventbusObj,
       eventPattern: {
         source: ['orcabus.wfm'],
-        detailType: ['WorkflowRunStateChange'],
+        detailType: ['workflowRunStateChange'],
         /*
         FIXME - nothing is set in stone yet
         */
         detail: {
-          status: ['ready_to_run'],
+          status: ['ready'],
           workflow: ['cttso_v2_launch'],
         },
       },
@@ -239,18 +250,23 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         // Name of future statemachine
         stateMachineName: 'cttsov2Icav2StateChangeHandlerSfn',
         // Statemachine substitutions we need to pass
-        // FIXME Also not set in stone
         eventBusName: props.eventbusObj.eventBusName,
-        detailType: 'ctTSOv2StateChange',
         source: 'orcabus.cttso_v2',
-        // Filters
-        // FIXME - if the pipeline ID changes, we need to redeploy the stack?
-        pipelineId: props.pipelineIdSSMParameterObj.stringValue,
+        detailType: 'workflowRunStateChange',
+        /* Event parameters */
+        workflowType: props.workflowType,
+        workflowVersion: props.workflowVersion,
+        serviceVersion: props.serviceVersion,
       }
     );
 
     // Set outputs
     this.cttsov2LaunchStateMachineName = stateMachine.stateMachineName;
     this.cttsov2LaunchStateMachineArn = stateMachine.stateMachineArn;
+
+    this.cttsov2CaptureIcav2EventsStateMachineName =
+      statechange_statemachine.stateMachineObj.stateMachineName;
+    this.cttsov2CaptureIcav2EventsStateMachineArn =
+      statechange_statemachine.stateMachineObj.stateMachineArn;
   }
 }
