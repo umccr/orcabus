@@ -4,11 +4,16 @@ import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 import { SharedStack, SharedStackProps } from './stacks/shared/stack';
 import { TokenServiceStackProps, TokenServiceStack } from './stacks/token-service/deploy/stack';
 import { IcaEventPipeStack, IcaEventPipeStackProps } from './stacks/ica-event-pipe/stack';
+import {
+  Cttsov2Icav2PipelineTable,
+  Cttsov2Icav2PipelineTableStackProps,
+} from './stacks/cttso-v2-pipeline-dynamo-db/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   sharedStackProps: SharedStackProps;
   tokenServiceStackProps: TokenServiceStackProps;
   icaEventPipeStackProps: IcaEventPipeStackProps;
+  cttsov2Icav2PipelineTableStackProps: Cttsov2Icav2PipelineTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -17,6 +22,7 @@ export class StatefulStackCollection {
   readonly sharedStack: Stack;
   readonly tokenServiceStack: Stack;
   readonly icaEventPipeStack: Stack;
+  readonly cttsov2Icav2PipelineTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -37,6 +43,15 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'IcaEventPipeStack'),
       ...statefulConfiguration.icaEventPipeStackProps,
     });
+
+    this.cttsov2Icav2PipelineTableStack = new Cttsov2Icav2PipelineTable(
+      scope,
+      'Cttsov2Icav2PipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'Cttsov2Icav2PipelineTableStack'),
+        ...statefulConfiguration.cttsov2Icav2PipelineTableStackProps,
+      }
+    );
   }
 
   /**
