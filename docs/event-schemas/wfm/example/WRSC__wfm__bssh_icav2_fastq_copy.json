@@ -1,0 +1,24 @@
+{
+  "version": "0",
+  "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "WorkflowRunStateChange",
+  "source": "orcabus.wfm",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "portalRunId": "202405012397gatc",
+    "timestamp": "2025-05-01T09:25:44Z",
+    "status": "ready",
+    "workflowType": "bssh_icav2_fastq_copy",
+    "workflowVersion": "<fill-by-workflow-manager> e.g. 4.2.7",
+    "payload": {
+      "refId": "<fill-by-workflow-manager>",
+      "version": "0.1.0",
+      "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
+      "analysisId": "12345678-238c-4200-b632-d5dd8c8db94a",
+      "outputUriPrefix": "icav2://12345678-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/"
+    }
+  }
+}
