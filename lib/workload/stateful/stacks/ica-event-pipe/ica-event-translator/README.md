@@ -6,7 +6,7 @@ This stack creates the ica event translator service to translate external (ICA) 
 <!-- TOC -->
 * [ICAv2 Event Translator](#icav2-event-translator)
   * [Inputs](#inputs)
-    * [Example Input](#example-input)
+    * [Example ICA Event Input](#example-ica-event-input)
   * [Outputs](#outputs)
   * [lambda function for event translation](#lambda-function-for-event-translation)
     * [Receive and Translate ICAv2 event to Orcabus internal event](#receive-and-translate-icav2-event-to-orcabus-internal-event)
@@ -18,11 +18,28 @@ This stack creates the ica event translator service to translate external (ICA) 
 
 ## Inputs
 
-The AWS lambda functions takes ```ICAV2_EXTERNAL_EVENT``` events with following parameters and verify specific parmaters pattern.
+The AWS lambda functions takes ```External ICA Event``` events with following envelope pattern (sqs, event pipe). 
 
+>AWS Pipes doesn't directly allow overriding the `source` and `detail-type` at the Pipe level because these are set by the AWS Pipes framework itself when routing events through Pipes. 
 
-### Example Input
-This event is icav2 event without EventBus wrapper. General Event Bridge event will be with [standard wrapper format](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-events-structure.html) with payload in the detail.
+```json5
+{
+  "version": "0",
+  "id": "3xxxxxx-fxxxxx-2xxx-axxx-cxxxxxxxx",
+  "detail-type": "Event from aws:sqs", // event from sqs event pipeline
+  "source": "Pipe IcaEventPipeName", // source from Pipe {IcaEventPipeName}
+  "account": "xxxxxxxxx",
+  "time": "2024-00-00T00:01:00Z",
+  "region": "ap-southeast-x",
+  "resources": [],
+  "detail": {
+    "ica-event": ['*'] // ica event payload
+  }
+}
+```
+
+### Example Ica Event Input
+This event is icav2 event without EventBus pipe envelop. General Event Bridge event will be with [standard wrapper format](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-events-structure.html) with payload in the detail.
 ```json5
 {
   "correlationId": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
@@ -33,31 +50,21 @@ This event is icav2 event without EventBus wrapper. General Event Bridge event w
     "analysisPreviousStatus": "INPROGRESS",
     "analysisStatus": "SUCCEEDED"
   },
-  "description": "Analysis status changed",
   "projectId": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
-  "payloadVersion": "v3",
   "payload": {
     "id": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
-    "timeCreated": "2024-03-25T08:04:40Z",
-    "timeModified": "2024-03-25T10:07:06Z",
-    "ownerId": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
-    ...
-    "reference": "xxxxxx_xxxxxx_xxxxxx_xxxxxx_xxx_xxxxx-BclConvert vx_x_x-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
+    "timeCreated": "2024-00-25T00:04:00Z",
+    "timeModified": "2024-00-25T00:07:00Z",
     "userReference": "xxxxxx_xxxxxx_xxxxxx_xxxxxx_xxx_xxxxxxxxxx",
+    ...
     "pipeline": {
+      "id": "bxxxx-cxxx-4xxx-8xxxx-axxxxxxxxxxx",
+      "timeCreated": "2024-00-00T01:16:50Z",
+      "timeModified": "2024-00-00T02:08:46Z",
+      "code": "BclConvert v0_0_0",
+      "urn": "urn:ilmn:ica:pipeline:bxxxx-cxxx-4xxx-8xxxx-axxxxxxxxxxx#BclConvert_v0_0_0",
+      "description": "This is an autolaunch BclConvert pipeline for use by the metaworkflow",
       ...
-    },
-    "workflowSession": {
-      ...
-      "status": "INPROGRESS",
-      "startDate": "2024-03-25T07:57:48Z",
-      "tags": {
-        ...
-      }
-    },
-    "status": "SUCCEEDED",
-    "analysisStorage": {
-      ....
     },
     ....
   }
@@ -66,22 +73,44 @@ This event is icav2 event without EventBus wrapper. General Event Bridge event w
 
 ## Outputs
 
-The AWS lambda functions return ```ICAV2_INTERNAL_EVENT``` with the following parameters:
+The AWS lambda functions return ```WorkflowRunStateChange``` with the following parameters:
 
-* project_id ->  "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx"
-* analysis_id->  "0xxxxxxx-ddxxx-xxxxx-bxx-5xxxxxxx" (payload.id)
-* instrument_run_id -> "2xxxxxxxxx_Axxxxxx_0xxxx_Bxxxx", (from userReference)
-* portal_run_id ???
-* output_uri_prefix ???
-* tags (payloadTags, workflow session tags)
 ```json5
 {
-  "project_id": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
-  "analysis_id": "0xxxxxxx-ddxxx-xxxxx-bxx-5xxxxxxx",
-  "instrument_run_id": "2xxxxxxxxx_Axxxxxx_0xxxx_Bxxxx",
-  "tags": {
-        ...
-      }
+  "version": "0", // by default is 0
+  "id": "dxxxxx-6xxxx-fxxx-1xxx-5xxxxx",
+  "detail-type": "WorkflowRunStateChange", // event type
+  "source": "orcabus.bct", // from bct service
+  "account": "404687356768",
+  "time": "2024-00-00T02:08:46Z",
+  "region": "ap-southeast-x",
+  "resources": [],
+  "detail": {
+    // tranalted event deatils (see below)
+  }
+}
+```
+Internal WorkflowRunStateChange event detail:
+```json5
+{
+  "portalRunId": '20xxxxxxxxxx',
+  "timestamp": "2024-00-25T00:07:00Z",
+  "status": "SUCCEEDED",
+  "workflowType": "bssh_bcl_convert",
+  "workflowVersion": "4.2.7",
+  "payload": {
+    "refId": None,
+    "version": "0.1.0",
+    "projectId": "valid_project_id",
+    "analysisId": "valid_payload_id",
+    "userReference": "123456_A1234_0000_TestingPattern",
+    "timeCreated": "2024-01-01T00:11:35Z",
+    "timeModified": "2024-01-01T01:24:29Z",
+    "pipelineId": "valid_pipeline_id",
+    "pipelineCode": "BclConvert v0_0_0",
+    "pipelineDescription": "BclConvert pipeline.",
+    "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
+  }
 }
 ```
 
@@ -89,21 +118,36 @@ The AWS lambda functions return ```ICAV2_INTERNAL_EVENT``` with the following pa
 
 ### Receive and Translate ICAv2 event to Orcabus internal event
 Combine the iput and anylsis result to generat the orcabus internal event.
+Event Pattern (filter rules) for event pipe:
+```json5
+{
+  account: [Stack.of(this).account],
+  detailType: ['Event from aws:sqs'],
+  source: [`Pipe {props.icaEventPipeName}`],
+  detail: {
+      'ica-event': {
+        eventCode: [{ prefix: 'ICA_EXEC_' }],
+        projectId: [{ exists: true }],
+        payload: [{ exists: true }],
+        ...
+      },
+  },
+}
+```
 
 ### Save this translation process to dynamoDB
 Send the orignal input and orcabus event after translation to the dynao db for recording of the process. 
-```json5
-{
-  id: analysisId,
-  id_type: "icav2_analysis_id",
-  original_external_event: {orignal input events},
-  translated_internal_event: {orcabus event after translation},
-  timestamp: datetime.datetime.now().isoformat()
-}
- ```
+
+Dynamodb format:
+| analysis_id    | event_status | id_type | portal_run_id | original_external_event | translated_internal_ica_event | timestamp |
+| -------- | ------- | ------- | ------- | ------- | ------- |------- | 
+| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | PREPARING_INPUTS | analysis_id | 20xxxxxxxxxx | {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
+|dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | SUCCEEDED  | analysis_id | 20xxxxxxxxxx | {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
+
 
 ### Publish the Orcabus event to event bus
 publish the Orcabus (internal) event back the event bus.
+Example output event can be seen [here](../../../../../../docs/event-schemas/wfm/example/WRSC__bct__bssh_bcl_convert.json).
 
 ## Unit Test
 

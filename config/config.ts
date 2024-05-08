@@ -44,7 +44,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
           statefulConfig: {
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
-            icaEventPipeStackProps: getIcaEventPipeStackProps(),
+            icaEventPipeStackProps: getIcaEventPipeStackProps(stage),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
           },
           statelessConfig: {
@@ -70,7 +70,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
           statefulConfig: {
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
-            icaEventPipeStackProps: getIcaEventPipeStackProps(),
+            icaEventPipeStackProps: getIcaEventPipeStackProps(stage),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
           },
           statelessConfig: {
@@ -96,7 +96,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
           statefulConfig: {
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
-            icaEventPipeStackProps: getIcaEventPipeStackProps(),
+            icaEventPipeStackProps: getIcaEventPipeStackProps(stage),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
           },
           statelessConfig: {

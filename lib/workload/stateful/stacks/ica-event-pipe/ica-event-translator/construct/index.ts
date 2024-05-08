@@ -16,6 +16,8 @@ export interface Icav2EventTranslatorConstructProps {
   /** vpc ann SG for lambda function */
   vpcProps: VpcLookupOptions;
   lambdaSecurityGroupName: string;
+  /** ica event pipe name for tight coupling */
+  icaEventPipeName: string;
 }
 
 export class IcaEventTranslatorConstruct extends Construct {
@@ -65,10 +67,12 @@ export class IcaEventTranslatorConstruct extends Construct {
       eventPattern: {
         account: [Stack.of(this).account],
         detailType: ['Event from aws:sqs'],
+        source: [`Pipe ${props.icaEventPipeName}`],
         detail: {
           'ica-event': {
             eventCode: [{ prefix: 'ICA_EXEC_' }],
             projectId: [{ exists: true }],
+            payload: [{ exists: true }],
           },
         },
       },

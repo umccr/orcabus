@@ -12,7 +12,7 @@ import {
 const alarmThreshod: number = 1;
 const queueVizTimeout: number = 30;
 
-interface IcaEventTranslatorProps {
+export interface IcaEventTranslatorProps {
   /** dynamodb table for translator service */
   icav2EventTranslatorDynamodbTableName: string;
   removalPolicy?: RemovalPolicy;
@@ -34,14 +34,17 @@ export interface IcaEventPipeStackProps {
   /** The ICA account to grant publish permissions to */
   icaAwsAccountNumber: string;
 
+  /** IcaEventTranslatorProps */
   IcaEventTranslatorProps: IcaEventTranslatorProps;
 }
 
 export class IcaEventPipeStack extends Stack {
+  private readonly icaEventPipe: IcaEventPipeConstruct;
+
   constructor(scope: Construct, id: string, props: StackProps & IcaEventPipeStackProps) {
     super(scope, id, props);
-    this.createPipeConstruct(this, 'IcaEventPipeConstruct', props);
-    this.createIcaEventTranslator(props);
+    this.icaEventPipe = this.createPipeConstruct(this, 'IcaEventPipeConstruct', props);
+    this.createIcaEventTranslator(props, this.icaEventPipe.pipe.pipeName);
   }
 
   private createPipeConstruct(
@@ -61,7 +64,7 @@ export class IcaEventPipeStack extends Stack {
     return new IcaEventPipeConstruct(scope, id, constructProps);
   }
 
-  private createIcaEventTranslator(props: IcaEventPipeStackProps) {
+  private createIcaEventTranslator(props: IcaEventPipeStackProps, IcaEventPipeName: string) {
     // extract the IcaEventTranslatorConstructProps
     const icaEventTranslatorProps = props.IcaEventTranslatorProps;
 
@@ -69,6 +72,7 @@ export class IcaEventPipeStack extends Stack {
     const eventTranslatorDynamoDBTable = new TableV2(this, 'ICAv2EventTranslatorDynamoDBTable', {
       tableName: icaEventTranslatorProps.icav2EventTranslatorDynamodbTableName,
       removalPolicy: icaEventTranslatorProps.removalPolicy || RemovalPolicy.DESTROY,
+
       /* Either a db_uuid or an icav2 event id or a portal run id */
       partitionKey: { name: 'analysis_id', type: AttributeType.STRING },
       sortKey: { name: 'event_status', type: AttributeType.STRING },
@@ -79,6 +83,7 @@ export class IcaEventPipeStack extends Stack {
       eventBusName: props.eventBusName,
       vpcProps: icaEventTranslatorProps.vpcProps,
       lambdaSecurityGroupName: icaEventTranslatorProps.lambdaSecurityGroupName,
+      icaEventPipeName: IcaEventPipeName,
     };
 
     return new IcaEventTranslatorConstruct(
