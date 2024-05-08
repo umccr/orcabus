@@ -3,7 +3,6 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import { IcaEventPipeConstruct, IcaEventPipeConstructProps } from './constructs/ica_event_pipe';
 import { VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { RemovalPolicy } from 'aws-cdk-lib';
-import { TableV2, AttributeType } from 'aws-cdk-lib/aws-dynamodb';
 import {
   Icav2EventTranslatorConstructProps,
   IcaEventTranslatorConstruct,
@@ -13,7 +12,9 @@ const alarmThreshod: number = 1;
 const queueVizTimeout: number = 30;
 
 export interface IcaEventTranslatorProps {
-  /** dynamodb table for translator service */
+  /**
+   * dynamodb table for translator service
+   */
   icav2EventTranslatorDynamodbTableName: string;
   removalPolicy?: RemovalPolicy;
 
@@ -68,18 +69,10 @@ export class IcaEventPipeStack extends Stack {
     // extract the IcaEventTranslatorConstructProps
     const icaEventTranslatorProps = props.IcaEventTranslatorProps;
 
-    // create the dynamodb table for the translator service
-    const eventTranslatorDynamoDBTable = new TableV2(this, 'ICAv2EventTranslatorDynamoDBTable', {
-      tableName: icaEventTranslatorProps.icav2EventTranslatorDynamodbTableName,
-      removalPolicy: icaEventTranslatorProps.removalPolicy || RemovalPolicy.DESTROY,
-
-      /* Either a db_uuid or an icav2 event id or a portal run id */
-      partitionKey: { name: 'analysis_id', type: AttributeType.STRING },
-      sortKey: { name: 'event_status', type: AttributeType.STRING },
-    });
-
     const icaEventTranslatorConstructProps: Icav2EventTranslatorConstructProps = {
-      icav2EventTranslatorDynamodbTable: eventTranslatorDynamoDBTable,
+      icav2EventTranslatorDynamodbTableName:
+        icaEventTranslatorProps.icav2EventTranslatorDynamodbTableName,
+      dynamodbTableRemovalPolicy: icaEventTranslatorProps.removalPolicy || RemovalPolicy.DESTROY, // default to destroy
       eventBusName: props.eventBusName,
       vpcProps: icaEventTranslatorProps.vpcProps,
       lambdaSecurityGroupName: icaEventTranslatorProps.lambdaSecurityGroupName,

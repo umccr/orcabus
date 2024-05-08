@@ -1,5 +1,5 @@
 """
-The icav2 event translator expects the following as inputs (without wrapper from sqs, event pipe, and eventbus)
+The icav2 event translator expects the following as inputs (without envelop from sqs, event pipe, and eventbus)
 {
   "correlationId": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
   "timestamp": "2024-03-25T10:07:09.990Z",
@@ -9,61 +9,46 @@ The icav2 event translator expects the following as inputs (without wrapper from
     "analysisPreviousStatus": "INPROGRESS",
     "analysisStatus": "SUCCEEDED"
   },
-  "description": "Analysis status changed",
   "projectId": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
-  "payloadVersion": "v3",
   "payload": {
     "id": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
-    "timeCreated": "2024-03-25T08:04:40Z",
-    "timeModified": "2024-03-25T10:07:06Z",
-    "ownerId": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
-    ...
-    "reference": "xxxxxx_xxxxxx_xxxxxx_xxxxxx_xxx_xxxxx-BclConvert vx_x_x-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
+    "timeCreated": "2024-00-25T00:04:00Z",
+    "timeModified": "2024-00-25T00:07:00Z",
     "userReference": "xxxxxx_xxxxxx_xxxxxx_xxxxxx_xxx_xxxxxxxxxx",
+    ...
     "pipeline": {
+      "id": "bxxxx-cxxx-4xxx-8xxxx-axxxxxxxxxxx",
+      "timeCreated": "2024-00-00T01:16:50Z",
+      "timeModified": "2024-00-00T02:08:46Z",
+      "code": "BclConvert v0_0_0",
+      "urn": "urn:ilmn:ica:pipeline:bxxxx-cxxx-4xxx-8xxxx-axxxxxxxxxxx#BclConvert_v0_0_0",
+      "description": "This is an autolaunch BclConvert pipeline for use by the metaworkflow",
       ...
-    },
-    "workflowSession": {
-      ...
-      "status": "INPROGRESS",
-      "startDate": "2024-03-25T07:57:48Z",
-      "summary": "",
-      "tags": {
-        ...
-      }
-    },
-    "status": "SUCCEEDED",
-    "startDate": "2024-03-25T08:04:51Z",
-    "endDate": "2024-03-25T10:07:05Z",
-    "summary": "",
-    "analysisStorage": {
-      ....
     },
     ....
   }
 }
-The event tranlator then returns the following
+The event tranlator then returns the following: 
 {
-    "portalRunId": "202405012397actg",
-    "timestamp": "2024-05-01T09:25:44Z",
-    "status": "succeeded",
-    "workflowType": "bssh_bcl_convert",
-    "workflowVersion": "4.2.7",
-    "payload": {
-      "refId": null,
-      "version": "0.1.0",
-      "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
-      "analysisId": "aaaaafe8-238c-4200-b632-d5dd8c8db94a",
-      "userReference": "540424_A01001_0193_BBBBMMDRX5_c754de_bd822f",
-      "timeCreated": "2024-05-01T10:11:35Z",
-      "timeModified": "2024-05-01T11:24:29Z",
-      "pipelineId": "bfffffff-cb27-4dfa-846e-acd6eb081aca",
-      "pipelineCode": "BclConvert v4_2_7",
-      "pipelineDescription": "This is an autolaunch BclConvert pipeline for use by the metaworkflow",
-      "pipelineUrn": "urn:ilmn:ica:pipeline:bfffffff-cb27-4dfa-846e-acd6eb081aca#BclConvert_v4_2_7"
-    },
-    "serviceVersion": "0.1.0"
+  "portalRunId": '20xxxxxxxxxx',
+  "timestamp": "2024-00-25T00:07:00Z",
+  "status": "SUCCEEDED",
+  "workflowType": "bssh_bcl_convert",
+  "workflowVersion": "4.2.7",
+  "payload": {
+    "refId": None,
+    "version": "0.1.0",
+    "projectId": "valid_project_id",
+    "analysisId": "valid_payload_id",
+    "userReference": "123456_A1234_0000_TestingPattern",
+    "timeCreated": "2024-01-01T00:11:35Z",
+    "timeModified": "2024-01-01T01:24:29Z",
+    "pipelineId": "valid_pipeline_id",
+    "pipelineCode": "BclConvert v0_0_0",
+    "pipelineDescription": "BclConvert pipeline.",
+    "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
   }
+}
 """
 
 import os
@@ -143,7 +128,7 @@ def translate_to_aws_event(event)->AWSEvent:
   return AWSEvent(
     detail= get_event_details(event),
     detail_type= "WorkflowRunStateChange",
-    version="0.1.0",
+    # version="0.1.0",  # comment as the version is managed by the evnet bus
     source= "orcabus.bct",
   )
 

@@ -122,7 +122,21 @@ function applyNagSuppression(stackId: string, stack: Stack) {
         ]
       );
       break;
-
+    case 'IcaEventPipeStack':
+      // suppress by resource
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        ['/IcaEventPipeStack/IcaEventTranslatorConstruct/EventTranslator/ServiceRole/Resource'],
+        [
+          {
+            id: 'AwsSolutions-IAM4',
+            reason:
+              'Permission to <IcaEventTranslatorConstructtEventTranslatorArn>/* is needed. See ' +
+              'https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html ',
+          },
+        ]
+      );
+      break;
     default:
       break;
   }

@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
-import { Duration, Stack } from 'aws-cdk-lib';
-import { ITableV2 } from 'aws-cdk-lib/aws-dynamodb';
+import { Duration, Stack, RemovalPolicy } from 'aws-cdk-lib';
+import { TableV2, AttributeType } from 'aws-cdk-lib/aws-dynamodb';
 import { EventBus, Rule, IEventBus } from 'aws-cdk-lib/aws-events';
 import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
@@ -11,7 +11,8 @@ import * as path from 'path';
 
 export interface Icav2EventTranslatorConstructProps {
   /** dynamodb name and event bus name */
-  icav2EventTranslatorDynamodbTable: ITableV2;
+  icav2EventTranslatorDynamodbTableName: string;
+  dynamodbTableRemovalPolicy: RemovalPolicy;
   eventBusName: string;
   /** vpc ann SG for lambda function */
   vpcProps: VpcLookupOptions;
@@ -24,12 +25,10 @@ export class IcaEventTranslatorConstruct extends Construct {
   private readonly vpc: IVpc;
   private readonly lambdaSG: ISecurityGroup;
   private readonly mainBus: IEventBus;
-  private readonly dynamoDBTable: ITableV2;
   private readonly lambdaRuntimePythonVersion = Runtime.PYTHON_3_12;
 
   constructor(scope: Construct, id: string, props: Icav2EventTranslatorConstructProps) {
     super(scope, id);
-    this.dynamoDBTable = props.icav2EventTranslatorDynamodbTable;
     this.mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
     this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
     this.lambdaSG = SecurityGroup.fromLookupByName(
@@ -43,11 +42,21 @@ export class IcaEventTranslatorConstruct extends Construct {
   }
 
   private createICAv2EventTranslator(props: Icav2EventTranslatorConstructProps) {
+    // create the dynamodb table for the translator service
+    const dynamoDBTable = new TableV2(this, 'ICAv2EventTranslatorDynamoDBTable', {
+      tableName: props.icav2EventTranslatorDynamodbTableName,
+      removalPolicy: props.dynamodbTableRemovalPolicy,
+
+      /* Either a db_uuid or an icav2 event id or a portal run id */
+      partitionKey: { name: 'analysis_id', type: AttributeType.STRING },
+      sortKey: { name: 'event_status', type: AttributeType.STRING },
+    });
+
     const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
       entry: path.join(__dirname, '../translator_service'),
       runtime: this.lambdaRuntimePythonVersion,
       environment: {
-        TABLE_NAME: props.icav2EventTranslatorDynamodbTable.tableName,
+        TABLE_NAME: props.icav2EventTranslatorDynamodbTableName,
         EVENT_BUS_NAME: props.eventBusName,
       },
       vpc: this.vpc,
@@ -59,7 +68,7 @@ export class IcaEventTranslatorConstruct extends Construct {
       handler: 'handler',
     });
 
-    this.dynamoDBTable.grantReadWriteData(EventTranslatorFunction);
+    dynamoDBTable.grantReadWriteData(EventTranslatorFunction);
 
     // Create a rule to trigger the Lambda function from the EventBus ICAV2_EXTERNAL_EVENT
     const rule = new Rule(this, 'Rule', {
@@ -88,8 +97,8 @@ export class IcaEventTranslatorConstruct extends Construct {
     // Optional: If the Lambda function needs more permissions for the DynamoDB table and the event bus
     EventTranslatorFunction.addToRolePolicy(
       new PolicyStatement({
-        actions: ['events:PutEvents', 'dynamodb:PutItem'],
-        resources: [this.mainBus.eventBusArn, this.dynamoDBTable.tableArn],
+        actions: ['events:PutEvents', 'dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:Scan'],
+        resources: [this.mainBus.eventBusArn, dynamoDBTable.tableArn],
       })
     );
   }
