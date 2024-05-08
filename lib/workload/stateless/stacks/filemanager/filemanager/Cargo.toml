@@ -35,7 +35,8 @@ flate2 = "1"
 md5 = "0.7"
 hex = "0.4"
 parquet = { version = "51", features = ["async"] }
-arrow = "51"
+arrow = { version = "51", features = ["chrono-tz"] }
+arrow-json = "51"
 bytes = "1.6"
 
 aws-sdk-sqs = "1"

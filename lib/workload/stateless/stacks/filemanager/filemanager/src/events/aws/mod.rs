@@ -15,7 +15,7 @@ use crate::events::aws::EventType::{Created, Deleted, Other};
 use crate::uuid::UuidGenerator;
 
 pub mod collecter;
-mod inventory;
+pub mod inventory;
 pub mod message;
 
 /// A wrapper around AWS storage types with sqlx support.
