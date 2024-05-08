@@ -34,9 +34,10 @@ csv = "1"
 flate2 = "1"
 md5 = "0.7"
 hex = "0.4"
-parquet = { version = "51", features = ["async"] }
-arrow = { version = "51", features = ["chrono-tz"] }
-arrow-json = "51"
+parquet = { version = "50", features = ["async"] }
+arrow = { version = "50", features = ["chrono-tz"] }
+arrow-json = "50"
+orc-rust = "0.3"
 bytes = "1.6"
 
 aws-sdk-sqs = "1"

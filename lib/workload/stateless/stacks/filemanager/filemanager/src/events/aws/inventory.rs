@@ -3,7 +3,6 @@
 
 use std::io::{BufReader, Cursor, Read};
 use std::result;
-use std::str::FromStr;
 
 use arrow::array::RecordBatch;
 use arrow::error::ArrowError;
@@ -11,15 +10,17 @@ use arrow_json::ArrayWriter;
 use aws_arn::known::Service;
 use aws_arn::ResourceName;
 use aws_sdk_s3::types::InventoryFormat;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use csv::{ReaderBuilder, StringRecord, Trim};
 use flate2::read::MultiGzDecoder;
 use futures::future::join_all;
-use futures::{Stream, StreamExt, TryStreamExt};
+use futures::{Stream, TryStreamExt};
 use mockall_double::double;
+use orc_rust::error::OrcError;
+use orc_rust::ArrowReaderBuilder;
 use parquet::arrow::ParquetRecordBatchStreamBuilder;
 use parquet::errors::ParquetError;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::from_slice;
 use serde_with::{serde_as, DisplayFromStr};
 
@@ -31,37 +32,10 @@ use crate::events::aws::message::EventType::Created;
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::uuid::UuidGenerator;
 
-impl FromStr for StorageClass {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "DEEP_ARCHIVE" => Ok(Self::DeepArchive),
-            "GLACIER" => Ok(Self::Glacier),
-            "GLACIER_IR" => Ok(Self::GlacierIr),
-            "INTELLIGENT_TIERING" => Ok(Self::IntelligentTiering),
-            "ONEZONE_IA" => Ok(Self::OnezoneIa),
-            "OUTPOSTS" => Ok(Self::Outposts),
-            "REDUCED_REDUNDANCY" => Ok(Self::ReducedRedundancy),
-            "SNOW" => Ok(Self::Snow),
-            "STANDARD" => Ok(Self::Standard),
-            "STANDARD_IA" => Ok(Self::StandardIa),
-            _ => Err(S3InventoryError("invalid storage class".to_string())),
-        }
-    }
-}
-
 /// Represents an S3 inventory including associated inventory fetching and parsing logic.
 #[derive(Debug)]
 pub struct Inventory {
     client: Client,
-}
-
-#[derive(Debug)]
-pub enum InventoryStream<Csv, Parquet, Orc> {
-    Csv(Csv),
-    Parquet(Parquet),
-    Orc(Orc),
 }
 
 impl Inventory {
@@ -110,9 +84,9 @@ impl Inventory {
     /// Parse an arrow record batch from an incoming stream into messages for ingestion.
     pub async fn parse_record_batch(
         &self,
-        stream: impl Stream<Item = Result<RecordBatch>> + Unpin,
+        stream: impl Stream<Item = result::Result<RecordBatch, ArrowError>> + Unpin,
     ) -> Result<Vec<Record>> {
-        let batches = stream.map(|record| record).try_collect::<Vec<_>>().await?;
+        let batches = stream.try_collect::<Vec<_>>().await?;
 
         let buf = Vec::new();
         let mut writer = ArrayWriter::new(buf);
@@ -128,6 +102,8 @@ impl Inventory {
         //
         // A more performant solution could involve using:
         // https://github.com/Swoorup/arrow-convert
+        // This is should be similar to arrow2_convert::TryIntoArrow in the above performance graph,
+        // as it is a port of arrow2_convert with arrow-rs as the dependency.
         from_slice::<Vec<Record>>(buf.as_slice()).map_err(|err| {
             S3InventoryError(format!("failed to deserialize json from arrow: {}", err))
         })
@@ -136,12 +112,18 @@ impl Inventory {
     /// Parse a parquet manifest file into records.
     pub async fn parse_parquet(&self, body: Vec<u8>) -> Result<Vec<Record>> {
         let reader = ParquetRecordBatchStreamBuilder::new(Cursor::new(body))
-            .await
-            .unwrap()
-            .with_batch_size(3)
-            .build()
-            .unwrap()
-            .map_err(|err| S3InventoryError(err.to_string()));
+            .await?
+            .build()?
+            .map_err(ArrowError::from);
+
+        self.parse_record_batch(reader).await
+    }
+
+    /// Parse an ORC manifest file into records.
+    pub async fn parse_orc(&self, body: Vec<u8>) -> Result<Vec<Record>> {
+        let reader = ArrowReaderBuilder::try_new_async(Cursor::new(body))
+            .await?
+            .build_async();
 
         self.parse_record_batch(reader).await
     }
@@ -190,7 +172,10 @@ impl Inventory {
                     self.parse_csv(&manifest.file_schema, body.as_slice()).await
                 }
                 InventoryFormat::Parquet => self.parse_parquet(body).await,
-                _ => Err(S3InventoryError("unsupported type".to_string())),
+                InventoryFormat::Orc => self.parse_orc(body).await,
+                _ => Err(S3InventoryError(
+                    "unsupported manifest file type".to_string(),
+                )),
             }
         }))
         .await
@@ -222,6 +207,12 @@ impl From<ArrowError> for Error {
     }
 }
 
+impl From<OrcError> for Error {
+    fn from(error: OrcError) -> Self {
+        S3InventoryError(error.to_string())
+    }
+}
+
 /// An S3 inventory record.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Record {
@@ -233,12 +224,47 @@ pub struct Record {
     version_id: Option<String>,
     #[serde(alias = "Size")]
     size: Option<i64>,
-    #[serde(alias = "LastModifiedDate")]
+    #[serde(
+        alias = "LastModifiedDate",
+        deserialize_with = "deserialize_native_utc"
+    )]
     last_modified_date: Option<DateTime<Utc>>,
     #[serde(alias = "ETag")]
     e_tag: Option<String>,
     #[serde(alias = "StorageClass")]
     storage_class: Option<StorageClass>,
+}
+
+/// Deserializes into a DateTime<Utc>, or a NativeDateTime which is converted it to a DateTime<Utc>
+/// that is assumed to be native to Utc.
+///
+///
+/// Note, AWS returns a LastModifiedDate which seems to be in UTC. However, it uses the incorrect
+/// timestamp datatype for ORC/Parquet, which doesn't include a timezone (and hence is assumed to
+/// be in local time, which can't be parsed as a DateTime<Utc>).
+///
+/// This is likely a bug in AWS, so we fix it here and ensure that the timezone component is
+/// present.
+pub fn deserialize_native_utc<'de, D>(
+    deserializer: D,
+) -> result::Result<Option<DateTime<Utc>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    // First try to deserialize as a DateTime<Utc>, then try a NativeDateTime.
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Date {
+        Utc(DateTime<Utc>),
+        Native(NaiveDateTime),
+    }
+
+    Ok(
+        Option::<Date>::deserialize(deserializer)?.map(|datetime| match datetime {
+            Date::Utc(utc) => utc,
+            Date::Native(native) => native.and_utc(),
+        }),
+    )
 }
 
 /// The manifest format for an inventory.
