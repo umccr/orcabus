@@ -68,7 +68,11 @@ export class StatelessPipelineStack extends cdk.Stack {
         `source $HOME/.cargo/env`,
         `pip3 install cargo-lambda`,
       ],
-      commands: ['yarn install --immutable', 'yarn run cdk-stateless synth'],
+      commands: [
+        'yarn install --immutable',
+        'yarn run cdk-stateless synth',
+        'rm -rfv cdk.out/asset.*',
+      ],
       input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
