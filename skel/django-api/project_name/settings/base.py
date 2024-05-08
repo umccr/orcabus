@@ -17,10 +17,7 @@ DEBUG = os.getenv("DJANGO_DEBUG", True)
 
 ALLOWED_HOSTS = ["*"]
 
-DB_PREFIX = "{{project_name}}_"
-
 INSTALLED_APPS = [
-    "django_database_prefix",
     "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -43,6 +40,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "djangorestframework_camel_case.middleware.CamelCaseMiddleWare",
 ]
 
 ROOT_URLCONF = "{{project_name}}.urls.base"
@@ -104,9 +102,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ---
 
-# 1GB packet limit for MySQL. See https://dev.mysql.com/doc/refman/5.7/en/packet-too-large.html
-MYSQL_CLIENT_MAX_ALLOWED_PACKET = 1073741824
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -132,6 +127,20 @@ LOGGING = {
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
+    # https://www.django-rest-framework.org/api-guide/parsers/#camelcase-json
+    # https://github.com/vbabiy/djangorestframework-camel-case
+    "DEFAULT_RENDERER_CLASSES": (
+        "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
+        "djangorestframework_camel_case.render.CamelCaseBrowsableAPIRenderer",
+    ),
+    "DEFAULT_PARSER_CLASSES": (
+        "djangorestframework_camel_case.parser.CamelCaseFormParser",
+        "djangorestframework_camel_case.parser.CamelCaseMultiPartParser",
+        "djangorestframework_camel_case.parser.CamelCaseJSONParser",
+    ),
+    "JSON_UNDERSCOREIZE": {
+        'no_underscore_before_number': True,
+    },
 }
 
 CORS_ORIGIN_ALLOW_ALL = True

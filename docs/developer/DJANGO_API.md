@@ -1,39 +1,38 @@
 # Django API Profile
 
-> !!! TODO NOTE: DJANGO PROJECT DIR STRUCTURE & STEPS NEED TO BE REVISED DUE TO REFACTOR !!! 
-
 - Use this profile if your microservice need: ORM, API, LAMBDA, SQS
 
 ## App
 
-- Consider building a microservice: `hello_world_manager`
+- Consider building a microservice: `hello-manager`
 
 ### Ready Check
 
 - Make sure you have activated conda environment and setup dev toolchain
 - At project root, preform:
 ```
-conda activate orcabus
-make install
+conda create -n hello-manager python=3.12
+conda activate hello-manager
 ```
 
 ### Bootstrap
 
 ```
-mkdir -p ./lib/workload/stateless/hello_world_manager
+mkdir -p ./lib/workload/stateless/stacks/hello-manager
 
-django-admin startproject --template skel/django-api hello_world_manager ./lib/workload/stateless/hello_world_manager
-
-make install
+pip install Django
+django-admin startproject --template skel/django-api hello_manager ./lib/workload/stateless/stacks/hello-manager
 ```
 
 ### Model
 
 ```
-(make sure db is up)
-make up && make ps
+cd lib/workload/stateless/stacks/hello-manager
 
-cd lib/workload/stateless/hello_world_manager/src
+(make sure db is up)
+make up
+make ps
+make install
 
 python manage.py inspectdb
 python manage.py showmigrations
@@ -42,7 +41,7 @@ python manage.py makemigrations
 python manage.py showmigrations
 python manage.py migrate
 python manage.py inspectdb
-python manage.py inspectdb table hello_world_manager_helloworld
+python manage.py inspectdb hello_manager_helloworld
 python manage.py test
 python manage.py shell_plus
 
@@ -61,16 +60,16 @@ python manage.py shell_plus
 >>> exit()
 ```
 
-### MySQL
+### PSQL
 
 ```
-docker exec -it orcabus_db mysql -h 0.0.0.0 -D orcabus -u root -proot
+make psql
 
-mysql> show databases;
-mysql> show tables;
-mysql> describe hello_world_manager_helloworld;
-mysql> select * from hello_world_manager_helloworld;
-mysql> \q
+orcabus# \l
+orcabus# \dt
+orcabus# \d hello_manager_helloworld
+orcabus# select * from hello_manager_helloworld;
+orcabus# \q
 ```
 
 ### REST API
@@ -79,8 +78,8 @@ mysql> \q
 python manage.py runserver_plus
 
 (in another terminal)
-curl -s http://localhost:8000/hello | jq
-curl -s http://localhost:8000/hello/1 | jq
+curl -s http://localhost:8000/hlo/v1/hello | jq
+curl -s http://localhost:8000/hlo/v1/hello/1 | jq
 
 open -a Safari http://localhost:8000
 
@@ -100,24 +99,24 @@ python manage.py help
 
 - Unit test model
 ```
-python manage.py test hello_world_manager.tests.test_models.HelloModelTests.test_save_hello
+python manage.py test hello_manager.tests.test_models.HelloModelTests.test_save_hello
 ```
 
 - Unit test proc handler
 ```
-python manage.py test hello_world_manager_proc.tests.test_hello_proc.HelloProcUnitTests.test_handler
+python manage.py test hello_manager_proc.tests.test_hello_proc.HelloProcUnitTests.test_handler
 ```
 
 - Unit test service layer
 ```
-python manage.py test hello_world_manager_proc.tests.test_hello_srv.HelloSrvUnitTests.test_get_hello_from_db
+python manage.py test hello_manager_proc.tests.test_hello_srv.HelloSrvUnitTests.test_get_hello_from_db
 ```
 
 ### Reset
 ```
 python manage.py reset_db
 
-rm hello_world_manager/migrations/0001_initial.py
+rm hello_manager/migrations/0001_initial.py
 
 python manage.py showmigrations
 ```
@@ -127,18 +126,15 @@ At this point, you may rename the source code and continue developing the app or
 Go back to project root:
 ```
 cd ../../../../../
-rm -rf lib/workload/stateless/hello_world_manager
+rm -rf lib/workload/stateless/stacks/hello-manager
 ```
 
 ## CDK
 
-Each App stack comes with corresponding `component.ts` for CDK boilerplate code as well.
+Each App stack comes with corresponding `deploy/stack.ts` for CDK boilerplate code as well.
 Typically, it is unfinished CDK deployment code. You will need to complete it.
 Follow the `FIXME` trail.
 
 This App stack use the following CDK Construct library. You may need to refer their documentation for further enhancement or tweaking.
 
 - https://constructs.dev/packages/@aws-cdk/aws-lambda-python-alpha
-- https://constructs.dev/packages/@aws-cdk/aws-apigatewayv2-alpha
-- https://constructs.dev/packages/@aws-cdk/aws-apigatewayv2-integrations-alpha
-- https://constructs.dev/packages/@aws-cdk/aws-apigatewayv2-authorizers-alpha
