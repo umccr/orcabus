@@ -194,7 +194,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       generate_trimmed_samplesheet_lambda_obj,
       upload_samplesheet_to_cache_dir_lambda_obj,
     ].forEach((lambda_obj) => {
-      lambda_obj.grantInvoke(<iam.IRole>stateMachine.role);
+      lambda_obj.currentVersion.grantInvoke(<iam.IRole>stateMachine.role);
     });
 
     // Allow state machine to read/write to dynamodb table
