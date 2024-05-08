@@ -99,6 +99,23 @@ export class StatelessPipelineStack extends cdk.Stack {
       },
     });
 
+    // After the assets are published, this could be removed to prevent hitting artifact limit
+    // https://github.com/aws/aws-cdk/issues/9917
+    const stripAssetsFromAssembly = new pipelines.CodeBuildStep('StripAssetsFromAssembly', {
+      input: pipeline.cloudAssemblyFileSet,
+      commands: [
+        'S3_PATH=${CODEBUILD_SOURCE_VERSION#"arn:aws:s3:::"}',
+        'ZIP_ARCHIVE=$(basename $S3_PATH)',
+        'echo $S3_PATH',
+        'echo $ZIP_ARCHIVE',
+        'ls',
+        'rm -rfv asset.*',
+        'zip -r -q -A $ZIP_ARCHIVE *',
+        'ls',
+        'aws s3 cp $ZIP_ARCHIVE s3://$S3_PATH',
+      ],
+    });
+
     /**
      * Deployment to Beta (Dev) account
      */
@@ -113,7 +130,8 @@ export class StatelessPipelineStack extends cdk.Stack {
           account: betaConfig.accountId,
           region: betaConfig.region,
         }
-      )
+      ),
+      { pre: [stripAssetsFromAssembly] } // I think this should only be done once across stages
     );
 
     // Since the stateless stack might need to reference the stateful resources (e.g. db, sg), we might comment this out
@@ -158,6 +176,8 @@ export class StatelessPipelineStack extends cdk.Stack {
 
     // need to build pipeline so we could add notification at the pipeline construct
     pipeline.buildPipeline();
+
+    pipeline.pipeline.artifactBucket.grantReadWrite(stripAssetsFromAssembly.project);
 
     // notification for success/failure
     const alertsBuildSlackConfigArn = ssm.StringParameter.valueForStringParameter(
