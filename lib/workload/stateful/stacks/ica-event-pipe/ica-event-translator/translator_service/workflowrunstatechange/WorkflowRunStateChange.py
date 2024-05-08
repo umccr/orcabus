@@ -4,7 +4,7 @@ import re  # noqa: F401
 
 import six
 from enum import Enum
-from function.workflowrunstatechange import Payload  # noqa: F401,E501
+from translator_service.workflowrunstatechange import Payload  # noqa: F401,E501
 
 class WorkflowRunStateChange(object):
 

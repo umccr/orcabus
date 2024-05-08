@@ -1,10 +1,26 @@
 import { Construct } from 'constructs';
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { IcaEventPipeConstruct, IcaEventPipeConstructProps } from './constructs/ica_event_pipe';
+import { VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
+import { RemovalPolicy } from 'aws-cdk-lib';
+import { TableV2, AttributeType } from 'aws-cdk-lib/aws-dynamodb';
+import {
+  Icav2EventTranslatorConstructProps,
+  IcaEventTranslatorConstruct,
+} from './ica-event-translator/construct';
 
 const alarmThreshod: number = 1;
 const queueVizTimeout: number = 30;
 
+interface IcaEventTranslatorProps {
+  /** dynamodb table for translator service */
+  icav2EventTranslatorDynamodbTableName: string;
+  removalPolicy?: RemovalPolicy;
+
+  /** vpc ann SG for translator lambda function */
+  vpcProps: VpcLookupOptions;
+  lambdaSecurityGroupName: string;
+}
 /**
  * IcaEventPipeStackProps
  */
@@ -17,15 +33,18 @@ export interface IcaEventPipeStackProps {
   slackTopicName: string;
   /** The ICA account to grant publish permissions to */
   icaAwsAccountNumber: string;
+
+  IcaEventTranslatorProps: IcaEventTranslatorProps;
 }
 
 export class IcaEventPipeStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps & IcaEventPipeStackProps) {
     super(scope, id, props);
-    this.createConstruct(this, 'IcaEventPipeConstruct', props);
+    this.createPipeConstruct(this, 'IcaEventPipeConstruct', props);
+    this.createIcaEventTranslator(props);
   }
 
-  private createConstruct(
+  private createPipeConstruct(
     scope: Construct,
     id: string,
     props: StackProps & IcaEventPipeStackProps
@@ -40,6 +59,33 @@ export class IcaEventPipeStack extends Stack {
       icaAwsAccountNumber: props.icaAwsAccountNumber,
     };
     return new IcaEventPipeConstruct(scope, id, constructProps);
+  }
+
+  private createIcaEventTranslator(props: IcaEventPipeStackProps) {
+    // extract the IcaEventTranslatorConstructProps
+    const icaEventTranslatorProps = props.IcaEventTranslatorProps;
+
+    // create the dynamodb table for the translator service
+    const eventTranslatorDynamoDBTable = new TableV2(this, 'ICAv2EventTranslatorDynamoDBTable', {
+      tableName: icaEventTranslatorProps.icav2EventTranslatorDynamodbTableName,
+      removalPolicy: icaEventTranslatorProps.removalPolicy || RemovalPolicy.DESTROY,
+      /* Either a db_uuid or an icav2 event id or a portal run id */
+      partitionKey: { name: 'analysis_id', type: AttributeType.STRING },
+      sortKey: { name: 'event_status', type: AttributeType.STRING },
+    });
+
+    const icaEventTranslatorConstructProps: Icav2EventTranslatorConstructProps = {
+      icav2EventTranslatorDynamodbTable: eventTranslatorDynamoDBTable,
+      eventBusName: props.eventBusName,
+      vpcProps: icaEventTranslatorProps.vpcProps,
+      lambdaSecurityGroupName: icaEventTranslatorProps.lambdaSecurityGroupName,
+    };
+
+    return new IcaEventTranslatorConstruct(
+      this,
+      'IcaEventTranslatorConstruct',
+      icaEventTranslatorConstructProps
+    );
   }
 
   private constructTopicArn(props: StackProps & IcaEventPipeStackProps) {

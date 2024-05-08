@@ -6,12 +6,7 @@ import botocore.session
 from botocore.stub import Stubber
 from unittest.mock import patch
 from freezegun import freeze_time
-from uuid import uuid4, UUID
-from function.workflowrunstatechange import (
-    WorkflowRunStateChange,
-    AWSEvent,
-    Marshaller,
-)
+from uuid import UUID
 '''
 {
     "portalRunId": "202405012397actg",

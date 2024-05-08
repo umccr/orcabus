@@ -1,7 +1,6 @@
-import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Duration, Stack } from 'aws-cdk-lib';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import { ITableV2 } from 'aws-cdk-lib/aws-dynamodb';
 import { EventBus, Rule, IEventBus } from 'aws-cdk-lib/aws-events';
 import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
@@ -10,33 +9,25 @@ import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
 
-interface Icav2EventTranslatorStackProps extends cdk.StackProps {
+export interface Icav2EventTranslatorConstructProps {
   /** dynamodb name and event bus name */
-  icav2EventTranslatorDynamodbTableName: string;
+  icav2EventTranslatorDynamodbTable: ITableV2;
   eventBusName: string;
   /** vpc ann SG for lambda function */
   vpcProps: VpcLookupOptions;
   lambdaSecurityGroupName: string;
 }
 
-export class Icav2EventTranslatorStack extends cdk.Stack {
-  readonly id: string;
-
+export class IcaEventTranslatorConstruct extends Construct {
   private readonly vpc: IVpc;
   private readonly lambdaSG: ISecurityGroup;
   private readonly mainBus: IEventBus;
-  private readonly dynamoDBTable: dynamodb.ITableV2;
+  private readonly dynamoDBTable: ITableV2;
   private readonly lambdaRuntimePythonVersion = Runtime.PYTHON_3_12;
 
-  constructor(scope: Construct, id: string, props: Icav2EventTranslatorStackProps) {
-    super(scope, id, props);
-    this.id = id;
-
-    this.dynamoDBTable = dynamodb.TableV2.fromTableName(
-      this,
-      'Icav2EventTranslatorDynamoDBTable',
-      props.icav2EventTranslatorDynamodbTableName
-    );
+  constructor(scope: Construct, id: string, props: Icav2EventTranslatorConstructProps) {
+    super(scope, id);
+    this.dynamoDBTable = props.icav2EventTranslatorDynamodbTable;
     this.mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
     this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
     this.lambdaSG = SecurityGroup.fromLookupByName(
@@ -49,12 +40,12 @@ export class Icav2EventTranslatorStack extends cdk.Stack {
     this.createICAv2EventTranslator(props);
   }
 
-  private createICAv2EventTranslator(props: Icav2EventTranslatorStackProps) {
+  private createICAv2EventTranslator(props: Icav2EventTranslatorConstructProps) {
     const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
-      entry: path.join(__dirname, '../function'),
+      entry: path.join(__dirname, '../translator_service'),
       runtime: this.lambdaRuntimePythonVersion,
       environment: {
-        TABLE_NAME: props.icav2EventTranslatorDynamodbTableName,
+        TABLE_NAME: props.icav2EventTranslatorDynamodbTable.tableName,
         EVENT_BUS_NAME: props.eventBusName,
       },
       vpc: this.vpc,

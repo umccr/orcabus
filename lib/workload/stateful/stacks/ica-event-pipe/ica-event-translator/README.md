@@ -1,4 +1,7 @@
-# ICAv2 Event Translator
+# ICA Event Translator
+
+This stack creates the ica event translator service to translate external (ICA) events to orcabus events follow the defined schema `orcabus.wfm@WorkflowRunStateChange`. Example event can be seen [here](../../../../../../docs/event-schemas/wfm/example/WRSC__bct__bssh_bcl_convert.json). 
+
 
 <!-- TOC -->
 * [ICAv2 Event Translator](#icav2-event-translator)
@@ -17,10 +20,6 @@
 
 The AWS lambda functions takes ```ICAV2_EXTERNAL_EVENT``` events with following parameters and verify specific parmaters pattern.
 
-* eventCode is ICA_EXEC_028
-* eventParameters.analysisStatus is SUCCEEDED
-* payload.pipeline.id is "bf93b5cf-cb27-4dfa-846e-acd6eb081aca" - this is currently hardcoded
-* Can use a regex on the userReference attribute like `(\d{6}_[A|B]\d+_\d{4}_\w+)`
 
 ### Example Input
 This event is icav2 event without EventBus wrapper. General Event Bridge event will be with [standard wrapper format](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-events-structure.html) with payload in the detail.

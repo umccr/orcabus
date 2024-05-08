@@ -72,7 +72,7 @@ import logging
 import datetime
 import boto3
 from uuid import uuid4
-from function.workflowrunstatechange import (
+from translator_service.workflowrunstatechange import (
     WorkflowRunStateChange,
     AWSEvent,
     Marshaller,
