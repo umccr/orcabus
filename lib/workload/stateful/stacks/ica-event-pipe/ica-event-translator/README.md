@@ -86,7 +86,7 @@ The AWS lambda functions return ```WorkflowRunStateChange``` with the following 
   "region": "ap-southeast-x",
   "resources": [],
   "detail": {
-    // tranalted event deatils (see below)
+    // ttranslated event details (see below)
   }
 }
 ```

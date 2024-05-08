@@ -32,7 +32,7 @@ from uuid import UUID
 '''
 
 # Assuming you adapt your lambda function to use botocore for creating clients
-from function.icav2_event_translator import handler, get_portal_run_id  # Import your lambda function module
+from translator_service.icav2_event_translator import handler  # Import your lambda function module
 
 class TestICAv2EventTranslator(unittest.TestCase):
     def setUp(self):
@@ -72,8 +72,8 @@ class TestICAv2EventTranslator(unittest.TestCase):
         self.dynamodb_stubber = Stubber(self.dynamodb)
         self.events_stubber.activate()
         self.dynamodb_stubber.activate()
-        patch('function.icav2_event_translator.events', self.events).start()
-        patch('function.icav2_event_translator.dynamodb', self.dynamodb).start()
+        patch('translator_service.icav2_event_translator.events', self.events).start()
+        patch('translator_service.icav2_event_translator.dynamodb', self.dynamodb).start()
 
     def tearDown(self):
         self.events_stubber.deactivate()
@@ -85,7 +85,7 @@ class TestICAv2EventTranslator(unittest.TestCase):
             del os.environ['TABLE_NAME']
 
     
-    @patch('function.icav2_event_translator.uuid4', return_value=UUID('12345678-1234-5678-1234-567812345678'))
+    @patch('translator_service.icav2_event_translator.uuid4', return_value=UUID('12345678-1234-5678-1234-567812345678'))
     @freeze_time("2024-01-1")
     def test_valid_event(self, mock_uuid4):
         # Your test code goes here
