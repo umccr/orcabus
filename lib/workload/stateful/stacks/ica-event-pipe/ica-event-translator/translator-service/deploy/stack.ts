@@ -73,7 +73,13 @@ export class Icav2EventTranslatorStack extends cdk.Stack {
       eventBus: this.mainBus,
       eventPattern: {
         account: [Stack.of(this).account],
-        detailType: ['ICAV2_EXTERNAL_EVENT'],
+        detailType: ['Event from aws:sqs'],
+        detail: {
+          'ica-event': {
+            eventCode: [{ prefix: 'ICA_EXEC_' }],
+            projectId: [{ exists: true }],
+          },
+        },
       },
     });
 
