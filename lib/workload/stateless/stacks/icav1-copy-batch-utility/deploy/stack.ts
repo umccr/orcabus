@@ -1,8 +1,18 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda-layer';
+// import { BucketForCopyDestination,
+//   BucketForManifestOrInventory,
+//   BucketForBatchOpsReport,
+//   TransferMaximumConcurrency,
+//   TransferMaxPoolConnections,
+//   TransferMaxErrorRetries,
+//   TransferMultiPartChunkSize,
+// } from '../constants';
+import { getICAv1CopyBatchUtilityStackProps } from '../../../../../../config/stacks/icav1CopyBatchUtility';
 import path from 'path';
-import { aws_secretsmanager } from 'aws-cdk-lib';
+import { Duration, aws_secretsmanager } from 'aws-cdk-lib';
+import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
+import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
 
 export interface ICAv1CopyBatchUtilityConfig {
   AppName: string;
@@ -25,17 +35,27 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     super(scope, id, props);
 
     // Get ICAv1 Access token secret object for construct
-    // const icav1_access_token_secret_obj = aws_secretsmanager.Secret.fromSecretNameV2(
-    //   this,
-    //   'Icav1SecretsObject',
-    //   props.Icav1TokenSecretId
-    // );
+    const icav1_token = aws_secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'Icav1Secret',
+      props.Icav1TokenSecretId
+    );
 
-    // Generate lambda layer
-    const lambda_layer = new PythonLambdaLayerConstruct(this, 'lambda_layer', {
-      layerDescription: 'ICAv1 Copy Batch Utility Tools',
-      layerDirectory: path.join(__dirname, '../layers'),
-      layerName: 'icav1_copy_batch_utility_tools',
+    // S3 Batch Ops lambda
+    const lambda = new PythonFunction(this, 'ICAv1 Copy Batch Utility lambda', {
+      entry: path.join(__dirname, '../lambdas'),
+      runtime: Runtime.PYTHON_3_12,
+      environment: {
+        destination_bucket: props.BucketForCopyDestination,
+        max_concurrency: props.TransferMaximumConcurrency.toString(),
+        max_pool_connections: props.TransferMaxPoolConnections.toString(),
+        max_attempts: props.TransferMaxErrorRetries.toString(),
+        multipart_chunksize: props.TransferMultiPartChunkSize.toString(),
+      },
+      architecture: Architecture.ARM_64,
+      timeout: Duration.seconds(28),
+      index: 'lambda.py',
+      handler: 'handler',
     });
 
     // Attach S3 Batch Operations job assumed roles and policies

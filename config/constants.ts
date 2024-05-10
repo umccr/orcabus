@@ -103,9 +103,9 @@ export const basespaceAccessTokenSecretName = '/manual/BaseSpaceAccessTokenSecre
 ICAv1 Resources
  */
 export const icav1AccessTokenSecretName: Record<AppStage, string> = {
-  [AppStage.BETA]: 'ICAv1JWTKey-umccr-prod-service-trial', // pragma: allowlist secret
-  [AppStage.GAMMA]: 'ICAv1JWTKey-umccr-prod-service-staging', // pragma: allowlist secret
-  [AppStage.PROD]: 'ICAv1JWTKey-umccr-prod-service-prod', // pragma: allowlist secret
+  [AppStage.BETA]: 'IcaSecretsPortal', // pragma: allowlist secret
+  [AppStage.GAMMA]: 'IcaSecretsPortal', // pragma: allowlist secret
+  [AppStage.PROD]: 'IcaSecretsPortal', // pragma: allowlist secret
 };
 
 export const icav1CopyBatchUtilityName = 'icav1_copy_batch_utility';

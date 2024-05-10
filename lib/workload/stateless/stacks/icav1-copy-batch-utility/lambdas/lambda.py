@@ -36,7 +36,7 @@ myargs = {'ACL': 'bucket-owner-full-control', 'StorageClass': obj_copy_storage_c
 # Instantiate S3Client
 s3Client = boto3.client('s3', config=config)
 
-def lambda_handler(event, context):
+def handler(event, context):
 # Parse job parameters from Amazon S3 batch operations
     invocationId = event['invocationId']
     invocationSchemaVersion = event['invocationSchemaVersion']
