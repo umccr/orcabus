@@ -8,6 +8,10 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { PythonLambdaUuidConstruct } from '../python-lambda-uuid-generator-function';
+import * as lambda_python from '@aws-cdk/aws-lambda-python-alpha';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { Duration } from 'aws-cdk-lib';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 
 export interface WfmWorkflowStateChangeIcav2ReadyEventHandlerConstructProps {
   /* Names of table to write to */
@@ -16,8 +20,14 @@ export interface WfmWorkflowStateChangeIcav2ReadyEventHandlerConstructProps {
   /* Names of the stateMachine to create */
   stateMachineName: string; // Name of the state machine to create
 
+  /* The type of workflow we're working with */
+  workflowPlatformType: string; // One of 'cwl' or 'nextflow'
+
   /* The pipeline ID ssm parameter path */
   pipelineIdSsmPath: string; // Name of the pipeline id ssm parameter path we want to use as a backup
+
+  /* The ICAV2 Access token (needed to launch the pipeline inside the lambda) */
+  icav2AccessTokenSecretObj: secretsmanager.ISecret;
 
   /* Event configurations to push to  */
   detailType: string; // Detail type of the event to raise
@@ -28,8 +38,6 @@ export interface WfmWorkflowStateChangeIcav2ReadyEventHandlerConstructProps {
   /* State machines to run (underneath) */
   /* The inputs generation statemachine */
   generateInputsJsonSfn: sfn.IStateMachine;
-  /* The internal sfn event we run */
-  internalLaunchSfn: sfn.IStateMachine; // The arn of the internal step function that actually launches the icav2 analysis
 
   /* Internal workflowRunStateChange event details */
   workflowType: string;
@@ -60,6 +68,27 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
     // Build the lambda python function to generate a uuid
     const uuid_lambda_obj = new PythonLambdaUuidConstruct(this, 'uuid_python').lambdaObj;
 
+    // Build the launch lambda object
+    const launch_lambda_obj = new lambda_python.PythonFunction(
+      this,
+      'icav2_cwl_launch_python_function',
+      {
+        runtime: lambda.Runtime.PYTHON_3_11,
+        architecture: lambda.Architecture.ARM_64,
+        entry: path.join(__dirname, 'icav2_launch_pipeline_lambda_py'),
+        index: 'icav2_launch_pipeline_lambda.py',
+        handler: 'handler',
+        memorySize: 1024,
+        timeout: Duration.seconds(60),
+        environment: {
+          ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretArn,
+        },
+      }
+    );
+
+    // Give the lambda the ability to read the icav2 secret
+    props.icav2AccessTokenSecretObj.grantRead(<iam.Role>launch_lambda_obj.role);
+
     // Collect the pipeline id from the ssm parameter store
     const pipeline_id_ssm_param_obj = ssm.StringParameter.fromStringParameterName(
       this,
@@ -79,6 +108,8 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
       definitionSubstitutions: {
         /* Table object */
         __table_name__: table_obj.tableName,
+        /* Workflow Platform type */
+        __workflow_platform_type__: props.workflowPlatformType, // One of 'cwl' or 'nextflow'
         /* Event metadata */
         __detail_type__: props.detailType,
         __eventbus_name__: props.eventBusName,
@@ -88,17 +119,21 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
         __workflow_version__: props.workflowVersion,
         __service_version__: props.serviceVersion,
         /* Lambdas */
-        __generate_db_uuid_lambda_function_arn__: uuid_lambda_obj.functionArn,
+        __generate_db_uuid_lambda_function_arn__: uuid_lambda_obj.currentVersion.functionArn,
+        __launch_icav2_pipeline_lambda_function_name__:
+          launch_lambda_obj.currentVersion.functionArn,
         /* SSM Parameter paths */
         __pipeline_id_ssm_path__: pipeline_id_ssm_param_obj.parameterName,
         /* Step functions */
         __set_input_json_state_machine_arn__: props.generateInputsJsonSfn.stateMachineArn,
-        __launch_state_machine_arn__: props.internalLaunchSfn.stateMachineArn,
       },
     });
 
     /* Grant the state machine access to invoke the dbuuid generator lambda function */
     uuid_lambda_obj.currentVersion.grantInvoke(this.stateMachineObj.role);
+
+    /* Grant the state machine access to invoke the launch lambda function */
+    launch_lambda_obj.currentVersion.grantInvoke(this.stateMachineObj.role);
 
     /* Grant the state machine access to the ssm parameter path */
     pipeline_id_ssm_param_obj.grantRead(this.stateMachineObj.role);
@@ -114,7 +149,9 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
         actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
       })
     );
-    props.internalLaunchSfn.grantStartExecution(this.stateMachineObj.role);
+
+    // Grant the state machine the ability to start the internal generate inputs sfn
+    props.generateInputsJsonSfn.grantStartExecution(this.stateMachineObj.role);
 
     /* Grant the state machine read and write access to the table */
     table_obj.grantReadWriteData(this.stateMachineObj);
@@ -128,7 +165,7 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
         detailType: [props.detailType],
         detail: {
           status: ['ready'],
-          workflow: [props.workflowType],
+          workflowType: [props.workflowType],
         },
       },
     });

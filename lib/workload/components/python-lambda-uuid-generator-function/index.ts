@@ -14,7 +14,7 @@ export class PythonLambdaUuidConstruct extends Construct {
       runtime: lambda.Runtime.PYTHON_3_11,
       architecture: lambda.Architecture.ARM_64,
       entry: path.join(__dirname, 'uuid_py'),
-      index: 'uuid.py',
+      index: 'run_uuid.py',
       handler: 'handler',
       memorySize: 1024,
       timeout: Duration.seconds(3),

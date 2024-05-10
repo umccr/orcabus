@@ -5,7 +5,6 @@ import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 
-import { SfnIcav2LaunchPipelineConstruct } from '../../../../../../components/dynamodb-icav2-launch-pipeline-sfn';
 import { Icav2AnalysisEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-handle-event-change-sfn';
 import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-ready-event-handler-sfn';
 
@@ -45,21 +44,9 @@ export class BclConvertInteropQcIcav2PipelineConstruct extends Construct {
 
     1. A step function that listens to the 'ready' event from the WFM for bclconvert interop qc pipelines
     2. A step function that can take the parameters of the payload and convert these into an input json for the ICAv2 pipeline analysis
-    3. A step function that given an input json can launch an icav2 pipeline
+    3. A step function that listens to icav2 events and returns internal events to the WFM
 
     */
-
-    // Launch ICAv2 pipeline and update database SFN
-    // Add machine names
-    const launch_icav2_pipeline_sfn = new SfnIcav2LaunchPipelineConstruct(
-      this,
-      'launch_bclconvert_interop_qc_lambda',
-      {
-        stateMachineName: `${props.stateMachinePrefix}-launch-icav2-pipeline`,
-        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-        tableObj: props.dynamodbTableObj,
-      }
-    ).stateMachine;
 
     const configure_inputs_sfn = new sfn.StateMachine(this, 'configure_inputs_sfn', {
       stateMachineName: `${props.stateMachinePrefix}-configure-inputs-json`,
@@ -73,19 +60,19 @@ export class BclConvertInteropQcIcav2PipelineConstruct extends Construct {
     props.dynamodbTableObj.grantReadWriteData(configure_inputs_sfn.role);
 
     // Generate state machine for handling the 'ready' event
-    // This will call the configure inputs pipeline
     const handle_wfm_ready_event_sfn = new WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct(
       this,
       'handle_wfm_ready_event',
       {
         tableName: props.dynamodbTableObj.tableName,
         stateMachineName: `${props.stateMachinePrefix}-wfm-ready-event-handler`,
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+        workflowPlatformType: 'cwl', // Hardcoded this pipeline is a CWL pipeline.
         detailType: props.detailType,
         eventBusName: props.eventBusName,
         triggerLaunchSource: props.triggerLaunchSource,
         internalEventSource: props.internalEventSource,
         generateInputsJsonSfn: configure_inputs_sfn,
-        internalLaunchSfn: launch_icav2_pipeline_sfn,
         pipelineIdSsmPath: props.pipelineIdSsmObj.parameterName,
         workflowType: props.workflowType,
         workflowVersion: props.workflowVersion,

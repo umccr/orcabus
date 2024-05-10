@@ -203,26 +203,30 @@ def handler(event, context):
 
     # Check workflow type
     if workflow_type is None:
-        raise ValueError("workflow_type should be one of 'nextflow' or 'cwl'")
+        raise ValueError(f"workflow_type should be one of 'nextflow' or 'cwl', got {workflow_type} instead")
 
     if workflow_type.lower() == 'cwl':
         from wrapica.project_pipelines import (
-            ICAv2CwlAnalysisJsonInput as ICAv2AnalysisJsonInput,
+            ICAv2CwlAnalysisJsonInput as ICAv2AnalysisInput,
             ICAv2CWLPipelineAnalysis as ICAv2PipelineAnalysis,
+        )
+        # Collect the input json
+        icav2_analysis_input_obj = ICAv2AnalysisInput(
+            input_json=input_json
         )
     elif workflow_type.lower() == 'nextflow':
         from wrapica.project_pipelines import (
-            ICAv2NextflowAnalysisJsonInput as ICAv2AnalysisJsonInput,
+            ICAv2NextflowAnalysisInput as ICAv2AnalysisInput,
             ICAv2NextflowPipelineAnalysis as ICAv2PipelineAnalysis,
         )
+        # Collect the input json
+        icav2_analysis_input_obj = ICAv2AnalysisInput(
+            input_json=input_json,
+            project_id=project_id,
+            pipeline_id=pipeline_id
+        )
     else:
-        raise ValueError("workflow_type should be one of 'nextflow' or 'cwl'")
-
-
-    # Collect the input json
-    icav2_analysis_input_obj = ICAv2AnalysisJsonInput(
-        input_json=input_json
-    )
+        raise ValueError(f"workflow_type should be one of 'nextflow' or 'cwl' got {workflow_type} instead")
 
     # Initialise an ICAv2CWLPipeline Analysis object
     analysis_obj = ICAv2PipelineAnalysis(
@@ -260,23 +264,25 @@ def handler(event, context):
 
 # if __name__ == "__main__":
 #     import os
-#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2Jwticav2-credentials-umccr-service-user-trial"
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-trial"
 #     print(
 #         json.dumps(
 #             handler(
 #                 event={
-#                     "user_tags": {
-#                         "instrument_run_id": "231116_A01052_0172_BHVLM5DSX7"
-#                     },
-#                     "technical_tags": {
-#                         "portal_run_id": "20240403abcd1234"
-#                     },
-#                     "run_id": "231116_A01052_0172_BHVLM5DSX7",
-#                     "user_reference": "umccr_trial__orcabus_semi_automated__bclconvert_qc_pipeline__20240403abcd1234",
-#                     "project_id": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
-#                     "bclconvert_report_directory": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/",
-#                     "analysis_output_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/bclconvert_interop-qc/1_3_1__1_21__20240312031410/20240403abcd1234/",
-#                     "interop_directory": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/"
+#                   "workflow_type": "cwl",
+#                   "user_tags": {
+#                     "projectname": "trial"
+#                   },
+#                   "technical_tags": {
+#                     "portal_run_id": "20240510abcd0015",
+#                     "step_functions_execution_arn": "arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-wfm-ready-event-handler:aace90a0-37a2-c82f-e176-14008dccaff0_eab7d881-f6bc-a492-1cc2-c23fbcea8ea4"
+#                   },
+#                   "user_reference": "bclconvert_interop__semi_automated__umccr__pipeline",
+#                   "project_id": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
+#                   "pipeline_id": "f606f580-d476-47a8-9679-9ddb39fcb0a8",
+#                   "ica_logs_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0015/logs/",
+#                   "analysis_output_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0015/out/",
+#                   "input_json": "{\"bclconvert_report_directory\":{\"class\":\"Directory\",\"location\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/\"},\"interop_directory\":{\"class\":\"Directory\",\"location\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/\"},\"run_id\":\"231116_A01052_0172_BHVLM5DSX7\"}"
 #                 },
 #                 context=None
 #             ),

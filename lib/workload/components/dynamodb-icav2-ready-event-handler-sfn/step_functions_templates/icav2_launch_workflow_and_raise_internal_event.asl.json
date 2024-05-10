@@ -47,7 +47,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
-        "FunctionName": "${__generate_db_uuid__}",
+        "FunctionName": "${__generate_db_uuid_lambda_function_arn__}",
         "Payload": {}
       },
       "Retry": [
@@ -167,7 +167,7 @@
                   "event_timestamp_list": {
                     "L": [
                       {
-                        "S.$": "$.workflow_inputs.timestamp"
+                        "S.$": "$$.State.EnteredTime"
                       }
                     ]
                   },
@@ -191,40 +191,241 @@
     "Wait 1 Second (pre-input-generation)": {
       "Type": "Wait",
       "Seconds": 1,
-      "Next": "Set Input Json Sfn"
+      "Next": "Set Inputs (Parallel)"
     },
-    "Set Input Json Sfn": {
+    "Set Inputs (Parallel)": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Set Input Json Sfn",
+          "States": {
+            "Set Input Json Sfn": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "${__set_input_json_state_machine_arn__}",
+                "Input": {
+                  "db_uuid.$": "$.create_db_uuid_step.db_uuid"
+                }
+              },
+              "ResultPath": "$.set_input_json_sfn_step",
+              "Next": "Wait 1 Second (pre-execution)"
+            },
+            "Wait 1 Second (pre-execution)": {
+              "Type": "Wait",
+              "Seconds": 1,
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Pipeline ID in Event Payload",
+          "States": {
+            "Pipeline ID in Event Payload": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.workflow_inputs.payload.pipelineId",
+                  "IsPresent": true,
+                  "Next": "Skip Get Parameter"
+                }
+              ],
+              "Default": "GetPipelineIdSsmParameter"
+            },
+            "Skip Get Parameter": {
+              "Type": "Pass",
+              "Parameters": {
+                "pipeline_id": "$.workflow_inputs.payload.pipelineId"
+              },
+              "ResultPath": "$.pipeline_id_var",
+              "Next": "DynamoDB UpdatePipelineId"
+            },
+            "GetPipelineIdSsmParameter": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__pipeline_id_ssm_path__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "pipeline_id.$": "$.Parameter.Value"
+              },
+              "ResultPath": "$.pipeline_id_var",
+              "Next": "DynamoDB UpdatePipelineId"
+            },
+            "DynamoDB UpdatePipelineId": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id": {
+                    "S.$": "$.create_db_uuid_step.db_uuid"
+                  },
+                  "id_type": "db_uuid"
+                },
+                "UpdateExpression": "SET analysis_pipeline_id = :analysis_pipeline_id",
+                "ExpressionAttributeValues": {
+                  ":analysis_pipeline_id": {
+                    "S.$": "$.pipeline_id_var.pipeline_id"
+                  }
+                }
+              },
+              "ResultPath": "$.update_item_step",
+              "Next": "Wait 1 Second"
+            },
+            "Wait 1 Second": {
+              "Type": "Wait",
+              "Seconds": 1,
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.set_inputs_parallel_step",
+      "Next": "get_database_entry"
+    },
+    "get_database_entry": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
-        "StateMachineArn": "${__set_input_json_state_machine_arn__}",
-        "Input": {
-          "db_uuid.$": "$.create_db_uuid_step.db_uuid"
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.create_db_uuid_step.db_uuid",
+          "id_type": "db_uuid"
         }
       },
-      "Next": "Wait 1 Second (pre-execution)"
-    },
-    "Wait 1 Second (pre-execution)": {
-      "Type": "Wait",
-      "Seconds": 1,
-      "Next": "Launch ICAv2 Workflow"
-    },
-    "Launch ICAv2 Pipeline Sfn": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::states:startExecution.sync:2",
-      "Parameters": {
-        "StateMachineArn": "${__launch_icav2_pipeline_sfn_arn__}",
-        "Input": {
-          "db_uuid.$": "$.create_db_uuid_step.db_uuid"
-        }
+      "ResultSelector": {
+        "payload.$": "States.StringToJson($.Item.launch_event_payload.S)",
+        "input_json.$": "$.Item.input_json.S",
+        "pipeline_id.$": "$.Item.analysis_pipeline_id.S",
+        "technical_tags.$": "States.StringToJson($.Item.analysis_technical_tags.S)"
       },
+      "ResultPath": "$.get_input_parameters_from_event",
+      "Next": "get_parameters_from_payload"
+    },
+    "get_parameters_from_payload": {
+      "Type": "Pass",
+      "Parameters": {
+        "project_id.$": "$.get_input_parameters_from_event.payload.projectId",
+        "pipeline_id.$": "$.get_input_parameters_from_event.pipeline_id",
+        "user_reference.$": "$.get_input_parameters_from_event.payload.userReference",
+        "input_json.$": "$.get_input_parameters_from_event.input_json",
+        "analysis_output_uri.$": "$.get_input_parameters_from_event.payload.analysisOutputUri",
+        "ica_logs_uri.$": "$.get_input_parameters_from_event.payload.icaLogsUri",
+        "technical_tags.$": "$.get_input_parameters_from_event.technical_tags",
+        "user_tags.$": "$.get_input_parameters_from_event.payload.userTags"
+      },
+      "ResultPath": "$.get_parameters_from_payload",
+      "Next": "launch_icav2_pipeline_lambda"
+    },
+    "launch_icav2_pipeline_lambda": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload": {
+          "project_id.$": "$.get_parameters_from_payload.project_id",
+          "pipeline_id.$": "$.get_parameters_from_payload.pipeline_id",
+          "workflow_type": "${__workflow_platform_type__}",
+          "user_reference.$": "$.get_parameters_from_payload.user_reference",
+          "input_json.$": "$.get_parameters_from_payload.input_json",
+          "analysis_output_uri.$": "$.get_parameters_from_payload.analysis_output_uri",
+          "ica_logs_uri.$": "$.get_parameters_from_payload.ica_logs_uri",
+          "technical_tags.$": "$.get_parameters_from_payload.technical_tags",
+          "user_tags.$": "$.get_parameters_from_payload.user_tags"
+        },
+        "FunctionName": "${__launch_icav2_pipeline_lambda_function_name__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "TimeoutSeconds": 60,
+      "ResultSelector": {
+        "analysis_id.$": "$.Payload.analysis_id",
+        "analysis_status.$": "$.Payload.analysis_status",
+        "analysis_return_payload.$": "$.Payload.analysis_return_payload",
+        "analysis_launch_payload.$": "$.Payload.analysis_launch_payload"
+      },
+      "ResultPath": "$.launch_nextflow_object_step",
+      "Next": "Parallel"
+    },
+    "Parallel": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "DynamoDB Update DbUuid Item",
+          "States": {
+            "DynamoDB Update DbUuid Item": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id": {
+                    "S.$": "$.create_db_uuid_step.db_uuid"
+                  },
+                  "id_type": "db_uuid"
+                },
+                "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload",
+                "ExpressionAttributeValues": {
+                  ":analysis_id": {
+                    "S.$": "$.launch_nextflow_object_step.analysis_id"
+                  },
+                  ":analysis_status": {
+                    "S.$": "$.launch_nextflow_object_step.analysis_status"
+                  },
+                  ":analysis_return_payload": {
+                    "S.$": "States.JsonToString($.launch_nextflow_object_step.analysis_return_payload)"
+                  },
+                  ":analysis_launch_payload": {
+                    "S.$": "States.JsonToString($.launch_nextflow_object_step.analysis_launch_payload)"
+                  }
+                }
+              },
+              "ResultPath": "$.update_entry_post_launch_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "DynamoDB Put Icav2 ID Partition Entry",
+          "States": {
+            "DynamoDB Put Icav2 ID Partition Entry": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "id.$": "$.launch_nextflow_object_step.analysis_id",
+                  "id_type": "icav2_analysis_id",
+                  "db_uuid": {
+                    "S.$": "$.create_db_uuid_step.db_uuid"
+                  }
+                }
+              },
+              "ResultPath": "$.dynamo_db_put_item_step",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.update_database",
       "Next": "Wait 1 Second (Post-execution)"
     },
     "Wait 1 Second (Post-execution)": {
       "Type": "Wait",
       "Seconds": 1,
       "Comment": "Wait for databases to sync before continuing",
-      "End": true
+      "Next": "Get PortalRunId DataBase Entry"
     },
     "Get PortalRunId DataBase Entry": {
       "Type": "Task",
@@ -246,7 +447,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
-        "TableName": "MyDynamoDBTable",
+        "TableName": "${__table_name__}",
         "Key": {
           "id.$": "$.database_event_data.db_uuid",
           "id_type": "db_uuid"
@@ -256,14 +457,14 @@
       "ResultSelector": {
         "portalRunId.$": "$.Item.portal_run_id.S",
         "timestamp.$": "$$.State.EnteredTime",
-        "status": "$.Item.analysis_status.S",
+        "status.$": "$.Item.analysis_status.S",
         "workflowType": "${__workflow_type__}",
         "workflowVersion": "${__workflow_version__}",
         "payload": {
           "refId": null,
           "analysisLaunchPayload.$": "$.Item.analysis_launch_payload.S",
-          "analysisReturnPayload": "$.Item.analysis_return_payload.S",
-          "stateMachineExecutionArn": "$.Item.state_machine_execution_arn.S",
+          "analysisReturnPayload.$": "$.Item.analysis_return_payload.S",
+          "stateMachineExecutionArn.$": "$.Item.state_machine_execution_arn.S",
           "analysisId.$": "$.Item.analysis_id.S"
         },
         "serviceVersion": "${__service_version__}"

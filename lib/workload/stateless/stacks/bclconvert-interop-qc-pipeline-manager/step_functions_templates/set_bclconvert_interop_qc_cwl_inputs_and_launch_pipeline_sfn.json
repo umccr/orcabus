@@ -13,7 +13,7 @@
         }
       },
       "ResultSelector": {
-        "payload.$": "States.StringToJson($.Item.launch_event_payload)"
+        "payload.$": "States.StringToJson($.Item.launch_event_payload.S)"
       },
       "ResultPath": "$.get_input_parameters_from_event",
       "Next": "set_input_json_from_event_payload"
@@ -24,13 +24,13 @@
         "input_json": {
           "bclconvert_report_directory": {
             "class": "Directory",
-            "location.$": "$.get_database_entry.payload.bclconvert_report_directory"
+            "location.$": "$.get_input_parameters_from_event.payload.bclconvertReportDirectory"
           },
           "interop_directory": {
             "class": "Directory",
-            "location.$": "$.get_database_entry.payload.interop_directory"
+            "location.$": "$.get_input_parameters_from_event.payload.interopDirectory"
           },
-          "run_id.$": "$.get_database_entry.payload.run_id"
+          "run_id.$": "$.get_input_parameters_from_event.payload.runId"
         }
       },
       "ResultPath": "$.set_input_json",

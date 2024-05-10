@@ -59,7 +59,7 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
         /* Put event details */
         __workflow_type__: props.workflowType,
         __workflow_version__: props.workflowVersion,
-        __service_version_: props.serviceVersion,
+        __service_version__: props.serviceVersion,
       },
     });
 
@@ -71,14 +71,13 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
       eventBus: eventbus_obj,
       ruleName: `${props.stateMachineName}-rule`,
       eventPattern: {
-        detailType: ['Event from aws:sqs'],
-        source: [`Pipe ${props.icaEventPipeName}`],
+        // detailType: ['Event from aws:sqs'],
+        // FIXME - Pipe ${props.icaEventPipeName}
+        // source: [{ startsWith: "Pipe IcaEventPipe` }],
         detail: {
           'ica-event': {
             // ICA_EXEC_028 is an analysis state change in ICAv2?
-            eventCode: [{ prefix: 'ICA_EXEC_028' }],
-            projectId: [{ exists: true }],
-            payload: [{ exists: true }],
+            eventCode: ['ICA_EXEC_028'],
           },
         },
       },
@@ -87,7 +86,7 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
     /* Add rule as a target to the state machine */
     rule.addTarget(
       new events_targets.SfnStateMachine(this.stateMachineObj, {
-        input: events.RuleTargetInput.fromEventPath('$.detail'),
+        input: events.RuleTargetInput.fromEventPath('$.detail.ica-event'),
       })
     );
 

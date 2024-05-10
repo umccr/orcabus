@@ -12,7 +12,6 @@ import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Icav2AnalysisEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-handle-event-change-sfn';
 import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-ready-event-handler-sfn';
-import { SfnIcav2LaunchPipelineConstruct } from '../../../../../../components/dynamodb-icav2-launch-pipeline-sfn';
 
 interface Cttsov2Icav2PipelineManagerConstructProps {
   /* Stack Objects */
@@ -115,30 +114,23 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       <iam.IRole>upload_samplesheet_to_cache_dir_lambda_obj.currentVersion.role
     );
 
-    const launch_icav2_pipeline_sfn = new SfnIcav2LaunchPipelineConstruct(
-      this,
-      'launch_bclconvert_interop_qc_lambda',
-      {
-        stateMachineName: `${props.stateMachinePrefix}-launch-icav2-pipeline`,
-        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-        tableObj: props.dynamodbTableObj,
-      }
-    ).stateMachine;
-
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
     const configure_inputs_sfn = new sfn.StateMachine(
       this,
       'cttso_v2_launch_step_functions_state_machine',
       {
+        stateMachineName: `${props.stateMachinePrefix}-configure-inputs-json`,
         // defintiontemplate
         definitionBody: DefinitionBody.fromFile(props.generateInputJsonSfnTemplatePath),
         // definitionSubstitutions
         definitionSubstitutions: {
           /* Lambda arns */
-          __generate_copy_manifest_dict__: generate_copy_manifest_dict_lambda_obj.functionArn,
-          __generate_trimmed_samplesheet__: generate_trimmed_samplesheet_lambda_obj.functionArn,
+          __generate_copy_manifest_dict__:
+            generate_copy_manifest_dict_lambda_obj.currentVersion.functionArn,
+          __generate_trimmed_samplesheet__:
+            generate_trimmed_samplesheet_lambda_obj.currentVersion.functionArn,
           __upload_samplesheet_to_cache_dir__:
-            upload_samplesheet_to_cache_dir_lambda_obj.functionArn,
+            upload_samplesheet_to_cache_dir_lambda_obj.currentVersion.functionArn,
           /* Subfunction state machines */
           __copy_batch_data_state_machine_arn__:
             props.icav2CopyBatchStateMachineObj.stateMachineArn,
@@ -182,6 +174,9 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       {
         /* Names of objects to get */
         tableName: props.dynamodbTableObj.tableName, // Name of the table to get / update / query
+        /* Workflow type */
+        workflowPlatformType: 'nextflow', // This is a nextflow pipeline
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj, // Secret to get the icav2 access token
         /* Names of objects to create */
         stateMachineName: `${props.stateMachinePrefix}-wfm-ready-event-handler`, // Name of the state machine to create
         /* The pipeline ID ssm parameter path */
@@ -194,8 +189,6 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         /* State machines to run (underneath) */
         /* The inputs generation statemachine */
         generateInputsJsonSfn: configure_inputs_sfn,
-        /* The internal sfn event we run */
-        internalLaunchSfn: launch_icav2_pipeline_sfn, // The arn of the internal step function that actually launches the icav2 analysis
         /* Internal workflowRunStateChange event details */
         workflowType: props.workflowType,
         workflowVersion: props.workflowVersion,
