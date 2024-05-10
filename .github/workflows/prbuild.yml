@@ -16,56 +16,44 @@ permissions: read-all
 #  https://github.com/actions-rust-lang/setup-rust-toolchain
 
 jobs:
-  # pre-commit-lint-security:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Print toolchain versions
-  #       run: |
-  #         node -v
-  #         python3 -V
-  #         pip3 -V
-  #         make --version
-
-  #     # TODO see whether we can leverage https://github.com/pre-commit/action
-  #     - name: Install system-wide tools dependencies
-  #       run: |
-  #         pip3 install pre-commit detect-secrets black ggshield
-
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-
-  #     - name: TruffleHog OSS
-  #       uses: trufflesecurity/trufflehog@v3.34.0
-  #       with:
-  #         path: ./
-  #         base: ${{ github.event.repository.default_branch }}
-  #         head: HEAD
-  #         extra_args: --debug --only-verified
-
-  #     - name: Install dependencies
-  #       run: |
-  #         make install
-
-  #     - name: Lint and code formatting
-  #       run: |
-  #         make check
-
-  test-stateful-stack:
-    runs-on: codebuild-orcabus-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+  pre-commit-lint-security:
+    runs-on: ubuntu-latest
     steps:
+      - name: Print toolchain versions
+        run: |
+          node -v
+          python3 -V
+          pip3 -V
+          make --version
+
+      # TODO see whether we can leverage https://github.com/pre-commit/action
+      - name: Install system-wide tools dependencies
+        run: |
+          pip3 install pre-commit detect-secrets black ggshield
+
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@v3.34.0
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
 
       - name: Install dependencies
         run: |
-          yarn install --immutable
+          make install
 
-      - run: make test-stateful
+      - name: Lint and code formatting
+        run: |
+          make check
 
-  test-stateless-stack:
-    runs-on: codebuild-orcabus-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+  test-stateless-suite:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -77,10 +65,24 @@ jobs:
         run: |
           yarn install --immutable
 
-      - run: make test-stateless
+      - run: make test-suite
 
-  # test-stateless-suite:
-  #   runs-on: ubuntu-latest
+  # This require a self hosted runner where the compute is in ARM architecture
+  #
+  # test-stateful-stack:
+  #   runs-on: codebuild-orcabus-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Install dependencies
+  #       run: |
+  #         yarn install --immutable
+
+  #     - run: make test-stateful
+
+  # test-stateless-stack:
+  #   runs-on: codebuild-orcabus-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
   #   steps:
   #     - name: Checkout code
   #       uses: actions/checkout@v4
@@ -92,4 +94,4 @@ jobs:
   #       run: |
   #         yarn install --immutable
 
-  #     - run: make test-suite
+  #     - run: make test-stateless
