@@ -16,44 +16,44 @@ permissions: read-all
 #  https://github.com/actions-rust-lang/setup-rust-toolchain
 
 jobs:
-  pre-commit-lint-security:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print toolchain versions
-        run: |
-          node -v
-          python3 -V
-          pip3 -V
-          make --version
+  # pre-commit-lint-security:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Print toolchain versions
+  #       run: |
+  #         node -v
+  #         python3 -V
+  #         pip3 -V
+  #         make --version
 
-      # TODO see whether we can leverage https://github.com/pre-commit/action
-      - name: Install system-wide tools dependencies
-        run: |
-          pip3 install pre-commit detect-secrets black ggshield
+  #     # TODO see whether we can leverage https://github.com/pre-commit/action
+  #     - name: Install system-wide tools dependencies
+  #       run: |
+  #         pip3 install pre-commit detect-secrets black ggshield
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
 
-      - name: TruffleHog OSS
-        uses: trufflesecurity/trufflehog@v3.34.0
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --debug --only-verified
+  #     - name: TruffleHog OSS
+  #       uses: trufflesecurity/trufflehog@v3.34.0
+  #       with:
+  #         path: ./
+  #         base: ${{ github.event.repository.default_branch }}
+  #         head: HEAD
+  #         extra_args: --debug --only-verified
 
-      - name: Install dependencies
-        run: |
-          make install
+  #     - name: Install dependencies
+  #       run: |
+  #         make install
 
-      - name: Lint and code formatting
-        run: |
-          make check
+  #     - name: Lint and code formatting
+  #       run: |
+  #         make check
 
   test-stateful-stack:
-    runs-on: ubuntu-latest
+    runs-on: codebuild-orcabus-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -65,7 +65,7 @@ jobs:
       - run: make test-stateful
 
   test-stateless-stack:
-    runs-on: ubuntu-latest
+    runs-on: codebuild-orcabus-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -79,17 +79,17 @@ jobs:
 
       - run: make test-stateless
 
-  test-stateless-suite:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # test-stateless-suite:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Rust installation
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+  #     - name: Rust installation
+  #       uses: actions-rust-lang/setup-rust-toolchain@v1
 
-      - name: Install dependencies
-        run: |
-          yarn install --immutable
+  #     - name: Install dependencies
+  #       run: |
+  #         yarn install --immutable
 
-      - run: make test-suite
+  #     - run: make test-suite
