@@ -12,11 +12,16 @@ import {
   Icav2EventTranslatorTable,
   Icav2EventTranslatorTableStackProps,
 } from './stacks/icav2-event-translator-dynamo-db/deploy/stack';
+import {
+  BclconvertInteropQcIcav2PipelineTableStack,
+  BclconvertInteropQcIcav2PipelineTableStackProps,
+} from './stacks/bclconvert-interop-qc-pipeline-dynamo-db/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   sharedStackProps: SharedStackProps;
   tokenServiceStackProps: TokenServiceStackProps;
   icaEventPipeStackProps: IcaEventPipeStackProps;
+  bclconvertInteropQcIcav2PipelineTableStackProps: BclconvertInteropQcIcav2PipelineTableStackProps;
   cttsov2Icav2PipelineTableStackProps: Cttsov2Icav2PipelineTableStackProps;
   icav2EventTranslatorTableStackProps: Icav2EventTranslatorTableStackProps;
 }
@@ -27,6 +32,7 @@ export class StatefulStackCollection {
   readonly sharedStack: Stack;
   readonly tokenServiceStack: Stack;
   readonly icaEventPipeStack: Stack;
+  readonly bclconvertInteropQcIcav2PipelineTableStack: Stack;
   readonly cttsov2Icav2PipelineTableStack: Stack;
   readonly icav2EventTranslatorTableStack: Stack;
 
@@ -49,6 +55,16 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'IcaEventPipeStack'),
       ...statefulConfiguration.icaEventPipeStackProps,
     });
+
+    this.bclconvertInteropQcIcav2PipelineTableStack =
+      new BclconvertInteropQcIcav2PipelineTableStack(
+        scope,
+        'BclconvertInteropQcIcav2PipelineTableStack',
+        {
+          ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineTable'),
+          ...statefulConfiguration.bclconvertInteropQcIcav2PipelineTableStackProps,
+        }
+      );
 
     this.cttsov2Icav2PipelineTableStack = new Cttsov2Icav2PipelineTable(
       scope,

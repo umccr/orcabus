@@ -1,0 +1,67 @@
+{
+  "Comment": "Launch Icav2 Pipeline and log in db",
+  "StartAt": "get_database_entry",
+  "States": {
+    "get_database_entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "ResultSelector": {
+        "payload.$": "States.StringToJson($.Item.launch_event_payload)"
+      },
+      "ResultPath": "$.get_input_parameters_from_event",
+      "Next": "set_input_json_from_event_payload"
+    },
+    "set_input_json_from_event_payload": {
+      "Type": "Pass",
+      "Parameters": {
+        "input_json": {
+          "bclconvert_report_directory": {
+            "class": "Directory",
+            "location.$": "$.get_database_entry.payload.bclconvert_report_directory"
+          },
+          "interop_directory": {
+            "class": "Directory",
+            "location.$": "$.get_database_entry.payload.interop_directory"
+          },
+          "run_id.$": "$.get_database_entry.payload.run_id"
+        }
+      },
+      "ResultPath": "$.set_input_json",
+      "Next": "update_database_entry"
+    },
+    "update_database_entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.db_uuid"
+          },
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET input_json = :input_json",
+        "ExpressionAttributeValues": {
+          ":input_json": {
+            "S.$": "States.JsonToString($.set_input_json.input_json)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Wait 1 Second (Pre-execution)"
+    },
+    "Wait 1 Second (Pre-execution)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Wait for databases to sync before continuing",
+      "End": true
+    }
+  }
+}

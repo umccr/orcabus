@@ -15,7 +15,8 @@ export interface Icav2AnalysisEventHandlerConstructProps {
   /* Event configurations to push to  */
   detailType: string; // Detail type of the event to raise
   eventBusName: string; // Detail of the eventbus to push the event to
-  source: string; // Source of the event we push
+  icaEventPipeName: string; // Name of the ica event pipe this step function needs to subscribe to
+  internalEventSource: string; // Source of the event we push
 
   /* Internal workflowRunStateChange event details */
   workflowType: string;
@@ -54,7 +55,7 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
         /* Event metadata */
         __detail_type__: props.detailType,
         __eventbus_name__: props.eventBusName,
-        __eventsource__: props.source,
+        __eventsource__: props.internalEventSource,
         /* Put event details */
         __workflow_type__: props.workflowType,
         __workflow_version__: props.workflowVersion,
@@ -70,8 +71,16 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
       eventBus: eventbus_obj,
       ruleName: `${props.stateMachineName}-rule`,
       eventPattern: {
-        source: [props.source],
-        detailType: [props.detailType],
+        detailType: ['Event from aws:sqs'],
+        source: [`Pipe ${props.icaEventPipeName}`],
+        detail: {
+          'ica-event': {
+            // ICA_EXEC_028 is an analysis state change in ICAv2?
+            eventCode: [{ prefix: 'ICA_EXEC_028' }],
+            projectId: [{ exists: true }],
+            payload: [{ exists: true }],
+          },
+        },
       },
     });
 

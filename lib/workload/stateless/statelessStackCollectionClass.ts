@@ -27,6 +27,10 @@ import {
   BsshIcav2FastqCopyManagerStackProps,
 } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
 import {
+  BclconvertInteropQcIcav2PipelineManagerStack,
+  BclconvertInteropQcIcav2PipelineManagerStackProps,
+} from './stacks/bclconvert-interop-qc-pipeline-manager/deploy/stack';
+import {
   cttsov2Icav2PipelineManagerStackProps,
   Cttsov2Icav2PipelineManagerStack,
 } from './stacks/cttso-v2-pipeline-manager/deploy/stack';
@@ -44,6 +48,7 @@ export interface StatelessStackCollectionProps {
   bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
   icav2CopyBatchUtilityStackProps: ICAv2CopyBatchUtilityStackProps;
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
+  bclconvertInteropQcIcav2PipelineManagerStackProps: BclconvertInteropQcIcav2PipelineManagerStackProps;
   cttsov2Icav2PipelineManagerStackProps: cttsov2Icav2PipelineManagerStackProps;
   schemaStackProps: SchemaStackProps;
   icav2EventTranslatorStackProps: Icav2EventTranslatorStackProps;
@@ -58,6 +63,7 @@ export class StatelessStackCollection {
   readonly bsRunsUploadManagerStack: Stack;
   readonly icav2CopyBatchUtilityStack: Stack;
   readonly bsshIcav2FastqCopyManagerStack: Stack;
+  readonly bclconvertInteropQcIcav2PipelineManagerStack: Stack;
   readonly cttsov2Icav2PipelineManagerStack: Stack;
   readonly schemaStack: Stack;
   readonly icav2EventTranslatorStack: Stack;
@@ -118,6 +124,16 @@ export class StatelessStackCollection {
         ...statelessConfiguration.bsshIcav2FastqCopyManagerStackProps,
       }
     );
+
+    this.bclconvertInteropQcIcav2PipelineManagerStack =
+      new BclconvertInteropQcIcav2PipelineManagerStack(
+        scope,
+        'BclconvertInteropQcIcav2PipelineManagerStack',
+        {
+          ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineManagerStack'),
+          ...statelessConfiguration.bclconvertInteropQcIcav2PipelineManagerStackProps,
+        }
+      );
 
     this.cttsov2Icav2PipelineManagerStack = new Cttsov2Icav2PipelineManagerStack(
       scope,

@@ -1,130 +1,23 @@
 {
-  "Comment": "Move inputs to workflow_inputs",
-  "StartAt": "move_inputs",
+  "Comment": "Launch cttso v2",
+  "StartAt": "get_database_entry",
   "States": {
-    "move_inputs": {
-      "Type": "Pass",
-      "Next": "check_portal_run_id_in_db",
-      "Parameters": {
-        "workflow_inputs.$": "$"
-      },
-      "Comment": "We expect the inputs:\n* \"samplesheet_b64gz\"\n* \"project_id\"\n* \"portal_run_id\"\n* \"sample_id\"\n* \"fastq_list_rows_b64gz\"\n \"cache_uri\"\n* \"output_uri\"\n* \nPlus the following workflow input parameters\n* user_reference\n* user_tags\n"
-    },
-    "check_portal_run_id_in_db": {
+    "get_database_entry": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id": {
-            "S.$": "$.workflow_inputs.portalRunId"
-          },
-          "id_type": {
-            "S": "portal_run_id"
-          }
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
         }
       },
-      "Next": "is_portal_run_id_in_db",
-      "ResultPath": "$.portal_run_id_in_db_step",
+      "ResultPath": "$.database_event_data",
       "ResultSelector": {
-        "db_response.$": "$"
-      }
-    },
-    "is_portal_run_id_in_db": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Not": {
-            "Variable": "$.portal_run_id_in_db_step.db_response.Item",
-            "IsPresent": true
-          },
-          "Next": "generate_db_uuid"
-        }
-      ],
-      "Default": "get_database_entry"
-    },
-    "generate_db_uuid": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "${__generate_db_uuid__}",
-        "Payload": {}
+        "portal_run_id.$": "$.Item.portal_run_id.S",
+        "event_payload.$": "States.StringToJson($.Item.launch_event_payload.S)",
+        "analysis_technical_tags.$": "States.StringToJson($.Item.analysis_technical_tags.S)"
       },
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "Lambda.TooManyRequestsException"
-          ],
-          "IntervalSeconds": 1,
-          "MaxAttempts": 3,
-          "BackoffRate": 2
-        }
-      ],
-      "ResultSelector": {
-        "db_uuid.$": "$.Payload.db_uuid"
-      },
-      "ResultPath": "$.create_db_uuid_step",
-      "Next": "initialise_db_item"
-    },
-    "initialise_db_item": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:putItem",
-      "Parameters": {
-        "TableName": "${__table_name__}",
-        "Item": {
-          "id.$": "$.create_db_uuid_step.db_uuid",
-          "id_type": "db_uuid",
-          "portal_run_id": {
-            "S.$": "$.workflow_inputs.portalRunId"
-          },
-          "state_machine_execution_arn": {
-            "S.$": "$$.Execution.Id"
-          },
-          "analysis_status": {
-            "S": "PRE_LAUNCH"
-          },
-          "analysis_id": {
-            "S": ""
-          },
-          "analysis_return_payload": {
-            "S": ""
-          },
-          "analysis_launch_payload": {
-            "S": ""
-          }
-        }
-      },
-      "ResultPath": "$.dynamo_db_put_item_step",
-      "Next": "put_portal_partition_key_item"
-    },
-    "put_portal_partition_key_item": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:putItem",
-      "Parameters": {
-        "TableName": "${__table_name__}",
-        "Item": {
-          "id.$": "$.workflow_inputs.portalRunId",
-          "id_type": "portal_run_id",
-          "db_uuid": {
-            "S.$": "$.create_db_uuid_step.db_uuid"
-          }
-        }
-      },
-      "ResultPath": "$.dynamo_db_put_item_step",
-      "Next": "add_technical_tags"
-    },
-    "add_technical_tags": {
-      "Type": "Pass",
-      "Parameters": {
-        "technical_tags": {
-          "portal_run_id.$": "$.workflow_inputs.portalRunId",
-          "step_functions_execution_arn.$": "$$.Execution.Id"
-        }
-      },
-      "ResultPath": "$.add_technical_tags_step",
       "Next": "update_entry_pre_fastq_copy"
     },
     "update_entry_pre_fastq_copy": {
@@ -133,7 +26,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.create_db_uuid_step.db_uuid",
+          "id.$": "$.db_uuid",
           "id_type": "db_uuid"
         },
         "UpdateExpression": "SET analysis_status = :analysis_status",
@@ -158,8 +51,8 @@
               "Parameters": {
                 "FunctionName": "${__generate_trimmed_samplesheet__}",
                 "Payload": {
-                  "samplesheet_b64gz.$": "$.workflow_inputs.samplesheetB64gz",
-                  "sample_id.$": "$.workflow_inputs.sampleId"
+                  "samplesheet_b64gz.$": "$.get_database_entry.event_payload.samplesheetB64gz",
+                  "sample_id.$": "$.get_database_entry.event_payload.sampleId"
                 }
               },
               "Retry": [
@@ -188,7 +81,7 @@
               "Parameters": {
                 "FunctionName": "${__upload_samplesheet_to_cache_dir__}",
                 "Payload": {
-                  "cache_uri.$": "$.workflow_inputs.cacheUri",
+                  "cache_uri.$": "$.get_database_entry.event_payload.cacheUri",
                   "samplesheet_dict_b64gz.$": "$.generate_trimmed_samplesheet_step.samplesheet_b64gz"
                 }
               },
@@ -224,9 +117,9 @@
               "Parameters": {
                 "FunctionName": "${__generate_copy_manifest_dict__}",
                 "Payload": {
-                  "cache_uri.$": "$.workflow_inputs.cacheUri",
-                  "sample_id.$": "$.workflow_inputs.sampleId",
-                  "fastq_list_rows_b64gz.$": "$.workflow_inputs.fastqListRowsB64gz"
+                  "cache_uri.$": "$.get_database_entry.event_payload.cacheUri",
+                  "sample_id.$": "$.get_database_entry.event_payload.sampleId",
+                  "fastq_list_rows_b64gz.$": "$.get_database_entry.event_payload.fastqListRowsB64gz"
                 }
               },
               "Retry": [
@@ -301,14 +194,14 @@
       "Parameters": {
         "FunctionName": "${__launch_cttso_nextflow_pipeline__}",
         "Payload": {
-          "project_id.$": "$.workflow_inputs.projectId",
-          "user_reference.$": "$.workflow_inputs.userReference",
-          "run_folder_uri.$": "$.workflow_inputs.cacheUri",
+          "project_id.$": "$.get_database_entry.event_payload.projectId",
+          "user_reference.$": "$.get_database_entry.event_payload.userReference",
+          "run_folder_uri.$": "$.get_database_entry.event_payload.cacheUri",
           "samplesheet_uri.$": "$.copy_files_to_cache_directory_step.samplesheet_file_uri",
-          "sample_id.$": "$.workflow_inputs.sampleId",
-          "analysis_output_uri.$": "$.workflow_inputs.outputUri",
+          "sample_id.$": "$.get_database_entry.event_payload.sampleId",
+          "analysis_output_uri.$": "$.get_database_entry.event_payload.outputUri",
           "technical_tags.$": "$.add_technical_tags_step.technical_tags",
-          "user_tags.$": "$.workflow_inputs.userTags"
+          "user_tags.$": "$.get_database_entry.event_payload.userTags"
         }
       },
       "Retry": [
@@ -377,51 +270,13 @@
         }
       },
       "ResultPath": "$.dynamo_db_put_item_step",
-      "Next": "get_database_entry"
+      "Next": "Wait 1 Second"
     },
-    "get_database_entry": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:getItem",
-      "Parameters": {
-        "TableName": "${__table_name__}",
-        "Key": {
-          "id.$": "$.create_db_uuid_step.db_uuid",
-          "id_type": "db_uuid"
-        }
-      },
-      "Next": "put_launch_event",
-      "ResultPath": "$.database_event_data",
-      "ResultSelector": {
-        "portalRunId.$": "$.Item.portal_run_id.S",
-        "timestamp.$": "$$.State.EnteredTime",
-        "status": "$.Item.analysis_status.S",
-        "workflowType": "${__workflow_type__}",
-        "workflowVersion": "${__workflow_version__}",
-        "payload": {
-          "refId": "",
-          "analysisLaunchPayload.$": "$.Item.analysis_launch_payload.S",
-          "analysisReturnPayload": "$.Item.analysis_return_payload.S",
-          "stateMachineExecutionArn": "$.Item.state_machine_execution_arn.S",
-          "analysisId.$": "$.Item.analysis_id.S"
-        },
-        "serviceVersion": "${__service_version__}"
-      }
-    },
-    "put_launch_event": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::events:putEvents",
-      "Parameters": {
-        "Entries": [
-          {
-            "Detail.$": "$.database_event_data",
-            "DetailType": "workflowRunStateChange",
-            "EventBusName": "${__eventbus_name__}",
-            "Source": "orcabus.cttso_v2",
-            "Resources": []
-          }
-        ]
-      },
-      "End": true
+    "Wait 1 Second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "End": true,
+      "Comment": "Wait a second for database to update"
     }
   }
 }

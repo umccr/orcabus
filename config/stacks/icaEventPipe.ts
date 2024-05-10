@@ -1,9 +1,9 @@
 import { IcaEventPipeStackProps } from '../../lib/workload/stateful/stacks/ica-event-pipe/stack';
-import { eventBusName, icaAwsAccountNumber } from '../constants';
+import { icaEventPipeStackName, eventBusName, icaAwsAccountNumber } from '../constants';
 
 export const getIcaEventPipeStackProps = (): IcaEventPipeStackProps => {
   return {
-    name: 'IcaEventPipeStack',
+    name: icaEventPipeStackName,
     eventBusName: eventBusName,
     slackTopicName: 'AwsChatBotTopic',
     icaAwsAccountNumber: icaAwsAccountNumber,

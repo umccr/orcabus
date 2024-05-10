@@ -1,0 +1,140 @@
+{
+  "Comment": "Launch Icav2 Pipeline and log in db",
+  "StartAt": "get_database_entry",
+  "States": {
+    "get_database_entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "ResultSelector": {
+        "payload.$": "States.StringToJson($.Item.launch_event_payload)",
+        "input_json.$": "$.Item.input_json",
+        "pipeline_id.$": "$.Item.pipeline_id",
+        "technical_tags.$": "States.StringToJson($.Item.analysis_technical_tags)"
+      },
+      "ResultPath": "$.get_input_parameters_from_event",
+      "Next": "get_parameters_from_payload"
+    },
+    "get_parameters_from_payload": {
+      "Type": "Pass",
+      "Parameters": {
+        "project_id.$": "$.get_input_parameters_from_event.payload.project_id",
+        "pipeline_id.$": "$.get_input_parameters_from_event.pipeline_id",
+        "user_reference.$": "$.get_input_parameters_from_event.payload.user_reference",
+        "input_json.$": "$.get_input_parameters_from_event.input_json",
+        "analysis_output_uri.$": "$.get_input_parameters_from_event.payload.analysis_output_uri",
+        "ica_logs_uri.$": "$.get_input_parameters_from_event.payload.ica_logs_uri",
+        "technical_tags.$": "$.get_input_parameters_from_event.technical_tags",
+        "user_tags.$": "$.get_input_parameters_from_event.payload.user_tags"
+      },
+      "Next": "launch_icav2_pipeline_lambda"
+    },
+    "launch_icav2_pipeline_lambda": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload": {
+          "project_id.$": "$.project_id",
+          "pipeline_id.$": "$.pipeline_id",
+          "user_reference.$": "$.user_reference",
+          "input_json.$": "$.input_json",
+          "analysis_output_uri.$": "$.analysis_output_uri",
+          "ica_logs_uri.$": "$.ica_logs_uri",
+          "technical_tags.$": "$.technical_tags",
+          "user_tags.$": "$.user_tags"
+        },
+        "FunctionName": "${__launch_icav2_pipeline_lambda_function_name__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Parallel"
+    },
+    "Parallel": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "DynamoDB Update DbUuid Item",
+          "States": {
+            "DynamoDB Update DbUuid Item": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id": {
+                    "S.$": "$.create_db_uuid_step.db_uuid"
+                  },
+                  "id_type": "db_uuid"
+                },
+                "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload",
+                "ExpressionAttributeValues": {
+                  ":analysis_id": {
+                    "S.$": "$.launch_nextflow_object_step.analysis_id"
+                  },
+                  ":analysis_status": {
+                    "S.$": "$.launch_nextflow_object_step.analysis_status"
+                  },
+                  ":analysis_return_payload": {
+                    "S.$": "States.JsonToString($.launch_nextflow_object_step.analysis_return_payload)"
+                  },
+                  ":analysis_launch_payload": {
+                    "S.$": "States.JsonToString($.launch_nextflow_object_step.analysis_launch_payload)"
+                  }
+                }
+              },
+              "ResultPath": "$.update_entry_post_launch_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "DynamoDB Put Icav2 ID Partition Entry",
+          "States": {
+            "DynamoDB Put Icav2 ID Partition Entry": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "id.$": "$.launch_nextflow_object_step.analysis_id",
+                  "id_type": "icav2_analysis_id",
+                  "db_uuid": {
+                    "S.$": "$.create_db_uuid_step.db_uuid"
+                  }
+                }
+              },
+              "ResultPath": "$.dynamo_db_put_item_step",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.update_database",
+      "Next": "Wait 1 Second (Post-execution)"
+    },
+    "Wait 1 Second (Post-execution)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "End": true,
+      "Comment": "Wait for databases to sync before continuing"
+    }
+  }
+}
