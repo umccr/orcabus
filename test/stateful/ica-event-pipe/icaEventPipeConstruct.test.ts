@@ -1,22 +1,17 @@
 import * as cdk from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { IcaEventPipeConstruct } from '../../../lib/workload/stateful/stacks/ica-event-pipe/constructs/ica_event_pipe';
-import { IcaEventTranslatorConstruct } from '../../../lib/workload/stateful/stacks/ica-event-pipe/ica-event-translator/construct';
-import { vpcProps } from '../../../config/constants';
 
 const topicArn = 'arn:aws:sns:region-1:123456789123:TopicName';
 const icaTestAccount = '123456789123';
 let stack: cdk.Stack;
 
-const app = new cdk.App();
 beforeAll(() => {
   stack = new cdk.Stack();
 });
 
 describe('IcaEventPipeConstruct', () => {
-  stack = new cdk.Stack(app, 'TestEventBusStackWithCustomArchiver', {
-    env: { account: '123456789', region: 'ap-southeast-2' },
-  });
+  stack = new cdk.Stack();
   new IcaEventPipeConstruct(stack, 'TestIcaEventPipeConstruct', {
     icaEventPipeName: 'TestPipeName',
     icaQueueName: 'TestQueueName',
@@ -25,15 +20,6 @@ describe('IcaEventPipeConstruct', () => {
     slackTopicArn: topicArn,
     dlqMessageThreshold: 1,
     icaAwsAccountNumber: icaTestAccount,
-  });
-
-  new IcaEventTranslatorConstruct(stack, 'TestIcaEventTranslatorConstruct', {
-    icav2EventTranslatorDynamodbTableName: 'TestDynamoDBTableName',
-    dynamodbTableRemovalPolicy: cdk.RemovalPolicy.DESTROY,
-    eventBusName: 'TestBus',
-    vpcProps: vpcProps,
-    lambdaSecurityGroupName: 'LambdaSecurityGroup',
-    icaEventPipeName: 'TestPipeName',
   });
 
   const template = Template.fromStack(stack);
@@ -154,17 +140,6 @@ describe('IcaEventPipeConstruct', () => {
           },
         },
       },
-    });
-  });
-
-  test('DynamoDB Table created', () => {
-    template.resourceCountIs('AWS::DynamoDB::GlobalTable', 1);
-    template.hasResourceProperties('AWS::DynamoDB::GlobalTable', {
-      TableName: 'TestDynamoDBTableName',
-      AttributeDefinitions: [
-        { AttributeName: 'analysis_id', AttributeType: 'S' },
-        { AttributeName: 'event_status', AttributeType: 'S' },
-      ],
     });
   });
 });

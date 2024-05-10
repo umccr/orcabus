@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
-import { Duration, Stack, RemovalPolicy } from 'aws-cdk-lib';
-import { TableV2, AttributeType } from 'aws-cdk-lib/aws-dynamodb';
+import { Duration, Stack, StackProps } from 'aws-cdk-lib';
+import { TableV2, ITableV2 } from 'aws-cdk-lib/aws-dynamodb';
 import { EventBus, Rule, IEventBus } from 'aws-cdk-lib/aws-events';
 import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
@@ -9,28 +9,31 @@ import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
 
-export interface Icav2EventTranslatorConstructProps {
+export interface Icav2EventTranslatorStackProps {
   /** dynamodb name and event bus name */
   icav2EventTranslatorDynamodbTableName: string;
-  dynamodbTableRemovalPolicy: RemovalPolicy;
   eventBusName: string;
   /** vpc ann SG for lambda function */
   vpcProps: VpcLookupOptions;
   lambdaSecurityGroupName: string;
-  /** ica event pipe name for tight coupling */
-  icaEventPipeName: string;
 }
 
-export class IcaEventTranslatorConstruct extends Construct {
+export class Icav2EventTranslatorStack extends Stack {
   private readonly vpc: IVpc;
   private readonly lambdaSG: ISecurityGroup;
   private readonly mainBus: IEventBus;
+  private readonly dynamoDBTable: ITableV2;
   private readonly lambdaRuntimePythonVersion = Runtime.PYTHON_3_12;
 
-  constructor(scope: Construct, id: string, props: Icav2EventTranslatorConstructProps) {
+  constructor(scope: Construct, id: string, props: StackProps & Icav2EventTranslatorStackProps) {
     super(scope, id);
     this.mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
     this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
+    this.dynamoDBTable = TableV2.fromTableName(
+      this,
+      'Icav2EventTranslatorDynamoDBTable',
+      props.icav2EventTranslatorDynamodbTableName
+    );
     this.lambdaSG = SecurityGroup.fromLookupByName(
       this,
       'LambdaSecurityGroup',
@@ -41,17 +44,7 @@ export class IcaEventTranslatorConstruct extends Construct {
     this.createICAv2EventTranslator(props);
   }
 
-  private createICAv2EventTranslator(props: Icav2EventTranslatorConstructProps) {
-    // create the dynamodb table for the translator service
-    const dynamoDBTable = new TableV2(this, 'ICAv2EventTranslatorDynamoDBTable', {
-      tableName: props.icav2EventTranslatorDynamodbTableName,
-      removalPolicy: props.dynamodbTableRemovalPolicy,
-
-      /* Either a db_uuid or an icav2 event id or a portal run id */
-      partitionKey: { name: 'analysis_id', type: AttributeType.STRING },
-      sortKey: { name: 'event_status', type: AttributeType.STRING },
-    });
-
+  private createICAv2EventTranslator(props: Icav2EventTranslatorStackProps) {
     const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
       entry: path.join(__dirname, '../translator_service'),
       runtime: this.lambdaRuntimePythonVersion,
@@ -68,20 +61,22 @@ export class IcaEventTranslatorConstruct extends Construct {
       handler: 'handler',
     });
 
-    dynamoDBTable.grantReadWriteData(EventTranslatorFunction);
+    this.dynamoDBTable.grantReadWriteData(EventTranslatorFunction);
 
     // Create a rule to trigger the Lambda function from the EventBus ICAV2_EXTERNAL_EVENT
     const rule = new Rule(this, 'Rule', {
       eventBus: this.mainBus,
       eventPattern: {
         account: [Stack.of(this).account],
-        detailType: ['Event from aws:sqs'],
-        source: [`Pipe ${props.icaEventPipeName}`],
         detail: {
           'ica-event': {
-            eventCode: [{ prefix: 'ICA_EXEC_' }],
+            eventCode: ['ICA_EXEC_028'],
             projectId: [{ exists: true }],
-            payload: [{ exists: true }],
+            payload: {
+              pipeline: {
+                code: [{ prefix: 'BclConvert' }],
+              },
+            },
           },
         },
       },
@@ -98,8 +93,32 @@ export class IcaEventTranslatorConstruct extends Construct {
     EventTranslatorFunction.addToRolePolicy(
       new PolicyStatement({
         actions: ['events:PutEvents', 'dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:Scan'],
-        resources: [this.mainBus.eventBusArn, dynamoDBTable.tableArn],
+        resources: [this.mainBus.eventBusArn, this.dynamoDBTable.tableArn],
       })
     );
   }
 }
+
+/**
+ * 
+ * private createIcaEventTranslator(props: IcaEventPipeStackProps, IcaEventPipeName: string) {
+    // extract the IcaEventTranslatorConstructProps
+    const icaEventTranslatorProps = props.IcaEventTranslatorProps;
+
+    const icaEventTranslatorConstructProps: Icav2EventTranslatorStackProps = {
+      icav2EventTranslatorDynamodbTableName:
+        icaEventTranslatorProps.icav2EventTranslatorDynamodbTableName,
+      dynamodbTableRemovalPolicy: icaEventTranslatorProps.removalPolicy || RemovalPolicy.DESTROY, // default to destroy
+      eventBusName: props.eventBusName,
+      vpcProps: icaEventTranslatorProps.vpcProps,
+      lambdaSecurityGroupName: icaEventTranslatorProps.lambdaSecurityGroupName,
+      icaEventPipeName: IcaEventPipeName,
+    };
+
+    return new IcaEventTranslatorConstruct(
+      this,
+      'IcaEventTranslatorConstruct',
+      icaEventTranslatorConstructProps
+    );
+  }
+  */

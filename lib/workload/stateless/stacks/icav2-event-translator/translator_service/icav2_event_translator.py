@@ -129,7 +129,7 @@ def translate_to_aws_event(event)->AWSEvent:
     detail= get_event_details(event),
     detail_type= "WorkflowRunStateChange",
     # version="0.1.0",  # comment as the version is managed by the evnet bus
-    source= "orcabus.bct",
+    source= "orcabus.bcm",
   )
 
 # Convert from entity module to internal event details

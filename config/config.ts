@@ -16,6 +16,10 @@ import {
   getCttsov2Icav2PipelineTableStackProps,
 } from './stacks/cttsov2Icav2PipelineManager';
 import { getSchemaStackProps } from './stacks/schema';
+import {
+  getIcav2EventTranslatorTableStackProps,
+  getIcav2EventTranslatorStackProps,
+} from './stacks/icav2EventTranslator';
 
 interface EnvironmentConfig {
   name: string;
@@ -44,8 +48,9 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
           statefulConfig: {
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
-            icaEventPipeStackProps: getIcaEventPipeStackProps(stage),
+            icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
+            icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -57,6 +62,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
+            icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
           },
         },
       };
@@ -70,8 +76,9 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
           statefulConfig: {
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
-            icaEventPipeStackProps: getIcaEventPipeStackProps(stage),
+            icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
+            icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -83,6 +90,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
+            icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
           },
         },
       };
@@ -96,8 +104,9 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
           statefulConfig: {
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
-            icaEventPipeStackProps: getIcaEventPipeStackProps(stage),
+            icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
+            icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -109,6 +118,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
+            icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
           },
         },
       };
