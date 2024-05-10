@@ -1,14 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-// import { BucketForCopyDestination,
-//   BucketForManifestOrInventory,
-//   BucketForBatchOpsReport,
-//   TransferMaximumConcurrency,
-//   TransferMaxPoolConnections,
-//   TransferMaxErrorRetries,
-//   TransferMultiPartChunkSize,
-// } from '../constants';
-import { getICAv1CopyBatchUtilityStackProps } from '../../../../../../config/stacks/icav1CopyBatchUtility';
 import path from 'path';
 import { Duration, aws_secretsmanager } from 'aws-cdk-lib';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
@@ -29,8 +20,6 @@ export interface ICAv1CopyBatchUtilityConfig {
 export type ICAv1CopyBatchUtilityStackProps = ICAv1CopyBatchUtilityConfig & cdk.StackProps;
 
 export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
-  //  public readonly icav2_copy_batch_state_machine_arn_ssm_parameter_path: string;
-
   constructor(scope: Construct, id: string, props: ICAv1CopyBatchUtilityStackProps) {
     super(scope, id, props);
 
