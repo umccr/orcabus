@@ -184,6 +184,18 @@
         }
       },
       "ResultPath": "$.update_entry_post_fastq",
+      "Next": "set_sample_pair_ids"
+    },
+    "set_sample_pair_ids": {
+      "Type": "Pass",
+      "Parameters": {
+        "sample_pair_ids_dict": [
+          {
+            "sample_pair_id.$": "$.get_database_entry_step.event_payload.sampleId"
+          }
+        ]
+      },
+      "ResultPath": "$.set_sample_pair_ids",
       "Next": "set_input_json"
     },
     "set_input_json": {
@@ -192,7 +204,7 @@
         "input_json": {
           "run_folder.$": "$.get_database_entry_step.event_payload.cacheUri",
           "sample_sheet.$": "$.copy_files_to_cache_directory_step.samplesheet_file_uri",
-          "sample_pair_ids": ["$.get_database_entry_step.event_payload.sampleId"],
+          "sample_pair_ids.$": "$.set_sample_pair_ids.sample_pair_ids_dict[*].sample_pair_id",
           "StartsFromFastq": true
         }
       },
