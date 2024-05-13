@@ -81,17 +81,17 @@ jobs:
 
       - run: make test-stateful
 
-  # test-stateless-stack:
-  #   runs-on: codebuild-orcabus-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  test-stateless-stack:
+    runs-on: codebuild-wil-test-cb-orcabus-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - name: Rust installation
-  #       uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Rust installation
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
-  #     - name: Install dependencies
-  #       run: |
-  #         yarn install --immutable
+      - name: Install dependencies
+        run: |
+          yarn install --immutable
 
-  #     - run: make test-stateless
+      - run: make test-stateless
