@@ -1,5 +1,5 @@
 .EXPORT_ALL_VARIABLES:
-DJANGO_SETTINGS_MODULE = sequence_run_manager.settings.local
+DJANGO_SETTINGS_MODULE = hello_manager.settings.local
 
 .PHONY: test suite
 
@@ -23,17 +23,14 @@ suite:
 migrate:
 	@python manage.py migrate
 
-load: migrate
-	@python manage.py generate_mock_data
-
 start: migrate
 	@python manage.py runserver_plus
 
 openapi:
-	@python manage.py generateschema > orcabus.srm.openapi.yaml
+	@python manage.py generateschema > orcabus.hlo.openapi.yaml
 
 validate: openapi
-	@python -m openapi_spec_validator orcabus.srm.openapi.yaml
+	@python -m openapi_spec_validator orcabus.hlo.openapi.yaml
 
 coverage: install up migrate
 	@echo $$DJANGO_SETTINGS_MODULE

@@ -19,6 +19,6 @@ class HelloViewSetTestCase(TestCase):
         """
         python manage.py test {{project_name}}.tests.test_viewsets.HelloViewSetTestCase.test_get_api
         """
-        response = self.client.get('/hello/')
+        response = self.client.get('/hlo/v1/hello/')
         logger.info(response.json())
         self.assertEqual(response.status_code, 200, 'Ok status response is expected')

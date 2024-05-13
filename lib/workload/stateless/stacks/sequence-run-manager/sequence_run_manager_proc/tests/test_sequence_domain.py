@@ -31,7 +31,7 @@ class SequenceDomainUnitTests(SequenceRunProcUnitTestCase):
         self.assertIsNotNone(marshalled_object)
         self.assertIsInstance(marshalled_object, dict)
         self.assertIn("id", marshalled_object.keys())
-        self.assertIn("instrument_run_id", marshalled_object.keys())
+        self.assertIn("instrumentRunId", marshalled_object.keys())
 
     def test_unmarshall(self):
         """
@@ -52,7 +52,7 @@ class SequenceDomainUnitTests(SequenceRunProcUnitTestCase):
         self.assertIsNotNone(unmarshalled_object)
         self.assertIsInstance(unmarshalled_object, object)
         self.assertIsInstance(unmarshalled_object, SequenceRunStateChange)
-        self.assertIsInstance(unmarshalled_object.start_time, datetime)
+        self.assertIsInstance(unmarshalled_object.startTime, datetime)
 
     def test_aws_event_serde(self):
         """
@@ -88,7 +88,7 @@ class SequenceDomainUnitTests(SequenceRunProcUnitTestCase):
         self.assertIsInstance(mock_entry, dict)
         self.assertIn("Detail", mock_entry.keys())
         self.assertIsInstance(mock_entry["Detail"], str)
-        self.assertIsInstance(mock_entry["Time"], datetime)
+        self.assertIsInstance(mock_entry["DetailType"], str)
 
         mock_entry_detail = json.loads(mock_entry["Detail"])
         logger.info(mock_entry_detail)

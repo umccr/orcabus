@@ -57,26 +57,19 @@ class SequenceDomain:
 
         return SequenceRunStateChange(
             id=self.sequence.id,
-            instrument_run_id=self.sequence.instrument_run_id,
-            run_volume_name=self.sequence.run_volume_name,
-            run_folder_path=self.sequence.run_folder_path,
-            run_data_uri=self.sequence.run_data_uri,
+            instrumentRunId=self.sequence.instrument_run_id,
+            runVolumeName=self.sequence.run_volume_name,
+            runFolderPath=self.sequence.run_folder_path,
+            runDataUri=self.sequence.run_data_uri,
             status=_status_str,
-            start_time=self.sequence.start_time,
-            end_time=self.sequence.end_time,
-            reagent_barcode=self.sequence.reagent_barcode,
-            flowcell_barcode=self.sequence.flowcell_barcode,
-            sample_sheet_name=self.sequence.sample_sheet_name,
-            sequence_run_id=self.sequence.sequence_run_id,
-            sequence_run_name=self.sequence.sequence_run_name,
+            startTime=self.sequence.start_time,
+            endTime=self.sequence.end_time,
+            sampleSheetName=self.sequence.sample_sheet_name,
         )
 
     def to_event_with_envelope(self) -> AWSEvent:
         """Convert from Entity model to Domain event object with envelope"""
         return AWSEvent(
-            id=str(uuid.uuid4()),
-            time=datetime.utcnow().replace(tzinfo=timezone.utc),
-            version=self.event_version,
             source=self.namespace,
             detail_type=self.event_type,
             detail=self.to_event(),
@@ -94,7 +87,6 @@ class SequenceDomain:
             "DetailType": domain_event_with_envelope.detail_type,
             "Resources": [],
             "Source": domain_event_with_envelope.source,
-            "Time": domain_event_with_envelope.time,
             "EventBusName": event_bus_name,
         }
         if domain_event_with_envelope.resources is not None:

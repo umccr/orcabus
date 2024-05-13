@@ -56,8 +56,7 @@
           "status",
           "workflowType",
           "workflowVersion",
-          "payload",
-          "serviceVersion"
+          "payload"
         ],
         "properties": {
           "portalRunId": {
