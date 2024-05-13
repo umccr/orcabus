@@ -37,7 +37,7 @@ export class StatelessPipelineStack extends cdk.Stack {
       },
       environment: {
         type: 'ARM_CONTAINER',
-        computeType: 'BUILD_GENERAL1_SMALL',
+        computeType: 'BUILD_GENERAL1_LARGE',
         image: 'aws/codebuild/amazonlinux2-aarch64-standard:3.0',
         privilegedMode: true,
       },
