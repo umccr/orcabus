@@ -33,7 +33,7 @@ The AWS lambda functions takes ```External ICA Event``` events with following en
   "region": "ap-southeast-x",
   "resources": [],
   "detail": {
-    "ica-event": ['*'] // ica event payload
+    "ica-event": {} // ica event payload
   }
 }
 ```
@@ -44,7 +44,7 @@ This event is icav2 event without EventBus pipe envelop. General Event Bridge ev
 {
   "correlationId": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
   "timestamp": "2024-03-25T10:07:09.990Z",
-  "eventCode": "IXX_EXXX_XXX",
+  "eventCode": "ICA_EXEC_028",
   "eventParameters": {
     "pipelineExecution": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
     "analysisPreviousStatus": "INPROGRESS",
@@ -73,43 +73,37 @@ This event is icav2 event without EventBus pipe envelop. General Event Bridge ev
 
 ## Outputs
 
-The AWS lambda functions return ```WorkflowRunStateChange``` with the following parameters:
+The AWS lambda functions put translated event following  ```WorkflowRunStateChange``` schema with the following event detail::
 
 ```json5
 {
   "version": "0", // by default is 0
   "id": "dxxxxx-6xxxx-fxxx-1xxx-5xxxxx",
   "detail-type": "WorkflowRunStateChange", // event type
-  "source": "orcabus.bct", // from bct service
+  "source": "orcabus.bcm", // from bcl-convert-manager service
   "account": "404687356768",
   "time": "2024-00-00T02:08:46Z",
   "region": "ap-southeast-x",
   "resources": [],
   "detail": {
-    // ttranslated event details (see below)
-  }
-}
-```
-Internal WorkflowRunStateChange event detail:
-```json5
-{
-  "portalRunId": '20xxxxxxxxxx',
-  "timestamp": "2024-00-25T00:07:00Z",
-  "status": "SUCCEEDED",
-  "workflowType": "bssh_bcl_convert",
-  "workflowVersion": "4.2.7",
-  "payload": {
-    "refId": None,
-    "version": "0.1.0",
-    "projectId": "valid_project_id",
-    "analysisId": "valid_payload_id",
-    "userReference": "123456_A1234_0000_TestingPattern",
-    "timeCreated": "2024-01-01T00:11:35Z",
-    "timeModified": "2024-01-01T01:24:29Z",
-    "pipelineId": "valid_pipeline_id",
-    "pipelineCode": "BclConvert v0_0_0",
-    "pipelineDescription": "BclConvert pipeline.",
-    "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
+    "portalRunId": '20xxxxxxxxxx',
+    "timestamp": "2024-00-25T00:07:00Z",
+    "status": "SUCCEEDED",
+    "workflowType": "bssh_bcl_convert",
+    "workflowVersion": "4.2.7",
+    "payload": {
+      "refId": None,
+      "version": "0.1.0",
+      "projectId": "valid_project_id",
+      "analysisId": "valid_payload_id",
+      "userReference": "123456_A1234_0000_TestingPattern",
+      "timeCreated": "2024-01-01T00:11:35Z",
+      "timeModified": "2024-01-01T01:24:29Z",
+      "pipelineId": "valid_pipeline_id",
+      "pipelineCode": "BclConvert v0_0_0",
+      "pipelineDescription": "BclConvert pipeline.",
+      "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
+    }
   }
 }
 ```
@@ -122,27 +116,32 @@ Event Pattern (filter rules) for event pipe:
 ```json5
 {
   account: [Stack.of(this).account],
-  detailType: ['Event from aws:sqs'],
-  source: [`Pipe {props.icaEventPipeName}`],
   detail: {
-      'ica-event': {
-        eventCode: [{ prefix: 'ICA_EXEC_' }],
-        projectId: [{ exists: true }],
-        payload: [{ exists: true }],
-        ...
+    'ica-event': {
+    eventCode: ['ICA_EXEC_028'],
+    projectId: [{ exists: true }],
+    payload: {
+        pipeline: {
+          code: [{ prefix: 'BclConvert' }],
+        },
       },
+    },
   },
 }
 ```
 
 ### Save this translation process to dynamoDB
-Send the orignal input and orcabus event after translation to the dynao db for recording of the process. 
+Send the orignal input and orcabus event after translation to the dynamo db for audit or recording of the process. 
 
 Dynamodb format:
-| analysis_id    | event_status | id_type | portal_run_id | original_external_event | translated_internal_ica_event | timestamp |
-| -------- | ------- | ------- | ------- | ------- | ------- |------- | 
-| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | PREPARING_INPUTS | analysis_id | 20xxxxxxxxxx | {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
-|dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | SUCCEEDED  | analysis_id | 20xxxxxxxxxx | {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
+| id | id_type | analysis_id | analysis_status | portal_run_id | db_uuid | original_external_event | translated_internal_ica_event | timestamp |
+| -------- | ---- | ------- | ------- | ---- | ------- | ------- | ------- |------- | 
+| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | portal_run_id | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | | | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | | | |
+| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | analysis_id |  |   |dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | | | |
+| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | INITIALIZING | 20xxxxxxxxxx | | {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
+|dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | QUEUED | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
+|dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | IN_PROGRESS | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
+|dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | SUCCEEDED | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
 
 
 ### Publish the Orcabus event to event bus
@@ -150,7 +149,7 @@ publish the Orcabus (internal) event back the event bus.
 Example output event can be seen [here](../../../../../../docs/event-schemas/wfm/example/WRSC__bct__bssh_bcl_convert.json).
 
 ## Unit Test
-
+Move to icav2-event-translator/translator_service
 ```make install```
 This will install all necessary package.\
 ```make test```
