@@ -15,12 +15,12 @@ export class Icav2EventTranslatorTable extends Stack {
     id: string,
     props: StackProps & Icav2EventTranslatorTableStackProps
   ) {
-    super(scope, id);
+    super(scope, id, props);
 
     /*
     Initialise dynamodb table, where portal_run_id is the primary sort key
     */
-    new DynamodbIcav2PipelineConstruct(this, 'cttsov2_icav2_pipeline_table', {
+    new DynamodbIcav2PipelineConstruct(this, 'icav2_event_translator_table', {
       tableName: props.dynamodbTableName,
       removalPolicy: props.removalPolicy,
     });

@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { Icav2EventTranslatorTable } from '../../../lib/workload/stateful/stacks/icav2-event-translator-dynamo-db/deploy/stack';
+import { DynamodbIcav2PipelineConstruct } from '../../../lib/workload/components/dynamodb-icav2-table';
 
 let stack: cdk.Stack;
 
@@ -10,11 +10,11 @@ beforeAll(() => {
 });
 
 describe('Icav2EventTranslatorTableStack', () => {
-  stack = new cdk.Stack(app, 'TestEventBusStackWithCustomArchiver', {
+  stack = new cdk.Stack(app, 'TestIcav2EventTranslatorTable', {
     env: { account: '123456789', region: 'ap-southeast-2' },
   });
-  new Icav2EventTranslatorTable(stack, 'TestIcav2EventTranslatorTableStack', {
-    dynamodbTableName: 'TestDynamoDBTableName',
+  new DynamodbIcav2PipelineConstruct(stack, 'TestIcav2EventTranslatorTableStack', {
+    tableName: 'TestDynamoDBTableName',
     removalPolicy: cdk.RemovalPolicy.DESTROY,
   });
 

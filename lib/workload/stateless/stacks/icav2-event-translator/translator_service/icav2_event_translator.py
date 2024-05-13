@@ -57,7 +57,7 @@ import logging
 import datetime
 import boto3
 from uuid import uuid4
-from translator_service.workflowrunstatechange import (
+from workflowrunstatechange import (
     WorkflowRunStateChange,
     AWSEvent,
     Marshaller,
@@ -100,14 +100,15 @@ def handler(event, context):
         raise Exception("Failed to send event to the event bus. Error: ", e)
     
     # Store the internal event in the DynamoDB table
-    try: 
-      # table = dynamodb.Table(table_name)
+    try:
+      db_uuid = generate_db_uuid()
       dynamodb.put_item(
           TableName=table_name,
           Item={
+              'id': {'S': db_uuid},
+              'id_type': {'S': 'db_uuid'},
               'analysis_id': {'S': internal_ica_event.detail.payload.get("analysisId", '')},
-              'event_status': {'S': internal_ica_event.detail.status},
-              'id_type': {'S': 'analysis_id'},
+              'analysis_status': {'S': internal_ica_event.detail.status}, # 'SUCCEEDED', 'FAILED', 'INPROGRESS', 'ABORTED', 'UNKNOWN
               "portal_run_id": {'S': internal_ica_event.detail.portalRunId},
               'original_external_event': {'S': json.dumps(event_details)},
               'translated_internal_ica_event': {'S': json.dumps(internal_ica_event.detail.to_dict())},
@@ -115,6 +116,31 @@ def handler(event, context):
           }
       )
       logger.info(f"Original and Internal events stored in the DynamoDB table.")
+      
+      # update dynamodb table with the new generate db_uuid
+      dynamodb.update_item(
+          TableName=table_name,
+          Key={
+              'id': {'S': internal_ica_event.detail.payload.get("analysisId", '')},
+              'id_type': {'S': 'analysis_id'}
+          },
+          UpdateExpression='SET db_uuid = :db_uuid',
+          ExpressionAttributeValues={
+              ':db_uuid': {'S': db_uuid}
+          }
+      )
+      dynamodb.update_item(
+          TableName=table_name,
+          Key={
+              'id': {'S': internal_ica_event.detail.portalRunId},
+              'id_type': {'S': 'portal_run_id'}
+          },
+          UpdateExpression='SET db_uuid = :db_uuid',
+          ExpressionAttributeValues={
+              ':db_uuid': {'S': db_uuid}
+          }
+      )
+      logger.info(f"db_uuid updated in anaylsis_id and portal_run_id record.")
     except Exception as e:
         raise Exception("Failed to store event in the DynamoDB table. Error: ", e)
 
@@ -128,8 +154,8 @@ def translate_to_aws_event(event)->AWSEvent:
   return AWSEvent(
     detail= get_event_details(event),
     detail_type= "WorkflowRunStateChange",
-    # version="0.1.0",  # comment as the version is managed by the evnet bus
     source= "orcabus.bcm",
+    # version="0.1.0",  # comment as the version is managed by the evnet bus
   )
 
 # Convert from entity module to internal event details
@@ -171,21 +197,47 @@ def get_portal_run_id(analysis_id: str) -> str:
     try:
       response = dynamodb.scan(
         TableName=table_name,
-        FilterExpression='analysis_id = :analysis_id',
+        FilterExpression='id = :analysis_id and id_type = :id_type',
         ExpressionAttributeValues={
-          ':analysis_id': {'S': analysis_id }
+          ':analysis_id': {'S': analysis_id },
+          ':id_type': {'S': 'analysis_id'}
         }
       )
       items = response.get('Items', [])
       # check if the response.Items has items
       if items:
-        logger.info(f"Analysis ID already exists in the DynamoDB table.")
+        logger.info(f"Analysis id already exists in the DynamoDB table.")
         return items[0].get("portal_run_id").get("S")
       else:
-        return generate_portal_run_id()
+        new_portal_run_id = generate_portal_run_id()
+        # put analysis id => portal run id map record in the dynamodb table
+        try:
+          dynamodb.put_item(
+              TableName=table_name,
+              Item={
+                  'id': {'S': analysis_id},
+                  'id_type': {'S': 'analysis_id'},
+                  "portal_run_id": {'S': new_portal_run_id}
+              }
+          )
+          dynamodb.put_item(
+              TableName=table_name,
+              Item={
+                  'id': {'S': new_portal_run_id},
+                  'id_type': {'S': 'portal_run_id'},
+                  "analysis_id": {'S': analysis_id}
+              }
+          )
+        except Exception as e:
+          raise Exception("Failed to store new portal run id in the DynamoDB table. Error: ", e)
+        logger.info(f"New portal run id created and stored in the DynamoDB table.")
+        return new_portal_run_id
       
     except Exception as e:
       raise Exception("Failed to get item from the DynamoDB table. Error: ", e)
     
 def generate_portal_run_id():
         return f"{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')}{str(uuid4())[:8]}"
+
+def generate_db_uuid():
+        return f"{str(uuid4())}"

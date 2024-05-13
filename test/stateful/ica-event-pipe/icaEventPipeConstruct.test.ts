@@ -102,44 +102,4 @@ describe('IcaEventPipeConstruct', () => {
       },
     });
   });
-
-  test('Event Translator Lambda created', () => {
-    template.resourceCountIs('AWS::Lambda::Function', 1);
-    template.hasResourceProperties('AWS::Lambda::Function', {
-      Handler: 'icav2_event_translator.handler',
-      Runtime: 'python3.12',
-      Timeout: 28,
-    });
-  });
-
-  test('Event Translator Lambda has permissions', () => {
-    template.hasResourceProperties('AWS::IAM::Policy', {
-      PolicyDocument: {
-        Statement: Match.arrayWith([
-          Match.objectLike({
-            Action: ['events:PutEvents', 'dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:Scan'],
-            Resource: [Match.anyValue(), Match.anyValue()],
-          }),
-        ]),
-      },
-    });
-  });
-
-  test('Event Translator Rule created', () => {
-    template.resourceCountIs('AWS::Events::Rule', 1);
-    template.hasResourceProperties('AWS::Events::Rule', {
-      EventPattern: {
-        account: ['123456789'],
-        'detail-type': ['Event from aws:sqs'],
-        source: ['Pipe TestPipeName'],
-        detail: {
-          'ica-event': {
-            eventCode: [{ prefix: 'ICA_EXEC_' }],
-            projectId: [{ exists: true }],
-            payload: [{ exists: true }],
-          },
-        },
-      },
-    });
-  });
 });

@@ -26,7 +26,7 @@ export class Icav2EventTranslatorStack extends Stack {
   private readonly lambdaRuntimePythonVersion = Runtime.PYTHON_3_12;
 
   constructor(scope: Construct, id: string, props: StackProps & Icav2EventTranslatorStackProps) {
-    super(scope, id);
+    super(scope, id, props);
     this.mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
     this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
     this.dynamoDBTable = TableV2.fromTableName(
@@ -98,27 +98,3 @@ export class Icav2EventTranslatorStack extends Stack {
     );
   }
 }
-
-/**
- * 
- * private createIcaEventTranslator(props: IcaEventPipeStackProps, IcaEventPipeName: string) {
-    // extract the IcaEventTranslatorConstructProps
-    const icaEventTranslatorProps = props.IcaEventTranslatorProps;
-
-    const icaEventTranslatorConstructProps: Icav2EventTranslatorStackProps = {
-      icav2EventTranslatorDynamodbTableName:
-        icaEventTranslatorProps.icav2EventTranslatorDynamodbTableName,
-      dynamodbTableRemovalPolicy: icaEventTranslatorProps.removalPolicy || RemovalPolicy.DESTROY, // default to destroy
-      eventBusName: props.eventBusName,
-      vpcProps: icaEventTranslatorProps.vpcProps,
-      lambdaSecurityGroupName: icaEventTranslatorProps.lambdaSecurityGroupName,
-      icaEventPipeName: IcaEventPipeName,
-    };
-
-    return new IcaEventTranslatorConstruct(
-      this,
-      'IcaEventTranslatorConstruct',
-      icaEventTranslatorConstructProps
-    );
-  }
-  */

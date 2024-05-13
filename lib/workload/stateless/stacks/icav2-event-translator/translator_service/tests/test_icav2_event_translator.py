@@ -32,7 +32,7 @@ from uuid import UUID
 '''
 
 # Assuming you adapt your lambda function to use botocore for creating clients
-from translator_service.icav2_event_translator import handler  # Import your lambda function module
+from icav2_event_translator import handler  # Import your lambda function module
 
 class TestICAv2EventTranslator(unittest.TestCase):
     def setUp(self):
@@ -41,7 +41,7 @@ class TestICAv2EventTranslator(unittest.TestCase):
             "detail": {
                 'ica-event': { 
                     "projectId": "valid_project_id",
-                    "eventCode": "ICA_EXEC_000",
+                    "eventCode": "ICA_EXEC_028",
                     "eventParameters": {
                         "analysisStatus": "SUCCEEDED"
                     },
@@ -72,8 +72,8 @@ class TestICAv2EventTranslator(unittest.TestCase):
         self.dynamodb_stubber = Stubber(self.dynamodb)
         self.events_stubber.activate()
         self.dynamodb_stubber.activate()
-        patch('translator_service.icav2_event_translator.events', self.events).start()
-        patch('translator_service.icav2_event_translator.dynamodb', self.dynamodb).start()
+        patch('icav2_event_translator.events', self.events).start()
+        patch('icav2_event_translator.dynamodb', self.dynamodb).start()
 
     def tearDown(self):
         self.events_stubber.deactivate()
@@ -85,18 +85,38 @@ class TestICAv2EventTranslator(unittest.TestCase):
             del os.environ['TABLE_NAME']
 
     
-    @patch('translator_service.icav2_event_translator.uuid4', return_value=UUID('12345678-1234-5678-1234-567812345678'))
+    @patch('icav2_event_translator.uuid4', return_value=UUID('12345678-1234-5678-1234-567812345678'))
     @freeze_time("2024-01-1")
-    def test_valid_event(self, mock_uuid4):
+    def test_valid_events_handler(self, mock_uuid4):
         # Your test code goes here
         
         response = {'Items': [], 'Count': 0, 'ScannedCount': 0}
         expected_params = {
             'TableName': 'test_table',
-            'FilterExpression': 'analysis_id = :analysis_id',
-            'ExpressionAttributeValues': {':analysis_id': {'S': 'valid_payload_id'}}
+            'FilterExpression': 'id = :analysis_id and id_type = :id_type',
+            'ExpressionAttributeValues': {':analysis_id': {'S': 'valid_payload_id'}, ':id_type': {'S': 'analysis_id'}}
         }
         self.dynamodb_stubber.add_response('scan', response, expected_params)
+        
+        response = {}
+        expected_params = {
+            'TableName': 'test_table',
+            'Item':{
+                'id': {'S': 'valid_payload_id'},
+                'id_type': {'S': 'analysis_id'},
+                "portal_run_id": {'S': '2024010112345678'}
+              }
+         }
+        self.dynamodb_stubber.add_response('put_item', response, expected_params)
+        expected_params = {
+            'TableName': 'test_table',
+            'Item':{
+                'id': {'S': '2024010112345678'},
+                'id_type': {'S': 'portal_run_id'},
+                "analysis_id": {'S': 'valid_payload_id'}
+              }
+         }
+        self.dynamodb_stubber.add_response('put_item', response, expected_params)
         
         # expected internal event
         expected_ica_event_details = {
@@ -125,7 +145,7 @@ class TestICAv2EventTranslator(unittest.TestCase):
         expected_params = {
             'Entries': [
                 {
-                    "Source": "orcabus.bct",
+                    "Source": "orcabus.bcm",
                     "DetailType": "WorkflowRunStateChange",
                     "Detail": json.dumps(expected_ica_event_details),
                     "EventBusName": os.environ['EVENT_BUS_NAME']
@@ -137,19 +157,46 @@ class TestICAv2EventTranslator(unittest.TestCase):
         
         # expected dynamodb table item
         expected_item = {
+            'id': {'S': '12345678-1234-5678-1234-567812345678'},
+            'id_type': {'S': 'db_uuid'},
             'analysis_id': {'S': expected_ica_event_details['payload']['analysisId']},
-              'event_status': {'S': expected_ica_event_details['status']},
-              'id_type': {'S': 'analysis_id'},
-              "portal_run_id": {'S': expected_ica_event_details['portalRunId']},
-              'original_external_event': {'S': json.dumps(self.event['detail']['ica-event'])},
-              'translated_internal_ica_event': {'S': json.dumps(expected_ica_event_details)},
-              'timestamp': {'S': expected_ica_event_details['timestamp']}
+            'analysis_status': {'S': 'SUCCEEDED'},
+            "portal_run_id": {'S': expected_ica_event_details['portalRunId']},
+            'original_external_event': {'S': json.dumps(self.event['detail']['ica-event'])},
+            'translated_internal_ica_event': {'S': json.dumps(expected_ica_event_details)},
+            'timestamp': {'S': expected_ica_event_details['timestamp']}
         }
         expected_params = {
             'Item':  expected_item,
             'TableName': 'test_table'
         }
         self.dynamodb_stubber.add_response('put_item', response, expected_params)
+        
+        expected_params= {
+            'TableName': 'test_table',
+            'Key': {
+                'id': {'S': "valid_payload_id"},
+                'id_type': {'S': 'analysis_id'}
+            },
+            'UpdateExpression': 'SET db_uuid = :db_uuid',
+            'ExpressionAttributeValues': {
+            ':db_uuid': {'S': '12345678-1234-5678-1234-567812345678'}
+            }
+        }
+        self.dynamodb_stubber.add_response('update_item', response, expected_params)
+        
+        expected_params= {
+            'TableName': 'test_table',
+            'Key': {
+                'id': {'S': '2024010112345678'},
+                'id_type': {'S': 'portal_run_id'}
+            },
+            'UpdateExpression': 'SET db_uuid = :db_uuid',
+            'ExpressionAttributeValues': {
+            ':db_uuid': {'S': '12345678-1234-5678-1234-567812345678'}
+            }
+        }
+        self.dynamodb_stubber.add_response('update_item', response, expected_params)
         
         # Execute the handler
         response = handler(self.event, None)

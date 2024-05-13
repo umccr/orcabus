@@ -26,7 +26,7 @@ export class DynamodbIcav2PipelineConstruct extends Construct {
         type: dynamodb.AttributeType.STRING,
       },
       tableName: props.tableName,
-      removalPolicy: props.removalPolicy || RemovalPolicy.DESTROY,
+      removalPolicy: props.removalPolicy,
     });
 
     // Set outputs
