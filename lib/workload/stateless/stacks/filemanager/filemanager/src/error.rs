@@ -25,7 +25,7 @@ pub enum Error {
     S3Error(String),
     #[error("credential generator error: `{0}`")]
     CredentialGeneratorError(String),
-    #[error("s3 inventory error: `{0}`")]
+    #[error("S3 inventory error: `{0}`")]
     S3InventoryError(String),
 }
 
@@ -38,5 +38,11 @@ impl From<sqlx::Error> for Error {
 impl From<MigrateError> for Error {
     fn from(err: MigrateError) -> Self {
         Self::SQLError(err.to_string())
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        Self::DeserializeError(err.to_string())
     }
 }

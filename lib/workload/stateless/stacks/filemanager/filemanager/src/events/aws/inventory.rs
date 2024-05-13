@@ -49,6 +49,18 @@ impl Inventory {
         Self::new(Client::with_defaults().await)
     }
 
+    /// Trim ascii whitespace from byte data.
+    /// TODO, replace this with std function once stable:
+    /// https://github.com/rust-lang/rust/issues/94035
+    fn trim_whitespace(bytes: &[u8]) -> &[u8] {
+        let end_pos = match bytes.iter().rposition(|char| !char.is_ascii_whitespace()) {
+            Some(i) => i,
+            None => bytes.len(),
+        };
+
+        &bytes[..=end_pos]
+    }
+
     /// Parse a CSV manifest file into records.
     pub async fn parse_csv(&self, schema: &str, body: &[u8]) -> Result<Vec<Record>> {
         let mut inventory_bytes = vec![];
@@ -57,14 +69,7 @@ impl Inventory {
             .map_err(|err| S3InventoryError(format!("decompressing CSV: {}", err)))?;
 
         // AWS seems to return extra newlines at the end of the CSV, so we remove these
-        let end_pos = match inventory_bytes
-            .iter()
-            .rposition(|char| !char.is_ascii_whitespace())
-        {
-            Some(i) => i,
-            None => inventory_bytes.len(),
-        };
-        let inventory_bytes = &inventory_bytes[..end_pos];
+        let inventory_bytes = Self::trim_whitespace(inventory_bytes.as_slice());
 
         let mut header_record = StringRecord::new();
         ReaderBuilder::new()
@@ -128,6 +133,94 @@ impl Inventory {
         self.parse_record_batch(reader).await
     }
 
+    /// Call `GetObject` on the key and bucket, returning the byte data of the response.
+    async fn get_object_bytes<K: AsRef<str>>(&self, key: K, bucket: K) -> Result<Vec<u8>> {
+        Ok(self
+            .client
+            .get_object(key.as_ref(), bucket.as_ref())
+            .await
+            .map_err(|err| S3InventoryError(err.to_string()))?
+            .body
+            .collect()
+            .await
+            .map_err(|err| S3InventoryError(err.to_string()))?
+            .to_vec())
+    }
+
+    /// Verify the md5sum of the data returning an error if there is a mismatch.
+    fn verify_md5<T: AsRef<[u8]>>(data: T, verify_with: T) -> Result<()> {
+        if md5::compute(data).0
+            != hex::decode(&verify_with)
+                .map_err(|err| S3InventoryError(format!("decoding hex string: {}", err)))?
+                .as_slice()
+        {
+            return Err(S3InventoryError(
+                "mismatched MD5 checksums in inventory manifest".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Parse byte data into a manifest.json and then into records.
+    async fn json_manifest_from_bytes(&self, bytes: &[u8]) -> Result<Vec<Record>> {
+        self.parse_manifest(from_slice(bytes)?).await
+    }
+
+    /// Parse records from a bucket and key containing an S3 inventory manifest file.
+    pub async fn parse_manifest_key<K: AsRef<str>>(
+        &self,
+        key: K,
+        bucket: K,
+    ) -> Result<Vec<Record>> {
+        if key.as_ref().ends_with(".json") {
+            self.parse_manifest_json(key, bucket).await
+        } else {
+            self.parse_manifest_checksum(key, bucket).await
+        }
+    }
+
+    /// Parse records from a bucket and key containing an S3 inventory manifest.checksum. This assumes
+    /// the corresponding manifest.json has the same key and bucket except with .json as the suffix.
+    pub async fn parse_manifest_checksum<K: AsRef<str>>(
+        &self,
+        key: K,
+        bucket: K,
+    ) -> Result<Vec<Record>> {
+        let checksum = self.get_object_bytes(key.as_ref(), bucket.as_ref()).await?;
+
+        let mut manifest_key = key.as_ref().to_string();
+        manifest_key.truncate(
+            manifest_key
+                .rfind('.')
+                .unwrap_or_else(|| key.as_ref().len()),
+        );
+
+        let manifest = self
+            .get_object_bytes(
+                format!("{}.json", manifest_key.as_str()).as_str(),
+                bucket.as_ref(),
+            )
+            .await?;
+        Self::verify_md5(
+            manifest.as_slice(),
+            Self::trim_whitespace(checksum.as_slice()),
+        )?;
+
+        self.json_manifest_from_bytes(manifest.as_slice()).await
+    }
+
+    /// Parse records from a bucket and key containing an S3 inventory manifest.json.
+    pub async fn parse_manifest_json<K: AsRef<str>>(
+        &self,
+        key: K,
+        bucket: K,
+    ) -> Result<Vec<Record>> {
+        let data = self.get_object_bytes(key, bucket).await?;
+
+        self.json_manifest_from_bytes(data.as_slice()).await
+    }
+
     /// Parse a manifest into records.
     pub async fn parse_manifest(&self, manifest: Manifest) -> Result<Vec<Record>> {
         let arn: ResourceName = manifest
@@ -157,15 +250,7 @@ impl Inventory {
                 .map_err(|_| S3InventoryError("collecting inventory bytes".to_string()))?
                 .to_vec();
 
-            if md5::compute(body.as_slice()).0
-                != hex::decode(&file.md5_checksum)
-                    .map_err(|err| S3InventoryError(format!("decoding hex string: {}", err)))?
-                    .as_slice()
-            {
-                return Err(S3InventoryError(
-                    "mismatched MD5 checksums in inventory manifest".to_string(),
-                ));
-            }
+            Self::verify_md5(body.as_slice(), file.md5_checksum.as_bytes())?;
 
             match manifest.file_format {
                 InventoryFormat::Csv => {
@@ -235,7 +320,7 @@ pub struct Record {
     storage_class: Option<StorageClass>,
 }
 
-/// Deserializes into a DateTime<Utc>, or a NativeDateTime which is converted it to a DateTime<Utc>
+/// Deserializes into a DateTime<Utc>, or a NativeDateTime which is converted into a DateTime<Utc>
 /// that is assumed to be native to Utc.
 ///
 ///
@@ -251,7 +336,7 @@ pub fn deserialize_native_utc<'de, D>(
 where
     D: Deserializer<'de>,
 {
-    // First try to deserialize as a DateTime<Utc>, then try a NativeDateTime.
+    // Throw-away enum, first try to deserialize as a DateTime<Utc>, then try a NativeDateTime.
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum Date {
@@ -382,23 +467,53 @@ mod tests {
     const EXPECTED_CHECKSUM: &str = "f11166069f1990abeb9c97ace9cdfabc"; // pragma: allowlist secret
 
     #[tokio::test]
+    async fn parse_csv_manifest_from_checksum() {
+        let (mut client, checksum) = test_csv_manifest();
+
+        let bytes = serde_json::to_vec_pretty(&expected_csv_manifest(checksum)).unwrap();
+        let checksum = format!("{}\n", hex::encode(md5::compute(bytes.as_slice()).0))
+            .as_bytes()
+            .to_vec();
+        set_client_manifest_expectations(&mut client, bytes);
+
+        client
+            .expect_get_object()
+            .with(eq("manifest.checksum"), eq(MANIFEST_BUCKET))
+            .once()
+            .returning(move |_, _| {
+                Ok(GetObjectOutput::builder()
+                    .body(ByteStream::from(checksum.clone()))
+                    .build())
+            });
+
+        let inventory = Inventory::new(client);
+        let result = inventory
+            .parse_manifest_key("manifest.checksum", MANIFEST_BUCKET)
+            .await
+            .unwrap();
+
+        assert_csv_records(result.as_slice());
+    }
+
+    #[tokio::test]
+    async fn parse_csv_manifest_from_key() {
+        let (mut client, checksum) = test_csv_manifest();
+
+        let bytes = serde_json::to_vec_pretty(&expected_csv_manifest(checksum)).unwrap();
+        set_client_manifest_expectations(&mut client, bytes);
+
+        let inventory = Inventory::new(client);
+        let result = inventory
+            .parse_manifest_key("manifest.json", MANIFEST_BUCKET)
+            .await
+            .unwrap();
+
+        assert_csv_records(result.as_slice());
+    }
+
+    #[tokio::test]
     async fn parse_csv_manifest() {
-        let data = concat!(
-            r#""bucket","inventory_test/","","true","false","0","2024-04-22T01:11:06.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
-            "\n",
-            r#""bucket","inventory_test/key1","","true","false","0","2024-04-22T01:13:28.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
-            "\n",
-            r#""bucket","inventory_test/key2","","true","false","5","2024-04-22T01:14:53.000Z","d8e8fca2dc0f896fd7cb4cb0031ba249","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
-            "\n\n"
-        );
-
-        let mut bytes = vec![];
-        let mut reader = GzEncoder::new(data.as_bytes(), Default::default());
-        reader.read_to_end(&mut bytes).unwrap();
-
-        let checksum = hex::encode(md5::compute(bytes.as_slice()).0);
-        let mut client = Client::default();
-        set_s3_client_expectations(&InventoryFormat::Csv, &mut client, bytes);
+        let (client, checksum) = test_csv_manifest();
 
         let inventory = Inventory::new(client);
         let result = inventory
@@ -426,7 +541,7 @@ mod tests {
 
         let checksum = hex::encode(md5::compute(bytes.as_slice()).0);
         let mut client = Client::default();
-        set_s3_client_expectations(&InventoryFormat::Csv, &mut client, bytes);
+        set_client_expectations(&InventoryFormat::Csv, &mut client, bytes);
 
         let inventory = Inventory::new(client);
         let result = inventory
@@ -473,7 +588,40 @@ mod tests {
         );
     }
 
-    fn set_s3_client_expectations(
+    fn set_client_manifest_expectations(s3_client: &mut Client, data: Vec<u8>) {
+        s3_client
+            .expect_get_object()
+            .with(eq("manifest.json"), eq(MANIFEST_BUCKET))
+            .once()
+            .returning(move |_, _| {
+                Ok(GetObjectOutput::builder()
+                    .body(ByteStream::from(data.clone()))
+                    .build())
+            });
+    }
+
+    fn test_csv_manifest() -> (Client, String) {
+        let data = concat!(
+            r#""bucket","inventory_test/","","true","false","0","2024-04-22T01:11:06.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
+            "\n",
+            r#""bucket","inventory_test/key1","","true","false","0","2024-04-22T01:13:28.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
+            "\n",
+            r#""bucket","inventory_test/key2","","true","false","5","2024-04-22T01:14:53.000Z","d8e8fca2dc0f896fd7cb4cb0031ba249","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
+            "\n\n"
+        );
+
+        let mut bytes = vec![];
+        let mut reader = GzEncoder::new(data.as_bytes(), Default::default());
+        reader.read_to_end(&mut bytes).unwrap();
+
+        let checksum = hex::encode(md5::compute(bytes.as_slice()).0);
+        let mut client = Client::default();
+        set_client_expectations(&InventoryFormat::Csv, &mut client, bytes);
+
+        (client, checksum)
+    }
+
+    fn set_client_expectations(
         file_format: &InventoryFormat,
         s3_client: &mut Client,
         data: Vec<u8>,
