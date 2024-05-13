@@ -16,9 +16,9 @@ my_max_pool_connections = int(os.environ['max_pool_connections'])
 my_max_concurrency = int(os.environ['max_concurrency'])
 my_multipart_chunksize = int(os.environ['multipart_chunksize'])
 my_max_attempts = int(os.environ['max_attempts'])
-metadata_copy = str(os.environ['copy_metadata'])
-tagging_copy = str(os.environ['copy_tagging'])
-obj_copy_storage_class = str(os.environ['copy_storage_class'])
+#metadata_copy = str(os.environ['copy_metadata'])
+#tagging_copy = str(os.environ['copy_tagging'])
+#obj_copy_storage_class = str(os.environ['copy_storage_class'])
 new_prefix = str(os.environ['destination_bucket_prefix'])
 
 # # Set up logging
@@ -31,7 +31,7 @@ logger.setLevel('INFO')
 # Set and Declare Configuration Parameters
 transfer_config = TransferConfig(max_concurrency=my_max_concurrency, multipart_chunksize=my_multipart_chunksize)
 config = Config(max_pool_connections=my_max_pool_connections, retries = {'max_attempts': my_max_attempts})
-myargs = {'ACL': 'bucket-owner-full-control', 'StorageClass': obj_copy_storage_class}
+myargs = {'ACL': 'bucket-owner-full-control' }#, 'StorageClass': obj_copy_storage_class}
 
 # Instantiate S3Client
 s3Client = boto3.client('s3', config=config)
@@ -66,18 +66,18 @@ def handler(event, context):
         if s3VersionId is not None:
             copy_source['VersionId'] = s3VersionId
             # Construct/Retrieve get source key metadata
-            if metadata_copy == 'Enable':
-                get_metadata = s3Client.head_object(Bucket=s3Bucket, Key=s3Key, VersionId=s3VersionId)
+#            if metadata_copy == 'Enable':
+#                get_metadata = s3Client.head_object(Bucket=s3Bucket, Key=s3Key, VersionId=s3VersionId)
             # Construct/Retrieve get source key tagging
-            if tagging_copy == 'Enable':
-                get_obj_tag = s3Client.get_object_tagging(Bucket=s3Bucket, Key=s3Key, VersionId=s3VersionId)
-        else:
+#            if tagging_copy == 'Enable':
+#                get_obj_tag = s3Client.get_object_tagging(Bucket=s3Bucket, Key=s3Key, VersionId=s3VersionId)
+#        else:
             # Construct/Retrieve get source key metadata
-            if metadata_copy == 'Enable':
-                get_metadata = s3Client.head_object(Bucket=s3Bucket, Key=s3Key)
+#            if metadata_copy == 'Enable':
+#                get_metadata = s3Client.head_object(Bucket=s3Bucket, Key=s3Key)
             # Construct/Retrieve get source key tagging
-            if tagging_copy == 'Enable':
-                get_obj_tag = s3Client.get_object_tagging(Bucket=s3Bucket, Key=s3Key)
+#            if tagging_copy == 'Enable':
+#                get_obj_tag = s3Client.get_object_tagging(Bucket=s3Bucket, Key=s3Key)
 
         # Construct New Path
         # Construct New Key
@@ -91,43 +91,43 @@ def handler(event, context):
         # Toggle Metadata or Tagging Copy Based on Enviromental Variables
         # Construct Request Parameters with metadata and tagging from sourceKey
         # Create variables to append as metadata and tagging to destination object
-        if metadata_copy == 'Enable':
-            logger.info("Object Metadata Copy Enabled from Source to Destination")
-            cache_control = get_metadata.get('CacheControl')
-            content_disposition = get_metadata.get('ContentDisposition')
-            content_encoding = get_metadata.get('ContentEncoding')
-            content_language = get_metadata.get('ContentLanguage')
-            metadata = get_metadata.get('Metadata')
-            website_redirect_location = get_metadata.get('WebsiteRedirectLocation')
-            expires = get_metadata.get('Expires')
-            # Construct Request With Required and Available Arguments
-            if cache_control:
-                myargs['CacheControl'] = cache_control
-            if content_disposition:
-                myargs['ContentDisposition'] = content_disposition
-            if content_encoding:
-                myargs['ContentEncoding'] = content_encoding
-            if content_language:
-                myargs['ContentLanguage'] = content_language
-            if metadata:
-                myargs['Metadata'] = metadata
-            if website_redirect_location:
-                myargs['WebsiteRedirectLocation'] = website_redirect_location
-            if expires:
-                myargs['Expires'] = expires
-        else:
-            logger.info("Object Metadata Copy Disabled")
+        # if metadata_copy == 'Enable':
+        #     logger.info("Object Metadata Copy Enabled from Source to Destination")
+        #     cache_control = get_metadata.get('CacheControl')
+        #     content_disposition = get_metadata.get('ContentDisposition')
+        #     content_encoding = get_metadata.get('ContentEncoding')
+        #     content_language = get_metadata.get('ContentLanguage')
+        #     metadata = get_metadata.get('Metadata')
+        #     website_redirect_location = get_metadata.get('WebsiteRedirectLocation')
+        #     expires = get_metadata.get('Expires')
+        #     # Construct Request With Required and Available Arguments
+        #     if cache_control:
+        #         myargs['CacheControl'] = cache_control
+        #     if content_disposition:
+        #         myargs['ContentDisposition'] = content_disposition
+        #     if content_encoding:
+        #         myargs['ContentEncoding'] = content_encoding
+        #     if content_language:
+        #         myargs['ContentLanguage'] = content_language
+        #     if metadata:
+        #         myargs['Metadata'] = metadata
+        #     if website_redirect_location:
+        #         myargs['WebsiteRedirectLocation'] = website_redirect_location
+        #     if expires:
+        #         myargs['Expires'] = expires
+        # else:
+        #     logger.info("Object Metadata Copy Disabled")
 
-        if tagging_copy == 'Enable':
-            logger.info("Object Tagging Copy Enabled from Source to Destination")
-            existing_tag_set = (get_obj_tag.get('TagSet'))
-            # Convert the Output from get object tagging to be compatible with transfer s3.copy()
-            tagging_to_s3 = "&".join([f"{parse.quote_plus(d['Key'])}={parse.quote_plus(d['Value'])}" for d in existing_tag_set])
-            # Construct Request With Required and Available Arguments
-            if existing_tag_set:
-                myargs['Tagging'] = tagging_to_s3
-        else:
-            logger.info("Object Tagging Copy Disabled")
+        # if tagging_copy == 'Enable':
+        #     logger.info("Object Tagging Copy Enabled from Source to Destination")
+        #     existing_tag_set = (get_obj_tag.get('TagSet'))
+        #     # Convert the Output from get object tagging to be compatible with transfer s3.copy()
+        #     tagging_to_s3 = "&".join([f"{parse.quote_plus(d['Key'])}={parse.quote_plus(d['Value'])}" for d in existing_tag_set])
+        #     # Construct Request With Required and Available Arguments
+        #     if existing_tag_set:
+        #         myargs['Tagging'] = tagging_to_s3
+        # else:
+        #     logger.info("Object Tagging Copy Disabled")
 
         # Initiate the Actual Copy Operation and include transfer config option
         logger.info(f"starting copy of object {s3Key} with versionID {s3VersionId} between SOURCEBUCKET: {s3Bucket} and DESTINATIONBUCKET: {newBucket}")
