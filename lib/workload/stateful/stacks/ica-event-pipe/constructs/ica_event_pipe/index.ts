@@ -31,13 +31,12 @@ export interface IcaEventPipeConstructProps {
 export class IcaEventPipeConstruct extends Construct {
   readonly icaQueue: IQueue;
   readonly mainBus: IEventBus;
-  readonly pipe: pipes.Pipe;
 
   constructor(scope: Construct, id: string, props: IcaEventPipeConstructProps) {
     super(scope, id);
     this.icaQueue = this.createMonitoredQueue(id, props).queue;
     this.mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
-    this.pipe = this.createPipe();
+    this.createPipe();
   }
 
   // Create the INPUT SQS queue that will receive the ICA events

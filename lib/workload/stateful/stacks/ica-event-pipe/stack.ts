@@ -22,10 +22,10 @@ export interface IcaEventPipeStackProps {
 export class IcaEventPipeStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps & IcaEventPipeStackProps) {
     super(scope, id, props);
-    this.createPipeConstruct(this, 'IcaEventPipeConstruct', props);
+    this.createConstruct(this, 'IcaEventPipeConstruct', props);
   }
 
-  private createPipeConstruct(
+  private createConstruct(
     scope: Construct,
     id: string,
     props: StackProps & IcaEventPipeStackProps
