@@ -2,22 +2,22 @@ import logging
 
 from django.test import TestCase
 
-from workflow_manager.models.helloworld import HelloWorld
+from workflow_manager.models.workflow import Workflow
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-class HelloModelTests(TestCase):
+class WorkflowModelTests(TestCase):
 
-    def test_save_hello(self):
+    def test_save_workflow(self):
         """
-        python manage.py test workflow_manager.tests.test_models.HelloModelTests.test_save_hello
+        python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_save_workflow
         """
-        mock_hello = HelloWorld()
-        mock_hello.text = "Hello World"
-        mock_hello.save()
+        mock_wfl = Workflow()
+        mock_wfl.text = "Test Workflow"
+        mock_wfl.save()
 
-        logger.info(mock_hello)
+        logger.info(mock_wfl)
 
-        self.assertEqual(1, HelloWorld.objects.count())
+        self.assertEqual(1, Workflow.objects.count())

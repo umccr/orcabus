@@ -3,7 +3,7 @@ from typing import Dict, List
 from rest_framework import serializers
 from rest_framework.fields import empty
 
-from workflow_manager.models.helloworld import HelloWorld
+from workflow_manager.models.workflow import Workflow
 
 READ_ONLY_SERIALIZER = "READ ONLY SERIALIZER"
 
@@ -35,7 +35,7 @@ class SubjectIdSerializer(serializers.BaseSerializer):
         raise NotImplementedError(READ_ONLY_SERIALIZER)
 
 
-class HelloWorldModelSerializer(serializers.ModelSerializer):
+class WorkflowModelSerializer(serializers.ModelSerializer):
     class Meta:
-        model = HelloWorld
+        model = Workflow
         fields = '__all__'

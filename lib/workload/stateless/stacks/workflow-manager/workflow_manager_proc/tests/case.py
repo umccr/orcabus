@@ -6,7 +6,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-class HelloProcUnitTestCase(TestCase):
+class WorkflowManagerProcUnitTestCase(TestCase):
 
     def setUp(self) -> None:
         # some code construct that share across all test cases under lims package
@@ -19,5 +19,5 @@ class HelloProcUnitTestCase(TestCase):
         pass
 
 
-class HelloProcIntegrationTestCase(TestCase):
+class WorkflowManagerProcIntegrationTestCase(TestCase):
     pass

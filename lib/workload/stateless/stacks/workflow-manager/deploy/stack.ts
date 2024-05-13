@@ -1,5 +1,3 @@
-// FIXME complete the implementation
-
 import path from 'path';
 import { Construct } from 'constructs';
 import { Architecture, ILayerVersion } from 'aws-cdk-lib/aws-lambda';
@@ -23,12 +21,11 @@ import {
   HttpRouteKey,
   HttpStage,
 } from 'aws-cdk-lib/aws-apigatewayv2';
-import { PostgresManagerStack } from '../../../lib/workload/stateless/stacks/postgres-manager/deploy/stack';
+import { PostgresManagerStack } from '../../../../../workload/stateless/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { ApiGatewayConstruct } from '../../../lib/workload/components/api-gateway';
+import { ApiGatewayConstruct } from '../../../../../workload/components/api-gateway';
 
-export interface ProjectNameStackProps {
-  // FIXME change prop interface name
+export interface WorkflowManagerStackProps {
   lambdaSecurityGroupName: string;
   vpcProps: VpcLookupOptions;
   mainBusName: string;
@@ -37,9 +34,8 @@ export interface ProjectNameStackProps {
   cognitoStatusPageAppClientIdParameterName: string;
 }
 
-export class ProjectNameStack extends Stack {
-  // FIXME change construct name
-  private props: ProjectNameStackProps;
+export class WorkflowManagerStack extends Stack {
+  private props: WorkflowManagerStackProps;
   private baseLayer: PythonLayerVersion;
   private readonly lambdaEnv;
   private readonly lambdaRuntimePythonVersion: aws_lambda.Runtime = aws_lambda.Runtime.PYTHON_3_12;
@@ -48,7 +44,7 @@ export class ProjectNameStack extends Stack {
   private readonly mainBus: IEventBus;
   private readonly vpc: IVpc;
 
-  constructor(scope: Construct, id: string, props: StackProps & ProjectNameStackProps) {
+  constructor(scope: Construct, id: string, props: StackProps & WorkflowManagerStackProps) {
     super(scope, id, props);
 
     this.props = props;
@@ -79,12 +75,12 @@ export class ProjectNameStack extends Stack {
       ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMReadOnlyAccess')
     );
 
-    const secretId: string = PostgresManagerStack.formatDbSecretManagerName('hello_manager');
+    const secretId: string = PostgresManagerStack.formatDbSecretManagerName('workflow_manager');
     const dbSecret = aws_secretsmanager.Secret.fromSecretNameV2(this, 'DbSecret', secretId);
     dbSecret.grantRead(this.lambdaRole);
 
     this.lambdaEnv = {
-      DJANGO_SETTINGS_MODULE: '{{ProjectName}}.settings.aws', // FIXME project name
+      DJANGO_SETTINGS_MODULE: 'workflow_manager.settings.aws',
       EVENT_BUS_NAME: this.mainBus.eventBusName,
     };
 
@@ -123,19 +119,19 @@ export class ProjectNameStack extends Stack {
     });
   }
 
-  private createApiHandlerAndIntegration(props: ProjectNameStackProps) {
+  private createApiHandlerAndIntegration(props: WorkflowManagerStackProps) {
     const apiFn: PythonFunction = this.createPythonFunction('Api', {
       index: 'api.py',
       handler: 'handler',
       timeout: Duration.seconds(28),
     });
 
-    const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
+    const wfmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
       region: this.region,
-      apiName: 'SequenceRunManager',
+      apiName: 'WorkflowManager',
       ...props,
     });
-    const httpApi = srmApi.httpApi;
+    const httpApi = wfmApi.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
 
@@ -148,7 +144,7 @@ export class ProjectNameStack extends Stack {
 
   private createProcHandler() {
     const procFn: PythonFunction = this.createPythonFunction('Proc', {
-      index: '{{project_name}}_proc/lambdas/hello_proc.py', // FIXME update appropriate path to Lambda entry point
+      index: 'workflow_manager_proc/lambdas/workflow_manager_proc',
       handler: 'handler',
       timeout: Duration.seconds(28),
     });
@@ -159,7 +155,7 @@ export class ProjectNameStack extends Stack {
 
   private createProcSqsHandler() {
     const procSqsFn: PythonFunction = this.createPythonFunction('ProcSqs', {
-      index: '{{project_name}}_proc/lambdas/hello_proc.py', // FIXME update appropriate path to Lambda entry point
+      index: 'workflow_manager_proc/lambdas/workflow_manager_proc.py',
       handler: 'sqs_handler',
       timeout: Duration.seconds(28),
     });

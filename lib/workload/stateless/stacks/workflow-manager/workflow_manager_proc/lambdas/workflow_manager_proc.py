@@ -6,7 +6,7 @@ django.setup()
 
 from libumccr import libjson
 
-from workflow_manager_proc.services import hello_srv
+from workflow_manager_proc.services import workflow_srv
 
 
 def sqs_handler(event, context):
@@ -52,10 +52,10 @@ def handler(event, context):
     """
     print(f"Processing {event}, {context}")
 
-    hallo = hello_srv.get_hello_from_db()
-    print(f"Hello > {hallo}")
+    wf = workflow_srv.get_workflow_from_db()
+    print(f"Workflow: {wf}")
 
     response = {
-        "hello": "world"
+        "Workflow": "Test workflow"
     }
     return response

@@ -1,5 +1,5 @@
 .EXPORT_ALL_VARIABLES:
-DJANGO_SETTINGS_MODULE = hello_manager.settings.local
+DJANGO_SETTINGS_MODULE = workflow_manager.settings.local
 
 .PHONY: test suite
 
