@@ -52,22 +52,24 @@ jobs:
         run: |
           make check
 
-  # test-stateless-suite:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  test-stateless-suite:
+    # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
+    runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - name: Rust installation
-  #       uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Rust installation
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
-  #     - name: Install dependencies
-  #       run: |
-  #         yarn install --immutable
+      - name: Install dependencies
+        run: |
+          yarn install --immutable
 
-  #     - run: make test-suite
+      - run: make test-suite
 
   test-stateful-stack:
+    # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
     runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout code
@@ -80,6 +82,7 @@ jobs:
       - run: make test-stateful
 
   test-stateless-stack:
+    # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
     runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout code
