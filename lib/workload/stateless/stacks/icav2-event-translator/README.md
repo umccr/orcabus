@@ -1,6 +1,6 @@
 # ICA Event Translator
 
-This stack creates the ica event translator service to translate external (ICA) events to orcabus events follow the defined schema `orcabus.wfm@WorkflowRunStateChange`. Example event can be seen [here](../../../../../../docs/event-schemas/wfm/example/WRSC__bct__bssh_bcl_convert.json). 
+This stack creates the ica event translator service to translate external (ICA) events to orcabus events follow the defined schema `orcabus.wfm@WorkflowRunStateChange`. Example event can be seen [here](../../../../../docs/event-schemas/wfm/example/WRSC__bcm__bssh_bcl_convert.json). 
 
 
 <!-- TOC -->
@@ -81,7 +81,7 @@ The AWS lambda functions put translated event following  ```WorkflowRunStateChan
   "id": "dxxxxx-6xxxx-fxxx-1xxx-5xxxxx",
   "detail-type": "WorkflowRunStateChange", // event type
   "source": "orcabus.bcm", // from bcl-convert-manager service
-  "account": "404687356768",
+  "account": "xxxxxxxxxxxx",
   "time": "2024-00-00T02:08:46Z",
   "region": "ap-southeast-x",
   "resources": [],
@@ -136,17 +136,17 @@ Send the orignal input and orcabus event after translation to the dynamo db for 
 Dynamodb format:
 | id | id_type | analysis_id | analysis_status | portal_run_id | db_uuid | original_external_event | translated_internal_ica_event | timestamp |
 | -------- | ---- | ------- | ------- | ---- | ------- | ------- | ------- |------- | 
-| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | portal_run_id | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | | | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | | | |
-| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | analysis_id |  |   |dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | | | |
-| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | INITIALIZING | 20xxxxxxxxxx | | {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
-|dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | QUEUED | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
-|dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | IN_PROGRESS | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
-|dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | SUCCEEDED | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
+| 20xxxxxxxxxx | portal_run_id | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | | | 4xxxxx-4xxxx-4xxx-4xxx-4xxxxx | | | |
+| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | analysis_id |  |   |dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | 4xxxxx-4xxxx-4xxx-4xxx-4xxxxx | | | |
+| 1xxxxx-1xxxx-1xxx-1xxx-1xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | INITIALIZING | 20xxxxxxxxxx | | {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
+|2xxxxx-2xxxx-2xxx-2xxx-2xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | QUEUED | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
+|3xxxxx-3xxxx-3xxx-3xxx-3xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | IN_PROGRESS | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
+|4xxxxx-4xxxx-4xxx-4xxx-4xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | SUCCEEDED | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
 
 
 ### Publish the Orcabus event to event bus
 publish the Orcabus (internal) event back the event bus.
-Example output event can be seen [here](../../../../../../docs/event-schemas/wfm/example/WRSC__bct__bssh_bcl_convert.json).
+Example output event can be seen [here](../../../../../docs/event-schemas/wfm/example/WRSC__bcm__bssh_bcl_convert.json).
 
 ## Unit Test
 Move to icav2-event-translator/translator_service
