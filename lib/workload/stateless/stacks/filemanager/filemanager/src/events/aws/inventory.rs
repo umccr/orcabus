@@ -162,63 +162,40 @@ impl Inventory {
         Ok(())
     }
 
-    /// Parse byte data into a manifest.json and then into records.
-    async fn json_manifest_from_bytes(&self, bytes: &[u8]) -> Result<Vec<Record>> {
-        self.parse_manifest(from_slice(bytes)?).await
-    }
-
-    /// Parse records from a bucket and key containing an S3 inventory manifest file.
+    /// Parse records from a bucket and key containing an S3 inventory manifest file. This can either
+    /// be a manifest.json file or a manifest.checksum.
     pub async fn parse_manifest_key<K: AsRef<str>>(
         &self,
         key: K,
         bucket: K,
     ) -> Result<Vec<Record>> {
-        if key.as_ref().ends_with(".json") {
-            self.parse_manifest_json(key, bucket).await
+        let data = self.get_object_bytes(key.as_ref(), bucket.as_ref()).await?;
+
+        let try_json = from_slice(data.as_slice());
+
+        if try_json.is_err() {
+            // If this is an error, assume that this data represents a checksum.
+            let mut manifest_key = key.as_ref().to_string();
+            manifest_key.truncate(
+                manifest_key
+                    .rfind('.')
+                    .unwrap_or_else(|| key.as_ref().len()),
+            );
+
+            let manifest = self
+                .get_object_bytes(
+                    format!("{}.json", manifest_key.as_str()).as_str(),
+                    bucket.as_ref(),
+                )
+                .await?;
+
+            Self::verify_md5(manifest.as_slice(), Self::trim_whitespace(data.as_slice()))?;
+
+            self.parse_manifest(from_slice(manifest.as_slice())?).await
         } else {
-            self.parse_manifest_checksum(key, bucket).await
+            // Otherwise return the JSON manifest.
+            self.parse_manifest(try_json?).await
         }
-    }
-
-    /// Parse records from a bucket and key containing an S3 inventory manifest.checksum. This assumes
-    /// the corresponding manifest.json has the same key and bucket except with .json as the suffix.
-    pub async fn parse_manifest_checksum<K: AsRef<str>>(
-        &self,
-        key: K,
-        bucket: K,
-    ) -> Result<Vec<Record>> {
-        let checksum = self.get_object_bytes(key.as_ref(), bucket.as_ref()).await?;
-
-        let mut manifest_key = key.as_ref().to_string();
-        manifest_key.truncate(
-            manifest_key
-                .rfind('.')
-                .unwrap_or_else(|| key.as_ref().len()),
-        );
-
-        let manifest = self
-            .get_object_bytes(
-                format!("{}.json", manifest_key.as_str()).as_str(),
-                bucket.as_ref(),
-            )
-            .await?;
-        Self::verify_md5(
-            manifest.as_slice(),
-            Self::trim_whitespace(checksum.as_slice()),
-        )?;
-
-        self.json_manifest_from_bytes(manifest.as_slice()).await
-    }
-
-    /// Parse records from a bucket and key containing an S3 inventory manifest.json.
-    pub async fn parse_manifest_json<K: AsRef<str>>(
-        &self,
-        key: K,
-        bucket: K,
-    ) -> Result<Vec<Record>> {
-        let data = self.get_object_bytes(key, bucket).await?;
-
-        self.json_manifest_from_bytes(data.as_slice()).await
     }
 
     /// Parse a manifest into records.
