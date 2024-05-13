@@ -68,18 +68,18 @@ jobs:
       - run: make test-suite
 
   # This require a self hosted runner where the compute is in ARM architecture
-  #
-  # test-stateful-stack:
-  #   runs-on: codebuild-orcabus-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
 
-  #     - name: Install dependencies
-  #       run: |
-  #         yarn install --immutable
+  test-stateful-stack:
+    runs-on: codebuild-wil-test-cb-orcabus-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - run: make test-stateful
+      - name: Install dependencies
+        run: |
+          yarn install --immutable
+
+      - run: make test-stateful
 
   # test-stateless-stack:
   #   runs-on: codebuild-orcabus-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
