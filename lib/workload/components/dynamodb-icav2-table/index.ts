@@ -1,8 +1,10 @@
 import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import { RemovalPolicy } from 'aws-cdk-lib';
 
 export interface DynamodbIcav2PipelineConstructProps {
   tableName: string;
+  removalPolicy?: RemovalPolicy;
 }
 
 export class DynamodbIcav2PipelineConstruct extends Construct {
@@ -24,6 +26,7 @@ export class DynamodbIcav2PipelineConstruct extends Construct {
         type: dynamodb.AttributeType.STRING,
       },
       tableName: props.tableName,
+      removalPolicy: props.removalPolicy,
     });
 
     // Set outputs
