@@ -100,35 +100,13 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     const s3BatchOperationsServiceIamRole = new iam.Role(this, 'S3BatchOperationsServiceIamRole', {
       assumedBy: new iam.ServicePrincipal('batchoperations.s3.amazonaws.com'),
       managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSBatchOperationsServiceRole'),
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
       ],
     });
     s3BatchOperationsServiceIamRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ['s3:GetObject', 's3:GetObjectVersion', 's3:GetBucketLocation'],
-        resources: [
-          `arn:aws:s3:::${props.BucketForManifestOrInventory}`,
-          `arn:aws:s3:::${props.BucketForManifestOrInventory}/*`,
-        ],
-        effect: iam.Effect.ALLOW,
-      })
-    );
-    s3BatchOperationsServiceIamRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ['s3:PutObject', 's3:GetBucketLocation'],
-        resources: [
-          `arn:aws:s3:::${props.BucketForBatchOpsReport}`,
-          `arn:aws:s3:::${props.BucketForBatchOpsReport}/*`,
-        ],
-        effect: iam.Effect.ALLOW,
-      })
-    );
-    s3BatchOperationsServiceIamRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ['lambda:InvokeFunction'],
-        resources: [
-          `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${lambda.functionName}`,
-        ],
+        actions: ['sts:AssumeRole'],
+        resources: [s3BatchCopyLambdaFunctionIamRole.roleArn],
         effect: iam.Effect.ALLOW,
       })
     );
