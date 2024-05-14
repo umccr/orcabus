@@ -1,6 +1,7 @@
 //! Database logic for AWS events.
 //!
 
+pub mod query;
 pub mod ingester;
 
 pub mod credentials;

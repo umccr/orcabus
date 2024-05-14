@@ -8,7 +8,7 @@ local:
 	@mkdir -p .local
 
 template: local
-	@yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/OrcaBusStatefulStack/TokenServiceStack > .local/template.yml
+	@yarn cdk-stateful synth -e OrcaBusStatefulPipeline/BetaDeployment/TokenServiceStack > .local/template.yml
 
 # see cfn-lint doc
 # https://github.com/aws-cloudformation/cfn-lint#exit-codes

@@ -1,6 +1,6 @@
 import { Client } from 'pg';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import { MicroserviceConfig, EventType } from './type';
+import { MicroserviceConfig } from './type';
 
 /**
  * get microservice config from lambda environment
@@ -12,38 +12,6 @@ export const getMicroserviceConfig = (): MicroserviceConfig => {
   }
   const microserviceConfig = JSON.parse(process.env.MICROSERVICE_CONFIG) as MicroserviceConfig;
   return microserviceConfig;
-};
-
-/**
- * get microservice name from the event payload and validate with the configuration
- * @param event
- * @returns
- */
-export const getMicroserviceName = (
-  microserviceConfig: MicroserviceConfig,
-  event: EventType
-): string => {
-  const eventName = event.microserviceName;
-  if (!eventName) {
-    throw new Error('Microservice microserviceName is not defined in the event payload');
-  }
-
-  const configNameArray = microserviceConfig.map((v) => v.name);
-  if (!configNameArray.includes(eventName)) {
-    throw new Error('invalid event microservice name');
-  }
-
-  return eventName;
-};
-
-/**
- * Execute postgres sql statement with some logs
- * @param client
- * @param sqlStatement
- */
-export const executeSqlWithLog = async (client: Client, sqlStatement: string) => {
-  console.info(`QUERY: ${sqlStatement}`);
-  console.info(`RESULT: ${JSON.stringify(await client.query(sqlStatement), undefined, 2)}`);
 };
 
 /**
@@ -78,4 +46,19 @@ export const getSecretValue = async (secretManagerName: string) => {
   }
 
   throw new Error('Failed to retrieve secret value');
+};
+
+export const getMicroservicePassword = async (microserviceName: string): Promise<string> => {
+  const microserviceSecretName = process.env.MICRO_SECRET_MANAGER_TEMPLATE_NAME?.replace(
+    '{replace_microservice_name}',
+    microserviceName
+  );
+  if (!microserviceSecretName)
+    throw new Error(`No microservice secret name configure in the env variable`);
+
+  const SMValue = JSON.parse(await getSecretValue(microserviceSecretName));
+  const SMPassword = SMValue?.password;
+  if (!SMPassword) throw new Error('No password output from password generator');
+
+  return SMPassword;
 };

@@ -2,41 +2,74 @@ import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { ConfigurableDatabaseProps } from '../../lib/workload/stateful/stacks/shared/constructs/database';
 import { SharedStackProps } from '../../lib/workload/stateful/stacks/shared/stack';
 import {
-  AccountName,
+  AppStage,
+  accountIdAlias,
   computeSecurityGroupName,
   databasePort,
   dbClusterEndpointHostParameterName,
   dbClusterIdentifier,
   dbClusterResourceIdParameterName,
-  devBucket,
   eventBusName,
   eventSourceQueueName,
-  prodBucket,
   rdsMasterSecretName,
-  regName,
-  stgBucket,
+  schemaRegistryName,
   vpcProps,
+  oncoanalyserBucket,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { SchemaRegistryProps } from '../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
-import { EventBusProps } from '../../lib/workload/stateful/stacks/shared/constructs/event-bus';
+import {
+  EventBusProps,
+  EventBusArchiverProps,
+} from '../../lib/workload/stateful/stacks/shared/constructs/event-bus';
 import { ComputeProps } from '../../lib/workload/stateful/stacks/shared/constructs/compute';
 import { EventSourceProps } from '../../lib/workload/stateful/stacks/shared/constructs/event-source';
 
 const getSchemaRegistryConstructProps = (): SchemaRegistryProps => {
   return {
-    registryName: regName,
-    description: 'Registry for OrcaBus Events',
+    registryName: schemaRegistryName,
+    description: 'Schema Registry for OrcaBus Events',
   };
 };
 
-const getEventBusConstructProps = (): EventBusProps => {
-  return {
+const getEventBusConstructProps = (stage: AppStage): EventBusProps => {
+  const baseConfig = {
     eventBusName: eventBusName,
     archiveName: 'OrcaBusMainArchive',
     archiveDescription: 'OrcaBus main event bus archive',
     archiveRetention: 365,
   };
+
+  const baseUniversalEventArchiverProps: EventBusArchiverProps = {
+    vpcProps: vpcProps,
+    archiveBucketName: 'orcabus-universal-events-archive-' + accountIdAlias[stage],
+    lambdaSecurityGroupName: 'OrcaBusSharedEventBusUniversalEventArchiveSecurityGroup',
+    bucketRemovalPolicy: RemovalPolicy.DESTROY,
+  };
+
+  switch (stage) {
+    case AppStage.BETA:
+      return {
+        ...baseConfig,
+        addCustomEventArchiver: true,
+        universalEventArchiverProps: baseUniversalEventArchiverProps,
+      };
+    case AppStage.GAMMA:
+      return {
+        ...baseConfig,
+        addCustomEventArchiver: true,
+        universalEventArchiverProps: baseUniversalEventArchiverProps,
+      };
+    case AppStage.PROD:
+      return {
+        ...baseConfig,
+        addCustomEventArchiver: true,
+        universalEventArchiverProps: {
+          ...baseUniversalEventArchiverProps,
+          bucketRemovalPolicy: RemovalPolicy.RETAIN,
+        },
+      };
+  }
 };
 
 const getComputeConstructProps = (): ComputeProps => {
@@ -45,42 +78,19 @@ const getComputeConstructProps = (): ComputeProps => {
   };
 };
 
-const getEventSourceConstructProps = (n: AccountName): EventSourceProps => {
-  switch (n) {
-    case 'beta':
-      return {
-        queueName: eventSourceQueueName,
-        maxReceiveCount: 3,
-        rules: [
-          {
-            bucket: devBucket,
-          },
-        ],
-      };
-    case 'gamma':
-      return {
-        queueName: eventSourceQueueName,
-        maxReceiveCount: 3,
-        rules: [
-          {
-            bucket: stgBucket,
-          },
-        ],
-      };
-    case 'prod':
-      return {
-        queueName: eventSourceQueueName,
-        maxReceiveCount: 3,
-        rules: [
-          {
-            bucket: prodBucket,
-          },
-        ],
-      };
-  }
+const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
+  return {
+    queueName: eventSourceQueueName,
+    maxReceiveCount: 3,
+    rules: [
+      {
+        bucket: oncoanalyserBucket[stage],
+      },
+    ],
+  };
 };
 
-const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps => {
+const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps => {
   const baseConfig = {
     clusterIdentifier: dbClusterIdentifier,
     defaultDatabaseName: 'orcabus',
@@ -94,8 +104,8 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
     secretRotationSchedule: Duration.days(7),
   };
 
-  switch (n) {
-    case 'beta':
+  switch (stage) {
+    case AppStage.BETA:
       return {
         ...baseConfig,
         numberOfInstance: 1,
@@ -105,7 +115,7 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
         enablePerformanceInsights: true,
         removalPolicy: RemovalPolicy.DESTROY,
       };
-    case 'gamma':
+    case AppStage.GAMMA:
       return {
         ...baseConfig,
         numberOfInstance: 1,
@@ -115,7 +125,7 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
         enablePerformanceInsights: true,
         removalPolicy: RemovalPolicy.DESTROY,
       };
-    case 'prod':
+    case AppStage.PROD:
       return {
         ...baseConfig,
         numberOfInstance: 1,
@@ -126,13 +136,13 @@ const getDatabaseConstructProps = (n: AccountName): ConfigurableDatabaseProps =>
   }
 };
 
-export const getSharedStackProps = (n: AccountName): SharedStackProps => {
+export const getSharedStackProps = (stage: AppStage): SharedStackProps => {
   return {
     vpcProps,
     schemaRegistryProps: getSchemaRegistryConstructProps(),
-    eventBusProps: getEventBusConstructProps(),
-    databaseProps: getDatabaseConstructProps(n),
+    eventBusProps: getEventBusConstructProps(stage),
+    databaseProps: getDatabaseConstructProps(stage),
     computeProps: getComputeConstructProps(),
-    eventSourceProps: getEventSourceConstructProps(n),
+    eventSourceProps: getEventSourceConstructProps(stage),
   };
 };

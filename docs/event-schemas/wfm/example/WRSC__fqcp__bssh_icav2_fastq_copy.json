@@ -1,0 +1,28 @@
+{
+  "version": "0",
+  "id": "f71ccccc-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "WorkflowRunStateChange",
+  "source": "orcabus.fqcp",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "portalRunId": "202405012397gatc",
+    "timestamp": "2025-05-01T09:25:44Z",
+    "status": "succeeded",
+    "workflowType": "bssh_icav2_fastq_copy",
+    "workflowVersion": "<fill-by-this-service> e.g. 4.2.7",
+    "payload": {
+      "refId": null,
+      "version": "0.1.0",
+      "instrumentRunId": "...",
+      "icav2CopyUtilityJobExecutionId": "",
+      "outputUri": "",
+      "manifestB64Gz": "...",
+      "fastqListRowsB64Gz": "",
+      "sampleSheetB64Gz": "...",
+      "basespaceRunId": "12345678"
+    }
+  }
+}

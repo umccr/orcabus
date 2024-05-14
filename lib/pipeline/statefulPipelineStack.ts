@@ -12,6 +12,7 @@ import {
   StatefulStackCollectionProps,
   StatefulStackCollection,
 } from '../workload/stateful/statefulStackCollectionClass';
+import { AppStage } from '../../config/constants';
 
 export class StatefulPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
@@ -83,12 +84,12 @@ export class StatefulPipelineStack extends cdk.Stack {
     /**
      * Deployment to Beta (Dev) account
      */
-    const betaConfig = getEnvironmentConfig('beta');
+    const betaConfig = getEnvironmentConfig(AppStage.BETA);
     if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(
         this,
-        'BetaDeployment',
+        'OrcaBusBeta',
         betaConfig.stackProps.statefulConfig,
         {
           account: betaConfig.accountId,
@@ -100,12 +101,12 @@ export class StatefulPipelineStack extends cdk.Stack {
     /**
      * Deployment to Gamma (Staging) account
      */
-    const gammaConfig = getEnvironmentConfig('gamma');
+    const gammaConfig = getEnvironmentConfig(AppStage.GAMMA);
     if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(
         this,
-        'GammaDeployment',
+        'OrcaBusGamma',
         gammaConfig.stackProps.statefulConfig,
         {
           account: gammaConfig.accountId,
@@ -118,12 +119,12 @@ export class StatefulPipelineStack extends cdk.Stack {
     /**
      * Deployment to Prod account (DISABLED)
      */
-    const prodConfig = getEnvironmentConfig('prod');
+    const prodConfig = getEnvironmentConfig(AppStage.PROD);
     if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
     pipeline.addStage(
       new OrcaBusStatefulDeploymentStage(
         this,
-        'ProdDeployment',
+        'OrcaBusProd',
         prodConfig.stackProps.statefulConfig,
         {
           account: prodConfig.accountId,
@@ -137,14 +138,14 @@ export class StatefulPipelineStack extends cdk.Stack {
     pipeline.buildPipeline();
 
     // notification for success/failure
-    const arteriaDevSlackConfigArn = ssm.StringParameter.valueForStringParameter(
+    const alertsBuildSlackConfigArn = ssm.StringParameter.valueForStringParameter(
       this,
-      '/chatbot_arn/slack/arteria-dev'
+      '/chatbot_arn/slack/alerts-build'
     );
     const target = chatbot.SlackChannelConfiguration.fromSlackChannelConfigurationArn(
       this,
       'SlackChannelConfiguration',
-      arteriaDevSlackConfigArn
+      alertsBuildSlackConfigArn
     );
 
     pipeline.pipeline.notifyOn('PipelineSlackNotification', target, {
@@ -152,7 +153,7 @@ export class StatefulPipelineStack extends cdk.Stack {
         codepipeline.PipelineNotificationEvents.PIPELINE_EXECUTION_FAILED,
         codepipeline.PipelineNotificationEvents.PIPELINE_EXECUTION_SUCCEEDED,
       ],
-      detailType: codestarnotifications.DetailType.BASIC,
+      detailType: codestarnotifications.DetailType.FULL,
       notificationRuleName: 'orcabus_stateful_pipeline_notification',
     });
   }

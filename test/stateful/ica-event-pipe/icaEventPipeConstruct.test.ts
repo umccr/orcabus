@@ -1,8 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { IcaEventPipeConstruct } from '../../../lib/workload/stateful/stacks/ica-event-pipe/construct/ica_event_pipe';
+import { IcaEventPipeConstruct } from '../../../lib/workload/stateful/stacks/ica-event-pipe/constructs/ica_event_pipe';
 
 const topicArn = 'arn:aws:sns:region-1:123456789123:TopicName';
+const icaTestAccount = '123456789123';
 let stack: cdk.Stack;
 
 beforeAll(() => {
@@ -18,7 +19,9 @@ describe('IcaEventPipeConstruct', () => {
     eventBusName: 'TestBus',
     slackTopicArn: topicArn,
     dlqMessageThreshold: 1,
+    icaAwsAccountNumber: icaTestAccount,
   });
+
   const template = Template.fromStack(stack);
   // console.log(JSON.stringify(template, undefined, 2));
 
@@ -38,22 +41,47 @@ describe('IcaEventPipeConstruct', () => {
   });
 
   test('SQS Queue configured with SSL', () => {
+    // make sure all QueuePolicies enforce SSL
     template.resourceCountIs('AWS::SQS::QueuePolicy', 2);
-    template.hasResourceProperties('AWS::SQS::QueuePolicy', {
-      PolicyDocument: Match.objectLike({
-        Statement: [
-          {
-            Action: 'sqs:*',
-            Effect: 'Deny',
-            Condition: {
-              Bool: {
-                'aws:SecureTransport': 'false',
+    template.allResourcesProperties(
+      'AWS::SQS::QueuePolicy',
+      Match.objectLike({
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: 'sqs:*',
+              Effect: 'Deny',
+              Condition: {
+                Bool: {
+                  'aws:SecureTransport': 'false',
+                },
               },
-            },
-          },
-        ],
-      }),
-    });
+            }),
+          ]),
+        },
+      })
+    );
+  });
+
+  test('SQS Queue configured for ICA events', () => {
+    template.hasResourceProperties(
+      'AWS::SQS::QueuePolicy',
+      Match.objectLike({
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: Match.arrayWith(['sqs:SendMessage']),
+              Effect: 'Allow',
+              Principal: {
+                AWS: {
+                  'Fn::Join': ['', ['arn:', Match.anyValue(), ':iam::' + icaTestAccount + ':root']],
+                },
+              },
+            }),
+          ]),
+        },
+      })
+    );
   });
 
   test('CloudWatch Alarm created', () => {

@@ -27,5 +27,3 @@ To modify the diagram, open the `docs/architecture.drawio.svg` with [diagrams.ne
 
 - Load tracking sheet data in Google Drive and map it to the Application model
 - (PLANNED) periodically trigger the sync every 24 hour
-
-

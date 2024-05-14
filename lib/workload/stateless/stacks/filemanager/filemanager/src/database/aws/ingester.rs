@@ -145,6 +145,7 @@ impl<'a> Ingester<'a> {
             "../database/queries/ingester/aws/insert_s3_created_objects.sql",
             &object_created.s3_object_ids,
             &object_ids,
+            &UuidGenerator::generate_n(object_created.s3_object_ids.len()),
             &object_created.buckets,
             &object_created.keys,
             &object_created.event_times as &[Option<DateTime<Utc>>],
@@ -200,6 +201,7 @@ impl<'a> Ingester<'a> {
             "../database/queries/ingester/aws/insert_s3_deleted_objects.sql",
             &object_deleted.s3_object_ids,
             &object_ids,
+            &UuidGenerator::generate_n(object_deleted.s3_object_ids.len()),
             &object_deleted.buckets,
             &object_deleted.keys,
             &object_deleted.event_times as &[Option<DateTime<Utc>>],
@@ -262,6 +264,7 @@ pub(crate) mod tests {
     use sqlx::postgres::PgRow;
     use sqlx::{Executor, PgPool, Row};
     use tokio::time::Instant;
+    use uuid::Uuid;
 
     use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
@@ -1570,6 +1573,10 @@ pub(crate) mod tests {
         created_date: Option<DateTime<Utc>>,
         deleted_date: Option<DateTime<Utc>>,
     ) {
+        assert_ne!(
+            s3_object_results.get::<Uuid, _>("s3_object_id"),
+            s3_object_results.get::<Uuid, _>("public_id")
+        );
         assert_eq!("bucket", s3_object_results.get::<String, _>("bucket"));
         assert_eq!("key", s3_object_results.get::<String, _>("key"));
         assert_eq!(version_id, s3_object_results.get::<String, _>("version_id"));

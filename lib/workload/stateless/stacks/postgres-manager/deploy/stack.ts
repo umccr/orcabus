@@ -1,7 +1,7 @@
-import { Duration, RemovalPolicy, SecretValue, Stack, StackProps } from 'aws-cdk-lib';
+import path from 'path';
+import { Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import { Function, Runtime, Architecture, Code } from 'aws-cdk-lib/aws-lambda';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Vpc, VpcLookupOptions, SubnetType, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -9,13 +9,28 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as sm from 'aws-cdk-lib/aws-secretsmanager';
 import { MicroserviceConfig, DbAuthType } from '../function/type';
-import package_json from '../package.json';
+import { ProviderFunction } from '../../../../components/provider-function';
 
 export type PostgresManagerStackProps = {
+  /**
+   * Secret name of the superuser credentials
+   */
   masterSecretName: string;
+  /**
+   * The Db cluster Id
+   */
   dbClusterIdentifier: string;
+  /**
+   * The microservice configuration
+   */
   microserviceDbConfig: MicroserviceConfig;
+  /**
+   * The SSM parameter name that contains the cluster resource id
+   */
   clusterResourceIdParameterName: string;
+  /**
+   * The port of the database
+   */
   dbPort: number;
   /**
    * The schedule (in Duration) that will rotate the microservice app secret
@@ -57,67 +72,44 @@ export class PostgresManagerStack extends Stack {
       props.clusterResourceIdParameterName
     );
 
-    const dbCluster = rds.DatabaseCluster.fromDatabaseClusterAttributes(this, 'OrcabusDbCluster', {
+    const dbCluster = rds.DatabaseCluster.fromDatabaseClusterAttributes(this, 'OrcaBusDbCluster', {
       clusterIdentifier: props.dbClusterIdentifier,
       clusterResourceIdentifier: dbClusterResourceId,
       port: props.dbPort,
     });
 
-    const dependencyLayer = new lambda.LayerVersion(this, 'DependenciesLayer', {
-      code: lambda.Code.fromDockerBuild(__dirname + '/../', {
-        file: 'deploy/construct/layer/node_module.Dockerfile',
-        imagePath: 'home/node/app/output',
+    const updatePgLambda = new Function(this, 'UpdatePostgresLambda', {
+      code: Code.fromDockerBuild(path.join(__dirname + '/../'), {
+        file: 'deploy/lambda-build.Dockerfile',
+        imagePath: 'usr/app/dist',
       }),
-      compatibleArchitectures: [lambda.Architecture.ARM_64],
-      compatibleRuntimes: [lambda.Runtime.NODEJS_20_X],
-    });
-
-    const runtimeDependencies = Object.keys(package_json.dependencies);
-    const rdsLambdaProps: nodejs.NodejsFunctionProps = {
-      layers: [dependencyLayer],
-      bundling: { externalModules: runtimeDependencies },
-      timeout: Duration.minutes(5),
-      handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_20_X,
-      architecture: lambda.Architecture.ARM_64,
-      environment: {
-        RDS_SECRET_MANAGER_NAME: masterSecret.secretName,
-        MICROSERVICE_CONFIG: JSON.stringify(props.microserviceDbConfig),
-      },
+      timeout: Duration.minutes(10),
+      handler: 'index.handler',
+      runtime: Runtime.NODEJS_20_X,
+      architecture: Architecture.ARM_64,
       vpc: vpc,
       vpcSubnets: {
         subnetType: SubnetType.PRIVATE_WITH_EGRESS,
       },
       securityGroups: [lambdaSG],
-    };
-
-    // 1. lambda responsible on db creation
-    const createPgDb = new nodejs.NodejsFunction(this, 'CreateDbPostgresLambda', {
-      ...rdsLambdaProps,
-      entry: __dirname + '/../function/create-pg-db.ts',
-      functionName: 'orcabus-create-pg-db',
+      environment: {
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+        MICRO_SECRET_MANAGER_TEMPLATE_NAME: PostgresManagerStack.formatDbSecretManagerName(
+          '{replace_microservice_name}'
+        ),
+        RDS_SECRET_MANAGER_NAME: masterSecret.secretName,
+        MICROSERVICE_CONFIG: JSON.stringify(props.microserviceDbConfig),
+      },
     });
-    masterSecret.grantRead(createPgDb);
+    masterSecret.grantRead(updatePgLambda);
 
-    // 2. lambda responsible on role creation with rds_iam
-    const initiatePgRdsIam = new nodejs.NodejsFunction(this, 'CreateIamUserPostgresLambda', {
-      ...rdsLambdaProps,
-      entry: __dirname + '/../function/create-pg-iam-role.ts',
-      functionName: 'orcabus-create-pg-iam-role',
+    new ProviderFunction(this, 'UpdatePgProviderFunction', {
+      vpc: vpc,
+      function: updatePgLambda,
+      additionalHash: JSON.stringify(props.microserviceDbConfig),
     });
-    masterSecret.grantRead(initiatePgRdsIam);
 
-    // create iam-policy that could be assumed when using the rds-iam
-    for (const microservice of props.microserviceDbConfig) {
-      if (microservice.authType == DbAuthType.RDS_IAM) {
-        const iamPolicy = new iam.ManagedPolicy(this, `${microservice.name}RdsIamPolicy`, {
-          managedPolicyName: PostgresManagerStack.formatRdsPolicyName(microservice.name),
-        });
-        dbCluster.grantConnect(iamPolicy, microservice.name);
-      }
-    }
-
-    // 3. lambda responsible on role creation with username-password auth
+    // each microservice will have its own role/SM to login
 
     // the template of the secret where it has common props
     const secretTemplateJson = {
@@ -126,10 +118,17 @@ export class PostgresManagerStack extends Stack {
       port: masterSecret.secretValueFromJson('port').unsafeUnwrap(),
     };
 
-    const secretManagerArray = [];
     for (const microservice of props.microserviceDbConfig) {
-      if (microservice.authType == DbAuthType.USERNAME_PASSWORD) {
-        // create secret manager for specific µ-app
+      if (microservice.authType == DbAuthType.RDS_IAM) {
+        // create iam-policy that could be assumed when using the rds-iam
+
+        const iamPolicy = new iam.ManagedPolicy(this, `${microservice.name}RdsIamPolicy`, {
+          managedPolicyName: PostgresManagerStack.formatRdsPolicyName(microservice.name),
+        });
+        dbCluster.grantConnect(iamPolicy, microservice.name);
+      } else if (microservice.authType == DbAuthType.USERNAME_PASSWORD) {
+        // create secret manager (+ rotator) for specific µ-app
+
         const microSM = new sm.Secret(this, `${microservice.name}UserPassCred`, {
           description: `orcabus microservice secret for '${microservice.name}'`,
           generateSecretString: {
@@ -145,7 +144,6 @@ export class PostgresManagerStack extends Stack {
           secretName: PostgresManagerStack.formatDbSecretManagerName(microservice.name),
         });
 
-        // rotating these SM
         new sm.SecretRotation(this, `${microservice.name}DbSecretRotation`, {
           application: sm.SecretRotationApplication.POSTGRES_ROTATION_SINGLE_USER,
           excludeCharacters: this.passExcludedCharacter,
@@ -159,36 +157,10 @@ export class PostgresManagerStack extends Stack {
           },
         });
 
-        // pushing to an array so it can be referred later
-        secretManagerArray.push(microSM);
+        // the pg lambda need to access the SM to set the role password
+        microSM.grantRead(updatePgLambda);
       }
     }
-
-    const createRolePgLambda = new nodejs.NodejsFunction(this, 'CreateUserPassPostgresLambda', {
-      ...rdsLambdaProps,
-      entry: __dirname + '/../function/create-pg-login-role.ts',
-      functionName: 'orcabus-create-pg-login-role',
-    });
-    createRolePgLambda.addEnvironment(
-      'MICRO_SECRET_MANAGER_TEMPLATE_NAME',
-      PostgresManagerStack.formatDbSecretManagerName('{replace_microservice_name}')
-    );
-
-    // grant lambda master secret
-    masterSecret.grantRead(createRolePgLambda);
-
-    // grant to read all microservice secret name
-    for (const secret of secretManagerArray) {
-      secret.grantRead(createRolePgLambda);
-    }
-
-    // 4. lambda responsible on alter db owner
-    const alterDbPgOwnerLambda = new nodejs.NodejsFunction(this, 'AlterDbOwnerPostgresLambda', {
-      ...rdsLambdaProps,
-      entry: __dirname + '/../function/alter-pg-db-owner.ts',
-      functionName: 'orcabus-alter-pg-db-owner',
-    });
-    masterSecret.grantRead(alterDbPgOwnerLambda);
   }
 
   /**

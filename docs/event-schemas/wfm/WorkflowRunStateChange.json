@@ -1,0 +1,102 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "WorkflowRunStateChange"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "AWSEvent": {
+        "type": "object",
+        "required": [
+          "detail-type",
+          "detail",
+          "source"
+        ],
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/WorkflowRunStateChange"
+          },
+          "account": {
+            "type": "string"
+          },
+          "detail-type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkflowRunStateChange": {
+        "type": "object",
+        "required": [
+          "portalRunId",
+          "timestamp",
+          "status",
+          "workflowType",
+          "workflowVersion",
+          "payload"
+        ],
+        "properties": {
+          "portalRunId": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "workflowType": {
+            "type": "string"
+          },
+          "workflowVersion": {
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/Payload"
+          }
+        }
+      },
+      "Payload": {
+        "type": "object",
+        "required": [
+          "refId",
+          "version"
+        ],
+        "properties": {
+          "refId": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

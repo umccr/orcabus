@@ -14,10 +14,46 @@ import {
 } from '../workload/stateless/statelessStackCollectionClass';
 
 import { getEnvironmentConfig } from '../../config/config';
+import { AppStage } from '../../config/constants';
 
 export class StatelessPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
+
+    // Define CodeBuild project for GH action runner to use
+    // the GH repo defined below already configured to allow CB webhook
+    // This is actually not part of the pipeline, so I guess we could move this someday.
+    const ghRunnerRole = new iam.Role(this, 'GHRunnerRole', {
+      assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
+    });
+    new codebuild.CfnProject(this, 'GHRunnerCodeBuildProject', {
+      // the name here act as a unique id for GH action to know which CodeBuild to use
+      // So if you change this, you need to update the GH action .yml file (.github/workflows/prbuild.yml)
+      name: 'orcabus-codebuild-gh-runner',
+      description: 'GitHub Action Runner in CodeBuild for `orcabus` repository',
+      serviceRole: ghRunnerRole.roleArn,
+      artifacts: {
+        type: 'NO_ARTIFACTS',
+      },
+      environment: {
+        type: 'ARM_CONTAINER',
+        computeType: 'BUILD_GENERAL1_LARGE',
+        image: 'aws/codebuild/amazonlinux2-aarch64-standard:3.0',
+        privilegedMode: true,
+      },
+      source: {
+        type: 'GITHUB',
+        gitCloneDepth: 1,
+        location: 'https://github.com/umccr/orcabus.git',
+        reportBuildStatus: false,
+      },
+      logsConfig: { cloudWatchLogs: { status: 'DISABLED' } },
+      triggers: {
+        webhook: true,
+        buildType: 'BUILD',
+        filterGroups: [[{ type: 'EVENT', pattern: 'WORKFLOW_JOB_QUEUED' }]],
+      },
+    });
 
     // A connection where the pipeline get its source code
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
@@ -98,21 +134,39 @@ export class StatelessPipelineStack extends cdk.Stack {
       },
     });
 
+    // After the assets are published, this could be removed to prevent hitting artifact limit
+    // https://github.com/aws/aws-cdk/issues/9917
+    const stripAssetsFromAssembly = new pipelines.CodeBuildStep('StripAssetsFromAssembly', {
+      input: pipeline.cloudAssemblyFileSet,
+      commands: [
+        'S3_PATH=${CODEBUILD_SOURCE_VERSION#"arn:aws:s3:::"}',
+        'ZIP_ARCHIVE=$(basename $S3_PATH)',
+        'echo $S3_PATH',
+        'echo $ZIP_ARCHIVE',
+        'ls',
+        'rm -rfv asset.*',
+        'zip -r -q -A $ZIP_ARCHIVE *',
+        'ls',
+        'aws s3 cp $ZIP_ARCHIVE s3://$S3_PATH',
+      ],
+    });
+
     /**
      * Deployment to Beta (Dev) account
      */
-    const betaConfig = getEnvironmentConfig('beta');
+    const betaConfig = getEnvironmentConfig(AppStage.BETA);
     if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
     pipeline.addStage(
       new OrcaBusStatelessDeploymentStage(
         this,
-        'BetaDeployment',
+        'OrcaBusBeta',
         betaConfig.stackProps.statelessConfig,
         {
           account: betaConfig.accountId,
           region: betaConfig.region,
         }
-      )
+      ),
+      { pre: [stripAssetsFromAssembly] } // I think this should only be done once across stages
     );
 
     // Since the stateless stack might need to reference the stateful resources (e.g. db, sg), we might comment this out
@@ -122,12 +176,12 @@ export class StatelessPipelineStack extends cdk.Stack {
     // /**
     //  * Deployment to Gamma (Staging) account
     //  */
-    // const gammaConfig = getEnvironmentConfig('gamma');
+    // const gammaConfig = getEnvironmentConfig(AppStage.GAMMA);
     // if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
     // pipeline.addStage(
     //   new OrcaBusStatelessDeploymentStage(
     //     this,
-    //     'GammaDeployment',
+    //     'OrcaBusGamma',
     //     gammaConfig.stackProps.statelessConfig,
     //     {
     //       account: gammaConfig.accountId,
@@ -140,12 +194,12 @@ export class StatelessPipelineStack extends cdk.Stack {
     // /**
     //  * Deployment to Prod account
     //  */
-    // const prodConfig = getEnvironmentConfig('prod');
+    // const prodConfig = getEnvironmentConfig(AppStage.PROD);
     // if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
     // pipeline.addStage(
     //   new OrcaBusStatelessDeploymentStage(
     //     this,
-    //     'ProdDeployment',
+    //     'OrcaBusProd',
     //     prodConfig.stackProps.statelessConfig,
     //     {
     //       account: prodConfig.accountId,
@@ -158,15 +212,17 @@ export class StatelessPipelineStack extends cdk.Stack {
     // need to build pipeline so we could add notification at the pipeline construct
     pipeline.buildPipeline();
 
+    pipeline.pipeline.artifactBucket.grantReadWrite(stripAssetsFromAssembly.project);
+
     // notification for success/failure
-    const arteriaDevSlackConfigArn = ssm.StringParameter.valueForStringParameter(
+    const alertsBuildSlackConfigArn = ssm.StringParameter.valueForStringParameter(
       this,
-      '/chatbot_arn/slack/arteria-dev'
+      '/chatbot_arn/slack/alerts-build'
     );
     const target = chatbot.SlackChannelConfiguration.fromSlackChannelConfigurationArn(
       this,
       'SlackChannelConfiguration',
-      arteriaDevSlackConfigArn
+      alertsBuildSlackConfigArn
     );
 
     pipeline.pipeline.notifyOn('PipelineSlackNotification', target, {
@@ -174,7 +230,7 @@ export class StatelessPipelineStack extends cdk.Stack {
         codepipeline.PipelineNotificationEvents.PIPELINE_EXECUTION_FAILED,
         codepipeline.PipelineNotificationEvents.PIPELINE_EXECUTION_SUCCEEDED,
       ],
-      detailType: codestarnotifications.DetailType.BASIC,
+      detailType: codestarnotifications.DetailType.FULL,
       notificationRuleName: 'orcabus_stateless_pipeline_notification',
     });
   }

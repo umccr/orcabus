@@ -1,0 +1,108 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Launch Job",
+  "States": {
+    "Launch Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__check_or_launch_job_lambda_arn__}",
+        "Payload": {
+          "dest_uri.$": "$.dest_uri",
+          "source_uris.$": "$.source_uris",
+          "job_id": null,
+          "failed_job_list": [],
+          "job_status": null,
+          "wait_time_seconds": 5
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "dest_uri.$": "$.Payload.dest_uri",
+        "source_uris.$": "$.Payload.source_uris",
+        "job_id.$": "$.Payload.job_id",
+        "failed_job_list": [],
+        "job_status.$": "$.Payload.job_status",
+        "wait_time_seconds.$": "$.Payload.wait_time_seconds"
+      },
+      "Next": "Wait 10 Seconds"
+    },
+    "Wait 10 Seconds": {
+      "Type": "Wait",
+      "Next": "Check Job",
+      "Comment": "Wait ten seconds for job to get going",
+      "SecondsPath": "$.wait_time_seconds"
+    },
+    "Check Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__check_or_launch_job_lambda_arn__}",
+        "Payload": {
+          "dest_uri.$": "$.dest_uri",
+          "source_uris.$": "$.source_uris",
+          "job_id.$": "$.job_id",
+          "failed_job_list.$": "$.failed_job_list",
+          "job_status.$": "$.job_status",
+          "wait_time_seconds.$": "$.wait_time_seconds"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "dest_uri.$": "$.Payload.dest_uri",
+        "source_uris.$": "$.Payload.source_uris",
+        "job_id.$": "$.Payload.job_id",
+        "failed_job_list.$": "$.Payload.failed_job_list",
+        "job_status.$": "$.Payload.job_status",
+        "wait_time_seconds.$": "$.Payload.wait_time_seconds"
+      },
+      "Next": "Job Complete?"
+    },
+    "Job Complete?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.job_status",
+          "StringEquals": "FAILED",
+          "Next": "Fail"
+        },
+        {
+          "Variable": "$.job_status",
+          "StringEquals": "SUCCEEDED",
+          "Next": "Success"
+        }
+      ],
+      "Default": "Wait 10 Seconds"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "Fail": {
+      "Type": "Fail"
+    }
+  }
+}

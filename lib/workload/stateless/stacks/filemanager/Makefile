@@ -21,7 +21,7 @@ up:
 down:
 	@docker compose -p "$(DOCKER_PROJECT_NAME)" down
 docker-postgres:
-	@docker compose -p "$(DOCKER_PROJECT_NAME)" up --wait -d postgres
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" up --wait -d postgres --build
 docker-clean:
 	@docker compose -p "$(DOCKER_PROJECT_NAME)" down --volumes
 docker-build:

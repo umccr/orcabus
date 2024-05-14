@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 
-import { FilemanagerProps, Filemanager } from './stacks/filemanager/deploy/lib/filemanager';
+import { FilemanagerProps, Filemanager } from './stacks/filemanager/deploy/stack';
 import {
   PostgresManagerStack,
   PostgresManagerStackProps,
@@ -13,13 +13,40 @@ import {
 import {
   SequenceRunManagerStack,
   SequenceRunManagerStackProps,
-} from './stacks/sequence-run-manager/deploy/component';
+} from './stacks/sequence-run-manager/deploy/stack';
+import {
+  BsRunsUploadManagerStack,
+  BsRunsUploadManagerStackProps,
+} from './stacks/bs-runs-upload-manager/deploy/stack';
+import {
+  ICAv2CopyBatchUtilityStack,
+  ICAv2CopyBatchUtilityStackProps,
+} from './stacks/icav2-copy-batch-utility/deploy/stack';
+import {
+  BsshIcav2FastqCopyManagerStack,
+  BsshIcav2FastqCopyManagerStackProps,
+} from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
+import {
+  cttsov2Icav2PipelineManagerStackProps,
+  Cttsov2Icav2PipelineManagerStack,
+} from './stacks/cttso-v2-pipeline-manager/deploy/stack';
+import { SchemaStack, SchemaStackProps } from './stacks/schema/stack';
+import {
+  Icav2EventTranslatorStack,
+  Icav2EventTranslatorStackProps,
+} from './stacks/icav2-event-translator/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
   metadataManagerStackProps: MetadataManagerStackProps;
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
+  bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
+  icav2CopyBatchUtilityStackProps: ICAv2CopyBatchUtilityStackProps;
+  bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
+  cttsov2Icav2PipelineManagerStackProps: cttsov2Icav2PipelineManagerStackProps;
+  schemaStackProps: SchemaStackProps;
+  icav2EventTranslatorStackProps: Icav2EventTranslatorStackProps;
 }
 
 export class StatelessStackCollection {
@@ -28,12 +55,23 @@ export class StatelessStackCollection {
   readonly fileManagerStack: Stack;
   readonly metadataManagerStack: Stack;
   readonly sequenceRunManagerStack: Stack;
+  readonly bsRunsUploadManagerStack: Stack;
+  readonly icav2CopyBatchUtilityStack: Stack;
+  readonly bsshIcav2FastqCopyManagerStack: Stack;
+  readonly cttsov2Icav2PipelineManagerStack: Stack;
+  readonly schemaStack: Stack;
+  readonly icav2EventTranslatorStack: Stack;
 
   constructor(
     scope: Construct,
     env: Environment,
     statelessConfiguration: StatelessStackCollectionProps
   ) {
+    this.schemaStack = new SchemaStack(scope, 'SchemaStack', {
+      ...this.createTemplateProps(env, 'SchemaStack'),
+      ...statelessConfiguration.schemaStackProps,
+    });
+
     this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
       ...this.createTemplateProps(env, 'PostgresManagerStack'),
       ...statelessConfiguration.postgresManagerStackProps,
@@ -53,6 +91,51 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'SequenceRunManagerStack'),
       ...statelessConfiguration.sequenceRunManagerStackProps,
     });
+
+    this.bsRunsUploadManagerStack = new BsRunsUploadManagerStack(
+      scope,
+      'BsRunsUploadManagerStack',
+      {
+        ...this.createTemplateProps(env, 'BsRunsUploadManagerStack'),
+        ...statelessConfiguration.bsRunsUploadManagerStackProps,
+      }
+    );
+
+    this.icav2CopyBatchUtilityStack = new ICAv2CopyBatchUtilityStack(
+      scope,
+      'ICAv2CopyBatchUtilityStack',
+      {
+        ...this.createTemplateProps(env, 'ICAv2CopyBatchUtilityStack'),
+        ...statelessConfiguration.icav2CopyBatchUtilityStackProps,
+      }
+    );
+
+    this.bsshIcav2FastqCopyManagerStack = new BsshIcav2FastqCopyManagerStack(
+      scope,
+      'BsshIcav2FastqCopyManagerStack',
+      {
+        ...this.createTemplateProps(env, 'BsshIcav2FastqCopyManagerStack'),
+        ...statelessConfiguration.bsshIcav2FastqCopyManagerStackProps,
+      }
+    );
+
+    this.cttsov2Icav2PipelineManagerStack = new Cttsov2Icav2PipelineManagerStack(
+      scope,
+      'Cttsov2Icav2PipelineManagerStack',
+      {
+        ...this.createTemplateProps(env, 'Cttsov2Icav2PipelineManagerStack'),
+        ...statelessConfiguration.cttsov2Icav2PipelineManagerStackProps,
+      }
+    );
+
+    this.icav2EventTranslatorStack = new Icav2EventTranslatorStack(
+      scope,
+      'Icav2EventTranslatorStack',
+      {
+        ...this.createTemplateProps(env, 'Icav2EventTranslatorStack'),
+        ...statelessConfiguration.icav2EventTranslatorStackProps,
+      }
+    );
   }
 
   /**

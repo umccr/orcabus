@@ -37,6 +37,13 @@ describe('cdk-nag-stateless-pipeline', () => {
     { id: 'AwsSolutions-CB3', reason: 'Allow CDK Pipeline' },
   ]);
 
+  NagSuppressions.addResourceSuppressionsByPath(stack, `/TestStack/GHRunnerCodeBuildProject`, [
+    {
+      id: 'AwsSolutions-CB4',
+      reason: 'This codebuild does not use artifacts, so S3 KMS key is irrelevant.',
+    },
+  ]);
+
   test('cdk-nag AwsSolutions Pack errors', () => {
     const errors = Annotations.fromStack(stack)
       .findError('*', Match.stringLikeRegexp('AwsSolutions-.*'))

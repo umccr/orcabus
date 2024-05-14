@@ -33,6 +33,8 @@ test-suite:
 	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) test)
 	@(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) test)
 	@(cd lib/workload/stateless/stacks/filemanager && $(MAKE) test)
+	@(cd lib/workload/stateless/stacks/postgres-manager && $(MAKE) test)
+	@(cd lib/workload/stateless/stacks/icav2-event-translator/translator_service && $(MAKE) test)
 
 # The default outer `test` target only run the top level cdk application unit tests under `./test`
 test: test-stateless test-stateful test-suite

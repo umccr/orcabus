@@ -1,7 +1,37 @@
 # SRM Deploy
 
-This directory contains CDK code constructs that will be called and assembled by higher level CDK Stack such as `lib/workload/orcabus-stateless-stack.ts`.
+This directory contains CDK code that will be called and assembled by higher level class such as `lib/workload/stateless/statelessStackCollectionClass.ts`.
 
-You may have multi-level directory structure under this folder as see fit to arrange your CDK constructs.
+Collectively, all CDK constructs created under this `deploy` directory forms as **one deployable stack**. Hence, just  a single `stack.ts` file should suffice if your app deployment is simple.
 
-However. Collectively, all CDK constructs created under this deploy directory will form as **one deployable stack** for the higher level CDK Stack. Hence, just single `stack-name.ts` file might be sufficed if your app deployment is a simpler CDK deployment construction.
+## TL;DR
+
+Go back to repo root:
+
+```
+cd ../../../../../
+```
+
+Hot-deploy against dev:
+```
+export AWS_PROFILE=umccr-dev-admin
+
+yarn cdk-stateless list
+yarn cdk-stateless synth -e OrcaBusStatelessPipeline/BetaDeployment/SequenceRunManagerStack
+yarn cdk-stateless diff -e OrcaBusStatelessPipeline/BetaDeployment/SequenceRunManagerStack
+yarn cdk-stateless deploy -e OrcaBusStatelessPipeline/BetaDeployment/SequenceRunManagerStack
+yarn cdk-stateless destroy -e OrcaBusStatelessPipeline/BetaDeployment/SequenceRunManagerStack
+```
+
+CloudFormation template:
+```
+yarn cdk-stateless synth -e OrcaBusStatelessPipeline/BetaDeployment/SequenceRunManagerStack > .local/template.yml
+cfn-lint .local/template.yml
+code .local/template.yml
+```
+
+CDK test:
+```
+yarn test --- test/stateless/deployment.test.ts
+yarn test --- test/stateless/
+```
