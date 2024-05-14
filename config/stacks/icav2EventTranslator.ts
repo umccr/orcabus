@@ -18,6 +18,6 @@ export const getIcav2EventTranslatorStackProps = (): Icav2EventTranslatorStackPr
     eventBusName,
     icav2EventTranslatorDynamodbTableName: dynamodbTableName,
     vpcProps: vpcProps,
-    lambdaSecurityGroupName: 'IcaEventTranslatorLambdaSecurityGroup',
+    lambdaSecurityGroupName: 'OrcaBusIcaEventTranslatorSecurityGroup',
   };
 };
