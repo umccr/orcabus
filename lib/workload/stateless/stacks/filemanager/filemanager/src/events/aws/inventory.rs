@@ -276,7 +276,7 @@ impl From<OrcError> for Error {
 }
 
 /// An S3 inventory record.
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct Record {
     #[serde(alias = "Bucket")]
     bucket: String,
@@ -295,6 +295,74 @@ pub struct Record {
     e_tag: Option<String>,
     #[serde(alias = "StorageClass")]
     storage_class: Option<StorageClass>,
+}
+
+impl Record {
+    /// Create a new record builder.
+    pub fn builder() -> RecordBuilder {
+        RecordBuilder::default()
+    }
+
+    /// Set the version id.
+    pub fn set_version_id(mut self, version_id: String) -> Self {
+        self.version_id = Some(version_id);
+        self
+    }
+}
+
+/// A builder for an S3 inventory record.
+#[derive(Debug, Default)]
+pub struct RecordBuilder {
+    version_id: Option<String>,
+    size: Option<i64>,
+    last_modified_date: Option<DateTime<Utc>>,
+    e_tag: Option<String>,
+    storage_class: Option<StorageClass>,
+}
+
+impl RecordBuilder {
+    /// Add a version id to the record.
+    pub fn with_version_id(mut self, version_id: String) -> Self {
+        self.version_id = Some(version_id);
+        self
+    }
+
+    /// Add a size to the record.
+    pub fn with_size(mut self, size: i64) -> Self {
+        self.size = Some(size);
+        self
+    }
+
+    /// Add a last modified date to the record.
+    pub fn with_last_modified_date(mut self, last_modified_date: DateTime<Utc>) -> Self {
+        self.last_modified_date = Some(last_modified_date);
+        self
+    }
+
+    /// Add an e-tag to the record.
+    pub fn with_e_tag(mut self, e_tag: String) -> Self {
+        self.e_tag = Some(e_tag);
+        self
+    }
+
+    /// Add a storage class to the record.
+    pub fn with_storage_class(mut self, storage_class: StorageClass) -> Self {
+        self.storage_class = Some(storage_class);
+        self
+    }
+
+    /// Build the record.
+    pub fn build(self, bucket: String, key: String) -> Record {
+        Record {
+            bucket,
+            key,
+            version_id: self.version_id,
+            size: self.size,
+            last_modified_date: self.last_modified_date,
+            e_tag: self.e_tag,
+            storage_class: self.storage_class,
+        }
+    }
 }
 
 /// Deserializes into a DateTime<Utc>, or a NativeDateTime which is converted into a DateTime<Utc>

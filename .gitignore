@@ -50,8 +50,6 @@ cdk.context.json
 
 # SQL dumps, data, etc...
 
-data/
-
 Brewfile.lock.json
 *.xml
 
