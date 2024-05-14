@@ -185,7 +185,18 @@ pre-commit run --all-files
 
 ### GitHub Action
 
-We have GitHub Action workflow to reinforce Lint, Code Formatting and Pre-commit Hook check as [Pull Request Build](.github/workflows/prbuild.yml) pipeline before main CI/CD automation run at CodePipeline. This is to protect any accidental secrets leak and/or pre-flight check for CI/CD automation. 
+#### Lint-Formatting-Security
+
+We have GitHub Action workflow to reinforce Lint, Code Formatting and Pre-commit Hook check as [Pull Request
+Build](.github/workflows/prbuild.yml) pipeline before the main CI/CD automation run at CodePipeline. This is to protect any
+accidental secrets leak and/or pre-flight check for CI/CD automation.
+
+#### Testing
+
+We have enabled application unit tests and stack security compliance in our GitHub Actions workflow using
+AWS CodeBuild as the runner. This provides developers with faster feedback before merging changes into the main branch.
+The deployment pipeline will run all tests again before deployment. If you believe your commit doesn't
+require GitHub Actions testing, you can include the `[skip ci]` in your commit message to skip this step.
 
 ### IDE
 
