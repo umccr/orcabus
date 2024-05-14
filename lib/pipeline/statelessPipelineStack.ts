@@ -28,7 +28,7 @@ export class StatelessPipelineStack extends cdk.Stack {
     });
     new codebuild.CfnProject(this, 'GHRunnerCodeBuildProject', {
       // the name here act as a unique id for GH action to know which CodeBuild to use
-      // So if you change this, you need to update the GH action yaml file (.github/workflows/prbuild.yml)
+      // So if you change this, you need to update the GH action .yml file (.github/workflows/prbuild.yml)
       name: 'orcabus-codebuild-gh-runner',
       description: 'GitHub Action Runner in CodeBuild for `orcabus` repository',
       serviceRole: ghRunnerRole.roleArn,
