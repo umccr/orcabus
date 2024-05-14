@@ -1,13 +1,13 @@
 {
   "Comment": "Handle icav2 state change",
-  "StartAt": "Move event detail",
+  "StartAt": "Move inputs",
   "States": {
-    "Move event detail": {
+    "Move inputs": {
       "Type": "Pass",
-      "Next": "DynamoDB Get UUID from ICAv2 Analysis ID",
       "Parameters": {
         "event_detail.$": "$"
-      }
+      },
+      "Next": "DynamoDB Get UUID from ICAv2 Analysis ID"
     },
     "DynamoDB Get UUID from ICAv2 Analysis ID": {
       "Type": "Task",
@@ -19,11 +19,11 @@
           "id_type": "icav2_analysis_id"
         }
       },
-      "Next": "Check Analysis ID in DataBase",
-      "ResultPath": "$.get_analysis_id_in_db_step",
       "ResultSelector": {
         "db_response.$": "$"
-      }
+      },
+      "ResultPath": "$.get_analysis_id_in_db_step",
+      "Next": "Check Analysis ID in DataBase"
     },
     "Check Analysis ID in DataBase": {
       "Type": "Choice",
@@ -36,11 +36,10 @@
           "Next": "Success"
         }
       ],
-      "Default": "Add items to database"
+      "Default": "Add items to database and update output json"
     },
-    "Add items to database": {
+    "Add items to database and update output json": {
       "Type": "Parallel",
-      "Next": "Wait 1 Second",
       "Branches": [
         {
           "StartAt": "DynamoDB Update Status",
@@ -67,9 +66,9 @@
           }
         },
         {
-          "StartAt": "DynamoDB Record event",
+          "StartAt": "Add status to event logger",
           "States": {
-            "DynamoDB Record event": {
+            "Add status to event logger": {
               "Type": "Task",
               "Resource": "arn:aws:states:::dynamodb:updateItem",
               "Parameters": {
@@ -99,16 +98,50 @@
               "End": true
             }
           }
+        },
+        {
+          "StartAt": "status is SUCCEEDED",
+          "States": {
+            "status is SUCCEEDED": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.event_detail.payload.status",
+                  "StringEquals": "SUCCEEDED",
+                  "Next": "Get Outputs JSON"
+                }
+              ],
+              "Default": "Pass"
+            },
+            "Get Outputs JSON": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "${__sfn_get_outputs_json__}",
+                "Input": {
+                  "db_uuid.$": "$.get_analysis_id_in_db_step.db_response.Item.db_uuid.S"
+                }
+              },
+              "Next": "Pass",
+              "ResultPath": "$.outputs_collection_sfn_step"
+            },
+            "Pass": {
+              "Type": "Pass",
+              "End": true,
+              "ResultPath": "$.pass_placeholder"
+            }
+          }
         }
       ],
-      "ResultPath": "$.add_items_to_db"
+      "ResultPath": "$.add_items_to_db",
+      "Next": "Wait (database - updates)"
     },
-    "Wait 1 Second": {
+    "Wait (database - updates)": {
       "Type": "Wait",
-      "Seconds": 1,
-      "Next": "DynamoDB Get UUID Row"
+      "Seconds": 5,
+      "Next": "Get UUID Row For Payload"
     },
-    "DynamoDB Get UUID Row": {
+    "Get UUID Row For Payload": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
@@ -118,8 +151,6 @@
           "id_type": "db_uuid"
         }
       },
-      "Next": "PutEvent",
-      "ResultPath": "$.get_updated_analysis_id_in_db_step",
       "ResultSelector": {
         "portalRunId.$": "$.Item.portal_run_id.S",
         "timestamp.$": "$$.State.EnteredTime",
@@ -128,15 +159,16 @@
         "workflowVersion": "${__workflow_version__}",
         "payload": {
           "refId": null,
-          "analysisLaunchPayload.$": "$.Item.analysis_launch_payload.S",
-          "analysisReturnPayload.$": "$.Item.analysis_return_payload.S",
-          "stateMachineExecutionArn.$": "$.Item.state_machine_execution_arn.S",
-          "analysisId.$": "$.Item.analysis_id.S"
-        },
-        "serviceVersion": "${__service_version__}"
-      }
+          "version": "${__service_version__}",
+          "projectId.$": "$.Item.project_id.S",
+          "analysisId.$": "$.Item.analysis_id.S",
+          "analysisOutput.$": "$.Item.analysis_output.S"
+        }
+      },
+      "ResultPath": "$.get_updated_analysis_id_in_db_step",
+      "Next": "Push Event to Orcabus"
     },
-    "PutEvent": {
+    "Push Event to Orcabus": {
       "Type": "Task",
       "Resource": "arn:aws:states:::events:putEvents",
       "Parameters": {

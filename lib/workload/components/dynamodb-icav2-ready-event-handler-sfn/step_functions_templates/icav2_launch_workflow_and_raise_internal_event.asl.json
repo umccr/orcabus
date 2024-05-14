@@ -1,16 +1,16 @@
 {
-  "Comment": "Move inputs to workflow_inputs",
-  "StartAt": "move_inputs",
+  "Comment": "ICAv2 Ready Event Handler",
+  "StartAt": "Move Inputs",
   "States": {
-    "move_inputs": {
+    "Move Inputs": {
       "Type": "Pass",
-      "Next": "check_portal_run_id_in_db",
+      "Next": "Find Portal Run Id in Database",
       "Parameters": {
         "workflow_inputs.$": "$"
       },
       "Comment": "Workflow inputs will be dependent on the icav2 end point we are executing"
     },
-    "check_portal_run_id_in_db": {
+    "Find Portal Run Id in Database": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
@@ -24,13 +24,13 @@
           }
         }
       },
-      "Next": "is_portal_run_id_in_db",
+      "Next": "Is Portal Run ID in Database",
       "ResultPath": "$.portal_run_id_in_db_step",
       "ResultSelector": {
         "db_response.$": "$"
       }
     },
-    "is_portal_run_id_in_db": {
+    "Is Portal Run ID in Database": {
       "Type": "Choice",
       "Choices": [
         {
@@ -38,12 +38,12 @@
             "Variable": "$.portal_run_id_in_db_step.db_response.Item",
             "IsPresent": true
           },
-          "Next": "generate_db_uuid"
+          "Next": "Generate the DB UUiD"
         }
       ],
       "Default": "Get PortalRunId DataBase Entry"
     },
-    "generate_db_uuid": {
+    "Generate the DB UUiD": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
@@ -67,9 +67,9 @@
         "db_uuid.$": "$.Payload.db_uuid"
       },
       "ResultPath": "$.create_db_uuid_step",
-      "Next": "add_technical_tags"
+      "Next": "Add Technical Tags"
     },
-    "add_technical_tags": {
+    "Add Technical Tags": {
       "Type": "Pass",
       "Parameters": {
         "technical_tags": {
@@ -78,16 +78,16 @@
         }
       },
       "ResultPath": "$.add_technical_tags_step",
-      "Next": "Add items to database"
+      "Next": "Add Payload and Run items to database"
     },
-    "Add items to database": {
+    "Add Payload and Run items to database": {
       "Type": "Parallel",
       "Next": "Wait 1 Second (pre-input-generation)",
       "Branches": [
         {
-          "StartAt": "initialise_db_item",
+          "StartAt": "Initialise DB Item",
           "States": {
-            "initialise_db_item": {
+            "Initialise DB Item": {
               "Type": "Task",
               "Resource": "arn:aws:states:::dynamodb:putItem",
               "Parameters": {
@@ -110,10 +110,22 @@
                   "analysis_id": {
                     "S": ""
                   },
+                  "project_id": {
+                    "S.$": "$.workflow_inputs.payload.projectId"
+                  },
                   "analysis_return_payload": {
                     "S": ""
                   },
                   "analysis_launch_payload": {
+                    "S": ""
+                  },
+                  "analysis_output_uri": {
+                    "S.$": "$.workflow_inputs.payload.analysisOutputUri"
+                  },
+                  "ica_logs_uri": {
+                    "S.$": "$.workflow_inputs.payload.icaLogsUri"
+                  },
+                  "analysis_output": {
                     "S": ""
                   },
                   "analysis_technical_tags": {
@@ -127,9 +139,9 @@
           }
         },
         {
-          "StartAt": "put_portal_partition_key_item",
+          "StartAt": "Put Portal Partition Key Item",
           "States": {
-            "put_portal_partition_key_item": {
+            "Put Portal Partition Key Item": {
               "Type": "Task",
               "Resource": "arn:aws:states:::dynamodb:putItem",
               "Parameters": {
@@ -151,9 +163,9 @@
           }
         },
         {
-          "StartAt": "log_event_item",
+          "StartAt": "Add Event Logger Item",
           "States": {
-            "log_event_item": {
+            "Add Event Logger Item": {
               "Type": "Task",
               "Resource": "arn:aws:states:::dynamodb:putItem",
               "Parameters": {
@@ -209,11 +221,6 @@
                 }
               },
               "ResultPath": "$.set_input_json_sfn_step",
-              "Next": "Wait 1 Second (pre-execution)"
-            },
-            "Wait 1 Second (pre-execution)": {
-              "Type": "Wait",
-              "Seconds": 1,
               "End": true
             }
           }
@@ -271,20 +278,20 @@
                 }
               },
               "ResultPath": "$.update_item_step",
-              "Next": "Wait 1 Second"
-            },
-            "Wait 1 Second": {
-              "Type": "Wait",
-              "Seconds": 1,
               "End": true
             }
           }
         }
       ],
       "ResultPath": "$.set_inputs_parallel_step",
-      "Next": "get_database_entry"
+      "Next": "Wait 1 Second (pre-execution)"
     },
-    "get_database_entry": {
+    "Wait 1 Second (pre-execution)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "Get Database Entry for execution"
+    },
+    "Get Database Entry for execution": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
@@ -301,9 +308,9 @@
         "technical_tags.$": "States.StringToJson($.Item.analysis_technical_tags.S)"
       },
       "ResultPath": "$.get_input_parameters_from_event",
-      "Next": "get_parameters_from_payload"
+      "Next": "Get Parameters for Launch Payload"
     },
-    "get_parameters_from_payload": {
+    "Get Parameters for Launch Payload": {
       "Type": "Pass",
       "Parameters": {
         "project_id.$": "$.get_input_parameters_from_event.payload.projectId",
@@ -316,9 +323,9 @@
         "user_tags.$": "$.get_input_parameters_from_event.payload.userTags"
       },
       "ResultPath": "$.get_parameters_from_payload",
-      "Next": "launch_icav2_pipeline_lambda"
+      "Next": "Lauch ICAv2 Pipeline Lambda Function"
     },
-    "launch_icav2_pipeline_lambda": {
+    "Lauch ICAv2 Pipeline Lambda Function": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
@@ -362,9 +369,9 @@
       "Type": "Parallel",
       "Branches": [
         {
-          "StartAt": "DynamoDB Update DbUuid Item",
+          "StartAt": "Update Db Uuid Item",
           "States": {
-            "DynamoDB Update DbUuid Item": {
+            "Update Db Uuid Item": {
               "Type": "Task",
               "Resource": "arn:aws:states:::dynamodb:updateItem",
               "Parameters": {
@@ -397,9 +404,9 @@
           }
         },
         {
-          "StartAt": "DynamoDB Put Icav2 ID Partition Entry",
+          "StartAt": "Add Icav2 ID Partition Entry",
           "States": {
-            "DynamoDB Put Icav2 ID Partition Entry": {
+            "Add Icav2 ID Partition Entry": {
               "Type": "Task",
               "Resource": "arn:aws:states:::dynamodb:putItem",
               "Parameters": {
@@ -437,13 +444,13 @@
           "id_type": "portal_run_id"
         }
       },
-      "Next": "DynamoDB GetItem",
+      "Next": "Get Push Event Info From DB",
       "ResultPath": "$.database_event_data",
       "ResultSelector": {
         "db_uuid.$": "$.Item.db_uuid.S"
       }
     },
-    "DynamoDB GetItem": {
+    "Get Push Event Info From DB": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
@@ -453,7 +460,7 @@
           "id_type": "db_uuid"
         }
       },
-      "Next": "put_launch_event",
+      "Next": "Push event to orcabus",
       "ResultSelector": {
         "portalRunId.$": "$.Item.portal_run_id.S",
         "timestamp.$": "$$.State.EnteredTime",
@@ -462,16 +469,15 @@
         "workflowVersion": "${__workflow_version__}",
         "payload": {
           "refId": null,
-          "analysisLaunchPayload.$": "$.Item.analysis_launch_payload.S",
-          "analysisReturnPayload.$": "$.Item.analysis_return_payload.S",
-          "stateMachineExecutionArn.$": "$.Item.state_machine_execution_arn.S",
-          "analysisId.$": "$.Item.analysis_id.S"
-        },
-        "serviceVersion": "${__service_version__}"
+          "version": "${__service_version__}",
+          "projectId.$": "$.Item.project_id.S",
+          "analysisId.$": "$.Item.analysis_id.S",
+          "analysisOutput": ""
+        }
       },
       "ResultPath": "$.database_event_data"
     },
-    "put_launch_event": {
+    "Push event to orcabus": {
       "Type": "Task",
       "Resource": "arn:aws:states:::events:putEvents",
       "Parameters": {

@@ -4,110 +4,128 @@
 The launch CWL pipeline expects the following as inputs
 
 {
-  "project_id": "project_id",
-  "pipeline_id": "pipeline_id",
-  "user_reference": "user_reference",
-  "input_json": "{
-    "bclconvert_report_directory": {
-      "class": "File",
-      "location": "icav2://project_id/path/to/run/folder/report/"
-    }
-    "interop_directory": {
-      "class": "Directory",
-      "location": "icav2://project_id/path/to/interop/directory"
-    }
-    "run_id": "run_id",
-  }",
-  "ica_logs_uri": "icav2://project_id/path/to/logs/",
-  "analysis_output_uri": "icav2://project_id/path/to/out/",
-  "technical_tags": {
-      "portal_run_id": "string",
-      "step_execution_arn": "string",
-      "step_functions_inputs": "string"
-  },
-  "user_tags": {
-    "instrument_run_id": "string"
-  },
+    "workflow_type": "cwl",
+    "user_tags": {
+        "projectname": "trial"
+    },
+    "technical_tags": {
+        "portal_run_id": "20240512abcd1234",
+        "step_functions_execution_arn": "arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-wfm-ready-event-handler:79ac2500-24ec-793f-81b3-50439944a235_92f04a8c-4f36-1594-ae52-cde6930f621e"
+    },
+    "user_reference": "bclconvert_interop__semi_automated__umccr__pipeline",
+    "project_id": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
+    "pipeline_id": "f606f580-d476-47a8-9679-9ddb39fcb0a8",
+    "ica_logs_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240512abcd1234/logs/",
+    "analysis_output_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240512abcd1234/out/",
+    "input_json": "{\"bclconvert_report_directory\":{\"class\":\"Directory\",\"location\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/\"},\"interop_directory\":{\"class\":\"Directory\",\"location\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/\"},\"run_id\":\"231116_A01052_0172_BHVLM5DSX7\"}"
 }
 
 With the following environment variables
 
 ICAV2_ACCESS_TOKEN_SECRET_ID
 
-The analysis pipeline then returns the following
-
+The lambda then returns the following
 {
-  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "timeCreated": "2024-02-15T22:28:01.487Z",
-  "timeModified": "2024-02-15T22:28:01.487Z",
-  "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "tenantName": "string",
-  "reference": "string",
-  "userReference": "string",
-  "pipeline": {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "timeCreated": "2024-02-15T22:28:01.487Z",
-    "timeModified": "2024-02-15T22:28:01.487Z",
-    "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantName": "string",
-    "code": "string",
-    "urn": "string",
-    "description": "string",
-    "language": "Nextflow",
-    "languageVersion": {
-      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "name": "string",
-      "language": "Nextflow"
+  "analysis_id": "f2b9e6ab-1c3c-467e-9b5c-8c232ed26a1b",
+  "analysis_status": "REQUESTED",
+  "analysis_return_payload": {
+    "id": "f2b9e6ab-1c3c-467e-9b5c-8c232ed26a1b",
+    "timeCreated": "2024-05-12T23:57:25Z",
+    "timeModified": "2024-05-12T23:57:26Z",
+    "owner": {
+      "id": "a9938581-7bf5-35d2-b461-282f34794dd1"
     },
-    "pipelineTags": {
+    "tenant": {
+      "id": "1555b441-c3be-40b0-a8f0-fb9dc7500545",
+      "name": "umccr-prod"
+    },
+    "reference": "bclconvert_interop__semi_automated__umccr__pipeline-bclconvert-interop-qc__1_3_1--1_21__20240313015132-1a823307-c69c-4b18-8e8b-19bc1ee196ab",
+    "userReference": "bclconvert_interop__semi_automated__umccr__pipeline",
+    "pipeline": {
+      "id": "f606f580-d476-47a8-9679-9ddb39fcb0a8",
+      "timeCreated": "2024-03-13T01:53:51Z",
+      "timeModified": "2024-03-13T01:53:51Z",
+      "owner": {
+        "id": "a9938581-7bf5-35d2-b461-282f34794dd1"
+      },
+      "tenant": {
+        "id": "1555b441-c3be-40b0-a8f0-fb9dc7500545",
+        "name": "umccr-prod"
+      },
+      "code": "bclconvert-interop-qc__1_3_1--1_21__20240313015132",
+      "description": "GitHub Release URL: https://github.com/umccr/cwl-ica/releases/tag/bclconvert-interop-qc/1.3.1--1.21__20240313015132",
+      "language": "CWL",
+      "pipelineTags": {
+        "technicalTags": []
+      },
+      "analysisStorage": {
+        "id": "6e1b6c8f-f913-48b2-9bd0-7fc13eda0fd0",
+        "name": "Small",
+        "description": "1.2TB"
+      },
+      "urn": "urn:ilmn:ica:pipeline:f606f580-d476-47a8-9679-9ddb39fcb0a8#bclconvert-interop-qc__1_3_1--1_21__20240313015132",
+      "proprietary": false
+    },
+    "status": "REQUESTED",
+    "tags": {
       "technicalTags": [
-        "string"
-      ]
+        "portal_run_id=20240512abcd1234",
+        "step_functions_execution_arn=arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-wfm-ready-event-handler:79ac2500-24ec-793f-81b3-50439944a235_92f04a8c-4f36-1594-ae52-cde6930f621e"
+      ],
+      "userTags": [
+        "projectname=trial"
+      ],
+      "referenceTags": []
     },
     "analysisStorage": {
-      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "timeCreated": "2024-02-15T22:28:01.487Z",
-      "timeModified": "2024-02-15T22:28:01.487Z",
-      "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "tenantName": "string",
-      "name": "string",
-      "description": "string"
+      "id": "6e1b6c8f-f913-48b2-9bd0-7fc13eda0fd0",
+      "name": "Small",
+      "description": "1.2TB"
     },
-    "proprietary": false
+    "analysisPriority": "LOW"
   },
-  "status": "REQUESTED",
-  "startDate": "2024-02-15T22:28:01.487Z",
-  "endDate": "2024-02-15T22:28:01.487Z",
-  "summary": "string",
-  "analysisStorage": {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "timeCreated": "2024-02-15T22:28:01.487Z",
-    "timeModified": "2024-02-15T22:28:01.487Z",
-    "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantName": "string",
-    "name": "string",
-    "description": "string"
-  },
-  "analysisPriority": "LOW",
-  "tags": {
-    "technicalTags": [
-      "portal_run_id=string",
-      "step_execution_arn=string",
-      "step_functions_inputs=string"
-    ],
-    "userTags": [
-      "subject_id=string",
-      "library_id=string",
-      "project_name=string",
-      "project_owner=string",
-      "instrument_run_id=string"
-    ],
-    "referenceTags": [
-      "string"
+  "analysis_launch_payload": {
+    "userReference": "bclconvert_interop__semi_automated__umccr__pipeline",
+    "pipelineId": "f606f580-d476-47a8-9679-9ddb39fcb0a8",
+    "tags": {
+      "technicalTags": [
+        "portal_run_id=20240512abcd1234",
+        "step_functions_execution_arn=arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-wfm-ready-event-handler:79ac2500-24ec-793f-81b3-50439944a235_92f04a8c-4f36-1594-ae52-cde6930f621e"
+      ],
+      "userTags": [
+        "projectname=trial"
+      ],
+      "referenceTags": []
+    },
+    "analysisInput": {
+      "objectType": "JSON",
+      "inputJson": "{\n  \"bclconvert_report_directory\": {\n    \"class\": \"Directory\",\n    \"location\": \"7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.81ad1cb41b92470d530608dc3cf57419/Reports\"\n  },\n  \"interop_directory\": {\n    \"class\": \"Directory\",\n    \"location\": \"7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.454782a16e9342b9e4e808dc388cff32/InterOp\"\n  },\n  \"run_id\": \"231116_A01052_0172_BHVLM5DSX7\"\n}",
+      "mounts": [
+        {
+          "dataId": "fol.81ad1cb41b92470d530608dc3cf57419",
+          "mountPath": "7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.81ad1cb41b92470d530608dc3cf57419/Reports"
+        },
+        {
+          "dataId": "fol.454782a16e9342b9e4e808dc388cff32",
+          "mountPath": "7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.454782a16e9342b9e4e808dc388cff32/InterOp"
+        }
+      ],
+      "externalData": [],
+      "dataIds": [
+        "fol.81ad1cb41b92470d530608dc3cf57419",
+        "fol.454782a16e9342b9e4e808dc388cff32"
+      ]
+    },
+    "activationCodeDetailId": "103094d2-e932-4e34-8dd4-06ee1fb8be68",
+    "analysisStorageId": "6e1b6c8f-f913-48b2-9bd0-7fc13eda0fd0",
+    "outputParentFolderId": null,
+    "analysisOutput": [
+      {
+        "sourcePath": "out/",
+        "targetProjectId": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
+        "targetPath": "/interop_qc/20240512abcd1234/out/",
+        "type": "FOLDER"
+      }
     ]
   }
 }
@@ -269,20 +287,20 @@ def handler(event, context):
 #         json.dumps(
 #             handler(
 #                 event={
-#                   "workflow_type": "cwl",
-#                   "user_tags": {
-#                     "projectname": "trial"
-#                   },
-#                   "technical_tags": {
-#                     "portal_run_id": "20240510abcd0015",
-#                     "step_functions_execution_arn": "arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-wfm-ready-event-handler:aace90a0-37a2-c82f-e176-14008dccaff0_eab7d881-f6bc-a492-1cc2-c23fbcea8ea4"
-#                   },
-#                   "user_reference": "bclconvert_interop__semi_automated__umccr__pipeline",
-#                   "project_id": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
-#                   "pipeline_id": "f606f580-d476-47a8-9679-9ddb39fcb0a8",
-#                   "ica_logs_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0015/logs/",
-#                   "analysis_output_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0015/out/",
-#                   "input_json": "{\"bclconvert_report_directory\":{\"class\":\"Directory\",\"location\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/\"},\"interop_directory\":{\"class\":\"Directory\",\"location\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/\"},\"run_id\":\"231116_A01052_0172_BHVLM5DSX7\"}"
+#                     "workflow_type": "cwl",
+#                     "user_tags": {
+#                         "projectname": "trial"
+#                     },
+#                     "technical_tags": {
+#                         "portal_run_id": "20240512abcd1234",
+#                         "step_functions_execution_arn": "arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-wfm-ready-event-handler:79ac2500-24ec-793f-81b3-50439944a235_92f04a8c-4f36-1594-ae52-cde6930f621e"
+#                     },
+#                     "user_reference": "bclconvert_interop__semi_automated__umccr__pipeline",
+#                     "project_id": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
+#                     "pipeline_id": "f606f580-d476-47a8-9679-9ddb39fcb0a8",
+#                     "ica_logs_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240512abcd1234/logs/",
+#                     "analysis_output_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240512abcd1234/out/",
+#                     "input_json": "{\"bclconvert_report_directory\":{\"class\":\"Directory\",\"location\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/\"},\"interop_directory\":{\"class\":\"Directory\",\"location\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/\"},\"run_id\":\"231116_A01052_0172_BHVLM5DSX7\"}"
 #                 },
 #                 context=None
 #             ),

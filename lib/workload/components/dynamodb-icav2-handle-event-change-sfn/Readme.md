@@ -15,6 +15,12 @@ This includes:
 After updating the database, the step function will then release an internal event stating there has been change
 to the analysis status.  
 
+## Example SFN 
+
+> ICAv2 Handle Event SFN generated from this construct
+
+![handle_event_change_sfn](./images/icav2_handle_event_change_sfn.png)
+
 ## Sfn I/O
 
 Example input event:
@@ -106,36 +112,32 @@ The step function will then raise an event like this:
 
 <summary>Click to expand!</summary>
 
-// FIMXE - has json literals that need to be updated
-
-```json
+```json5
 {
-    "version": "0",
-    "id": "2c8560b5-ff65-3cfe-b88b-e23948805117",
-    "detail-type": "workflowRunStateChange",
-    "source": "orcabus.bclconvert_interop_qc",
-    "account": "843407916570",
-    "time": "2024-05-10T10:06:59Z",
-    "region": "ap-southeast-2",
-    "resources": [
-        "arn:aws:states:ap-southeast-2:843407916570:stateMachine:bclconvertInteropQcSfn-icav2-external-handler",
-        "arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-icav2-external-handler:215316fb-8d33-4e86-a070-fe7b8d50f645"
-    ],
-    "detail": {
-        "status": "$.Item.analysis_status.S",
-        "workflowType": "bclconvert_interop_qc",
-        "workflowVersion": "1.3.1--1.21",
-        "payload": {
-            "refId": "",
-            "analysisReturnPayload": "$.Item.analysis_return_payload.S",
-            "stateMachineExecutionArn": "$.Item.state_machine_execution_arn.S",
-            "analysisLaunchPayload": "{\"userReference\":\"bclconvert_interop__semi_automated__umccr__pipeline\",\"pipelineId\":\"f606f580-d476-47a8-9679-9ddb39fcb0a8\",\"tags\":{\"technicalTags\":[\"portal_run_id=20240510abcd0021\",\"step_functions_execution_arn=arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-wfm-ready-event-handler:27d3c64d-cbde-e39f-47b6-78ee7ef63d93_3cd71a8a-d2e9-6a36-f273-5d1129fe125d\"],\"userTags\":[\"projectname=trial\"],\"referenceTags\":[]},\"analysisInput\":{\"objectType\":\"JSON\",\"inputJson\":\"{\\n  \\\"bclconvert_report_directory\\\": {\\n    \\\"class\\\": \\\"Directory\\\",\\n    \\\"location\\\": \\\"7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.81ad1cb41b92470d530608dc3cf57419/Reports\\\"\\n  },\\n  \\\"interop_directory\\\": {\\n    \\\"class\\\": \\\"Directory\\\",\\n    \\\"location\\\": \\\"7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.454782a16e9342b9e4e808dc388cff32/InterOp\\\"\\n  },\\n  \\\"run_id\\\": \\\"231116_A01052_0172_BHVLM5DSX7\\\"\\n}\",\"mounts\":[{\"dataId\":\"fol.81ad1cb41b92470d530608dc3cf57419\",\"mountPath\":\"7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.81ad1cb41b92470d530608dc3cf57419/Reports\"},{\"dataId\":\"fol.454782a16e9342b9e4e808dc388cff32\",\"mountPath\":\"7595e8f2-32d3-4c76-a324-c6a85dae87b5/fol.454782a16e9342b9e4e808dc388cff32/InterOp\"}],\"externalData\":[],\"dataIds\":[\"fol.81ad1cb41b92470d530608dc3cf57419\",\"fol.454782a16e9342b9e4e808dc388cff32\"]},\"activationCodeDetailId\":\"103094d2-e932-4e34-8dd4-06ee1fb8be68\",\"analysisStorageId\":\"6e1b6c8f-f913-48b2-9bd0-7fc13eda0fd0\",\"outputParentFolderId\":null,\"analysisOutput\":[{\"sourcePath\":\"out/\",\"targetProjectId\":\"7595e8f2-32d3-4c76-a324-c6a85dae87b5\",\"targetPath\":\"/interop_qc/20240510abcd0021/out/\",\"type\":\"FOLDER\"}]}",
-            "analysisId": "08f8dd73-dd72-4f1a-813b-03d4f32f3614"
-        },
-        "serviceVersion": "${__service_version__}",
-        "portalRunId": "20240510abcd0021",
-        "timestamp": "2024-05-10T10:06:58.813Z"
-    }
+  "version": "0",
+  "id": "2337e1d0-721e-8061-f2b5-655ae6715d18",
+  "detail-type": "workflowRunStateChange",
+  "source": "orcabus.bclconvert_interop_qc",
+  "account": "843407916570",
+  "time": "2024-05-13T00:45:01Z",
+  "region": "ap-southeast-2",
+  "resources": [
+    "arn:aws:states:ap-southeast-2:843407916570:stateMachine:bclconvertInteropQcSfn-icav2-external-handler",
+    "arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-icav2-external-handler:377f84cb-50c5-6ed3-8f8c-36489e53a746_5de566d0-615d-7095-f3a4-911b0fef9930"
+  ],
+  "detail": {
+    "workflowType": "bclconvert_interop_qc",
+    "workflowVersion": "1.3.1--1.21",
+    "payload": {
+      "refId": null,
+      "version": "2024.05.07",
+      "analysisId": "d63dc6c7-690a-4d17-8fd1-e4556a2ef1e0",
+      "analysisOutput": ""
+    },
+    "portalRunId": "20240513a3fb6502",  /* pragma: allowlist secret */
+    "timestamp": "2024-05-13T00:45:00.956Z",
+    "status": "SUCCEEDED"
+  }
 }
 ```
 
@@ -153,6 +155,18 @@ The step function will then raise an event like this:
 * `icaEventPipeName`: `string`  Name of the ica event pipe this step function needs to subscribe to  (Not currently used)
 * `internalEventSource`: `string`  Source of the event we push  (orcabus.bclconvert_interop_qc)
 
+* `generateOutputsJsonSfn`: `IStateMachine`  The state machine object to generate the outputs json
+
 * `workflowType`: `string`  Type of the workflow we're handling (bclconvert_interop_qc)
 * `workflowVersion`: `string`  The workflow Version we're using (1.3.1--1.21)  This is not currently used
 * `serviceVersion`: `string`  The service version we're running (2024.05.07)   This is not currently used
+
+### Building the generateOutputsJsonSfn
+
+The requirements of this step functions are, given a database uuid, 
+write to the database under the db uuid type to the column 'analysis_output' the outputs in json string format.
+
+This output json is then used to write the analysisOutput object on a succeeded workflow status.  
+
+An example of a generateOutputsJsonSfn can be found in the bclconvert-interop-qc-pipeline-manager stack.
+

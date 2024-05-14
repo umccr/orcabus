@@ -11,6 +11,13 @@ If the portal run id is already in the database, then the step function just ret
 If the portal run id is not in the database, then the step function will launch the workflow on the ICAv2 platform.  
 Then store the analysis configurations in the database and return an event back to the orcabus to say that the analysis has started running.  
 
+## Example SFN 
+
+> ICAv2 Ready Event Handler SFN
+
+![ready_event_handler_sfn](./images/icav2_ready_event_handler_sfn.png)
+
+
 ## Input
 
 ## Construct Inputs
@@ -29,6 +36,46 @@ Then store the analysis configurations in the database and return an event back 
 * workflowVersion - The workflow version (not currently used)
 * serviceVersion - The service version (not currently used)
 
+## Example input event
+
+<details>
+
+<summary>Click to expand</summary>
+
+```json
+{
+  "version": "0",
+  "id": "23440b51-5969-5d2b-c1d3-128dd0a3df1a",
+  "detail-type": "workflowRunStateChange",
+  "source": "orcabus.wfm",
+  "account": "843407916570",
+  "time": "2024-05-13T00:12:11Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "refId": null,
+    "version": "0.1.0",
+    "status": "ready",
+    "projectId": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
+    "userReference": "bclconvert_interop__semi_automated__umccr__pipeline__20240513ba2b787f",
+    "bclconvertReportDirectory": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/",
+    "interopDirectory": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/",
+    "runId": "231116_A01052_0172_BHVLM5DSX7",
+    "analysisOutputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513ba2b787f/out/",
+    "icaLogsUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513ba2b787f/logs/",
+    "userTags": {
+      "projectname": "trial"
+    }
+  }
+}
+```
+
+</details>
+
 ## Requirements of the generateInputsJsonSfn
 
-/TODO
+Creates the input_json for the workflow and writes the input_json to the database under the column `input_json`.  
+This input json should be a json-dumped string.  
+
+An example of the input json can be seen in the bclconvert-interop-qc stack.
+

@@ -1,8 +1,8 @@
 {
   "Comment": "Launch Icav2 Pipeline and log in db",
-  "StartAt": "get_database_entry",
+  "StartAt": "Get DataBase Entry",
   "States": {
-    "get_database_entry": {
+    "Get DataBase Entry": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
@@ -16,9 +16,9 @@
         "payload.$": "States.StringToJson($.Item.launch_event_payload.S)"
       },
       "ResultPath": "$.get_input_parameters_from_event",
-      "Next": "set_input_json_from_event_payload"
+      "Next": "Set Input Json from Event Payload"
     },
-    "set_input_json_from_event_payload": {
+    "Set Input Json from Event Payload": {
       "Type": "Pass",
       "Parameters": {
         "input_json": {
@@ -34,9 +34,9 @@
         }
       },
       "ResultPath": "$.set_input_json",
-      "Next": "update_database_entry"
+      "Next": "Update Database Entry"
     },
-    "update_database_entry": {
+    "Update Database Entry": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:updateItem",
       "Parameters": {

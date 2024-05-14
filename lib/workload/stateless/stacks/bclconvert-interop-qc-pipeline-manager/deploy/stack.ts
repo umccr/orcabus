@@ -70,10 +70,16 @@ export class BclconvertInteropQcIcav2PipelineManagerStack extends cdk.Stack {
         dynamodbTableObj: dynamodb_table_obj,
         icav2AccessTokenSecretObj: icav2_access_token_secret_obj,
         pipelineIdSsmObj: pipeline_id_ssm_obj,
+        // Lambda paths
+        setOutputJsonLambdaPath: path.join(__dirname, '../lambdas/set_outputs_json_py'),
         // Step function template paths
         generateInputJsonSfnTemplatePath: path.join(
           __dirname,
-          '../step_functions_templates/set_bclconvert_interop_qc_cwl_inputs_and_launch_pipeline_sfn.json'
+          '../step_functions_templates/set_bclconvert_interop_qc_cwl_inputs_sfn.asl.json'
+        ),
+        generateOutputJsonSfnTemplatePath: path.join(
+          __dirname,
+          '../step_functions_templates/set_bclconvert_interop_qc_cwl_outputs_sfn.asl.json'
         ),
         // Event buses
         eventBusName: props.eventBusName,

@@ -4,6 +4,8 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as path from 'path';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as events_targets from 'aws-cdk-lib/aws-events-targets';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cdk from 'aws-cdk-lib';
 
 export interface Icav2AnalysisEventHandlerConstructProps {
   /* Names of objects to get */
@@ -17,6 +19,9 @@ export interface Icav2AnalysisEventHandlerConstructProps {
   eventBusName: string; // Detail of the eventbus to push the event to
   icaEventPipeName: string; // Name of the ica event pipe this step function needs to subscribe to
   internalEventSource: string; // Source of the event we push
+
+  /* Step function to generate the output json */
+  generateOutputsJsonSfn: sfn.IStateMachine; // Step function to generate the output json
 
   /* Internal workflowRunStateChange event details */
   workflowType: string;
@@ -56,6 +61,8 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
         __detail_type__: props.detailType,
         __eventbus_name__: props.eventBusName,
         __eventsource__: props.internalEventSource,
+        /* Step function to generate the output json */
+        __sfn_get_outputs_json__: props.generateOutputsJsonSfn.stateMachineArn,
         /* Put event details */
         __workflow_type__: props.workflowType,
         __workflow_version__: props.workflowVersion,
@@ -65,6 +72,21 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
 
     /* Grant the state machine read and write access to the table */
     table_obj.grantReadWriteData(this.stateMachineObj);
+
+    /* Grant state machine permissions to run the output json step function */
+    props.generateOutputsJsonSfn.grantStartExecution(this.stateMachineObj);
+
+    /* Grant the state machine access to invoke the internal launch sfn machine */
+    // Because we run a nested state machine, we need to add the permissions to the state machine role
+    // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
+    this.stateMachineObj.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
+        ],
+        actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
+      })
+    );
 
     // Create a rule for this state machine
     const rule = new events.Rule(this, 'rule', {

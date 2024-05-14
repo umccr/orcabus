@@ -2,17 +2,26 @@
 
 <!-- TOC -->
 * [BCLConvert Interop QC Pipeline Manager](#bclconvert-interop-qc-pipeline-manager)
-  * [Inputs](#inputs)
-    * [Example Input](#example-input)
+  * [StepFunctions Layout](#stepfunctions-layout)
+    * [Workflow Run Manager Event Handler SFN](#workflow-run-manager-event-handler-sfn)
+    * [BCLConvert InterOp QC Configure Inputs SFN](#bclconvert-interop-qc-configure-inputs-sfn)
+    * [Handle ICAv2 External Event SFN](#handle-icav2-external-event-sfn)
+    * [BCLConvert InterOp QC Configure Outputs SFN](#bclconvert-interop-qc-configure-outputs-sfn)
+  * [Launch Inputs (via events)](#launch-inputs-via-events)
+    * [Example Launch Event Payload](#example-launch-event-payload)
+    * [Launching via the event](#launching-via-the-event)
   * [Outputs](#outputs)
+  * [Monitoring workflows](#monitoring-workflows)
+    * [Example external icav2 event](#example-external-icav2-event)
+    * [Example internal published event](#example-internal-published-event)
+    * [Termination event](#termination-event)
+      * [Success event](#success-event)
+      * [Fail event](#fail-event)
   * [Lambdas in this directory](#lambdas-in-this-directory)
-    * [Get Cache and Output paths](#get-cache-and-output-paths)
-    * [Generate a trimmed samplesheet](#generate-a-trimmed-samplesheet)
-    * [Upload the samplesheet to the cache path](#upload-the-samplesheet-to-the-cache-path)
-    * [Generate a copy manifest](#generate-a-copy-manifest)
-    * [Launch the nextflow pipeline](#launch-the-nextflow-pipeline)
+    * [set_outputs_json_py](#set_outputs_json_py)
+    * [External Parameters required by this CDK Stack](#external-parameters-required-by-this-cdk-stack)
   * [SSM Parameters](#ssm-parameters-)
-    * [External Parameters required by CDK](#external-parameters-required-by-cdk)
+  * [Secrets](#secrets)
 <!-- TOC -->
 
 This BCLConvert InterOpQC Pipeline Manager performs the following actions
@@ -23,136 +32,523 @@ This BCLConvert InterOpQC Pipeline Manager performs the following actions
 * Tracks the status of the pipeline run through ICAv2 events. 
 * Logs launches, intermediate status changes and completions in a DynamoDB database.  
 
-## Launch Inputs (via wfm ready)
+## StepFunctions Layout
 
-The AWS Step functions takes in the following event information
+### Workflow Run Manager Event Handler SFN
 
-* status - The status of the workflow run manager event (should be 'ready')
+> Handles events from the workflow run manager 
+
+Triggered when status is set to `ready` and the workflow type is set to `bclconvert_interop_qc`
+
+<details>
+
+<summary>Click to view graph</summary>
+
+![bclconvert_wfm_event_handler](./images/bclconvert_handle_wfm_sfn.png)
+
+</details>
 
 
+### BCLConvert InterOp QC Configure Inputs SFN
 
+> Required by the WFM SFN
 
-### Example Input
+This is a custom step function specific to this BCLConvert InteropQC stack.  
+Given the database UUID, generate the inputs-json for this workflow from parameters in the wfm payload.  
 
-```json5
+<details>
+
+<summary>Click to view graph</summary>
+
+![bclconvert_configure_inputs_json](./images/bclconvert_configure_inputs_sfn.png)
+
+</details>
+
+An example input json might as below:
+
+<details>
+
+<summary>Click to expand!</summary>
+
+```json
 {
-  "project_id": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
-  "sample_id": "L2301368",
-  "portal_run_id": "20240308abcd1234",
-  "user_reference": "PTC-ctTSO-v2-launch-test",
-  "user_tags": {
-    "subject_id": "SBJ04405",
-    "library_id": "L2301368",
-    "instrument_run_id": "231116_A01052_0172_BHVLM5DSX7",
-    "project_owner": "UMCCR",
-    "project_name": "testing"
+  "bclconvert_report_directory": {
+    "class": "Directory",
+    "location": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/"
   },
-  "samplesheet_b64gz": "H4sIAAAAAAAAA91b227bOBB9z1cU3tek0M2WlD5pVUAo0M0uGvahWCwGsq20Qm3ZlZV0i0X/fTmUGcvlULQVxmiNIAEcUuKZIefqw/8uXrwYfSryeVGPrl/8xz/xz3flooC7Vb3MG3go6k25qvigd9mO1vcVVPmy4P8asc2X6uqmmL67STzfdV3/6o+3RXHL3oE7uVk9eP5o+1BZbZr6fllUDTTf1uJZPp7fFl9GfMJ3nDWqOYzNDgV+BBdm32aLAv/tjt3LzohHjZTVvPh37yFnb6T7kPO48HS2mK0qLmkDm6JpyupjB8ayrMrl/RKaulwuizmIxRdF9bH5xCf548v9afk8XzdFDSv+ukW+xilyRr75DJtPK76KlPTx6c3qrvma10VH3aPgpfcyHFEg53mT8xl/i2dbmHzCIq9Qr1tV4Evz5ZpvZDnHt731fMf1J9HocVhoBIeyJGVZkrEk+2HQw9GUjyYsTZJ0N4rC1eW82Glz9D68cT+4gf/qjeuIX/mP3VNSNe3GinezjKX8hy+Q8HX4Mkwz3dNNF7O/Xw5QRUyogmshTbg+soRSBS6fcRAZOy9VhA6hijTlJ4KvwlJKFXzJjIkJZ6YKlzQQPBbcPkgDSTJ+KHDhMzOQ0KNOBWMoLF+B9BV8mB+bLDk3A/HJU4E7n+3te/dU8PPCJ6S/noF4faoIJvzNPAUgnWfrPemzgUGEsf0ocxYKCbUKScUyfBGm8RtMxNbkzBQS6U8Idw+oD02mwZfm54db1JkpJNYqRKQamc6dcl2gstgvmG/0KmTs6E+IeDdGVE3WgWlH9guG2l6FhAGhCmEqbD+CdNwpxlmccG6qGJOOlOehCQZb0m/gwgjhzMwkolSBOQUaCaWITCxoMI4PvFp+9Sa68do/+PEJEEPShtGj0SUUWi/miFYh+r0QJ9SBQjeS0JaVibTOEJXtQiSrcoY/jEwdMjwBpsTBLkSqWmYi/81IiPwYYmg74UbHZBUrAiidoqfoVLgqTwiRri6Z6LBockSRQZ4QIlX1YaqKnQ/6LHJ7Zpldp9MPkarG+ElMsI+li5Vo8CeESLluEcw1XTbWJjZ2Nzrog+hRZzFNhe8jNxqh7x+CZ4dInUURW7lz0Wx0sm9Kzw6R7AxgR5XR3SJRE2aWA2A/RCq5xOPG80tNpd5WrSeESJlLggA1Fs1DNxaLpzyLVBqRiY6GJhlTuqfPDpFKxrBi0jkdtGZjdWkXIpXpYEHHdC13UQ1aTmn7IWq+F8DWlia64D5bznR6IfpUppOhPWS0RaM971v7s0OkoosojRJdGpGI4HNCiHR/GzMdXTKWMWO7zi5EKrq0CS1t0VjV7Pcbnx0iFV3asoC26ES0+Czni/0Q6eiSiZyLNJdE9O5PqMWAjtE8AmYaLWJkNPXSrUL8OSrAXog/R3nVD5Hs9CXtVyearJtr0dAS10Pkf//BJ0ezxep+TtAbPhZVUedNMe9SD5yX/Ge74vbJr6v6891i9RWHy1n++BmkzrsEhXW5Lhal0Mbovq6uy8WS/5nl13LgenoX+9Px7O5qNvXCq2B+l19FwaS4ymfzSTF1Ijef5b/9Pluk2zc+BOBBhw3RgqKJEIZiZ1FO67z+9shhkTNAFj+gVjrymXVdrOFz2XQJMLfsHX0eDBWNBocHssIBtZyxhsM34vBBljGg1izWcARGHAHIWgXUwsQajrERxxhkQQJq9WENx8SIYwKy6gC1xLCGIzTiCEGWFqDWEdZwREYcEcj6AdRiwRqO2IgjBlkkgFoR2MLRzfxpHL4DshIANe23hsPoT30XZLoPam5vDYfRn/oeyJwe1ATeGg6jP/V9kIk7qFm6NRxGf+oHILNzUFNxaziM/tRHf9qm4KDm27ZwBEZ9BBhf2jwb1KTaGg6FNaNBs50HOy4NUMQZLa5Zw27/fPAOB6awVzTAtvNgx2kBisBiD5jCItEAi6TGHrklQBFJ7AFT2BwaYNt5sON4AEXosAZMZVXQwOQ82HEtgCJWWAM2MQbxSQQ7EjJQjGN7YIyRfCIi+ZYGDBTn1xqY0BjOQwd2RFygWLf2wBhjeujCjgoLFO/VHhhjYA8xsEsyKlDMU3tgjNE99GFHBwWK+2kPjDGkhQHsuENAEYXsgTHG+XAMO/YOUFQda2AiI5hoDJI/AypZRgukveByOA5jERdNQDJQQKWbWMNhLOKiECRZB1RmjjUcRv8fRSDpLqByW6zhMLr+KAbZ0QS1fdmXDN7k1epgILHR7ccOSOYKqDQVe0CMLj9Gl982UEHtltoDYnT3sQeShQIq5cQeEKOrj32QXBNQiSX2gBjdfByAbByD2iW2B8ToVeMxSGoLqDyWA4FcyEZ1s1mNHWdBtKqPYWceyM38YfK0+JQ/lKt7vAs5wgt/csKhlwB7rvgdxUi9kH1uqY2DO91qpbmdJK9dvr7pnpIfOZ5PuMxRhtBesmzhvH/9l+M43e9Yx+T4wXWXUqkOE+z4SxmkYL5BMP8Jle7AHTv6cgUpWGAQLHhCpTxMsOMvSZCCjQ2CjZ9QaQ/csaMvO5CCTQyCTQZV6geI5JJ7deRdYlKk2CBSPKjeHybS8XeCKZFcp18kPn6oSN2uwTCRjr/bS4rkGkTSfE9u6D0MPXjH3tElRTLEK3dYB2PgLh1915YUyRCp3MMjVbcPMnSXjr0zS4pkiFHu4TGq200Z5sSPv6ZFimSITu7h0anbkxmaIh173YoUyRCX3Ekn9b/4fvE/hhiak4tEAAA=",  /* pragma: allowlist secret */
-  "fastq_list_rows_b64gz": "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"  /* pragma: allowlist secret */
+  "interop_directory": {
+    "class": "Directory",
+    "location": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/"
+  },
+  "run_id": "231116_A01052_0172_BHVLM5DSX7"
 }
 ```
+
+</details>
+
+
+### Handle ICAv2 External Event SFN
+
+> Handles events from the ICAv2 event bus
+
+Triggered when the ica-event code is set to ICA_EXEC_028 (workflow run state change).  
+This will be triggered for analysis runs that do not relate to this workflow as well.  
+The step function will first check the database to see if the analysis id is related to this workflow and exit if not.  
+
+If the analysis id is related to this workflow, then publish an internal event with the status of the analysis is published.
+
+If the analysis is in a terminal state, then the internal event will be published with the outputs of the analysis or the error code :construction:
+
+<details>
+
+<summary>Click to view graph</summary>
+
+![bclconvert_external_event_sf](./images/bclconvert_handle_icav2_event_sfn.png)
+
+</details>
+
+### BCLConvert InterOp QC Configure Outputs SFN
+
+> Required by the ICAv2 External Event Handler SFN
+
+This is a custom step function specific to this BCLConvert InteropQC stack. 
+This is only called if the icav2 external event handler sfn determines the analysis is in a successful terminal state (SUCCEEDED).  
+
+This step function will take the db uuid, find the analysis output uri, and generate the outputs json for the analysis.
+
+<details>
+
+<summary>Click to view graph</summary>
+
+![bclconvert_output_json](./images/bclconvert_configure_outputs_sfn.png)
+
+</details>
+
+An output json might be as shown below
+
+<details>
+
+<summary>Click to expand!</summary>
+
+```json
+{
+  "multiqcOutputDir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/1_3_1__1_2_1/202405142871bfae/out/multiqc/",
+  "multiqcHtmlReport": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/1_3_1__1_2_1/202405142871bfae/out/multiqc/231116_A01052_0172_BHVLM5DSX7_multiqc_report.html",
+  "interopOutputDir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/1_3_1__1_2_1/202405142871bfae/out/interop_summary_files/"
+}
+```
+
+</details>
+
+## Launch Inputs (via events)
+
+In the top level of the payload we require the following values
+
+* detail-type - The type of event, this should be set to workflowRunStateChange
+* source - The source of the event, this should be set to orcabus.wfm
+
+The AWS Step functions requires the following event detail information
+
+* status - The status of the workflow run manager event (should be 'ready')
+* workflowType - this MUST be set to bclconvert_interop_qc
+* workflowVersion - Not currently used, set to 1.0.0
+* portalRunId - This is required to be set to a unique identifier for the run
+* payload
+  * refId: This is not tracked by this service, only by the workflow run manager service
+  * version: The service version, not currently used, set to 0.1.0
+  * projectId: The icav2 project id
+  * userReference: The user reference for the icav2 pipeline
+  * bclconvertReportDirectory: The icav2 uri that the report directory resides at 
+  * interopDirectory: The icav2 uri that the interop directory resides at
+  * runId: The illumina instrument run id
+  * analysisOutputUri: The icav2 uri that the analysis output should be stored at
+  * icaLogsUri: The icav2 uri that the ica logs should be stored at (note that this currently doesn't work) - see https://github.com/umccr-illumina/ica_v2/issues/184 for more info
+  * userTags: A dictionary of user tags that should be added to the analysis
+    * This might include
+      * The instrument run id
+      * The project name
+
+
+### Example Launch Event Payload
+
+<details>
+
+<summary>Click to expand! </summary>
+
+```json
+{
+    "version": "0",
+    "id": "2ce3c70c-e757-6246-5783-a83543d87ea7",
+    "detail-type": "workflowRunStateChange",
+    "source": "orcabus.wfm",
+    "account": "843407916570",
+    "time": "2024-05-10T08:25:12Z",
+    "region": "ap-southeast-2",
+    "resources": [],
+    "detail": {
+        "status": "ready",
+        "workflowType": "bclconvert_interop_qc",
+        "workflowVersion": "1.3.1--1.2.1",
+        "portalRunId": "20240510abcd0030",
+        "payload": {
+            "refId": "abc",
+            "version": "0.1.0",
+            "projectId": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
+            "userReference": "bclconvert_interop__semi_automated__umccr__pipeline",
+            "bclconvertReportDirectory": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/",
+            "interopDirectory": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/",
+            "runId": "231116_A01052_0172_BHVLM5DSX7",
+            "analysisOutputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0030/out/",
+            "icaLogsUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0030/logs/",
+            "userTags": {
+                "projectname": "trial"
+            }
+        }
+    }
+}
+```
+
+</details>
+
+
+### Launching via the event
+
+> A scripted example
+
+<details>
+
+<summary>Click to expand! </summary>
+
+```shell
+# Workflow Input
+report_uri="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/"
+interop_uri="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/"
+run_id="231116_A01052_0172_BHVLM5DSX7"
+output_root_uri="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/1_3_1__1_2_1/"
+project_id="7595e8f2-32d3-4c76-a324-c6a85dae87b5"  # trial
+
+# Event metadata
+portal_run_id="$(date --utc +%Y%m%d)$(xxd -l 4 -c 4 -p < /dev/random)"
+utc_time="$(date --utc --iso-8601=seconds | sed 's/+00:00/Z/')"
+
+# Generate the input payload
+input_payload="$( \
+  jq --null-input --raw-output \
+    --arg project_id "${project_id}" \
+    --arg portal_run_id "${portal_run_id}" \
+    --arg report_uri "${report_uri}" \
+    --arg interop_uri "${interop_uri}" \
+    --arg run_id "${run_id}" \
+    --arg output_root_uri "${output_root_uri}" \
+    '
+      {
+        "refId": null,
+        "version": "0.1.0",
+        "projectId": $project_id,
+        "userReference": "bclconvert_interop__semi_automated__umccr__pipeline__\($portal_run_id)",
+        "bclconvertReportDirectory": $report_uri,
+        "interopDirectory": $interop_uri,
+        "runId": $run_id,
+        "analysisOutputUri": "\($output_root_uri)\($portal_run_id)/out/",
+        "icaLogsUri": "\($output_root_uri)\($portal_run_id)/logs/",
+        "userTags": {
+          "projectname": "trial"
+        }
+      } 
+    '
+)"
+
+# Generate the input detail
+input_detail="$(
+  jq --null-input --raw-output \
+    --arg portal_run_id "${portal_run_id}" \
+    --argjson input_payload "${input_payload}" \
+    '
+      {
+        "status": "ready",
+        "portalRunId": $portal_run_id,
+        "workflowType": "bclconvert_interop_qc",
+        "workflowVersion": "1.3.1--1.2.1",
+        "payload": $input_payload
+      }
+    '
+)"
+  
+# Generate the event entry
+event_entry="$(
+  jq --null-input --raw-output --compact-output \
+    --arg portal_run_id "$portal_run_id" \
+    --arg utc_time "$utc_time" \
+    --argjson input_detail "$input_detail" \
+    '
+      {
+        "Entries": [
+          {
+            "EventBusName": "OrcaBusMain",
+            "DetailType": "workflowRunStateChange",
+            "Source": "orcabus.wfm",
+            "Time": $utc_time,
+            "Resources": [],
+            "Detail": ( $input_detail | tojson )
+          }
+        ]
+      }
+    ' \
+)"
+  
+# Push the event to the event bus
+aws events put-events --cli-input-json "${event_entry}"
+```
+
+</details>
 
 ## Outputs
 
-The AWS Step functions returns the following parameters:
+The AWS Step functions final step is generating a put-event with the payload (with the analysis id).  
 
-The analysis ID of the nextflow pipeline run launched by the step functions lambda 
+This put payload looks something like the following:
 
-The CreateNextflowAnalysis submission as a JSON object for reproducibility
+<details>
+
+<summary>Click to expand!</summary>
 
 ```json5
 {
-  "analysis_id": "3e17b6ff-ff63-43ab-ac15-e939e88932b6",
-  "analysis_launch_payload": {
-    "userReference": "PTC-ctTSO-v2-launch-test",
-    "pipelineId": "fdef5902-3f50-4ee7-ae17-15d38d4b489c",
-    "tags": {
-      "technicalTags": [
-        "portal_run_id=20240308abcd1234",
-        "step_functions_execution_arn=93f7c69b-66eb-4890-8eb4-298ec3b36d37"
-      ],
-      "userTags": [
-        "subject_id=SBJ04405",
-        "library_id=L2301368",
-        "instrument_run_id=231116_A01052_0172_BHVLM5DSX7",  /* pragma: allowlist secret */
-        "project_owner=UMCCR",
-        "project_name=testing"
-      ],
-      "referenceTags": []
-    },
-    "analysisInput": {
-      "inputs": [
-        {
-          "parameterCode": "run_folder",
-          "dataIds": [
-            "fol.58422302edd141213e0f08dc3cace45e"
-          ]
+    "version": "0",
+    "id": "90916b28-8649-5aa4-a779-c7a7939088bb",
+    "detail-type": "workflowRunStateChange",
+    "source": "orcabus.bclconvert_interop_qc",
+    "account": "843407916570",
+    "time": "2024-05-13T00:24:02Z",
+    "region": "ap-southeast-2",
+    "resources": [
+        "arn:aws:states:ap-southeast-2:843407916570:stateMachine:bclconvertInteropQcSfn-wfm-ready-event-handler",
+        "arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-wfm-ready-event-handler:36477523-4aa5-82c7-923a-14e1ecb93786_ddaeea43-84e7-08e0-bd70-f0673fcc8c89"
+    ],
+    "detail": {
+        "workflowType": "bclconvert_interop_qc",
+        "workflowVersion": "1.3.1--1.21",
+        "payload": {
+            "refId": null,
+            "version": "2024.05.07",
+            "analysisId": "d63dc6c7-690a-4d17-8fd1-e4556a2ef1e0",
+            "analysisOutput": "",
         },
-        {
-          "parameterCode": "sample_sheet",
-          "dataIds": [
-            "fil.94813f45b9e94977b0a308dc388cf24f"
-          ]
-        }
-      ],
-      "parameters": [
-        {
-          "code": "StartsFromFastq",
-          "value": "true"
-        },
-        {
-          "code": "sample_pair_ids",
-          "multiValue": [
-            "L2301368"
-          ]
-        }
-      ]
-    },
-    "activationCodeDetailId": "7f03a57e-2cfc-4b35-9cbb-d19e6ce9984b",
-    "analysisStorageId": "3fab13dd-46e7-4b54-bb34-b80a01a99379",
-    "outputParentFolderId": null,
-    "analysisOutput": [
-      {
-        "sourcePath": "out/",
-        "targetProjectId": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
-        "targetPath": "/ilmn_cttso_fastq_cache/20240308abcd1234/",
-        "type": "FOLDER"
-      }
-    ]
-  }
+        "portalRunId": "20240513a3fb6502",  /* pragma: allowlist secret */
+        "timestamp": "2024-05-13T00:24:01.812Z",
+        "status": "REQUESTED"
+    }
 }
 ```
 
+</details>
+
+## Monitoring workflows
+
+This stack also creates a icav2 external event handler that will track any events that are published to the event bus.
+
+This will trigger the tracking step function to launch, this will first look for the analysis id in the payload of the event in the
+BclConvert InterOp QC Database and determine if this analysis is part of this service.  
+
+If the analysis ID is not found in the database, no action is required, 
+if so, then publish an internal event displaying the analysis' status for the portal run id.  
+In the event that the analysis is in a terminal state (successful), then the internal event will be published with the outputs of the analysis.
+In the event that the analysis is in a terminal state (failure), then the internal event will be published with error information :construction:
+
+### Example external icav2 event
+
+<details>
+
+<summary>Click to expand!</summary>
+
+```json
+{
+    "version": "0",
+    "id": "1294b95b-4bb6-ff11-fdc5-f57af2928c64",
+    "detail-type": "Event from aws:sqs",
+    "source": "Pipe IcaEventPipeConstru-aVEAl34nl7zf",
+    "account": "843407916570",
+    "time": "2024-05-13T00:24:07Z",
+    "region": "ap-southeast-2",
+    "resources": [],
+    "detail": {
+        "ica-event": {
+            "correlationId": "0e28d39b-a2cc-4e9b-86f2-78db22a25891",
+            "timestamp": "2024-05-13T00:24:06.929Z",
+            "eventCode": "ICA_EXEC_028",
+            "eventParameters": {
+                "pipelineExecution": "d63dc6c7-690a-4d17-8fd1-e4556a2ef1e0",
+                "analysisPreviousStatus": "QUEUED",
+                "analysisStatus": "INITIALIZING"
+            },
+            "description": "Analysis status changed",
+            "projectId": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
+            "payloadVersion": "v4",
+            "payload": {
+                "id": "d63dc6c7-690a-4d17-8fd1-e4556a2ef1e0",
+                "timeCreated": "2024-05-13T00:23:58Z",
+                "timeModified": "2024-05-13T00:24:06Z",
+                "owner": {
+                    "id": "a9938581-7bf5-35d2-b461-282f34794dd1"
+                },
+                "tenant": {
+                    "id": "1555b441-c3be-40b0-a8f0-fb9dc7500545",
+                    "name": "umccr-prod"
+                },
+                "reference": "bclconvert_interop__semi_automated__umccr__pipeline__20240513a3fb6502-bclconvert-interop-qc__1_3_1--1_21__20240313015132-061f2f50-44b2-4606-a8ce-7b87c302848f",
+                "userReference": "bclconvert_interop__semi_automated__umccr__pipeline__20240513a3fb6502",
+                "pipeline": {
+                    "id": "f606f580-d476-47a8-9679-9ddb39fcb0a8",
+                    "urn": "urn:ilmn:ica:pipeline:f606f580-d476-47a8-9679-9ddb39fcb0a8#bclconvert-interop-qc__1_3_1--1_21__20240313015132",
+                    "timeCreated": "2024-03-13T01:53:51Z",
+                    "timeModified": "2024-03-13T01:53:51Z",
+                    "owner": {
+                        "id": "a9938581-7bf5-35d2-b461-282f34794dd1"
+                    },
+                    "tenant": {
+                        "id": "1555b441-c3be-40b0-a8f0-fb9dc7500545",
+                        "name": "umccr-prod"
+                    },
+                    "code": "bclconvert-interop-qc__1_3_1--1_21__20240313015132",
+                    "description": "GitHub Release URL: https://github.com/umccr/cwl-ica/releases/tag/bclconvert-interop-qc/1.3.1--1.21__20240313015132",
+                    "language": "CWL",
+                    "pipelineTags": {
+                        "technicalTags": []
+                    },
+                    "analysisStorage": {
+                        "id": "6e1b6c8f-f913-48b2-9bd0-7fc13eda0fd0",
+                        "name": "Small",
+                        "description": "1.2TB"
+                    },
+                    "proprietary": false
+                },
+                "status": "INITIALIZING",
+                "summary": "",
+                "analysisStorage": {
+                    "id": "6e1b6c8f-f913-48b2-9bd0-7fc13eda0fd0",
+                    "name": "Small",
+                    "description": "1.2TB"
+                },
+                "analysisPriority": "LOW",
+                "tags": {
+                    "technicalTags": [
+                        "portal_run_id=20240513a3fb6502",
+                        "step_functions_execution_arn=arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-wfm-ready-event-handler:36477523-4aa5-82c7-923a-14e1ecb93786_ddaeea43-84e7-08e0-bd70-f0673fcc8c89"
+                    ],
+                    "userTags": [
+                        "projectname=trial"
+                    ],
+                    "referenceTags": []
+                }
+            }
+        }
+    }
+}
+```
+
+</details>
+
+### Example internal published event
+
+<details>
+
+<summary>Click to expand! </summary>
+
+```json5
+{
+    "version": "0",
+    "id": "a235d43a-4e6a-adb6-4ba1-864d2f4948f8",
+    "detail-type": "workflowRunStateChange",
+    "source": "orcabus.bclconvert_interop_qc",
+    "account": "843407916570",
+    "time": "2024-05-13T00:24:09Z",
+    "region": "ap-southeast-2",
+    "resources": [
+        "arn:aws:states:ap-southeast-2:843407916570:stateMachine:bclconvertInteropQcSfn-icav2-external-handler",
+        "arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-icav2-external-handler:1294b95b-4bb6-ff11-fdc5-f57af2928c64_04c9b2f6-a009-fef2-fad5-266d3cdda709"
+    ],
+    "detail": {
+        "workflowType": "bclconvert_interop_qc",
+        "workflowVersion": "1.3.1--1.21",
+        "payload": {
+            "refId": null,
+            "version": "2024.05.07",
+            "analysisId": "d63dc6c7-690a-4d17-8fd1-e4556a2ef1e0",
+            "analysisOutput": ""
+        },
+        "portalRunId": "20240513a3fb6502",  /* pragma: allowlist secret */
+        "timestamp": "2024-05-13T00:24:09.472Z",
+        "status": "INITIALIZING"
+    }
+}
+```
+
+</details>
+
+### Termination event
+
+If the analysis is in a terminal state, then the internal event will be published with the status of the analysis.
+
+#### Success event
+
+In a success status event, the analysisOutput will be populated with the output uri of the analysis
+
+<details>
+
+<summary>Click to expand!</summary>
+
+```json5
+{
+    "version": "0",
+    "id": "a235d43a-4e6a-adb6-4ba1-864d2f4948f8",
+    "detail-type": "workflowRunStateChange",
+    "source": "orcabus.bclconvert_interop_qc",
+    "account": "843407916570",
+    "time": "2024-05-13T00:24:09Z",
+    "region": "ap-southeast-2",
+    "resources": [
+        "arn:aws:states:ap-southeast-2:843407916570:stateMachine:bclconvertInteropQcSfn-icav2-external-handler",
+        "arn:aws:states:ap-southeast-2:843407916570:execution:bclconvertInteropQcSfn-icav2-external-handler:1294b95b-4bb6-ff11-fdc5-f57af2928c64_04c9b2f6-a009-fef2-fad5-266d3cdda709"
+    ],
+    "detail": {
+        "workflowType": "bclconvert_interop_qc",
+        "workflowVersion": "1.3.1--1.21",
+        "payload": {
+            "refId": null,
+            "version": "2024.05.07",
+            "analysisId": "d63dc6c7-690a-4d17-8fd1-e4556a2ef1e0",
+            "analysisOutput": "{\"interopOutputDir\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513a3fb6502/out/interop_summary_files/\",\"multiqcHtmlReport\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513a3fb6502/out/multiqc/231116_A01052_0172_BHVLM5DSX7_multiqc_report.html\",\"multiqcOutputDir\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513a3fb6502/out/multiqc/\"}"
+        },
+        "portalRunId": "20240513a3fb6502",  /* pragma: allowlist secret */
+        "timestamp": "2024-05-13T00:24:09.472Z",
+        "status": "SUCCEEDED"
+    }
+}
+```
+
+</details>
+
+#### Fail event
+
+:construction:
+
 ## Lambdas in this directory
 
-### Get Cache and Output paths
+### set_outputs_json_py
 
-Combine the root cache and root output ssm parameters with the portal run id submitted in the inputs
+The set outputs json python script takes the analysis output uri in as an input and find the 
+interop summary results, the multiqc html report and the multiqc output directory.
 
-### Generate a trimmed samplesheet
-
-Generate a samplesheet that only has the TSO500L sections and only for the sample_id submitted in the inputs
-
-### Upload the samplesheet to the cache path
-
-Upload the samplesheet dict as a samplesheet csv to the cache path
-
-### Generate a copy manifest
-
-Generate a copy manifest for submissions to the icav2 copy batch utility
-
-### Launch the nextflow pipeline
-
-Take the fastq output locations, samplesheet location and metadata generated in the inputs and run the launch nextflow object.
+### External Parameters required by this CDK Stack
 
 ## SSM Parameters 
 
-### External Parameters required by CDK
+```
+/icav2/umccr-prod/bclconvert_interop_qc_pipeline_id
+```
 
-```
-/icav2/umccr-prod/service-user-trial-jwt-token-secret-arn
-/icav2_copy_batch_utility/state_machine_arn_batch
-/icav2/umccr-prod/cache_project_cttso_fastq_path
-/icav2/umccr-prod/output_project_cttso_fastq_path
-/icav2/umccr-prod/tso500_ctdna_2.1_pipeline_id
-```
+## Secrets
+
+* ICAv2JWTKey-umccr-prod-service-trial  # Development
+* ICAv2JWTKey-umccr-prod-service-staging  # Staging
+* ICAv2JWTKey-umccr-prod-service-prod  # Production

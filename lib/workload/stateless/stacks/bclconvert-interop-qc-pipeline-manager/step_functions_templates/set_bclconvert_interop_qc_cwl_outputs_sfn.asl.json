@@ -1,0 +1,82 @@
+{
+  "Comment": "Get CWL Outputs from BCLConvert InterOp QC pipeline",
+  "StartAt": "Get Output URI",
+  "States": {
+    "Get Output URI": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "ResultSelector": {
+        "analysis_output_uri.$": "$.Item.analysis_output_uri.S"
+      },
+      "ResultPath": "$.get_analysis_output_uri_step",
+      "Next": "Set outputs from analysis uri"
+    },
+    "Set outputs from analysis uri": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__set_outputs_json_lambda_function_arn__}",
+        "Payload": {
+          "analysis_output_uri.$": "$.get_analysis_output_uri_step.analysis_output_uri"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "TimeoutSeconds": 60,
+      "ResultSelector": {
+        "output_json": {
+          "interopOutputDir.$": "$.Payload.interop_output_dir",
+          "multiqcHtmlReport.$": "$.Payload.multiqc_html_report",
+          "multiqcOutputDir.$": "$.Payload.multiqc_output_dir"
+        }
+      },
+      "ResultPath": "$.analysis_outputs_step",
+      "Next": "Update analysisOutput column in DB"
+    },
+    "Update analysisOutput column in DB": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.db_uuid"
+          },
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET analysis_output = :output_json",
+        "ExpressionAttributeValues": {
+          ":output_json": {
+            "S.$": "States.JsonToString($.analysis_outputs_step.output_json)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Wait 1 Second (Post-update)"
+    },
+    "Wait 1 Second (Post-update)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Wait for databases to sync before continuing",
+      "End": true
+    }
+  }
+}

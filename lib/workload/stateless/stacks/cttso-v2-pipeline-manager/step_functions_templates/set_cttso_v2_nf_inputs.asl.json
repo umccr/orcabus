@@ -1,8 +1,8 @@
 {
-  "Comment": "Launch cttso v2",
-  "StartAt": "get_database_entry",
+  "Comment": "Set ctTSOv2 Input JSON",
+  "StartAt": "Get Database entry",
   "States": {
-    "get_database_entry": {
+    "Get Database entry": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
@@ -16,9 +16,9 @@
       "ResultSelector": {
         "event_payload.$": "States.StringToJson($.Item.launch_event_payload.S)"
       },
-      "Next": "update_entry_pre_fastq_copy"
+      "Next": "Update Entry Pre-Fastq Copy"
     },
-    "update_entry_pre_fastq_copy": {
+    "Update Entry Pre-Fastq Copy": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:updateItem",
       "Parameters": {
@@ -35,15 +35,15 @@
         }
       },
       "ResultPath": "$.update_entry_pre_fastq",
-      "Next": "copy_files_to_cache_directory"
+      "Next": "Copy Files to Cache Directory"
     },
-    "copy_files_to_cache_directory": {
+    "Copy Files to Cache Directory": {
       "Type": "Parallel",
       "Branches": [
         {
-          "StartAt": "generate_trimmed_samplesheet",
+          "StartAt": "Generate Trimmed SampleSheet",
           "States": {
-            "generate_trimmed_samplesheet": {
+            "Generate Trimmed SampleSheet": {
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
@@ -66,14 +66,14 @@
                   "BackoffRate": 2
                 }
               ],
-              "Next": "upload_samplesheet_to_cache_path",
+              "Next": "Upload SampleSheet to Cache Path",
               "Comment": "We expect the inputs:\n* samplesheet_b64gz\n* sample_id\n\nAnd we provide outputs as \n* samplesheet_b64gz",
               "ResultPath": "$.generate_trimmed_samplesheet_step",
               "ResultSelector": {
                 "samplesheet_b64gz.$": "$.Payload.samplesheet_b64gz"
               }
             },
-            "upload_samplesheet_to_cache_path": {
+            "Upload SampleSheet to Cache Path": {
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
@@ -107,9 +107,9 @@
           }
         },
         {
-          "StartAt": "generate_copy_manifest",
+          "StartAt": "Generate Copy Manifest",
           "States": {
-            "generate_copy_manifest": {
+            "Generate Copy Manifest": {
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
@@ -133,14 +133,14 @@
                   "BackoffRate": 2
                 }
               ],
-              "Next": "copy_fastq_files_to_cache_directory",
+              "Next": "Copy Fastq Files to Cache Directory",
               "Comment": "Generate a copy manifest object, ready to parse into the icav2 copy batch utility step function\n\nWe expect the following inputs:\n\n* cache_path\n* project_id\n* sample_id\n* fastq_list_rows\n\nAnd we expect the following outputs:\n\n* manifest_list",
               "ResultSelector": {
                 "manifest_list.$": "$.Payload.manifest_list"
               },
               "ResultPath": "$.generate_copy_manifest_dict_step"
             },
-            "copy_fastq_files_to_cache_directory": {
+            "Copy Fastq Files to Cache Directory": {
               "Type": "Task",
               "End": true,
               "Parameters": {
@@ -158,7 +158,7 @@
           }
         }
       ],
-      "Next": "update_entry_post_fastq_copy",
+      "Next": "Update DB Entry (post-fastq copy)",
       "ResultSelector": {
         "trimmed_samplesheet_b64gz.$": "$.[0].generate_trimmed_samplesheet_step.samplesheet_b64gz",
         "samplesheet_file_id.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_id",
@@ -167,7 +167,7 @@
       },
       "ResultPath": "$.copy_files_to_cache_directory_step"
     },
-    "update_entry_post_fastq_copy": {
+    "Update DB Entry (post-fastq copy)": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:updateItem",
       "Parameters": {
@@ -184,9 +184,9 @@
         }
       },
       "ResultPath": "$.update_entry_post_fastq",
-      "Next": "set_sample_pair_ids"
+      "Next": "Set Sample Paid IDs as Dict"
     },
-    "set_sample_pair_ids": {
+    "Set Sample Paid IDs as Dict": {
       "Type": "Pass",
       "Parameters": {
         "sample_pair_ids_dict": [
@@ -196,9 +196,9 @@
         ]
       },
       "ResultPath": "$.set_sample_pair_ids",
-      "Next": "set_input_json"
+      "Next": "Set Input JSON Payload"
     },
-    "set_input_json": {
+    "Set Input JSON Payload": {
       "Type": "Pass",
       "Parameters": {
         "input_json": {
@@ -209,9 +209,9 @@
         }
       },
       "ResultPath": "$.set_input_json",
-      "Next": "update_database_entry"
+      "Next": "Update InputJSON in Database"
     },
-    "update_database_entry": {
+    "Update InputJSON in Database": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:updateItem",
       "Parameters": {

@@ -90,25 +90,27 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       /* Lambdas paths */
       generateTrimmedSamplesheetLambdaPath: path.join(
         __dirname,
-        '../lambdas/generate_and_trim_cttso_samplesheet_dict'
-      ), // __dirname + '/../../../lambdas/generate_and_trim_cttso_samplesheet_dict'
+        '../lambdas/generate_and_trim_cttso_samplesheet_dict_py'
+      ), // __dirname + '/../../../lambdas/generate_and_trim_cttso_samplesheet_dict_py'
       uploadSamplesheetToCacheDirLambdaPath: path.join(
         __dirname,
-        '../lambdas/upload_samplesheet_to_cache_dir'
-      ), // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir'
+        '../lambdas/upload_samplesheet_to_cache_dir_py'
+      ), // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir_py'
       generateCopyManifestDictLambdaPath: path.join(
         __dirname,
-        '../lambdas/generate_copy_manifest_dict'
-      ), // __dirname + '/../../../lambdas/generate_copy_manifest_dict'
-      launchCttsov2NextflowPipelineLambdaPath: path.join(
-        __dirname,
-        '../lambdas/launch_cttso_nextflow_pipeline'
-      ), // __dirname + '../launch_cttso_nextflow_pipeline'
+        '../lambdas/generate_copy_manifest_dict_py'
+      ), // __dirname + '/../../../lambdas/generate_copy_manifest_dict_py'
+      deleteCacheUriLambdaPath: path.join(__dirname, '../lambdas/delete_cache_uri_py'),
+      setOutputJsonLambdaPath: path.join(__dirname, '../lambdas/set_output_json_py'),
       /* Step function templates */
       generateInputJsonSfnTemplatePath: path.join(
         __dirname,
-        '../step_functions_templates/cttso_v2_launch_workflow_state_machine.asl.json'
-      ), // __dirname + '/../../../step_functions_templates/cttso_v2_launch_workflow_state_machine.asl.json'
+        '../step_functions_templates/set_cttso_v2_nf_inputs.asl.json'
+      ), // __dirname + '/../../../step_functions_templates/set_cttso_v2_nf_inputs.asl.json'
+      generateOutputJsonSfnTemplatePath: path.join(
+        __dirname,
+        '../step_functions_templates/set_cttso_v2_nf_outputs.asl.json'
+      ), // __dirname + '/../../../step_functions_templates/set_cttso_v2_nf_inputs.asl.json'
       /* Event buses */
       eventBusName: props.eventBusName,
       icaEventPipeName: props.icaEventPipeName,

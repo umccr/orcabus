@@ -20,6 +20,7 @@ interface Cttsov2Icav2PipelineManagerConstructProps {
   pipelineIdSsmObj: ssm.IStringParameter;
   // Step function generate paths
   generateInputJsonSfnTemplatePath: string; // __dirname + '/../../../step_functions_templates/cttso_v2_launch_step_function.json'
+  generateOutputJsonSfnTemplatePath: string; // __dirname + "../../../step_functions_templates/cttso_v2_output_step_function.json"
   // Event buses
   eventBusName: string;
   icaEventPipeName: string;
@@ -34,11 +35,14 @@ interface Cttsov2Icav2PipelineManagerConstructProps {
   stateMachinePrefix: string;
   /* Extras */
   // Lambda layers paths
+  // SFN Input Lambdas
   lambdaLayerObj: lambda.ILayerVersion;
   generateTrimmedSamplesheetLambdaPath: string; // __dirname + '/../../../lambdas/generate_trimmed_samplesheet_lambda_path'
-  uploadSamplesheetToCacheDirLambdaPath: string; // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir'
-  generateCopyManifestDictLambdaPath: string; // __dirname + '/../../../lambdas/generate_copy_manifest_dict'
-  launchCttsov2NextflowPipelineLambdaPath: string; // __dirname + '/../../../lambdas/launch_cttso_nextflow_pipeline'
+  uploadSamplesheetToCacheDirLambdaPath: string; // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir_py'
+  generateCopyManifestDictLambdaPath: string; // __dirname + '/../../../lambdas/generate_copy_manifest_dict_py'
+  // SFN Output lambdas
+  deleteCacheUriLambdaPath: string; // __dirname + '/../../../lambdas/delete_cache_uri_py'
+  setOutputJsonLambdaPath: string; // __dirname + '/../../../lambdas/set_output_json_py'
   // ICAv2 Copy Batch State Machine Object
   icav2CopyBatchStateMachineObj: sfn.IStateMachine;
 }
@@ -53,11 +57,12 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     /*
     Part 1: Set up the lambdas needed for the input json generation state machine
     Quite a bit more complicated than regular ICAv2 workflow setup since we need to
-    1. Update the samplesheet
-    2. Copy fastqs into a particular directory setup type
+    1. Convert the samplesheet from json into csv format
+    2. Upload the samplesheet to icav2
+    3. Copy fastqs into a particular directory setup type
     */
 
-    // generate_copy_manifest_dict lambda
+    // generate_copy_manifest_dict_py lambda
     const generate_copy_manifest_dict_lambda_obj = new PythonFunction(
       this,
       'generate_copy_manifest_dict_lambda_python_function',
@@ -65,7 +70,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         entry: props.generateCopyManifestDictLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
-        index: 'handler.py',
+        index: 'generate_copy_manifest_dict.py',
         handler: 'handler',
         memorySize: 1024,
         layers: [props.lambdaLayerObj],
@@ -82,7 +87,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         entry: props.generateTrimmedSamplesheetLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
-        index: 'handler.py',
+        index: 'generate_and_trim_cttso_samplesheet_dict.py',
         handler: 'handler',
         memorySize: 1024,
         layers: [props.lambdaLayerObj],
@@ -90,7 +95,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       }
     );
 
-    // upload_samplesheet_to_cache_dir lambda
+    // upload_samplesheet_to_cache_dir_py lambda
     const upload_samplesheet_to_cache_dir_lambda_obj = new PythonFunction(
       this,
       'upload_samplesheet_to_cache_dir_lambda_python_function',
@@ -98,7 +103,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         entry: props.uploadSamplesheetToCacheDirLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
-        index: 'handler.py',
+        index: 'upload_samplesheet_to_cache_dir.py',
         handler: 'handler',
         memorySize: 1024,
         layers: [props.lambdaLayerObj],
@@ -109,7 +114,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       }
     );
 
-    // Add icav2 secrets permissions to lambda
+    // Add icav2 secrets permissions to lambdas
     props.icav2AccessTokenSecretObj.grantRead(
       <iam.IRole>upload_samplesheet_to_cache_dir_lambda_obj.currentVersion.role
     );
@@ -166,7 +171,79 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     // Add state machine execution permissions to stateMachine role
     props.icav2CopyBatchStateMachineObj.grantStartExecution(configure_inputs_sfn.role);
 
-    /* Add ICAv2 WfmworkflwoRunStateChange wrapper around launch state machine */
+    /*
+    Part 2: Configure the lambdas and outputs step function
+    Quite a bit more complicated than regular ICAv2 workflow setup since we need to
+    1. Generate the outputs json from a nextflow pipeline (which doesn't have a json outputs endpoint)
+    2. Delete the cache fastqs we generated in the configure inputs json step function
+    */
+    // Delete the cache uri directory lambda
+    const delete_cache_uri_lambda_function = new PythonFunction(
+      this,
+      'delete_cache_uri_lambda_python_function',
+      {
+        entry: props.deleteCacheUriLambdaPath,
+        runtime: lambda.Runtime.PYTHON_3_11,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'delete_cache_uri.py',
+        handler: 'handler',
+        memorySize: 1024,
+        layers: [props.lambdaLayerObj],
+        timeout: Duration.seconds(60),
+        environment: {
+          ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
+        },
+      }
+    );
+
+    // Set the output json lambda
+    const set_output_json_lambda_function = new PythonFunction(
+      this,
+      'set_output_json_lambda_python_function',
+      {
+        entry: props.setOutputJsonLambdaPath,
+        runtime: lambda.Runtime.PYTHON_3_11,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'set_output_json.py',
+        handler: 'handler',
+        memorySize: 1024,
+        layers: [props.lambdaLayerObj],
+        timeout: Duration.seconds(60),
+        environment: {
+          ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
+        },
+      }
+    );
+
+    // Add icav2 secrets permissions to lambdas
+    [delete_cache_uri_lambda_function, set_output_json_lambda_function].forEach((lambda_obj) => {
+      props.icav2AccessTokenSecretObj.grantRead(<iam.Role>lambda_obj.currentVersion.role);
+    });
+
+    const configure_outputs_sfn = new sfn.StateMachine(this, 'sfn_configure_outputs_json', {
+      stateMachineName: `${props.stateMachinePrefix}-configure-outputs-json`,
+      // defintiontemplate
+      definitionBody: DefinitionBody.fromFile(props.generateOutputJsonSfnTemplatePath),
+      // definitionSubstitutions
+      definitionSubstitutions: {
+        /* Dynamodb tables */
+        __table_name__: props.dynamodbTableObj.tableName,
+        __delete_cache_uri_lambda_function_arn__:
+          delete_cache_uri_lambda_function.currentVersion.functionArn,
+        __set_outputs_json_lambda_function_arn__:
+          set_output_json_lambda_function.currentVersion.functionArn,
+      },
+    });
+
+    // Allow the state machine to read/write to dynamodb table
+    props.dynamodbTableObj.grantReadWriteData(configure_outputs_sfn.role);
+
+    // Allow the state machine to invoke the lambdas
+    [delete_cache_uri_lambda_function, set_output_json_lambda_function].forEach((lambda_obj) => {
+      lambda_obj.currentVersion.grantInvoke(<iam.IRole>configure_outputs_sfn.role);
+    });
+
+    /* Add ICAv2 WfmworkflowRunStateChange wrapper around launch state machine */
     // This state machine handles the event target configurations */
     const statemachine_launch_wrapper = new WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct(
       this,
@@ -208,6 +285,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         eventBusName: props.eventBusName,
         icaEventPipeName: props.icaEventPipeName,
         internalEventSource: props.internalEventSource,
+        generateOutputsJsonSfn: configure_outputs_sfn,
         workflowType: props.workflowType,
         workflowVersion: props.workflowVersion,
         serviceVersion: props.serviceVersion,
