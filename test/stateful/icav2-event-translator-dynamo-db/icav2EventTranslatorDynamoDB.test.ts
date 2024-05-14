@@ -19,7 +19,7 @@ describe('Icav2EventTranslatorTableStack', () => {
   });
 
   const template = Template.fromStack(stack);
-  console.log(JSON.stringify(template, undefined, 2));
+  // console.log(JSON.stringify(template, undefined, 2));
 
   test('DynamoDB Table created', () => {
     template.resourceCountIs('AWS::DynamoDB::GlobalTable', 1);

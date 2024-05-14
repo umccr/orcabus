@@ -92,7 +92,7 @@ export class Icav2EventTranslatorStack extends Stack {
     // Optional: If the Lambda function needs more permissions for the DynamoDB table and the event bus
     EventTranslatorFunction.addToRolePolicy(
       new PolicyStatement({
-        actions: ['events:PutEvents', 'dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:Scan'],
+        actions: ['events:PutEvents', 'dynamodb:Query'],
         resources: [this.mainBus.eventBusArn, this.dynamoDBTable.tableArn],
       })
     );

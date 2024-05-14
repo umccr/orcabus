@@ -137,7 +137,7 @@ Dynamodb format:
 | id | id_type | analysis_id | analysis_status | portal_run_id | db_uuid | original_external_event | translated_internal_ica_event | timestamp |
 | -------- | ---- | ------- | ------- | ---- | ------- | ------- | ------- |------- | 
 | 20xxxxxxxxxx | portal_run_id | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | | | 4xxxxx-4xxxx-4xxx-4xxx-4xxxxx | | | |
-| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | analysis_id |  |   |dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | 4xxxxx-4xxxx-4xxx-4xxx-4xxxxx | | | |
+| dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | analysis_id |  |   | 20xxxxxxxxxx | 4xxxxx-4xxxx-4xxx-4xxx-4xxxxx | | | |
 | 1xxxxx-1xxxx-1xxx-1xxx-1xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | INITIALIZING | 20xxxxxxxxxx | | {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
 |2xxxxx-2xxxx-2xxx-2xxx-2xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | QUEUED | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
 |3xxxxx-3xxxx-3xxx-3xxx-3xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | IN_PROGRESS | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |

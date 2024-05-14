@@ -195,11 +195,11 @@ def get_portal_run_id(analysis_id: str) -> str:
     # check if dynomodb table have the anylsis id
     table_name = os.getenv("TABLE_NAME")
     try:
-      response = dynamodb.scan(
+      response = dynamodb.query(
         TableName=table_name,
-        FilterExpression='id = :analysis_id and id_type = :id_type',
+        KeyConditionExpression = 'id = :analysis_id and id_type = :id_type',
         ExpressionAttributeValues={
-          ':analysis_id': {'S': analysis_id },
+          ':analysis_id': {'S': analysis_id},
           ':id_type': {'S': 'analysis_id'}
         }
       )
