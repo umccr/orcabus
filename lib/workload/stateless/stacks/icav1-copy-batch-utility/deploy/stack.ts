@@ -49,18 +49,14 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     });
 
     // Attach S3 Batch Operations job assumed roles and policies
-    const s3BatchCopyLambdaFunctionIamRole = new iam.Role(
-      this,
-      'S3BatchCopyLambdaFunctionIamRole',
-      {
-        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [
-          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
-        ],
-      }
-    );
+    const s3BatchCopyLambdaFunctionRole = new iam.Role(this, 'S3BatchCopyLambdaFunctionRole', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+      ],
+    });
 
-    s3BatchCopyLambdaFunctionIamRole.addToPolicy(
+    s3BatchCopyLambdaFunctionRole.addToPolicy(
       new iam.PolicyStatement({
         actions: [
           's3:GetObject',
@@ -76,7 +72,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       })
     );
 
-    s3BatchCopyLambdaFunctionIamRole.addToPolicy(
+    s3BatchCopyLambdaFunctionRole.addToPolicy(
       new iam.PolicyStatement({
         actions: [
           's3:PutObject',
@@ -91,6 +87,8 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
         resources: [
           `arn:aws:s3:::${props.BucketForCopyDestination}`,
           `arn:aws:s3:::${props.BucketForCopyDestination}/*`,
+          `arn:aws:s3:::${props.BucketForBatchOpsReport}`,
+          `arn:aws:s3:::${props.BucketForBatchOpsReport}/*`,
         ],
         effect: iam.Effect.ALLOW,
       })
@@ -106,7 +104,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     s3BatchOperationsServiceIamRole.addToPolicy(
       new iam.PolicyStatement({
         actions: ['sts:AssumeRole'],
-        resources: [s3BatchCopyLambdaFunctionIamRole.roleArn],
+        resources: [s3BatchCopyLambdaFunctionRole.roleArn],
         effect: iam.Effect.ALLOW,
       })
     );
