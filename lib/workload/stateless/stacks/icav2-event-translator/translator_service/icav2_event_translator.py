@@ -204,40 +204,48 @@ def get_portal_run_id(analysis_id: str) -> str:
         }
       )
       items = response.get('Items', [])
+      
       # check if the response.Items has items
+      # if exist return the portal run id
+      # if not create new portal run and store run id in the dynamodb table
       if items:
         logger.info(f"Analysis id already exists in the DynamoDB table.")
         return items[0].get("portal_run_id").get("S")
       else:
-        new_portal_run_id = generate_portal_run_id()
-        # put analysis id => portal run id map record in the dynamodb table
-        try:
-          dynamodb.put_item(
-              TableName=table_name,
-              Item={
-                  'id': {'S': analysis_id},
-                  'id_type': {'S': 'analysis_id'},
-                  "portal_run_id": {'S': new_portal_run_id}
-              }
-          )
-          dynamodb.put_item(
-              TableName=table_name,
-              Item={
-                  'id': {'S': new_portal_run_id},
-                  'id_type': {'S': 'portal_run_id'},
-                  "analysis_id": {'S': analysis_id}
-              }
-          )
-        except Exception as e:
-          raise Exception("Failed to store new portal run id in the DynamoDB table. Error: ", e)
-        logger.info(f"New portal run id created and stored in the DynamoDB table.")
-        return new_portal_run_id
+        return generate_new_portal_run(analysis_id)
       
     except Exception as e:
       raise Exception("Failed to get item from the DynamoDB table. Error: ", e)
-    
-def generate_portal_run_id():
+
+# create new portal run and store run id in the dynamodb table
+def generate_new_portal_run(analysis_id: str)->str:
+    table_name = os.getenv("TABLE_NAME")
+    new_portal_run_id = generate_portal_run_id()
+        # put analysis_id <=> portal_run_id map record in the dynamodb table
+    try:
+      dynamodb.put_item(
+      TableName=table_name,
+      Item={
+          'id': {'S': analysis_id},
+          'id_type': {'S': 'analysis_id'},
+          "portal_run_id": {'S': new_portal_run_id}
+        }
+      )
+      dynamodb.put_item(
+          TableName=table_name,
+          Item={
+            'id': {'S': new_portal_run_id},
+            'id_type': {'S': 'portal_run_id'},
+            "analysis_id": {'S': analysis_id}
+          }
+        )
+    except Exception as e:
+        raise Exception("Failed to store new portal run id in the DynamoDB table. Error: ", e)
+    logger.info(f"New portal run id created and stored in the DynamoDB table.")
+    return new_portal_run_id
+  
+def generate_portal_run_id()->str:
         return f"{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')}{str(uuid4())[:8]}"
 
-def generate_db_uuid():
+def generate_db_uuid()->str:
         return f"{str(uuid4())}"

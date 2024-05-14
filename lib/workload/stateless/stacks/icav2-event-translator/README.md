@@ -149,7 +149,7 @@ publish the Orcabus (internal) event back the event bus.
 Example output event can be seen [here](../../../../../docs/event-schemas/wfm/example/WRSC__bcm__bssh_bcl_convert.json).
 
 ## Unit Test
-Move to icav2-event-translator/translator_service
+Move to icav2-event-translator/translator_service, test script: [`test_icav2_event_translator.py`](./translator_service/tests/test_icav2_event_translator.py)
 ```make install```
 This will install all necessary package.\
 ```make test```
