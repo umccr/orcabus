@@ -93,10 +93,10 @@ class TestICAv2EventTranslator(unittest.TestCase):
         response = {'Items': [], 'Count': 0, 'ScannedCount': 0}
         expected_params = {
             'TableName': 'test_table',
-            'FilterExpression': 'id = :analysis_id and id_type = :id_type',
+            'KeyConditionExpression': 'id = :analysis_id and id_type = :id_type',
             'ExpressionAttributeValues': {':analysis_id': {'S': 'valid_payload_id'}, ':id_type': {'S': 'analysis_id'}}
         }
-        self.dynamodb_stubber.add_response('scan', response, expected_params)
+        self.dynamodb_stubber.add_response('query', response, expected_params)
         
         response = {}
         expected_params = {
