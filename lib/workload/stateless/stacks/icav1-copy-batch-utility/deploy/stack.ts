@@ -49,11 +49,12 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     });
 
     // Attach S3 Batch Operations job assumed roles and policies
+
     const s3BatchCopyLambdaFunctionIamRole = new iam.Role(
       this,
       'S3BatchCopyLambdaFunctionIamRole',
       {
-        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+        assumedBy: new iam.ServicePrincipal('batchoperations.s3.amazonaws.com'),
         managedPolicies: [
           iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
         ],
