@@ -34,12 +34,12 @@ export class Icav2EventTranslatorStack extends Stack {
       'Icav2EventTranslatorDynamoDBTable',
       props.icav2EventTranslatorDynamodbTableName
     );
-    this.lambdaSG = SecurityGroup.fromLookupByName(
-      this,
-      'LambdaSecurityGroup',
-      props.lambdaSecurityGroupName,
-      this.vpc
-    );
+    this.lambdaSG = new SecurityGroup(this, 'IcaEventTranslatorLambdaSG', {
+      vpc: this.vpc,
+      securityGroupName: props.lambdaSecurityGroupName,
+      allowAllOutbound: true,
+      description: 'Security group that allows teh Ica Event Translator function to egress out.',
+    });
 
     this.createICAv2EventTranslator(props);
   }
