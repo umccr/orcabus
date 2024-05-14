@@ -20,6 +20,41 @@ export class StatelessPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
 
+    // Define CodeBuild project for GH action runner to use
+    // the GH repo defined below already configured to allow CB webhook
+    // This is actually not part of the pipeline, so I guess we could move this someday.
+    const ghRunnerRole = new iam.Role(this, 'GHRunnerRole', {
+      assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
+    });
+    new codebuild.CfnProject(this, 'GHRunnerCodeBuildProject', {
+      // the name here act as a unique id for GH action to know which CodeBuild to use
+      // So if you change this, you need to update the GH action .yml file (.github/workflows/prbuild.yml)
+      name: 'orcabus-codebuild-gh-runner',
+      description: 'GitHub Action Runner in CodeBuild for `orcabus` repository',
+      serviceRole: ghRunnerRole.roleArn,
+      artifacts: {
+        type: 'NO_ARTIFACTS',
+      },
+      environment: {
+        type: 'ARM_CONTAINER',
+        computeType: 'BUILD_GENERAL1_LARGE',
+        image: 'aws/codebuild/amazonlinux2-aarch64-standard:3.0',
+        privilegedMode: true,
+      },
+      source: {
+        type: 'GITHUB',
+        gitCloneDepth: 1,
+        location: 'https://github.com/umccr/orcabus.git',
+        reportBuildStatus: false,
+      },
+      logsConfig: { cloudWatchLogs: { status: 'DISABLED' } },
+      triggers: {
+        webhook: true,
+        buildType: 'BUILD',
+        filterGroups: [[{ type: 'EVENT', pattern: 'WORKFLOW_JOB_QUEUED' }]],
+      },
+    });
+
     // A connection where the pipeline get its source code
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
     const sourceFile = pipelines.CodePipelineSource.connection('umccr/orcabus', 'main', {
