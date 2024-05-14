@@ -122,6 +122,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
         ]
       );
       break;
+
     default:
       break;
   }
