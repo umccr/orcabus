@@ -1,8 +1,9 @@
-use sqlx::{query_file, Acquire, Postgres, QueryBuilder, Row};
+use sqlx::{query_file, query_file_as, Acquire, Postgres, Row};
 
 use crate::database::Client;
 use crate::error::Result;
-use crate::events::aws::FlatS3EventMessage;
+use crate::events::aws::message::EventType;
+use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 
 /// Query the filemanager via REST interface.
 #[derive(Debug)]
@@ -39,43 +40,105 @@ impl<'a> Query<'a> {
         Ok(query_results)
     }
 
-    /// Selects existing objects by the bucket and key. This does not start a transaction.
-    /// TODO, ideally this should use some better types. Potentially use sea-orm codegen to simplify.
+    /// Selects existing objects by the bucket and key for update. This does not start a transaction.
+    /// TODO, ideally this should use some better types. Potentially use sea-orm codegen to simplify queries.
     pub async fn select_existing_by_bucket_key(
         &self,
         conn: impl Acquire<'_, Database = Postgres>,
-        bucket: &str,
-        key: &str,
-        version_id: Option<String>,
-        for_update: bool,
-    ) -> Result<FlatS3EventMessage> {
+        buckets: Vec<String>,
+        keys: Vec<String>,
+        version_ids: Vec<Option<String>>,
+    ) -> Result<FlatS3EventMessages> {
         let mut conn = conn.acquire().await?;
+        let version_ids: Vec<String> = version_ids
+            .into_iter()
+            .map(|version_id| version_id.unwrap_or_else(FlatS3EventMessage::default_version_id))
+            .collect();
 
-        let version_id = version_id.unwrap_or_else(FlatS3EventMessage::default_version_id);
-
-        let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(include_str!(
-            "../../../../database/queries/api/select_existing_by_bucket_key.sql"
-        ));
-
-        builder.push_bind(bucket);
-        builder.push_bind(key);
-        builder.push_bind(version_id);
-
-        if for_update {
-            builder.push("for_update;");
-        } else {
-            builder.push(";");
-        }
-
-        Ok(builder
-            .build_query_as::<FlatS3EventMessage>()
-            .fetch_one(&mut *conn)
-            .await?)
+        Ok(FlatS3EventMessages(
+            query_file_as!(
+                FlatS3EventMessage,
+                "../database/queries/api/select_existing_by_bucket_key.sql",
+                buckets.as_slice(),
+                keys.as_slice(),
+                version_ids.as_slice()
+            )
+            .fetch_all(&mut *conn)
+            .await?,
+        ))
     }
 }
 
 impl QueryResults {
     pub fn new(_results: Vec<String>) -> Self {
         Self { _results }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::database::aws::ingester::tests::{test_created_events, test_ingester};
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::events::aws::tests::{EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_VERSION_ID};
+    use chrono::{DateTime, Duration};
+    use sqlx::PgPool;
+    use std::ops::Add;
+
+    use super::*;
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_select_existing_by_bucket_key(pool: PgPool) {
+        let ingester = test_ingester(pool.clone());
+        let query = Query::new(Client::new(pool));
+
+        let mut events = test_created_events();
+        events.object_deleted = Default::default();
+
+        let new_date = Some(DateTime::default().add(Duration::days(1)));
+        let new_sequencer = Some(EXPECTED_NEW_SEQUENCER_ONE.to_string());
+        let new_key = "key1";
+
+        let mut increase_date = test_created_events();
+        increase_date.object_created.event_times[0] = new_date;
+        increase_date.object_created.sequencers[0].clone_from(&new_sequencer);
+
+        let mut different_key = test_created_events();
+        different_key.object_created.keys[0] = new_key.to_string();
+
+        let mut different_key_and_date = test_created_events();
+        different_key_and_date.object_created.event_times[0] = new_date;
+        different_key_and_date.object_created.keys[0] = new_key.to_string();
+        different_key_and_date.object_created.sequencers[0].clone_from(&new_sequencer);
+
+        ingester.ingest_events(events).await.unwrap();
+        ingester.ingest_events(increase_date).await.unwrap();
+        ingester.ingest_events(different_key).await.unwrap();
+        ingester
+            .ingest_events(different_key_and_date)
+            .await
+            .unwrap();
+
+        let mut tx = query.client.pool().begin().await.unwrap();
+        let results = query
+            .select_existing_by_bucket_key(
+                &mut tx,
+                vec!["bucket".to_string(), "bucket".to_string()],
+                vec!["key".to_string(), new_key.to_string()],
+                vec![
+                    Some(EXPECTED_VERSION_ID.to_string()),
+                    Some(EXPECTED_VERSION_ID.to_string()),
+                ],
+            )
+            .await
+            .unwrap()
+            .0;
+
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().any(|result| result.bucket == "bucket"
+            && result.key == "key"
+            && result.event_time == new_date));
+        assert!(results.iter().any(|result| result.bucket == "bucket"
+            && result.key == new_key
+            && result.event_time == new_date));
     }
 }

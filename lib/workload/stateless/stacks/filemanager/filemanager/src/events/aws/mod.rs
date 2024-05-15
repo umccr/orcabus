@@ -392,7 +392,7 @@ impl FlatS3EventMessages {
 }
 
 /// A flattened AWS S3 record
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default, sqlx::FromRow)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default)]
 pub struct FlatS3EventMessage {
     pub s3_object_id: Uuid,
     pub sequencer: Option<String>,

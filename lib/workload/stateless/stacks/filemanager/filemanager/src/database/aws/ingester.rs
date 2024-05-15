@@ -281,8 +281,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {
-        let mut events = test_events();
-        events.object_deleted = Default::default();
+        let events = test_created_events();
 
         let ingester = test_ingester(pool);
         ingester.ingest_events(events).await.unwrap();
@@ -296,8 +295,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created_large_size(pool: PgPool) {
-        let mut events = test_events();
-        events.object_deleted = Default::default();
+        let mut events = test_created_events();
 
         events
             .object_created
@@ -1641,6 +1639,12 @@ pub(crate) mod tests {
 
     pub(crate) fn test_events() -> Events {
         update_test_events(expected_events_simple())
+    }
+
+    pub(crate) fn test_created_events() -> Events {
+        let mut events = test_events();
+        events.object_deleted = Default::default();
+        events
     }
 
     pub(crate) fn test_ingester<'a>(pool: PgPool) -> Ingester<'a> {
