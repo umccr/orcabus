@@ -130,9 +130,9 @@ input_payload="$( \
       {
         "refId": null,
         "version": "0.1.0",
-        "bsshProjectId": "${bssh_project_id}"
-        "bsshAnalysisId": "${bssh_analysis_id}"
-        "outputUriPrefix": "${output_uri_prefix}"
+        "bsshProjectId": $bssh_project_id,
+        "bsshAnalysisId": $bssh_analysis_id,
+        "outputUriPrefix": $output_uri_prefix
       } 
     '
 )"

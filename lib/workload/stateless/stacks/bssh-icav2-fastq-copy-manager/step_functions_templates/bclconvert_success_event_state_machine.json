@@ -22,7 +22,12 @@
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
         "FunctionName": "${__bclconvert_success_event_lambda_arn__}",
-        "Payload.$": "$.workflow_inputs"
+        "Payload": {
+          "project_id.$": "$.workflow_inputs.payload.bsshProjectId",
+          "analysis_id.$": "$.workflow_inputs.payload.bsshAnalysisId",
+          "portal_run_id.$": "$.workflow_inputs.portalRunId",
+          "output_uri_prefix.$": "$.workflow_inputs.payload.outputUriPrefix"
+        }
       },
       "Retry": [
         {
@@ -37,8 +42,6 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "Launch Copy Job StateMachine",
-      "ResultPath": "$.bclconvert_success_event_handler_step",
       "TimeoutSeconds": 60,
       "ResultSelector": {
         "instrument_run_id.$": "$.Payload.instrument_run_id",
@@ -47,7 +50,9 @@
         "fastq_list_rows_b64gz.$": "$.Payload.fastq_list_rows_b64gz",
         "manifest_b64gz.$": "$.Payload.manifest_b64gz",
         "samplesheet_b64gz.$": "$.Payload.samplesheet_dict_b64gz"
-      }
+      },
+      "ResultPath": "$.bclconvert_success_event_handler_step",
+      "Next": "Launch Copy Job StateMachine"
     },
     "Launch Copy Job StateMachine": {
       "Type": "Task",

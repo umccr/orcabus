@@ -43,7 +43,7 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
         entry: props.bclconvertSuccessEventHandlerLambdaPath,
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
-        index: 'handler.py',
+        index: 'query_bclconvert_outputs_handler_lambda.py',
         handler: 'handler',
         memorySize: 1024,
         layers: [props.lambdasLayerObj],
@@ -62,6 +62,8 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
 
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
     const stateMachine = new sfn.StateMachine(this, 'bssh_fastq_copy_state_machine', {
+      // State machine name
+      stateMachineName: props.stateMachineName,
       // defintiontemplate
       definitionBody: DefinitionBody.fromFile(props.workflowDefinitionBodyPath),
       // definitionSubstitutions

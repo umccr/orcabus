@@ -71,7 +71,7 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
         /* Lambda paths */
         bclconvertSuccessEventHandlerLambdaPath: path.join(
           __dirname,
-          '../lambdas/query_bclconvert_outputs_handler'
+          '../lambdas/query_bclconvert_outputs_handler_lambda_py'
         ),
         /* State machine */
         stateMachineName: props.bsshIcav2FastqCopyManagerStateMachinePrefix,
