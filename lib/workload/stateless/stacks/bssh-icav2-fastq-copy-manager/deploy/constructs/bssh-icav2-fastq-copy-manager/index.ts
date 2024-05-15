@@ -72,6 +72,8 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
           bclconvert_success_event_lambda.currentVersion.functionArn,
         __copy_batch_data_state_machine_arn__: props.icav2CopyBatchStateMachineObj.stateMachineArn,
         __eventbus_name__: props.eventBusObj.eventBusName,
+        __detail_type__: props.detailType,
+        __event_source__: props.internalEventSource,
       },
     });
 

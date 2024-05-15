@@ -91,9 +91,9 @@
         "Entries": [
           {
             "Detail.$": "$.workflow_outputs",
-            "DetailType": "bsshFastqCopyManagerComplete",
+            "DetailType": "${__detail_type__}",
             "EventBusName": "${__eventbus_name__}",
-            "Source": "orcabus.bssh_fastq_copy_manager"
+            "Source": "${__event_source__}"
           }
         ]
       },
