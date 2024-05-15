@@ -110,7 +110,7 @@ export const icav1AccessTokenSecretName: Record<AppStage, string> = {
 
 export const icav1CopyBatchUtilityName = 'icav1_copy_batch_utility';
 export const icav1BucketForCopyDestination = 'umccr-temp-dev';
-export const icav1BucketForManifestOrInventory = 'manifest';
+export const icav1BucketForManifestOrInventory = 'umccr-temp-dev';
 export const icav1BucketForBatchOpsReport = 'umccr-temp-dev';
 export const icav1TransferMaximumConcurrency = 940;
 export const icav1TransferMaxPoolConnections = 940;
