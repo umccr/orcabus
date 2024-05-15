@@ -65,9 +65,16 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
           's3:GetObjectVersion',
           's3:GetObjectVersionAcl',
           's3:GetObjectVersionTagging',
-          's3:ListBucket*',
+          's3:ListBucket',
         ],
-        resources: ['*'],
+        resources: [
+          `arn:aws:s3:::${props.BucketForCopyDestination}`,
+          `arn:aws:s3:::${props.BucketForCopyDestination}/*`,
+          `arn:aws:s3:::${props.BucketForBatchOpsReport}`,
+          `arn:aws:s3:::${props.BucketForBatchOpsReport}/*`,
+          `arn:aws:s3:::${props.BucketForManifestOrInventory}`,
+          `arn:aws:s3:::${props.BucketForManifestOrInventory}/*`,
+        ],
         effect: iam.Effect.ALLOW,
       })
     );
@@ -81,7 +88,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
           's3:PutObjectLegalHold',
           's3:PutObjectRetention',
           's3:GetBucketObjectLockConfiguration',
-          's3:ListBucket*',
+          's3:ListBucket',
           's3:GetBucketLocation',
         ],
         resources: [
@@ -89,6 +96,8 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
           `arn:aws:s3:::${props.BucketForCopyDestination}/*`,
           `arn:aws:s3:::${props.BucketForBatchOpsReport}`,
           `arn:aws:s3:::${props.BucketForBatchOpsReport}/*`,
+          `arn:aws:s3:::${props.BucketForManifestOrInventory}`,
+          `arn:aws:s3:::${props.BucketForManifestOrInventory}/*`,
         ],
         effect: iam.Effect.ALLOW,
       })
