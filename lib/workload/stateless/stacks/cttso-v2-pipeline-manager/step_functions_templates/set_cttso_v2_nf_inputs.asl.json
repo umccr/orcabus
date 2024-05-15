@@ -134,9 +134,10 @@
                 }
               ],
               "Next": "Copy Fastq Files to Cache Directory",
-              "Comment": "Generate a copy manifest object, ready to parse into the icav2 copy batch utility step function\n\nWe expect the following inputs:\n\n* cache_path\n* project_id\n* sample_id\n* fastq_list_rows\n\nAnd we expect the following outputs:\n\n* manifest_list",
+              "Comment": "Generate a copy manifest object, ready to parse into the icav2 copy batch utility step function\n\nWe expect the following inputs:\n\n* cache_path\n* project_id\n* sample_id\n* fastq_list_rows\n\nAnd we expect the following outputs:\n\n* manifest",
               "ResultSelector": {
-                "manifest_list.$": "$.Payload.manifest_list"
+                "dest_uri.$": "$.Payload.dest_uri",
+                "source_uris.$": "$.Payload.source_uris"
               },
               "ResultPath": "$.generate_copy_manifest_dict_step"
             },
@@ -144,9 +145,10 @@
               "Type": "Task",
               "End": true,
               "Parameters": {
-                "StateMachineArn": "${__copy_batch_data_state_machine_arn__}",
+                "StateMachineArn": "${__copy_icav2_files_state_machine_arn__}",
                 "Input": {
-                  "manifest.$": "$.generate_copy_manifest_dict_step.manifest_list"
+                  "dest_uri.$": "$.generate_copy_manifest_dict_step.dest_uri",
+                  "source_uris.$": "$.generate_copy_manifest_dict_step.source_uris"
                 }
               },
               "Resource": "arn:aws:states:::states:startExecution.sync:2",

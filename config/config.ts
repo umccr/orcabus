@@ -9,7 +9,6 @@ import { getMetadataManagerStackProps } from './stacks/metadataManager';
 import { getSequenceRunManagerStackProps } from './stacks/sequenceRunManager';
 import { getFileManagerStackProps } from './stacks/fileManager';
 import { getBsRunsUploadManagerStackProps } from './stacks/bsRunsUploadManager';
-import { getICAv2CopyBatchUtilityStackProps } from './stacks/icav2CopyBatchUtility';
 import { getBsshIcav2FastqCopyManagerStackProps } from './stacks/bsshIcav2FastqCopyManager';
 import {
   getCttsov2Icav2PipelineManagerStackProps,
@@ -64,7 +63,6 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             bclconvertInteropQcIcav2PipelineManagerStackProps:
               getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
@@ -96,7 +94,6 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             bclconvertInteropQcIcav2PipelineManagerStackProps:
               getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
@@ -128,7 +125,6 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             bclconvertInteropQcIcav2PipelineManagerStackProps:
               getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),

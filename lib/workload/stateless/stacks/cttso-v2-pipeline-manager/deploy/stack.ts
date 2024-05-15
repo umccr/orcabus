@@ -1,13 +1,12 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
-import * as events from 'aws-cdk-lib/aws-events';
 import { Cttsov2Icav2PipelineManagerConstruct } from './constructs/cttsov2-icav2-manager';
 import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda-layer';
 import path from 'path';
+import { ICAv2CopyFilesConstruct } from '../../../../components/icav2-copy-files';
 
 export interface Cttsov2Icav2PipelineManagerConfig {
   /* ICAv2 Pipeline analysis essentials */
@@ -31,10 +30,6 @@ export interface Cttsov2Icav2PipelineManagerConfig {
   Names for statemachines
   */
   stateMachinePrefix: string;
-  /*
-  Extras
-  */
-  icav2CopyBatchUtilityStateMachineName: string;
 }
 
 export type cttsov2Icav2PipelineManagerStackProps = Cttsov2Icav2PipelineManagerConfig &
@@ -43,13 +38,6 @@ export type cttsov2Icav2PipelineManagerStackProps = Cttsov2Icav2PipelineManagerC
 export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cttsov2Icav2PipelineManagerStackProps) {
     super(scope, id, props);
-
-    // Get the copy batch state machine name
-    const icav2_copy_batch_stack_state_machine_obj = sfn.StateMachine.fromStateMachineName(
-      this,
-      'icav2_copy_batch_state_machine',
-      props.icav2CopyBatchUtilityStateMachineName
-    );
 
     // Get dynamodb table for construct
     const dynamodb_table_obj = dynamodb.TableV2.fromTableName(
@@ -61,8 +49,18 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
     // Get ICAv2 Access token secret object for construct
     const icav2_access_token_secret_obj = secretsManager.Secret.fromSecretNameV2(
       this,
-      'Icav2SecretsObject',
+      'icav2_secrets_object',
       props.icav2TokenSecretId
+    );
+
+    // Get the copy batch state machine name
+    const icav2_copy_files_state_machine_obj = new ICAv2CopyFilesConstruct(
+      this,
+      'icav2_copy_files_state_machine_obj',
+      {
+        icav2JwtSecretParameterObj: icav2_access_token_secret_obj,
+        stateMachineName: `${props.stateMachinePrefix}-icav2-copy-files-sfn`,
+      }
     );
 
     // Get lambda layer object
@@ -85,7 +83,7 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       dynamodbTableObj: dynamodb_table_obj,
       icav2AccessTokenSecretObj: icav2_access_token_secret_obj,
       lambdaLayerObj: lambda_layer_obj.lambdaLayerVersionObj,
-      icav2CopyBatchStateMachineObj: icav2_copy_batch_stack_state_machine_obj,
+      icav2CopyFilesStateMachineObj: icav2_copy_files_state_machine_obj.icav2CopyFilesSfnObj,
       pipelineIdSsmObj: pipeline_id_ssm_obj_list,
       /* Lambdas paths */
       generateTrimmedSamplesheetLambdaPath: path.join(

@@ -4,13 +4,13 @@ This stack creates the ica event translator service to translate external (ICA) 
 
 
 <!-- TOC -->
-* [ICAv2 Event Translator](#icav2-event-translator)
+* [ICA Event Translator](#ica-event-translator)
   * [Inputs](#inputs)
-    * [Example ICA Event Input](#example-ica-event-input)
+    * [Example Ica Event Input](#example-ica-event-input)
   * [Outputs](#outputs)
   * [lambda function for event translation](#lambda-function-for-event-translation)
     * [Receive and Translate ICAv2 event to Orcabus internal event](#receive-and-translate-icav2-event-to-orcabus-internal-event)
-    * [Save this translation to dynamoDB](#save-this-translation-process-to-dynamodb)
+    * [Save this translation process to dynamoDB](#save-this-translation-process-to-dynamodb)
     * [Publish the Orcabus event to event bus](#publish-the-orcabus-event-to-event-bus)
   * [Unit Test](#unit-test)
 <!-- TOC -->

@@ -44,7 +44,7 @@ interface Cttsov2Icav2PipelineManagerConstructProps {
   deleteCacheUriLambdaPath: string; // __dirname + '/../../../lambdas/delete_cache_uri_py'
   setOutputJsonLambdaPath: string; // __dirname + '/../../../lambdas/set_output_json_py'
   // ICAv2 Copy Batch State Machine Object
-  icav2CopyBatchStateMachineObj: sfn.IStateMachine;
+  icav2CopyFilesStateMachineObj: sfn.IStateMachine;
 }
 
 export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
@@ -137,8 +137,8 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
           __upload_samplesheet_to_cache_dir__:
             upload_samplesheet_to_cache_dir_lambda_obj.currentVersion.functionArn,
           /* Subfunction state machines */
-          __copy_batch_data_state_machine_arn__:
-            props.icav2CopyBatchStateMachineObj.stateMachineArn,
+          __copy_icav2_files_state_machine_arn__:
+            props.icav2CopyFilesStateMachineObj.stateMachineArn,
           /* Dynamodb tables */
           __table_name__: props.dynamodbTableObj.tableName,
         },
@@ -169,7 +169,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     );
 
     // Add state machine execution permissions to stateMachine role
-    props.icav2CopyBatchStateMachineObj.grantStartExecution(configure_inputs_sfn.role);
+    props.icav2CopyFilesStateMachineObj.grantStartExecution(configure_inputs_sfn.role);
 
     /*
     Part 2: Configure the lambdas and outputs step function

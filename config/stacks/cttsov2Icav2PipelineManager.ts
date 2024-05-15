@@ -2,7 +2,6 @@ import {
   AppStage,
   eventBusName,
   cttsov2Icav2PipelineIdSSMParameterPath,
-  icav2CopyBatchUtilityName,
   cttsov2Icav2PipelineManagerDynamodbTableName,
   icav2AccessTokenSecretName,
   cttsov2DynamoDbTableSSMArn,
@@ -50,7 +49,5 @@ export const getCttsov2Icav2PipelineManagerStackProps = (
     detailType: cttsov2Icav2EventDetailType,
     /* Names for statemachines */
     stateMachinePrefix: cttsov2StateMachinePrefix,
-    /* Extras */
-    icav2CopyBatchUtilityStateMachineName: icav2CopyBatchUtilityName,
   };
 };
