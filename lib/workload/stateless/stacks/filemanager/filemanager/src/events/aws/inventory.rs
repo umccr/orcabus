@@ -32,6 +32,9 @@ use crate::events::aws::message::EventType::Created;
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::uuid::UuidGenerator;
 
+const DEFAULT_CSV_MANIFEST: &str =
+    "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, LastModifiedDate, ETag, StorageClass";
+
 /// Represents an S3 inventory including associated inventory fetching and parsing logic.
 #[derive(Debug)]
 pub struct Inventory {
@@ -62,7 +65,7 @@ impl Inventory {
     }
 
     /// Parse a CSV manifest file into records.
-    pub async fn parse_csv(&self, schema: &str, body: &[u8]) -> Result<Vec<Record>> {
+    pub async fn parse_csv(&self, schema: Option<&str>, body: &[u8]) -> Result<Vec<Record>> {
         let mut inventory_bytes = vec![];
         MultiGzDecoder::new(BufReader::new(body))
             .read_to_end(&mut inventory_bytes)
@@ -71,17 +74,37 @@ impl Inventory {
         // AWS seems to return extra newlines at the end of the CSV, so we remove these
         let inventory_bytes = Self::trim_whitespace(inventory_bytes.as_slice());
 
-        let mut header_record = StringRecord::new();
-        ReaderBuilder::new()
-            .trim(Trim::All)
-            .has_headers(false)
-            .from_reader(schema.as_bytes())
-            .read_record(&mut header_record)?;
+        let reader_builder = || {
+            let mut builder = ReaderBuilder::new();
+            builder.trim(Trim::All);
+            builder
+        };
 
-        let mut csv = ReaderBuilder::new()
-            .trim(Trim::All)
-            .from_reader(inventory_bytes);
-        csv.set_headers(header_record);
+        let set_headers = |csv: &mut csv::Reader<&[u8]>, header: &[u8]| {
+            let mut header_record = StringRecord::new();
+            reader_builder()
+                .has_headers(false)
+                .from_reader(header)
+                .read_record(&mut header_record)?;
+
+            csv.set_headers(header_record);
+
+            Ok::<_, Error>(())
+        };
+
+        let mut csv = reader_builder().from_reader(inventory_bytes);
+        if let Some(schema) = schema {
+            // If a schema is available, use that.
+            set_headers(&mut csv, schema.as_bytes())?;
+        } else {
+            // If not, try to parse the csv with headers, otherwise fallback to a default schema.
+            let mut header_reader = reader_builder().from_reader(inventory_bytes);
+            let mut iter = header_reader.deserialize::<Record>();
+            if let Some(Err(_)) = iter.next() {
+                // Failed to read a header row, fallback on default schema.
+                set_headers(&mut csv, DEFAULT_CSV_MANIFEST.as_bytes())?;
+            }
+        }
 
         Ok(csv.deserialize().collect::<result::Result<_, _>>()?)
     }
@@ -198,47 +221,50 @@ impl Inventory {
         }
     }
 
+    pub async fn records_from_format(
+        &self,
+        format: &InventoryFormat,
+        body: Vec<u8>,
+        schema: Option<&str>,
+    ) -> Result<Vec<Record>> {
+        match format {
+            InventoryFormat::Csv => self.parse_csv(schema, body.as_slice()).await,
+            InventoryFormat::Parquet => self.parse_parquet(body).await,
+            InventoryFormat::Orc => self.parse_orc(body).await,
+            _ => Err(S3InventoryError(
+                "unsupported manifest file type".to_string(),
+            )),
+        }
+    }
+
     /// Parse a manifest into records.
     pub async fn parse_manifest(&self, manifest: Manifest) -> Result<Vec<Record>> {
-        let arn: ResourceName = manifest
-            .destination_bucket
-            .parse()
-            .map_err(|err| S3InventoryError(format!("parsing destination bucket arn: {}", err)))?;
+        let arn: result::Result<ResourceName, _> = manifest.destination_bucket.parse();
 
-        if arn.service != Service::S3.into() {
-            return Err(S3InventoryError(
-                "destination bucket ARN is not S3".to_string(),
-            ));
-        }
-
-        let bucket = arn.resource.to_string();
+        let bucket = match arn {
+            // Proper arn, parse out the bucket.
+            Ok(arn) => {
+                if arn.service != Service::S3.into() {
+                    return Err(S3InventoryError(
+                        "destination bucket ARN is not S3".to_string(),
+                    ));
+                }
+                arn.resource.to_string()
+            }
+            // Ok, try and use the destination bucket as a string directly.
+            Err(_) => manifest.destination_bucket,
+        };
 
         // TODO: consider streaming a file and reading records without placing them into memory first.
         let inventories = join_all(manifest.files.iter().map(|file| async {
-            let inventory = self
-                .client
-                .get_object(&file.key, &bucket)
-                .await
-                .map_err(|err| S3InventoryError(format!("getting inventory: {}", err)))?;
-            let body = inventory
-                .body
-                .collect()
-                .await
-                .map_err(|_| S3InventoryError("collecting inventory bytes".to_string()))?
-                .to_vec();
+            let body = self.get_object_bytes(&file.key, &bucket).await?;
 
-            Self::verify_md5(body.as_slice(), file.md5_checksum.as_bytes())?;
-
-            match manifest.file_format {
-                InventoryFormat::Csv => {
-                    self.parse_csv(&manifest.file_schema, body.as_slice()).await
-                }
-                InventoryFormat::Parquet => self.parse_parquet(body).await,
-                InventoryFormat::Orc => self.parse_orc(body).await,
-                _ => Err(S3InventoryError(
-                    "unsupported manifest file type".to_string(),
-                )),
+            if let Some(checksum) = &file.md5_checksum {
+                Self::verify_md5(body.as_slice(), checksum.as_bytes())?;
             }
+
+            self.records_from_format(&manifest.file_format, body, manifest.file_schema.as_deref())
+                .await
         }))
         .await
         .into_iter()
@@ -405,7 +431,7 @@ pub struct Manifest {
     destination_bucket: String,
     #[serde_as(as = "DisplayFromStr")]
     file_format: InventoryFormat,
-    file_schema: String,
+    file_schema: Option<String>,
     files: Vec<File>,
 }
 
@@ -414,7 +440,7 @@ pub struct Manifest {
 pub struct File {
     key: String,
     #[serde(rename = "MD5checksum")]
-    md5_checksum: String,
+    md5_checksum: Option<String>,
 }
 
 impl From<Vec<Record>> for FlatS3EventMessages {
@@ -477,30 +503,6 @@ mod tests {
 
     use super::*;
 
-    const ORC_MANIFEST_SCHEMA: &str = "struct<bucket:string,key:string,version_id:string,\
-        is_latest:boolean,is_delete_marker:boolean,size:bigint,last_modified_date:timestamp,\
-        e_tag:string,storage_class:string,is_multipart_uploaded:boolean,replication_status:string,\
-        encryption_status:string,object_lock_retain_until_date:timestamp,object_lock_mode:string,\
-        object_lock_legal_hold_status:string,intelligent_tiering_access_tier:string,\
-        bucket_key_status:string,checksum_algorithm:string,\
-        object_access_control_list:string,object_owner:string>";
-
-    const PARQUET_MANIFEST_SCHEMA: &str =
-        "message s3.inventory {  required binary bucket (STRING);  \
-        required binary key (STRING);  optional binary version_id (STRING);  \
-        optional boolean is_latest;  optional boolean is_delete_marker;  \
-        optional int64 size;  optional int64 last_modified_date (TIMESTAMP(MILLIS,true));  \
-        optional binary e_tag (STRING);  optional binary storage_class (STRING);  \
-        optional boolean is_multipart_uploaded;  optional binary replication_status (STRING);  \
-        optional binary encryption_status (STRING);  \
-        optional int64 object_lock_retain_until_date (TIMESTAMP(MILLIS,true));  \
-        optional binary object_lock_mode (STRING);  \
-        optional binary object_lock_legal_hold_status (STRING);  \
-        optional binary intelligent_tiering_access_tier (STRING);  \
-        optional binary bucket_key_status (STRING);  optional binary checksum_algorithm (STRING);  \
-        optional binary object_access_control_list (STRING);  \
-        optional binary object_owner (STRING);}";
-
     const CSV_MANIFEST_SCHEMA: &str = "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, \
                 LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, \
                 EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, \
@@ -513,9 +515,13 @@ mod tests {
 
     #[tokio::test]
     async fn parse_csv_manifest_from_checksum() {
-        let (mut client, checksum) = test_csv_manifest();
+        let (mut client, checksum) = test_csv_manifest(None);
 
-        let bytes = serde_json::to_vec_pretty(&expected_csv_manifest(checksum)).unwrap();
+        let bytes = serde_json::to_vec_pretty(&expected_csv_manifest(
+            Some(checksum),
+            Some(CSV_MANIFEST_SCHEMA.to_string()),
+        ))
+        .unwrap();
         let checksum = format!("{}\n", hex::encode(md5::compute(bytes.as_slice()).0))
             .as_bytes()
             .to_vec();
@@ -542,9 +548,13 @@ mod tests {
 
     #[tokio::test]
     async fn parse_csv_manifest_from_key() {
-        let (mut client, checksum) = test_csv_manifest();
+        let (mut client, checksum) = test_csv_manifest(None);
 
-        let bytes = serde_json::to_vec_pretty(&expected_csv_manifest(checksum)).unwrap();
+        let bytes = serde_json::to_vec_pretty(&expected_csv_manifest(
+            Some(checksum),
+            Some(CSV_MANIFEST_SCHEMA.to_string()),
+        ))
+        .unwrap();
         set_client_manifest_expectations(&mut client, bytes);
 
         let inventory = Inventory::new(client);
@@ -558,11 +568,56 @@ mod tests {
 
     #[tokio::test]
     async fn parse_csv_manifest() {
-        let (client, checksum) = test_csv_manifest();
+        let (client, checksum) = test_csv_manifest(None);
 
         let inventory = Inventory::new(client);
         let result = inventory
-            .parse_manifest(expected_csv_manifest(checksum))
+            .parse_manifest(expected_csv_manifest(
+                Some(checksum),
+                Some(CSV_MANIFEST_SCHEMA.to_string()),
+            ))
+            .await
+            .unwrap();
+
+        assert_csv_records(result.as_slice());
+    }
+
+    #[tokio::test]
+    async fn parse_csv_manifest_no_checksum() {
+        let (client, _) = test_csv_manifest(None);
+
+        let inventory = Inventory::new(client);
+        let result = inventory
+            .parse_manifest(expected_csv_manifest(
+                None,
+                Some(CSV_MANIFEST_SCHEMA.to_string()),
+            ))
+            .await
+            .unwrap();
+
+        assert_csv_records(result.as_slice());
+    }
+
+    #[tokio::test]
+    async fn parse_csv_manifest_with_headers() {
+        let (client, checksum) = test_csv_manifest(Some(CSV_MANIFEST_SCHEMA));
+
+        let inventory = Inventory::new(client);
+        let result = inventory
+            .parse_manifest(expected_csv_manifest(Some(checksum), None))
+            .await
+            .unwrap();
+
+        assert_csv_records(result.as_slice());
+    }
+
+    #[tokio::test]
+    async fn parse_csv_manifest_default_schema() {
+        let (client, checksum) = test_csv_manifest(None);
+
+        let inventory = Inventory::new(client);
+        let result = inventory
+            .parse_manifest(expected_csv_manifest(Some(checksum), None))
             .await
             .unwrap();
 
@@ -591,14 +646,16 @@ mod tests {
         let inventory = Inventory::new(client);
         let result = inventory
             .parse_manifest(expected_manifest(
-                "Size, Bucket, Key, VersionId, IsLatest, IsDeleteMarker, \
+                Some(
+                    "Size, Bucket, Key, VersionId, IsLatest, IsDeleteMarker, \
                 LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, \
                 EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, \
                 ObjectLockLegalHoldStatus, IntelligentTieringAccessTier, BucketKeyStatus, \
                 ChecksumAlgorithm, ObjectAccessControlList, ObjectOwner"
-                    .to_string(),
+                        .to_string(),
+                ),
                 InventoryFormat::Csv,
-                checksum,
+                Some(checksum),
             ))
             .await
             .unwrap();
@@ -611,7 +668,13 @@ mod tests {
         let manifest = expected_json_manifest(&InventoryFormat::Csv);
 
         let result: Manifest = serde_json::from_value(manifest).unwrap();
-        assert_eq!(result, expected_csv_manifest(EXPECTED_CHECKSUM.to_string()));
+        assert_eq!(
+            result,
+            expected_csv_manifest(
+                Some(EXPECTED_CHECKSUM.to_string()),
+                Some(CSV_MANIFEST_SCHEMA.to_string())
+            )
+        );
     }
 
     #[test]
@@ -645,15 +708,20 @@ mod tests {
             });
     }
 
-    fn test_csv_manifest() -> (Client, String) {
-        let data = concat!(
+    fn test_csv_manifest(headers: Option<&str>) -> (Client, String) {
+        let mut data = concat!(
             r#""bucket","inventory_test/","","true","false","0","2024-04-22T01:11:06.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
             "\n",
             r#""bucket","inventory_test/key1","","true","false","0","2024-04-22T01:13:28.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
             "\n",
             r#""bucket","inventory_test/key2","","true","false","5","2024-04-22T01:14:53.000Z","d8e8fca2dc0f896fd7cb4cb0031ba249","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
             "\n\n"
-        );
+        )
+        .to_string();
+
+        if let Some(headers) = headers {
+            data = format!("{}\n{}", headers, data);
+        }
 
         let mut bytes = vec![];
         let mut reader = GzEncoder::new(data.as_bytes(), Default::default());
@@ -688,33 +756,32 @@ mod tests {
     }
 
     fn expected_json_manifest(format: &InventoryFormat) -> Value {
-        let schema = match format {
-            InventoryFormat::Csv => CSV_MANIFEST_SCHEMA,
-            InventoryFormat::Orc => ORC_MANIFEST_SCHEMA,
-            InventoryFormat::Parquet => PARQUET_MANIFEST_SCHEMA,
-            _ => "",
-        };
-
         // Taken from https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory-location.html#storage-inventory-location-manifest
-        json!({
+        let mut value = json!({
             "sourceBucket": "example-source-bucket",
             "destinationBucket": format!("arn:aws:s3:::{}", MANIFEST_BUCKET),
             "version": "2016-11-30",
             "creationTimestamp" : "1514944800000",
             "fileFormat": format.as_str(),
-            "fileSchema": schema,
             "files": [{
                 "key": format!("{}{}", MANIFEST_KEY, ending_from_format(format)),
                 "size": 2147483647,
                 "MD5checksum": EXPECTED_CHECKSUM
             }]
-        })
+        });
+
+        // Orc and Parquet manifest is ignored anyway.
+        if let InventoryFormat::Csv = format {
+            value["fileSchema"] = CSV_MANIFEST_SCHEMA.parse().unwrap();
+        };
+
+        value
     }
 
     fn expected_manifest(
-        file_schema: String,
+        file_schema: Option<String>,
         file_format: InventoryFormat,
-        md5_checksum: String,
+        md5_checksum: Option<String>,
     ) -> Manifest {
         let ending = ending_from_format(&file_format);
 
@@ -739,27 +806,15 @@ mod tests {
     }
 
     fn expected_orc_manifest(checksum: String) -> Manifest {
-        expected_manifest(
-            ORC_MANIFEST_SCHEMA.to_string(),
-            InventoryFormat::Orc,
-            checksum,
-        )
+        expected_manifest(None, InventoryFormat::Orc, Some(checksum))
     }
 
     fn expected_parquet_manifest(checksum: String) -> Manifest {
-        expected_manifest(
-            PARQUET_MANIFEST_SCHEMA.to_string(),
-            InventoryFormat::Parquet,
-            checksum,
-        )
+        expected_manifest(None, InventoryFormat::Parquet, Some(checksum))
     }
 
-    fn expected_csv_manifest(checksum: String) -> Manifest {
-        expected_manifest(
-            CSV_MANIFEST_SCHEMA.to_string(),
-            InventoryFormat::Csv,
-            checksum,
-        )
+    fn expected_csv_manifest(checksum: Option<String>, schema: Option<String>) -> Manifest {
+        expected_manifest(schema, InventoryFormat::Csv, checksum)
     }
 
     fn assert_csv_records(result: &[Record]) {
