@@ -31,45 +31,55 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     //   props.Icav1TokenSecretId
     // );
 
-    // Policies for all related buckets
-    const bucketPolicies = new iam.PolicyStatement({
-      actions: [
-        's3:GetObject',
-        's3:GetObjectAcl',
-        's3:GetObjectTagging',
-        's3:GetObjectVersion',
-        's3:GetObjectVersionAcl',
-        's3:GetObjectVersionTagging',
-        's3:GetBucketObjectLockConfiguration',
-        's3:PutObject',
-        's3:PutObjectAcl',
-        's3:PutObjectTagging',
-        's3:PutObjectLegalHold',
-        's3:PutObjectRetention',
-        's3:GetBucketLocation',
-        's3:ListBucket',
+    // Lambda execution role
+    const lambdaRole = new iam.Role(this, 'lambdaRole', {
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
       ],
-      resources: [
-        `arn:aws:s3:::${props.BucketForCopyDestination}`,
-        `arn:aws:s3:::${props.BucketForCopyDestination}/*`,
-        `arn:aws:s3:::${props.BucketForBatchOpsReport}`,
-        `arn:aws:s3:::${props.BucketForBatchOpsReport}/*`,
-        `arn:aws:s3:::${props.BucketForManifestOrInventory}`,
-        `arn:aws:s3:::${props.BucketForManifestOrInventory}/*`,
-      ],
-      effect: iam.Effect.ALLOW,
-    });
-
-    // S3 Batch Operations service role and trust relationship
-    const s3BatchOperationsServiceRole = new iam.Role(this, 'S3BatchOperationsServiceRole', {
-      assumedBy: new iam.ServicePrincipal('batchoperations.s3.amazonaws.com'),
+      inlinePolicies: {
+        S3BatchCopyLambdaFunctionIamRolePolicy0: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              actions: [
+                's3:GetObject',
+                's3:GetObjectAcl',
+                's3:GetObjectTagging',
+                's3:GetObjectVersion',
+                's3:GetObjectVersionAcl',
+                's3:GetObjectVersionTagging',
+                's3:ListBucket*',
+              ],
+              resources: ['*'],
+              effect: iam.Effect.ALLOW,
+            }),
+            new iam.PolicyStatement({
+              actions: [
+                's3:PutObject',
+                's3:PutObjectAcl',
+                's3:PutObjectTagging',
+                's3:PutObjectLegalHold',
+                's3:PutObjectRetention',
+                's3:GetBucketObjectLockConfiguration',
+                's3:ListBucket*',
+                's3:GetBucketLocation',
+              ],
+              resources: [
+                `arn:aws:s3:::${props.BucketForCopyDestination}`,
+                `arn:aws:s3:::${props.BucketForCopyDestination}/*`,
+              ],
+              effect: iam.Effect.ALLOW,
+            }),
+          ],
+        }),
+      },
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
     });
 
     // S3 Batch Ops lambda
     const lambda = new PythonFunction(this, 'ICAv1 Copy Batch Utility lambda', {
       entry: path.join(__dirname, '../lambdas'),
       runtime: Runtime.PYTHON_3_12,
-      //role: s3BatchOperationsServiceRole,
+      role: lambdaRole,
       environment: {
         destination_bucket: props.BucketForCopyDestination,
         max_concurrency: props.TransferMaximumConcurrency.toString(),
@@ -83,7 +93,38 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       handler: 'handler',
     });
 
-    s3BatchOperationsServiceRole.addToPolicy(bucketPolicies);
-    lambda.addToRolePolicy(bucketPolicies);
+    // S3 Batch Operations role
+    new iam.Role(this, 'S3BatchOperationsRole', {
+      assumedBy: new iam.ServicePrincipal('batchoperations.s3.amazonaws.com'),
+      inlinePolicies: {
+        S3BatchOperationPolicy: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              actions: ['s3:GetObject', 's3:GetObjectVersion', 's3:GetBucketLocation'],
+              resources: [
+                `arn:aws:s3:::${props.BucketForManifestOrInventory}`,
+                `arn:aws:s3:::${props.BucketForManifestOrInventory}/*`,
+              ],
+              effect: iam.Effect.ALLOW,
+            }),
+            new iam.PolicyStatement({
+              actions: ['s3:PutObject', 's3:GetBucketLocation'],
+              resources: [
+                `arn:aws:s3:::${props.BucketForBatchOpsReport}`,
+                `arn:aws:s3:::${props.BucketForBatchOpsReport}/*`,
+              ],
+              effect: iam.Effect.ALLOW,
+            }),
+            new iam.PolicyStatement({
+              actions: ['lambda:InvokeFunction'],
+              resources: [
+                `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${lambda.functionName}*`,
+              ],
+              effect: iam.Effect.ALLOW,
+            }),
+          ],
+        }),
+      },
+    });
   }
 }
