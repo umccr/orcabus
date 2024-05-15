@@ -14,16 +14,16 @@ class WorkflowRun(OrcaBusBaseModel):
 		unique_together = ["portal_run_id", "status", "timestamp"]
 
 	id = models.BigAutoField(primary_key=True)
-        
-	workflow = models.ForeignKey(Workflow, null=True, blank=True, on_delete=models.SET_NULL)  # Link to workflow table
-	payload = models.ForeignKey(Payload, null=True, blank=True, on_delete=models.SET_NULL)  # Link to workflow payload data
 
 	portal_run_id = models.CharField(max_length=255)
-	execution_id = models.CharField(max_length=255)  # ID of the external service
-	workflow_run_name = models.CharField(max_length=255)
 	status = models.CharField(max_length=255)
-	comment = models.CharField(max_length=255)
 	timestamp = models.DateTimeField()
+	execution_id = models.CharField(max_length=255, null=True, blank=True)  # ID of the external service
+	workflow_run_name = models.CharField(max_length=255, null=True, blank=True)
+	comment = models.CharField(max_length=255, null=True, blank=True)
+
+	workflow = models.ForeignKey(Workflow, null=True, blank=True, on_delete=models.SET_NULL)  # Link to workflow table
+	payload = models.ForeignKey(Payload, null=True, blank=True, on_delete=models.SET_NULL)  # Link to workflow payload data
 
 	objects = WorkflowRunManager()
 
