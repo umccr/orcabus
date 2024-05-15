@@ -6,6 +6,7 @@ members = [
     "filemanager-api",
     "filemanager-http-lambda",
     "filemanager-ingest-lambda",
+    "filemanager-inventory-lambda",
     "filemanager-migrate-lambda"
 ]
 

@@ -772,7 +772,7 @@ mod tests {
 
         // Orc and Parquet manifest is ignored anyway.
         if let InventoryFormat::Csv = format {
-            value["fileSchema"] = CSV_MANIFEST_SCHEMA.parse().unwrap();
+            value["fileSchema"] = Value::String(CSV_MANIFEST_SCHEMA.to_string());
         };
 
         value

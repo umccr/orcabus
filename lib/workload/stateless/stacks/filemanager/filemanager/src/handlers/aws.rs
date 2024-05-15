@@ -15,8 +15,9 @@ use crate::database::aws::credentials::IamGeneratorBuilder;
 use crate::database::aws::ingester::Ingester;
 use crate::database::{Client, Ingest};
 use crate::events::aws::collecter::CollecterBuilder;
-use crate::events::aws::FlatS3EventMessages;
-use crate::events::Collect;
+use crate::events::aws::inventory::{Inventory, Manifest};
+use crate::events::aws::{Events, FlatS3EventMessages};
+use crate::events::{Collect, EventSourceType};
 
 /// Handle SQS events by manually calling the SQS receive function. This is meant
 /// to be run through something like API gateway to manually invoke ingestion.
@@ -76,6 +77,45 @@ pub async fn ingest_event(
     let ingester = Ingester::new(database_client);
 
     trace!("ingester: {:?}", ingester);
+    ingester.ingest(events).await?;
+
+    Ok(ingester)
+}
+
+/// Handle an S3 inventory for ingestion.
+pub async fn ingest_s3_inventory(
+    s3_client: S3Client,
+    database_client: Client<'_>,
+    bucket: Option<String>,
+    key: Option<String>,
+    manifest: Option<Manifest>,
+) -> Result<Ingester<'_>, Error> {
+    let inventory = Inventory::new(s3_client);
+
+    let records = if let Some(manifest) = manifest {
+        inventory.parse_manifest(manifest).await?
+    } else if let (Some(bucket), Some(key)) = (bucket, key) {
+        inventory.parse_manifest_key(key, bucket).await?
+    } else {
+        return Err(Error::from(
+            "either a manifest or bucket and key option needs to be specified".to_string(),
+        ));
+    };
+    trace!("records extracted from inventory: {:?}", records);
+
+    // Note, not using collector here because we don't want to call head on all the objects.
+    // This means that objects are assumed to exist when ingesting, and it is not confirmed whether
+    // this is true. In practice, objects could have been deleted after the inventory was created
+    // unless the state of the S3 bucket was kept the same.
+    // TODO: add option to check for object existence with HeadObject before ingesting.
+    let events = EventSourceType::S3(Events::from(
+        FlatS3EventMessages::from(records).sort_and_dedup(),
+    ));
+    trace!("ingesting events: {:?}", events);
+
+    let ingester = Ingester::new(database_client);
+    trace!("ingester: {:?}", ingester);
+
     ingester.ingest(events).await?;
 
     Ok(ingester)

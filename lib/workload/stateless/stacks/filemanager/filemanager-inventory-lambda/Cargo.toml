@@ -1,6 +1,5 @@
 [package]
-name = "filemanager-ingest-lambda"
-description = "This crate is a lambda function which ingests events from sqs"
+name = "filemanager-inventory-lambda"
 version = "0.1.0"
 license.workspace = true
 edition.workspace = true
@@ -8,10 +7,10 @@ authors.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros"] }
 tracing = { version = "0.1" }
 
-aws_lambda_events = "0.15"
 lambda_runtime = "0.11"
 
-filemanager = { path = "../filemanager" }
+filemanager = { path = "../filemanager", features = ["migrate"] }
