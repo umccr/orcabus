@@ -10,6 +10,7 @@ export interface ICAv1CopyBatchUtilityConfig {
   AppName: string;
   Icav1TokenSecretId: string;
   BucketForCopyDestination: string;
+  BucketForCopyDestinationPrefix: string;
   BucketForManifestOrInventory: string;
   BucketForBatchOpsReport: string;
   TransferMaximumConcurrency: number;
@@ -82,6 +83,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       role: lambdaRole,
       environment: {
         destination_bucket: props.BucketForCopyDestination,
+        destination_bucket_prefix: props.BucketForCopyDestinationPrefix,
         max_concurrency: props.TransferMaximumConcurrency.toString(),
         max_pool_connections: props.TransferMaxPoolConnections.toString(),
         max_attempts: props.TransferMaxErrorRetries.toString(),
