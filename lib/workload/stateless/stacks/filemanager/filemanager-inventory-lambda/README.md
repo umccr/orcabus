@@ -23,28 +23,30 @@ Alternatively, this function can be called with the [`manifest.json` data][manif
 aws lambda invoke \
   --function-name orcabus-filemanager-ingest-inventory \
   --payload \
-   '{
-    "sourceBucket": "example-source-bucket",
-    "destinationBucket": "arn:aws:s3:::example-inventory-destination-bucket",
-    "version": "2016-11-30",
-    "creationTimestamp" : "1514944800000",
-    "fileFormat": "CSV",
-    "fileSchema": "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, ObjectLockLegalHoldStatus, IntelligentTieringAccessTier, BucketKeyStatus, ChecksumAlgorithm, ObjectAccessControlList, ObjectOwner",
-    "files": [
-        {
-            "key": "Inventory/example-source-bucket/2016-11-06T21-32Z/files/939c6d46-85a9-4ba8-87bd-9db705a579ce.csv.gz",
-            "size": 2147483647,
-            "MD5checksum": "<checksum_value>"
-        }
-    ]
+  '{
+      "sourceBucket": "example-source-bucket",
+      "destinationBucket": "arn:aws:s3:::example-inventory-destination-bucket",
+      "version": "2016-11-30",
+      "creationTimestamp" : "1514944800000",
+      "fileFormat": "CSV",
+      "fileSchema": "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, ObjectLockLegalHoldStatus, IntelligentTieringAccessTier, BucketKeyStatus, ChecksumAlgorithm, ObjectAccessControlList, ObjectOwner",
+      "files": [
+          {
+              "key": "Inventory/example-source-bucket/2016-11-06T21-32Z/files/939c6d46-85a9-4ba8-87bd-9db705a579ce.csv.gz",
+              "size": 2147483647,
+              "MD5checksum": "<checksum_value>"
+          }
+      ]
   }' \
   --cli-binary-format raw-in-base64-out \
   response.json
 ```
 
-The `manifest.json` is not required to contain the file schema. For Parquet and Orc, the file schema is encoded within 
-the inventory data. For CSV, AWS does not include header fields. These could be included in a custom inventory file, or
-if omitted, parsing is attempted with the following default headers:
+The `manifest.json` is only required to contain the `destinationBucket`, `fileFormat`, and the `key` component of the `files`.
+Note, that the `destionationBucket` specified the location of the inventory file. It does not need to be a full ARN,
+and can instead be the bucket name. The `fileFormat` is not required because for Parquet and Orc, the file schema is
+encoded within the inventory data. For CSV, AWS does not include header fields. So if the file schema is missing, parsing
+will attempt to use CSV headers if they are present, or default to the following headers if not present:
 
 ```"Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, LastModifiedDate, ETag, StorageClass"```
 

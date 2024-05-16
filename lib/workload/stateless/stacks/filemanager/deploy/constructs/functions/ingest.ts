@@ -38,11 +38,6 @@ export class IngestFunction extends fn.Function {
       const eventSource = new SqsEventSource(source);
       this.function.addEventSource(eventSource);
     });
-    props.buckets.map((bucket) => {
-      this.addToPolicy(new PolicyStatement({
-        actions: ['s3:ListBucket', 's3:GetObject'],
-        resources: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
-      }));
-    })
+    this.addPoliciesForBuckets(props.buckets);
   }
 }

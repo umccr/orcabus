@@ -21,6 +21,7 @@ export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & {
   eventSourceQueueName: string;
   eventSourceBuckets: string[];
+  inventorySourceBuckets: string[];
   databaseClusterEndpointHostParameter: string;
   vpcProps: VpcLookupOptions;
   migrateDatabase?: boolean;
@@ -114,6 +115,7 @@ export class Filemanager extends Stack {
       host: this.host,
       securityGroup: this.securityGroup,
       port: props.port,
+      buckets: props.inventorySourceBuckets,
     });
   }
 
