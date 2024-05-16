@@ -2,7 +2,7 @@
 
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
 use aws_sdk_s3::primitives::ByteStream;
-use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
+use aws_smithy_mocks_experimental::{mock, mock_client, Rule, RuleMode};
 use filemanager::clients::aws::s3::Client;
 use filemanager::events::aws::inventory::{Inventory, Record};
 use filemanager::events::aws::StorageClass;
@@ -13,25 +13,8 @@ macro_rules! base_mocks {
         const MANIFEST_JSON: &[u8] = include_bytes!(concat!("data/", $manifest_file));
         const INVENTORY: &[u8] = include_bytes!(concat!("data/", $inventory_file));
 
-        let get_inventory_manifest = mock!(aws_sdk_s3::Client::get_object)
-            .match_requests(|req| {
-                req.bucket() == Some($bucket) && req.key() == Some($manifest_file)
-            })
-            .then_output(|| {
-                GetObjectOutput::builder()
-                    .body(ByteStream::from_static(MANIFEST_JSON))
-                    .build()
-            });
-
-        let get_inventory = mock!(aws_sdk_s3::Client::get_object)
-            .match_requests(|req| {
-                req.bucket() == Some($bucket) && req.key() == Some($inventory_file)
-            })
-            .then_output(|| {
-                GetObjectOutput::builder()
-                    .body(ByteStream::from_static(INVENTORY))
-                    .build()
-            });
+        let get_inventory_manifest = mock_get_object($bucket, $manifest_file, MANIFEST_JSON);
+        let get_inventory = mock_get_object($bucket, $inventory_file, INVENTORY);
 
         (get_inventory_manifest, get_inventory)
     }};
@@ -39,32 +22,6 @@ macro_rules! base_mocks {
 
 /// Create a mock client. This is a macro so that file byte data can be included at compile time.
 macro_rules! mock_client_for_inventory {
-    (impl $bucket:expr, $inventory_file:expr, $manifest_file:expr) => {{
-        const MANIFEST_JSON: &[u8] = include_bytes!(concat!("data/", $manifest_file));
-        const INVENTORY: &[u8] = include_bytes!(concat!("data/", $inventory_file));
-
-        let get_inventory_manifest = mock!(aws_sdk_s3::Client::get_object)
-            .match_requests(|req| {
-                req.bucket() == Some($bucket) && req.key() == Some($manifest_file)
-            })
-            .then_output(|| {
-                GetObjectOutput::builder()
-                    .body(ByteStream::from_static(MANIFEST_JSON))
-                    .build()
-            });
-
-        let get_inventory = mock!(aws_sdk_s3::Client::get_object)
-            .match_requests(|req| {
-                req.bucket() == Some($bucket) && req.key() == Some($inventory_file)
-            })
-            .then_output(|| {
-                GetObjectOutput::builder()
-                    .body(ByteStream::from_static(INVENTORY))
-                    .build()
-            });
-
-        (get_inventory_manifest, get_inventory)
-    }};
     ($bucket:expr, $inventory_file:expr, $manifest_file:expr) => {{
         let (get_inventory_manifest, get_inventory) =
             base_mocks!($bucket, $inventory_file, $manifest_file);
@@ -80,15 +37,7 @@ macro_rules! mock_client_for_inventory {
             base_mocks!($bucket, $inventory_file, $manifest_file);
 
         const MANIFEST_CHECKSUM: &[u8] = include_bytes!(concat!("data/", $checksum_file));
-        let get_inventory_checksum = mock!(aws_sdk_s3::Client::get_object)
-            .match_requests(|req| {
-                req.bucket() == Some($bucket) && req.key() == Some($checksum_file)
-            })
-            .then_output(|| {
-                GetObjectOutput::builder()
-                    .body(ByteStream::from_static(MANIFEST_CHECKSUM))
-                    .build()
-            });
+        let get_inventory_checksum = mock_get_object($bucket, $checksum_file, MANIFEST_CHECKSUM);
 
         mock_client!(
             aws_sdk_s3,
@@ -102,21 +51,22 @@ macro_rules! mock_client_for_inventory {
     }};
 }
 
+/// Mock a single GetObject request with the bucket, key and data.
+fn mock_get_object(bucket: &'static str, key: &'static str, data: &'static [u8]) -> Rule {
+    mock!(aws_sdk_s3::Client::get_object)
+        .match_requests(|req| req.bucket() == Some(bucket) && req.key() == Some(key))
+        .then_output(move || {
+            GetObjectOutput::builder()
+                .body(ByteStream::from_static(data))
+                .build()
+        })
+}
+
 /// Get records from an inventory.
-macro_rules! parse_records {
-    ($bucket:expr, $inventory_file:expr, $manifest_file:expr) => {{
-        let client = mock_client_for_inventory!($bucket, $inventory_file, $manifest_file);
-        let inventory = Inventory::new(Client::new(client));
+async fn parse_records(client: aws_sdk_s3::Client, bucket: &str, file: &str) -> Vec<Record> {
+    let inventory = Inventory::new(Client::new(client));
 
-        inventory.parse_manifest_key($manifest_file, $bucket).await
-    }};
-    ($bucket:expr, $inventory_file:expr, $manifest_file:expr, $checksum_file:expr) => {{
-        let client =
-            mock_client_for_inventory!($bucket, $inventory_file, $manifest_file, $checksum_file);
-        let inventory = Inventory::new(Client::new(client));
-
-        inventory.parse_manifest_key($checksum_file, $bucket).await
-    }};
+    inventory.parse_manifest_key(file, bucket).await.unwrap()
 }
 
 fn expected_records() -> Vec<Record> {
@@ -180,84 +130,132 @@ fn expected_records_no_version() -> Vec<Record> {
 
 #[tokio::test]
 async fn csv_with_checksum() {
-    let result = parse_records!(
+    let client = mock_client_for_inventory!(
         "filemanager-inventory-test",
         "csv_inventory.csv.gz",
         "csv_inventory_manifest.json",
         "csv_inventory_manifest.checksum"
     );
-    assert_eq!(result.unwrap(), expected_records());
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "csv_inventory_manifest.checksum",
+    )
+    .await;
+    assert_eq!(result, expected_records());
 }
 
 #[tokio::test]
 async fn csv_with_manifest() {
-    let result = parse_records!(
+    let client = mock_client_for_inventory!(
         "filemanager-inventory-test",
         "csv_inventory.csv.gz",
         "csv_inventory_manifest.json"
     );
-    assert_eq!(result.unwrap(), expected_records());
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "csv_inventory_manifest.json",
+    )
+    .await;
+    assert_eq!(result, expected_records());
 }
 
 #[tokio::test]
 async fn csv_no_version_with_checksum() {
-    let result = parse_records!(
+    let client = mock_client_for_inventory!(
         "filemanager-inventory-test",
         "csv_inventory_no_version.csv.gz",
         "csv_inventory_no_version_manifest.json",
         "csv_inventory_no_version_manifest.checksum"
     );
-    assert_eq!(result.unwrap(), expected_records_no_version());
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "csv_inventory_no_version_manifest.checksum",
+    )
+    .await;
+    assert_eq!(result, expected_records_no_version());
 }
 
 #[tokio::test]
 async fn csv_no_version_with_manifest() {
-    let result = parse_records!(
+    let client = mock_client_for_inventory!(
         "filemanager-inventory-test",
         "csv_inventory_no_version.csv.gz",
         "csv_inventory_no_version_manifest.json"
     );
-    assert_eq!(result.unwrap(), expected_records_no_version());
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "csv_inventory_no_version_manifest.json",
+    )
+    .await;
+    assert_eq!(result, expected_records_no_version());
 }
 
 #[tokio::test]
 async fn orc_with_checksum() {
-    let result = parse_records!(
+    let client = mock_client_for_inventory!(
         "filemanager-inventory-test",
         "orc_inventory.orc",
         "orc_inventory_manifest.json",
         "orc_inventory_manifest.checksum"
     );
-    assert_eq!(result.unwrap(), expected_records());
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "orc_inventory_manifest.checksum",
+    )
+    .await;
+    assert_eq!(result, expected_records());
 }
 
 #[tokio::test]
 async fn orc_with_manifest() {
-    let result = parse_records!(
+    let client = mock_client_for_inventory!(
         "filemanager-inventory-test",
         "orc_inventory.orc",
         "orc_inventory_manifest.json"
     );
-    assert_eq!(result.unwrap(), expected_records());
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "orc_inventory_manifest.json",
+    )
+    .await;
+    assert_eq!(result, expected_records());
 }
 
 #[tokio::test]
 async fn parquet_with_checksum() {
-    let result = parse_records!(
+    let client = mock_client_for_inventory!(
         "filemanager-inventory-test",
         "parquet_inventory.parquet",
         "parquet_inventory_manifest.json",
         "parquet_inventory_manifest.checksum"
     );
-    assert_eq!(result.unwrap(), expected_records());
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "parquet_inventory_manifest.checksum",
+    )
+    .await;
+    assert_eq!(result, expected_records());
 }
 
 #[tokio::test]
 async fn parquet_with_manifest() {
-    let result = parse_records!(
+    let client = mock_client_for_inventory!(
         "filemanager-inventory-test",
         "parquet_inventory.parquet",
         "parquet_inventory_manifest.json"
     );
-    assert_eq!(result.unwrap(), expected_records());
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "parquet_inventory_manifest.json",
+    )
+    .await;
+    assert_eq!(result, expected_records());
 }
