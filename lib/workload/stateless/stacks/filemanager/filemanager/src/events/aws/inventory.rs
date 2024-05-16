@@ -222,6 +222,7 @@ impl Inventory {
         }
     }
 
+    /// Parse records based on the inventory format.
     pub async fn records_from_format(
         &self,
         format: &InventoryFormat,

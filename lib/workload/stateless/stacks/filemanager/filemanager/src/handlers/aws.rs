@@ -272,7 +272,7 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_inventory_ingestion_binding_reordered_deleted(pool: PgPool) {
+    async fn test_inventory_ingestion_binding_old_created(pool: PgPool) {
         let client = csv_manifest_from_key_expectations();
 
         ingest_s3_inventory(
