@@ -48,9 +48,11 @@ def handler(event, context):
     taskId = event['tasks'][0]['taskId']
     # use unquote_plus to handle various characters in S3 Key name
     s3Key = parse.unquote_plus(event['tasks'][0]['s3Key'], encoding='utf-8')
+    print(event)
     s3VersionId = event['tasks'][0]['s3VersionId']
-    s3BucketArn = event['tasks'][0]['s3BucketArn']
-    s3Bucket = s3BucketArn.split(':')[-1]
+    #s3BucketArn = event['tasks'][0]['s3BucketArn']
+    #s3Bucket = s3BucketArn.split(':')[-1]
+    s3Bucket = event['tasks'][0]['s3Bucket']
 
     try:
     # Prepare result code and string
