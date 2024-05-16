@@ -15,21 +15,16 @@ Given
     /* Except fastq list rows is b64gz encoded */
 }
 
-Return a manifest list
+Return a icav2 copy files dict
 
 {
-    "manifest_list": [
-      {
-        "fastq_list_rows[0].Read1FileURI": [  # trial
-            "cache_uri",  # dest_uri
-        ],
-        "fastq_list_rows[0].Read2FileURI": [  # trial
-            "cache_uri",  # dest_uri
-        ],
-        ...
-      }
-    ]
+  "dest_uri": "<cache_uri>",
+  "source_uris": [
+      "fastq_list_rows[0].Read1FileURI",
+      "fastq_list_rows[0].Read2FileURI"
+  ]
 }
+
 """
 from functools import reduce
 from pathlib import Path
@@ -111,22 +106,10 @@ def handler(event, context):
         )
     )
 
-    # Generate the manifest list
-    manifest_list = dict(
-        map(
-            lambda source_uri_iter: (
-                source_uri_iter,
-                [
-                    fastq_cache_path
-                ]
-            ),
-            source_uris
-        )
-    )
-
     # Return the manifest list
     return {
-        "manifest_list": manifest_list
+        "dest_uri": fastq_cache_path,
+        "source_uris": source_uris
     }
 
 
@@ -164,8 +147,7 @@ def handler(event, context):
 #         json.dumps(
 #             handler(
 #                 event={
-#                     "cache_path": "/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache",  # pragma: allowlist secret
-#                     "project_id": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
+#                     "cache_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache",  # pragma: allowlist secret
 #                     "sample_id": "L2301346_rerun",
 #                     "fastq_list_rows_b64gz": fastq_list_rows_b64gz
 #                 },
@@ -176,12 +158,9 @@ def handler(event, context):
 #     )
 #
 #     # {
-#     #     "manifest_list": {
-#     #         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-analyses/231116_A01052_0172_BHVLM5DSX7_d24651_4c90dc-BclConvert v4_2_7-b719c8d9-5e6d-49e6-a8be-ca17b5e9d40b/output/Samples/Lane_2/L2301346_rerun/L2301346_rerun_S7_L002_R1_001.fastq.gz": [
-#     #             "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache/L2301346_rerun/"
-#     #         ],
-#     #         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-analyses/231116_A01052_0172_BHVLM5DSX7_d24651_4c90dc-BclConvert v4_2_7-b719c8d9-5e6d-49e6-a8be-ca17b5e9d40b/output/Samples/Lane_2/L2301346_rerun/L2301346_rerun_S7_L002_R2_001.fastq.gz": [
-#     #             "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache/L2301346_rerun/"
-#     #         ]
-#     #     }
+#     #     "dest_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache/L2301346_rerun/",
+#     #     "source_uris": [
+#     #         "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Samples/Lane_2/L2301346_rerun/L2301346_rerun_S7_L002_R1_001.fastq.gz",
+#     #         "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Samples/Lane_2/L2301346_rerun/L2301346_rerun_S7_L002_R2_001.fastq.gz"
+#     #     ]
 #     # }

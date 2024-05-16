@@ -79,8 +79,44 @@ that can be done by the lambda that generates the copy job
 
 """
 from functools import reduce
-from typing import Dict, List
-from icav2_copy_batch_utility_tools.utils.compression_helpers import decompress_dict
+import json
+from base64 import b64encode, b64decode
+import gzip
+from typing import Dict, List, Union
+
+
+def compress_dict(input_dict: Union[Dict, List]) -> str:
+    """
+    Given a json input, compress to a base64 encoded string
+
+    param: input_dict: input dictionary to compress
+
+    Returns: gzipped compressed base64 encoded string
+    """
+
+    # Compress
+    return b64encode(
+        gzip.compress(
+            json.dumps(input_dict).encode('utf-8')
+        )
+    ).decode("utf-8")
+
+
+def decompress_dict(input_compressed_b64gz_str: str) -> Union[Dict, List]:
+    """
+    Given a base64 encoded string, decompress and return the original dictionary
+    Args:
+        input_compressed_b64gz_str:
+
+    Returns: decompressed dictionary or list
+    """
+
+    # Decompress
+    return json.loads(
+        gzip.decompress(
+            b64decode(input_compressed_b64gz_str.encode('utf-8'))
+        )
+    )
 
 
 def handler(event: Dict, context) -> List[Dict]:
