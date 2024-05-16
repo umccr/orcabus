@@ -16,9 +16,6 @@ my_max_pool_connections = int(os.environ['max_pool_connections'])
 my_max_concurrency = int(os.environ['max_concurrency'])
 my_multipart_chunksize = int(os.environ['multipart_chunksize'])
 my_max_attempts = int(os.environ['max_attempts'])
-#metadata_copy = str(os.environ['copy_metadata'])
-#tagging_copy = str(os.environ['copy_tagging'])
-#obj_copy_storage_class = str(os.environ['copy_storage_class'])
 new_prefix = str(os.environ['destination_bucket_prefix'])
 
 # # Set up logging
@@ -40,6 +37,7 @@ def handler(event, context):
 # Parse job parameters from Amazon S3 batch operations
     invocationId = event['invocationId']
     invocationSchemaVersion = event['invocationSchemaVersion']
+    print(invocationSchemaVersion)
 
     # Prepare results
     results = []
@@ -48,88 +46,26 @@ def handler(event, context):
     taskId = event['tasks'][0]['taskId']
     # use unquote_plus to handle various characters in S3 Key name
     s3Key = parse.unquote_plus(event['tasks'][0]['s3Key'], encoding='utf-8')
-    print(event)
     s3VersionId = event['tasks'][0]['s3VersionId']
-    #s3BucketArn = event['tasks'][0]['s3BucketArn']
-    #s3Bucket = s3BucketArn.split(':')[-1]
     s3Bucket = event['tasks'][0]['s3Bucket']
 
     try:
     # Prepare result code and string
         resultCode = None
         resultString = None
-        # Remove line feed or carriage return for compatibility with S3 Batch Result Message
-        # Will use str.translate to strip '\n' and '\r'. Convert both char to ascii using ord()
-        # where '\t' = 9, '\n' = 10 and '\r' = 13
-        mycompat = {9: None, 10: None, 13: None}
         # Construct Copy Object
         copy_source = {'Bucket': s3Bucket, 'Key': s3Key}
         # If source key has VersionID, then construct request with VersionID
         if s3VersionId is not None:
             copy_source['VersionId'] = s3VersionId
-            # Construct/Retrieve get source key metadata
-#            if metadata_copy == 'Enable':
-#                get_metadata = s3Client.head_object(Bucket=s3Bucket, Key=s3Key, VersionId=s3VersionId)
-            # Construct/Retrieve get source key tagging
-#            if tagging_copy == 'Enable':
-#                get_obj_tag = s3Client.get_object_tagging(Bucket=s3Bucket, Key=s3Key, VersionId=s3VersionId)
-#        else:
-            # Construct/Retrieve get source key metadata
-#            if metadata_copy == 'Enable':
-#                get_metadata = s3Client.head_object(Bucket=s3Bucket, Key=s3Key)
-            # Construct/Retrieve get source key tagging
-#            if tagging_copy == 'Enable':
-#                get_obj_tag = s3Client.get_object_tagging(Bucket=s3Bucket, Key=s3Key)
-
-        # Construct New Path
-        # Construct New Key
+        
+        # Construct new path and key
         if new_prefix and len(new_prefix) > 0:
             newKey = "{0}/{1}".format(new_prefix, s3Key)
         else:
             newKey = s3Key
 
         newBucket = target_bucket
-
-        # Toggle Metadata or Tagging Copy Based on Enviromental Variables
-        # Construct Request Parameters with metadata and tagging from sourceKey
-        # Create variables to append as metadata and tagging to destination object
-        # if metadata_copy == 'Enable':
-        #     logger.info("Object Metadata Copy Enabled from Source to Destination")
-        #     cache_control = get_metadata.get('CacheControl')
-        #     content_disposition = get_metadata.get('ContentDisposition')
-        #     content_encoding = get_metadata.get('ContentEncoding')
-        #     content_language = get_metadata.get('ContentLanguage')
-        #     metadata = get_metadata.get('Metadata')
-        #     website_redirect_location = get_metadata.get('WebsiteRedirectLocation')
-        #     expires = get_metadata.get('Expires')
-        #     # Construct Request With Required and Available Arguments
-        #     if cache_control:
-        #         myargs['CacheControl'] = cache_control
-        #     if content_disposition:
-        #         myargs['ContentDisposition'] = content_disposition
-        #     if content_encoding:
-        #         myargs['ContentEncoding'] = content_encoding
-        #     if content_language:
-        #         myargs['ContentLanguage'] = content_language
-        #     if metadata:
-        #         myargs['Metadata'] = metadata
-        #     if website_redirect_location:
-        #         myargs['WebsiteRedirectLocation'] = website_redirect_location
-        #     if expires:
-        #         myargs['Expires'] = expires
-        # else:
-        #     logger.info("Object Metadata Copy Disabled")
-
-        # if tagging_copy == 'Enable':
-        #     logger.info("Object Tagging Copy Enabled from Source to Destination")
-        #     existing_tag_set = (get_obj_tag.get('TagSet'))
-        #     # Convert the Output from get object tagging to be compatible with transfer s3.copy()
-        #     tagging_to_s3 = "&".join([f"{parse.quote_plus(d['Key'])}={parse.quote_plus(d['Value'])}" for d in existing_tag_set])
-        #     # Construct Request With Required and Available Arguments
-        #     if existing_tag_set:
-        #         myargs['Tagging'] = tagging_to_s3
-        # else:
-        #     logger.info("Object Tagging Copy Disabled")
 
         # Initiate the Actual Copy Operation and include transfer config option
         logger.info(f"starting copy of object {s3Key} with versionID {s3VersionId} between SOURCEBUCKET: {s3Bucket} and DESTINATIONBUCKET: {newBucket}")
@@ -154,8 +90,7 @@ def handler(event, context):
         except AttributeError:
             logger.error(e)
             resultCode = 'PermanentFailure'
-            # Remove line feed or carriage return for compatibility with S3 Batch Result Message
-            resultString = '{}'.format(str(e).translate(mycompat))
+            resultString = '{}'.format(str(e))
     except Exception as e:
         # log errors, some errors does not have a response, so handle them
         logger.error(f"Unable to complete requested operation, see Additional Client/Service error details below:")
@@ -168,19 +103,19 @@ def handler(event, context):
             resultString = '{}: {}: {}: {}'.format(errorCode, errorMessage, errorS3RequestID, errorS3ExtendedRequestID)
         except AttributeError:
             logger.error(e)
-            resultString = 'Exception: {}'.format(str(e).translate(mycompat))
+            resultString = 'Exception: {}'.format(str(e))
             resultCode = 'PermanentFailure'
 
-        finally:
-            results.append({
-            'taskId': taskId,
-            'resultCode': resultCode,
-            'resultString': resultString
-            })
+    finally:
+        results.append({
+        'taskId': taskId,
+        'resultCode': resultCode,
+        'resultString': resultString
+        })
 
-        return {
-            'invocationSchemaVersion': invocationSchemaVersion,
-            'treatMissingKeysAs': 'PermanentFailure',
-            'invocationId': invocationId,
-            'results': results
-        }
+    return {
+        'invocationSchemaVersion': invocationSchemaVersion,
+        'treatMissingKeysAs': 'PermanentFailure',
+        'invocationId': invocationId,
+        'results': results
+    }
