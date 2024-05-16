@@ -1465,9 +1465,11 @@ dependencies = [
 name = "filemanager-inventory-lambda"
 version = "0.1.0"
 dependencies = [
+ "aws-sdk-s3",
  "filemanager",
  "lambda_runtime",
  "serde",
+ "serde_json",
  "tokio",
  "tracing",
 ]

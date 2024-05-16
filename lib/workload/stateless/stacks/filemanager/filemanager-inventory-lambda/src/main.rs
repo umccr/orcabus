@@ -8,14 +8,15 @@ use filemanager::handlers::aws::{create_database_pool, ingest_s3_inventory, upda
 use filemanager::handlers::init_tracing;
 
 /// The Lambda request for the S3 inventory function.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[serde(untagged)]
 pub enum Request {
     BucketKey(BucketKey),
     Manifest(Manifest),
 }
 
 /// The bucket and key which points to a manifest.json or manifest.checksum.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq)]
 pub struct BucketKey {
     bucket: String,
     key: String,
@@ -51,4 +52,86 @@ async fn main() -> Result<(), Error> {
         Ok::<_, Error>(())
     }))
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aws_sdk_s3::types::InventoryFormat;
+    use filemanager::events::aws::inventory::File;
+    use serde_json::{from_str, json};
+
+    #[test]
+    fn deserialize_bucket_key() {
+        let bucket_key = json!({
+            "bucket": "bucket",
+            "key": "key"
+        })
+        .to_string();
+
+        let result = from_str::<Request>(&bucket_key).unwrap();
+        assert_eq!(
+            result,
+            Request::BucketKey(BucketKey {
+                bucket: "bucket".to_string(),
+                key: "key".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn deserialize_manifest() {
+        let expected_checksum = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
+        let expected_schema = "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, LastModifiedDate, ETag, StorageClass";
+        let manifest = json!({
+            "sourceBucket": "example-source-bucket",
+            "destinationBucket": "arn:aws:s3:::example-inventory-destination-bucket",
+            "version": "2016-11-30",
+            "creationTimestamp" : "1514944800000",
+            "fileFormat": "CSV",
+            "fileSchema": expected_schema,
+            "files": [
+                {
+                    "key": "key.csv.gz",
+                    "size": 2147483647,
+                    "MD5checksum": expected_checksum
+                }
+            ]
+        })
+        .to_string();
+
+        assert_manifest(
+            &manifest,
+            Some(expected_schema.to_string()),
+            Some(expected_checksum.to_string()),
+        );
+    }
+
+    #[test]
+    fn deserialize_manifest_minimal() {
+        let manifest = json!({
+            "destinationBucket": "example-inventory-destination-bucket",
+            "fileFormat": "CSV",
+            "files": [
+                {
+                    "key": "key.csv.gz"
+                }
+            ]
+        })
+        .to_string();
+
+        assert_manifest(&manifest, None, None);
+    }
+
+    fn assert_manifest(manifest: &str, file_schema: Option<String>, checksum: Option<String>) {
+        let result = from_str::<Request>(manifest).unwrap();
+        let expected = Manifest::new(
+            "example-inventory-destination-bucket".to_string(),
+            InventoryFormat::Csv,
+            file_schema,
+            vec![File::new("key.csv.gz".to_string(), checksum)],
+        );
+
+        assert_eq!(result, Request::Manifest(expected));
+    }
 }

@@ -443,12 +443,36 @@ pub struct Manifest {
     files: Vec<File>,
 }
 
+impl Manifest {
+    /// Create a new manifest.
+    pub fn new(
+        destination_bucket: String,
+        file_format: InventoryFormat,
+        file_schema: Option<String>,
+        files: Vec<File>,
+    ) -> Self {
+        Self {
+            destination_bucket,
+            file_format,
+            file_schema,
+            files,
+        }
+    }
+}
+
 /// The files inside the manifest.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct File {
     key: String,
     #[serde(rename = "MD5checksum")]
     md5_checksum: Option<String>,
+}
+
+impl File {
+    /// Create a new file
+    pub fn new(key: String, md5_checksum: Option<String>) -> Self {
+        Self { key, md5_checksum }
+    }
 }
 
 impl From<Vec<Record>> for FlatS3EventMessages {
@@ -491,6 +515,7 @@ impl From<Record> for FlatS3EventMessage {
             last_modified_date,
             sha256: None,
             // Anything in an inventory report is always a created event.
+            // TODO: look into version ids with delete markers. Is this Created or Deleted event?
             event_type: Created,
             number_reordered: 0,
             number_duplicate_events: 0,
