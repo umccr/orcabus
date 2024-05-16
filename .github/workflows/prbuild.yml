@@ -23,6 +23,7 @@ permissions: read-all
 jobs:
   pre-commit-lint-security:
     runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
     steps:
       - name: Print toolchain versions
         run: |
