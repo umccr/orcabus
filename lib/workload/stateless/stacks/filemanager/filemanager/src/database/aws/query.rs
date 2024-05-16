@@ -1,4 +1,4 @@
-use sqlx::{query_file, query_file_as, Acquire, Postgres, Row};
+use sqlx::{query_file, query_file_as, Acquire, Postgres, Row, Transaction};
 
 use crate::database::Client;
 use crate::error::Result;
@@ -45,27 +45,28 @@ impl<'a> Query<'a> {
     pub async fn select_existing_by_bucket_key(
         &self,
         conn: impl Acquire<'_, Database = Postgres>,
-        buckets: Vec<String>,
-        keys: Vec<String>,
-        version_ids: Vec<Option<String>>,
+        buckets: &[String],
+        keys: &[String],
+        version_ids: &[String],
     ) -> Result<FlatS3EventMessages> {
         let mut conn = conn.acquire().await?;
-        let version_ids: Vec<String> = version_ids
-            .into_iter()
-            .map(|version_id| version_id.unwrap_or_else(FlatS3EventMessage::default_version_id))
-            .collect();
 
         Ok(FlatS3EventMessages(
             query_file_as!(
                 FlatS3EventMessage,
                 "../database/queries/api/select_existing_by_bucket_key.sql",
-                buckets.as_slice(),
-                keys.as_slice(),
-                version_ids.as_slice()
+                buckets,
+                keys,
+                version_ids
             )
             .fetch_all(&mut *conn)
             .await?,
         ))
+    }
+
+    /// Start a new transaction.
+    pub async fn transaction(&self) -> Result<Transaction<Postgres>> {
+        Ok(self.client.pool().begin().await?)
     }
 }
 
@@ -122,12 +123,13 @@ mod tests {
         let results = query
             .select_existing_by_bucket_key(
                 &mut tx,
-                vec!["bucket".to_string(), "bucket".to_string()],
-                vec!["key".to_string(), new_key.to_string()],
+                vec!["bucket".to_string(), "bucket".to_string()].as_slice(),
+                vec!["key".to_string(), new_key.to_string()].as_slice(),
                 vec![
-                    Some(EXPECTED_VERSION_ID.to_string()),
-                    Some(EXPECTED_VERSION_ID.to_string()),
-                ],
+                    EXPECTED_VERSION_ID.to_string(),
+                    EXPECTED_VERSION_ID.to_string(),
+                ]
+                .as_slice(),
             )
             .await
             .unwrap()

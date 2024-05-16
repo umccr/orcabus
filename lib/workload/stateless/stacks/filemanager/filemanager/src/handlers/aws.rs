@@ -2,10 +2,12 @@
 //!
 
 use aws_lambda_events::sqs::SqsEvent;
+use itertools::Itertools;
 use lambda_runtime::Error;
 use mockall_double::double;
 use sqlx::PgPool;
-use tracing::trace;
+use std::collections::HashSet;
+use tracing::{debug, trace};
 
 #[double]
 use crate::clients::aws::s3::Client as S3Client;
@@ -13,10 +15,11 @@ use crate::clients::aws::s3::Client as S3Client;
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::database::aws::credentials::IamGeneratorBuilder;
 use crate::database::aws::ingester::Ingester;
+use crate::database::aws::query::Query;
 use crate::database::{Client, Ingest};
 use crate::events::aws::collecter::CollecterBuilder;
-use crate::events::aws::inventory::{Inventory, Manifest};
-use crate::events::aws::{Events, FlatS3EventMessages};
+use crate::events::aws::inventory::{DiffMessages, Inventory, Manifest};
+use crate::events::aws::{Events, FlatS3EventMessages, TransposedS3EventMessages};
 use crate::events::{Collect, EventSourceType};
 
 /// Handle SQS events by manually calling the SQS receive function. This is meant
@@ -103,15 +106,40 @@ pub async fn ingest_s3_inventory(
     };
     trace!("records extracted from inventory: {:?}", records);
 
+    let transposed_events: TransposedS3EventMessages =
+        FlatS3EventMessages::from(records).sort_and_dedup().into();
+
+    let query = Query::new(database_client.clone());
+    let mut tx = query.transaction().await?;
+    let database_records = query
+        .select_existing_by_bucket_key(
+            &mut tx,
+            transposed_events.keys.as_slice(),
+            transposed_events.buckets.as_slice(),
+            transposed_events.version_ids.as_slice(),
+        )
+        .await?;
+    tx.commit().await?;
+
+    // Some back and forth between transposed vs not transposed events. Potential optimization
+    // could involve using ndarray + slicing, with an enum representing the fields of the struct.
+    let transposed_events: HashSet<DiffMessages> = HashSet::from_iter(Vec::<DiffMessages>::from(
+        FlatS3EventMessages::from(transposed_events),
+    ));
+    let database_records: HashSet<DiffMessages> =
+        HashSet::from_iter(Vec::<DiffMessages>::from(database_records));
+    let diff = &transposed_events - &database_records;
+
+    debug!("diff found between database and inventory: {:?}", diff);
+
     // Note, not using collector here because we don't want to call head on all the objects.
     // This means that objects are assumed to exist when ingesting, and it is not confirmed whether
     // this is true. In practice, objects could have been deleted after the inventory was created
     // unless the state of the S3 bucket was kept the same.
     // TODO: add option to check for object existence with HeadObject before ingesting.
-    let events = EventSourceType::S3(Events::from(
-        FlatS3EventMessages::from(records).sort_and_dedup(),
-    ));
-    trace!("ingesting events: {:?}", events);
+    let events = EventSourceType::S3(Events::from(FlatS3EventMessages::from(
+        diff.into_iter().collect_vec(),
+    )));
 
     let ingester = Ingester::new(database_client);
     trace!("ingester: {:?}", ingester);
