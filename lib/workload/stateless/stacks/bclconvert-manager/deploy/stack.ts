@@ -9,7 +9,7 @@ import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
 
-export interface Icav2EventTranslatorStackProps {
+export interface BclConvertManagerStackProps {
   /** dynamodb name and event bus name */
   icav2EventTranslatorDynamodbTableName: string;
   eventBusName: string;
@@ -18,33 +18,32 @@ export interface Icav2EventTranslatorStackProps {
   lambdaSecurityGroupName: string;
 }
 
-export class Icav2EventTranslatorStack extends Stack {
-  private readonly vpc: IVpc;
-  private readonly lambdaSG: ISecurityGroup;
-  private readonly mainBus: IEventBus;
-  private readonly dynamoDBTable: ITableV2;
+export class BclConvertManagerStack extends Stack {
   private readonly lambdaRuntimePythonVersion = Runtime.PYTHON_3_12;
 
-  constructor(scope: Construct, id: string, props: StackProps & Icav2EventTranslatorStackProps) {
+  constructor(scope: Construct, id: string, props: StackProps & BclConvertManagerStackProps) {
     super(scope, id, props);
-    this.mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
-    this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
-    this.dynamoDBTable = TableV2.fromTableName(
-      this,
-      'Icav2EventTranslatorDynamoDBTable',
-      props.icav2EventTranslatorDynamodbTableName
-    );
-    this.lambdaSG = new SecurityGroup(this, 'IcaEventTranslatorLambdaSG', {
-      vpc: this.vpc,
-      securityGroupName: props.lambdaSecurityGroupName,
-      allowAllOutbound: true,
-      description: 'Security group that allows teh Ica Event Translator function to egress out.',
-    });
 
     this.createICAv2EventTranslator(props);
   }
 
-  private createICAv2EventTranslator(props: Icav2EventTranslatorStackProps) {
+  private createICAv2EventTranslator(props: BclConvertManagerStackProps) {
+    const mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
+    const vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
+    const dynamoDBTable = TableV2.fromTableName(
+      this,
+      'Icav2EventTranslatorDynamoDBTable',
+      props.icav2EventTranslatorDynamodbTableName
+    );
+
+    const lambdaSG = new SecurityGroup(this, 'IcaEventTranslatorLambdaSG', {
+      vpc,
+      securityGroupName: props.lambdaSecurityGroupName,
+      allowAllOutbound: true,
+      description:
+        'Security group that allows teh Ica Event Translator (BclConvertManager) function to egress out.',
+    });
+
     const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
       entry: path.join(__dirname, '../translator_service'),
       runtime: this.lambdaRuntimePythonVersion,
@@ -52,20 +51,20 @@ export class Icav2EventTranslatorStack extends Stack {
         TABLE_NAME: props.icav2EventTranslatorDynamodbTableName,
         EVENT_BUS_NAME: props.eventBusName,
       },
-      vpc: this.vpc,
-      vpcSubnets: { subnets: this.vpc.privateSubnets },
-      securityGroups: [this.lambdaSG],
+      vpc: vpc,
+      vpcSubnets: { subnets: vpc.privateSubnets },
+      securityGroups: [lambdaSG],
       architecture: Architecture.ARM_64,
       timeout: Duration.seconds(28),
       index: 'icav2_event_translator.py',
       handler: 'handler',
     });
 
-    this.dynamoDBTable.grantReadWriteData(EventTranslatorFunction);
+    dynamoDBTable.grantReadWriteData(EventTranslatorFunction);
 
     // Create a rule to trigger the Lambda function from the EventBus ICAV2_EXTERNAL_EVENT
     const rule = new Rule(this, 'Rule', {
-      eventBus: this.mainBus,
+      eventBus: mainBus,
       eventPattern: {
         account: [Stack.of(this).account],
         detail: {
@@ -93,7 +92,7 @@ export class Icav2EventTranslatorStack extends Stack {
     EventTranslatorFunction.addToRolePolicy(
       new PolicyStatement({
         actions: ['events:PutEvents'],
-        resources: [this.mainBus.eventBusArn],
+        resources: [mainBus.eventBusArn],
       })
     );
   }

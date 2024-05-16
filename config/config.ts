@@ -17,9 +17,9 @@ import {
 } from './stacks/cttsov2Icav2PipelineManager';
 import { getSchemaStackProps } from './stacks/schema';
 import {
-  getIcav2EventTranslatorTableStackProps,
-  getIcav2EventTranslatorStackProps,
-} from './stacks/icav2EventTranslator';
+  getBclConvertManagerTableStackProps,
+  getBclConvertManagerStackProps,
+} from './stacks/bclConvertManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -50,7 +50,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
-            icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
+            BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -62,7 +62,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
-            icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            BclConvertManagerStackProps: getBclConvertManagerStackProps(),
           },
         },
       };
@@ -78,7 +78,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
-            icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
+            BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -90,7 +90,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
-            icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            BclConvertManagerStackProps: getBclConvertManagerStackProps(),
           },
         },
       };
@@ -106,7 +106,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
-            icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
+            BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -118,7 +118,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
-            icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            BclConvertManagerStackProps: getBclConvertManagerStackProps(),
           },
         },
       };

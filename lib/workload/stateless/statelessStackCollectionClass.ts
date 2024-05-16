@@ -32,9 +32,9 @@ import {
 } from './stacks/cttso-v2-pipeline-manager/deploy/stack';
 import { SchemaStack, SchemaStackProps } from './stacks/schema/stack';
 import {
-  Icav2EventTranslatorStack,
-  Icav2EventTranslatorStackProps,
-} from './stacks/icav2-event-translator/deploy/stack';
+  BclConvertManagerStack,
+  BclConvertManagerStackProps,
+} from './stacks/bclconvert-manager/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
@@ -46,7 +46,7 @@ export interface StatelessStackCollectionProps {
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
   cttsov2Icav2PipelineManagerStackProps: cttsov2Icav2PipelineManagerStackProps;
   schemaStackProps: SchemaStackProps;
-  icav2EventTranslatorStackProps: Icav2EventTranslatorStackProps;
+  BclConvertManagerStackProps: BclConvertManagerStackProps;
 }
 
 export class StatelessStackCollection {
@@ -60,7 +60,7 @@ export class StatelessStackCollection {
   readonly bsshIcav2FastqCopyManagerStack: Stack;
   readonly cttsov2Icav2PipelineManagerStack: Stack;
   readonly schemaStack: Stack;
-  readonly icav2EventTranslatorStack: Stack;
+  readonly BclConvertManagerStack: Stack;
 
   constructor(
     scope: Construct,
@@ -128,14 +128,10 @@ export class StatelessStackCollection {
       }
     );
 
-    this.icav2EventTranslatorStack = new Icav2EventTranslatorStack(
-      scope,
-      'Icav2EventTranslatorStack',
-      {
-        ...this.createTemplateProps(env, 'Icav2EventTranslatorStack'),
-        ...statelessConfiguration.icav2EventTranslatorStackProps,
-      }
-    );
+    this.BclConvertManagerStack = new BclConvertManagerStack(scope, 'BclConvertManagerStack', {
+      ...this.createTemplateProps(env, 'BclConvertManagerStack'),
+      ...statelessConfiguration.BclConvertManagerStackProps,
+    });
   }
 
   /**

@@ -1,10 +1,11 @@
-# ICA Event Translator
+# BclConvert Manager
 
-This stack creates the ica event translator service to translate external (ICA) events to orcabus events follow the defined schema `orcabus.wfm@WorkflowRunStateChange`. Example event can be seen [here](../../../../../docs/event-schemas/wfm/example/WRSC__bcm__bssh_bcl_convert.json). 
+## Icav2 event translator service
 
+This stack creates the ica event translator service to translate external (ICA) events to orcabus events follow the defined schema `orcabus.wfm@WorkflowRunStateChange`. Example event can be seen [here](../../../../../docs/event-schemas/wfm/example/WRSC__bcm__bssh_bcl_convert.json).
 
 <!-- TOC -->
-* [ICAv2 Event Translator](#icav2-event-translator)
+* [ICAv2 Event Translator](#icav2-event-translator-service)
   * [Inputs](#inputs)
     * [Example ICA Event Input](#example-ica-event-input)
   * [Outputs](#outputs)
@@ -16,7 +17,7 @@ This stack creates the ica event translator service to translate external (ICA) 
 <!-- TOC -->
 
 
-## Inputs
+### Inputs
 
 The AWS lambda functions takes ```External ICA Event``` events with following envelope pattern (sqs, event pipe). 
 
@@ -38,9 +39,11 @@ The AWS lambda functions takes ```External ICA Event``` events with following en
 }
 ```
 
-### Example Ica Event Input
+#### Example Ica Event Input
+
 This event is icav2 event without EventBus pipe envelop. General Event Bridge event will be with [standard wrapper format](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-events-structure.html) with payload in the detail.
-```json5
+
+``` json5
 {
   "correlationId": "xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx",
   "timestamp": "2024-03-25T10:07:09.990Z",
@@ -71,7 +74,7 @@ This event is icav2 event without EventBus pipe envelop. General Event Bridge ev
 }
 ```
 
-## Outputs
+### Outputs
 
 The AWS lambda functions put translated event following  ```WorkflowRunStateChange``` schema with the following event detail::
 
@@ -108,11 +111,13 @@ The AWS lambda functions put translated event following  ```WorkflowRunStateChan
 }
 ```
 
-## lambda function for event translation
+### lambda function for event translation
 
-### Receive and Translate ICAv2 event to Orcabus internal event
+#### Receive and Translate ICAv2 event to Orcabus internal event
+
 Combine the iput and anylsis result to generat the orcabus internal event.
 Event Pattern (filter rules) for event pipe:
+
 ```json5
 {
   account: [Stack.of(this).account],
@@ -130,7 +135,7 @@ Event Pattern (filter rules) for event pipe:
 }
 ```
 
-### Save this translation process to dynamoDB
+#### Save this translation process to dynamoDB
 Send the orignal input and orcabus event after translation to the dynamo db for audit or recording of the process. 
 
 Dynamodb format:
@@ -143,13 +148,15 @@ Dynamodb format:
 |3xxxxx-3xxxx-3xxx-3xxx-3xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | IN_PROGRESS | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
 |4xxxxx-4xxxx-4xxx-4xxx-4xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | SUCCEEDED | 20xxxxxxxxxx | |  {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
 
+#### Publish the Orcabus event to event bus
 
-### Publish the Orcabus event to event bus
 publish the Orcabus (internal) event back the event bus.
 Example output event can be seen [here](../../../../../docs/event-schemas/wfm/example/WRSC__bcm__bssh_bcl_convert.json).
 
-## Unit Test
+### Unit Test
+
 Move to icav2-event-translator/translator_service, test script: [`test_icav2_event_translator.py`](./translator_service/tests/test_icav2_event_translator.py)
+
 ```make install```
 This will install all necessary package.\
 ```make test```
