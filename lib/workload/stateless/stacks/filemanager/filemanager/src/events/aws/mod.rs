@@ -524,6 +524,12 @@ impl FlatS3EventMessage {
         self
     }
 
+    /// Set the sha256.
+    pub fn with_sha256(mut self, sha256: Option<String>) -> Self {
+        self.sha256 = sha256;
+        self
+    }
+
     pub fn default_version_id() -> String {
         "null".to_string()
     }

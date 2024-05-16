@@ -1,6 +1,8 @@
 -- Select the existing and most recent s3_objects (those that haven't yet been deleted)
 -- based on the input bucket, key and version_id values into FlatS3EventMessage structs.
--- TODO, replace this with sea-orm codegen and query builder.
+-- This query effectively fetches the current objects in S3 for a set of buckets, keys
+-- and version_ids.
+-- TODO, potentially replace this with sea-orm codegen and query builder.
 
 -- Unnest input.
 with input as (
@@ -46,6 +48,5 @@ cross join lateral (
     order by s3_object.created_date desc
     limit 1
 )
--- Return the s3_objects, discarding the input.
 as s3_object
 for update;

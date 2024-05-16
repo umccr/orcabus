@@ -276,6 +276,12 @@ impl Inventory {
 
         Ok(inventories)
     }
+
+    /// The sequencer value for an inventory event. This is the lowest possible sequencer value
+    /// so that any deleted event can bind to the inventory records.
+    pub fn inventory_sequencer() -> String {
+        String::new()
+    }
 }
 
 impl From<csv::Error> for Error {
@@ -478,7 +484,7 @@ impl From<Record> for FlatS3EventMessage {
             e_tag,
             // Set this to the empty string so that any deleted events after this can bind to this
             // created event, as they are always greater than this event.
-            sequencer: Some("".to_string()),
+            sequencer: Some(Inventory::inventory_sequencer()),
             version_id: version_id.unwrap_or_else(FlatS3EventMessage::default_version_id),
             storage_class,
             last_modified_date,
@@ -525,7 +531,7 @@ impl From<Vec<DiffMessages>> for FlatS3EventMessages {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use aws_sdk_s3::operation::get_object::GetObjectOutput;
     use aws_sdk_s3::primitives::ByteStream;
     use flate2::read::GzEncoder;
@@ -544,18 +550,20 @@ mod tests {
                 ChecksumAlgorithm, ObjectAccessControlList, ObjectOwner";
 
     const MANIFEST_KEY: &str = "Inventory/example-source-bucket/2016-11-06T21-32Z/files/939c6d46-85a9-4ba8-87bd-9db705a579ce";
-    const MANIFEST_BUCKET: &str = "example-inventory-destination-bucket";
+    pub(crate) const MANIFEST_BUCKET: &str = "example-inventory-destination-bucket";
     const EXPECTED_CHECKSUM: &str = "f11166069f1990abeb9c97ace9cdfabc"; // pragma: allowlist secret
+
+    pub(crate) const EXPECTED_E_TAG_EMPTY: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_E_TAG_KEY_2: &str = "d8e8fca2dc0f896fd7cb4cb0031ba249"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_LAST_MODIFIED_ONE: &str = "2024-04-22T01:11:06.000Z";
+    pub(crate) const EXPECTED_LAST_MODIFIED_TWO: &str = "2024-04-22T01:13:28.000Z";
+    pub(crate) const EXPECTED_LAST_MODIFIED_THREE: &str = "2024-04-22T01:14:53.000Z";
 
     #[tokio::test]
     async fn parse_csv_manifest_from_checksum() {
         let (mut client, checksum) = test_csv_manifest(None);
 
-        let bytes = serde_json::to_vec_pretty(&expected_csv_manifest(
-            Some(checksum),
-            Some(CSV_MANIFEST_SCHEMA.to_string()),
-        ))
-        .unwrap();
+        let bytes = csv_manifest_to_json(checksum);
         let checksum = format!("{}\n", hex::encode(md5::compute(bytes.as_slice()).0))
             .as_bytes()
             .to_vec();
@@ -582,14 +590,7 @@ mod tests {
 
     #[tokio::test]
     async fn parse_csv_manifest_from_key() {
-        let (mut client, checksum) = test_csv_manifest(None);
-
-        let bytes = serde_json::to_vec_pretty(&expected_csv_manifest(
-            Some(checksum),
-            Some(CSV_MANIFEST_SCHEMA.to_string()),
-        ))
-        .unwrap();
-        set_client_manifest_expectations(&mut client, bytes);
+        let client = csv_manifest_from_key_expectations();
 
         let inventory = Inventory::new(client);
         let result = inventory
@@ -730,6 +731,23 @@ mod tests {
         );
     }
 
+    pub(crate) fn csv_manifest_from_key_expectations() -> Client {
+        let (mut client, checksum) = test_csv_manifest(None);
+
+        let bytes = csv_manifest_to_json(checksum);
+        set_client_manifest_expectations(&mut client, bytes);
+
+        client
+    }
+
+    fn csv_manifest_to_json(checksum: String) -> Vec<u8> {
+        serde_json::to_vec_pretty(&expected_csv_manifest(
+            Some(checksum),
+            Some(CSV_MANIFEST_SCHEMA.to_string()),
+        ))
+        .unwrap()
+    }
+
     fn set_client_manifest_expectations(s3_client: &mut Client, data: Vec<u8>) {
         s3_client
             .expect_get_object()
@@ -860,8 +878,8 @@ mod tests {
                     key: "inventory_test/".to_string(),
                     version_id: None,
                     size: Some(0),
-                    last_modified_date: Some("2024-04-22T01:11:06.000Z".parse().unwrap()),
-                    e_tag: Some("d41d8cd98f00b204e9800998ecf8427e".to_string()),
+                    last_modified_date: Some(EXPECTED_LAST_MODIFIED_ONE.parse().unwrap()),
+                    e_tag: Some(EXPECTED_E_TAG_EMPTY.to_string()),
                     storage_class: Some(StorageClass::Standard),
                 },
                 Record {
@@ -869,8 +887,8 @@ mod tests {
                     key: "inventory_test/key1".to_string(),
                     version_id: None,
                     size: Some(0),
-                    last_modified_date: Some("2024-04-22T01:13:28.000Z".parse().unwrap()),
-                    e_tag: Some("d41d8cd98f00b204e9800998ecf8427e".to_string()),
+                    last_modified_date: Some(EXPECTED_LAST_MODIFIED_TWO.parse().unwrap()),
+                    e_tag: Some(EXPECTED_E_TAG_EMPTY.to_string()),
                     storage_class: Some(StorageClass::Standard),
                 },
                 Record {
@@ -878,8 +896,8 @@ mod tests {
                     key: "inventory_test/key2".to_string(),
                     version_id: None,
                     size: Some(5),
-                    last_modified_date: Some("2024-04-22T01:14:53.000Z".parse().unwrap()),
-                    e_tag: Some("d8e8fca2dc0f896fd7cb4cb0031ba249".to_string()),
+                    last_modified_date: Some(EXPECTED_LAST_MODIFIED_THREE.parse().unwrap()),
+                    e_tag: Some(EXPECTED_E_TAG_KEY_2.to_string()),
                     storage_class: Some(StorageClass::Standard),
                 },
             ]

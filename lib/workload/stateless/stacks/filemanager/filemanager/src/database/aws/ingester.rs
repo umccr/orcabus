@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use crate::database::{Client, CredentialGenerator, Ingest};
 use crate::error::Result;
+use crate::events::aws::inventory::Inventory;
 use crate::events::aws::message::EventType;
 use crate::events::aws::{Events, TransposedS3EventMessages};
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
@@ -61,8 +62,10 @@ impl<'a> Ingester<'a> {
                 .position(|reprocess| reprocess.s3_object_id == object.s3_object_id)
             {
                 let reprocess = reprocess.remove(pos);
-                if reprocess.sequencer.is_none() {
-                    // No re-processing if the sequencer was never set.
+                if reprocess.sequencer.is_none()
+                    || reprocess.sequencer == Some(Inventory::inventory_sequencer())
+                {
+                    // No re-processing if the sequencer was never set. Or if this event was null from an S3 inventory.
                     return false;
                 } else {
                     *object = reprocess;
@@ -1507,7 +1510,7 @@ pub(crate) mod tests {
         );
     }
 
-    fn remove_version_ids(mut events: Events) -> Events {
+    pub(crate) fn remove_version_ids(mut events: Events) -> Events {
         events
             .object_deleted
             .version_ids
@@ -1522,7 +1525,7 @@ pub(crate) mod tests {
         events
     }
 
-    fn replace_sequencers(mut events: Events, sequencer: Option<String>) -> Events {
+    pub(crate) fn replace_sequencers(mut events: Events, sequencer: Option<String>) -> Events {
         events
             .object_deleted
             .sequencers
@@ -1562,6 +1565,58 @@ pub(crate) mod tests {
         )
     }
 
+    pub(crate) fn assert_row(
+        s3_object_results: &PgRow,
+        message: FlatS3EventMessage,
+        created_sequencer: Option<String>,
+        deleted_sequencer: Option<String>,
+        created_date: Option<DateTime<Utc>>,
+        deleted_date: Option<DateTime<Utc>>,
+    ) {
+        assert_ne!(
+            s3_object_results.get::<Uuid, _>("s3_object_id"),
+            s3_object_results.get::<Uuid, _>("public_id")
+        );
+        assert_eq!(message.bucket, s3_object_results.get::<String, _>("bucket"));
+        assert_eq!(message.key, s3_object_results.get::<String, _>("key"));
+        assert_eq!(
+            message.version_id,
+            s3_object_results.get::<String, _>("version_id")
+        );
+        assert_eq!(
+            created_sequencer,
+            s3_object_results.get::<Option<String>, _>("created_sequencer")
+        );
+        assert_eq!(
+            deleted_sequencer,
+            s3_object_results.get::<Option<String>, _>("deleted_sequencer")
+        );
+        assert_eq!(
+            message.size,
+            s3_object_results.get::<Option<i64>, _>("size")
+        );
+        assert_eq!(
+            message.sha256,
+            s3_object_results.get::<Option<String>, _>("sha256")
+        );
+        assert_eq!(
+            message.e_tag,
+            s3_object_results.get::<Option<String>, _>("e_tag")
+        );
+        assert_eq!(
+            message.last_modified_date,
+            s3_object_results.get::<Option<DateTime<Utc>>, _>("last_modified_date")
+        );
+        assert_eq!(
+            created_date,
+            s3_object_results.get::<Option<DateTime<Utc>>, _>("created_date")
+        );
+        assert_eq!(
+            deleted_date,
+            s3_object_results.get::<Option<DateTime<Utc>>, _>("deleted_date")
+        );
+    }
+
     pub(crate) fn assert_with(
         s3_object_results: &PgRow,
         size: Option<i64>,
@@ -1571,41 +1626,22 @@ pub(crate) mod tests {
         created_date: Option<DateTime<Utc>>,
         deleted_date: Option<DateTime<Utc>>,
     ) {
-        assert_ne!(
-            s3_object_results.get::<Uuid, _>("s3_object_id"),
-            s3_object_results.get::<Uuid, _>("public_id")
-        );
-        assert_eq!("bucket", s3_object_results.get::<String, _>("bucket"));
-        assert_eq!("key", s3_object_results.get::<String, _>("key"));
-        assert_eq!(version_id, s3_object_results.get::<String, _>("version_id"));
-        assert_eq!(
+        let message = FlatS3EventMessage::default()
+            .with_bucket("bucket".to_string())
+            .with_key("key".to_string())
+            .with_size(size)
+            .with_version_id(version_id)
+            .with_last_modified_date(Some(DateTime::<Utc>::default()))
+            .with_e_tag(Some(EXPECTED_E_TAG.to_string()))
+            .with_sha256(Some(EXPECTED_SHA256.to_string()));
+
+        assert_row(
+            s3_object_results,
+            message,
             created_sequencer,
-            s3_object_results.get::<Option<String>, _>("created_sequencer")
-        );
-        assert_eq!(
             deleted_sequencer,
-            s3_object_results.get::<Option<String>, _>("deleted_sequencer")
-        );
-        assert_eq!(size, s3_object_results.get::<Option<i64>, _>("size"));
-        assert_eq!(
-            Some(EXPECTED_SHA256.to_string()),
-            s3_object_results.get::<Option<String>, _>("sha256")
-        );
-        assert_eq!(
-            Some(EXPECTED_E_TAG.to_string()),
-            s3_object_results.get::<Option<String>, _>("e_tag")
-        );
-        assert_eq!(
-            DateTime::<Utc>::default(),
-            s3_object_results.get::<DateTime<Utc>, _>("last_modified_date")
-        );
-        assert_eq!(
             created_date,
-            s3_object_results.get::<Option<DateTime<Utc>>, _>("created_date")
-        );
-        assert_eq!(
             deleted_date,
-            s3_object_results.get::<Option<DateTime<Utc>>, _>("deleted_date")
         );
     }
 
