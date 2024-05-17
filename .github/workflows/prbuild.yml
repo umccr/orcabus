@@ -2,13 +2,8 @@ name: Pull Request Build
 
 on:
   pull_request:
-    paths:
-      - '**'
-      - '!/*.md'
-      - '!/**.md'
-      - '!/**.png'
-      - '!/**.svg'
-      - '!/**.drawio'
+    paths-ignore:
+      - '**.md'
     types:
       - opened
       - reopened
