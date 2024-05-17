@@ -3,7 +3,13 @@ name: Pull Request Build
 on:
   pull_request:
     paths-ignore:
+      # The ignore only works only if changes to the main branch only include the following files.
+      # So if the commit only contain .md changes but the PR change contain more, the ignore fails
+      # https://github.com/actions/runner/issues/2324#issuecomment-1703345084
       - '**.md'
+      - '**.svg'
+      - '**.drawio'
+      - '**.png'
     types:
       - opened
       - reopened
