@@ -10,6 +10,7 @@
 
 - Make sure you have activated conda environment and setup dev toolchain
 - At project root, preform:
+
 ```
 conda create -n hello-manager python=3.12
 conda activate hello-manager
