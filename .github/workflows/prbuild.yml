@@ -3,6 +3,7 @@ name: Pull Request Build
 on:
   pull_request:
     paths-ignore:
+      - '*.md'
       - '**.md'
       - '**.png'
       - '**.svg'
