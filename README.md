@@ -140,10 +140,10 @@ yarn -v
 
 Additionally, we expect the following common tools be installed and available in your system shell PATH. We provide [Brewfile](Brewfile) as an example. You may manage these common tools in any other way as see fit for your local setup.
 
-```
+```sh
 brew bundle
 ```
-
+  
 ### Mocking
 
 - We use docker-compose as a mock stack for application local dev and running test suite purpose.
