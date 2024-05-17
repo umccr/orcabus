@@ -37,7 +37,6 @@ def handler(event, context):
 # Parse job parameters from Amazon S3 batch operations
     invocationId = event['invocationId']
     invocationSchemaVersion = event['invocationSchemaVersion']
-    print(invocationSchemaVersion)
 
     # Prepare results
     results = []
