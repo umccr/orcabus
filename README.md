@@ -146,7 +146,7 @@ brew bundle
 
 ### Mocking
 
-- We use docker compose as a mock stack for application local dev and running test suite purpose.
+- We use docker-compose as a mock stack for application local dev and running test suite purpose.
 - Typically, you will have your own application compose stack defined at your app project root, if any.
 - You can also reuse common docker compose stack, if applicable. See [shared/README.md](shared)
 
