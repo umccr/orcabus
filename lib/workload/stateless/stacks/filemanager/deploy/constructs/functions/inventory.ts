@@ -5,7 +5,7 @@ import { DatabaseProps } from './function';
 /**
  * The name of the inventory Lambda function.
  */
-export const INVENTORY_FUNCTION_NAME = 'orcabus-filemanager-ingest-inventory';
+export const INVENTORY_FUNCTION_NAME = 'orcabus-filemanager-inventory';
 
 export type InventoryFunctionConfig = {
   /**

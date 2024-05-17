@@ -9,7 +9,7 @@ before the filemanager was deployed.
 To use this function, call it with the bucket and key of the inventory `manifest.json` file created by S3 Inventory:
 ```sh
 aws lambda invoke \
-  --function-name orcabus-filemanager-ingest-inventory \
+  --function-name orcabus-filemanager-inventory \
   --payload '{ "bucket": "inventory_manifest_location", "key": "manifest.json" }' \
   --cli-binary-format raw-in-base64-out \
   response.json
@@ -20,10 +20,8 @@ exists under the same key prefix and a `.json` extension.
 
 Alternatively, this function can be called with the [`manifest.json` data][manifest-json] serialized directly into the function input:
 ```sh
-aws lambda invoke \
-  --function-name orcabus-filemanager-ingest-inventory \
-  --payload \
-  '{
+payload='
+{
       "sourceBucket": "example-source-bucket",
       "destinationBucket": "arn:aws:s3:::example-inventory-destination-bucket",
       "version": "2016-11-30",
@@ -37,13 +35,17 @@ aws lambda invoke \
               "MD5checksum": "<checksum_value>"
           }
       ]
-  }' \
+}
+'
+aws lambda invoke \
+  --function-name orcabus-filemanager-inventory \
+  --payload "$payload" \
   --cli-binary-format raw-in-base64-out \
   response.json
 ```
 
 The `manifest.json` is only required to contain the `destinationBucket`, `fileFormat`, and the `key` component of the `files`.
-Note, that the `destionationBucket` specified the location of the inventory file. It does not need to be a full ARN,
+Note, that the `destionationBucket` specifies the location of the inventory file. It does not need to be a full ARN,
 and can instead be the bucket name. The `fileFormat` is not required because for Parquet and Orc, the file schema is
 encoded within the inventory data. For CSV, AWS does not include header fields. So if the file schema is missing, parsing
 will attempt to use CSV headers if they are present, or default to the following headers if not present:
