@@ -1,4 +1,5 @@
 install:
+	@pip install -r requirements.txt
 	@pip install -r deps/requirements-test.txt
 
 test: install

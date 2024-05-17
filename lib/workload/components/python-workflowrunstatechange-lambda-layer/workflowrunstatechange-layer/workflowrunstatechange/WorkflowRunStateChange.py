@@ -1,14 +1,13 @@
 # coding: utf-8
 import pprint
 import re  # noqa: F401
+from datetime import datetime
 
 import six
-from enum import Enum
-from workflowrunstatechange import Payload  # noqa: F401,E501
+from . import Payload  # noqa: F401,E501
+
 
 class WorkflowRunStateChange(object):
-
-
     _types = {
         'portalRunId': 'str',
         'timestamp': 'datetime',
@@ -44,74 +43,68 @@ class WorkflowRunStateChange(object):
 
 
     @property
-    def portalRunId(self):
-
+    def portalRunId(self) -> str:
+        """Get the portalRunId"""
         return self._portalRunId
 
     @portalRunId.setter
-    def portalRunId(self, portalRunId):
-
-
+    def portalRunId(self, portalRunId: str):
+        """Set the portalRunId"""
         self._portalRunId = portalRunId
 
 
     @property
-    def timestamp(self):
-
+    def timestamp(self) -> datetime:
+        """Get the timestamp"""
         return self._timestamp
 
     @timestamp.setter
-    def timestamp(self, timestamp):
-
-
+    def timestamp(self, timestamp: datetime):
+        """Set the timestamp"""
         self._timestamp = timestamp
 
 
     @property
-    def status(self):
-
+    def status(self) -> str:
+        """Get the status"""
         return self._status
 
     @status.setter
-    def status(self, status):
-
-
+    def status(self, status: str):
+        """Set the status"""
         self._status = status
 
 
     @property
-    def workflowType(self):
-
+    def workflowType(self) -> str:
+        """Get the workflowType"""
         return self._workflowType
 
     @workflowType.setter
-    def workflowType(self, workflowType):
-
-
+    def workflowType(self, workflowType: str):
+        """Set the workflowType"""
         self._workflowType = workflowType
 
 
     @property
-    def workflowVersion(self):
-
+    def workflowVersion(self) -> str:
+        """Get the workflowVersion"""
         return self._workflowVersion
 
     @workflowVersion.setter
-    def workflowVersion(self, workflowVersion):
-
-
+    def workflowVersion(self, workflowVersion: str):
+        """Set the workflowVersion"""
         self._workflowVersion = workflowVersion
 
 
     @property
-    def payload(self):
-
+    def payload(self) -> Payload:
+        """Get the payload"""
         return self._payload
 
     @payload.setter
-    def payload(self, payload):
-
-
+    def payload(self, payload: Payload):
+        """Set the payload"""
         self._payload = payload
 
     def to_dict(self):

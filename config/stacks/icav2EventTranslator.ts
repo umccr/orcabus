@@ -1,7 +1,7 @@
 import { AppStage, vpcProps, eventBusName } from '../constants';
 import { RemovalPolicy } from 'aws-cdk-lib';
 import { Icav2EventTranslatorTableStackProps } from '../../lib/workload/stateful/stacks/icav2-event-translator-dynamo-db/deploy/stack';
-import { Icav2EventTranslatorStackProps } from '../../lib/workload/stateless/stacks/icav2-event-translator/deploy/stack';
+import { Icav2EventTranslatorStackProps } from '../../lib/workload/stateless/stacks/bclconvert-manager/deploy/stack';
 
 const dynamodbTableName = 'IcaEventTranslatorTable';
 
