@@ -104,6 +104,7 @@ mod tests {
             &manifest,
             Some(expected_schema.to_string()),
             Some(expected_checksum.to_string()),
+            "arn:aws:s3:::example-inventory-destination-bucket",
         );
     }
 
@@ -120,13 +121,23 @@ mod tests {
         })
         .to_string();
 
-        assert_manifest(&manifest, None, None);
+        assert_manifest(
+            &manifest,
+            None,
+            None,
+            "example-inventory-destination-bucket",
+        );
     }
 
-    fn assert_manifest(manifest: &str, file_schema: Option<String>, checksum: Option<String>) {
+    fn assert_manifest(
+        manifest: &str,
+        file_schema: Option<String>,
+        checksum: Option<String>,
+        bucket: &str,
+    ) {
         let result = from_str::<Request>(manifest).unwrap();
         let expected = Manifest::new(
-            "example-inventory-destination-bucket".to_string(),
+            bucket.to_string(),
             InventoryFormat::Csv,
             file_schema,
             vec![File::new("key.csv.gz".to_string(), checksum)],

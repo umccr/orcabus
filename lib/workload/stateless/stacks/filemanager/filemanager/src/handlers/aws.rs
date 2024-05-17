@@ -104,7 +104,7 @@ pub async fn ingest_s3_inventory(
             "either a manifest or bucket and key option needs to be specified".to_string(),
         ));
     };
-    trace!("records extracted from inventory: {:?}", records);
+    trace!("records extracted from inventory: {:#?}", records);
 
     let transposed_events: TransposedS3EventMessages =
         FlatS3EventMessages::from(records).sort_and_dedup().into();
@@ -114,8 +114,8 @@ pub async fn ingest_s3_inventory(
     let database_records = query
         .select_existing_by_bucket_key(
             &mut tx,
-            transposed_events.keys.as_slice(),
             transposed_events.buckets.as_slice(),
+            transposed_events.keys.as_slice(),
             transposed_events.version_ids.as_slice(),
         )
         .await?;
@@ -128,13 +128,16 @@ pub async fn ingest_s3_inventory(
     ));
     let database_records: HashSet<DiffMessages> =
         HashSet::from_iter(Vec::<DiffMessages>::from(database_records));
+
+    // Note, it isn't strictly necessary to perform a diff as the database will handle duplicate
+    // records, however this saves some unnecessary database processing.
     let diff = &transposed_events - &database_records;
 
     if diff.is_empty() {
         debug!("no diff found between database and inventory");
         Ok(Ingester::new(database_client))
     } else {
-        debug!("diff found between database and inventory: {:?}", diff);
+        debug!("diff found between database and inventory: {:#?}", diff);
 
         // Note, not using collector here because we don't want to call head on all the objects.
         // This means that objects are assumed to exist when ingesting, and it is not confirmed whether
