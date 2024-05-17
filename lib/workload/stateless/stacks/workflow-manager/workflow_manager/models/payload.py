@@ -1,5 +1,5 @@
-from django.db import models
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db import models
 
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 
@@ -11,9 +11,8 @@ class PayloadManager(OrcaBusBaseManager):
 class Payload(OrcaBusBaseModel):
     id = models.BigAutoField(primary_key=True)
 
-    # Definition from an external source (as known to the execution engine)
-    payload_type = models.CharField(max_length=255)
     payload_ref_id = models.CharField(max_length=255, unique=True)
+    version = models.CharField(max_length=255)
     data = models.JSONField(encoder=DjangoJSONEncoder)
 
     objects = PayloadManager()
