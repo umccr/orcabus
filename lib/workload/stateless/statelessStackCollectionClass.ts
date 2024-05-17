@@ -34,7 +34,7 @@ import { SchemaStack, SchemaStackProps } from './stacks/schema/stack';
 import {
   Icav2EventTranslatorStack,
   Icav2EventTranslatorStackProps,
-} from './stacks/icav2-event-translator/deploy/stack';
+} from './stacks/bclconvert-manager/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;

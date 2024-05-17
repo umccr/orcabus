@@ -92,7 +92,7 @@ The AWS lambda functions put translated event following  ```WorkflowRunStateChan
     "workflowType": "bssh_bcl_convert",
     "workflowVersion": "4.2.7",
     "payload": {
-      "refId": None,
+      "refId": null,
       "version": "0.1.0",
       "projectId": "valid_project_id",
       "analysisId": "valid_payload_id",

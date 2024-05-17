@@ -8,6 +8,7 @@ import { ISecurityGroup, IVpc, Vpc, VpcLookupOptions, SecurityGroup } from 'aws-
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
+import { PythonWorkflowrunstatechangeLambdaLayerConstruct } from '../../../../components/python-workflowrunstatechange-lambda-layer';
 
 export interface Icav2EventTranslatorStackProps {
   /** dynamodb name and event bus name */
@@ -38,13 +39,22 @@ export class Icav2EventTranslatorStack extends Stack {
       vpc: this.vpc,
       securityGroupName: props.lambdaSecurityGroupName,
       allowAllOutbound: true,
-      description: 'Security group that allows teh Ica Event Translator function to egress out.',
+      description: 'Security group that allows the Ica Event Translator function to egress out.',
     });
 
     this.createICAv2EventTranslator(props);
   }
 
   private createICAv2EventTranslator(props: Icav2EventTranslatorStackProps) {
+    const workflowrunstatechangeLambdaLayer = new PythonWorkflowrunstatechangeLambdaLayerConstruct(
+      this,
+      'WorkflowrunstatechangeLambdaLayer',
+      {
+        layerDescription: 'The workflow run statechange module for the BCLConvert Manager',
+        layerName: 'BCLConvertManagerWorkflowRunStateChangelambdaLayer',
+      }
+    );
+
     const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
       entry: path.join(__dirname, '../translator_service'),
       runtime: this.lambdaRuntimePythonVersion,
@@ -59,6 +69,7 @@ export class Icav2EventTranslatorStack extends Stack {
       timeout: Duration.seconds(28),
       index: 'icav2_event_translator.py',
       handler: 'handler',
+      layers: [workflowrunstatechangeLambdaLayer.lambdaLayerVersionObj],
     });
 
     this.dynamoDBTable.grantReadWriteData(EventTranslatorFunction);

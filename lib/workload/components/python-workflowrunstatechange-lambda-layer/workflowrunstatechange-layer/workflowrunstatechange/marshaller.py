@@ -1,7 +1,9 @@
 import datetime
 import re
 import six
-import workflowrunstatechange as workflowrunstatechange
+
+from .WorkflowRunStateChange import WorkflowRunStateChange
+
 
 class Marshaller:
     PRIMITIVE_TYPES = (float, bool, bytes, six.text_type) + six.integer_types
@@ -62,7 +64,7 @@ class Marshaller:
             if typeName in cls.NATIVE_TYPES_MAPPING:
                 typeName = cls.NATIVE_TYPES_MAPPING[typeName]
             else:
-                typeName = getattr(workflowrunstatechange, typeName)
+                typeName = getattr(WorkflowRunStateChange, typeName)
 
         if typeName in cls.PRIMITIVE_TYPES:
             return cls.__unmarshall_primitive(data, typeName)
