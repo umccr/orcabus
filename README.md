@@ -163,6 +163,7 @@ brew bundle
 ### Code Formatting
 
 TypeScript
+
 - Run prettier: `yarn prettier`
 - Fix prettier issue: `yarn prettier-fix`
 - Opt-out prettier: See [.prettierignore](.prettierignore)
