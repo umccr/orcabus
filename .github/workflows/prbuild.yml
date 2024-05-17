@@ -2,6 +2,12 @@ name: Pull Request Build
 
 on:
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - '**.png'
+      - '**.svg'
+      - '**.jpg'
+      - '**.jpeg'
     types:
       - opened
       - reopened
