@@ -21,23 +21,23 @@ class WorkflowRunStateChange(object):
         'portalRunId': 'portalRunId',
         'timestamp': 'timestamp',
         'status': 'status',
-        'workflowType': 'workflowType',
+        'workflowName': 'workflowName',
         'workflowVersion': 'workflowVersion',
         'payload': 'payload'
     }
 
-    def __init__(self, portal_run_id=None, timestamp=None, status=None, workflow_type=None, workflow_version=None, payload=None):  # noqa: E501
+    def __init__(self, portal_run_id=None, timestamp=None, status=None, workflow_name=None, workflow_version=None, payload=None):  # noqa: E501
         self._portalRunId = None
         self._timestamp = None
         self._status = None
-        self._workflowType = None
+        self._workflowName = None
         self._workflowVersion = None
         self._payload = None
         self.discriminator = None
         self.portalRunId = portal_run_id
         self.timestamp = timestamp
         self.status = status
-        self.workflowType = workflow_type
+        self.workflowName = workflow_name
         self.workflowVersion = workflow_version
         self.payload = payload
 
@@ -76,14 +76,14 @@ class WorkflowRunStateChange(object):
 
 
     @property
-    def workflowType(self) -> str:
-        """Get the workflowType"""
-        return self._workflowType
+    def workflowName(self) -> str:
+        """Get the workflowName"""
+        return self._workflowName
 
-    @workflowType.setter
-    def workflowType(self, workflowType: str):
-        """Set the workflowType"""
-        self._workflowType = workflowType
+    @workflowName.setter
+    def workflowName(self, workflowName: str):
+        """Set the workflowName"""
+        self._workflowName = workflowName
 
 
     @property

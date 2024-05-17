@@ -4,8 +4,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import path from 'path';
 
 export interface PythonWorkflowrunstatechangeLambdaLayerConstructProps {
-  layerName: string;
-  layerDescription: string;
+  layerName?: string;
+  layerDescription?: string;
 }
 
 export class PythonWorkflowrunstatechangeLambdaLayerConstruct extends Construct {
