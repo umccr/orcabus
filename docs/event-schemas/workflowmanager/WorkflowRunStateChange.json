@@ -54,8 +54,9 @@
           "portalRunId",
           "timestamp",
           "status",
-          "workflowType",
+          "workflowName",
           "workflowVersion",
+          "workflowRunName",
           "payload"
         ],
         "properties": {
@@ -69,10 +70,13 @@
           "status": {
             "type": "string"
           },
-          "workflowType": {
+          "workflowName": {
             "type": "string"
           },
           "workflowVersion": {
+            "type": "string"
+          },
+          "workflowRunName": {
             "type": "string"
           },
           "payload": {
@@ -93,8 +97,14 @@
           },
           "version": {
             "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Data"
           }
-        },
+        }
+      },
+      "Data": {
+        "type": "object",
         "additionalProperties": true
       }
     }
