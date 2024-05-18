@@ -15,9 +15,12 @@ export const getSchemaStackProps = (): SchemaStackProps => {
       // adjust name, description, location accordingly
       {
         ...defaultProps,
-        schemaName: 'orcabus.srm@SequenceRunStateChange',
+        schemaName: 'orcabus.sequencerunmanager@SequenceRunStateChange',
         schemaDescription: 'State change event for sequencing run by SequenceRunManager',
-        schemaLocation: path.join(__dirname, docBase + '/srm/SequenceRunStateChange.json'),
+        schemaLocation: path.join(
+          __dirname,
+          docBase + '/sequencerunmanager/SequenceRunStateChange.json'
+        ),
       },
       {
         ...defaultProps,
