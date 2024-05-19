@@ -10,6 +10,7 @@ Pushes an event based on the putSource event attribute,
 
 ALl other attributes remain the same
 """
+from copy import deepcopy
 
 from workflowrunstatechange import WorkflowRunStateChange, AWSEvent, Marshaller, generate_portal_run_id
 from datetime import datetime, timezone
@@ -59,18 +60,20 @@ def translate_to_aws_event_with_new_source(event) -> AWSEvent:
 
 
 def get_event_details(event) -> WorkflowRunStateChange:
+    # Generate portal run id
+    new_portal_run_id = generate_portal_run_id()
     # generate internal event with required attributes
     return WorkflowRunStateChange(
-        portal_run_id=handle_portal_run_id(event),
+        portal_run_id=handle_portal_run_id(event, new_portal_run_id),
         timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         status=environ["OUTPUT_EVENT_STATUS"],  # change the status to complete from succeeded
         workflow_name=event.get("workflowName"),
         workflow_version=event.get("workflowVersion"),
-        payload=event.get("payload")
+        payload=handle_payload(event.get("payload"), new_portal_run_id),
     )
 
 
-def handle_portal_run_id(event):
+def handle_portal_run_id(event, portal_run_id):
     # If the portal run id is in the event, then we relay this
     if "portalRunId" in event:
         return event.get("portalRunId")
@@ -78,4 +81,17 @@ def handle_portal_run_id(event):
     # If the portal run id is not in the event and we need one (because this is a 'ready' event)
     # Then we need to generate one
     if environ["OUTPUT_EVENT_STATUS"] == "ready":
-        return generate_portal_run_id()
+        return portal_run_id
+
+
+def handle_payload(payload: typing.Dict, portal_run_id: str):
+    # Recursively traverse the payload data attribute, replace values
+    # where __portal_run_id__ is found with portal_run_id
+    for key, item in deepcopy(payload).items():
+        if isinstance(item, dict):
+            payload[key] = handle_payload(item, portal_run_id)
+        elif isinstance(item, list):
+            for i in deepcopy(payload[key]):
+                payload[key][i] = handle_payload(i, portal_run_id)
+        elif isinstance(item, str):
+            payload[key] = item.replace("__portalRunId__", portal_run_id)

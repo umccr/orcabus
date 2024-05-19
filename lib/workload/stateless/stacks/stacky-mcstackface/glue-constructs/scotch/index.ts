@@ -71,7 +71,7 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
 
     Output Event source: `orcabus.metadatamanager`
     Output Event DetailType: `orcabus.librarystatechange`
-    Output Event status: `libraryrunidregistered`
+    Output Event status: `libraryrunidsregistered`
 
     * The UpdateDataBaseOnNewSampleSheet Construct
       * Subscribes to the BCLConvertManagerEventHandler Stack outputs and updates the database:

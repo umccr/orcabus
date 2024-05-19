@@ -1,0 +1,271 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Decompress SampleSheet",
+  "States": {
+    "Decompress SampleSheet": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload": {
+          "samplesheet_b64gz": "$.samplesheetB64gz"
+        },
+        "FunctionName": "${__decompress_samplesheet_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Update DataBases",
+      "Comment": "Gunzip SampleSheet",
+      "ResultPath": "$.decompress_samplesheet_step",
+      "ResultSelector": {
+        "samplesheet_json.$": "$.samplesheet_json"
+      }
+    },
+    "Update DataBases": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "Registed SampleSheet by RunID",
+          "States": {
+            "Registed SampleSheet by RunID": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "Column": {
+                    "S": "MyEntry"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Collect LibraryIDs",
+          "States": {
+            "Collect LibraryIDs": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__collect_library_ids_lambda_arn__}",
+                "Payload": {
+                  "samplesheet_json.$": "$.decompress_samplesheet_step.samplesheet_json"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Update LibraryID databases",
+              "ResultPath": "$.collect_library_ids_step",
+              "ResultSelector": {
+                "library_id_dict_list.$": "$.Payload.library_id_dict_list",
+                "library_run_id_dict_list.$": "$.Payload.library_run_id_dict_list"
+              }
+            },
+            "Update LibraryID databases": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Put LibraryRunIds",
+                  "States": {
+                    "Put LibraryRunIds": {
+                      "Type": "Map",
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Register LibraryRunIds in DB",
+                        "States": {
+                          "Register LibraryRunIds in DB": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:putItem",
+                            "Parameters": {
+                              "TableName": "${__table_name__}",
+                              "Item": {
+                                "Column": {
+                                  "S": "MyEntry"
+                                }
+                              }
+                            },
+                            "End": true
+                          }
+                        }
+                      },
+                      "ItemsPath": "$.collect_library_ids_step.library_run_id_dict_list",
+                      "ResultPath": "$.library_run_ids_map_step",
+                      "Next": "Push LibraryrunIds registered event"
+                    },
+                    "Push LibraryrunIds registered event": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+                      "Parameters": {
+                        "Entries": [
+                          {
+                            "Detail": {
+                              "Message": "Hello from Step Functions!",
+                              "TaskToken.$": "$$.Task.Token"
+                            },
+                            "DetailType": "MyDetailType",
+                            "EventBusName": "MyEventBusName",
+                            "Source": "MySource"
+                          }
+                        ]
+                      },
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Update LibraryIDs",
+                  "States": {
+                    "Update LibraryIDs": {
+                      "Type": "Map",
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Get LibraryID from Database",
+                        "States": {
+                          "Get LibraryID from Database": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:getItem",
+                            "Parameters": {
+                              "TableName": "${__table_name__}",
+                              "Key": {
+                                "Column": {
+                                  "S": "MyEntry"
+                                }
+                              }
+                            },
+                            "Next": "Choice",
+                            "ResultPath": "$.get_library_id_step"
+                          },
+                          "Choice": {
+                            "Type": "Choice",
+                            "Choices": [
+                              {
+                                "Variable": "$.get_library_id_step.Item",
+                                "IsPresent": true,
+                                "Next": "Append LibraryRunIDs to LibraryId List"
+                              }
+                            ],
+                            "Default": "Query LabMetadata From Athena"
+                          },
+                          "Query LabMetadata From Athena": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "OutputPath": "$.Payload",
+                            "Parameters": {
+                              "FunctionName": "${__query_lab_metadata_lambda_arn__}",
+                              "Payload": {
+                                "library_id": ""
+                              }
+                            },
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "Lambda.ServiceException",
+                                  "Lambda.AWSLambdaException",
+                                  "Lambda.SdkClientException",
+                                  "Lambda.TooManyRequestsException"
+                                ],
+                                "IntervalSeconds": 1,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2
+                              }
+                            ],
+                            "Next": "Put LibraryId in DataBase and add LibraryRunId to list",
+                            "ResultPath": "$.query_lab_metadata_from_athena_step"
+                          },
+                          "Append LibraryRunIDs to LibraryId List": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:updateItem",
+                            "Parameters": {
+                              "TableName": "${__table_name__}",
+                              "Key": {
+                                "Column": {
+                                  "S": "MyEntry"
+                                }
+                              },
+                              "UpdateExpression": "SET MyKey = :myValueRef",
+                              "ExpressionAttributeValues": {
+                                ":myValueRef": {
+                                  "S": "MyValue"
+                                }
+                              }
+                            },
+                            "End": true
+                          },
+                          "Put LibraryId in DataBase and add LibraryRunId to list": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:putItem",
+                            "Parameters": {
+                              "TableName": "${__table_name__}",
+                              "Item": {
+                                "Column": {
+                                  "S": "MyEntry"
+                                }
+                              }
+                            },
+                            "End": true
+                          }
+                        }
+                      },
+                      "ResultPath": "$.update_library_ids",
+                      "ItemsPath": "$.collect_library_ids_step.library_id_dict_list",
+                      "Next": "Push libraryid registered event"
+                    },
+                    "Push libraryid registered event": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+                      "Parameters": {
+                        "Entries": [
+                          {
+                            "Detail": {
+                              "Message": "Hello from Step Functions!",
+                              "TaskToken.$": "$$.Task.Token"
+                            },
+                            "DetailType": "MyDetailType",
+                            "EventBusName": "MyEventBusName",
+                            "Source": "MySource"
+                          }
+                        ]
+                      },
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "End": true,
+              "ResultPath": "$.update_libraryid_databases"
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.update_db_step"
+    }
+  }
+}
