@@ -164,3 +164,5 @@ Move to icav2-event-translator/translator_service, test script: [`test_icav2_eve
 This will install all necessary package.\
 ```make test```
 Run unit testing for lambda function.
+
+> **_NOTE:_**: As icav2_event_translator service depends on schemas-codebinding-layer, we need set PYTHONPATH=$(path/to/layer):$$PYTHONPATH for layer module import.

@@ -77,6 +77,7 @@ export class StatelessStackCollection {
         ...this.createTemplateProps(env, 'SchemasCodeBindingLayerStack'),
       }
     );
+
     this.schemaStack = new SchemaStack(scope, 'SchemaStack', {
       ...this.createTemplateProps(env, 'SchemaStack'),
       ...statelessConfiguration.schemaStackProps,

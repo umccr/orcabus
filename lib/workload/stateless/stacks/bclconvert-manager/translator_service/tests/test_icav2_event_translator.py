@@ -89,7 +89,6 @@ class TestICAv2EventTranslator(unittest.TestCase):
     @freeze_time("2024-01-1")
     def test_valid_events_handler(self, mock_uuid4):
         # Your test code goes here
-        
         response = {'Items': [], 'Count': 0, 'ScannedCount': 0}
         expected_params = {
             'TableName': 'test_table',
@@ -124,7 +123,7 @@ class TestICAv2EventTranslator(unittest.TestCase):
             "timestamp": datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
             "status": "SUCCEEDED",
             "workflowName":"BclConvert",
-            "workflowVersion": "4.2.7",
+            "workflowVersion": "0.0.0",
             "workflowRunName": "123456_A1234_0000_TestingPattern",
             "payload": {
                 "refId": None,

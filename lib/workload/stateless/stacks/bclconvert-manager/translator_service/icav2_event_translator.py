@@ -33,20 +33,23 @@ The event tranlator then returns the following:
   "portalRunId": '20xxxxxxxxxx',
   "timestamp": "2024-00-25T00:07:00Z",
   "status": "SUCCEEDED",
-  "workflowType": "bssh_bcl_convert",
+  "workflowName": "BclConvert",
   "workflowVersion": "4.2.7",
+  workflowRunName: "123456_A1234_0000_TestingPattern",
   "payload": {
     "refId": None,
     "version": "0.1.0",
-    "projectId": "valid_project_id",
-    "analysisId": "valid_payload_id",
-    "userReference": "123456_A1234_0000_TestingPattern",
-    "timeCreated": "2024-01-01T00:11:35Z",
-    "timeModified": "2024-01-01T01:24:29Z",
-    "pipelineId": "valid_pipeline_id",
-    "pipelineCode": "BclConvert v0_0_0",
-    "pipelineDescription": "BclConvert pipeline.",
-    "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
+    "data": {
+      "projectId": "valid_project_id",
+      "analysisId": "valid_payload_id",
+      "userReference": "123456_A1234_0000_TestingPattern",
+      "timeCreated": "2024-01-01T00:11:35Z",
+      "timeModified": "2024-01-01T01:24:29Z",
+      "pipelineId": "valid_pipeline_id",
+      "pipelineCode": "BclConvert v0_0_0",
+      "pipelineDescription": "BclConvert pipeline.",
+      "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
+    }
   }
 }
 """
@@ -120,7 +123,7 @@ def handler(event, context):
       dynamodb.update_item(
           TableName=table_name,
           Key={
-              'id': {'S': internal_ica_event.detail.get('data', '').get("analysisId", '')},
+              'id': {'S': internal_ica_event.detail.payload.get("data", '').get("analysisId", '')},
               'id_type': {'S': 'analysis_id'}
           },
           UpdateExpression='SET db_uuid = :db_uuid',
@@ -166,13 +169,15 @@ def get_event_details(event)->WorkflowRunStateChange:
     payload = event.get("payload", {})
     pipeline = payload.get("pipeline", {})
     
+    event_name, version = parse_event_code(pipeline.get("code",''))
+    
     # generate internal event with required attributes
     return WorkflowRunStateChange(
       portalRunId= get_portal_run_id(payload.get("id", '')),
       timestamp= datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
       status= analysis_status,
-      workflowName= "BclConvert",
-      workflowVersion= "4.2.7",
+      workflowName= event_name,
+      workflowVersion= version,
       workflowRunName= payload.get("userReference", ''),
       payload= {
         "refId": None,
@@ -245,7 +250,32 @@ def generate_new_portal_run(analysis_id: str)->str:
         raise Exception("Failed to store new portal run id in the DynamoDB table. Error: ", e)
     logger.info(f"New portal run id created and stored in the DynamoDB table.")
     return new_portal_run_id
-  
+
+def parse_event_code(event_code):
+    # Split the event code by space to separate the event name and version string
+    parts = event_code.split(" ")
+    if len(parts) != 2:
+        raise ValueError("Event code format must be 'EventName vMajor_Minor_Patch'")
+
+    event_name = parts[0]
+    version_part = parts[1]
+
+    # Remove the leading 'v' from the version string
+    if not version_part.startswith('v'):
+        raise ValueError("Version must start with 'v'")
+    
+    version_numbers = version_part[1:]  # Remove the 'v'
+
+    # Split the version numbers by underscore
+    version_numbers = version_numbers.split("_")
+    if len(version_numbers) != 3:
+        raise ValueError("Version must be in the format 'Major_Minor_Patch'")
+
+    # Join the version numbers with dots to form the standard version format
+    version = ".".join(version_numbers)
+
+    return event_name, version
+
 def generate_portal_run_id()->str:
         return f"{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')}{str(uuid4())[:8]}"
 
