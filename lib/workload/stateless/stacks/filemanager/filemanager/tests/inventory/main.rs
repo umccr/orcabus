@@ -193,3 +193,69 @@ async fn csv_no_version_with_manifest() {
     .await;
     assert_eq!(result, expected_records_no_version());
 }
+
+#[tokio::test]
+async fn orc_with_checksum() {
+    let client = mock_client_for_inventory!(
+        "filemanager-inventory-test",
+        "orc_inventory.orc",
+        "orc_inventory_manifest.json",
+        "orc_inventory_manifest.checksum"
+    );
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "orc_inventory_manifest.checksum",
+    )
+    .await;
+    assert_eq!(result, expected_records());
+}
+
+#[tokio::test]
+async fn orc_with_manifest() {
+    let client = mock_client_for_inventory!(
+        "filemanager-inventory-test",
+        "orc_inventory.orc",
+        "orc_inventory_manifest.json"
+    );
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "orc_inventory_manifest.json",
+    )
+    .await;
+    assert_eq!(result, expected_records());
+}
+
+#[tokio::test]
+async fn parquet_with_checksum() {
+    let client = mock_client_for_inventory!(
+        "filemanager-inventory-test",
+        "parquet_inventory.parquet",
+        "parquet_inventory_manifest.json",
+        "parquet_inventory_manifest.checksum"
+    );
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "parquet_inventory_manifest.checksum",
+    )
+    .await;
+    assert_eq!(result, expected_records());
+}
+
+#[tokio::test]
+async fn parquet_with_manifest() {
+    let client = mock_client_for_inventory!(
+        "filemanager-inventory-test",
+        "parquet_inventory.parquet",
+        "parquet_inventory_manifest.json"
+    );
+    let result = parse_records(
+        client,
+        "filemanager-inventory-test",
+        "parquet_inventory_manifest.json",
+    )
+    .await;
+    assert_eq!(result, expected_records());
+}
