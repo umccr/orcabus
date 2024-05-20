@@ -1,12 +1,13 @@
 import { Construct } from 'constructs';
 import { Duration, Stack, StackProps } from 'aws-cdk-lib';
-import { TableV2, ITableV2 } from 'aws-cdk-lib/aws-dynamodb';
+import { TableV2 } from 'aws-cdk-lib/aws-dynamodb';
 import { EventBus, Rule, IEventBus } from 'aws-cdk-lib/aws-events';
 import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
-import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { ISecurityGroup, IVpc, Vpc, VpcLookupOptions, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
+import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
+import { Vpc, VpcLookupOptions, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
 
 export interface BclConvertManagerStackProps {
@@ -16,6 +17,8 @@ export interface BclConvertManagerStackProps {
   /** vpc ann SG for lambda function */
   vpcProps: VpcLookupOptions;
   lambdaSecurityGroupName: string;
+  /** SchemasCodeBindingLambdaLayer Arn for translator function*/
+  schemasCodeBindingLambdaLayerArn: string;
 }
 
 export class BclConvertManagerStack extends Stack {
@@ -23,7 +26,6 @@ export class BclConvertManagerStack extends Stack {
 
   constructor(scope: Construct, id: string, props: StackProps & BclConvertManagerStackProps) {
     super(scope, id, props);
-
     this.createICAv2EventTranslator(props);
   }
 
@@ -34,6 +36,11 @@ export class BclConvertManagerStack extends Stack {
       this,
       'Icav2EventTranslatorDynamoDBTable',
       props.icav2EventTranslatorDynamodbTableName
+    );
+    const SchemasCodeBindingLambdaLayer = PythonLayerVersion.fromLayerVersionArn(
+      this,
+      'SchemasCodeBindingLambdaLayer',
+      props.schemasCodeBindingLambdaLayerArn
     );
 
     const lambdaSG = new SecurityGroup(this, 'IcaEventTranslatorLambdaSG', {
@@ -46,6 +53,7 @@ export class BclConvertManagerStack extends Stack {
 
     const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
       entry: path.join(__dirname, '../translator_service'),
+      layers: [SchemasCodeBindingLambdaLayer],
       runtime: this.lambdaRuntimePythonVersion,
       environment: {
         TABLE_NAME: props.icav2EventTranslatorDynamodbTableName,

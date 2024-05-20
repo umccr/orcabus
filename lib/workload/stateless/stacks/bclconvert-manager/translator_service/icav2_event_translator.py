@@ -50,7 +50,6 @@ The event tranlator then returns the following:
   }
 }
 """
-
 import os
 import json
 import logging
@@ -121,7 +120,7 @@ def handler(event, context):
       dynamodb.update_item(
           TableName=table_name,
           Key={
-              'id': {'S': internal_ica_event.detail.payload.get("analysisId", '')},
+              'id': {'S': internal_ica_event.detail.get('data', '').get("analysisId", '')},
               'id_type': {'S': 'analysis_id'}
           },
           UpdateExpression='SET db_uuid = :db_uuid',

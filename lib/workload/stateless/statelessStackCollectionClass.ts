@@ -36,6 +36,8 @@ import {
   BclConvertManagerStackProps,
 } from './stacks/bclconvert-manager/deploy/stack';
 
+import { SchemasCodeBindingLayerStack } from './stacks/schemas-codebinding-layer';
+
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -61,12 +63,20 @@ export class StatelessStackCollection {
   readonly cttsov2Icav2PipelineManagerStack: Stack;
   readonly schemaStack: Stack;
   readonly BclConvertManagerStack: Stack;
+  readonly SchemasCodeBindingStack: SchemasCodeBindingLayerStack;
 
   constructor(
     scope: Construct,
     env: Environment,
     statelessConfiguration: StatelessStackCollectionProps
   ) {
+    this.SchemasCodeBindingStack = new SchemasCodeBindingLayerStack(
+      scope,
+      'SchemasCodeBindingLayerStack',
+      {
+        ...this.createTemplateProps(env, 'SchemasCodeBindingLayerStack'),
+      }
+    );
     this.schemaStack = new SchemaStack(scope, 'SchemaStack', {
       ...this.createTemplateProps(env, 'SchemaStack'),
       ...statelessConfiguration.schemaStackProps,
@@ -131,6 +141,7 @@ export class StatelessStackCollection {
     this.BclConvertManagerStack = new BclConvertManagerStack(scope, 'BclConvertManagerStack', {
       ...this.createTemplateProps(env, 'BclConvertManagerStack'),
       ...statelessConfiguration.BclConvertManagerStackProps,
+      ...{ schemasCodeBindingLambdaLayerArn: this.SchemasCodeBindingStack.lambdaLayerVersionArn },
     });
   }
 
