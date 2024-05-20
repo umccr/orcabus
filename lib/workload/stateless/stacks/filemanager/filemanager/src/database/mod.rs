@@ -21,7 +21,7 @@ pub trait CredentialGenerator {
 }
 
 /// A database client handles database interaction.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Client<'a> {
     // Use a Cow here to allow an owned pool or a shared reference to a pool.
     pool: Cow<'a, PgPool>,

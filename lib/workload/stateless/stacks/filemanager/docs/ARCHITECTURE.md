@@ -21,6 +21,11 @@ and `version_id` are the same, the sequencer value determines the ordering of ev
 sequencer value is smaller than another event's sequencer value. Duplicate events have the same `bucket`, `key`,
 `version_id` and `sequencer` values for an event type.
 
+Objects can also be ingested using an external [S3 inventory][s3-inventory]. The S3 inventory does not contain any 
+sequencer values, and so it cannot be compared directly with events containing sequencer values. The filemanager makes
+some assumptions about how to ingest S3 inventory data as there is inherent ambiguity in the ordering of data.
+See the [implementation section][inventory-implementation] of `filemanager-inventory-lambda` for more information.
+
 ### Duplicate events
 
 Within the application code, duplicate events are removed in the [events] module by matching on the `bucket`, `key`,
@@ -41,3 +46,5 @@ database to be re-inserted. If it is not met, then the event is inserted normall
 
 [events]: ../filemanager/src/events
 [s3-events]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventNotifications.html
+[s3-inventory]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html
+[inventory-implementation]: ../filemanager-inventory-lambda/README.md#implementation

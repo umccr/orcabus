@@ -4,7 +4,7 @@
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use chrono::{DateTime, Utc};
 use itertools::{izip, Itertools};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use uuid::Uuid;
 
@@ -15,10 +15,12 @@ use crate::events::aws::EventType::{Created, Deleted, Other};
 use crate::uuid::UuidGenerator;
 
 pub mod collecter;
+pub mod inventory;
 pub mod message;
 
 /// A wrapper around AWS storage types with sqlx support.
-#[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type)]
+#[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[sqlx(type_name = "storage_class")]
 pub enum StorageClass {
     DeepArchive,
@@ -519,6 +521,12 @@ impl FlatS3EventMessage {
     /// Set the event type.
     pub fn with_event_type(mut self, event_type: EventType) -> Self {
         self.event_type = event_type;
+        self
+    }
+
+    /// Set the sha256.
+    pub fn with_sha256(mut self, sha256: Option<String>) -> Self {
+        self.sha256 = sha256;
         self
     }
 

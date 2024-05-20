@@ -5,6 +5,7 @@ use std::result;
 
 use aws_sdk_s3 as s3;
 use aws_sdk_s3::error::SdkError;
+use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::operation::list_buckets::{ListBucketsError, ListBucketsOutput};
 use aws_sdk_s3::types::ChecksumMode::Enabled;
@@ -45,6 +46,21 @@ impl Client {
     ) -> Result<HeadObjectOutput, HeadObjectError> {
         self.inner
             .head_object()
+            .checksum_mode(Enabled)
+            .key(key)
+            .bucket(bucket)
+            .send()
+            .await
+    }
+
+    /// Execute the `GetObject` operation.
+    pub async fn get_object(
+        &self,
+        key: &str,
+        bucket: &str,
+    ) -> Result<GetObjectOutput, GetObjectError> {
+        self.inner
+            .get_object()
             .checksum_mode(Enabled)
             .key(key)
             .bucket(bucket)
