@@ -8,17 +8,27 @@ class WorkflowManager(OrcaBusBaseManager):
 
 
 class Workflow(OrcaBusBaseModel):
+    class Meta:
+        # a combo of this gives us human-readable pipeline id
+        unique_together = ["workflow_name", "workflow_version"]
+
     id = models.BigAutoField(primary_key=True)
 
-    # Definition from an external source (as known to the execution engine)
+    # human choice - how this is being named
     workflow_name = models.CharField(max_length=255)
+
+    # human choice - how this is being named
     workflow_version = models.CharField(max_length=255)
-    workflow_ref_id = models.CharField(max_length=255, unique=True)
+
+    # human choice - how this is being named
     execution_engine = models.CharField(max_length=255)
 
-    approval_state = models.CharField(max_length=255) # FIXME: figure out what states we have and how many
+    # definition from an external system (as known to the execution engine)
+    execution_engine_pipeline_id = models.CharField(max_length=255)
+
+    approval_state = models.CharField(max_length=255)  # FIXME: figure out what states we have and how many
 
     objects = WorkflowManager()
 
     def __str__(self):
-        return f"ID: {self.id}, workflow_ref_id: {self.workflow_ref_id}"
+        return f"ID: {self.id}, workflow_name: {self.workflow_name}, workflow_version: {self.workflow_version}"
