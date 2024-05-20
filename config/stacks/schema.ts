@@ -25,6 +25,15 @@ export const getSchemaStackProps = (): SchemaStackProps => {
         schemaDescription: 'State change event for workflow run',
         schemaLocation: path.join(__dirname, docBase + '/wfm/WorkflowRunStateChange.json'),
       },
+      {
+        ...defaultProps,
+        schemaName: 'orcabus.bclconvertmanager@WorkflowRunStateChange',
+        schemaDescription: 'State change event for workflow run by BclConvertManager',
+        schemaLocation: path.join(
+          __dirname,
+          docBase + '/bclconvertmanager/WorkflowRunStateChange.json'
+        ),
+      },
     ],
   };
 };

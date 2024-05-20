@@ -2,7 +2,7 @@
 
 ## Icav2 event translator service
 
-This stack creates the ica event translator service to translate external (ICA) events to orcabus events follow the defined schema `orcabus.wfm@WorkflowRunStateChange`. Example event can be seen [here](../../../../../docs/event-schemas/wfm/example/WRSC__bcm__bssh_bcl_convert.json).
+This stack creates the ica event translator service to translate external (ICA) events to orcabus events follow the defined schema `orcabus.wfm@WorkflowRunStateChange`. Example event can be seen [here](../../../../../docs/event-schemas/bclconvertmanager/example/WRSC__bcm__bssh_bcl_convert.json).
 
 <!-- TOC -->
 * [ICAv2 Event Translator](#icav2-event-translator-service)
@@ -80,32 +80,35 @@ The AWS lambda functions put translated event following  ```WorkflowRunStateChan
 
 ```json5
 {
-  "version": "0", // by default is 0
-  "id": "dxxxxx-6xxxx-fxxx-1xxx-5xxxxx",
-  "detail-type": "WorkflowRunStateChange", // event type
-  "source": "orcabus.bcm", // from bcl-convert-manager service
-  "account": "xxxxxxxxxxxx",
-  "time": "2024-00-00T02:08:46Z",
-  "region": "ap-southeast-x",
+  "version": "0",
+  "id": "f71aaaaa-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "WorkflowRunStateChange",
+  "source": "orcabus.bclconvertmanager",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
   "resources": [],
   "detail": {
-    "portalRunId": '20xxxxxxxxxx',
-    "timestamp": "2024-00-25T00:07:00Z",
+    "portalRunId": "202405012397actg",
+    "timestamp": "2024-05-01T09:25:44Z",
     "status": "SUCCEEDED",
-    "workflowType": "bssh_bcl_convert",
+    "workflowName": "BclConvert",
     "workflowVersion": "4.2.7",
+    "workflowRunName": "540424_A01001_0193_BBBBMMDRX5_c754de_bd822f",
     "payload": {
-      "refId": None,
+      "refId": null,
       "version": "0.1.0",
-      "projectId": "valid_project_id",
-      "analysisId": "valid_payload_id",
-      "userReference": "123456_A1234_0000_TestingPattern",
-      "timeCreated": "2024-01-01T00:11:35Z",
-      "timeModified": "2024-01-01T01:24:29Z",
-      "pipelineId": "valid_pipeline_id",
-      "pipelineCode": "BclConvert v0_0_0",
-      "pipelineDescription": "BclConvert pipeline.",
-      "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
+      "data": {
+        "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
+        "analysisId": "aaaaafe8-238c-4200-b632-d5dd8c8db94a",
+        "userReference": "540424_A01001_0193_BBBBMMDRX5_c754de_bd822f",
+        "timeCreated": "2024-05-01T10:11:35Z",
+        "timeModified": "2024-05-01T11:24:29Z",
+        "pipelineId": "bfffffff-cb27-4dfa-846e-acd6eb081aca",
+        "pipelineCode": "BclConvert v4_2_7",
+        "pipelineDescription": "This is an autolaunch BclConvert pipeline for use by the metaworkflow",
+        "pipelineUrn": "urn:ilmn:ica:pipeline:bfffffff-cb27-4dfa-846e-acd6eb081aca#BclConvert_v4_2_7"
+      }
     }
   }
 }
@@ -151,7 +154,7 @@ Dynamodb format:
 #### Publish the Orcabus event to event bus
 
 publish the Orcabus (internal) event back the event bus.
-Example output event can be seen [here](../../../../../docs/event-schemas/wfm/example/WRSC__bcm__bssh_bcl_convert.json).
+Example output event can be seen [here](../../../../../docs/event-schemas/bclconvertmanager/example/WRSC__bcm__bssh_bcl_convert.json).
 
 ### Unit Test
 

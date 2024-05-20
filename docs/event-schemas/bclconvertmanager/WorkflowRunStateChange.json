@@ -101,8 +101,7 @@
           "data": {
             "$ref": "#/components/schemas/Data"
           }
-        },
-        "additionalProperties": true
+        }
       },
       "Data": {
         "type": "object",

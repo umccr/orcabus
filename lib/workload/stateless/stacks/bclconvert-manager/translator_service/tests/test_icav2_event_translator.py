@@ -123,20 +123,23 @@ class TestICAv2EventTranslator(unittest.TestCase):
             "portalRunId": '2024010112345678',
             "timestamp": datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
             "status": "SUCCEEDED",
-            "workflowType": "bssh_bcl_convert",
+            "workflowName":"BclConvert",
             "workflowVersion": "4.2.7",
+            "workflowRunName": "123456_A1234_0000_TestingPattern",
             "payload": {
                 "refId": None,
                 "version": "0.1.0",
-                "projectId": "valid_project_id",
-                "analysisId": "valid_payload_id",
-                "userReference": "123456_A1234_0000_TestingPattern",
-                "timeCreated": "2024-01-01T00:11:35Z",
-                "timeModified": "2024-01-01T01:24:29Z",
-                "pipelineId": "valid_pipeline_id",
-                "pipelineCode": "BclConvert v0_0_0",
-                "pipelineDescription": "This is an test autolaunch BclConvert pipeline.",
-                "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
+                "data": {
+                    "projectId": "valid_project_id",
+                    "analysisId": "valid_payload_id",
+                    "userReference": "123456_A1234_0000_TestingPattern",
+                    "timeCreated": "2024-01-01T00:11:35Z",
+                    "timeModified": "2024-01-01T01:24:29Z",
+                    "pipelineId": "valid_pipeline_id",
+                    "pipelineCode": "BclConvert v0_0_0",
+                    "pipelineDescription": "This is an test autolaunch BclConvert pipeline.",
+                    "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
+                }
             }
         }
         
@@ -145,7 +148,7 @@ class TestICAv2EventTranslator(unittest.TestCase):
         expected_params = {
             'Entries': [
                 {
-                    "Source": "orcabus.bcm",
+                    "Source": "orcabus.bclconvertmanager",
                     "DetailType": "WorkflowRunStateChange",
                     "Detail": json.dumps(expected_ica_event_details),
                     "EventBusName": os.environ['EVENT_BUS_NAME']
@@ -159,8 +162,8 @@ class TestICAv2EventTranslator(unittest.TestCase):
         expected_item = {
             'id': {'S': '12345678-1234-5678-1234-567812345678'},
             'id_type': {'S': 'db_uuid'},
-            'analysis_id': {'S': expected_ica_event_details['payload']['analysisId']},
-            'analysis_status': {'S': 'SUCCEEDED'},
+            'analysis_id': {'S': expected_ica_event_details['payload']['data']['analysisId']},
+            'analysis_status': {'S': expected_ica_event_details['status']},
             "portal_run_id": {'S': expected_ica_event_details['portalRunId']},
             'original_external_event': {'S': json.dumps(self.event['detail']['ica-event'])},
             'translated_internal_ica_event': {'S': json.dumps(expected_ica_event_details)},

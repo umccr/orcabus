@@ -107,7 +107,7 @@ def handler(event, context):
           Item={
               'id': {'S': db_uuid},
               'id_type': {'S': 'db_uuid'},
-              'analysis_id': {'S': internal_ica_event.detail.payload.get("analysisId", '')},
+              'analysis_id': {'S': internal_ica_event.detail.payload.get('data', '').get("analysisId", '')},
               'analysis_status': {'S': internal_ica_event.detail.status}, # 'SUCCEEDED', 'FAILED', 'INPROGRESS', 'ABORTED', 'UNKNOWN
               "portal_run_id": {'S': internal_ica_event.detail.portalRunId},
               'original_external_event': {'S': json.dumps(event_details)},
@@ -154,7 +154,7 @@ def translate_to_aws_event(event)->AWSEvent:
   return AWSEvent(
     detail= get_event_details(event),
     detail_type= "WorkflowRunStateChange",
-    source= "orcabus.bcm",
+    source= "orcabus.bclconvertmanager",
     # version="0.1.0",  # comment as the version is managed by the evnet bus
   )
 
@@ -169,23 +169,26 @@ def get_event_details(event)->WorkflowRunStateChange:
     
     # generate internal event with required attributes
     return WorkflowRunStateChange(
-      portal_run_id= get_portal_run_id(payload.get("id", '')),
+      portalRunId= get_portal_run_id(payload.get("id", '')),
       timestamp= datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
       status= analysis_status,
-      workflow_type= "bssh_bcl_convert",
-      workflow_version= "4.2.7",
+      workflowName= "BclConvert",
+      workflowVersion= "4.2.7",
+      workflowRunName= payload.get("userReference", ''),
       payload= {
         "refId": None,
         "version": "0.1.0",
-        "projectId": project_id,
-        "analysisId": payload.get("id", ''),
-        "userReference": payload.get("userReference", ''),
-        "timeCreated": payload.get("timeCreated",""),
-        "timeModified": payload.get("timeModified",""),
-        "pipelineId": pipeline.get("id",''),
-        "pipelineCode": pipeline.get("code",''),
-        "pipelineDescription": pipeline.get("description",''),
-        "pipelineUrn": pipeline.get("urn",'')
+        "data": {
+          "projectId": project_id,
+          "analysisId": payload.get("id", ''),
+          "userReference": payload.get("userReference", ''),
+          "timeCreated": payload.get("timeCreated",""),
+          "timeModified": payload.get("timeModified",""),
+          "pipelineId": pipeline.get("id",''),
+          "pipelineCode": pipeline.get("code",''),
+          "pipelineDescription": pipeline.get("description",''),
+          "pipelineUrn": pipeline.get("urn",'')
+        }
       }
     )
 
