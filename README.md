@@ -140,15 +140,15 @@ yarn -v
 
 Additionally, we expect the following common tools be installed and available in your system shell PATH. We provide [Brewfile](Brewfile) as an example. You may manage these common tools in any other way as see fit for your local setup.
 
-```
+```sh
 brew bundle
 ```
-
+  
 ### Mocking
 
-- We use docker compose as a mock stack for application local dev and running test suite purpose.
+- We use docker-compose as a mock stack for application local dev and running test suite purpose.
 - Typically, you will have your own application compose stack defined at your app project root, if any.
-- You can also reuse common docker compose stack, if applicable. See [shared/README.md](shared)
+- You can also reuse a common docker compose stack, if applicable. See [shared/README.md](shared)
 
 ### Microservice
 
@@ -163,6 +163,7 @@ brew bundle
 ### Code Formatting
 
 TypeScript
+
 - Run prettier: `yarn prettier`
 - Fix prettier issue: `yarn prettier-fix`
 - Opt-out prettier: See [.prettierignore](.prettierignore)
