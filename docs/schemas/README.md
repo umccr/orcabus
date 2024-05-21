@@ -64,17 +64,27 @@ service -- emits -->  MyDomainEntityStateChange  (no breaking changes, support a
 #### Multiple Service Schemas
 
 - Multiple services may publish the same or similar schema due to similarity of their domain modelling aspect.
-- The event schema discriminator is the event `source` property of the event message instance.
-- Subscriber routes the message of interest from upstream service event source through [EventBridge Event Rule](https://www.google.com/search?q=eventbridge+event+rule); within application deployment CDK code.
-- When your application subscribe to similar schema from multiple sources, you should use their reverse domain (Namespace) to manage schema code binding purpose.
+- Similarly a single service may publish several different events.
+- The event schema discriminator are the event `source` and `detail-type` properties of the event message instance.
+- Subscribers can route messages of interest from upstream event sources through [EventBridge Event Rule](https://www.google.com/search?q=eventbridge+event+rule); within application deployment CDK code.
+- When your application subscribes to similar schema from multiple sources, you should use their reverse domain (Namespace) to manage schema code binding purpose.
 
 Example:
 
 ```
-orcabus.bclconvertmanager@WorkflowRunStateChange
+orcabus.executionservice@WorkflowRunStateChange
 orcabus.workflowmanager@WorkflowRunStateChange
 ```
 
+```
+{
+  "detail-type": ["WorkflowRunStateChange"],
+  "source": ["orcabus.executionservice"],
+  "detail": {
+    "status": ["SUCCEEDED"]
+  }
+}
+```
 ```
 {
   "detail-type": ["WorkflowRunStateChange"],
@@ -85,25 +95,17 @@ orcabus.workflowmanager@WorkflowRunStateChange
 }
 ```
 
-```
-{
-  "detail-type": ["WorkflowRunStateChange"],
-  "source": ["orcabus.bclconvertmanager"],
-  "detail": {
-    "status": ["SUCCEEDED"]
-  }
-}
-```
 
 ### Namespace
 
-Service namespaces are for filtering Event Rule purpose. This is used in event `source` property when service emits messages. It denotes where the message is originating from. The convention follows reverse domain name. We follow "compat" format of [CDK stack directory name](../../lib/workload/stateless/stacks). i.e. Removing dash character from kebab-case.
+Service namespaces are for filtering Event Rule purpose. This is used in the event `source` property when the service emits messages. It denotes where the message is originating from. The convention follows reverse domain name. We follow "compat" format of [CDK stack directory name](../../lib/workload/stateless/stacks). i.e. Removing dash character from kebab-case.
 
+List of current namespaces:
 ```
-orcabus.sequencerunmanager
 orcabus.filemanager
 orcabus.metadatamanager
 orcabus.workflowmanager
+orcabus.sequencerunmanager
 orcabus.bclconvertmanager
 orcabus.bclconvertinteropqcmanager
 orcabus.bsshicav2fastqcopymanager
@@ -114,13 +116,31 @@ orcabus.pieriandxmanager
 Example:
 
 ```
-orcabus.sequencerunmanager@SequenceRunStateChange
 orcabus.filemanager@FileStateChange
 orcabus.metadatamanager@LibraryStateChange
 orcabus.workflowmanager@WorkflowRunStateChange
+orcabus.sequencerunmanager@SequenceRunStateChange
 orcabus.bclconvertmanager@WorkflowRunStateChange
 orcabus.bclconvertinteropqcmanager@WorkflowRunStateChange
 orcabus.cttsov2manager@WorkflowRunStateChange
 ```
 
 ## Data Schemas
+
+Specifically for the WorkflowRunStateChange events we differentiate between the details of the workflow run and the payload associated with it.
+The general structure of a WorkflowRunStateChange event is governed by the WorkflowRunStateChange event schema, whereas the nature of the data (payload) that the change carries is defined via separate "data schemas".
+This ensures the general means of communicating workflow state change remains independent of the payload data that is different for each execution service and each status.
+
+Concept:
+
+- Shared WRSC event-schema (for Execution Services)
+- Dedicated WRSC event-schema (for WorkflowManager)
+- The "data-schema" contract for Payload structure. 
+
+Outlooks:
+
+- There will be only 2 WRSC schemas.
+- There will be 2 types of schemas - "event-schema" and "data-schema"
+- The "data-schema" is NOT an event schema, it does not contain (AWS) event envelope properties such as `source`, etc.
+- The "data-schema" is the interface between the data producer and the consumer. The data-schema can be used as composition to form a instance of event message from "event-schema" such as WRSC.
+- The execution service will make use of the shared (`executionservice`) WRSC schema, but has full control over its own Payload data schema.
