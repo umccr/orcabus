@@ -1,13 +1,13 @@
 import os
 import boto3
-from workflow_manager_proc.domain.workflowrunstatechange import WorkflowRunStateChange
+from workflow_manager_proc.domain.workflowmanager.workflowrunstatechange import WorkflowRunStateChange
 
 client = boto3.client('events')
-source = "orcabus.wfm"
+source = "orcabus.workflowmanager"
 event_bus_name = os.environ["ORCABUS_EVENT_BUS_NAME"]
 
 def handler(event, context):
-    """event has to be JSON conform to WorkflowRunStateChange
+    """event has to be JSON conform to workflowmanager.WorkflowRunStateChange
     """
     print(f"Processing {event}, {context}")
     
