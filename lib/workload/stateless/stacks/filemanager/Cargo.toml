@@ -6,6 +6,7 @@ members = [
     "filemanager-api",
     "filemanager-http-lambda",
     "filemanager-ingest-lambda",
+    "filemanager-inventory-lambda",
     "filemanager-migrate-lambda"
 ]
 
@@ -13,4 +14,4 @@ members = [
 license = "MIT"
 edition = "2021"
 authors = ["Marko Malenic <mmalenic1@gmail.com>", "Roman Valls Guimera <brainstorm@nopcode.org>"]
-rust-version = "1.74"
+rust-version = "1.76"
