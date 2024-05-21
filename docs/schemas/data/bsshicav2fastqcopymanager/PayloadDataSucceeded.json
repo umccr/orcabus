@@ -1,0 +1,47 @@
+{
+	"openapi": "3.0.0",
+	"info": {
+		"version": "1.0.0",
+		"title": "PayloadDataSucceeded"
+	},
+	"paths": {},
+	"components": {
+		"schemas": {
+			"PayloadDataSucceeded": {
+				"type": "object",
+				"required": [
+					"instrumentRunId",
+					"icav2CopyUtilityJobExecutionId",
+					"outputUri",
+					"manifestB64gz",
+					"fastqListRowsB64gz",
+					"sampleSheetB64gz",
+					"basespaceRunId"
+				],
+				"properties": {
+					"instrumentRunId": {
+						"type": "string"
+					},
+					"icav2CopyUtilityJobExecutionId": {
+						"type": "string"
+					},
+					"outputUri": {
+						"type": "string"
+					},
+					"manifestB64gz": {
+						"type": "string"
+					},
+					"fastqListRowsB64gz": {
+						"type": "string"
+					},
+					"sampleSheetB64gz": {
+						"type": "string"
+					},
+					"basespaceRunId": {
+						"type": "string"
+					}
+				}
+			}
+		}
+	}
+}
