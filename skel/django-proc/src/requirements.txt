@@ -3,6 +3,6 @@ boto3==1.28.0
 Django==4.2.11
 django-environ==0.10.0
 django-database-prefix==0.1.0
-pymysql==1.1.0
+pymysql==1.1.1
 libica==2.2.1
 libumccr==0.4.0rc1
