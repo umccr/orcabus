@@ -1,0 +1,31 @@
+{
+	"openapi": "3.0.0",
+	"info": {
+	  "version": "1.0.0",
+	  "title": "PayloadDataReady"
+	},
+	"paths": {},
+	"components": {
+	  "schemas": {
+		"PayloadDataReady": {
+		  "type": "object",
+		  "required": [
+			"projectId",
+			"analysisId",
+			"outputUriPrefix"
+		  ],
+		  "properties": {
+			"projectId": {
+			  "type": "string"
+			},
+			"analysisId": {
+			  "type": "string"
+			},
+			"outputUriPrefix": {
+			  "type": "string"
+			}
+		  }
+		}
+	  }
+	}
+  }
