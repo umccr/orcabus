@@ -92,8 +92,7 @@ export class WorkflowManagerStack extends Stack {
 
     this.createMigrationHandler();
     this.createApiHandlerAndIntegration(props);
-    this.createProcHandler();
-    this.createProcSqsHandler();
+    this.createHandleServiceWrscEventHandler();
   }
 
   private createPythonFunction(name: string, props: object): PythonFunction {
@@ -142,39 +141,25 @@ export class WorkflowManagerStack extends Stack {
     });
   }
 
-  private createProcHandler() {
-    const procFn: PythonFunction = this.createPythonFunction('Proc', {
-      index: 'workflow_manager_proc/lambdas/workflow_manager_proc',
+  private createHandleServiceWrscEventHandler() {
+    const procFn: PythonFunction = this.createPythonFunction('HandleServiceWrscEvent', {
+      index: 'workflow_manager_proc/lambdas/handle_service_wrsc_event.py',
       handler: 'handler',
       timeout: Duration.seconds(28),
     });
 
     this.mainBus.grantPutEventsTo(procFn);
-    this.setupEventRule(procFn);
-  }
 
-  private createProcSqsHandler() {
-    const procSqsFn: PythonFunction = this.createPythonFunction('ProcSqs', {
-      index: 'workflow_manager_proc/lambdas/workflow_manager_proc.py',
-      handler: 'sqs_handler',
-      timeout: Duration.seconds(28),
-    });
-
-    // this.mainBus.grantPutEventsTo(procSqsFn); // FIXME remove this if no use
-    // this.setupEventRule(procSqsFn); // FIXME remove this if no use
-  }
-
-  private setupEventRule(fn: aws_lambda.Function) {
     const eventRule = new Rule(this, 'EventRule', {
       ruleName: 'EventRule',
       description: 'Rule to send {event_type.value} events to the {handler.function_name} Lambda',
       eventBus: this.mainBus,
     });
 
-    eventRule.addTarget(new aws_events_targets.LambdaFunction(fn));
+    eventRule.addTarget(new aws_events_targets.LambdaFunction(procFn));
     eventRule.addEventPattern({
-      source: ['orcabus.foo'], // FIXME complete source to destination event mapping
-      detailType: ['FooRunStateChange'],
+      source: [{ 'anything-but': 'orcabus.workflowmanager' }],
+      detailType: ['WorkflowRunStateChange'],
     });
   }
 }
