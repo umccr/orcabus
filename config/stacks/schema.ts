@@ -3,7 +3,7 @@ import { schemaRegistryName } from '../constants';
 import path from 'path';
 
 export const getSchemaStackProps = (): SchemaStackProps => {
-  const docBase: string = '../../docs/event-schemas';
+  const docBase: string = '../../docs/schemas/events';
   const defaultProps = {
     schemaType: 'OpenApi3',
   };
@@ -33,11 +33,11 @@ export const getSchemaStackProps = (): SchemaStackProps => {
       },
       {
         ...defaultProps,
-        schemaName: 'orcabus.bclconvertmanager@WorkflowRunStateChange',
-        schemaDescription: 'State change event for workflow run by BclConvertManager',
+        schemaName: 'orcabus.executionservice@WorkflowRunStateChange',
+        schemaDescription: 'State change event for workflow run by workflow execution services',
         schemaLocation: path.join(
           __dirname,
-          docBase + '/bclconvertmanager/WorkflowRunStateChange.json'
+          docBase + '/executionservice/WorkflowRunStateChange.json'
         ),
       },
     ],

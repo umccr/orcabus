@@ -52,15 +52,18 @@
         "type": "object",
         "required": [
           "portalRunId",
+          "executionId",
           "timestamp",
           "status",
           "workflowName",
           "workflowVersion",
-          "workflowRunName",
-          "payload"
+          "workflowRunName"
         ],
         "properties": {
           "portalRunId": {
+            "type": "string"
+          },
+          "executionId": {
             "type": "string"
           },
           "timestamp": {
@@ -87,25 +90,17 @@
       "Payload": {
         "type": "object",
         "required": [
-          "refId",
-          "version"
+          "version",
+          "data"
         ],
         "properties": {
-          "refId": {
-            "type": "string",
-            "nullable": true
-          },
           "version": {
             "type": "string"
           },
           "data": {
-            "$ref": "#/components/schemas/Data"
+            "type": "object"
           }
         }
-      },
-      "Data": {
-        "type": "object",
-        "additionalProperties": true
       }
     }
   }
