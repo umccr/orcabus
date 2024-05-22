@@ -1,5 +1,5 @@
 # Define the path to the Lambda Layer
-LAYER_PATH := ../../schemas-codebinding-layer/layers
+LAYER_PATH := ../../shared-layers/layers/executionservice
 
 # Default target
 .PHONY: test
