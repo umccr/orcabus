@@ -33,7 +33,7 @@ Input Event status: `complete`
 
 Output Event source: `orcabus.metadatamanager`
 Output Event DetailType: `orcabus.librarystatechange`
-Output Event status: `libraryrunidregistered`
+Output Event status: `libraryrunidsregistered`
 
 * The UpdateDataBaseOnNewSampleSheet Construct
   * Subscribes to the BCLConvertManagerEventHandler Stack outputs and updates the database:
@@ -101,7 +101,7 @@ Input Event status: `complete`
 
 Output Event source: `orcabus.metadatamanager`
 Output Event DetailType: `orcabus.librarystatechange`
-Output Event status: `fastqlistrowregistered`
+Output Event status: `fastqlistrowsregistered`
 
 * The UpdateDataBaseOnNewFastqListRows Construct
   * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and updates the database:

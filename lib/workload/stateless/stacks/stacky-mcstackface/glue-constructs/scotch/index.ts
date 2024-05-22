@@ -6,7 +6,7 @@ import * as events_targets from 'aws-cdk-lib/aws-events-targets';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Duration } from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { EventRelayerConstruct } from '../../../../../components/event-workflowrunstatechange-relayer';
+import { EventRelayerConstruct } from '../../../../../components/event-workflowrunstatechange-workflowrunmanager-relayer-sfn';
 
 /*
 Create an event rule for the bclconvertmanager source,
