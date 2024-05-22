@@ -12,7 +12,8 @@ import {
   eventBusName,
   eventSourceQueueName,
   rdsMasterSecretName,
-  schemaRegistryName,
+  eventSchemaRegistryName,
+  dataSchemaRegistryName,
   vpcProps,
   oncoanalyserBucket,
 } from '../constants';
@@ -25,10 +26,17 @@ import {
 import { ComputeProps } from '../../lib/workload/stateful/stacks/shared/constructs/compute';
 import { EventSourceProps } from '../../lib/workload/stateful/stacks/shared/constructs/event-source';
 
-const getSchemaRegistryConstructProps = (): SchemaRegistryProps => {
+const getEventSchemaRegistryConstructProps = (): SchemaRegistryProps => {
   return {
-    registryName: schemaRegistryName,
-    description: 'Schema Registry for OrcaBus Events',
+    registryName: eventSchemaRegistryName,
+    description: 'Schema Registry for ' + eventSchemaRegistryName,
+  };
+};
+
+const getDataSchemaRegistryConstructProps = (): SchemaRegistryProps => {
+  return {
+    registryName: dataSchemaRegistryName,
+    description: 'Schema Registry for ' + dataSchemaRegistryName,
   };
 };
 
@@ -139,7 +147,8 @@ const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps =
 export const getSharedStackProps = (stage: AppStage): SharedStackProps => {
   return {
     vpcProps,
-    schemaRegistryProps: getSchemaRegistryConstructProps(),
+    eventSchemaRegistryProps: getEventSchemaRegistryConstructProps(),
+    dataSchemaRegistryProps: getDataSchemaRegistryConstructProps(),
     eventBusProps: getEventBusConstructProps(stage),
     databaseProps: getDatabaseConstructProps(stage),
     computeProps: getComputeConstructProps(),
