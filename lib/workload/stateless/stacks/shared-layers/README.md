@@ -10,7 +10,7 @@ This stack creates shared Lambda layers for function used acrross orcabus server
 
 Example of defined schemas codebinding modules in the layers folder for schemas code binding across stacks.
 
-### schemas-codebinding-layer
+### event-schemas-codebinding-layer
 
 #### How to apply in your stack
 

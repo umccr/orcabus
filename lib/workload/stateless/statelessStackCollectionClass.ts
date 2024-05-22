@@ -139,7 +139,7 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'BclConvertManagerStack'),
       ...statelessConfiguration.BclConvertManagerStackProps,
       ...{
-        schemasCodeBindingLambdaLayerArn: this.sharedLayersStack.executionServiceCodeBindingLayer,
+        schemasCodeBindingLambdaLayerObj: this.sharedLayersStack.executionServiceCodeBindingLayer,
       },
     });
   }
