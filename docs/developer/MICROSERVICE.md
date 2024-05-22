@@ -37,7 +37,6 @@ The "skel" profile are one abstraction up; from the native toolchain application
 Think of; it is "the origin" of where your _now_ very complex application to date in near future. Doing this way is optional. We may revise whether this skel approach is useful in the future iterations.
 
 - [DJANGO_API.md](DJANGO_API.md)
-- [DJANGO_PROC.md](DJANGO_PROC.md)
 - [RUST_API.md](RUST_API.md)
 
 ### AWS Native
