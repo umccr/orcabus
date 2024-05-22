@@ -19,7 +19,7 @@ Output Event status: `complete`
   * Contains a standard workflow run statechange, the fastqlistrowgzipped, and instrument run id
   * Pushes a workflow run manager event saying that the BSSHFastqCopyManager has complete.
 
-![](images/part_1/BSSHFastqCopyManagerEventHandler.png)
+![](images/part_1/bssh_fastq_copy_manager_event_handler_sfn.png)
 
 ### Part 2
 

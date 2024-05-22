@@ -140,7 +140,7 @@ Output Event status: `ready`
 
 > This will be all one stack
 
-The most important glue of them all. Gorilla Glue!
+The most important glue of them all. Super Glue!
 
 ### Construct C (Part 1)
 
