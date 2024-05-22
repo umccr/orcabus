@@ -2,18 +2,18 @@ import { Construct } from 'constructs';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import path from 'path';
-import { Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
+import { CfnOutput } from 'aws-cdk-lib';
 
-export class SchemasCodeBindingLayerStack extends Stack {
+export class ExecutionServiceCodeBindingLayerConstruct extends Construct {
   public readonly lambdaLayerVersionArn: string;
   public readonly lambdaLayerVersionObj: PythonLayerVersion;
 
-  constructor(scope: Construct, id: string, props: StackProps) {
-    super(scope, id, props);
+  constructor(scope: Construct, id: string) {
+    super(scope, id);
 
     this.lambdaLayerVersionObj = new PythonLayerVersion(this, 'SchemasCodeBindingLayer', {
       layerVersionName: 'SchemasCodeBindingLayer',
-      entry: path.join(__dirname, 'layers'),
+      entry: path.join(__dirname, '../../layers/excecutionservice'),
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_12],
       compatibleArchitectures: [lambda.Architecture.ARM_64],
       description: 'Layer to enable code binding for OrcaBus Event Schemas.',

@@ -18,7 +18,7 @@ export interface BclConvertManagerStackProps {
   vpcProps: VpcLookupOptions;
   lambdaSecurityGroupName: string;
   /** SchemasCodeBindingLambdaLayer Arn for translator function*/
-  schemasCodeBindingLambdaLayerArn: string;
+  schemasCodeBindingLambdaLayerObj: PythonLayerVersion;
 }
 
 export class BclConvertManagerStack extends Stack {
@@ -26,6 +26,8 @@ export class BclConvertManagerStack extends Stack {
 
   constructor(scope: Construct, id: string, props: StackProps & BclConvertManagerStackProps) {
     super(scope, id, props);
+
+    // Create the ICAv2 Event Translator service
     this.createICAv2EventTranslator(props);
   }
 
@@ -36,11 +38,6 @@ export class BclConvertManagerStack extends Stack {
       this,
       'Icav2EventTranslatorDynamoDBTable',
       props.icav2EventTranslatorDynamodbTableName
-    );
-    const SchemasCodeBindingLambdaLayer = PythonLayerVersion.fromLayerVersionArn(
-      this,
-      'SchemasCodeBindingLambdaLayer',
-      props.schemasCodeBindingLambdaLayerArn
     );
 
     const lambdaSG = new SecurityGroup(this, 'IcaEventTranslatorLambdaSG', {
@@ -53,7 +50,7 @@ export class BclConvertManagerStack extends Stack {
 
     const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
       entry: path.join(__dirname, '../translator_service'),
-      layers: [SchemasCodeBindingLambdaLayer],
+      layers: [props.schemasCodeBindingLambdaLayerObj],
       runtime: this.lambdaRuntimePythonVersion,
       environment: {
         TABLE_NAME: props.icav2EventTranslatorDynamodbTableName,
