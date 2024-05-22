@@ -13,7 +13,7 @@ export class ExecutionServiceCodeBindingLayerConstruct extends Construct {
 
     this.lambdaLayerVersionObj = new PythonLayerVersion(this, 'SchemasCodeBindingLayer', {
       layerVersionName: 'SchemasCodeBindingLayer',
-      entry: path.join(__dirname, '../../layers/excecutionservice'),
+      entry: path.join(__dirname, '../../layers/executionservice'),
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_12],
       compatibleArchitectures: [lambda.Architecture.ARM_64],
       description: 'Layer to enable code binding for OrcaBus Event Schemas.',
