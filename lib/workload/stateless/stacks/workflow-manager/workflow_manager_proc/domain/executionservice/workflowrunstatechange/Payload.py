@@ -5,17 +5,49 @@ import re  # noqa: F401
 import six
 from enum import Enum
 
-class Payload(dict):
+class Payload(object):
 
 
     _types = {
+        'version': 'str',
+        'data': 'object'
     }
 
     _attribute_map = {
+        'version': 'version',
+        'data': 'data'
     }
 
-    def __init__(self):  # noqa: E501
+    def __init__(self, version=None, data=None):  # noqa: E501
+        self._version = None
+        self._data = None
         self.discriminator = None
+        self.version = version
+        self.data = data
+
+
+    @property
+    def version(self):
+
+        return self._version
+
+    @version.setter
+    def version(self, version):
+
+
+        self._version = version
+
+
+    @property
+    def data(self):
+
+        return self._data
+
+    @data.setter
+    def data(self, data):
+
+
+        self._data = data
 
     def to_dict(self):
         result = {}

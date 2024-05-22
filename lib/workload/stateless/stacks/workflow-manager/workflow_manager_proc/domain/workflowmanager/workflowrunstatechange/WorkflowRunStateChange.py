@@ -13,8 +13,9 @@ class WorkflowRunStateChange(object):
         'portalRunId': 'str',
         'timestamp': 'datetime',
         'status': 'str',
-        'workflowType': 'str',
+        'workflowName': 'str',
         'workflowVersion': 'str',
+        'workflowRunName': 'str',
         'payload': 'Payload'
     }
 
@@ -22,24 +23,27 @@ class WorkflowRunStateChange(object):
         'portalRunId': 'portalRunId',
         'timestamp': 'timestamp',
         'status': 'status',
-        'workflowType': 'workflowType',
+        'workflowName': 'workflowName',
         'workflowVersion': 'workflowVersion',
+        'workflowRunName': 'workflowRunName',
         'payload': 'payload'
     }
 
-    def __init__(self, portalRunId=None, timestamp=None, status=None, workflowType=None, workflowVersion=None, payload=None):  # noqa: E501
+    def __init__(self, portalRunId=None, timestamp=None, status=None, workflowName=None, workflowVersion=None, workflowRunName=None, payload=None):  # noqa: E501
         self._portalRunId = None
         self._timestamp = None
         self._status = None
-        self._workflowType = None
+        self._workflowName = None
         self._workflowVersion = None
+        self._workflowRunName = None
         self._payload = None
         self.discriminator = None
         self.portalRunId = portalRunId
         self.timestamp = timestamp
         self.status = status
-        self.workflowType = workflowType
+        self.workflowName = workflowName
         self.workflowVersion = workflowVersion
+        self.workflowRunName = workflowRunName
         self.payload = payload
 
 
@@ -80,15 +84,15 @@ class WorkflowRunStateChange(object):
 
 
     @property
-    def workflowType(self):
+    def workflowName(self):
 
-        return self._workflowType
+        return self._workflowName
 
-    @workflowType.setter
-    def workflowType(self, workflowType):
+    @workflowName.setter
+    def workflowName(self, workflowName):
 
 
-        self._workflowType = workflowType
+        self._workflowName = workflowName
 
 
     @property
@@ -101,6 +105,18 @@ class WorkflowRunStateChange(object):
 
 
         self._workflowVersion = workflowVersion
+
+
+    @property
+    def workflowRunName(self):
+
+        return self._workflowRunName
+
+    @workflowRunName.setter
+    def workflowRunName(self, workflowRunName):
+
+
+        self._workflowRunName = workflowRunName
 
 
     @property

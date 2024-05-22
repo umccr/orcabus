@@ -62,7 +62,7 @@ class Marshaller:
             if typeName in cls.NATIVE_TYPES_MAPPING:
                 typeName = cls.NATIVE_TYPES_MAPPING[typeName]
             else:
-                typeName = getattr(schema.orcabus_wfm.workflowrunstatechange, typeName)
+                typeName = getattr(workflowrunstatechange, typeName)
 
         if typeName in cls.PRIMITIVE_TYPES:
             return cls.__unmarshall_primitive(data, typeName)

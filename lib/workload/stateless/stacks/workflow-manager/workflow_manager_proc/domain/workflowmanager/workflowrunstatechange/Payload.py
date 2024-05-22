@@ -5,17 +5,65 @@ import re  # noqa: F401
 import six
 from enum import Enum
 
-class Payload(dict):
+class Payload(object):
 
 
     _types = {
+        'refId': 'str',
+        'version': 'str',
+        'data': 'object'
     }
 
     _attribute_map = {
+        'refId': 'refId',
+        'version': 'version',
+        'data': 'data'
     }
 
-    def __init__(self):  # noqa: E501
+    def __init__(self, refId=None, version=None, data=None):  # noqa: E501
+        self._refId = None
+        self._version = None
+        self._data = None
         self.discriminator = None
+        self.refId = refId
+        self.version = version
+        self.data = data
+
+
+    @property
+    def refId(self):
+
+        return self._refId
+
+    @refId.setter
+    def refId(self, refId):
+
+
+        self._refId = refId
+
+
+    @property
+    def version(self):
+
+        return self._version
+
+    @version.setter
+    def version(self, version):
+
+
+        self._version = version
+
+
+    @property
+    def data(self):
+
+        return self._data
+
+    @data.setter
+    def data(self, data):
+
+
+        self._data = data
 
     def to_dict(self):
         result = {}
