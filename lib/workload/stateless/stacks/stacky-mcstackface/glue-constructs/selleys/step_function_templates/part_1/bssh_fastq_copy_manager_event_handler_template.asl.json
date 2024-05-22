@@ -1,0 +1,102 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Generate DB Uuid",
+  "States": {
+    "Generate DB Uuid": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${__generate_ref_uuid_lambda_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Save input events to DB (local)"
+    },
+    "Save input events to DB (local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "MyDynamoDBTable",
+        "Item": {
+          "Column": {
+            "S": "MyEntry"
+          }
+        }
+      },
+      "Next": "Translate to internal event"
+    },
+    "Translate to internal event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${__translate_internal_event_lambda_function_arn__}f"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Save output events to DB (local)"
+    },
+    "Save output events to DB (local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "MyDynamoDBTable",
+        "Key": {
+          "Column": {
+            "S": "MyEntry"
+          }
+        },
+        "UpdateExpression": "SET MyKey = :myValueRef",
+        "ExpressionAttributeValues": {
+          ":myValueRef": {
+            "S": "MyValue"
+          }
+        }
+      },
+      "Next": "Push Complete Internal Event"
+    },
+    "Push Complete Internal Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "Message": "Hello from Step Functions!",
+              "TaskToken.$": "$$.Task.Token"
+            },
+            "DetailType": "MyDetailType",
+            "EventBusName": "MyEventBusName",
+            "Source": "MySource"
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}

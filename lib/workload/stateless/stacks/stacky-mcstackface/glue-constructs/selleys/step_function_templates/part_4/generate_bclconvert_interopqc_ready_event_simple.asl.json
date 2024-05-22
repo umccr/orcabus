@@ -1,0 +1,102 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Generate Ref uuid",
+  "States": {
+    "Generate Ref uuid": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${__generate_ref_uuid_lambda_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Put Event ID and Output to DB (local)"
+    },
+    "Put Event ID and Output to DB (local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "MyDynamoDBTable",
+        "Item": {
+          "Column": {
+            "S": "MyEntry"
+          }
+        }
+      },
+      "Next": "Translate BCLConvert InterOp Qc Ready Event"
+    },
+    "Translate BCLConvert InterOp Qc Ready Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${__translate_fastq_copy_manager_ready_event_lambda_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Add Item to DataBase (local)"
+    },
+    "Add Item to DataBase (local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "MyDynamoDBTable",
+        "Key": {
+          "Column": {
+            "S": "MyEntry"
+          }
+        },
+        "UpdateExpression": "SET MyKey = :myValueRef",
+        "ExpressionAttributeValues": {
+          ":myValueRef": {
+            "S": "MyValue"
+          }
+        }
+      },
+      "Next": "Raise Internal Ready Event"
+    },
+    "Raise Internal Ready Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "Message": "Hello from Step Functions!",
+              "TaskToken.$": "$$.Task.Token"
+            },
+            "DetailType": "MyDetailType",
+            "EventBusName": "MyEventBusName",
+            "Source": "MySource"
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}
