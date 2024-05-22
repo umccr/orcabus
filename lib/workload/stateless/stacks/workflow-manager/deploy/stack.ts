@@ -151,14 +151,14 @@ export class WorkflowManagerStack extends Stack {
     this.mainBus.grantPutEventsTo(procFn);
 
     const eventRule = new Rule(this, 'EventRule', {
-      ruleName: 'EventRule',
-      description: 'Rule to send {event_type.value} events to the {handler.function_name} Lambda',
+      description:
+        'Rule to send WorkflowRunStateChange events to the HandleServiceWrscEvent Lambda',
       eventBus: this.mainBus,
     });
 
     eventRule.addTarget(new aws_events_targets.LambdaFunction(procFn));
     eventRule.addEventPattern({
-      source: [{ 'anything-but': 'orcabus.workflowmanager' }],
+      source: ["{ 'anything-but': 'orcabus.workflowmanager' }"],
       detailType: ['WorkflowRunStateChange'],
     });
   }
