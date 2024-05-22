@@ -12,13 +12,18 @@ import logging
 
 # Define Environmental Variables
 target_bucket = str(os.environ['destination_bucket'])
+target_key = str(os.environ['destination_bucket_prefix'])
 my_max_pool_connections = int(os.environ['max_pool_connections'])
 my_max_concurrency = int(os.environ['max_concurrency'])
 my_multipart_chunksize = int(os.environ['multipart_chunksize'])
 my_max_attempts = int(os.environ['max_attempts'])
-new_prefix = str(os.environ['destination_bucket_prefix'])
 
-# # Set up logging
+# ICAv1/GDS creds, accessible via SSM and populated by another lambda
+ica_v1_aws_access_key_id=str(os.environ['ica_v1_aws_access_key_id']),
+ica_v1_aws_secret_access_key=str(os.environ['ica_v1_aws_secret_access_key']),
+ica_v1_aws_session_token=str(os.environ['ica_v1_aws_session_token']),
+
+# Set up logging
 logger = logging.getLogger(__name__)
 logger.setLevel('INFO')
 
@@ -28,10 +33,15 @@ logger.setLevel('INFO')
 # Set and Declare Configuration Parameters
 transfer_config = TransferConfig(max_concurrency=my_max_concurrency, multipart_chunksize=my_multipart_chunksize)
 config = Config(max_pool_connections=my_max_pool_connections, retries = {'max_attempts': my_max_attempts})
-myargs = {'ACL': 'bucket-owner-full-control' }#, 'StorageClass': obj_copy_storage_class}
+myargs = {'ACL': 'bucket-owner-full-control' }
 
-# Instantiate S3Client
+# Instantiate S3 clients
 s3Client = boto3.client('s3', config=config)
+# destS3Client = boto3.client('s3',
+#                             aws_access_key=ica_v1_aws_access_key_id,
+#                             aws_secret_access_key=ica_v1_aws_secret_access_key,
+#                             aws_session_token=ica_v1_aws_session_token,
+#                             config=config)
 
 def handler(event, context):
 # Parse job parameters from Amazon S3 batch operations
@@ -45,30 +55,21 @@ def handler(event, context):
     taskId = event['tasks'][0]['taskId']
     # use unquote_plus to handle various characters in S3 Key name
     s3Key = parse.unquote_plus(event['tasks'][0]['s3Key'], encoding='utf-8')
-    s3VersionId = event['tasks'][0]['s3VersionId']
     s3Bucket = event['tasks'][0]['s3Bucket']
 
     try:
     # Prepare result code and string
         resultCode = None
         resultString = None
+
         # Construct Copy Object
         copy_source = {'Bucket': s3Bucket, 'Key': s3Key}
-        # If source key has VersionID, then construct request with VersionID
-        if s3VersionId is not None:
-            copy_source['VersionId'] = s3VersionId
-        
-        # Construct new path and key
-        if new_prefix and len(new_prefix) > 0:
-            newKey = "{0}/{1}".format(new_prefix, s3Key)
-        else:
-            newKey = s3Key
-
-        newBucket = target_bucket
 
         # Initiate the Actual Copy Operation and include transfer config option
-        logger.info(f"starting copy of object {s3Key} with versionID {s3VersionId} between SOURCEBUCKET: {s3Bucket} and DESTINATIONBUCKET: {newBucket}")
-        response = s3Client.copy(copy_source, newBucket, newKey, Config=transfer_config, ExtraArgs=myargs)
+        logger.info(f"starting copy of object {s3Key} between SOURCEBUCKET: {s3Bucket} and DESTINATIONBUCKET: {s3Bucket}")
+        # Note: This is a boto3 inject.py method: https://github.com/boto/boto3/blob/fb608de3453155578fd68a3a627e27b39f44647f/boto3/s3/inject.py#L371
+        # We might need to segregate S3 s3clients into source/destination if destination S3 Batch IAM role/policies are not enough.
+        response = s3Client.copy(copy_source, target_bucket, target_key, Config=transfer_config, ExtraArgs=myargs)
         # Confirm copy was successful
         logger.info("Successfully completed the copy process!")
 

@@ -9,6 +9,9 @@ import { aws_iam as iam } from 'aws-cdk-lib';
 export interface ICAv1CopyBatchUtilityConfig {
   AppName: string;
   Icav1TokenSecretId: string;
+  Icav1AwsAccessKeyId: string;
+  Icav1AwsSecretAccessKey: string;
+  Icav1AwsSessionToken: string;
   BucketForCopyDestination: string;
   BucketForCopyDestinationPrefix: string;
   BucketForManifestOrInventory: string;
@@ -82,6 +85,9 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       runtime: Runtime.PYTHON_3_12,
       role: lambdaRole,
       environment: {
+        ica_v1_aws_access_key_id: props.Icav1AwsAccessKeyId,
+        ica_v1_aws_secret_access_key: props.Icav1AwsSecretAccessKey,
+        ica_v1_aws_session_token: props.Icav1AwsSessionToken,
         destination_bucket: props.BucketForCopyDestination,
         destination_bucket_prefix: props.BucketForCopyDestinationPrefix,
         max_concurrency: props.TransferMaximumConcurrency.toString(),
