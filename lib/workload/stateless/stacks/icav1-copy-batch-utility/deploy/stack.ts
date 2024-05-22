@@ -86,7 +86,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       role: lambdaRole,
       environment: {
         ica_v1_aws_access_key_id: props.Icav1AwsAccessKeyId,
-        ica_v1_aws_secret_access_key: props.Icav1AwsSecretAccessKey,
+        ica_v1_aws_secret_access_key: props.Icav1AwsSecretAccessKey, //pragma: allowlist secret
         ica_v1_aws_session_token: props.Icav1AwsSessionToken,
         destination_bucket: props.BucketForCopyDestination,
         destination_bucket_prefix: props.BucketForCopyDestinationPrefix,

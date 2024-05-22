@@ -20,7 +20,7 @@ my_max_attempts = int(os.environ['max_attempts'])
 
 # ICAv1/GDS creds, accessible via SSM and populated by another lambda
 ica_v1_aws_access_key_id=str(os.environ['ica_v1_aws_access_key_id']),
-ica_v1_aws_secret_access_key=str(os.environ['ica_v1_aws_secret_access_key']),
+ica_v1_aws_secret_access_key=str(os.environ['ica_v1_aws_secret_access_key']), #pragma: allowlist secret
 ica_v1_aws_session_token=str(os.environ['ica_v1_aws_session_token']),
 
 # Set up logging
@@ -39,7 +39,7 @@ myargs = {'ACL': 'bucket-owner-full-control' }
 s3Client = boto3.client('s3', config=config)
 # destS3Client = boto3.client('s3',
 #                             aws_access_key=ica_v1_aws_access_key_id,
-#                             aws_secret_access_key=ica_v1_aws_secret_access_key,
+#                             aws_secret_access_key=ica_v1_aws_secret_access_key, #pragma: allowlist secret
 #                             aws_session_token=ica_v1_aws_session_token,
 #                             config=config)
 
