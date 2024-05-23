@@ -36,8 +36,6 @@ import {
   BclConvertManagerStackProps,
 } from './stacks/bclconvert-manager/deploy/stack';
 
-import { SharedLayersStack } from './stacks/shared-layers/stack';
-
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -63,17 +61,12 @@ export class StatelessStackCollection {
   readonly cttsov2Icav2PipelineManagerStack: Stack;
   readonly schemaStack: Stack;
   readonly bclConvertManagerStack: Stack;
-  readonly sharedLayersStack: SharedLayersStack;
 
   constructor(
     scope: Construct,
     env: Environment,
     statelessConfiguration: StatelessStackCollectionProps
   ) {
-    this.sharedLayersStack = new SharedLayersStack(scope, 'SchemasCodeBindingLayerStack', {
-      ...this.createTemplateProps(env, 'SchemasCodeBindingLayerStack'),
-    });
-
     this.schemaStack = new SchemaStack(scope, 'SchemaStack', {
       ...this.createTemplateProps(env, 'SchemaStack'),
       ...statelessConfiguration.schemaStackProps,
@@ -138,9 +131,6 @@ export class StatelessStackCollection {
     this.bclConvertManagerStack = new BclConvertManagerStack(scope, 'BclConvertManagerStack', {
       ...this.createTemplateProps(env, 'BclConvertManagerStack'),
       ...statelessConfiguration.BclConvertManagerStackProps,
-      ...{
-        schemasCodeBindingLambdaLayerObj: this.sharedLayersStack.executionServiceCodeBindingLayer,
-      },
     });
   }
 

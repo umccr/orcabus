@@ -59,15 +59,17 @@ import logging
 import datetime
 import boto3
 from uuid import uuid4
-from workflowrunstatechange import (
+from helper.workflowrunstatechange import (
     WorkflowRunStateChange,
     AWSEvent,
     Marshaller,
 )
+from helper.icav2_analysis import collect_analysis_objects
 
 events = boto3.client("events", region_name='ap-southeast-2')
 dynamodb = boto3.client('dynamodb', region_name='ap-southeast-2')
 
+# Set loggers
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -167,9 +169,14 @@ def get_event_details(event)->WorkflowRunStateChange:
     analysis_status = event.get("eventParameters", {}).get("analysisStatus", '')
     
     payload = event.get("payload", {})
+    analysis_id = payload.get("id", '')
     pipeline = payload.get("pipeline", {})
     
     event_name, version = parse_event_code(pipeline.get("code",''))
+    
+    analysis_outputs = collect_analysis_objects(
+        project_id, analysis_id
+    )
     
     # generate internal event with required attributes
     return WorkflowRunStateChange(
@@ -184,14 +191,17 @@ def get_event_details(event)->WorkflowRunStateChange:
         "version": "0.1.0",
         "data": {
           "projectId": project_id,
-          "analysisId": payload.get("id", ''),
+          "analysisId": analysis_id,
           "userReference": payload.get("userReference", ''),
           "timeCreated": payload.get("timeCreated",""),
           "timeModified": payload.get("timeModified",""),
           "pipelineId": pipeline.get("id",''),
           "pipelineCode": pipeline.get("code",''),
           "pipelineDescription": pipeline.get("description",''),
-          "pipelineUrn": pipeline.get("urn",'')
+          "pipelineUrn": pipeline.get("urn",''),
+          "instrumentRunId": analysis_outputs.get("instrument_run_id"),
+          "basespaceRunId": analysis_outputs.get("basespace_run_id"),
+          "samplesheetB64gz": analysis_outputs.get("samplesheet_b64gz")
         }
       }
     )
@@ -269,7 +279,7 @@ def parse_event_code(event_code):
     # Split the version numbers by underscore
     version_numbers = version_numbers.split("_")
     if len(version_numbers) != 3:
-        raise ValueError("Version must be in the format 'Major_Minor_Patch'")
+        raise ValueError("Version must be in the format (Semantic Version) 'Major_Minor_Patch'")
 
     # Join the version numbers with dots to form the standard version format
     version = ".".join(version_numbers)

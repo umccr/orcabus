@@ -17,8 +17,6 @@ export interface BclConvertManagerStackProps {
   /** vpc ann SG for lambda function */
   vpcProps: VpcLookupOptions;
   lambdaSecurityGroupName: string;
-  /** SchemasCodeBindingLambdaLayer Arn for translator function*/
-  schemasCodeBindingLambdaLayerObj: PythonLayerVersion | null;
 }
 
 export class BclConvertManagerStack extends Stack {
@@ -50,9 +48,6 @@ export class BclConvertManagerStack extends Stack {
 
     const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
       entry: path.join(__dirname, '../translator_service'),
-      layers: props.schemasCodeBindingLambdaLayerObj
-        ? [props.schemasCodeBindingLambdaLayerObj]
-        : [],
       runtime: this.lambdaRuntimePythonVersion,
       environment: {
         TABLE_NAME: props.icav2EventTranslatorDynamodbTableName,

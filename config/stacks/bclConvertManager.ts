@@ -17,6 +17,5 @@ export const getBclConvertManagerStackProps = (): BclConvertManagerStackProps =>
     icav2EventTranslatorDynamodbTableName: dynamodbTableName,
     vpcProps: vpcProps,
     lambdaSecurityGroupName: 'OrcaBusIcaEventTranslatorSecurityGroup',
-    schemasCodeBindingLambdaLayerObj: null,
   };
 };
