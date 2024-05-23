@@ -33,6 +33,7 @@ select
     number_reordered,
     number_duplicate_events,
     size,
+    is_delete_marker,
     'Created' as "event_type!: EventType"
 from input
 -- Grab the most recent object in each input group.

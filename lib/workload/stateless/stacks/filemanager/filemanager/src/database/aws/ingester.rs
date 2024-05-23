@@ -135,7 +135,8 @@ impl<'a> Ingester<'a> {
             &object_created.e_tags as &[Option<String>],
             &object_created.storage_classes as &[Option<StorageClass>],
             &object_created.version_ids as &[String],
-            &object_created.sequencers as &[Option<String>]
+            &object_created.sequencers as &[Option<String>],
+            &object_created.is_delete_markers as &[bool],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -158,7 +159,8 @@ impl<'a> Ingester<'a> {
             &object_created.e_tags as &[Option<String>],
             &object_created.storage_classes as &[Option<StorageClass>],
             &object_created.version_ids,
-            &object_created.sequencers as &[Option<String>]
+            &object_created.sequencers as &[Option<String>],
+            &object_created.is_delete_markers as &[bool],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -216,7 +218,8 @@ impl<'a> Ingester<'a> {
             &object_deleted.version_ids,
             &object_deleted.sequencers as &[Option<String>],
             // Fill this with 1 reorder, because if we get here then this must be a reordered event.
-            &vec![1; object_deleted.s3_object_ids.len()]
+            &vec![1; object_deleted.s3_object_ids.len()],
+            &object_deleted.is_delete_markers as &[bool],
         )
         .fetch_all(&mut *tx)
         .await?;

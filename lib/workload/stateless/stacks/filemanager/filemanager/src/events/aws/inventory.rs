@@ -318,6 +318,8 @@ pub struct Record {
     key: String,
     #[serde(alias = "VersionId")]
     version_id: Option<String>,
+    #[serde(alias = "IsDeleteMarker")]
+    is_delete_marker: Option<bool>,
     #[serde(alias = "Size")]
     size: Option<i64>,
     #[serde(
@@ -352,6 +354,7 @@ pub struct RecordBuilder {
     last_modified_date: Option<DateTime<Utc>>,
     e_tag: Option<String>,
     storage_class: Option<StorageClass>,
+    is_delete_marker: Option<bool>,
 }
 
 impl RecordBuilder {
@@ -385,6 +388,12 @@ impl RecordBuilder {
         self
     }
 
+    /// Add a delete marker to the record.
+    pub fn with_delete_marker(mut self, is_delete_marker: Option<bool>) -> Self {
+        self.is_delete_marker = is_delete_marker;
+        self
+    }
+
     /// Build the record.
     pub fn build(self, bucket: String, key: String) -> Record {
         Record {
@@ -395,6 +404,7 @@ impl RecordBuilder {
             last_modified_date: self.last_modified_date,
             e_tag: self.e_tag,
             storage_class: self.storage_class,
+            is_delete_marker: self.is_delete_marker,
         }
     }
 }
@@ -493,6 +503,7 @@ impl From<Record> for FlatS3EventMessage {
             bucket,
             key,
             version_id,
+            is_delete_marker,
             size,
             last_modified_date,
             e_tag,
@@ -515,8 +526,8 @@ impl From<Record> for FlatS3EventMessage {
             last_modified_date,
             sha256: None,
             // Anything in an inventory report is always a created event.
-            // TODO: look into version ids with delete markers. Is this Created or Deleted event?
             event_type: Created,
+            is_delete_marker: is_delete_marker.unwrap_or_default(),
             number_reordered: 0,
             number_duplicate_events: 0,
         }
@@ -959,6 +970,7 @@ pub(crate) mod tests {
                     bucket: "bucket".to_string(),
                     key: "inventory_test/".to_string(),
                     version_id: None,
+                    is_delete_marker: Some(false),
                     size: Some(0),
                     last_modified_date: Some(EXPECTED_LAST_MODIFIED_ONE.parse().unwrap()),
                     e_tag: Some(EXPECTED_E_TAG_EMPTY.to_string()),
@@ -968,6 +980,7 @@ pub(crate) mod tests {
                     bucket: "bucket".to_string(),
                     key: "inventory_test/key1".to_string(),
                     version_id: None,
+                    is_delete_marker: Some(false),
                     size: Some(0),
                     last_modified_date: Some(EXPECTED_LAST_MODIFIED_TWO.parse().unwrap()),
                     e_tag: Some(EXPECTED_E_TAG_EMPTY.to_string()),
@@ -977,6 +990,7 @@ pub(crate) mod tests {
                     bucket: "bucket".to_string(),
                     key: "inventory_test/key2".to_string(),
                     version_id: None,
+                    is_delete_marker: Some(false),
                     size: Some(5),
                     last_modified_date: Some(EXPECTED_LAST_MODIFIED_THREE.parse().unwrap()),
                     e_tag: Some(EXPECTED_E_TAG_KEY_2.to_string()),

@@ -77,6 +77,7 @@ pub struct TransposedS3EventMessages {
     pub storage_classes: Vec<Option<StorageClass>>,
     pub last_modified_dates: Vec<Option<DateTime<Utc>>>,
     pub event_types: Vec<EventType>,
+    pub is_delete_markers: Vec<bool>,
 }
 
 impl TransposedS3EventMessages {
@@ -96,6 +97,7 @@ impl TransposedS3EventMessages {
             storage_classes: Vec::with_capacity(capacity),
             last_modified_dates: Vec::with_capacity(capacity),
             event_types: Vec::with_capacity(capacity),
+            is_delete_markers: Vec::with_capacity(capacity),
         }
     }
 
@@ -114,6 +116,7 @@ impl TransposedS3EventMessages {
             storage_class,
             last_modified_date,
             event_type,
+            is_delete_marker,
             ..
         } = message;
 
@@ -129,6 +132,7 @@ impl TransposedS3EventMessages {
         self.storage_classes.push(storage_class);
         self.last_modified_dates.push(last_modified_date);
         self.event_types.push(event_type);
+        self.is_delete_markers.push(is_delete_marker);
     }
 }
 
@@ -164,7 +168,8 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
             messages.sequencers,
             messages.storage_classes,
             messages.last_modified_dates,
-            messages.event_types
+            messages.event_types,
+            messages.is_delete_markers,
         )
         .map(
             |(
@@ -180,6 +185,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                 storage_class,
                 last_modified_date,
                 event_type,
+                is_delete_marker,
             )| {
                 FlatS3EventMessage {
                     s3_object_id,
@@ -194,6 +200,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                     last_modified_date,
                     event_time,
                     event_type,
+                    is_delete_marker,
                     number_reordered: 0,
                     number_duplicate_events: 0,
                 }
@@ -342,6 +349,7 @@ impl FlatS3EventMessages {
                         &a.sha256,
                         &a.storage_class,
                         &a.last_modified_date,
+                        &a.is_delete_marker,
                     )
                         .cmp(&(
                             b_sequencer,
@@ -355,6 +363,7 @@ impl FlatS3EventMessages {
                             &a.sha256,
                             &b.storage_class,
                             &b.last_modified_date,
+                            &b.is_delete_marker,
                         ));
                 }
             }
@@ -371,6 +380,7 @@ impl FlatS3EventMessages {
                 &a.sha256,
                 &a.storage_class,
                 &a.last_modified_date,
+                &a.is_delete_marker,
             )
                 .cmp(&(
                     &b.event_time,
@@ -384,6 +394,7 @@ impl FlatS3EventMessages {
                     &a.sha256,
                     &b.storage_class,
                     &b.last_modified_date,
+                    &b.is_delete_marker,
                 ))
         });
 
@@ -406,6 +417,7 @@ pub struct FlatS3EventMessage {
     pub last_modified_date: Option<DateTime<Utc>>,
     pub event_time: Option<DateTime<Utc>>,
     pub event_type: EventType,
+    pub is_delete_marker: bool,
     pub number_reordered: i64,
     pub number_duplicate_events: i64,
 }
@@ -515,6 +527,12 @@ impl FlatS3EventMessage {
     /// Set the event time.
     pub fn with_event_time(mut self, event_time: Option<DateTime<Utc>>) -> Self {
         self.event_time = event_time;
+        self
+    }
+
+    /// Set the delete marker.
+    pub fn with_is_delete_marker(mut self, is_delete_marker: bool) -> Self {
+        self.is_delete_marker = is_delete_marker;
         self
     }
 
@@ -807,7 +825,7 @@ pub(crate) mod tests {
                 "requester": "123456789012",
                 "source-ip-address": "127.0.0.1",
                 "reason": "DeleteObject",
-                "deletion-type": "Delete Marker Created"
+                "deletion-type": "Permanently Deleted"
             }
         })
     }
