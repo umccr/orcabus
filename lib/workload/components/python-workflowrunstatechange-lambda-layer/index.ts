@@ -3,7 +3,7 @@ import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import path from 'path';
 
-export interface PythonWorkflowrunstatechangeLambdaLayerConstructProps {
+export interface PythonWorkflowrunstatechangeSfnConstructProps {
   layerName?: string;
   layerDescription?: string;
 }
@@ -12,11 +12,7 @@ export class PythonWorkflowrunstatechangeLambdaLayerConstruct extends Construct 
   public readonly lambdaLayerArn: string;
   public readonly lambdaLayerVersionObj: PythonLayerVersion;
 
-  constructor(
-    scope: Construct,
-    id: string,
-    props: PythonWorkflowrunstatechangeLambdaLayerConstructProps
-  ) {
+  constructor(scope: Construct, id: string, props: PythonWorkflowrunstatechangeSfnConstructProps) {
     super(scope, id);
 
     this.lambdaLayerVersionObj = new PythonLayerVersion(this, 'python_lambda_layer', {

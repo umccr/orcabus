@@ -6,14 +6,14 @@
       "Type": "Pass",
       "Next": "Get reference id from payload",
       "Parameters": {
-        "event_inputs.$": "$"
+        "input_event_detail.$": "$"
       }
     },
     "Get reference id from payload": {
       "Type": "Pass",
       "Next": "Get reference Id in database (local)",
       "Parameters": {
-        "reference_id.$": "$.event_inputs.detail.payload.refId"
+        "reference_id.$": "$.input_event_detail.payload.refId"
       },
       "ResultPath": "$.get_reference_id_step"
     },
@@ -24,9 +24,10 @@
         "TableName": "${__table_name__}",
         "Key": {
           "id.$": "$.get_reference_id_step.reference_id",
-          "id_type": "${__event_transformation_type__}"
+          "id_type": "${__id_type__}"
         }
       },
+      "ResultPath": "$.get_reference_id_in_db_step",
       "Next": "is reference id in database"
     },
     "is reference id in database": {
@@ -34,28 +35,28 @@
       "Choices": [
         {
           "Not": {
-            "Variable": "$.get_reference_id_step.reference_id",
+            "Variable": "$.get_reference_id_in_db_step.Item",
             "IsPresent": true
           },
-          "Next": "Get Item from DataBase (loca)"
+          "Next": "Get Item from DataBase (local)"
         }
       ],
       "Default": "Add event input to database (local)"
     },
-    "Get Item from DataBase (loca)": {
+    "Get Item from DataBase (local)": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
           "id.$": "$.generate_db_uuid_step.db_uuid",
-          "id_type": "${__event_transformation_type__}"
+          "id_type": "${__id_type__}"
         }
       },
       "Next": "EventBridge PutEvents",
       "ResultPath": "$.get_workflow_run_items",
       "ResultSelector": {
-        "workflow_input_maker_detail": ".Item.input_maker_outputs"
+        "output_event_data": ".Item.output_event_data.M"
       }
     },
     "EventBridge PutEvents": {
@@ -64,10 +65,22 @@
       "Parameters": {
         "Entries": [
           {
-            "Detail.$": "$.get_workflow_run_items.workflow_input_maker_detail",
-            "DetailType": "${__detail_type__}",
+            "Source": "${__event_output_source__}",
             "EventBusName": "${__event_bus_name__}",
-            "Source": "${__event_output_source__}"
+            "DetailType": "${__detail_type__}",
+            "Detail": {
+              "portalRunId.$": "$.get_workflow_run_items.output_event_data.portal_run_id",
+              "timestamp.$": "$$.Execution.StartTime",
+              "status": "ready",
+              "workflowName": "${__workflow_name__}",
+              "workflowVersion": "${__workflow_version__}",
+              "workflowRunName.$": "$.get_workflow_run_items.workflow_run_name",
+              "payload": {
+                "refId": null,
+                "version": "${__payload_version__}",
+                "data.$": "$.get_workflow_run_items.output_event_data"
+              }
+            }
           }
         ]
       },
@@ -79,13 +92,10 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Item": {
-          "id": "$.get_reference_id_step.reference_id",
-          "id_type": "${__event_transformation_type__}",
-          "event_input_source": {
-            "S": "${__event_input_source__}"
-          },
-          "event_input_payload": {
-            "S.$": "$.States.JsonToString($.event_input_payload)"
+          "id.$": "$.get_reference_id_step.reference_id",
+          "id_type": "${__id_type__}",
+          "input_event_data": {
+            "M.$": "$.input_event_detail.payload.data"
           }
         }
       },
@@ -101,13 +111,160 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::states:startExecution.sync:2",
       "Parameters": {
-        "StateMachineArn": "arn:aws:states:REGION:ACCOUNT_ID:stateMachine:STATE_MACHINE_NAME",
+        "StateMachineArn": "${__input_maker_state_machine_arn__}",
         "Input": {
           "db_uuid": "$.get_reference_id_step.reference_id"
         }
       },
-      "Next": "Get Item from DataBase (loca)",
+      "Next": "Get inputs for updating event detail output",
       "ResultPath": "$.set_workflow_run_inputs"
+    },
+    "Get inputs for updating event detail output": {
+      "Type": "Parallel",
+      "Next": "Update Portal Run ID in Event Detail Output",
+      "Branches": [
+        {
+          "StartAt": "Get event output item",
+          "States": {
+            "Get event output item": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:getItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.generate_db_uuid_step.db_uuid",
+                  "id_type": "${__id_type__}"
+                }
+              },
+              "ResultPath": "$.get_output_event_data_step",
+              "ResultSelector": {
+                "output_event_data.$": "$.Item.output_event_data.M"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Generate Portal Run ID",
+          "States": {
+            "Generate Portal Run ID": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__generate_portal_run_id_lambda_function_arn__}",
+                "Payload": {}
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultSelector": {
+                "portal_run_id.$": "$.Payload.portal_run_id"
+              },
+              "ResultPath": "$.get_portal_run_id_step",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.event_detail_outputs_parallel"
+    },
+    "Update Portal Run ID in Event Detail Output": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__update_portal_run_id_in_event_detail_lambda_function_arn__}",
+        "Payload": {
+          "portal_run_id.$": "$.event_detail_outputs_parallel.get_portal_run_id_step.portal_run_id",
+          "output_event_data.$": "$.event_detail_outputs_parallel.get_output_event_data_step.output_event_data"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Generate workflow run name",
+      "ResultSelector": {
+        "output_event_data_updated.$": "$.Payload.event_data_updated"
+      },
+      "ResultPath": "$.update_event_step_detail_with_portal_run_id_step"
+    },
+    "Generate workflow run name": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_workflow_run_name_lambda_function_arn__}",
+        "Payload": {
+          "workflow_name": "${__workflow_name__}",
+          "workflow_version": "${__workflow_version__}",
+          "portal_run_id.$": "$.event_detail_outputs_parallel.get_portal_run_id_step.portal_run_id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Update Event Data Item with Portal Run ID",
+      "ResultSelector": {
+        "workflow_run_name.$": "$.Payload.workflow_run_name"
+      },
+      "ResultPath": "$.generate_workflow_run_name_step"
+    },
+    "Update Event Data Item with Portal Run ID": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.get_reference_id_step.reference_id",
+          "id_type": "${__id_type__}"
+        },
+        "UpdateExpression": "SET output_event_data = :output_event_data",
+        "ExpressionAttributeValues": {
+          ":portal_run_id": {
+            "S.$": "$.event_detail_outputs_parallel.get_portal_run_id_step.portal_run_id"
+          },
+          ":workflow_run_name": {
+            "S.$": "$.generate_workflow_run_name_step.workflow_run_name"
+          },
+          ":output_event_data": {
+            "M.$": "$.update_event_step_detail_with_portal_run_id_step.output_event_data_updated"
+          }
+        }
+      },
+      "Next": "Wait 1 Second (post event detail output update)"
+    },
+    "Wait 1 Second (post event detail output update)": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "Get Item from DataBase (local)"
     }
   }
 }

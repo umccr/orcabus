@@ -12,7 +12,7 @@ class WorkflowRunStateChange(object):
         'portalRunId': 'str',
         'timestamp': 'datetime',
         'status': 'str',
-        'workflowType': 'str',
+        'workflowName': 'str',
         'workflowVersion': 'str',
         'payload': 'Payload'
     }

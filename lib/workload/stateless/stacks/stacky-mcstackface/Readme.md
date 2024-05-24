@@ -50,7 +50,7 @@ Input Event Source: `orcabus.workflowrunmanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
-Output Event source: `orcabus.bclconvertmanagerinputeventglue`
+Output Event source: `orcabus.bsshfastqcopyinputeventglue`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `complete`
 

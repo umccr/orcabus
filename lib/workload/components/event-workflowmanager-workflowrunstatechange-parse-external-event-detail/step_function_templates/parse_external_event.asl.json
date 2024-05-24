@@ -1,11 +1,17 @@
 {
   "Comment": "A description of my state machine",
-  "StartAt": "Generate DB Uuid",
+  "StartAt": "Move inputs",
   "States": {
+    "Move inputs": {
+      "Type": "Pass",
+      "Next": "Generate DB Uuid",
+      "Parameters": {
+        "event_detail_input.$": "$"
+      }
+    },
     "Generate DB Uuid": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "OutputPath": "$.Payload",
       "Parameters": {
         "Payload.$": "$",
         "FunctionName": "${__generate_ref_uuid_lambda_function_arn__}"
@@ -23,28 +29,36 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "Save input events to DB (local)"
+      "Next": "Save input events to DB (local)",
+      "ResultSelector": {
+        "uuid.$": "$.Payload.uuid"
+      },
+      "ResultPath": "$.generate_db_uuid_step"
     },
     "Save input events to DB (local)": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:putItem",
       "Parameters": {
-        "TableName": "MyDynamoDBTable",
+        "TableName": "${__table_name__}",
         "Item": {
-          "Column": {
-            "S": "MyEntry"
+          "id.$": "$.generate_db_uuid_step.uuid",
+          "id_type": "${__id_type__}",
+          "event_detail_input": {
+            "M.$": "$.event_detail_input"
           }
         }
       },
-      "Next": "Translate to internal event"
+      "Next": "Translate internal event"
     },
-    "Translate to internal event": {
+    "Translate internal event": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "OutputPath": "$.Payload",
       "Parameters": {
-        "Payload.$": "$",
-        "FunctionName": "${__translate_internal_event_lambda_function_arn__}f"
+        "FunctionName": "${__translate_event_lambda_function_arn__}",
+        "Payload": {
+          "uuid": "$.generate_db_uuid_step.uuid",
+          "event_detail_input": "$.event_detail_input"
+        }
       },
       "Retry": [
         {
@@ -59,25 +73,33 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "Save output events to DB (local)"
+      "Next": "Save output events to DB (local)",
+      "ResultSelector": {
+        "event_detail_output.$": "$.Payload"
+      },
+      "ResultPath": "$.translate_event_step"
     },
     "Save output events to DB (local)": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:updateItem",
       "Parameters": {
-        "TableName": "MyDynamoDBTable",
+        "TableName": "${__table_name__}",
         "Key": {
-          "Column": {
-            "S": "MyEntry"
-          }
+          "id.$": "$.generate_db_uuid_step.uuid",
+          "id_type": "${__id_type__}"
         },
-        "UpdateExpression": "SET MyKey = :myValueRef",
+        "UpdateExpression": "SET event_detail_output = :event_detail_output",
         "ExpressionAttributeValues": {
-          ":myValueRef": {
-            "S": "MyValue"
+          ":event_detail_output": {
+            "M.$": "$.translate_event_step.event_detail_output"
           }
         }
       },
+      "Next": "Wait 1 Second"
+    },
+    "Wait 1 Second": {
+      "Type": "Wait",
+      "Seconds": 1,
       "Next": "Push Complete Internal Event"
     },
     "Push Complete Internal Event": {
@@ -86,13 +108,10 @@
       "Parameters": {
         "Entries": [
           {
-            "Detail": {
-              "Message": "Hello from Step Functions!",
-              "TaskToken.$": "$$.Task.Token"
-            },
-            "DetailType": "MyDetailType",
-            "EventBusName": "MyEventBusName",
-            "Source": "MySource"
+            "Detail.$": "$.translate_event_step.event_detail_output.detail",
+            "DetailType": "${__detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__output_source__}"
           }
         ]
       },

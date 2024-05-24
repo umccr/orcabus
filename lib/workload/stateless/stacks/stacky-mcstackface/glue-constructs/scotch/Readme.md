@@ -6,13 +6,15 @@
 
 ### Part 1
 
-Input Event Source: `orcabus.bclconvertmanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
-Input Event status: `complete`
+* Input Event Source: `orcabus.bclconvertmanager`
+* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event status: `complete`
 
-Output Event source: `orcabus.workflowrunmanager`
-Output Event DetailType: `orcabus.workflowrunstatechange`
-Output Event status: `complete`
+
+* Output Event source: `orcabus.workflowrunmanager`
+* Output Event DetailType: `orcabus.workflowrunstatechange`
+* Output Event status: `complete`
+
 
 * The BCLConvertManagerEventHandler Construct
   * This will be triggered by the completion event from the BCLConvertManager stack.
@@ -25,13 +27,15 @@ Output Event status: `complete`
 
 ### Part 2
 
-Input Event Source: `orcabus.workflowrunmanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
-Input Event status: `complete`
+* Input Event Source: `orcabus.workflowrunmanager`
+* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event status: `complete`
 
-Output Event source: `orcabus.metadatamanager`
-Output Event DetailType: `orcabus.librarystatechange`
-Output Event status: `librarylaneidregistered`
+
+* Output Event source: `orcabus.metadatamanager`
+* Output Event DetailType: `orcabus.librarystatechange`
+* Output Event status: `samplesheetregistered`
+
 
 * The UpdateDataBaseOnNewSampleSheet Construct
   * Subscribes to the BCLConvertManagerEventHandler Stack outputs and updates the database:
@@ -51,13 +55,15 @@ OR
 
 ### Part 3
 
-Input Event Source: `orcabus.workflowrunmanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
-Input Event status: `complete`
+* Input Event Source: `orcabus.workflowrunmanager`
+* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event status: `complete`
 
-Output Event source: `orcabus.bclconvertmanagerinputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
-Output Event status: `complete`
+
+* Output Event source: `orcabus.bsshfastqcopyinputeventglue`
+* Output Event DetailType: `orcabus.workflowrunstatechange`
+* Output Event status: `complete`
+
 
 * The BsshFastqCopyManagerInputMaker Construct
   * Subscribes to the BCLConvertManagerEventHandler Stack outputs and creates the input for the BSSHFastqCopyManager
@@ -72,13 +78,15 @@ With the parent function displayed here:
 
 ### Part 4
 
-Input Event Source: `orcabus.bsshfastqcopymanagerinputeventglue`
-Input Event DetailType: `orcabus.workflowrunstatechange`
-Input Event status: `complete`
+* Input Event Source: `orcabus.bsshfastqcopymanagerinputeventglue`
+* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event status: `complete`
 
-Output Event source: `orcabus.workflowrunmanager`
-Output Event DetailType: `orcabus.workflowrunstatechange`
-Output Event status: `ready`
+
+* Output Event source: `orcabus.workflowrunmanager`
+* Output Event DetailType: `orcabus.workflowrunstatechange`
+* Output Event status: `ready`
+
 
 * The BsshFastqCopyManagerReadyEventSubmitter Construct
   * Subscribes to the BCLConvertManagerEventHandler Stack outputs and generates a ready event for the BSSHFastqCopyManager

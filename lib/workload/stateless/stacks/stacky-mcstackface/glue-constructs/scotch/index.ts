@@ -1,35 +1,23 @@
 import { Construct } from 'constructs';
-import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as events from 'aws-cdk-lib/aws-events';
-import * as events_targets from 'aws-cdk-lib/aws-events-targets';
-import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { Duration } from 'aws-cdk-lib';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import { EventRelayerConstruct } from '../../../../../components/event-workflowrunstatechange-workflowrunmanager-relayer-sfn';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+import { BclconvertSuccessEventRelayer } from './constructs/part_1/bclconvert-success-event-relayer';
+import { updateDataBaseOnNewSamplesheetEventConstruct } from './constructs/part_2/update-database-on-new-samplesheet';
+import { bsshFastqCopyManagerInputMakerConstruct } from './constructs/part_3/bssh-fastq-copy-manager-input-maker';
+import { BsshFastqCopyManagerReadyEventHandlerConstruct } from './constructs/part_4/bssh-fastq-copy-manager-ready-event-relayer';
 
 /*
-Create an event rule for the bclconvertmanager source,
-where a workflowrunstatechange detail type has occurred and the workflow is in the succeeded state.
-
-Parse the outputs from the event into a new event object with a different source (workflowrunmanager)
-
-The event output payload will be of the same construct.
-
-Input Event Source: `orcabus.bclconvertmanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
-Input Event status: `succeeded`
-
-Output Event source: `orcabus.workflowrunmanager`
-Output Event DetailType: `orcabus.workflowrunstatechange`
-Output Event status: `complete`
-
+Provide the glue to get from the bclconvertmanager success event
+To triggering the bsshFastqCopyManager
 */
 
 export interface BclconvertManagerEventHanderConstructProps {
-  eventbusObj: events.EventBus;
-  relayEventLambdaPath: string;
-  workflowrunstatechangeLambdaLayerObj: PythonLayerVersion;
+  eventBusObj: events.EventBus;
+  workflowManagerTableObj: dynamodb.ITableV2;
+  metadataTableObj: dynamodb.ITableV2;
+  inputMakerTableObj: dynamodb.ITableV2;
+  bsshOutputFastqCopyUriPrefixSsmParameterObj: ssm.IStringParameter;
 }
 
 export class BclconvertManagerEventHanderConstruct extends Construct {
@@ -50,16 +38,12 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
     Output Event DetailType: `orcabus.workflowrunstatechange`
     Output Event status: `complete`
     */
-    const bclconvertSuccessEventRelayer = new EventRelayerConstruct(
+    const bclconvertSuccessEventRelayer = new BclconvertSuccessEventRelayer(
       this,
-      'bclconvertSuccessEventRelayer',
+      'bclconvert_success_event_relayer',
       {
-        eventbusObj: props.eventbusObj,
-        inputSource: 'orcabus.bclconvertmanager',
-        detailType: 'workflowRunStateChange',
-        inputStatus: 'succeeded',
-        targetSource: 'orcabus.workflowrunmanager',
-        targetStatus: 'complete',
+        eventBusObj: props.eventBusObj,
+        tableObj: props.workflowManagerTableObj,
       }
     );
 
@@ -82,7 +66,14 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
           * type
           * workflow etc.
     */
-    // TODO
+    const updateDataBaseOnNewSamplesheet = new updateDataBaseOnNewSamplesheetEventConstruct(
+      this,
+      'update_database_on_new_samplesheet_construct',
+      {
+        eventBusObj: props.eventBusObj,
+        tableObj: props.metadataTableObj,
+      }
+    );
 
     /*
     Part 3
@@ -99,7 +90,15 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
       * Subscribes to the BCLConvertManagerEventHandler Stack outputs and creates the input for the BSSHFastqCopyManager
       * Pushes an event payload of the input for the BsshFastqCopyManagerReadyEventSubmitter
     */
-    // TODO
+    const bsshFastqCopyManagerInputMaker = new bsshFastqCopyManagerInputMakerConstruct(
+      this,
+      'bssh_fastq_copy_input_maker',
+      {
+        eventBusObj: props.eventBusObj,
+        outputUriPrefixSsmParameterObj: props.bsshOutputFastqCopyUriPrefixSsmParameterObj,
+        tableObj: props.inputMakerTableObj,
+      }
+    );
 
     /*
     Part 4
@@ -115,16 +114,12 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
     * The BsshFastqCopyManagerReadyEventSubmitter Construct
       * Subscribes to the BCLConvertManagerEventHandler Stack outputs and generates a ready event for the BSSHFastqCopyManager
     */
-    const bsshFastqCopyManagerReadyEventRelayer = new EventRelayerConstruct(
+    const bsshFastqCopyReadyEventSubmitter = new BsshFastqCopyManagerReadyEventHandlerConstruct(
       this,
-      'bclconvertSuccessEventRelayer',
+      'bssh_fastq_copy_ready_event_submitter',
       {
-        eventbusObj: props.eventbusObj,
-        inputSource: 'orcabus.bclconvertmanager',
-        detailType: 'workflowRunStateChange',
-        inputStatus: 'succeeded',
-        targetSource: 'orcabus.workflowrunmanager',
-        targetStatus: 'complete',
+        eventBusObj: props.eventBusObj,
+        tableObj: props.workflowManagerTableObj,
       }
     );
   }
