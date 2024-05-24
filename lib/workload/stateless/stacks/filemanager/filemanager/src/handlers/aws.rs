@@ -227,7 +227,7 @@ mod tests {
 
         let event = SqsEvent {
             records: vec![SqsMessage {
-                body: Some(expected_event_record_simple()),
+                body: Some(expected_event_record_simple(false)),
                 ..Default::default()
             }],
         };

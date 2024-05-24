@@ -230,7 +230,8 @@ mod tests {
 
     use crate::events::aws::message::EventType::Created;
     use crate::events::aws::tests::{
-        assert_flat_s3_event, expected_event_bridge_record, expected_sqs_record, EXPECTED_E_TAG,
+        assert_flat_s3_event, expected_event_bridge_record,
+        expected_event_bridge_record_delete_marker, expected_sqs_record, EXPECTED_E_TAG,
         EXPECTED_REQUEST_ID, EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_VERSION_ID,
     };
     use crate::events::aws::EventType::Deleted;
@@ -279,6 +280,7 @@ mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             Some(i64::MAX),
             "null".to_string(),
+            false,
         );
     }
     #[test]
@@ -298,6 +300,7 @@ mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
+            false,
         );
     }
 
@@ -314,6 +317,46 @@ mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
+            false,
+        );
+    }
+
+    #[test]
+    fn deserialize_event_bridge_message_delete_marker() {
+        let record = expected_event_bridge_record_delete_marker().to_string();
+
+        let result: FlatS3EventMessages = serde_json::from_str(&record).unwrap();
+        let first_message = result.into_inner().first().unwrap().clone();
+
+        assert_flat_s3_event(
+            first_message,
+            &Created,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            None,
+            EXPECTED_VERSION_ID.to_string(),
+            true,
+        );
+    }
+
+    #[test]
+    fn deserialize_sqs_message_delete_marker() {
+        let mut record = expected_sqs_record();
+        record["eventName"] = json!("ObjectRemoved:DeleteMarkerCreated");
+        let message = json!({
+           "Records": [record]
+        })
+        .to_string();
+
+        let result: FlatS3EventMessages = serde_json::from_str(&message).unwrap();
+        let first_message = result.into_inner().first().unwrap().clone();
+
+        assert_flat_s3_event(
+            first_message,
+            &Created,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            None,
+            EXPECTED_VERSION_ID.to_string(),
+            true,
         );
     }
 }

@@ -344,6 +344,12 @@ impl Record {
         self.version_id = Some(version_id);
         self
     }
+
+    /// Set the delete marker.
+    pub fn set_is_delete_marker(mut self, is_delete_marker: bool) -> Self {
+        self.is_delete_marker = Some(is_delete_marker);
+        self
+    }
 }
 
 /// A builder for an S3 inventory record.

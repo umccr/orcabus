@@ -594,6 +594,7 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
+            false,
         );
 
         let second = result.next().unwrap();
@@ -603,6 +604,7 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
             EXPECTED_VERSION_ID.to_string(),
+            false,
         );
 
         let third = result.next().unwrap();
@@ -612,6 +614,7 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
             EXPECTED_VERSION_ID.to_string(),
+            false,
         );
     }
 
@@ -627,6 +630,7 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
             EXPECTED_VERSION_ID.to_string(),
+            false,
         );
 
         let second = result.next().unwrap();
@@ -636,6 +640,7 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
+            false,
         );
     }
 
@@ -663,6 +668,7 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(0),
             EXPECTED_VERSION_ID.to_string(),
+            false,
         );
 
         let second = result.next().unwrap();
@@ -672,6 +678,7 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
+            false,
         );
 
         let third = result.next().unwrap();
@@ -681,6 +688,7 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             "version_id".to_string(),
+            false,
         );
     }
 
@@ -690,6 +698,7 @@ pub(crate) mod tests {
         sequencer: Option<String>,
         size: Option<i64>,
         version_id: String,
+        is_delete_marker: bool,
     ) {
         assert_eq!(event.event_time, Some(DateTime::<Utc>::default()));
         assert_eq!(&event.event_type, event_type);
@@ -701,6 +710,7 @@ pub(crate) mod tests {
         assert_eq!(event.sequencer, sequencer);
         assert_eq!(event.storage_class, None);
         assert_eq!(event.last_modified_date, None);
+        assert_eq!(event.is_delete_marker, is_delete_marker);
     }
 
     fn assert_object(
@@ -774,19 +784,24 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn expected_flat_events_simple() -> FlatS3EventMessages {
-        expected_flat_events(expected_event_record_simple())
+        expected_flat_events(expected_event_record_simple(false))
     }
 
     pub(crate) fn expected_events_simple() -> Events {
-        expected_events(expected_event_record_simple())
+        expected_events(expected_event_record_simple(false))
+    }
+
+    pub(crate) fn expected_events_simple_delete_marker() -> Events {
+        expected_events(expected_event_record_simple(true))
     }
 
     pub(crate) fn expected_events_full() -> Events {
-        expected_events(expected_event_record_full())
+        expected_events(expected_event_record_full(false))
     }
 
-    pub(crate) fn expected_event_record_simple() -> String {
-        let mut records: Value = serde_json::from_str(&expected_event_record_full()).unwrap();
+    pub(crate) fn expected_event_record_simple(is_delete_marker: bool) -> String {
+        let mut records: Value =
+            serde_json::from_str(&expected_event_record_full(is_delete_marker)).unwrap();
 
         records["Records"] = json!([
             records["Records"][0].clone(),
@@ -828,6 +843,13 @@ pub(crate) mod tests {
                 "deletion-type": "Permanently Deleted"
             }
         })
+    }
+
+    /// https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
+    pub(crate) fn expected_event_bridge_record_delete_marker() -> Value {
+        let mut value = expected_event_bridge_record();
+        value["detail"]["deletion-type"] = json!("Delete Marker Created");
+        value
     }
 
     /// https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-content-structure.html
@@ -874,11 +896,15 @@ pub(crate) mod tests {
         })
     }
 
-    pub(crate) fn expected_event_record_full() -> String {
+    pub(crate) fn expected_event_record_full(is_delete_marker: bool) -> String {
         let object = expected_sqs_record();
 
         let mut object_created_one = object.clone();
-        object_created_one["eventName"] = json!("ObjectCreated:Put");
+        object_created_one["eventName"] = if is_delete_marker {
+            json!("ObjectRemoved:DeleteMarkerCreated")
+        } else {
+            json!("ObjectCreated:Put")
+        };
         object_created_one["s3"]["object"]["sequencer"] = json!(EXPECTED_SEQUENCER_CREATED_ONE);
         object_created_one["s3"]["object"]["size"] = json!(0);
 
