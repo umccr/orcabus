@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import { DynamodbIcav2PipelineConstruct } from '../../../../components/dynamodb-icav2-table';
+import { DynamodbPartitionedPipelineConstruct } from '../../../../components/dynamodb-partitioned-table';
 
 export interface Cttsov2Icav2PipelineTableConfig {
   dynamodbTableName: string;
@@ -21,7 +21,7 @@ export class Cttsov2Icav2PipelineTable extends cdk.Stack {
     /*
     Initialise dynamodb table, where portal_run_id is the primary sort key
     */
-    const dynamodb_table = new DynamodbIcav2PipelineConstruct(
+    const dynamodb_table = new DynamodbPartitionedPipelineConstruct(
       this,
       'cttsov2_icav2_pipeline_table',
       {

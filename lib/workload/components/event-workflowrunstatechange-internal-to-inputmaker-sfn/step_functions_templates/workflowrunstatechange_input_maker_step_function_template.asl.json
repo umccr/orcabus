@@ -56,7 +56,7 @@
       "Next": "EventBridge PutEvents",
       "ResultPath": "$.get_workflow_run_items",
       "ResultSelector": {
-        "output_event_data": ".Item.output_event_data.M"
+        "event_data_output": ".Item.event_data_output.M"
       }
     },
     "EventBridge PutEvents": {
@@ -69,7 +69,7 @@
             "EventBusName": "${__event_bus_name__}",
             "DetailType": "${__detail_type__}",
             "Detail": {
-              "portalRunId.$": "$.get_workflow_run_items.output_event_data.portal_run_id",
+              "portalRunId.$": "$.get_workflow_run_items.event_data_output.portal_run_id",
               "timestamp.$": "$$.Execution.StartTime",
               "status": "ready",
               "workflowName": "${__workflow_name__}",
@@ -78,7 +78,7 @@
               "payload": {
                 "refId": null,
                 "version": "${__payload_version__}",
-                "data.$": "$.get_workflow_run_items.output_event_data"
+                "data.$": "$.get_workflow_run_items.event_data_output"
               }
             }
           }
@@ -94,7 +94,7 @@
         "Item": {
           "id.$": "$.get_reference_id_step.reference_id",
           "id_type": "${__id_type__}",
-          "input_event_data": {
+          "event_data_input": {
             "M.$": "$.input_event_detail.payload.data"
           }
         }
@@ -136,9 +136,9 @@
                   "id_type": "${__id_type__}"
                 }
               },
-              "ResultPath": "$.get_output_event_data_step",
+              "ResultPath": "$.get_event_data_output_step",
               "ResultSelector": {
-                "output_event_data.$": "$.Item.output_event_data.M"
+                "event_data_output.$": "$.Item.event_data_output.M"
               },
               "End": true
             }
@@ -185,7 +185,7 @@
         "FunctionName": "${__update_portal_run_id_in_event_detail_lambda_function_arn__}",
         "Payload": {
           "portal_run_id.$": "$.event_detail_outputs_parallel.get_portal_run_id_step.portal_run_id",
-          "output_event_data.$": "$.event_detail_outputs_parallel.get_output_event_data_step.output_event_data"
+          "event_data_output.$": "$.event_detail_outputs_parallel.get_event_data_output_step.event_data_output"
         }
       },
       "Retry": [
@@ -203,7 +203,7 @@
       ],
       "Next": "Generate workflow run name",
       "ResultSelector": {
-        "output_event_data_updated.$": "$.Payload.event_data_updated"
+        "event_data_output_updated.$": "$.Payload.event_data_updated"
       },
       "ResultPath": "$.update_event_step_detail_with_portal_run_id_step"
     },
@@ -246,7 +246,7 @@
           "id.$": "$.get_reference_id_step.reference_id",
           "id_type": "${__id_type__}"
         },
-        "UpdateExpression": "SET output_event_data = :output_event_data",
+        "UpdateExpression": "SET event_data_output = :event_data_output",
         "ExpressionAttributeValues": {
           ":portal_run_id": {
             "S.$": "$.event_detail_outputs_parallel.get_portal_run_id_step.portal_run_id"
@@ -254,8 +254,8 @@
           ":workflow_run_name": {
             "S.$": "$.generate_workflow_run_name_step.workflow_run_name"
           },
-          ":output_event_data": {
-            "M.$": "$.update_event_step_detail_with_portal_run_id_step.output_event_data_updated"
+          ":event_data_output": {
+            "M.$": "$.update_event_step_detail_with_portal_run_id_step.event_data_output_updated"
           }
         }
       },

@@ -35,14 +35,14 @@ def handler(event, context):
     portal_run_id: str = event.get('portal_run_id', None)
 
     # Get the payload data from the event
-    output_event_data: Dict = event.get('output_event_data', None)
+    event_data_output: Dict = event.get('event_data_output', None)
 
     # Assert both portal run id and output event data are not none
     assert portal_run_id is not None, 'Portal run id is required'
-    assert output_event_data is not None, 'Output event data is required'
+    assert event_data_output is not None, 'Output event data is required'
 
     # Recursively replace __portal_run_id__ with the actual portal run id
     return {
-       "event_data_updated":  replace_portal_run_id_recursively(output_event_data, portal_run_id)
+       "event_data_updated":  replace_portal_run_id_recursively(event_data_output, portal_run_id)
     }
 

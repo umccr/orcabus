@@ -56,8 +56,8 @@
       "Parameters": {
         "FunctionName": "${__translate_event_lambda_function_arn__}",
         "Payload": {
-          "uuid": "$.generate_db_uuid_step.uuid",
-          "event_detail_input": "$.event_detail_input"
+          "uuid.$": "$.generate_db_uuid_step.uuid",
+          "event_detail_input.$": "$.event_detail_input"
         }
       },
       "Retry": [
