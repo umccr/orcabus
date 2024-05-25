@@ -33,22 +33,42 @@ def get_events_client() -> 'EventBridgeClient':
 
 
 def handler(event, context):
-    new_event = translate_to_aws_event_with_new_source(event)
+    # FIXME - I don't think we know full construct use-case just yet
+    # FIXME - if anything this should be its own construct called 'translate event detail'
+    # Update refid
+    event['event_input']['detail']['payload']['refId'] = event["reference_id"]
 
-    try:
-        get_events_client().put_events(
-            Entries=[
-                {
-                    "Source": new_event.source,
-                    "DetailType": new_event.detail_type,
-                    "Detail": json.dumps(Marshaller.marshall(new_event.detail)),
-                    "EventBusName": environ["EVENT_BUS_NAME"]
-                }
-            ]
-        )
-        logger.info(f"Internal event sent to the event bus.")
-    except Exception as e:
-        raise Exception("Failed to send event to the event bus. Error: ", e)
+    if (
+            event['event_input_type'] == 'workflowCompleteExternal' and
+            event['event_output_type'] == 'workflowCompleteInternal'
+    ):
+        new_event = translate_to_aws_event_with_new_source(event['event_input'])
+        return json.dumps(Marshaller.marshall(new_event.detail))
+    elif (
+        event['event_input_type'] == 'inputMaker' and
+        event['event_output_type'] == 'ready'
+    ):
+        # Override portal run id in the event payload
+        if 'portal_run_id' in event.keys() and 'event_input' in event.keys():
+            event['event_input']['portalRunId'] = event['portal_run_id']
+        new_event = translate_to_aws_event_with_new_source(event['event_input'])
+        return json.dumps(Marshaller.marshall(new_event.detail))
+    else:
+        new_event = translate_to_aws_event_with_new_source(event['event_input'])
+        try:
+            get_events_client().put_events(
+                Entries=[
+                    {
+                        "Source": new_event.source,
+                        "DetailType": new_event.detail_type,
+                        "Detail": json.dumps(Marshaller.marshall(new_event.detail)),
+                        "EventBusName": environ["EVENT_BUS_NAME"]
+                    }
+                ]
+            )
+            logger.info(f"Internal event sent to the event bus.")
+        except Exception as e:
+            raise Exception("Failed to send event to the event bus. Error: ", e)
 
 
 def translate_to_aws_event_with_new_source(event) -> AWSEvent:
@@ -87,6 +107,7 @@ def handle_portal_run_id(event, portal_run_id):
 def handle_payload(payload: typing.Dict, portal_run_id: str):
     # Recursively traverse the payload data attribute, replace values
     # where __portal_run_id__ is found with portal_run_id
+    payload = deepcopy(payload)
     for key, item in deepcopy(payload).items():
         if isinstance(item, dict):
             payload[key] = handle_payload(item, portal_run_id)
@@ -95,3 +116,5 @@ def handle_payload(payload: typing.Dict, portal_run_id: str):
                 payload[key][i] = handle_payload(i, portal_run_id)
         elif isinstance(item, str):
             payload[key] = item.replace("__portalRunId__", portal_run_id)
+
+    return payload
