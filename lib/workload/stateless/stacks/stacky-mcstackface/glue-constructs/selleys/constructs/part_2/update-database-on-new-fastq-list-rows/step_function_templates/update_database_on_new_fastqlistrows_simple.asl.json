@@ -1,14 +1,22 @@
 {
   "Comment": "A description of my state machine",
-  "StartAt": "Decompress fastq list rows",
+  "StartAt": "Move Inputs",
   "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "Decompress fastq list rows",
+      "Parameters": {
+        "inputs.$": "$"
+      }
+    },
     "Decompress fastq list rows": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "OutputPath": "$.Payload",
       "Parameters": {
-        "Payload.$": "$",
-        "FunctionName": "${__decompress_fastq_list_rows_lambda_function_arn__}"
+        "FunctionName": "${__decompress_fastq_list_rows_lambda_function_arn__}",
+        "Payload": {
+          "fastq_list_rows_b64gz.$": "$.inputs.payload.data.fastqListRowsB64gz"
+        }
       },
       "Retry": [
         {
@@ -23,25 +31,30 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "Add fastq list rows to instrument run id (LibraryFile DB)"
+      "Next": "Add fastq list rows to instrument run id (LibraryFile DB)",
+      "ResultPath": "$,decompress_fastq_list_rows_step",
+      "ResultSelector": {
+        "fastq_list_rows": "$.Payload.fastq_list_rows"
+      }
     },
     "Add fastq list rows to instrument run id (LibraryFile DB)": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
       "Parameters": {
-        "TableName": "MyDynamoDBTable",
-        "Key": {
-          "Column": {
-            "S": "MyEntry"
-          }
-        },
-        "UpdateExpression": "SET MyKey = :myValueRef",
-        "ExpressionAttributeValues": {
-          ":myValueRef": {
-            "S": "MyValue"
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.inputs.payload.data.instrumentRunId",
+          "id_type": "${__table_partition_name__}",
+          "fastq_list_rows": {
+            "L$": "$.decompress_fastq_list_rows_step.fastq_list_rows"
           }
         }
       },
+      "Next": "Wait 1 Second"
+    },
+    "Wait 1 Second": {
+      "Type": "Wait",
+      "Seconds": 1,
       "Next": "Raise event for fastqlistrows registered"
     },
     "Raise event for fastqlistrows registered": {
@@ -51,12 +64,11 @@
         "Entries": [
           {
             "Detail": {
-              "Message": "Hello from Step Functions!",
-              "TaskToken.$": "$$.Task.Token"
+              "instrumentRunId.$": "$.inputs.payload.data.instrumentRunId"
             },
-            "DetailType": "MyDetailType",
-            "EventBusName": "MyEventBusName",
-            "Source": "MySource"
+            "DetailType": "${__detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}"
           }
         ]
       },

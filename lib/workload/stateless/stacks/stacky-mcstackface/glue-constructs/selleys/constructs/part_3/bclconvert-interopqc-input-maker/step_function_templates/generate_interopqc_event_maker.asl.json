@@ -1,0 +1,112 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move inputs",
+  "States": {
+    "Move inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "inputs.$": "$"
+      },
+      "Next": "Get event data from ref db (Local)"
+    },
+    "Get event data from ref db (Local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": "$.inputs.db_uuid",
+          "id_type": "${__input_maker_type__}"
+        }
+      },
+      "ResultSelector": {
+        "event_data_input.$": "$.Item.event_data_input.M"
+      },
+      "ResultPath": "$.get_event_detail_payload_data_from_db_step",
+      "Next": "Get Parameter Steps"
+    },
+    "Get Parameter Steps": {
+      "Type": "Parallel",
+      "Next": "Generate inputs for BCLConvert InteropQC",
+      "Branches": [
+        {
+          "StartAt": "Get OutputUri Prefix for BCLConvert InterOp QC data",
+          "States": {
+            "Get OutputUri Prefix for BCLConvert InterOp QC data": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__bclconvert_interop_qc_output_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "output_uri_prefix.$": "$.Parameter.Value"
+              },
+              "ResultPath": "$.get_output_uri_prefix_parameter_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Project ID and Name for BCLConvert InterOp QC data",
+          "States": {
+            "Get Project ID and Name for BCLConvert InterOp QC data": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__icav2_project_id_and_name_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "project_id.$": "$.Parameter.Value.project_id",
+                "project_name.$": "$.Parameter.Value.project_name"
+              },
+              "ResultPath": "$.get_project_id_and_name_parameter_step",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.get_ssm_parameters_steps"
+    },
+    "Generate inputs for BCLConvert InteropQC": {
+      "Type": "Pass",
+      "Parameters": {
+        "projectId.$": "$.get_ssm_parameters_steps.get_project_id_and_name_parameter_step.project_id",
+        "bclconvertReportDirectory.$": "States.Format('{}Reports/', $.get_event_detail_payload_data_from_db_step.event_data_input.outputUri)",
+        "interopDirectory.$": "States.Format('{}InterOp/', $.get_event_detail_payload_data_from_db_step.event_data_input.outputUri)",
+        "runId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
+        "analysisId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.analysisId",
+        "analysisOutputUri.$": "States.Format('{}__portal_run_id__/out/', $.get_ssm_parameters_steps.get_output_uri_prefix_parameter_step.output_uri_prefix)",
+        "icaLogsUri.$": "States.Format('{}__portal_run_id__/logs/', $.get_ssm_parameters_steps.get_output_uri_prefix_parameter_step.output_uri_prefix)",
+        "userTags": {
+          "instrument_run_id": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
+          "project_name": "$.get_ssm_parameters_steps.get_project_id_and_name_parameter_step.project_name"
+        }
+      },
+      "ResultPath": "$.set_event_data_output",
+      "Next": "Add event data outputs (local)"
+    },
+    "Add event data outputs (local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.inputs.db_uuid",
+          "id_type": "${__input_maker_type__}"
+        },
+        "UpdateExpression": "SET event_detail_output = :event_detail_output",
+        "ExpressionAttributeValues": {
+          ":event_data_output": {
+            "M.$": "$.set_event_data_output"
+          }
+        }
+      },
+      "Next": "Wait 1 Second"
+    },
+    "Wait 1 Second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "End": true
+    }
+  }
+}

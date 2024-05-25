@@ -10,7 +10,7 @@ Input Event Source: `orcabus.bsshfastqcopymanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `succeeded`
 
-Output Event source: `orcabus.workflowrunmanager`
+Output Event source: `orcabus.workflowmanager`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `complete`
 
@@ -23,11 +23,11 @@ Output Event status: `complete`
 
 ### Part 2
 
-Input Event Source: `orcabus.workflowrunmanager`
+Input Event Source: `orcabus.workflowmanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
-Output Event source: `orcabus.metadatamanager`
+Output Event source: `orcabus.instrumentrunmanager`
 Output Event DetailType: `orcabus.librarystatechange`
 Output Event status: `fastqlistrowsregistered`
 
@@ -45,7 +45,7 @@ OR
 
 ### Part 3
 
-Input Event Source: `orcabus.workflowrunmanager`
+Input Event Source: `orcabus.workflowmanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
@@ -69,7 +69,7 @@ Input Event Source: `orcabus.bclconvertinteropqcinputeventglue`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
-Output Event source: `orcabus.workflowrunmanager`
+Output Event source: `orcabus.workflowmanager`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `ready`
 
