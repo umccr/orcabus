@@ -4,22 +4,29 @@ The dynamo db service that stores the hacky metadata manager
 
 We have various id types
 
-* instrument_run_id
-  * Contains the instrument run id
-  * The samplesheet as a json
-  * The instrument lanes 
+## Instrument Run Manager
 
-* instrument lane
-  * The instrument run id, plus the lane number
-  * The library run ids in this lane
+* id: Instrument Run ID
+* id_type: Partition Table Name
+* samplesheet_dict: The samplesheet dictionary
+* fastq_list_row_dict: The fastq list rows
 
-* library id
-  * A library id with metadata
+## Workflow Manager
 
-* library lane id
-  * A library lane id that connects an instrument lane to a library id
-  * There may be multiple library lanes for a library id
+* Records Translated Events
 
-* 
+* id: refId
+* id_type: The name of the translation event
+* event_detail_input: The input event detail
+* event_detail_output: The event detail of the translated event
 
+## Glue Manager
 
+* Records Input Maker Creation Jobs by Glue Constructs 
+
+* id: refId
+* id_type: The name of the input maker glue construct
+* event_data_input: The input event data
+* event_data_output: The output event data
+* portal_run_id: The portal run id generated for the ready event
+* workflow_run_name: The workflow run name generated for the ready event
