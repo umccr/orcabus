@@ -26,7 +26,7 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
 
     /*
     Part 1
-    Parse the outputs from the event into a new event object with a different source (workflowrunmanager)
+    Parse the outputs from the event into a new event object with a different source (workflowmanager)
 
     The event output payload will be of the same construct.
 
@@ -34,7 +34,7 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
     Input Event DetailType: `orcabus.workflowrunstatechange`
     Input Event status: `succeeded`
 
-    Output Event source: `orcabus.workflowrunmanager`
+    Output Event source: `orcabus.workflowmanager`
     Output Event DetailType: `orcabus.workflowrunstatechange`
     Output Event status: `complete`
     */
@@ -49,7 +49,7 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
 
     /*
     Part 2
-    Input Event Source: `orcabus.workflowrunmanager`
+    Input Event Source: `orcabus.workflowmanager`
     Input Event DetailType: `orcabus.workflowrunstatechange`
     Input Event status: `complete`
 
@@ -78,7 +78,7 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
     /*
     Part 3
 
-    Input Event Source: `orcabus.workflowrunmanager`
+    Input Event Source: `orcabus.workflowmanager`
     Input Event DetailType: `orcabus.workflowrunstatechange`
     Input Event status: `complete`
 
@@ -107,7 +107,7 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
     Input Event DetailType: `orcabus.workflowrunstatechange`
     Input Event status: `complete`
 
-    Output Event source: `orcabus.workflowrunmanager`
+    Output Event source: `orcabus.workflowmanager`
     Output Event DetailType: `orcabus.workflowrunstatechange`
     Output Event status: `ready`
 

@@ -15,7 +15,7 @@
       "Parameters": {
         "Payload": {
           "decompress": true,
-          "input": "$.inputs.samplesheetB64gz"
+          "input.$": "$.inputs.samplesheetB64gz"
         },
         "FunctionName": "${__decompress_samplesheet_function_arn__}"
       },

@@ -7,7 +7,7 @@ import { WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct 
 Create an event rule for the bclconvertmanager source,
 where a workflowrunstatechange detail type has occurred and the workflow is in the succeeded state.
 
-Parse the outputs from the event into a new event object with a different source (workflowrunmanager)
+Parse the outputs from the event into a new event object with a different source (workflowmanager)
 
 The event output payload will be of the same construct.
 
@@ -15,7 +15,7 @@ Input Event Source: `orcabus.bclconvertmanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `succeeded`
 
-Output Event source: `orcabus.workflowrunmanager`
+Output Event source: `orcabus.workflowmanager`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `complete`
 
@@ -39,7 +39,7 @@ export class BclconvertSuccessEventRelayer extends Construct {
 
     /*
         Part 1
-        Parse the outputs from the event into a new event object with a different source (workflowrunmanager)
+        Parse the outputs from the event into a new event object with a different source (workflowmanager)
 
         The event output payload will be of the same construct.
 
@@ -47,7 +47,7 @@ export class BclconvertSuccessEventRelayer extends Construct {
         Input Event DetailType: `orcabus.workflowrunstatechange`
         Input Event status: `succeeded`
 
-        Output Event source: `orcabus.workflowrunmanager`
+        Output Event source: `orcabus.workflowmanager`
         Output Event DetailType: `orcabus.workflowrunstatechange`
         Output Event status: `complete`
         */

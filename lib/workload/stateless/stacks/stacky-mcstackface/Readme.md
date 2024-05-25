@@ -31,8 +31,8 @@ Input Event Source: `orcabus.workflowrunmanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
-Output Event source: `orcabus.metadatamanager`
-Output Event DetailType: `orcabus.librarystatechange`
+Output Event source: `orcabus.instrumentmanager`
+Output Event DetailType: `orcabus.instrumentRunStateChange`
 Output Event status: `libraryrunidsregistered`
 
 * The UpdateDataBaseOnNewSampleSheet Construct
@@ -99,8 +99,8 @@ Input Event Source: `orcabus.workflowrunmanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
-Output Event source: `orcabus.metadatamanager`
-Output Event DetailType: `orcabus.librarystatechange`
+Output Event source: `orcabus.instrumentmanager`
+Output Event DetailType: `orcabus.fastqlistrowstatechange`
 Output Event status: `fastqlistrowsregistered`
 
 * The UpdateDataBaseOnNewFastqListRows Construct
@@ -111,9 +111,9 @@ Output Event status: `fastqlistrowsregistered`
 
 ### Construct B (Part 3)
 
-Input Event Source: `orcabus.workflowrunmanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
-Input Event status: `complete`
+Input Event Source: `orcabus.instrumentmanager`
+Input Event DetailType: `orcabus.fastqlistrowstatechange`
+Input Event status: `fastqlistrowsregistered`
 
 Output Event source: `orcabus.bclconvertinteropqcinputeventglue`
 Output Event DetailType: `orcabus.workflowrunstatechange`
@@ -163,7 +163,7 @@ Input Event source: `orcabus.workflowrunmanager`
 Input Event DetailType: `orcabus.librarystatechange`
 Input Event status: `fastqlistrowsregistered`
 
-Output Event source: `orcabus.cttsov2inputeventglude`
+Output Event source: `orcabus.cttsov2inputeventglue`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `complete`
 

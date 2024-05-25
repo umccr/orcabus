@@ -9,7 +9,7 @@ import { WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct 
 * Input Event status: `complete`
 
 
-* Output Event source: `orcabus.workflowrunmanager`
+* Output Event source: `orcabus.workflowmanager`
 * Output Event DetailType: `orcabus.workflowrunstatechange`
 * Output Event status: `ready`
 
@@ -40,7 +40,7 @@ export class BsshFastqCopyManagerReadyEventHandlerConstruct extends Construct {
 
     /*
         Part 1
-        Parse the outputs from the event into a new event object with a different source (workflowrunmanager)
+        Parse the outputs from the event into a new event object with a different source (workflowmanager)
 
         The event output payload will be of the same construct.
 
@@ -48,7 +48,7 @@ export class BsshFastqCopyManagerReadyEventHandlerConstruct extends Construct {
         Input Event DetailType: `orcabus.workflowrunstatechange`
         Input Event status: `succeeded`
 
-        Output Event source: `orcabus.workflowrunmanager`
+        Output Event source: `orcabus.workflowmanager`
         Output Event DetailType: `orcabus.workflowrunstatechange`
         Output Event status: `complete`
         */

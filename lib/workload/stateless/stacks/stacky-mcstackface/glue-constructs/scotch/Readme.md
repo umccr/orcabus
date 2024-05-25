@@ -11,7 +11,7 @@
 * Input Event status: `complete`
 
 
-* Output Event source: `orcabus.workflowrunmanager`
+* Output Event source: `orcabus.workflowmanager`
 * Output Event DetailType: `orcabus.workflowrunstatechange`
 * Output Event status: `complete`
 
@@ -27,13 +27,13 @@
 
 ### Part 2
 
-* Input Event Source: `orcabus.workflowrunmanager`
+* Input Event Source: `orcabus.workflowmanager`
 * Input Event DetailType: `orcabus.workflowrunstatechange`
 * Input Event status: `complete`
 
 
-* Output Event source: `orcabus.metadatamanager`
-* Output Event DetailType: `orcabus.librarystatechange`
+* Output Event source: `orcabus.instrumentmanager`
+* Output Event DetailType: `orcabus.samplesheetstatechange`
 * Output Event status: `samplesheetregistered`
 
 
@@ -55,7 +55,7 @@ OR
 
 ### Part 3
 
-* Input Event Source: `orcabus.workflowrunmanager`
+* Input Event Source: `orcabus.workflowmanager`
 * Input Event DetailType: `orcabus.workflowrunstatechange`
 * Input Event status: `complete`
 
@@ -83,7 +83,7 @@ With the parent function displayed here:
 * Input Event status: `complete`
 
 
-* Output Event source: `orcabus.workflowrunmanager`
+* Output Event source: `orcabus.workflowmanager`
 * Output Event DetailType: `orcabus.workflowrunstatechange`
 * Output Event status: `ready`
 
