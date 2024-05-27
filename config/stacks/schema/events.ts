@@ -1,15 +1,15 @@
-import { SchemaStackProps } from '../../lib/workload/stateless/stacks/schema/stack';
-import { schemaRegistryName } from '../constants';
+import { SchemaStackProps } from '../../../lib/workload/stateless/stacks/schema/stack';
+import { eventSchemaRegistryName } from '../../constants';
 import path from 'path';
 
-export const getSchemaStackProps = (): SchemaStackProps => {
-  const docBase: string = '../../docs/schemas/events';
+export const getEventSchemaStackProps = (): SchemaStackProps => {
+  const docBase: string = '../../../docs/schemas/events';
   const defaultProps = {
     schemaType: 'OpenApi3',
   };
 
   return {
-    registryName: schemaRegistryName,
+    registryName: eventSchemaRegistryName,
     schemas: [
       // add your schema into this `schemas` array
       // adjust name, description, location accordingly

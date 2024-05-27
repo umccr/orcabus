@@ -49,7 +49,8 @@ export interface StatelessStackCollectionProps {
   icav2CopyBatchUtilityStackProps: ICAv2CopyBatchUtilityStackProps;
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
   cttsov2Icav2PipelineManagerStackProps: cttsov2Icav2PipelineManagerStackProps;
-  schemaStackProps: SchemaStackProps;
+  eventSchemaStackProps: SchemaStackProps;
+  dataSchemaStackProps: SchemaStackProps;
   icav2EventTranslatorStackProps: Icav2EventTranslatorStackProps;
   workflowManagerStackProps: WorkflowManagerStackProps;
 }
@@ -64,7 +65,8 @@ export class StatelessStackCollection {
   readonly icav2CopyBatchUtilityStack: Stack;
   readonly bsshIcav2FastqCopyManagerStack: Stack;
   readonly cttsov2Icav2PipelineManagerStack: Stack;
-  readonly schemaStack: Stack;
+  readonly eventSchemaStack: Stack;
+  readonly dataSchemaStack: Stack;
   readonly icav2EventTranslatorStack: Stack;
   readonly workflowManagerStack: Stack;
 
@@ -73,9 +75,14 @@ export class StatelessStackCollection {
     env: Environment,
     statelessConfiguration: StatelessStackCollectionProps
   ) {
-    this.schemaStack = new SchemaStack(scope, 'SchemaStack', {
-      ...this.createTemplateProps(env, 'SchemaStack'),
-      ...statelessConfiguration.schemaStackProps,
+    this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
+      ...this.createTemplateProps(env, 'EventSchemaStack'),
+      ...statelessConfiguration.eventSchemaStackProps,
+    });
+
+    this.dataSchemaStack = new SchemaStack(scope, 'DataSchemaStack', {
+      ...this.createTemplateProps(env, 'DataSchemaStack'),
+      ...statelessConfiguration.dataSchemaStackProps,
     });
 
     this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
