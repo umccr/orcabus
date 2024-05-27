@@ -181,6 +181,7 @@ pub(crate) mod tests {
             &vec![Some(StorageClass::Standard)] as &[Option<StorageClass>],
             &vec![EXPECTED_VERSION_ID.to_string()],
             &vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()],
+            &vec![false]
         )
         .fetch_all(&mut *tx)
         .await
@@ -248,6 +249,7 @@ pub(crate) mod tests {
             &vec![EXPECTED_VERSION_ID.to_string()],
             &vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()],
             &vec![1],
+            &vec![false]
         )
         .fetch_all(&mut *tx)
         .await
@@ -377,6 +379,7 @@ pub(crate) mod tests {
             &vec![Some(StorageClass::Standard)] as &[Option<StorageClass>],
             &vec![EXPECTED_VERSION_ID.to_string()],
             &vec![sequencer.to_string()],
+            &vec![false]
         )
         .fetch_all(ingester.client().pool())
         .await

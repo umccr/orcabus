@@ -135,7 +135,8 @@ impl<'a> Ingester<'a> {
             &object_created.e_tags as &[Option<String>],
             &object_created.storage_classes as &[Option<StorageClass>],
             &object_created.version_ids as &[String],
-            &object_created.sequencers as &[Option<String>]
+            &object_created.sequencers as &[Option<String>],
+            &object_created.is_delete_markers as &[bool],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -158,7 +159,8 @@ impl<'a> Ingester<'a> {
             &object_created.e_tags as &[Option<String>],
             &object_created.storage_classes as &[Option<StorageClass>],
             &object_created.version_ids,
-            &object_created.sequencers as &[Option<String>]
+            &object_created.sequencers as &[Option<String>],
+            &object_created.is_delete_markers as &[bool],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -216,7 +218,8 @@ impl<'a> Ingester<'a> {
             &object_deleted.version_ids,
             &object_deleted.sequencers as &[Option<String>],
             // Fill this with 1 reorder, because if we get here then this must be a reordered event.
-            &vec![1; object_deleted.s3_object_ids.len()]
+            &vec![1; object_deleted.s3_object_ids.len()],
+            &object_deleted.is_delete_markers as &[bool],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -274,8 +277,8 @@ pub(crate) mod tests {
     use crate::database::{Client, Ingest};
     use crate::events::aws::message::EventType::{Created, Deleted};
     use crate::events::aws::tests::{
-        expected_events_simple, expected_flat_events_simple, EXPECTED_E_TAG,
-        EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
+        expected_events_simple, expected_events_simple_delete_marker, expected_flat_events_simple,
+        EXPECTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
         EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_SHA256,
         EXPECTED_VERSION_ID,
     };
@@ -294,6 +297,53 @@ pub(crate) mod tests {
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
         assert_created(&s3_object_results[0]);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_object_created_delete_marker(pool: PgPool) {
+        let mut events = test_events_delete_marker();
+        events.object_deleted = Default::default();
+
+        let ingester = test_ingester(pool);
+        ingester.ingest_events(events).await.unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 1);
+        assert_eq!(s3_object_results.len(), 1);
+
+        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true);
+        assert_row(
+            &s3_object_results[0],
+            message,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            None,
+            Some(Default::default()),
+            None,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_object_removed_delete_marker(pool: PgPool) {
+        let events = test_events_delete_marker();
+
+        let ingester = test_ingester(pool);
+        ingester.ingest_events(events).await.unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 1);
+        assert_eq!(s3_object_results.len(), 1);
+
+        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true);
+        assert_row(
+            &s3_object_results[0],
+            message,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            Some(Default::default()),
+            Some(Default::default()),
+        );
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -499,6 +549,50 @@ pub(crate) mod tests {
         assert_eq!(s3_object_results.len(), 1);
         assert_eq!(2, s3_object_results[0].get::<i64, _>("number_reordered"));
         assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_reorder_different_update_field(pool: PgPool) {
+        let ingester = test_ingester(pool);
+        let events = test_events();
+        // Regular ingest.
+        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
+
+        let mut sequencer = EXPECTED_SEQUENCER_CREATED_ONE.to_string();
+        sequencer.pop().unwrap();
+        sequencer.push('5');
+        let mut events = replace_sequencers(test_created_events(), Some(sequencer.to_string()));
+        events.object_created.sha256s[0] = None;
+        // Ingest with a sequencer that causes the previous event to be reprocessed.
+        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
+
+        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_results.len(), 2);
+        assert_eq!(1, s3_object_results[0].get::<i64, _>("number_reordered"));
+
+        // It's expected that a null field still gets updated with the reordered event.
+        let message =
+            expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false).with_sha256(None);
+        assert_row(
+            &s3_object_results[0],
+            message,
+            Some(sequencer),
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            Some(Default::default()),
+            Some(Default::default()),
+        );
+
+        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false);
+        assert_row(
+            &s3_object_results[1],
+            message,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            None,
+            Some(Default::default()),
+            None,
+        );
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -1615,6 +1709,26 @@ pub(crate) mod tests {
             deleted_date,
             s3_object_results.get::<Option<DateTime<Utc>>, _>("deleted_date")
         );
+        assert_eq!(
+            message.is_delete_marker,
+            s3_object_results.get::<bool, _>("is_delete_marker")
+        );
+    }
+
+    pub(crate) fn expected_message(
+        size: Option<i64>,
+        version_id: String,
+        is_delete_marker: bool,
+    ) -> FlatS3EventMessage {
+        FlatS3EventMessage::default()
+            .with_bucket("bucket".to_string())
+            .with_key("key".to_string())
+            .with_size(size)
+            .with_version_id(version_id)
+            .with_last_modified_date(Some(DateTime::<Utc>::default()))
+            .with_e_tag(Some(EXPECTED_E_TAG.to_string()))
+            .with_sha256(Some(EXPECTED_SHA256.to_string()))
+            .with_is_delete_marker(is_delete_marker)
     }
 
     pub(crate) fn assert_with(
@@ -1626,14 +1740,7 @@ pub(crate) mod tests {
         created_date: Option<DateTime<Utc>>,
         deleted_date: Option<DateTime<Utc>>,
     ) {
-        let message = FlatS3EventMessage::default()
-            .with_bucket("bucket".to_string())
-            .with_key("key".to_string())
-            .with_size(size)
-            .with_version_id(version_id)
-            .with_last_modified_date(Some(DateTime::<Utc>::default()))
-            .with_e_tag(Some(EXPECTED_E_TAG.to_string()))
-            .with_sha256(Some(EXPECTED_SHA256.to_string()));
+        let message = expected_message(size, version_id, false);
 
         assert_row(
             s3_object_results,
@@ -1675,6 +1782,10 @@ pub(crate) mod tests {
 
     pub(crate) fn test_events() -> Events {
         update_test_events(expected_events_simple())
+    }
+
+    pub(crate) fn test_events_delete_marker() -> Events {
+        update_test_events(expected_events_simple_delete_marker())
     }
 
     pub(crate) fn test_created_events() -> Events {
