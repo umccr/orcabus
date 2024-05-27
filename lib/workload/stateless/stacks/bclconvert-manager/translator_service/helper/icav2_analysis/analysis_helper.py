@@ -11,7 +11,7 @@ import json
 from base64 import b64encode
 from pathlib import Path
 from typing import Dict, Tuple, List, Union
-from bssh_manager_tools.utils.samplesheet_helper import read_v2_samplesheet
+from helper.samplesheet.samplesheet_helper import read_v2_samplesheet
 import logging
 
 # Wrapica imports

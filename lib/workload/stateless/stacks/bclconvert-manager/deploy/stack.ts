@@ -21,9 +21,16 @@ export interface BclConvertManagerStackProps {
 
 export class BclConvertManagerStack extends Stack {
   private readonly lambdaRuntimePythonVersion = Runtime.PYTHON_3_12;
+  private readonly baseLayer: PythonLayerVersion;
 
   constructor(scope: Construct, id: string, props: StackProps & BclConvertManagerStackProps) {
     super(scope, id, props);
+
+    this.baseLayer = new PythonLayerVersion(this, 'BaseLayer', {
+      entry: path.join(__dirname, '../deps'),
+      compatibleRuntimes: [this.lambdaRuntimePythonVersion],
+      compatibleArchitectures: [Architecture.ARM_64],
+    });
 
     // Create the ICAv2 Event Translator service
     this.createICAv2EventTranslator(props);
@@ -48,6 +55,7 @@ export class BclConvertManagerStack extends Stack {
 
     const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
       entry: path.join(__dirname, '../translator_service'),
+      layers: [this.baseLayer],
       runtime: this.lambdaRuntimePythonVersion,
       environment: {
         TABLE_NAME: props.icav2EventTranslatorDynamodbTableName,

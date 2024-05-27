@@ -1,7 +1,7 @@
 import datetime
 import re
 import six
-import workflowrunstatechange as workflowrunstatechange
+import helper.workflowrunstatechange as workflowrunstatechange
 
 class Marshaller:
     PRIMITIVE_TYPES = (float, bool, bytes, six.text_type) + six.integer_types

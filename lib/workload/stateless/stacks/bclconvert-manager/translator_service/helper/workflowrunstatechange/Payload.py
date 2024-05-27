@@ -4,7 +4,7 @@ import re  # noqa: F401
 
 import six
 from enum import Enum
-from workflowrunstatechange.Data import Data  # noqa: F401,E501
+from helper.workflowrunstatechange.Data import Data  # noqa: F401,E501
 
 class Payload(object):
 

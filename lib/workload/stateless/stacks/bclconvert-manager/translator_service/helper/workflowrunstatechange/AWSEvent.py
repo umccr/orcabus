@@ -4,7 +4,7 @@ import re  # noqa: F401
 
 import six
 from enum import Enum
-from workflowrunstatechange.WorkflowRunStateChange import WorkflowRunStateChange  # noqa: F401,E501
+from helper.workflowrunstatechange.WorkflowRunStateChange import WorkflowRunStateChange  # noqa: F401,E501
 
 class AWSEvent(object):
 

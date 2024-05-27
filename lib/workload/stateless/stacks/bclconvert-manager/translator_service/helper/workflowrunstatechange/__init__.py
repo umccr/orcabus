@@ -2,8 +2,8 @@
 
 from __future__ import absolute_import
 
-from workflowrunstatechange.marshaller import Marshaller
-from workflowrunstatechange.AWSEvent import AWSEvent
-from workflowrunstatechange.Data import Data
-from workflowrunstatechange.Payload import Payload
-from workflowrunstatechange.WorkflowRunStateChange import WorkflowRunStateChange
+from helper.workflowrunstatechange.marshaller import Marshaller
+from helper.workflowrunstatechange.AWSEvent import AWSEvent
+from helper.workflowrunstatechange.Data import Data
+from helper.workflowrunstatechange.Payload import Payload
+from helper.workflowrunstatechange.WorkflowRunStateChange import WorkflowRunStateChange
