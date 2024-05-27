@@ -53,8 +53,8 @@ export class BclconvertInteropqcInputMakerConstruct extends Construct {
         super(scope, id);
 
         /*
-            Part 1: Build the internal sfn
-            */
+        Part 1: Build the internal sfn
+        */
         const inputMakerSfn = new sfn.StateMachine(this, 'bclconvert_interopqc_input_maker', {
             definitionBody: sfn.DefinitionBody.fromFile(
                 path.join(
@@ -72,7 +72,7 @@ export class BclconvertInteropqcInputMakerConstruct extends Construct {
         });
 
         /*
-        Part 2: Grant the internal sfn permissions to access the ssm parametera
+        Part 2: Grant the internal sfn permissions to access the ssm parameter
         */
         [
             props.outputUriPrefixSsmParameterObj,
@@ -110,6 +110,7 @@ export class BclconvertInteropqcInputMakerConstruct extends Construct {
                 triggerSource: this.bclconvertInteropqcInputMakerEventMap.triggerSource,
                 triggerStatus: this.bclconvertInteropqcInputMakerEventMap.triggerStatus,
                 triggerWorkflowName: this.bclconvertInteropqcInputMakerEventMap.triggerWorkflowName,
+                outputSource: this.bclconvertInteropqcInputMakerEventMap.outputSource,
                 workflowName: this.bclconvertInteropqcInputMakerEventMap.workflowName,
                 workflowVersion: this.bclconvertInteropqcInputMakerEventMap.workflowVersion,
             }

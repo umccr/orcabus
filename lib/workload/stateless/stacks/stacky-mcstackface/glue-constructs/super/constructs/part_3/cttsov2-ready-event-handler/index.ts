@@ -4,7 +4,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct } from '../../../../../../../../components/event-workflowmanager-workflowrunstatechange-parse-external-event-detail';
 
 /*
-* Input Event Source: `orcabus.bclconvertinteropqcinputeventglue`
+* Input Event Source: `orcabus.cttsov2inputeventglue`
 * Input Event DetailType: `orcabus.workflowrunstatechange`
 * Input Event status: `complete`
 
@@ -12,28 +12,27 @@ import { WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct 
 * Output Event DetailType: `orcabus.workflowrunstatechange`
 * Output Event status: `ready`
 
-* The BCLConvertInteropQCReadyEventSubmitter Construct
-  * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and generates a ready event for the BCLConvertInteropQC
-
+* The ctTSOv2ReadyEventSubmitter Construct
+  * Subscribes to the ctTSOv2InputMaker Construct outputs and generates a ready event for the ctTSOv2ReadySfn
 */
 
-export interface BclconvertInteropqcManagerReadyEventHandlerConstructProps {
+export interface cttsov2ManagerReadyEventHandlerConstructProps {
   eventBusObj: events.EventBus;
   tableObj: dynamodb.ITableV2;
 }
 
-export class BclconvertInteropqcManagerReadyEventHandlerConstruct extends Construct {
-  public declare bsshFastqCopyReadyEventMap: {
-    prefix: 'bsshFastqCopyReadyEventRelayer';
-    tablePartition: 'bssh_fastq_copy_ready_event';
-    triggerSource: 'orcabus.bsshfastqcopyinputeventglue';
+export class cttsov2ManagerReadyEventHandlerConstruct extends Construct {
+  public declare cttsov2ReadyEventMap: {
+    prefix: 'cttsov2ReadyEventRelayer';
+    tablePartition: 'cttsov2_ready_event';
+    triggerSource: 'orcabus.cttsov2inputeventglue';
     triggerStatus: 'ready';
   };
 
   constructor(
     scope: Construct,
     id: string,
-    props: BclconvertInteropqcManagerReadyEventHandlerConstructProps
+    props: cttsov2ManagerReadyEventHandlerConstructProps
   ) {
     super(scope, id);
 
@@ -59,12 +58,12 @@ export class BclconvertInteropqcManagerReadyEventHandlerConstruct extends Constr
       this,
       'bclconvertSuccessEventRelayer',
       {
-        lambdaPrefix: this.bsshFastqCopyReadyEventMap.prefix,
-        stateMachinePrefix: this.bsshFastqCopyReadyEventMap.prefix,
+        lambdaPrefix: this.cttsov2ReadyEventMap.prefix,
+        stateMachinePrefix: this.cttsov2ReadyEventMap.prefix,
         tableObj: props.tableObj,
-        tablePartitionName: this.bsshFastqCopyReadyEventMap.tablePartition,
-        triggerSource: this.bsshFastqCopyReadyEventMap.triggerSource,
-        triggerStatus: this.bsshFastqCopyReadyEventMap.triggerStatus,
+        tablePartitionName: this.cttsov2ReadyEventMap.tablePartition,
+        triggerSource: this.cttsov2ReadyEventMap.triggerSource,
+        triggerStatus: this.cttsov2ReadyEventMap.triggerStatus,
         eventBusObj: props.eventBusObj,
       }
     );

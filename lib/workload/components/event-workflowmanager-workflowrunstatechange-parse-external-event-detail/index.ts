@@ -7,7 +7,7 @@ import {PythonWorkflowrunstatechangeLambdaLayerConstruct} from '../python-workfl
 import {PythonFunction} from '@aws-cdk/aws-lambda-python-alpha';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as events from 'aws-cdk-lib/aws-events';
-import * as events_targets from 'aws-cdk-lib/aws-events-targets';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import path from 'path';
 
 export interface WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailProps {
@@ -112,7 +112,7 @@ export class WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstr
 
         // Add target of event to be the state machine
         rule.addTarget(
-            new events_targets.SfnStateMachine(this.stepFunctionObj, {
+            new eventsTargets.SfnStateMachine(this.stepFunctionObj, {
                 input: events.RuleTargetInput.fromEventPath('$.detail'),
             })
         );

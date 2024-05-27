@@ -10,42 +10,46 @@ The most important glue of them all. Super Glue!
 
 ### Construct C (Part 1)
 
-Input Event Source: `orcabus.metadatamanager`
+Input Event Source: `orcabus.instrumentrunmanager`
 Input Event DetailType: `orcabus.librarystatechange`
 Input Event status: `fastqlistrowregistered`
 
-Output Event source: `orcabus.workflowrunmanager`
-Output Event DetailType: `orcabus.librarystatechange`
-Output Event status: `fastqlistrowsregistered`
+Output Event source: `orcabus.cttsov2inputeventglue`
+Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event status: `awaitinginput`
 
-* The FastqListRowEventHandler Construct
-  * This will be triggered by the completion event from the UpdateDataBaseOnNewFastqListRows complete event.
-  * Contains a standard workflow run statechange
-  * And a list of fastq list rows / library ids that have changed, and the instrument run id
+* The fastqListRowsToctTSOv2InputMaker Construct
+  * Subscribes to the FastqListRowEventHandler Construct outputs and creates the input for the ctTSOv2ReadySfn
+  * Pushes an event payload of the input for the ctTSOv2ReadyEventSubmitters
+  * From the awaiting input event, we then generate a workflow ready status for each of the cttso run workflows
 
-![](images/part_1/fastq_list_row_event_handler.png)
 
 ### Construct C (Part 2)
 
-Input Event source: `orcabus.workflowrunmanager`
-Input Event DetailType: `orcabus.librarystatechange`
-Input Event status: `fastqlistrowsregistered`
-
-Output Event source: `orcabus.cttsov2inputeventglude`
+Output Event source: `orcabus.cttsov2inputeventglue`
 Output Event DetailType: `orcabus.workflowrunstatechange`
-Output Event status: `complete`
+Output Event status: `awaitinginput`
 
-* The ctTSOv2InputMaker Construct
-  * Subscribes to the FastqListRowEventHandler Construct outputs and creates the input for the ctTSOv2ReadySfn
-  * Pushes an event payload of the input for the ctTSOv2ReadyEventSubmitter
 
-![](images/part_2/send_cttso_ready_events.png)
+Output Event source: `orcabus.cttsov2inputeventglue`
+Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event status: `ready`
+
+* The ctTSOv2InputMaker, subscribes to the cttsov2 input event glue (itself) and generates a ready event for the ctTSOv2ReadySfn
+  * For the cttso v2 workflow we require a samplesheet, a set of fastq list rows (provided in the last step)
+  * However, in order to be 'ready' we need to use a few more variables such as  
+    * icaLogsUri,
+    * analysisOuptutUri
+    * cacheUri
+    * projectId
+    * userReference
+
 
 ### Construct C (Part 3)
 
-Output Event source: `orcabus.cttsov2inputeventglude`
+Output Event source: `orcabus.cttsov2inputeventglue`
 Output Event DetailType: `orcabus.workflowrunstatechange`
-Output Event status: `complete`
+Output Event status: `ready`
 
 Output Event source: `orcabus.workflowrunmanager`
 Output Event DetailType: `orcabus.workflowrunstatechange`

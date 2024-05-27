@@ -5,7 +5,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import {PythonFunction} from '@aws-cdk/aws-lambda-python-alpha';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as events from 'aws-cdk-lib/aws-events';
-import * as events_targets from 'aws-cdk-lib/aws-events-targets';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import path from 'path';
 import * as cdk from 'aws-cdk-lib';
 
@@ -21,6 +21,7 @@ export interface WorkflowRunStateChangeInternalInputMakerProps {
     triggerSource: string;
     triggerStatus: string;
     triggerWorkflowName: string;
+    outputSource: string;
     /* Workflow metadata constants */
     workflowName: string;
     workflowVersion: string;
@@ -32,7 +33,6 @@ export interface WorkflowRunStateChangeInternalInputMakerProps {
 export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct {
     public readonly stepFunctionObj: sfn.StateMachine;
     public declare detailType: 'workflowRunStateChange';
-    public declare outputEventSource: 'orcabus.workflowmanager';
 
     constructor(scope: Construct, id: string, props: WorkflowRunStateChangeInternalInputMakerProps) {
         super(scope, id);
@@ -99,7 +99,7 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
                 /* Table configurations */
                 __table_name__: props.tableObj.tableName,
                 /* Event configurations */
-                __event_output_source__: this.outputEventSource,
+                __event_output_source__: props.outputSource,
                 __detail_type: this.detailType,
                 __event_bus_name__: props.eventBusObj.eventBusName,
                 __id_type__: props.tablePartitionName,
@@ -160,7 +160,7 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
 
         // Add target of event to be the state machine
         rule.addTarget(
-            new events_targets.SfnStateMachine(this.stepFunctionObj, {
+            new eventsTargets.SfnStateMachine(this.stepFunctionObj, {
                 input: events.RuleTargetInput.fromEventPath('$.detail'),
             })
         );

@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import path from 'path';
 import { LambdaB64GzTranslatorConstruct } from '../../../../../../../../components/lambda-b64gz-translator';
 
@@ -92,5 +93,12 @@ export class updateDataBaseOnNewSamplesheetEventConstruct extends Construct {
         },
       },
     });
+
+    // Add target to event rule
+    eventRule.addTarget(
+        new eventsTargets.SfnStateMachine(this.stateMachineObj, {
+            input: events.RuleTargetInput.fromEventPath('$.detail'),
+        })
+    );
   }
 }

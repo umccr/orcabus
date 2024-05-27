@@ -50,11 +50,11 @@ export class BclconvertSuccessEventRelayer extends Construct {
         Output Event source: `orcabus.workflowmanager`
         Output Event DetailType: `orcabus.workflowrunstatechange`
         Output Event status: `complete`
-        */
+    */
 
     /*
         Create the event detail construct
-        */
+    */
     new WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct(
       this,
       'bclconvertSuccessEventRelayer',

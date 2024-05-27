@@ -1,0 +1,136 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move inputs",
+  "States": {
+    "Move inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "inputs.$": "$"
+      },
+      "Next": "Get event data from ref db (Local)"
+    },
+    "Get event data from ref db (Local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": "$.inputs.db_uuid",
+          "id_type": "${__input_maker_type__}"
+        }
+      },
+      "ResultSelector": {
+        "event_data_input.$": "$.Item.event_data_input.M"
+      },
+      "ResultPath": "$.get_event_detail_payload_data_from_db_step",
+      "Next": "Get Parameter Steps"
+    },
+    "Get Parameter Steps": {
+      "Type": "Parallel",
+      "Next": "Generate inputs for cttsov2",
+      "Branches": [
+        {
+          "StartAt": "Get CacheUri Prefix for cttsov2 analysis",
+          "States": {
+            "Get CacheUri Prefix for cttsov2 analysis": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__cttsov2_cache_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "End": true,
+              "ResultSelector": {
+                "cache_uri_prefix.$": "$.Parameter.Value"
+              },
+              "ResultPath": "$.get_cache_uri_prefix_step"
+            }
+          }
+        },
+        {
+          "StartAt": "Get OutputUri Prefix for ctTSOv2 Analysis",
+          "States": {
+            "Get OutputUri Prefix for ctTSOv2 Analysis": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__cttsov2_output_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "output_uri_prefix.$": "$.Parameter.Value"
+              },
+              "ResultPath": "$.get_output_uri_prefix_parameter_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Project ID and Name for cttsov2 analysis",
+          "States": {
+            "Get Project ID and Name for cttsov2 analysis": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__icav2_project_id_and_name_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "project_id.$": "$.Parameter.Value.project_id",
+                "project_name.$": "$.Parameter.Value.project_name"
+              },
+              "ResultPath": "$.get_project_id_and_name_parameter_step",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.get_ssm_parameters_steps",
+      "ResultSelector": {
+        "cache_uri_prefix.$": "$.get_cache_uri_prefix_step.cache_uri_prefix",
+        "output_uri_prefix.$": "$.get_output_uri_prefix_parameter_step.output_uri_prefix",
+        "project_id.$": "$.get_project_id_and_name_parameter_step.project_id",
+        "project_name.$": "$.get_project_id_and_name_parameter_step.project_name"
+      }
+    },
+    "Generate inputs for cttsov2": {
+      "Type": "Pass",
+      "Parameters": {
+        "projectId.$": "$.get_ssm_parameters_steps.project_id",
+        "sampleId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.libraryId",
+        "samplesheetDict.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.samplesheetDict",
+        "fastqListRows.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.fastqListRows",
+        "instrumentRunId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
+        "cacheUri.$": "States.Format('{}__portal_run_id__/out/', $.get_ssm_parameters_steps.cache_uri_prefix)",
+        "analysisOutputUri.$": "States.Format('{}__portal_run_id__/out/', $.get_ssm_parameters_steps.output_uri_prefix)",
+        "icaLogsUri.$": "States.Format('{}__portal_run_id__/logs/', $.get_ssm_parameters_steps.output_uri_prefix)",
+        "userTags": {
+          "library_id": "$.get_event_detail_payload_data_from_db_step.event_data_input.libraryId",
+          "project_name": "$.get_ssm_parameters_steps.project_name"
+        }
+      },
+      "ResultPath": "$.set_event_data_output",
+      "Next": "Add event data outputs (local)"
+    },
+    "Add event data outputs (local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.inputs.db_uuid",
+          "id_type": "${__input_maker_type__}"
+        },
+        "UpdateExpression": "SET event_detail_output = :event_detail_output",
+        "ExpressionAttributeValues": {
+          ":event_data_output": {
+            "M.$": "$.set_event_data_output"
+          }
+        }
+      },
+      "Next": "Wait 1 Second"
+    },
+    "Wait 1 Second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "End": true
+    }
+  }
+}

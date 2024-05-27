@@ -16,17 +16,17 @@ Provide the glue to get from the bclconvertmanager success event
 To triggering the bsshFastqCopyManager
 */
 
-export interface BclconvertManagerEventHanderConstructProps {
+export interface BclconvertManagerEventHandlerConstructProps {
     eventBusObj: events.EventBus;
     workflowManagerTableObj: dynamodb.ITableV2;
-    metadataTableObj: dynamodb.ITableV2;
+    instrumentRunTableObj: dynamodb.ITableV2;
     inputMakerTableObj: dynamodb.ITableV2;
-    bsshOutputFastqCopyUriPrefixSsmParameterObj: ssm.IStringParameter;
+    bclconvertInteropQcUriPrefixSsmParameterObj: ssm.IStringParameter;
     icav2ProjectIdSsmParameterObj: ssm.IStringParameter
 }
 
-export class BclconvertManagerEventHanderConstruct extends Construct {
-    constructor(scope: Construct, id: string, props: BclconvertManagerEventHanderConstructProps) {
+export class BclconvertManagerEventHandlerConstruct extends Construct {
+    constructor(scope: Construct, id: string, props: BclconvertManagerEventHandlerConstructProps) {
         super(scope, id);
 
         /*
@@ -75,7 +75,7 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
             'update_database_on_new_fastq_list_rows',
             {
                 eventBusObj: props.eventBusObj,
-                tableObj: props.metadataTableObj,
+                tableObj: props.instrumentRunTableObj,
             }
         );
 
@@ -99,7 +99,7 @@ export class BclconvertManagerEventHanderConstruct extends Construct {
             'bclconvert_interopqc_input_maker',
             {
                 eventBusObj: props.eventBusObj,
-                outputUriPrefixSsmParameterObj: props.bsshOutputFastqCopyUriPrefixSsmParameterObj,
+                outputUriPrefixSsmParameterObj: props.bclconvertInteropQcUriPrefixSsmParameterObj,
                 tableObj: props.inputMakerTableObj,
                 icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj
             }

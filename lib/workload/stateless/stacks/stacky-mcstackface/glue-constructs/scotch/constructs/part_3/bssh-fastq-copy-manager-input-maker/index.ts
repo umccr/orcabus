@@ -52,8 +52,8 @@ export class bsshFastqCopyManagerInputMakerConstruct extends Construct {
         super(scope, id);
 
         /*
-            Part 1: Build the internal sfn
-            */
+        Part 1: Build the internal sfn
+        */
         const inputMakerSfn = new sfn.StateMachine(this, 'bssh_fastq_copy_manager_input_maker', {
             definitionBody: sfn.DefinitionBody.fromFile(
                 path.join(
@@ -70,28 +70,28 @@ export class bsshFastqCopyManagerInputMakerConstruct extends Construct {
         });
 
         /*
-            Part 2: Grant the internal sfn permissions to access the ssm parameter
-            */
+        Part 2: Grant the internal sfn permissions to access the ssm parameter
+        */
         props.outputUriPrefixSsmParameterObj.grantRead(inputMakerSfn.role);
 
         /*
-            Part 3: Build the external sfn
-            */
+        Part 3: Build the external sfn
+        */
         new WorkflowRunStateChangeInternalInputMakerConstruct(
             this,
             'bssh_fastq_copy_manager_input_maker_external',
             {
                 /*
-                        Set Input StateMachine Object
-                        */
+                Set Input StateMachine Object
+                */
                 inputStateMachineObj: inputMakerSfn,
                 lambdaPrefix: this.bsshFastqCopyManagerInputMakerEventMap.prefix,
                 payloadVersion: this.bsshFastqCopyManagerInputMakerEventMap.payloadVersion,
                 stateMachinePrefix: this.bsshFastqCopyManagerInputMakerEventMap.prefix,
 
                 /*
-                        Table objects
-                        */
+                Table objects
+                */
                 tableObj: props.tableObj,
                 tablePartitionName: this.bsshFastqCopyManagerInputMakerEventMap.tablePartition,
 
@@ -102,6 +102,7 @@ export class bsshFastqCopyManagerInputMakerConstruct extends Construct {
                 triggerSource: this.bsshFastqCopyManagerInputMakerEventMap.triggerSource,
                 triggerStatus: this.bsshFastqCopyManagerInputMakerEventMap.triggerStatus,
                 triggerWorkflowName: this.bsshFastqCopyManagerInputMakerEventMap.triggerWorkflowName,
+                outputSource: this.bsshFastqCopyManagerInputMakerEventMap.outputSource,
                 workflowName: this.bsshFastqCopyManagerInputMakerEventMap.workflowName,
                 workflowVersion: this.bsshFastqCopyManagerInputMakerEventMap.workflowVersion,
             }
