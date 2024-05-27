@@ -1,6 +1,6 @@
 import path from 'path';
 import { Construct } from 'constructs';
-import { Architecture, ILayerVersion } from 'aws-cdk-lib/aws-lambda';
+import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
 import {
@@ -25,7 +25,7 @@ import { PostgresManagerStack } from '../../../../../workload/stateless/stacks/p
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct } from '../../../../../workload/components/api-gateway';
 
-export interface WorkflowManagerStackProps {
+export interface WorkflowManagerStackProps extends StackProps {
   lambdaSecurityGroupName: string;
   vpcProps: VpcLookupOptions;
   mainBusName: string;
@@ -44,7 +44,7 @@ export class WorkflowManagerStack extends Stack {
   private readonly mainBus: IEventBus;
   private readonly vpc: IVpc;
 
-  constructor(scope: Construct, id: string, props: StackProps & WorkflowManagerStackProps) {
+  constructor(scope: Construct, id: string, props: WorkflowManagerStackProps) {
     super(scope, id, props);
 
     this.props = props;
@@ -82,6 +82,7 @@ export class WorkflowManagerStack extends Stack {
     this.lambdaEnv = {
       DJANGO_SETTINGS_MODULE: 'workflow_manager.settings.aws',
       EVENT_BUS_NAME: this.mainBus.eventBusName,
+      SECRET_ID: secretId,
     };
 
     this.baseLayer = new PythonLayerVersion(this, 'BaseLayer', {

@@ -26,7 +26,6 @@ def handler(event, context):
     # check workflow run list
     if len(wrsc_matches) == 0:
         # create new entry
-        # FIXME: might need to deserialise in future
         db_wfr: WorkflowRun = create_workflow_run.handler(srv.Marshaller.marshall(input_wrsc))
         
 		# create outgoing event
@@ -36,7 +35,7 @@ def handler(event, context):
             status = db_wfr.status,
             workflowType = db_wfr.workflow.workflow_name,
             workflowVersion = db_wfr.workflow.workflow_version,
-            payload = db_wfr.payload
+            payload = db_wfr.payload  # the DB payload (as opposed to the input payload) will have a reference ID
 		)
 
         # emit state change

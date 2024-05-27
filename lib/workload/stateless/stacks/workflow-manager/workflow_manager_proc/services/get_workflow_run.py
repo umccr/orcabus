@@ -3,7 +3,7 @@
 # django.setup()
 
 # # --- keep ^^^ at top of the module
-from datetime import datetime
+import datetime
 from workflow_manager.models.workflow_run import WorkflowRun
 
 default_time_window = datetime.timedelta(hours=1)
@@ -14,7 +14,7 @@ def handler(event, context):
         portal_run_id: "",
         status: "",  # optional
         timestamp: "" # optional
-        time_window: "" # not used, default 1h
+        time_window: "" # currenty not used, defaults 1h
     }
     """
     print(f"Processing {event}, {context}")
@@ -31,7 +31,7 @@ def handler(event, context):
             status = status
         )
     if timestamp:
-        dt = datetime.fromisoformat(timestamp)
+        dt = datetime.datetime.fromisoformat(timestamp)
         start_t = dt - default_time_window
         end_t = dt + default_time_window
         qs.filter(

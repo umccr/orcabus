@@ -1,5 +1,6 @@
 .EXPORT_ALL_VARIABLES:
 DJANGO_SETTINGS_MODULE = workflow_manager.settings.local
+EVENT_BUS_NAME = mock-bus
 
 .PHONY: test suite
 
