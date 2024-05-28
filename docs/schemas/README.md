@@ -17,9 +17,9 @@ Login to AWS dev account: `AWS Console > Amazon EventBridge > Schema Registry > 
 
 ### How to publish event schema into Registry?
 
-1. Study existing schemas within this directory.
-2. Follow the structure and, add your schema into this directory; including example event message instances.
-3. Register your schema into [`config/stacks/schema.ts`](../../config/stacks/schema.ts).
+1. Study existing schemas within [events](events) directory.
+2. Follow the structure and, add your schema into the directory; including example event message instances.
+3. Register your event schema into [`config/stacks/schema/events.ts`](../../config/stacks/schema/events.ts).
    - Follow the existing code structure. 
    - This is the only CDK TypeScript source file that need modifying.
    - The [schema](../../lib/workload/stateless/stacks/schema/README.md) stack should detect changes and deploy upon successful build. 
@@ -72,19 +72,20 @@ service -- emits -->  MyDomainEntityStateChange  (no breaking changes, support a
 Example:
 
 ```
-orcabus.executionservice@WorkflowRunStateChange
+orcabus.bclconvertmanager@WorkflowRunStateChange
 orcabus.workflowmanager@WorkflowRunStateChange
 ```
 
 ```
 {
   "detail-type": ["WorkflowRunStateChange"],
-  "source": ["orcabus.executionservice"],
+  "source": ["orcabus.bclconvertmanager"],
   "detail": {
     "status": ["SUCCEEDED"]
   }
 }
 ```
+
 ```
 {
   "detail-type": ["WorkflowRunStateChange"],
@@ -113,6 +114,8 @@ orcabus.cttsov2manager
 orcabus.pieriandxmanager
 ```
 
+NOTE: The namespace `orcabus.executionservice` is reserved _logical_ namespace for shared event schema among workflow execution services. Explain details in Data Schemas section below.
+
 Example:
 
 ```
@@ -127,9 +130,9 @@ orcabus.cttsov2manager@WorkflowRunStateChange
 
 ## Data Schemas
 
-Specifically for the WorkflowRunStateChange events we differentiate between the details of the workflow run and the payload associated with it.
-The general structure of a WorkflowRunStateChange event is governed by the WorkflowRunStateChange event schema, whereas the nature of the data (payload) that the change carries is defined via separate "data schemas".
-This ensures the general means of communicating workflow state change remains independent of the payload data that is different for each execution service and each status.
+Login to AWS dev account: `AWS Console > Amazon EventBridge > Schema Registry > Schemas > orcabus.data`
+
+Specifically for the `WorkflowRunStateChange` (WRSC) events we differentiate between the details of the workflow run and the payload associated with it. The general structure of a `WorkflowRunStateChange` event is governed by the `WorkflowRunStateChange` event schema, whereas the nature of the data (payload) that the change carries is defined via separate "data schemas". This ensures the general means of communicating workflow state change remains independent of the payload data that is different for each execution service and each status.
 
 Concept:
 

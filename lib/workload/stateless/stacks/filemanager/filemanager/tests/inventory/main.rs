@@ -72,22 +72,25 @@ async fn parse_records(client: aws_sdk_s3::Client, bucket: &str, file: &str) -> 
 fn expected_records() -> Vec<Record> {
     let no_version_records = expected_records_no_version();
     vec![
-        no_version_records[0].clone(),
+        no_version_records[0].clone().set_is_delete_marker(false),
         Record::builder()
             .with_size(0)
             .with_last_modified_date("2024-05-06T22:38:00Z".parse().unwrap())
             .with_e_tag("d41d8cd98f00b204e9800998ecf8427e".to_string()) // pragma: allowlist secret
             .with_storage_class(StorageClass::Standard)
+            .with_delete_marker(Some(false))
             .build(
                 "filemanager-inventory-test".to_string(),
                 "inventory-test/key1".to_string(),
             ),
         no_version_records[1]
             .clone()
-            .set_version_id("tpinzcbxOfWpZsmjvVgdHEvSohsY4TA0".to_string()),
+            .set_version_id("tpinzcbxOfWpZsmjvVgdHEvSohsY4TA0".to_string())
+            .set_is_delete_marker(false),
         Record::builder()
             .with_version_id("gdN1exfZmD7m713patv8dlQ7fTNwle3v".to_string())
             .with_last_modified_date("2024-05-06T22:46:14Z".parse().unwrap())
+            .with_delete_marker(Some(true))
             .build(
                 "filemanager-inventory-test".to_string(),
                 "inventory-test/key2".to_string(),
@@ -98,6 +101,7 @@ fn expected_records() -> Vec<Record> {
             .with_last_modified_date("2024-05-06T22:45:34Z".parse().unwrap())
             .with_e_tag("d8e8fca2dc0f896fd7cb4cb0031ba249".to_string()) // pragma: allowlist secret
             .with_storage_class(StorageClass::Standard)
+            .with_delete_marker(Some(false))
             .build(
                 "filemanager-inventory-test".to_string(),
                 "inventory-test/key2".to_string(),

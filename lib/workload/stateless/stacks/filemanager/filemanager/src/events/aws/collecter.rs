@@ -432,7 +432,7 @@ pub(crate) mod tests {
         ReceiveMessageOutput::builder()
             .messages(
                 MessageBuilder::default()
-                    .body(expected_event_record_simple())
+                    .body(expected_event_record_simple(false))
                     .build(),
             )
             .build()

@@ -25,6 +25,10 @@ export const getPostgresManagerStackProps = (): PostgresManagerStackProps => {
         authType: DbAuthType.USERNAME_PASSWORD,
       },
       {
+        name: 'workflow_manager',
+        authType: DbAuthType.USERNAME_PASSWORD,
+      },
+      {
         name: 'metadata_manager',
         authType: DbAuthType.USERNAME_PASSWORD,
       },

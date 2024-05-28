@@ -15,7 +15,8 @@ import {
   getCttsov2Icav2PipelineManagerStackProps,
   getCttsov2Icav2PipelineTableStackProps,
 } from './stacks/cttsov2Icav2PipelineManager';
-import { getSchemaStackProps } from './stacks/schema';
+import { getEventSchemaStackProps } from './stacks/schema/events';
+import { getDataSchemaStackProps } from './stacks/schema/data';
 import {
   getBclConvertManagerTableStackProps,
   getBclConvertManagerStackProps,
@@ -61,7 +62,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
-            schemaStackProps: getSchemaStackProps(),
+            eventSchemaStackProps: getEventSchemaStackProps(),
+            dataSchemaStackProps: getDataSchemaStackProps(),
             BclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
           },
         },
@@ -89,7 +91,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
-            schemaStackProps: getSchemaStackProps(),
+            eventSchemaStackProps: getEventSchemaStackProps(),
+            dataSchemaStackProps: getDataSchemaStackProps(),
             BclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
           },
         },
@@ -117,7 +120,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
-            schemaStackProps: getSchemaStackProps(),
+            eventSchemaStackProps: getEventSchemaStackProps(),
+            dataSchemaStackProps: getDataSchemaStackProps(),
             BclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
           },
         },
