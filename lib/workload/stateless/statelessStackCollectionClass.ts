@@ -35,6 +35,10 @@ import {
   Icav2EventTranslatorStack,
   Icav2EventTranslatorStackProps,
 } from './stacks/icav2-event-translator/deploy/stack';
+import {
+  WorkflowManagerStack,
+  WorkflowManagerStackProps,
+} from './stacks/workflow-manager/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
@@ -48,6 +52,7 @@ export interface StatelessStackCollectionProps {
   eventSchemaStackProps: SchemaStackProps;
   dataSchemaStackProps: SchemaStackProps;
   icav2EventTranslatorStackProps: Icav2EventTranslatorStackProps;
+  workflowManagerStackProps: WorkflowManagerStackProps;
 }
 
 export class StatelessStackCollection {
@@ -63,6 +68,7 @@ export class StatelessStackCollection {
   readonly eventSchemaStack: Stack;
   readonly dataSchemaStack: Stack;
   readonly icav2EventTranslatorStack: Stack;
+  readonly workflowManagerStack: Stack;
 
   constructor(
     scope: Construct,
@@ -143,6 +149,11 @@ export class StatelessStackCollection {
         ...statelessConfiguration.icav2EventTranslatorStackProps,
       }
     );
+
+    this.workflowManagerStack = new WorkflowManagerStack(scope, 'WorkflowManagerStack', {
+      ...this.createTemplateProps(env, 'WorkflowManagerStack'),
+      ...statelessConfiguration.workflowManagerStackProps,
+    });
   }
 
   /**

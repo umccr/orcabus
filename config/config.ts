@@ -21,6 +21,7 @@ import {
   getIcav2EventTranslatorTableStackProps,
   getIcav2EventTranslatorStackProps,
 } from './stacks/icav2EventTranslator';
+import { getWorkflowManagerStackProps } from './stacks/workflowRunManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -65,6 +66,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
             icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            workflowManagerStackProps: getWorkflowManagerStackProps(),
           },
         },
       };
@@ -94,6 +96,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
             icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            workflowManagerStackProps: getWorkflowManagerStackProps(),
           },
         },
       };
@@ -123,6 +126,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
             icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            workflowManagerStackProps: getWorkflowManagerStackProps(),
           },
         },
       };
