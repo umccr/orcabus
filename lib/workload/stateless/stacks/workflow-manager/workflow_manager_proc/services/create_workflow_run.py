@@ -16,13 +16,24 @@ def handler(event, context):
     """
     print(f"Processing {event}, {context}")
     
-    wrsc: WorkflowRunStateChange = Marshaller.unmarshall(event)
+    wrsc: WorkflowRunStateChange = Marshaller.unmarshall(event, WorkflowRunStateChange)
 
 	# We expect: a corresponding Workflow has to exist for each workflow run
-    workflow: Workflow = Workflow.objects.get(
-        workflow_type = wrsc.workflowName,
-        workflow_version = wrsc.workflowVersion
-    )
+    # FIXME: remove the try/except once workflows are pre-registered. Or allow creation?
+    try:
+        workflow: Workflow = Workflow.objects.get(
+            workflow_name = wrsc.workflowName,
+            workflow_version = wrsc.workflowVersion
+        )
+    except Exception:
+        workflow = Workflow(
+            workflow_name = wrsc.workflowName,
+            workflow_version = wrsc.workflowVersion,
+            execution_engine = "Unknown",
+            execution_engine_pipeline_id = "Unknown",
+            approval_state = "RESEARCH"
+        )
+        workflow.save()
 
     # first create a new payload entry and assign a unique reference ID for it
     input_payload: Payload = wrsc.payload    
@@ -42,7 +53,7 @@ def handler(event, context):
         workflow_run_name = wrsc.workflowRunName,
         status = wrsc.status,
         comment = None,
-        timestamp = make_aware(wrsc.timestamp)
+        timestamp = wrsc.timestamp
 	)
     wfr.save()
 

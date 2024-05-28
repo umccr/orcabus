@@ -13,7 +13,7 @@ def handler(event, context):
     """event will be a <any service>.WorkflowRunStateChange event"""
     print(f"Processing {event}, {context}")
     
-    input_event: srv.AWSEvent = srv.Marshaller.unmarshall(event)
+    input_event: srv.AWSEvent = srv.Marshaller.unmarshall(event, srv.AWSEvent)
     input_wrsc: srv.WorkflowRunStateChange = input_event.detail
 
     query = {
@@ -21,25 +21,25 @@ def handler(event, context):
         "status": input_wrsc.status,
         "timestamp": input_wrsc.timestamp
 	}
-    wrsc_matches = get_workflow_run.handler(query)  # FIXME: may only need to be a "exist" query
+    wrsc_matches = get_workflow_run.handler(query, None)  # FIXME: may only need to be a "exist" query
     
     # check workflow run list
     if len(wrsc_matches) == 0:
         # create new entry
-        db_wfr: WorkflowRun = create_workflow_run.handler(srv.Marshaller.marshall(input_wrsc))
+        db_wfr: WorkflowRun = create_workflow_run.handler(srv.Marshaller.marshall(input_wrsc), None)
         
 		# create outgoing event
         out_event = wfm.WorkflowRunStateChange(
             portalRunId = db_wfr.portal_run_id,
             timestamp = db_wfr.timestamp,
             status = db_wfr.status,
-            workflowType = db_wfr.workflow.workflow_name,
+            workflowName = db_wfr.workflow.workflow_name,
             workflowVersion = db_wfr.workflow.workflow_version,
             payload = db_wfr.payload  # the DB payload (as opposed to the input payload) will have a reference ID
 		)
 
         # emit state change
-        emit_workflow_run_state_change.handler(wfm.Marshaller.marshall(out_event))
+        emit_workflow_run_state_change.handler(wfm.Marshaller.marshall(out_event), None)
     else:
         # ignore - status already exists
         print(f"WorkflowRun already exists for query:{query}")

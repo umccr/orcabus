@@ -31,7 +31,7 @@ def handler(event, context):
             status = status
         )
     if timestamp:
-        dt = datetime.datetime.fromisoformat(timestamp)
+        dt = datetime.datetime.fromisoformat(str(timestamp))
         start_t = dt - default_time_window
         end_t = dt + default_time_window
         qs.filter(
