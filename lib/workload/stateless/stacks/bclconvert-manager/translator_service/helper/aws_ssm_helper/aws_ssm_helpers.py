@@ -54,7 +54,7 @@ def set_icav2_env_vars():
     Set the icav2 environment variables
     :return:
     """
-    environ["ICAV2_BASE_URL"] = environ["ICAV2_BASE_URL"],
+    environ["ICAV2_BASE_URL"] = environ["ICAV2_BASE_URL"]
     environ["ICAV2_ACCESS_TOKEN"] = get_secret(
         environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
     )
