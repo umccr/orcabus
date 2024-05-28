@@ -126,6 +126,7 @@ impl<'a> Ingester<'a> {
             FlatS3EventMessage,
             "../database/queries/ingester/aws/update_reordered_for_created.sql",
             &object_created.s3_object_ids,
+            &object_created.object_ids,
             &object_created.buckets,
             &object_created.keys,
             &object_created.event_times as &[Option<DateTime<Utc>>],
@@ -142,7 +143,7 @@ impl<'a> Ingester<'a> {
         .await?;
 
         let object_created = Self::reprocess_updated(object_created, updated);
-        let object_ids = UuidGenerator::generate_n(object_created.s3_object_ids.len());
+        let object_ids = object_created.object_ids;
 
         let mut inserted = query_file_as!(
             Insert,
@@ -189,6 +190,7 @@ impl<'a> Ingester<'a> {
             FlatS3EventMessage,
             "../database/queries/ingester/aws/update_reordered_for_deleted.sql",
             &object_deleted.s3_object_ids,
+            &object_deleted.object_ids,
             &object_deleted.buckets,
             &object_deleted.keys,
             &object_deleted.event_times as &[Option<DateTime<Utc>>],
@@ -199,7 +201,7 @@ impl<'a> Ingester<'a> {
         .await?;
 
         let object_deleted = Self::reprocess_updated(object_deleted, updated);
-        let object_ids = UuidGenerator::generate_n(object_deleted.s3_object_ids.len());
+        let object_ids = object_deleted.object_ids;
 
         let mut inserted = query_file_as!(
             Insert,
@@ -246,6 +248,104 @@ impl<'a> Ingester<'a> {
         Ok(())
     }
 
+    pub async fn ingest_events_v2(&self, events: EventSourceType) -> Result<()> {
+        let EventSourceType::S3(events) = events;
+
+        let Events {
+            object_created,
+            object_deleted,
+            ..
+        } = events;
+
+        trace!(object_created = ?object_created, "ingesting object created events");
+
+        let mut tx = self.client().pool().begin().await?;
+
+        if !object_created.s3_object_ids.is_empty() {
+            let mut inserted = query_file_as!(
+                Insert,
+                "../database/queries/ingester/aws/insert_s3_objects_v2.sql",
+                &object_created.s3_object_ids,
+                &object_created.object_ids,
+                &UuidGenerator::generate_n(object_created.s3_object_ids.len()),
+                &object_created.buckets,
+                &object_created.keys,
+                &object_created.event_times as &[Option<DateTime<Utc>>],
+                &object_created.sizes as &[Option<i64>],
+                &object_created.sha256s as &[Option<String>],
+                &object_created.last_modified_dates as &[Option<DateTime<Utc>>],
+                &object_created.e_tags as &[Option<String>],
+                &object_created.storage_classes as &[Option<StorageClass>],
+                &object_created.version_ids,
+                &object_created.sequencers as &[Option<String>],
+                &object_created.is_delete_markers as &[bool],
+                &vec![EventType::Created; object_created.s3_object_ids.len()] as &[EventType],
+            )
+            .fetch_all(&mut *tx)
+            .await?;
+
+            let object_ids = Self::reprocess_inserts(object_created.object_ids, &mut inserted);
+            // Insert only the non duplicate events.
+            if !object_ids.is_empty() {
+                debug!(
+                    object_ids = ?object_ids,
+                    "inserting into object table created events"
+                );
+
+                query_file!(
+                    "../database/queries/ingester/insert_objects_v2.sql",
+                    &object_ids,
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
+        if !object_deleted.s3_object_ids.is_empty() {
+            let mut inserted = query_file_as!(
+                Insert,
+                "../database/queries/ingester/aws/insert_s3_objects_v2.sql",
+                &object_deleted.s3_object_ids,
+                &object_deleted.object_ids,
+                &UuidGenerator::generate_n(object_deleted.s3_object_ids.len()),
+                &object_deleted.buckets,
+                &object_deleted.keys,
+                &object_deleted.event_times as &[Option<DateTime<Utc>>],
+                &object_deleted.sizes as &[Option<i64>],
+                &object_deleted.sha256s as &[Option<String>],
+                &object_deleted.last_modified_dates as &[Option<DateTime<Utc>>],
+                &object_deleted.e_tags as &[Option<String>],
+                &object_deleted.storage_classes as &[Option<StorageClass>],
+                &object_deleted.version_ids,
+                &object_deleted.sequencers as &[Option<String>],
+                &object_deleted.is_delete_markers as &[bool],
+                &vec![EventType::Deleted; object_deleted.s3_object_ids.len()] as &[EventType],
+            )
+            .fetch_all(&mut *tx)
+            .await?;
+
+            let object_ids = Self::reprocess_inserts(object_deleted.object_ids, &mut inserted);
+            // Insert only the non duplicate events.
+            if !object_ids.is_empty() {
+                debug!(
+                    object_ids = ?object_ids,
+                    "inserting into object table from deleted events"
+                );
+
+                query_file!(
+                    "../database/queries/ingester/insert_objects_v2.sql",
+                    &object_ids,
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
     /// Get a reference to the database client.
     pub fn client(&self) -> &Client {
         &self.client
@@ -284,6 +384,7 @@ pub(crate) mod tests {
     };
     use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
     use crate::events::EventSourceType;
+    use crate::uuid::UuidGenerator;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {
@@ -386,6 +487,99 @@ pub(crate) mod tests {
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
         assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_object_removed_v2(pool: PgPool) {
+        let events = test_events();
+
+        let ingester = test_ingester(pool);
+        ingester
+            .ingest_events_v2(EventSourceType::S3(events))
+            .await
+            .unwrap();
+
+        let (object_results, s3_object_result) = (
+            sqlx::query("select * from object_v2")
+                .fetch_all(ingester.client.pool())
+                .await
+                .unwrap(),
+            sqlx::query("select * from s3_object_v2")
+                .fetch_all(ingester.client.pool())
+                .await
+                .unwrap(),
+        );
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_result.len(), 2);
+
+        let s3_object_results = &s3_object_result[0];
+        assert_ne!(
+            s3_object_results.get::<Uuid, _>("s3_object_id"),
+            s3_object_results.get::<Uuid, _>("public_id")
+        );
+        assert_eq!("bucket", s3_object_results.get::<String, _>("bucket"));
+        assert_eq!("key", s3_object_results.get::<String, _>("key"));
+        assert_eq!(
+            EXPECTED_VERSION_ID.to_string(),
+            s3_object_results.get::<String, _>("version_id")
+        );
+        assert_eq!(
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            s3_object_results.get::<Option<String>, _>("sequencer")
+        );
+        assert_eq!(Some(0), s3_object_results.get::<Option<i64>, _>("size"));
+        assert_eq!(
+            Some(EXPECTED_SHA256.to_string()),
+            s3_object_results.get::<Option<String>, _>("sha256")
+        );
+        assert_eq!(
+            Some(EXPECTED_E_TAG.to_string()),
+            s3_object_results.get::<Option<String>, _>("e_tag")
+        );
+        assert_eq!(
+            Some(Default::default()),
+            s3_object_results.get::<Option<DateTime<Utc>>, _>("last_modified_date")
+        );
+        assert_eq!(
+            Some(Default::default()),
+            s3_object_results.get::<Option<DateTime<Utc>>, _>("date")
+        );
+        assert!(!s3_object_results.get::<bool, _>("is_delete_marker"));
+
+        let s3_object_results = &s3_object_result[1];
+        assert_ne!(
+            s3_object_results.get::<Uuid, _>("s3_object_id"),
+            s3_object_results.get::<Uuid, _>("public_id")
+        );
+        assert_eq!("bucket", s3_object_results.get::<String, _>("bucket"));
+        assert_eq!("key", s3_object_results.get::<String, _>("key"));
+        assert_eq!(
+            EXPECTED_VERSION_ID.to_string(),
+            s3_object_results.get::<String, _>("version_id")
+        );
+        assert_eq!(
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            s3_object_results.get::<Option<String>, _>("sequencer")
+        );
+        assert_eq!(None, s3_object_results.get::<Option<i64>, _>("size"));
+        assert_eq!(
+            Some(EXPECTED_SHA256.to_string()),
+            s3_object_results.get::<Option<String>, _>("sha256")
+        );
+        assert_eq!(
+            Some(EXPECTED_E_TAG.to_string()),
+            s3_object_results.get::<Option<String>, _>("e_tag")
+        );
+        assert_eq!(
+            Some(Default::default()),
+            s3_object_results.get::<Option<DateTime<Utc>>, _>("last_modified_date")
+        );
+        assert_eq!(
+            Some(Default::default()),
+            s3_object_results.get::<Option<DateTime<Utc>>, _>("date")
+        );
+        assert!(!s3_object_results.get::<bool, _>("is_delete_marker"));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -561,10 +755,10 @@ pub(crate) mod tests {
         let mut sequencer = EXPECTED_SEQUENCER_CREATED_ONE.to_string();
         sequencer.pop().unwrap();
         sequencer.push('5');
-        let mut events = replace_sequencers(test_created_events(), Some(sequencer.to_string()));
-        events.object_created.sha256s[0] = None;
+        let mut events1 = replace_sequencers(test_created_events(), Some(sequencer.to_string()));
+        events1.object_created.sha256s[0] = None;
         // Ingest with a sequencer that causes the previous event to be reprocessed.
-        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
+        ingester.ingest(EventSourceType::S3(events1)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -1539,7 +1733,15 @@ pub(crate) mod tests {
                 ingester
                     .ingest(EventSourceType::S3(
                         // Okay to dedup here as the Lambda function would be doing this anyway.
-                        FlatS3EventMessages(chunk.to_vec()).dedup().into(),
+                        FlatS3EventMessages(
+                            chunk
+                                .iter()
+                                .cloned()
+                                .map(|event| event.regenerate_ids())
+                                .collect(),
+                        )
+                        .dedup()
+                        .into(),
                     ))
                     .await
                     .unwrap();
@@ -1553,7 +1755,9 @@ pub(crate) mod tests {
             row_asserts(s3_object_results);
 
             // Clean up for next permutation.
-            pool.execute("truncate s3_object, object").await.unwrap();
+            pool.execute("truncate s3_object, object, s3_object_v2")
+                .await
+                .unwrap();
         }
 
         println!(
@@ -1768,11 +1972,20 @@ pub(crate) mod tests {
                 *sha256 = Some(EXPECTED_SHA256.to_string());
             });
         };
+        let update_object_id = |id: &mut Vec<Uuid>| {
+            id.iter_mut().for_each(|id| {
+                *id = UuidGenerator::generate();
+            });
+        };
 
+        update_object_id(&mut events.object_created.object_ids);
+        update_object_id(&mut events.object_created.s3_object_ids);
         update_last_modified(&mut events.object_created.last_modified_dates);
         update_storage_class(&mut events.object_created.storage_classes);
         update_sha256(&mut events.object_created.sha256s);
 
+        update_object_id(&mut events.object_deleted.object_ids);
+        update_object_id(&mut events.object_deleted.s3_object_ids);
         update_last_modified(&mut events.object_deleted.last_modified_dates);
         update_storage_class(&mut events.object_deleted.storage_classes);
         update_sha256(&mut events.object_deleted.sha256s);

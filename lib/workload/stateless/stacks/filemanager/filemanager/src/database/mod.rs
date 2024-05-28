@@ -308,6 +308,7 @@ pub(crate) mod tests {
             FlatS3EventMessage,
             "../database/queries/ingester/aws/update_reordered_for_deleted.sql",
             &vec![UuidGenerator::generate()],
+            &vec![UuidGenerator::generate()],
             &vec!["bucket".to_string()],
             &vec!["key".to_string()],
             &vec![DateTime::<Utc>::default()],
@@ -368,6 +369,7 @@ pub(crate) mod tests {
         let sequencers = query_file_as!(
             FlatS3EventMessage,
             "../database/queries/ingester/aws/update_reordered_for_created.sql",
+            &vec![UuidGenerator::generate()],
             &vec![UuidGenerator::generate()],
             &vec!["bucket".to_string()],
             &vec!["key".to_string()],

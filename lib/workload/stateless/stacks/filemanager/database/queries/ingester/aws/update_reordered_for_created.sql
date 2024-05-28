@@ -7,19 +7,21 @@ with input as (
         *
     from unnest(
         $1::uuid[],
-        $2::text[],
+        $2::uuid[],
         $3::text[],
-        $4::timestamptz[],
-        $5::bigint[],
-        $6::text[],
-        $7::timestamptz[],
-        $8::text[],
-        $9::storage_class[],
-        $10::text[],
+        $4::text[],
+        $5::timestamptz[],
+        $6::bigint[],
+        $7::text[],
+        $8::timestamptz[],
+        $9::text[],
+        $10::storage_class[],
         $11::text[],
-        $12::boolean[]
+        $12::text[],
+        $13::boolean[]
     ) as input (
         s3_object_id,
+        object_id,
         bucket,
         key,
         created_date,
@@ -38,6 +40,7 @@ current_objects as (
     select
         s3_object.*,
         input.s3_object_id as input_id,
+        input.object_id as input_object_id,
         input.bucket as input_bucket,
         input.key as input_key,
         input.version_id as input_version_id,
@@ -109,6 +112,7 @@ update as (
 -- Return the old values because these need to be reprocessed.
 select
     -- Note, this is the passed through value from the input in order to identify this event later.
+    input_object_id as "object_id!",
     input_id as "s3_object_id!",
     bucket,
     key,

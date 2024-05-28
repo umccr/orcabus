@@ -16,7 +16,7 @@ pub trait Collect {
 }
 
 /// The type of event.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum EventSourceType {
     S3(Events),
