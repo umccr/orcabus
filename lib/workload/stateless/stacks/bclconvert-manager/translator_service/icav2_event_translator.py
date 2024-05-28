@@ -49,6 +49,9 @@ The event tranlator then returns the following:
       "pipelineCode": "BclConvert v0_0_0",
       "pipelineDescription": "BclConvert pipeline.",
       "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
+      "instrumentRunId": analysis_outputs.get("instrument_run_id"),
+      "basespaceRunId": analysis_outputs.get("basespace_run_id"),
+      "samplesheetB64gz": analysis_outputs.get("samplesheet_b64gz")
     }
   }
 }
@@ -58,7 +61,6 @@ import json
 import logging
 import datetime
 import boto3
-from uuid import uuid4
 from helper.workflowrunstatechange import (
     WorkflowRunStateChange,
     AWSEvent,
@@ -66,6 +68,8 @@ from helper.workflowrunstatechange import (
 )
 from helper.icav2_analysis import collect_analysis_objects
 from helper.aws_ssm_helper import set_icav2_env_vars
+from helper.generate_db_uuid import generate_db_uuid
+from helper.generate_portal_run_id import generate_portal_run_id
 
 events = boto3.client("events", region_name='ap-southeast-2')
 dynamodb = boto3.client('dynamodb', region_name='ap-southeast-2')
@@ -82,6 +86,8 @@ def handler(event, context):
     event_bus_name = os.getenv("EVENT_BUS_NAME")
     table_name = os.getenv("TABLE_NAME")
     
+    # Set ICAv2 env variables
+    logger.info("Setting icav2 env vars from secrets manager")
     set_icav2_env_vars()
 
     # Extract relevant fields from the event payload
@@ -91,6 +97,19 @@ def handler(event, context):
     internal_ica_event = translate_to_aws_event(event_details)
 
     # send the internal event to the event bus
+    send_internal_event_to_eventbus(internal_ica_event, event_bus_name)
+    
+    # Store the internal event in the DynamoDB table
+    store_events_into_dynamodb(internal_ica_event, table_name, event_details)
+    
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps("Internal event sent to the event bus and both msg stored in the DynamoDB table.")
+    }
+
+# send the internal event to the event bus
+def send_internal_event_to_eventbus(internal_ica_event, event_bus_name)->None:
     try:
       events.put_events(
         Entries=[
@@ -105,10 +124,11 @@ def handler(event, context):
       logger.info(f"Internal event sent to the event bus.")
     except Exception as e:
         raise Exception("Failed to send event to the event bus. Error: ", e)
-    
-    # Store the internal event in the DynamoDB table
-    try:
-      db_uuid = generate_db_uuid()
+
+# Store the internal event in the DynamoDB table
+def store_events_into_dynamodb(internal_ica_event, table_name, event_details)->None:
+  try:
+      db_uuid = generate_db_uuid().get("db_uuid")
       dynamodb.put_item(
           TableName=table_name,
           Item={
@@ -148,14 +168,9 @@ def handler(event, context):
           }
       )
       logger.info(f"db_uuid updated in anaylsis_id and portal_run_id record.")
-    except Exception as e:
+  except Exception as e:
         raise Exception("Failed to store event in the DynamoDB table. Error: ", e)
-
-    return {
-        "statusCode": 200,
-        "body": json.dumps("Internal event sent to the event bus and both msg stored in the DynamoDB table.")
-    }
-
+  
 # Convert from Entity model to aws event object with aws event envelope
 def translate_to_aws_event(event)->AWSEvent:
   return AWSEvent(
@@ -289,8 +304,3 @@ def parse_event_code(event_code):
 
     return event_name, version
 
-def generate_portal_run_id()->str:
-        return f"{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')}{str(uuid4())[:8]}"
-
-def generate_db_uuid()->str:
-        return f"{str(uuid4())}"
