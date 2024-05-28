@@ -27,7 +27,7 @@ class WorkflowFactory(factory.django.DjangoModelFactory):
 
     workflow_name =  "TestWorkflow"
     workflow_version =  "1.0"
-    workflow_ref_id =  str(uuid.uuid4())
+    execution_engine_pipeline_id =  str(uuid.uuid4())
     execution_engine =  "ICAv2"
     approval_state =  "NATA"
 
@@ -36,7 +36,7 @@ class PayloadFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Payload
 
-    payload_type =  "success_payload"
+    version =  "1.0.0"
     payload_ref_id =  str(uuid.uuid4())
     data = TestConstant.payload.value
 
@@ -49,7 +49,7 @@ class WorkflowRunFactory(factory.django.DjangoModelFactory):
     portal_run_id =  f"20240130{_uid[:8]}"
     execution_id =  _uid
     workflow_run_name =  f"TestWorkflowRun{_uid[:8]}"
-    status =  "ready"
+    status =  "READY"
     comment = "Lorem Ipsum"
     timestamp = make_aware(datetime.now())
     # If required, set later

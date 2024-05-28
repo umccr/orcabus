@@ -40,3 +40,16 @@ class WorkflowRun(OrcaBusBaseModel):
 
     def __str__(self):
         return f"ID: {self.id}, portal_run_id: {self.portal_run_id}"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "portal_run_id": self.portal_run_id,
+            "status": self.status,
+            "timestamp": self.timestamp,
+            "execution_id": self.execution_id,
+            "workflow_run_name": self.workflow_run_name,
+            "comment": self.comment,
+            "payload": self.payload.to_dict() if (self.payload is not None) else None,
+            "workflow": self.workflow.to_dict() if (self.workflow is not None) else None
+        }
