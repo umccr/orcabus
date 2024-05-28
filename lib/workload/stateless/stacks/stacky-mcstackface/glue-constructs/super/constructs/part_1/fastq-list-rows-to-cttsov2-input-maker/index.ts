@@ -52,7 +52,7 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
     triggerStatus: 'fastqlistrowregistered',
     triggerDetailType: 'libraryStateChange',
     triggerWorkflowName: 'bclconvert_interop_qc',
-    outputDetailType: 'workflowRunStateChange',
+    outputDetailType: 'WorkflowRunStateChange',
     outputSource: 'orcabus.cttsov2inputeventglue',
     outputStatus: 'awaitinginput',
     payloadVersion: '2024.05.24',

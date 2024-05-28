@@ -15,12 +15,12 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id": "$.inputs.db_uuid",
+          "id.$": "$.inputs.db_uuid",
           "id_type": "${__input_maker_type__}"
         }
       },
       "ResultSelector": {
-        "event_data_input.$": "$.Item.event_data_input.M"
+        "event_data_input.$": "States.StringToJson($.Item.event_data_input.S)"
       },
       "ResultPath": "$.get_event_detail_payload_data_from_db_step",
       "Next": "Get OutputUri Prefix for BSSH Fastq Copy Manager"
@@ -40,9 +40,10 @@
     "Generate inputs for BsshFastqCopyManager": {
       "Type": "Pass",
       "Parameters": {
+        "instrumentRunId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
         "projectId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.projectId",
         "analysisId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.analysisId",
-        "outputUri.$": "States.Format('{}__portal_run_id__/', $.get_output_uri_prefix_parameter_step.output_uri_prefix)"
+        "outputUri.$": "States.Format('{}{}/__portal_run_id__/', $.get_output_uri_prefix_parameter_step.output_uri_prefix, $.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId)"
       },
       "ResultPath": "$.set_event_data_output",
       "Next": "Add event data outputs (local)"
@@ -56,10 +57,10 @@
           "id.$": "$.inputs.db_uuid",
           "id_type": "${__input_maker_type__}"
         },
-        "UpdateExpression": "SET event_detail_output = :event_detail_output",
+        "UpdateExpression": "SET event_data_output = :event_data_output",
         "ExpressionAttributeValues": {
           ":event_data_output": {
-            "M.$": "$.set_event_data_output"
+            "S.$": "States.JsonToString($.set_event_data_output)"
           }
         }
       },

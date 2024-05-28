@@ -407,7 +407,7 @@
     },
     "LibraryLaneId Registered Event": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Resource": "arn:aws:states:::events:putEvents",
       "Parameters": {
         "Entries": [
           {

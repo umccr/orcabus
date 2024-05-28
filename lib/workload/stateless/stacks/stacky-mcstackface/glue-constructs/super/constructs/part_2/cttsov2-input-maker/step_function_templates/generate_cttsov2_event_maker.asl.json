@@ -20,7 +20,7 @@
         }
       },
       "ResultSelector": {
-        "event_data_input.$": "$.Item.event_data_input.M"
+        "event_data_input.$": "States.StringToJson($.Item.event_data_input.S)"
       },
       "ResultPath": "$.get_event_detail_payload_data_from_db_step",
       "Next": "Get Parameter Steps"
@@ -84,10 +84,10 @@
       ],
       "ResultPath": "$.get_ssm_parameters_steps",
       "ResultSelector": {
-        "cache_uri_prefix.$": "$.get_cache_uri_prefix_step.cache_uri_prefix",
-        "output_uri_prefix.$": "$.get_output_uri_prefix_parameter_step.output_uri_prefix",
-        "project_id.$": "$.get_project_id_and_name_parameter_step.project_id",
-        "project_name.$": "$.get_project_id_and_name_parameter_step.project_name"
+        "cache_uri_prefix.$": "$.[0]get_cache_uri_prefix_step.cache_uri_prefix",
+        "output_uri_prefix.$": "$.[1].get_output_uri_prefix_parameter_step.output_uri_prefix",
+        "project_id.$": "$.[2].get_project_id_and_name_parameter_step.project_id",
+        "project_name.$": "$.[2].get_project_id_and_name_parameter_step.project_name"
       }
     },
     "Generate inputs for cttsov2": {
@@ -121,7 +121,7 @@
         "UpdateExpression": "SET event_detail_output = :event_detail_output",
         "ExpressionAttributeValues": {
           ":event_data_output": {
-            "M.$": "$.set_event_data_output"
+            "S.$": "States.JsonToString($.set_event_data_output)"
           }
         }
       },

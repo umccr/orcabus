@@ -414,7 +414,7 @@
         "Entries": [
           {
             "Detail.$": "$.database_event_data",
-            "DetailType": "workflowRunStateChange",
+            "DetailType": "WorkflowRunStateChange",
             "EventBusName": "${__eventbus_name__}",
             "Source": "orcabus.cttso_v2",
             "Resources": []

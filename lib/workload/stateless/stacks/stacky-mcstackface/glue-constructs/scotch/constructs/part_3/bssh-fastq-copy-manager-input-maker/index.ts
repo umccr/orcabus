@@ -38,7 +38,7 @@ export class bsshFastqCopyManagerInputMakerConstruct extends Construct {
     tablePartition: 'bssh_fastq_copy',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
-    triggerDetailType: 'workflowRunStateChange',
+    triggerDetailType: 'WorkflowRunStateChange',
     triggerWorkflowName: 'bclconvert',
     outputSource: 'orcabus.bsshfastqcopyinputeventglue',
     outputStatus: 'ready',
@@ -54,6 +54,7 @@ export class bsshFastqCopyManagerInputMakerConstruct extends Construct {
     Part 1: Build the internal sfn
     */
     const inputMakerSfn = new sfn.StateMachine(this, 'bssh_fastq_copy_manager_input_maker', {
+      stateMachineName: `${this.bsshFastqCopyManagerInputMakerEventMap.prefix}-input-maker-internal-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,
@@ -63,15 +64,21 @@ export class bsshFastqCopyManagerInputMakerConstruct extends Construct {
       ),
       definitionSubstitutions: {
         __table_name__: props.tableObj.tableName,
+        __input_maker_type__: this.bsshFastqCopyManagerInputMakerEventMap.tablePartition,
         __bclconvert_output_uri_ssm_parameter_name__:
           props.outputUriPrefixSsmParameterObj.parameterName,
       },
     });
 
     /*
-    Part 2: Grant the internal sfn permissions to access the ssm parameter
+    Part 2: Grant the internal sfn permissions
     */
+
+    // Access the ssm parameters
     props.outputUriPrefixSsmParameterObj.grantRead(inputMakerSfn.role);
+
+    // Read/write to the table
+    props.tableObj.grantReadWriteData(inputMakerSfn.role);
 
     /*
     Part 3: Build the external sfn

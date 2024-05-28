@@ -17,7 +17,7 @@ export class updateDataBaseOnNewFastqListRowsEventConstruct extends Construct {
     tablePartition: 'fastqlistrows_by_instrument_run',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
-    triggerDetailType: 'workflowRunStateChange',
+    triggerDetailType: 'WorkflowRunStateChange',
     triggerWorkflowName: 'bssh_fastq_copy',
     outputSource: 'orcabus.instrumentrunmanager',
     outputStatus: 'fastqlistrowsregistered',

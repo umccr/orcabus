@@ -32,7 +32,7 @@ export interface WorkflowRunStateChangeInternalInputMakerProps {
 
 export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct {
   public readonly stepFunctionObj: sfn.StateMachine;
-  public readonly detailType = 'workflowRunStateChange';
+  public readonly detailType = 'WorkflowRunStateChange';
 
   constructor(scope: Construct, id: string, props: WorkflowRunStateChangeInternalInputMakerProps) {
     super(scope, id);
@@ -100,7 +100,7 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
         __table_name__: props.tableObj.tableName,
         /* Event configurations */
         __event_output_source__: props.outputSource,
-        __detail_type: this.detailType,
+        __detail_type__: this.detailType,
         __event_bus_name__: props.eventBusObj.eventBusName,
         __id_type__: props.tablePartitionName,
         /* Workflow name */

@@ -38,7 +38,7 @@ export class BclconvertInteropqcInputMakerConstruct extends Construct {
     tablePartition: 'bclconvert_interop_qc',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
-    triggerDetailType: 'workflowRunStateChange',
+    triggerDetailType: 'WorkflowRunStateChange',
     triggerWorkflowName: 'bssh_fastq_copy',
     outputSource: 'orcabus.bclconvertinteropqcinputeventglue',
     outputStatus: 'ready',

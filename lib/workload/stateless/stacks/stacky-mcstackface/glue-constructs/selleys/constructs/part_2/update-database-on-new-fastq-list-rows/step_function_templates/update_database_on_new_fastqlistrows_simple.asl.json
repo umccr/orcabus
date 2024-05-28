@@ -59,7 +59,7 @@
     },
     "Raise event for fastqlistrows registered": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Resource": "arn:aws:states:::events:putEvents",
       "Parameters": {
         "Entries": [
           {

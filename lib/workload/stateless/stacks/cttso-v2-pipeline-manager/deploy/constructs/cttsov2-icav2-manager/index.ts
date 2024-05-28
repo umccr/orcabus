@@ -219,7 +219,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       eventBus: props.eventbusObj,
       eventPattern: {
         source: ['orcabus.wfm'],
-        detailType: ['workflowRunStateChange'],
+        detailType: ['WorkflowRunStateChange'],
         /*
         FIXME - nothing is set in stone yet
         */
@@ -252,7 +252,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         // Statemachine substitutions we need to pass
         eventBusName: props.eventbusObj.eventBusName,
         source: 'orcabus.cttso_v2',
-        detailType: 'workflowRunStateChange',
+        detailType: 'WorkflowRunStateChange',
         /* Event parameters */
         workflowType: props.workflowType,
         workflowVersion: props.workflowVersion,

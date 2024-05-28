@@ -34,57 +34,12 @@
       "Type": "Choice",
       "Choices": [
         {
-          "Not": {
-            "Variable": "$.get_reference_id_in_db_step.Item",
-            "IsPresent": true
-          },
+          "Variable": "$.get_reference_id_in_db_step.Item",
+          "IsPresent": true,
           "Next": "Get Item from DataBase (local)"
         }
       ],
       "Default": "Add event input to database (local)"
-    },
-    "Get Item from DataBase (local)": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:getItem",
-      "Parameters": {
-        "TableName": "${__table_name__}",
-        "Key": {
-          "id.$": "$.generate_db_uuid_step.db_uuid",
-          "id_type": "${__id_type__}"
-        }
-      },
-      "Next": "EventBridge PutEvents",
-      "ResultPath": "$.get_workflow_run_items",
-      "ResultSelector": {
-        "event_data_output": ".Item.event_data_output.M"
-      }
-    },
-    "EventBridge PutEvents": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
-      "Parameters": {
-        "Entries": [
-          {
-            "Source": "${__event_output_source__}",
-            "EventBusName": "${__event_bus_name__}",
-            "DetailType": "${__detail_type__}",
-            "Detail": {
-              "portalRunId.$": "$.get_workflow_run_items.event_data_output.portal_run_id",
-              "timestamp.$": "$$.Execution.StartTime",
-              "status": "ready",
-              "workflowName": "${__workflow_name__}",
-              "workflowVersion": "${__workflow_version__}",
-              "workflowRunName.$": "$.get_workflow_run_items.workflow_run_name",
-              "payload": {
-                "refId": null,
-                "version": "${__payload_version__}",
-                "data.$": "$.get_workflow_run_items.event_data_output"
-              }
-            }
-          }
-        ]
-      },
-      "End": true
     },
     "Add event input to database (local)": {
       "Type": "Task",
@@ -95,7 +50,7 @@
           "id.$": "$.get_reference_id_step.reference_id",
           "id_type": "${__id_type__}",
           "event_data_input": {
-            "M.$": "$.input_event_detail.payload.data"
+            "S.$": "States.JsonToString($.input_event_detail.payload.data)"
           }
         }
       },
@@ -113,7 +68,7 @@
       "Parameters": {
         "StateMachineArn": "${__input_maker_state_machine_arn__}",
         "Input": {
-          "db_uuid": "$.get_reference_id_step.reference_id"
+          "db_uuid.$": "$.get_reference_id_step.reference_id"
         }
       },
       "Next": "Get inputs for updating event detail output",
@@ -132,13 +87,13 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id.$": "$.generate_db_uuid_step.db_uuid",
+                  "id.$": "$.get_reference_id_step.reference_id",
                   "id_type": "${__id_type__}"
                 }
               },
               "ResultPath": "$.get_event_data_output_step",
               "ResultSelector": {
-                "event_data_output.$": "$.Item.event_data_output.M"
+                "event_data_output.$": "States.StringToJson($.Item.event_data_output.S)"
               },
               "End": true
             }
@@ -176,7 +131,11 @@
           }
         }
       ],
-      "ResultPath": "$.event_detail_outputs_parallel"
+      "ResultPath": "$.event_detail_outputs_parallel",
+      "ResultSelector": {
+        "event_data_output.$": "$.[0].get_event_data_output_step.event_data_output",
+        "portal_run_id.$": "$.[1].get_portal_run_id_step.portal_run_id"
+      }
     },
     "Update Portal Run ID in Event Detail Output": {
       "Type": "Task",
@@ -184,8 +143,8 @@
       "Parameters": {
         "FunctionName": "${__update_portal_run_id_in_event_detail_lambda_function_arn__}",
         "Payload": {
-          "portal_run_id.$": "$.event_detail_outputs_parallel.get_portal_run_id_step.portal_run_id",
-          "event_data_output.$": "$.event_detail_outputs_parallel.get_event_data_output_step.event_data_output"
+          "portal_run_id.$": "$.event_detail_outputs_parallel.portal_run_id",
+          "event_data_output.$": "$.event_detail_outputs_parallel.event_data_output"
         }
       },
       "Retry": [
@@ -215,7 +174,7 @@
         "Payload": {
           "workflow_name": "${__workflow_name__}",
           "workflow_version": "${__workflow_version__}",
-          "portal_run_id.$": "$.event_detail_outputs_parallel.get_portal_run_id_step.portal_run_id"
+          "portal_run_id.$": "$.event_detail_outputs_parallel.portal_run_id"
         }
       },
       "Retry": [
@@ -246,25 +205,71 @@
           "id.$": "$.get_reference_id_step.reference_id",
           "id_type": "${__id_type__}"
         },
-        "UpdateExpression": "SET event_data_output = :event_data_output",
+        "UpdateExpression": "SET event_data_output = :event_data_output, workflow_run_name = :workflow_run_name, portal_run_id = :portal_run_id",
         "ExpressionAttributeValues": {
           ":portal_run_id": {
-            "S.$": "$.event_detail_outputs_parallel.get_portal_run_id_step.portal_run_id"
+            "S.$": "$.event_detail_outputs_parallel.portal_run_id"
           },
           ":workflow_run_name": {
             "S.$": "$.generate_workflow_run_name_step.workflow_run_name"
           },
           ":event_data_output": {
-            "M.$": "$.update_event_step_detail_with_portal_run_id_step.event_data_output_updated"
+            "S.$": "States.JsonToString($.update_event_step_detail_with_portal_run_id_step.event_data_output_updated)"
           }
         }
       },
+      "ResultPath": "$.update_event_data_step",
       "Next": "Wait 1 Second (post event detail output update)"
     },
     "Wait 1 Second (post event detail output update)": {
       "Type": "Wait",
       "Seconds": 5,
       "Next": "Get Item from DataBase (local)"
+    },
+    "Get Item from DataBase (local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.get_reference_id_step.reference_id",
+          "id_type": "${__id_type__}"
+        }
+      },
+      "Next": "EventBridge PutEvents",
+      "ResultPath": "$.get_workflow_run_items",
+      "ResultSelector": {
+        "portal_run_id.$": "$.Item.portal_run_id.S",
+        "workflow_run_name.$": "$.Item.workflow_run_name.S",
+        "event_data_output.$": "States.StringToJson($.Item.event_data_output.S)"
+      }
+    },
+    "EventBridge PutEvents": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Source": "${__event_output_source__}",
+            "EventBusName": "${__event_bus_name__}",
+            "DetailType": "${__detail_type__}",
+            "Detail": {
+              "portalRunId.$": "$.get_workflow_run_items.portal_run_id",
+              "timestamp.$": "$$.Execution.StartTime",
+              "status": "ready",
+              "workflowName": "${__workflow_name__}",
+              "workflowVersion": "${__workflow_version__}",
+              "workflowRunName.$": "$.get_workflow_run_items.workflow_run_name",
+              "payload": {
+                "refId": null,
+                "version": "${__payload_version__}",
+                "data.$": "$.get_workflow_run_items.event_data_output"
+              }
+            }
+          }
+        ]
+      },
+      "End": true
     }
   }
 }

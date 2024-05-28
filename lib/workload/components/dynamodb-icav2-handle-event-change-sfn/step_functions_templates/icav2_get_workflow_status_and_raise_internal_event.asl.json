@@ -97,7 +97,7 @@
         "Entries": [
           {
             "Detail.$": "$.update_analysis_id_in_db_step",
-            "DetailType": "workflowRunStateChange",
+            "DetailType": "WorkflowRunStateChange",
             "EventBusName": "${__eventbus_name__}",
             "Source": "${__eventsource__}"
           }

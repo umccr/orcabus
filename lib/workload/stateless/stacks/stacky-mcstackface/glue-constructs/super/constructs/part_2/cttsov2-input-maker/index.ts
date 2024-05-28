@@ -45,7 +45,7 @@ export class cttsov2InputMakerConstruct extends Construct {
     tablePartition: 'cttso_v2',
     triggerSource: 'orcabus.cttsov2inputeventglue',
     triggerStatus: 'awaitinginput',
-    triggerDetailType: 'workflowRunStateChange',
+    triggerDetailType: 'WorkflowRunStateChange',
     triggerWorkflowName: 'cttsov2',
     outputSource: 'orcabus.cttsov2inputeventglue',
     outputStatus: 'ready',

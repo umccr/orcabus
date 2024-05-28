@@ -2,10 +2,10 @@
 
 This step function is designed to mock the workflow manager.  
 
-In this case, workflowRunStateChange events are persisted from another microservice and
+In this case, WorkflowRunStateChange events are persisted from another microservice and
 resubmitted by the workflow manager.  This is a common pattern.
 
-The only difference is, that for workflowRunStateChange detail types from the workflowManager,
+The only difference is, that for WorkflowRunStateChange detail types from the workflowManager,
 we expect detail.payload.refId to be populated by a uuid.  
 
 ## Step function overview

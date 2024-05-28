@@ -17,7 +17,7 @@ export class updateDataBaseOnNewSamplesheetEventConstruct extends Construct {
     tablePartition: 'samplesheet_by_instrument_run',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
-    triggerDetailType: 'workflowRunStateChange',
+    triggerDetailType: 'WorkflowRunStateChange',
     triggerWorkflowName: 'bclconvert',
     outputSource: 'orcabus.instrumentrunmanager',
     outputStatus: 'succeeded',
@@ -88,8 +88,8 @@ export class updateDataBaseOnNewSamplesheetEventConstruct extends Construct {
         source: [this.updateDataBaseOnNewSamplesheetEventMap.triggerSource],
         detailType: [this.updateDataBaseOnNewSamplesheetEventMap.triggerDetailType],
         detail: {
-          status: [this.updateDataBaseOnNewSamplesheetEventMap.triggerStatus],
-          workflowName: [this.updateDataBaseOnNewSamplesheetEventMap.triggerWorkflowName],
+          status: [{'equals-ignore-case': this.updateDataBaseOnNewSamplesheetEventMap.triggerStatus }],
+          workflowName: [{'equals-ignore-case': this.updateDataBaseOnNewSamplesheetEventMap.triggerWorkflowName }],
         },
       },
     });

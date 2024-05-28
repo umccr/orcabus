@@ -51,11 +51,11 @@ Output Event source: `orcabus.cttsov2inputeventglue`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `ready`
 
-Output Event source: `orcabus.workflowrunmanager`
+Output Event source: `orcabus.workflowmanager`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `ready`
 
 * The ctTSOv2ReadyEventSubmitter Construct
   * Subscribes to the ctTSOv2InputMaker Construct outputs and generates a ready event for the ctTSOv2ReadySfn
 
-![](images/part_3/cttsov2_workflowrunmanager_ready_event.png)
+![](images/part_3/cttsov2_workflowmanager_ready_event.png)

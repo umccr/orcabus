@@ -22,7 +22,7 @@ export interface WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailPr
 
 export class WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct extends Construct {
   public readonly stepFunctionObj: sfn.StateMachine;
-  public readonly detailType = 'workflowRunStateChange';
+  public readonly detailType = 'WorkflowRunStateChange';
   public readonly outputEventSource = 'orcabus.workflowmanager';
 
   constructor(
@@ -74,7 +74,7 @@ export class WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstr
         __translate_event_lambda_function_arn__: translateEventLambda.currentVersion.functionArn,
         __table_name__: props.tableObj.tableName,
         __trigger_source__: props.triggerSource,
-        __detail_type: this.detailType,
+        __detail_type__: this.detailType,
         __event_bus_name__: props.eventBusObj.eventBusName,
         __output_source__: this.outputEventSource,
         __id_type__: props.tablePartitionName,

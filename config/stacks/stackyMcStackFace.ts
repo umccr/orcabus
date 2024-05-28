@@ -20,8 +20,8 @@ export const getGlueStackProps = (): GlueStackConfig => {
     cttsov2OutputUriPrefixSsmParameterName: mockCttsov2OutputUriPrefixSsmParameterName,
     eventBusName: mockEventBusName,
     icav2ProjectIdSsmParameterName: mockIcav2ProjectIdSsmParameterName,
-    inputMakerTableName: mockInstrumentRunTableName,
-    instrumentRunTableName: mockInputMakerTableName,
+    inputMakerTableName: mockInputMakerTableName,
+    instrumentRunTableName: mockInstrumentRunTableName,
     workflowManagerTableName: mockWorkflowManagerTableName,
   };
 };

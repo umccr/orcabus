@@ -44,7 +44,7 @@ export class EventRelayerConstruct extends Construct {
       new PythonWorkflowrunstatechangeLambdaLayerConstruct(this, 'event_layer_lambda_layer', {})
         .lambdaLayerVersionObj;
 
-    // Create lambda to repush the event from the bclconvertmanager source to the workflowrunmanager source
+    // Create lambda to repush the event from the bclconvertmanager source to the workflowmanager source
     const lambdaFunction = new PythonFunction(this, 'relay_lambda', {
       entry: path.join('__dirname', 'relay_event_with_new_source_lambda_py'),
       runtime: lambda.Runtime.PYTHON_3_11,

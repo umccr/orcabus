@@ -16,7 +16,7 @@ Input Event Source: `orcabus.bclconvertmanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `succeeded`
 
-Output Event source: `orcabus.workflowrunmanager`
+Output Event source: `orcabus.workflowmanager`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `complete`
 
@@ -27,7 +27,7 @@ Output Event status: `complete`
 
 ### Construct A (part 2)
 
-Input Event Source: `orcabus.workflowrunmanager`
+Input Event Source: `orcabus.workflowmanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
@@ -46,7 +46,7 @@ Output Event status: `libraryrunidsregistered`
 
 ### Construct A (part 3)
 
-Input Event Source: `orcabus.workflowrunmanager`
+Input Event Source: `orcabus.workflowmanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
@@ -64,7 +64,7 @@ Input Event Source: `orcabus.bsshfastqcopymanagerinputeventglue`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
-Output Event source: `orcabus.workflowrunmanager`
+Output Event source: `orcabus.workflowmanager`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `ready`
 
@@ -84,7 +84,7 @@ Input Event Source: `orcabus.bsshfastqcopymanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `succeeded`
 
-Output Event source: `orcabus.workflowrunmanager`
+Output Event source: `orcabus.workflowmanager`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `complete`
 
@@ -95,7 +95,7 @@ Output Event status: `complete`
 
 ### Construct B (Part 2)
 
-Input Event Source: `orcabus.workflowrunmanager`
+Input Event Source: `orcabus.workflowmanager`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
@@ -129,7 +129,7 @@ Input Event Source: `orcabus.bclconvertinteropqcinputeventglue`
 Input Event DetailType: `orcabus.workflowrunstatechange`
 Input Event status: `complete`
 
-Output Event source: `orcabus.workflowrunmanager`
+Output Event source: `orcabus.workflowmanager`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `ready`
 
@@ -191,7 +191,7 @@ Output Event source: `orcabus.cttsov2inputeventglue`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `ready`
 
-Output Event source: `orcabus.workflowrunmanager`
+Output Event source: `orcabus.workflowmanager`
 Output Event DetailType: `orcabus.workflowrunstatechange`
 Output Event status: `ready`
 

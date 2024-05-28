@@ -44,10 +44,11 @@
           "id.$": "$.generate_db_uuid_step.uuid",
           "id_type": "${__id_type__}",
           "event_detail_input": {
-            "M.$": "$.event_detail_input"
+            "S.$": "States.JsonToString($.event_detail_input)"
           }
         }
       },
+      "ResultPath": "$.save_inputs_step",
       "Next": "Translate internal event"
     },
     "Translate internal event": {
@@ -75,7 +76,7 @@
       ],
       "Next": "Save output events to DB (local)",
       "ResultSelector": {
-        "event_detail_output.$": "$.Payload"
+        "event_detail_output.$": "$.Payload.event_detail_output"
       },
       "ResultPath": "$.translate_event_step"
     },
@@ -91,10 +92,11 @@
         "UpdateExpression": "SET event_detail_output = :event_detail_output",
         "ExpressionAttributeValues": {
           ":event_detail_output": {
-            "M.$": "$.translate_event_step.event_detail_output"
+            "S.$": "States.JsonToString($.translate_event_step.event_detail_output)"
           }
         }
       },
+      "ResultPath": "$.save_outputs_step",
       "Next": "Wait 1 Second"
     },
     "Wait 1 Second": {
@@ -104,11 +106,11 @@
     },
     "Push Complete Internal Event": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Resource": "arn:aws:states:::events:putEvents",
       "Parameters": {
         "Entries": [
           {
-            "Detail.$": "$.translate_event_step.event_detail_output.detail",
+            "Detail.$": "$.translate_event_step.event_detail_output",
             "DetailType": "${__detail_type__}",
             "EventBusName": "${__event_bus_name__}",
             "Source": "${__output_source__}"

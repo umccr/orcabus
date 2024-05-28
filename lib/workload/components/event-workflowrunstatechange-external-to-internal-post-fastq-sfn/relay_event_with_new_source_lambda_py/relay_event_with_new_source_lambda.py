@@ -3,7 +3,7 @@
 """
 Simply update the status of a workflow run statechange event and push back to the event bus
 
-This takes a succeeded status from a non-workflow-manage service, and duplicates that event from the workflowrunmanager
+This takes a succeeded status from a non-workflow-manage service, and duplicates that event from the workflowmanager
 source with a 'complete' status.
 
 Pushes an event based on the putSource event attribute,
