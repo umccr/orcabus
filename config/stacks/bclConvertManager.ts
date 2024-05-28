@@ -16,7 +16,7 @@ export const getBclConvertManagerStackProps = (stage: AppStage): BclConvertManag
     eventBusName,
     icav2EventTranslatorDynamodbTableName: dynamodbTableName,
     vpcProps: vpcProps,
-    lambdaSecurityGroupName: 'OrcaBusIcaEventTranslatorSecurityGroup',
+    lambdaSecurityGroupName: 'OrcaBusBclConvertManagerSecurityGroup',
     icav2JwtSecretsManagerPath: icav2AccessTokenSecretName[stage],
   };
 };

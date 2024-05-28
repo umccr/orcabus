@@ -4,7 +4,7 @@ import { TableV2 } from 'aws-cdk-lib/aws-dynamodb';
 import { EventBus, Rule, IEventBus } from 'aws-cdk-lib/aws-events';
 import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
-import { Vpc, VpcLookupOptions, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
+import { Vpc, VpcLookupOptions, SecurityGroup, IVpc, ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
@@ -24,6 +24,8 @@ export interface BclConvertManagerStackProps {
 export class BclConvertManagerStack extends Stack {
   private readonly lambdaRuntimePythonVersion = Runtime.PYTHON_3_12;
   private readonly baseLayer: PythonLayerVersion;
+  private readonly vpc: IVpc;
+  private readonly lambdaSG: ISecurityGroup;
 
   constructor(scope: Construct, id: string, props: StackProps & BclConvertManagerStackProps) {
     super(scope, id, props);
@@ -34,6 +36,15 @@ export class BclConvertManagerStack extends Stack {
       compatibleArchitectures: [Architecture.ARM_64],
     });
 
+    this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
+    this.lambdaSG = new SecurityGroup(this, 'IcaEventTranslatorLambdaSG', {
+      vpc: this.vpc,
+      securityGroupName: props.lambdaSecurityGroupName,
+      allowAllOutbound: true,
+      description:
+        'Security group that allows teh Ica Event Translator (BclConvertManager) function to egress out.',
+    });
+
     // Create the ICAv2 Event Translator service
     this.createICAv2EventTranslator(props);
   }
@@ -41,7 +52,6 @@ export class BclConvertManagerStack extends Stack {
   private createICAv2EventTranslator(props: BclConvertManagerStackProps) {
     //Get the orcabus, vpc, dynamodb table, cav2 jwt secret from lookup
     const mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
-    const vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
     const dynamoDBTable = TableV2.fromTableName(
       this,
       'Icav2EventTranslatorDynamoDBTable',
@@ -53,14 +63,6 @@ export class BclConvertManagerStack extends Stack {
       props.icav2JwtSecretsManagerPath
     );
 
-    const lambdaSG = new SecurityGroup(this, 'IcaEventTranslatorLambdaSG', {
-      vpc,
-      securityGroupName: props.lambdaSecurityGroupName,
-      allowAllOutbound: true,
-      description:
-        'Security group that allows teh Ica Event Translator (BclConvertManager) function to egress out.',
-    });
-
     const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
       entry: path.join(__dirname, '../translator_service'),
       layers: [this.baseLayer],
@@ -71,9 +73,9 @@ export class BclConvertManagerStack extends Stack {
         ICAV2_BASE_URL: 'https://ica.illumina.com/ica/rest',
         ICAV2_ACCESS_TOKEN_SECRET_ID: icav2JwtSecretsManagerObj.secretName,
       },
-      vpc: vpc,
-      vpcSubnets: { subnets: vpc.privateSubnets },
-      securityGroups: [lambdaSG],
+      vpc: this.vpc,
+      vpcSubnets: { subnets: this.vpc.privateSubnets },
+      securityGroups: [this.lambdaSG],
       architecture: Architecture.ARM_64,
       timeout: Duration.seconds(28),
       index: 'icav2_event_translator.py',
