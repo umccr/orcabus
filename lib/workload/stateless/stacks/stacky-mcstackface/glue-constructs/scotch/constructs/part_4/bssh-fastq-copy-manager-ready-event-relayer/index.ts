@@ -19,16 +19,16 @@ import { WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct 
 */
 
 export interface BsshFastqCopyManagerReadyEventHandlerConstructProps {
-  eventBusObj: events.EventBus;
+  eventBusObj: events.IEventBus;
   tableObj: dynamodb.ITableV2;
 }
 
 export class BsshFastqCopyManagerReadyEventHandlerConstruct extends Construct {
-  public declare bsshFastqCopyReadyEventMap: {
-    prefix: 'bsshFastqCopyReadyEventRelayer';
-    tablePartition: 'bssh_fastq_copy_ready_event';
-    triggerSource: 'orcabus.bsshfastqcopyinputeventglue';
-    triggerStatus: 'ready';
+  public readonly bsshFastqCopyReadyEventMap = {
+    prefix: 'bsshFastqCopyReadyEventRelayer',
+    tablePartition: 'bssh_fastq_copy_ready_event',
+    triggerSource: 'orcabus.bsshfastqcopyinputeventglue',
+    triggerStatus: 'ready',
   };
 
   constructor(

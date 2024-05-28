@@ -22,16 +22,16 @@ Output Event status: `complete`
 */
 
 export interface BSSHFastqCopyManagerEventHandlerConstructProps {
-  eventBusObj: events.EventBus;
+  eventBusObj: events.IEventBus;
   tableObj: dynamodb.ITableV2;
 }
 
 export class BSSHFastqCopyManagerEventRelayer extends Construct {
-  public declare bsshFastqCopySuccessEventMap: {
-    prefix: 'bsshFastqCopySuccessEventRelayer';
-    tablePartition: 'bssh_fastq_copy_event';
-    triggerSource: 'orcabus.bsshfastqcopymanager';
-    triggerStatus: 'succeeded';
+  public readonly bsshFastqCopySuccessEventMap = {
+    prefix: 'bsshFastqCopySuccessEventRelayer',
+    tablePartition: 'bssh_fastq_copy_event',
+    triggerSource: 'orcabus.bsshfastqcopymanager',
+    triggerStatus: 'succeeded'
   };
 
   constructor(scope: Construct, id: string, props: BSSHFastqCopyManagerEventHandlerConstructProps) {

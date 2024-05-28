@@ -169,3 +169,17 @@ export const cttsov2Icav2PipelineSfnSSMArn = path.join(
 export const cttsov2Icav2PipelineWorkflowType = 'cttsov2';
 export const cttsov2Icav2PipelineWorkflowTypeVersion = '2.1.1';
 export const cttsov2Icav2ServiceVersion = '2024.05.07';
+
+// Mock Stack
+export const mockEventBusName = eventBusName;
+export const mockInstrumentRunTableName = 'stacky-instrument-run-table';
+export const mockInputMakerTableName = 'stacky-input-maker-table';
+export const mockWorkflowManagerTableName = 'stacky-workflow-manager-table';
+export const mockIcav2ProjectIdSsmParameterName = '/orcabus/stacky/icav2_project_id_and_name_json';
+export const mockBsshOutputFastqCopyUriPrefixSsmParameterName =
+  '/orcabus/stacky/bssh_output_fastq_copy_uri_prefix';
+export const mockBclconvertInteropQcUriPrefixSsmParameterName =
+  '/orcabus/stacky/bclconvert_interop_qc_uri_prefix';
+export const mockCttsov2OutputUriPrefixSsmParameterName =
+  '/orcabus/stacky/cttsov2_output_uri_prefix';
+export const mockCttsov2CacheUriPrefixSsmParameterName = '/orcabus/stacky/cttsov2_cache_uri_prefix';

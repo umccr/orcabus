@@ -18,16 +18,16 @@ import { WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct 
 */
 
 export interface BclconvertInteropqcManagerReadyEventHandlerConstructProps {
-  eventBusObj: events.EventBus;
+  eventBusObj: events.IEventBus;
   tableObj: dynamodb.ITableV2;
 }
 
 export class BclconvertInteropqcManagerReadyEventHandlerConstruct extends Construct {
-  public declare bsshFastqCopyReadyEventMap: {
-    prefix: 'bsshFastqCopyReadyEventRelayer';
-    tablePartition: 'bssh_fastq_copy_ready_event';
-    triggerSource: 'orcabus.bsshfastqcopyinputeventglue';
-    triggerStatus: 'ready';
+  public readonly bclconvertInteropQcEventMap = {
+    prefix: 'bclconvertInteropQcEventRelayer',
+    tablePartition: 'bclconvert_interopqc_ready_event',
+    triggerSource: 'orcabus.bclconvertinteropqcinputeventglue',
+    triggerStatus: 'ready',
   };
 
   constructor(
@@ -59,12 +59,12 @@ export class BclconvertInteropqcManagerReadyEventHandlerConstruct extends Constr
       this,
       'bclconvertSuccessEventRelayer',
       {
-        lambdaPrefix: this.bsshFastqCopyReadyEventMap.prefix,
-        stateMachinePrefix: this.bsshFastqCopyReadyEventMap.prefix,
+        lambdaPrefix: this.bclconvertInteropQcEventMap.prefix,
+        stateMachinePrefix: this.bclconvertInteropQcEventMap.prefix,
         tableObj: props.tableObj,
-        tablePartitionName: this.bsshFastqCopyReadyEventMap.tablePartition,
-        triggerSource: this.bsshFastqCopyReadyEventMap.triggerSource,
-        triggerStatus: this.bsshFastqCopyReadyEventMap.triggerStatus,
+        tablePartitionName: this.bclconvertInteropQcEventMap.tablePartition,
+        triggerSource: this.bclconvertInteropQcEventMap.triggerSource,
+        triggerStatus: this.bclconvertInteropQcEventMap.triggerStatus,
         eventBusObj: props.eventBusObj,
       }
     );

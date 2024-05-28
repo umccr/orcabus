@@ -24,7 +24,7 @@ export class Icav2EventTranslatorStack extends Stack {
   private readonly lambdaSG: ISecurityGroup;
   private readonly mainBus: IEventBus;
   private readonly dynamoDBTable: ITableV2;
-  private readonly lambdaRuntimePythonVersion = Runtime.PYTHON_3_12;
+  private readonly lambdaRuntimePythonVersion = Runtime.PYTHON_3_11;
 
   constructor(scope: Construct, id: string, props: StackProps & Icav2EventTranslatorStackProps) {
     super(scope, id, props);

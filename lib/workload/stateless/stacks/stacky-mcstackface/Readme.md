@@ -199,3 +199,9 @@ Output Event status: `ready`
   * Subscribes to the ctTSOv2InputMaker Construct outputs and generates a ready event for the ctTSOv2ReadySfn
 
 
+
+## Kicking things off
+
+We need a BCLConvertManager Success event to get things started! 
+
+An example is as follows:

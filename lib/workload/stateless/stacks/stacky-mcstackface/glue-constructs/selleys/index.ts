@@ -1,15 +1,11 @@
-import {Construct} from 'constructs';
+import { Construct } from 'constructs';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import {BSSHFastqCopyManagerEventRelayer} from "./constructs/part_1/bssh-fastq-copy-manager-event-relayer";
-import {
-    updateDataBaseOnNewFastqListRowsEventConstruct
-} from "./constructs/part_2/update-database-on-new-fastq-list-rows";
-import {BclconvertInteropqcInputMakerConstruct} from "./constructs/part_3/bclconvert-interopqc-input-maker";
-import {
-    BclconvertInteropqcManagerReadyEventHandlerConstruct
-} from "./constructs/part_4/bclconvert-interopqc-ready-event-submitter";
+import { BSSHFastqCopyManagerEventRelayer } from './constructs/part_1/bssh-fastq-copy-manager-event-relayer';
+import { updateDataBaseOnNewFastqListRowsEventConstruct } from './constructs/part_2/update-database-on-new-fastq-list-rows';
+import { BclconvertInteropqcInputMakerConstruct } from './constructs/part_3/bclconvert-interopqc-input-maker';
+import { BclconvertInteropqcManagerReadyEventHandlerConstruct } from './constructs/part_4/bclconvert-interopqc-ready-event-submitter';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -17,19 +13,19 @@ To triggering the bsshFastqCopyManager
 */
 
 export interface BclconvertManagerEventHandlerConstructProps {
-    eventBusObj: events.EventBus;
-    workflowManagerTableObj: dynamodb.ITableV2;
-    instrumentRunTableObj: dynamodb.ITableV2;
-    inputMakerTableObj: dynamodb.ITableV2;
-    bclconvertInteropQcUriPrefixSsmParameterObj: ssm.IStringParameter;
-    icav2ProjectIdSsmParameterObj: ssm.IStringParameter
+  eventBusObj: events.IEventBus;
+  workflowManagerTableObj: dynamodb.ITableV2;
+  instrumentRunTableObj: dynamodb.ITableV2;
+  inputMakerTableObj: dynamodb.ITableV2;
+  bclconvertInteropQcUriPrefixSsmParameterObj: ssm.IStringParameter;
+  icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
 }
 
-export class BclconvertManagerEventHandlerConstruct extends Construct {
-    constructor(scope: Construct, id: string, props: BclconvertManagerEventHandlerConstructProps) {
-        super(scope, id);
+export class BsshFastqCopyEventHandlerConstruct extends Construct {
+  constructor(scope: Construct, id: string, props: BclconvertManagerEventHandlerConstructProps) {
+    super(scope, id);
 
-        /*
+    /*
         Part 1
         Input Event Source: `orcabus.bsshfastqcopymanager`
         Input Event DetailType: `orcabus.workflowrunstatechange`
@@ -44,16 +40,17 @@ export class BclconvertManagerEventHandlerConstruct extends Construct {
           * Contains a standard workflow run statechange, the fastqlistrowgzipped, and instrument run id
           * Pushes a workflow run manager event saying that the BSSHFastqCopyManager has complete.
         */
-        const bsshfastqCopyManagerEventRelayerSuccessEventRelayer = new BSSHFastqCopyManagerEventRelayer(
-            this,
-            'bssh_fastq_copy_manager_event_relayer_success_event_relayer',
-            {
-                eventBusObj: props.eventBusObj,
-                tableObj: props.workflowManagerTableObj,
-            }
-        );
+    const bsshfastqCopyManagerEventRelayerSuccessEventRelayer =
+      new BSSHFastqCopyManagerEventRelayer(
+        this,
+        'bssh_fastq_copy_manager_event_relayer_success_event_relayer',
+        {
+          eventBusObj: props.eventBusObj,
+          tableObj: props.workflowManagerTableObj,
+        }
+      );
 
-        /*
+    /*
         Part 2
         Input Event Source: `orcabus.workflowmanager`
         Input Event DetailType: `orcabus.workflowrunstatechange`
@@ -70,16 +67,16 @@ export class BclconvertManagerEventHandlerConstruct extends Construct {
             * Pushes an event to say that some fastq list rows have been added to the database, with a list of affected library ids and the instrument run id
 
         */
-        const updateDataBaseOnNewFastqListRows = new updateDataBaseOnNewFastqListRowsEventConstruct(
-            this,
-            'update_database_on_new_fastq_list_rows',
-            {
-                eventBusObj: props.eventBusObj,
-                tableObj: props.instrumentRunTableObj,
-            }
-        );
+    const updateDataBaseOnNewFastqListRows = new updateDataBaseOnNewFastqListRowsEventConstruct(
+      this,
+      'update_database_on_new_fastq_list_rows',
+      {
+        eventBusObj: props.eventBusObj,
+        tableObj: props.instrumentRunTableObj,
+      }
+    );
 
-        /*
+    /*
         Part 3
 
         Input Event Source: `orcabus.workflowmanager`
@@ -94,18 +91,18 @@ export class BclconvertManagerEventHandlerConstruct extends Construct {
           * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and creates the input for the BCLConvertInteropQC
           * Pushes an event payload of the input for the BCLConvertInteropQCReadyEventSubmitter
         */
-        const bclconvertInteropqcInputMaker = new BclconvertInteropqcInputMakerConstruct(
-            this,
-            'bclconvert_interopqc_input_maker',
-            {
-                eventBusObj: props.eventBusObj,
-                outputUriPrefixSsmParameterObj: props.bclconvertInteropQcUriPrefixSsmParameterObj,
-                tableObj: props.inputMakerTableObj,
-                icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj
-            }
-        );
+    const bclconvertInteropqcInputMaker = new BclconvertInteropqcInputMakerConstruct(
+      this,
+      'bclconvert_interopqc_input_maker',
+      {
+        eventBusObj: props.eventBusObj,
+        outputUriPrefixSsmParameterObj: props.bclconvertInteropQcUriPrefixSsmParameterObj,
+        tableObj: props.inputMakerTableObj,
+        icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+      }
+    );
 
-        /*
+    /*
         Part 4
 
         Input Event Source: `orcabus.bclconvertinteropqcinputeventglue`
@@ -120,13 +117,14 @@ export class BclconvertManagerEventHandlerConstruct extends Construct {
           * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and generates a ready event for the BCLConvertInteropQC
 
         */
-        const bclconvertInteropqcManagerReadyEvent = new BclconvertInteropqcManagerReadyEventHandlerConstruct(
-            this,
-            'bclconvert_interopqc_ready_event_submitter',
-            {
-                eventBusObj: props.eventBusObj,
-                tableObj: props.workflowManagerTableObj,
-            }
-        );
-    }
+    const bclconvertInteropqcManagerReadyEvent =
+      new BclconvertInteropqcManagerReadyEventHandlerConstruct(
+        this,
+        'bclconvert_interopqc_ready_event_submitter',
+        {
+          eventBusObj: props.eventBusObj,
+          tableObj: props.workflowManagerTableObj,
+        }
+      );
+  }
 }

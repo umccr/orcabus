@@ -17,39 +17,35 @@ import { WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct 
 */
 
 export interface cttsov2ManagerReadyEventHandlerConstructProps {
-  eventBusObj: events.EventBus;
+  eventBusObj: events.IEventBus;
   tableObj: dynamodb.ITableV2;
 }
 
 export class cttsov2ManagerReadyEventHandlerConstruct extends Construct {
-  public declare cttsov2ReadyEventMap: {
-    prefix: 'cttsov2ReadyEventRelayer';
-    tablePartition: 'cttsov2_ready_event';
-    triggerSource: 'orcabus.cttsov2inputeventglue';
-    triggerStatus: 'ready';
+  public readonly cttsov2ReadyEventMap = {
+    prefix: 'cttsov2ReadyEventRelayer',
+    tablePartition: 'cttsov2_ready_event',
+    triggerSource: 'orcabus.cttsov2inputeventglue',
+    triggerStatus: 'ready',
   };
 
-  constructor(
-    scope: Construct,
-    id: string,
-    props: cttsov2ManagerReadyEventHandlerConstructProps
-  ) {
+  constructor(scope: Construct, id: string, props: cttsov2ManagerReadyEventHandlerConstructProps) {
     super(scope, id);
 
     /*
-        Part 1
-        Parse the outputs from the event into a new event object with a different source (workflowmanager)
+    Part 1
+    Parse the outputs from the event into a new event object with a different source (workflowmanager)
 
-        The event output payload will be of the same construct.
+    The event output payload will be of the same construct.
 
-        Input Event Source: `orcabus.bclconvertmanager`
-        Input Event DetailType: `orcabus.workflowrunstatechange`
-        Input Event status: `succeeded`
+    Input Event Source: `orcabus.bclconvertmanager`
+    Input Event DetailType: `orcabus.workflowrunstatechange`
+    Input Event status: `succeeded`
 
-        Output Event source: `orcabus.workflowmanager`
-        Output Event DetailType: `orcabus.workflowrunstatechange`
-        Output Event status: `complete`
-        */
+    Output Event source: `orcabus.workflowmanager`
+    Output Event DetailType: `orcabus.workflowrunstatechange`
+    Output Event status: `complete`
+    */
 
     /*
     Create the event detail construct

@@ -51,26 +51,26 @@
             "M.$": "$.decompress_samplesheet_step.samplesheet_json"
           }
         }
-      }
+      },
+      "Next": "SampleSheet Registered Event"
     },
-    "Next": "SampleSheet Registered Event"
-  },
-  "SampleSheet Registered Event": {
-    "Type": "Task",
-    "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
-    "Parameters": {
-      "Entries": [
-        {
-          "Detail": {
-            "instrumentRunId.$": "$.inputs.instrumentRunId",
-            "timestamp.$": "$$.Execution.StartTime"
-          },
-          "DetailType": "${__detail_type__}",
-          "EventBusName": "${__event_bus_name__}",
-          "Source": "${__event_source__}"
-        }
-      ]
-    },
-    "End": true
+    "SampleSheet Registered Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "instrumentRunId.$": "$.inputs.instrumentRunId",
+              "timestamp.$": "$$.Execution.StartTime"
+            },
+            "DetailType": "${__detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}"
+          }
+        ]
+      },
+      "End": true
+    }
   }
 }

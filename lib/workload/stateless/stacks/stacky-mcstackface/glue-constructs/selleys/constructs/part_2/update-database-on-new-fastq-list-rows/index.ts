@@ -12,16 +12,16 @@ export interface updateDataBaseOnNewFastqListRowsEventConstructProps {
 }
 
 export class updateDataBaseOnNewFastqListRowsEventConstruct extends Construct {
-  public declare updateDataBaseOnNewFastqListRowsEventMap: {
-    prefix: 'updateDatabaseOnNewFastqListRows';
-    tablePartition: 'fastqlistrows_by_instrument_run';
-    triggerSource: 'orcabus.workflowmanager';
-    triggerStatus: 'succeeded';
-    triggerDetailType: 'workflowRunStateChange';
-    triggerWorkflowName: 'bssh_fastq_copy';
-    outputSource: 'orcabus.instrumentrunmanager';
-    outputStatus: 'fastqlistrowsregistered';
-    outputDetailType: 'instrumentRunStateChange';
+  public readonly updateDataBaseOnNewFastqListRowsEventMap = {
+    prefix: 'updateDatabaseOnNewFastqListRows',
+    tablePartition: 'fastqlistrows_by_instrument_run',
+    triggerSource: 'orcabus.workflowmanager',
+    triggerStatus: 'succeeded',
+    triggerDetailType: 'workflowRunStateChange',
+    triggerWorkflowName: 'bssh_fastq_copy',
+    outputSource: 'orcabus.instrumentrunmanager',
+    outputStatus: 'fastqlistrowsregistered',
+    outputDetailType: 'instrumentRunStateChange',
   };
 
   public readonly stateMachineObj: sfn.StateMachine;
@@ -52,7 +52,7 @@ export class updateDataBaseOnNewFastqListRowsEventConstruct extends Construct {
         path.join(
           __dirname,
           'step_function_templates',
-          'update_database_on_new_samplesheet.asl.simple.json'
+          'update_database_on_new_fastqlistrows_simple.asl.json'
         )
       ),
       definitionSubstitutions: {
@@ -95,9 +95,9 @@ export class updateDataBaseOnNewFastqListRowsEventConstruct extends Construct {
 
     eventRule.addTarget(new eventsTargets.SfnStateMachine(this.stateMachineObj));
     eventRule.addTarget(
-        new eventsTargets.SfnStateMachine(this.stateMachineObj, {
-            input: events.RuleTargetInput.fromEventPath('$.detail'),
-        })
+      new eventsTargets.SfnStateMachine(this.stateMachineObj, {
+        input: events.RuleTargetInput.fromEventPath('$.detail'),
+      })
     );
   }
 }

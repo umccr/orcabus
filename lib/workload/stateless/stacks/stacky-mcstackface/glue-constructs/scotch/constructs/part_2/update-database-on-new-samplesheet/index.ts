@@ -12,16 +12,16 @@ export interface updateDataBaseOnNewSamplesheetEventConstructProps {
 }
 
 export class updateDataBaseOnNewSamplesheetEventConstruct extends Construct {
-  public declare updateDataBaseOnNewSamplesheetEventMap: {
-    prefix: 'updateDatabaseOnNewSamplesheet';
-    tablePartition: 'samplesheet_by_instrument_run';
-    triggerSource: 'orcabus.workflowmanager';
-    triggerStatus: 'succeeded';
-    triggerDetailType: 'workflowRunStateChange';
-    triggerWorkflowName: 'bclconvert';
-    outputSource: 'orcabus.instrumentrunmanager';
-    outputStatus: 'succeeded';
-    outputDetailType: 'instrumentRunStateChange';
+  public readonly updateDataBaseOnNewSamplesheetEventMap = {
+    prefix: 'updateDatabaseOnNewSamplesheet',
+    tablePartition: 'samplesheet_by_instrument_run',
+    triggerSource: 'orcabus.workflowmanager',
+    triggerStatus: 'succeeded',
+    triggerDetailType: 'workflowRunStateChange',
+    triggerWorkflowName: 'bclconvert',
+    outputSource: 'orcabus.instrumentrunmanager',
+    outputStatus: 'succeeded',
+    outputDetailType: 'instrumentRunStateChange',
   };
 
   public readonly stateMachineObj: sfn.StateMachine;
@@ -96,9 +96,9 @@ export class updateDataBaseOnNewSamplesheetEventConstruct extends Construct {
 
     // Add target to event rule
     eventRule.addTarget(
-        new eventsTargets.SfnStateMachine(this.stateMachineObj, {
-            input: events.RuleTargetInput.fromEventPath('$.detail'),
-        })
+      new eventsTargets.SfnStateMachine(this.stateMachineObj, {
+        input: events.RuleTargetInput.fromEventPath('$.detail'),
+      })
     );
   }
 }

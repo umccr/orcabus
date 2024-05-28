@@ -20,6 +20,7 @@ import {
   getIcav2EventTranslatorTableStackProps,
   getIcav2EventTranslatorStackProps,
 } from './stacks/icav2EventTranslator';
+import {getGlueStackProps, getStatefulGlueStackProps} from './stacks/stackyMcStackFace';
 
 interface EnvironmentConfig {
   name: string;
@@ -51,6 +52,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
+            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -63,6 +65,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
             icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            stackyMcStackFaceProps: getGlueStackProps(),
           },
         },
       };
@@ -79,6 +82,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
+            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -91,6 +95,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
             icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            stackyMcStackFaceProps: getGlueStackProps(),
           },
         },
       };
@@ -107,6 +112,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
+            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -119,6 +125,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
             icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            stackyMcStackFaceProps: getGlueStackProps(),
           },
         },
       };

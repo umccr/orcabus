@@ -12,6 +12,7 @@ import {
   Icav2EventTranslatorTable,
   Icav2EventTranslatorTableStackProps,
 } from './stacks/icav2-event-translator-dynamo-db/deploy/stack';
+import {StackyStatefulTablesStack, StackyStatefulTablesStackProps} from "./stacks/stacky-mcstackface-dynamodb";
 
 export interface StatefulStackCollectionProps {
   sharedStackProps: SharedStackProps;
@@ -19,6 +20,7 @@ export interface StatefulStackCollectionProps {
   icaEventPipeStackProps: IcaEventPipeStackProps;
   cttsov2Icav2PipelineTableStackProps: Cttsov2Icav2PipelineTableStackProps;
   icav2EventTranslatorTableStackProps: Icav2EventTranslatorTableStackProps;
+  stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
 }
 
 export class StatefulStackCollection {
@@ -29,6 +31,7 @@ export class StatefulStackCollection {
   readonly icaEventPipeStack: Stack;
   readonly cttsov2Icav2PipelineTableStack: Stack;
   readonly icav2EventTranslatorTableStack: Stack;
+  readonly stackyStatefulTablesStack: Stack;
 
   constructor(
     scope: Construct,
@@ -66,6 +69,12 @@ export class StatefulStackCollection {
         ...statefulConfiguration.icav2EventTranslatorTableStackProps,
       }
     );
+
+    this.stackyStatefulTablesStack = new StackyStatefulTablesStack(scope, 'StackyStatefulTablesStack', {
+      ...this.createTemplateProps(env, 'StackyStatefulTablesStack'),
+      ...statefulConfiguration.stackyStatefulTablesStackProps,
+    });
+
   }
 
   /**

@@ -35,6 +35,7 @@ import {
   Icav2EventTranslatorStack,
   Icav2EventTranslatorStackProps,
 } from './stacks/bclconvert-manager/deploy/stack';
+import { GlueStack, GlueStackProps } from './stacks/stacky-mcstackface/glue-constructs';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
@@ -47,6 +48,7 @@ export interface StatelessStackCollectionProps {
   cttsov2Icav2PipelineManagerStackProps: cttsov2Icav2PipelineManagerStackProps;
   schemaStackProps: SchemaStackProps;
   icav2EventTranslatorStackProps: Icav2EventTranslatorStackProps;
+  stackyMcStackFaceProps: GlueStackProps;
 }
 
 export class StatelessStackCollection {
@@ -61,6 +63,7 @@ export class StatelessStackCollection {
   readonly cttsov2Icav2PipelineManagerStack: Stack;
   readonly schemaStack: Stack;
   readonly icav2EventTranslatorStack: Stack;
+  readonly stackyMcStackFaceStack: Stack;
 
   constructor(
     scope: Construct,
@@ -136,6 +139,11 @@ export class StatelessStackCollection {
         ...statelessConfiguration.icav2EventTranslatorStackProps,
       }
     );
+
+    this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
+      ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
+      ...statelessConfiguration.stackyMcStackFaceProps,
+    });
   }
 
   /**

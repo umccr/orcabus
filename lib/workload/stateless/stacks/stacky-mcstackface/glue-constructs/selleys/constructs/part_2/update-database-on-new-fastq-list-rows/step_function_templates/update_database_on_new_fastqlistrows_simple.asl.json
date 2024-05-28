@@ -32,7 +32,7 @@
         }
       ],
       "Next": "Add fastq list rows to instrument run id (LibraryFile DB)",
-      "ResultPath": "$,decompress_fastq_list_rows_step",
+      "ResultPath": "$.decompress_fastq_list_rows_step",
       "ResultSelector": {
         "fastq_list_rows": "$.Payload.fastq_list_rows"
       }
@@ -46,7 +46,7 @@
           "id.$": "$.inputs.payload.data.instrumentRunId",
           "id_type": "${__table_partition_name__}",
           "fastq_list_rows": {
-            "L$": "$.decompress_fastq_list_rows_step.fastq_list_rows"
+            "L.$": "$.decompress_fastq_list_rows_step.fastq_list_rows"
           }
         }
       },

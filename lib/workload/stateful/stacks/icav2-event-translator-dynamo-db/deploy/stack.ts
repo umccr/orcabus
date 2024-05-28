@@ -1,7 +1,7 @@
 import { Stack, RemovalPolicy, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import {DynamodbPartitionedPipelineConstruct} from "../../../../components/dynamodb-partitioned-table";
+import { DynamodbPartitionedPipelineConstruct } from '../../../../components/dynamodb-partitioned-table';
 
 export interface Icav2EventTranslatorTableStackProps {
   dynamodbTableName: string;

@@ -22,16 +22,16 @@ Output Event status: `complete`
 */
 
 export interface BclconvertManagerEventHandlerConstructProps {
-  eventBusObj: events.EventBus;
+  eventBusObj: events.IEventBus;
   tableObj: dynamodb.ITableV2;
 }
 
 export class BclconvertSuccessEventRelayer extends Construct {
-  public declare bclconvertSuccessEventMap: {
-    prefix: 'bclconvertSuccessEventRelayer';
-    tablePartition: 'bclconvert_success_event';
-    triggerSource: 'orcabus.bclconvertmanager';
-    triggerStatus: 'succeeded';
+  public readonly bclconvertSuccessEventMap = {
+    prefix: 'bclconvertSuccessEventRelayer',
+    tablePartition: 'bclconvert_success_event',
+    triggerSource: 'orcabus.bclconvertmanager',
+    triggerStatus: 'succeeded',
   };
 
   constructor(scope: Construct, id: string, props: BclconvertManagerEventHandlerConstructProps) {
