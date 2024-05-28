@@ -7,7 +7,7 @@ import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-a
 import { Vpc, VpcLookupOptions, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import * as path from 'path';
 
 export interface BclConvertManagerStackProps {
@@ -17,6 +17,8 @@ export interface BclConvertManagerStackProps {
   /** vpc ann SG for lambda function */
   vpcProps: VpcLookupOptions;
   lambdaSecurityGroupName: string;
+  /** secrets manager path for icav2 api call*/
+  icav2JwtSecretsManagerPath: string;
 }
 
 export class BclConvertManagerStack extends Stack {
@@ -37,12 +39,18 @@ export class BclConvertManagerStack extends Stack {
   }
 
   private createICAv2EventTranslator(props: BclConvertManagerStackProps) {
+    //Get the orcabus, vpc, dynamodb table, cav2 jwt secret from lookup
     const mainBus = EventBus.fromEventBusName(this, 'EventBus', props.eventBusName);
     const vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
     const dynamoDBTable = TableV2.fromTableName(
       this,
       'Icav2EventTranslatorDynamoDBTable',
       props.icav2EventTranslatorDynamodbTableName
+    );
+    const icav2JwtSecretsManagerObj = Secret.fromSecretNameV2(
+      this,
+      'icav2_jwt_secret',
+      props.icav2JwtSecretsManagerPath
     );
 
     const lambdaSG = new SecurityGroup(this, 'IcaEventTranslatorLambdaSG', {
@@ -60,6 +68,8 @@ export class BclConvertManagerStack extends Stack {
       environment: {
         TABLE_NAME: props.icav2EventTranslatorDynamodbTableName,
         EVENT_BUS_NAME: props.eventBusName,
+        ICAV2_BASE_URL: 'https://ica.illumina.com/ica/rest',
+        ICAV2_ACCESS_TOKEN_SECRET_ID: icav2JwtSecretsManagerObj.secretName,
       },
       vpc: vpc,
       vpcSubnets: { subnets: vpc.privateSubnets },
@@ -71,6 +81,7 @@ export class BclConvertManagerStack extends Stack {
     });
 
     dynamoDBTable.grantReadWriteData(EventTranslatorFunction);
+    icav2JwtSecretsManagerObj.grantRead(EventTranslatorFunction);
 
     // Create a rule to trigger the Lambda function from the EventBus ICAV2_EXTERNAL_EVENT
     const rule = new Rule(this, 'Rule', {

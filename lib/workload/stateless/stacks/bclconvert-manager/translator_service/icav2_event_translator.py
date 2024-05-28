@@ -65,6 +65,7 @@ from helper.workflowrunstatechange import (
     Marshaller,
 )
 from helper.icav2_analysis import collect_analysis_objects
+from helper.aws_ssm_helper import set_icav2_env_vars
 
 events = boto3.client("events", region_name='ap-southeast-2')
 dynamodb = boto3.client('dynamodb', region_name='ap-southeast-2')
@@ -80,6 +81,8 @@ def handler(event, context):
   
     event_bus_name = os.getenv("EVENT_BUS_NAME")
     table_name = os.getenv("TABLE_NAME")
+    
+    set_icav2_env_vars()
 
     # Extract relevant fields from the event payload
     event_details = event.get("detail", {}).get("ica-event", {})

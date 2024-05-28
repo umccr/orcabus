@@ -62,7 +62,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
-            BclConvertManagerStackProps: getBclConvertManagerStackProps(),
+            BclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
           },
         },
       };
@@ -90,7 +90,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
-            BclConvertManagerStackProps: getBclConvertManagerStackProps(),
+            BclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
           },
         },
       };
@@ -118,7 +118,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
-            BclConvertManagerStackProps: getBclConvertManagerStackProps(),
+            BclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
           },
         },
       };
