@@ -152,7 +152,6 @@ pub const RAND_SEED: u64 = 42;
 /// records in it.
 pub fn ingest_bench_elements(
     c: &mut Criterion,
-    starts_with: usize,
     n_messages: usize,
     runtime: &Runtime,
     pool: &PgPool,
@@ -162,51 +161,6 @@ pub fn ingest_bench_elements(
     let mut group = c.benchmark_group("ingest");
     group.measurement_time(Duration::from_secs(measurement_time_secs));
     group.sample_size(sample_size);
-
-    let ingester = Ingester::new(Client::from_ref(pool));
-
-    let start = Instant::now();
-    println!("starting initial record ingestion process");
-
-    let starts_with_messages = EventSourceType::S3(Events::from(
-        MessageGenerator::new(RAND_SEED, starts_with)
-            .gen_messages(1)
-            .sort_and_dedup(),
-    ));
-    println!(
-        "{} events created, took {} seconds",
-        starts_with,
-        start.elapsed().as_secs()
-    );
-
-    // Clean up any previous iterations.
-    runtime.block_on(async {
-        sqlx::query!("truncate table s3_object, object, s3_object_v2, object_v2")
-            .fetch_all(pool)
-            .await
-            .unwrap();
-    });
-
-    runtime.block_on(async {
-        ingester.ingest(starts_with_messages.clone()).await.unwrap();
-    });
-    println!(
-        "{} events ingested v1, took {} seconds",
-        starts_with,
-        start.elapsed().as_secs()
-    );
-
-    runtime.block_on(async {
-        ingester
-            .ingest_events_v2(starts_with_messages)
-            .await
-            .unwrap();
-    });
-    println!(
-        "{} events ingested v2, took {} seconds",
-        starts_with,
-        start.elapsed().as_secs()
-    );
 
     let bench = |group: &mut BenchmarkGroup<_>, same_key: usize, function_name: &str| {
         group.bench_with_input(
@@ -279,37 +233,81 @@ pub fn ingest_bench_elements(
         );
     };
 
-    // For each benchmark, the same key represents the number of keys, buckets and version_ids that
-    // are the same for a given insert.
-    for same_key in [1, 2, 3, 5, 10, 20, 50, 100] {
-        group.throughput(Throughput::Elements(same_key as u64));
+    for starts_with in [0, 100000] {
+        let ingester = Ingester::new(Client::from_ref(pool));
 
-        bench(&mut group, same_key, "v1");
-        bench(&mut group, same_key, "v2");
+        let start = Instant::now();
+        println!("starting initial record ingestion process");
+
+        let starts_with_messages = EventSourceType::S3(Events::from(
+            MessageGenerator::new(RAND_SEED, starts_with)
+                .gen_messages(1)
+                .sort_and_dedup(),
+        ));
+        println!(
+            "{} events created, took {} seconds",
+            starts_with,
+            start.elapsed().as_secs()
+        );
+
+        // Clean up any previous iterations.
+        runtime.block_on(async {
+            sqlx::query!("truncate table s3_object, object, s3_object_v2, object_v2")
+                .fetch_all(pool)
+                .await
+                .unwrap();
+        });
+
+        runtime.block_on(async {
+            ingester.ingest(starts_with_messages.clone()).await.unwrap();
+        });
+        println!(
+            "{} events ingested v1, took {} seconds",
+            starts_with,
+            start.elapsed().as_secs()
+        );
+
+        runtime.block_on(async {
+            ingester
+                .ingest_events_v2(starts_with_messages)
+                .await
+                .unwrap();
+        });
+        println!(
+            "{} events ingested v2, took {} seconds",
+            starts_with,
+            start.elapsed().as_secs()
+        );
+
+        // For each benchmark, the same key represents the number of keys, buckets and version_ids that
+        // are the same for a given insert.
+        for same_key in [1, 2, 3, 5, 10, 20, 50, 100] {
+            group.throughput(Throughput::Elements(same_key as u64));
+
+            bench(
+                &mut group,
+                same_key,
+                &format!("v1_starts_with_{}", starts_with),
+            );
+            bench(
+                &mut group,
+                same_key,
+                &format!("v2_starts_with_{}", starts_with),
+            );
+        }
     }
 
     group.finish();
 }
 
-/// Benchmark the filemanager ingest function starting with an empty database
-pub fn ingest_bench_empty_database(c: &mut Criterion) {
+/// Benchmark the filemanager ingest function starting with an empty database, and a small database
+/// with 100000 records.
+pub fn ingest_bench_database(c: &mut Criterion) {
     let runtime = Runtime::new().expect("failed to create tokio runtime");
     let pool = database_pool(&runtime);
 
-    ingest_bench_elements(c, 0, 1000, &runtime, &pool, 200, 20);
+    ingest_bench_elements(c, 1000, &runtime, &pool, 200, 20);
 }
 
-/// Benchmark the filemanager ingest function starting with a medium number of records.
-pub fn ingest_bench_small_database(c: &mut Criterion) {
-    let runtime = Runtime::new().expect("failed to create tokio runtime");
-    let pool = database_pool(&runtime);
-
-    ingest_bench_elements(c, 100000, 1000, &runtime, &pool, 200, 20);
-}
-
-criterion_group!(
-    benches,
-    ingest_bench_empty_database,
-    ingest_bench_small_database
-);
+criterion_group!(benches, ingest_bench_database);
 criterion_main!(benches);
