@@ -18,7 +18,10 @@
           "pipelineId",
           "pipelineCode",
           "pipelineDescription",
-          "pipelineUrn"
+          "pipelineUrn",
+          "instrumentRunId",
+          "basespaceRunId",
+          "samplesheetB64gz"
         ],
         "properties": {
           "projectId": {
@@ -46,6 +49,15 @@
             "type": "string"
           },
           "pipelineUrn": {
+            "type": "string"
+          },
+          "instrumentRunId": {
+            "type": "string"
+          },
+          "basespaceRunId": {
+            "type": "string"
+          },
+          "samplesheetB64gz": {
             "type": "string"
           }
         }

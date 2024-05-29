@@ -9,7 +9,7 @@ These are time-based UUIDs, with the timestamp encoded in the first 48 bits.
 from uuid6 import uuid7
 
 
-def generate_db_uuid(event, context):
+def generate_db_uuid()->dict[str, str]:
     return {
         "db_uuid": str(uuid7())
     }

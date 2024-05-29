@@ -1,11 +1,11 @@
 # BclConvert Manager
 
+This stack creates the BclConvert Manager service which include ica event translator service to translate external (ICA) events to orcabus events follow the defined schema `orcabus.bclconvertmanager@WorkflowRunStateChange`. Example event can be seen [here](../../../../../docs/schemas/events/executionservice/example/WRSC__example1.json).
+
 ## Icav2 event translator service
 
-This stack creates the ica event translator service to translate external (ICA) events to orcabus events follow the defined schema `orcabus.wfm@WorkflowRunStateChange`. Example event can be seen [here](../../../../../docs/event-schemas/bclconvertmanager/example/WRSC__bcm__bssh_bcl_convert.json).
-
 <!-- TOC -->
-* [ICAv2 Event Translator](#icav2-event-translator-service)
+* [Icav2 Event Translator](#icav2-event-translator-service)
   * [Inputs](#inputs)
     * [Example ICA Event Input](#example-ica-event-input)
   * [Outputs](#outputs)
@@ -15,7 +15,6 @@ This stack creates the ica event translator service to translate external (ICA) 
     * [Publish the Orcabus event to event bus](#publish-the-orcabus-event-to-event-bus)
   * [Unit Test](#unit-test)
 <!-- TOC -->
-
 
 ### Inputs
 
@@ -107,7 +106,10 @@ The AWS lambda functions put translated event following  ```WorkflowRunStateChan
         "pipelineId": "bfffffff-cb27-4dfa-846e-acd6eb081aca",
         "pipelineCode": "BclConvert v4_2_7",
         "pipelineDescription": "This is an autolaunch BclConvert pipeline for use by the metaworkflow",
-        "pipelineUrn": "urn:ilmn:ica:pipeline:bfffffff-cb27-4dfa-846e-acd6eb081aca#BclConvert_v4_2_7"
+        "pipelineUrn": "urn:ilmn:ica:pipeline:bfffffff-cb27-4dfa-846e-acd6eb081aca#BclConvert_v4_2_7",
+        "instrumentRunId": "12345_A12345_1234_ABCDE12345",
+        "basespaceRunId": "1234567",
+        "samplesheetB64gz": "H4sIAFGBVWYC/9VaUW+jOBD+Kyvu9VqBgST0njhWh046..."
       }
     }
   }
@@ -139,7 +141,8 @@ Event Pattern (filter rules) for event pipe:
 ```
 
 #### Save this translation process to dynamoDB
-Send the orignal input and orcabus event after translation to the dynamo db for audit or recording of the process. 
+
+Send the orignal input and orcabus event after translation to the dynamo db for audit or recording of the process.
 
 Dynamodb format:
 | id | id_type | analysis_id | analysis_status | portal_run_id | db_uuid | original_external_event | translated_internal_ica_event | timestamp |
@@ -158,11 +161,11 @@ Example output event can be seen [here](../../../../../docs/event-schemas/bclcon
 
 ### Unit Test
 
-Move to icav2-event-translator/translator_service, test script: [`test_icav2_event_translator.py`](./translator_service/tests/test_icav2_event_translator.py)
+Move to bclconvert-manager/translator_service, test script: [`test_icav2_event_translator.py`](./translator_service/tests/test_icav2_event_translator.py)
 
 ```make install```
 This will install all necessary package.\
 ```make test```
 Run unit testing for lambda function.
 
-> **_NOTE:_**: As icav2_event_translator service depends on schemas-codebinding-layer, we need set PYTHONPATH=$(path/to/layer):$$PYTHONPATH for layer module import.
+> **_NOTE:_**: This unit test only cover logic in icav2_event_translator.py not boto3.client service. All boto3.client service and ica api call will be mocked by Stubber.

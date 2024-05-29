@@ -4,43 +4,26 @@ import re  # noqa: F401
 
 import six
 from enum import Enum
-from helper.workflowrunstatechange.Data import Data  # noqa: F401,E501
 
 class Payload(object):
 
 
     _types = {
-        'refId': 'str',
         'version': 'str',
-        'data': 'Data'
+        'data': 'object'
     }
 
     _attribute_map = {
-        'refId': 'refId',
         'version': 'version',
         'data': 'data'
     }
 
-    def __init__(self, refId=None, version=None, data=None):  # noqa: E501
-        self._refId = None
+    def __init__(self, version=None, data=None):  # noqa: E501
         self._version = None
         self._data = None
         self.discriminator = None
-        self.refId = refId
         self.version = version
         self.data = data
-
-
-    @property
-    def refId(self):
-
-        return self._refId
-
-    @refId.setter
-    def refId(self, refId):
-
-
-        self._refId = refId
 
 
     @property

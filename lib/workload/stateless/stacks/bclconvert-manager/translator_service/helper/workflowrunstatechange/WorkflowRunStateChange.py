@@ -4,13 +4,14 @@ import re  # noqa: F401
 
 import six
 from enum import Enum
-from helper.workflowrunstatechange import Payload  # noqa: F401,E501
+from helper.workflowrunstatechange.Payload import Payload  # noqa: F401,E501
 
 class WorkflowRunStateChange(object):
 
 
     _types = {
         'portalRunId': 'str',
+        'executionId': 'str',
         'timestamp': 'datetime',
         'status': 'str',
         'workflowName': 'str',
@@ -21,6 +22,7 @@ class WorkflowRunStateChange(object):
 
     _attribute_map = {
         'portalRunId': 'portalRunId',
+        'executionId': 'executionId',
         'timestamp': 'timestamp',
         'status': 'status',
         'workflowName': 'workflowName',
@@ -29,8 +31,9 @@ class WorkflowRunStateChange(object):
         'payload': 'payload'
     }
 
-    def __init__(self, portalRunId=None, timestamp=None, status=None, workflowName=None, workflowVersion=None, workflowRunName=None, payload=None):  # noqa: E501
+    def __init__(self, portalRunId=None, executionId=None, timestamp=None, status=None, workflowName=None, workflowVersion=None, workflowRunName=None, payload=None):  # noqa: E501
         self._portalRunId = None
+        self._executionId = None
         self._timestamp = None
         self._status = None
         self._workflowName = None
@@ -39,6 +42,7 @@ class WorkflowRunStateChange(object):
         self._payload = None
         self.discriminator = None
         self.portalRunId = portalRunId
+        self.executionId = executionId
         self.timestamp = timestamp
         self.status = status
         self.workflowName = workflowName
@@ -57,6 +61,18 @@ class WorkflowRunStateChange(object):
 
 
         self._portalRunId = portalRunId
+
+
+    @property
+    def executionId(self):
+
+        return self._executionId
+
+    @executionId.setter
+    def executionId(self, executionId):
+
+
+        self._executionId = executionId
 
 
     @property

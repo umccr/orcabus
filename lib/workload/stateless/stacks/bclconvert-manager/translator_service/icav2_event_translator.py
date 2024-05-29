@@ -28,32 +28,45 @@ The icav2 event translator expects the following as inputs (without envelop from
     ....
   }
 }
-The event tranlator then returns the following: 
+The event tranlator then returns the following:
+(Non-SUCCEEDED Event without payload)
 {
-  "portalRunId": '20xxxxxxxxxx',
-  "timestamp": "2024-00-25T00:07:00Z",
-  "status": "SUCCEEDED",
-  "workflowName": "BclConvert",
-  "workflowVersion": "4.2.7",
-  workflowRunName: "123456_A1234_0000_TestingPattern",
-  "payload": {
-    "refId": None,
-    "version": "0.1.0",
-    "data": {
-      "projectId": "valid_project_id",
-      "analysisId": "valid_payload_id",
-      "userReference": "123456_A1234_0000_TestingPattern",
-      "timeCreated": "2024-01-01T00:11:35Z",
-      "timeModified": "2024-01-01T01:24:29Z",
-      "pipelineId": "valid_pipeline_id",
-      "pipelineCode": "BclConvert v0_0_0",
-      "pipelineDescription": "BclConvert pipeline.",
-      "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
-      "instrumentRunId": analysis_outputs.get("instrument_run_id"),
-      "basespaceRunId": analysis_outputs.get("basespace_run_id"),
-      "samplesheetB64gz": analysis_outputs.get("samplesheet_b64gz")
+    "portalRunId": '20xxxxxxxxxx',
+    "executionId": "valid_payload_id",
+    "timestamp": "2024-00-25T00:07:00Z",
+    "status": "SUCCEEDED",
+    "workflowName": "BclConvert",
+    "workflowVersion": "4.2.7",
+    workflowRunName: "123456_A1234_0000_TestingPattern",
+}
+
+(SUCCEEDED Event)
+{
+    "portalRunId": '20xxxxxxxxxx',
+    "executionId": "valid_payload_id",
+    "timestamp": "2024-00-25T00:07:00Z",
+    "status": "SUCCEEDED",
+    "workflowName": "BclConvert",
+    "workflowVersion": "4.2.7",
+    workflowRunName: "123456_A1234_0000_TestingPattern",
+    "payload": {
+        "refId": None,
+        "version": "0.1.0",
+        "data": {
+            "projectId": "valid_project_id",
+            "analysisId": "valid_payload_id",
+            "userReference": "123456_A1234_0000_TestingPattern",
+            "timeCreated": "2024-01-01T00:11:35Z",
+            "timeModified": "2024-01-01T01:24:29Z",
+            "pipelineId": "valid_pipeline_id",
+            "pipelineCode": "BclConvert v0_0_0",
+            "pipelineDescription": "BclConvert pipeline.",
+            "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
+            "instrumentRunId": "12345_A12345_1234_ABCDE12345",
+            "basespaceRunId": "1234567",
+            "samplesheetB64gz": "test_sample_sheetB64gz"
+        }
     }
-  }
 }
 """
 import os
@@ -64,7 +77,11 @@ import boto3
 from helper.workflowrunstatechange import (
     WorkflowRunStateChange,
     AWSEvent,
-    Marshaller,
+    Marshaller as WorkflowRunStateChangeMarshaller,
+)
+from helper.payloaddatasucceeded import (
+    PayloadDataSucceeded,
+    Marshaller as PayloadDataMarshaller,
 )
 from helper.icav2_analysis import collect_analysis_objects
 from helper.aws_ssm_helper import set_icav2_env_vars
@@ -82,6 +99,8 @@ logger.setLevel(logging.INFO)
 def handler(event, context):
     assert os.getenv("EVENT_BUS_NAME"), "EVENT_BUS_NAME environment variable is not set"
     assert os.getenv("TABLE_NAME"), "TABLE_NAME environment variable is not set"
+    assert os.getenv("ICAV2_BASE_URL"), "ICAV2_BASE_URL environment variable is not set"
+    assert os.getenv("ICAV2_ACCESS_TOKEN_SECRET_ID"), "ICAV2_ACCESS_TOKEN_SECRET_ID environment variable is not set"
 
     event_bus_name = os.getenv("EVENT_BUS_NAME")
     table_name = os.getenv("TABLE_NAME")
@@ -116,7 +135,7 @@ def send_internal_event_to_eventbus(internal_ica_event, event_bus_name) -> None:
                 {
                     "Source": internal_ica_event.source,
                     "DetailType": internal_ica_event.detail_type,
-                    "Detail": json.dumps(Marshaller.marshall(internal_ica_event.detail)),
+                    "Detail": json.dumps(WorkflowRunStateChangeMarshaller.marshall(internal_ica_event.detail)),
                     "EventBusName": event_bus_name
                 }
             ]
@@ -129,7 +148,7 @@ def send_internal_event_to_eventbus(internal_ica_event, event_bus_name) -> None:
 # Store the internal event in the DynamoDB table
 def store_events_into_dynamodb(internal_ica_event, table_name, event_details) -> None:
     try:
-        db_uuid = generate_db_uuid(None, None).get("db_uuid")
+        db_uuid = generate_db_uuid(None, None).get("db_uuid",'')
         dynamodb.put_item(
             TableName=table_name,
             Item={
@@ -187,7 +206,6 @@ def translate_to_aws_event(event) -> AWSEvent:
 # Convert from entity module to internal event details
 def get_event_details(event) -> WorkflowRunStateChange:
     # Extract relevant fields from the event payload
-    project_id = event.get("projectId", '')
     analysis_status = event.get("eventParameters", {}).get("analysisStatus", '')
 
     payload = event.get("payload", {})
@@ -195,14 +213,25 @@ def get_event_details(event) -> WorkflowRunStateChange:
     pipeline = payload.get("pipeline", {})
 
     event_name, version = parse_event_code(pipeline.get("code", ''))
+    
+    if analysis_status != "SUCCEEDED":
+        # generate internal event without payload
+        return WorkflowRunStateChange(
+            portalRunId=get_portal_run_id(analysis_id),
+            executionId=analysis_id,
+            timestamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            status=analysis_status,
+            workflowName=event_name,
+            workflowVersion=version,
+            workflowRunName=payload.get("userReference", ''),
+        )
 
-    analysis_outputs = collect_analysis_objects(
-        project_id, analysis_id
-    )
+    succeeded_payload_data = get_succeeded_payload_data(event)
 
     # generate internal event with required attributes
     return WorkflowRunStateChange(
         portalRunId=get_portal_run_id(payload.get("id", '')),
+        executionId=analysis_id,
         timestamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         status=analysis_status,
         workflowName=event_name,
@@ -211,23 +240,37 @@ def get_event_details(event) -> WorkflowRunStateChange:
         payload={
             "refId": None,
             "version": "0.1.0",
-            "data": {
-                "projectId": project_id,
-                "analysisId": analysis_id,
-                "userReference": payload.get("userReference", ''),
-                "timeCreated": payload.get("timeCreated", ""),
-                "timeModified": payload.get("timeModified", ""),
-                "pipelineId": pipeline.get("id", ''),
-                "pipelineCode": pipeline.get("code", ''),
-                "pipelineDescription": pipeline.get("description", ''),
-                "pipelineUrn": pipeline.get("urn", ''),
-                "instrumentRunId": analysis_outputs.get("instrument_run_id"),
-                "basespaceRunId": analysis_outputs.get("basespace_run_id"),
-                "samplesheetB64gz": analysis_outputs.get("samplesheet_b64gz")
-            }
+            "data": PayloadDataMarshaller.marshall(succeeded_payload_data)
         }
     )
 
+def get_succeeded_payload_data(event) -> PayloadDataSucceeded:
+    # Extract relevant fields from the event payload
+    project_id = event.get("projectId", '')
+
+    payload = event.get("payload", {})
+    analysis_id = payload.get("id", '')
+    pipeline = payload.get("pipeline", {})
+    
+    analysis_outputs = collect_analysis_objects(
+        project_id, analysis_id
+    )
+    
+    return PayloadDataSucceeded(
+        projectId=project_id,
+        analysisId=analysis_id,
+        userReference=payload.get("userReference", ''),
+        timeCreated=payload.get("timeCreated", ""),
+        timeModified=payload.get("timeModified", ""),
+        pipelineId=pipeline.get("id", ''),
+        pipelineCode=pipeline.get("code", ''),
+        pipelineDescription=pipeline.get("description", ''),
+        pipelineUrn=pipeline.get("urn", ''),
+        instrumentRunId=analysis_outputs.get("instrument_run_id"),
+        basespaceRunId=analysis_outputs.get("basespace_run_id"),
+        samplesheetB64gz=analysis_outputs.get("samplesheet_b64gz")
+    )
+    
 
 # check the dynamodb table to see if new portal run id is required
 def get_portal_run_id(analysis_id: str) -> str:
