@@ -159,7 +159,7 @@ export class WorkflowManagerStack extends Stack {
 
     eventRule.addTarget(new aws_events_targets.LambdaFunction(procFn));
     eventRule.addEventPattern({
-      source: ["{ 'anything-but': 'orcabus.workflowmanager' }"],
+      source: ['{ "anything-but": "orcabus.workflowmanager" }'],
       detailType: ['WorkflowRunStateChange'],
     });
   }

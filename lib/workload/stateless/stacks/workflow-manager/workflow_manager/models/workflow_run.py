@@ -46,7 +46,7 @@ class WorkflowRun(OrcaBusBaseModel):
             "id": self.id,
             "portal_run_id": self.portal_run_id,
             "status": self.status,
-            "timestamp": self.timestamp,
+            "timestamp": str(self.timestamp),
             "execution_id": self.execution_id,
             "workflow_run_name": self.workflow_run_name,
             "comment": self.comment,
