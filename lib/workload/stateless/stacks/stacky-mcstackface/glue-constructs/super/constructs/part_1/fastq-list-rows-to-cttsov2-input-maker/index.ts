@@ -12,7 +12,7 @@ import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 ### Construct C (Part 1)
 
 Input Event Source: `orcabus.instrumentrunmanager`
-Input Event DetailType: `orcabus.librarystatechange`
+Input Event DetailType: `InstrumentRunStateChange`
 Input Event status: `fastqlistrowregistered`
 
 First bit:
@@ -50,7 +50,7 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
     fastqListRowTablePartitionName: 'fastqlistrows_by_instrument_run',
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'fastqlistrowregistered',
-    triggerDetailType: 'libraryStateChange',
+    triggerDetailType: 'LibraryStateChange',
     triggerWorkflowName: 'bclconvert_interop_qc',
     outputDetailType: 'WorkflowRunStateChange',
     outputSource: 'orcabus.cttsov2inputeventglue',
@@ -143,8 +143,8 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
     });
 
     /*
-        Part 2: Update the permissions
-        */
+    Part 2: Update the permissions
+    */
 
     // Allow lambdas to be invoked by the step function
     [

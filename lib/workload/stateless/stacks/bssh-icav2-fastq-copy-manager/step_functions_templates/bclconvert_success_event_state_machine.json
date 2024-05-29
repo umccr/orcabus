@@ -73,7 +73,7 @@
           "portalRunId.$": "$.workflow_inputs.portalRunId",
           "workflowName": "${__workflow_name__}",
           "workflowVersion": "${__workflow_version__}",
-          "workflowRunName": "States.format(umccr__orcabus__automated__{}__{}, $.workflow_inputs.payload.data.instrumentRunId, $.workflow_inputs.portalRunId)",
+          "workflowRunName.$": "States.Format('umccr__orcabus__automated__{}__{}', $.workflow_inputs.payload.data.instrumentRunId, $.workflow_inputs.portalRunId)",
           "payload": {
             "refId": null,
             "version": "${__payload_version__}",

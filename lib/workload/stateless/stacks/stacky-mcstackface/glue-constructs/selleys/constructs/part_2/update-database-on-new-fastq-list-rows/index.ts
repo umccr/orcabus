@@ -21,7 +21,7 @@ export class updateDataBaseOnNewFastqListRowsEventConstruct extends Construct {
     triggerWorkflowName: 'bsshFastqCopy',
     outputSource: 'orcabus.instrumentrunmanager',
     outputStatus: 'fastqlistrowsregistered',
-    outputDetailType: 'instrumentRunStateChange',
+    outputDetailType: 'InstrumentRunStateChange',
   };
 
   public readonly stateMachineObj: sfn.StateMachine;

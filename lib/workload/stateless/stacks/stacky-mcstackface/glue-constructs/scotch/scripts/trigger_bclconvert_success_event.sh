@@ -34,12 +34,15 @@ payload_json="$( \
     ' \
 )"
 
+portal_run_id="$(date +"%Y%m%d")$(xxd -l 4 -c 4 -p < /dev/random)"
+
 detail_json="$( \
   jq --null-input --raw-output \
     --argjson payload_json "${payload_json}" \
+    --arg portal_run_id "${portal_run_id}" \
     '
       {
-        "portalRunId": "202405287f1c0a3c",
+        "portalRunId": $portal_run_id,
         "timestamp": "2024-05-28T06:17:07Z",
         "status": "SUCCEEDED",
         "workflowName": "BclConvert",

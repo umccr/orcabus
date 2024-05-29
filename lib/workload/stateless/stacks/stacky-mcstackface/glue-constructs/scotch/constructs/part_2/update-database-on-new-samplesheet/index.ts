@@ -21,7 +21,7 @@ export class updateDataBaseOnNewSamplesheetEventConstruct extends Construct {
     triggerWorkflowName: 'bclconvert',
     outputSource: 'orcabus.instrumentrunmanager',
     outputStatus: 'succeeded',
-    outputDetailType: 'instrumentRunStateChange',
+    outputDetailType: 'InstrumentRunStateChange',
   };
 
   public readonly stateMachineObj: sfn.StateMachine;

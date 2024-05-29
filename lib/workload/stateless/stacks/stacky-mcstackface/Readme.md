@@ -32,7 +32,7 @@ Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `complete`
 
 Output Event source: `orcabus.instrumentmanager`
-Output Event DetailType: `orcabus.instrumentRunStateChange`
+Output Event DetailType: `orcabus.InstrumentRunStateChange`
 Output Event status: `libraryrunidsregistered`
 
 * The UpdateDataBaseOnNewSampleSheet Construct

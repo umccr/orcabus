@@ -27,9 +27,9 @@ export class cttsov2GlueHandlerConstruct extends Construct {
 
     /*
         Part 1
-        Input Event Source: `orcabus.workflowmanager`
-        Input Event DetailType: `WorkflowRunStateChange`
-        Input Event status: `complete`
+        Input Event Source: `orcabus.instrumentrunmanager`
+        Input Event DetailType: `LibraryStateChange`
+        Input Event status: `fastqlistrowregistered`
 
         Output Event source: `orcabus.cttsov2inputeventglue`
         Output Event DetailType: `WorkflowRunStateChange`

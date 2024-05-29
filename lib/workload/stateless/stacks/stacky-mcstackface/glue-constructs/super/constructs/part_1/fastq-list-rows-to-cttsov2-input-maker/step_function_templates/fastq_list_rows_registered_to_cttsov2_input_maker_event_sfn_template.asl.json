@@ -239,11 +239,16 @@
                     "status": "awaitinginput",
                     "workflowName": "${__workflow_name__}",
                     "workflowVersion": "${__workflow_version__}",
+                    "workflowRunName": null,
                     "payload": {
-                      "sampleId.$": "$.library_id",
-                      "instrumentRunId.$": "$.instrument_run_id",
-                      "samplesheetDict.$": "$.slim_inputs.samplesheet",
-                      "fastqListRows.$": "$.slim_inputs.fastq_list_rows"
+                      "refId": null,
+                      "version": "${__service_version__}",
+                      "data": {
+                        "sampleId.$": "$.library_id",
+                        "instrumentRunId.$": "$.instrument_run_id",
+                        "samplesheetDict.$": "$.slim_inputs.samplesheet",
+                        "fastqListRows.$": "$.slim_inputs.fastq_list_rows"
+                      }
                     }
                   },
                   "DetailType": "${__detail_type__}",
