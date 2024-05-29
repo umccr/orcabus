@@ -17,7 +17,7 @@ def handler(event, context):
         time_window: "" # currenty not used, defaults 1h
     }
     """
-    print(f"Processing {event}, {context}")
+    print(f"Processing get_workflow_run with: {event}, {context}")
     portal_run_id = event['portal_run_id']
     status = event.get('status', None)
     timestamp = event.get('timestamp', None)
@@ -27,19 +27,23 @@ def handler(event, context):
         portal_run_id = portal_run_id
     )
     if status:
-        qs.filter(
+        qs = qs.filter(
             status = status
         )
     if timestamp:
         dt = datetime.datetime.fromisoformat(str(timestamp))
+        print(f"Filter for time window around: {str(timestamp)}")
         start_t = dt - default_time_window
         end_t = dt + default_time_window
-        qs.filter(
-            timestamp__range=[start_t, end_t]
+        print(f"Time window from {start_t} to {end_t}.")
+        qs = qs.filter(
+            timestamp__range=(start_t, end_t)
         )
 
     workflow_runs = []
     for w in qs.all():
         workflow_runs.append(w)
+        print(w.to_dict())
+    print(f"Found {len(workflow_runs)} WorkflowRun records.")
 
     return workflow_runs  # FIXME: need to deserialise in future
