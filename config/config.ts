@@ -9,7 +9,6 @@ import { getMetadataManagerStackProps } from './stacks/metadataManager';
 import { getSequenceRunManagerStackProps } from './stacks/sequenceRunManager';
 import { getFileManagerStackProps } from './stacks/fileManager';
 import { getBsRunsUploadManagerStackProps } from './stacks/bsRunsUploadManager';
-import { getICAv2CopyBatchUtilityStackProps } from './stacks/icav2CopyBatchUtility';
 import { getBsshIcav2FastqCopyManagerStackProps } from './stacks/bsshIcav2FastqCopyManager';
 import {
   getCttsov2Icav2PipelineManagerStackProps,
@@ -20,6 +19,10 @@ import {
   getIcav2EventTranslatorTableStackProps,
   getIcav2EventTranslatorStackProps,
 } from './stacks/icav2EventTranslator';
+import {
+  getBclconvertInteropQcIcav2PipelineManagerStackProps,
+  getBclconvertInteropQcIcav2PipelineTableStackProps,
+} from './stacks/bclconvertInteropQcIcav2PipelineManager';
 import {getGlueStackProps, getStatefulGlueStackProps} from './stacks/stackyMcStackFace';
 
 interface EnvironmentConfig {
@@ -50,6 +53,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
+            bclconvertInteropQcIcav2PipelineTableStackProps:
+              getBclconvertInteropQcIcav2PipelineTableStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
             stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
@@ -60,8 +65,9 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
+            bclconvertInteropQcIcav2PipelineManagerStackProps:
+              getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
             icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
@@ -80,6 +86,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
+            bclconvertInteropQcIcav2PipelineTableStackProps:
+              getBclconvertInteropQcIcav2PipelineTableStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
             stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
@@ -90,8 +98,9 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
+            bclconvertInteropQcIcav2PipelineManagerStackProps:
+              getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
             icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
@@ -110,6 +119,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
+            bclconvertInteropQcIcav2PipelineTableStackProps:
+              getBclconvertInteropQcIcav2PipelineTableStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
             stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
@@ -120,8 +131,9 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
+            bclconvertInteropQcIcav2PipelineManagerStackProps:
+              getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             schemaStackProps: getSchemaStackProps(),
             icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),

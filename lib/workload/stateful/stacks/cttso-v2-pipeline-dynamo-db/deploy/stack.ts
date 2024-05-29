@@ -12,8 +12,8 @@ export interface Cttsov2Icav2PipelineTableConfig {
 export type Cttsov2Icav2PipelineTableStackProps = Cttsov2Icav2PipelineTableConfig & cdk.StackProps;
 
 export class Cttsov2Icav2PipelineTable extends cdk.Stack {
-  public readonly cttsov2_icav2_dynamodb_table_arn_ssm_parameter_path: string;
-  public readonly cttsov2_icav2_dynamodb_table_name_ssm_parameter_path: string;
+  public readonly cttsov2Icav2DynamodbTableArnSsmParameterPath: string;
+  public readonly cttsov2Icav2DynamodbTableNameSsmParameterPath: string;
 
   constructor(scope: Construct, id: string, props: Cttsov2Icav2PipelineTableStackProps) {
     super(scope, id, props);
@@ -32,7 +32,7 @@ export class Cttsov2Icav2PipelineTable extends cdk.Stack {
     /*
     Generate a ssm parameter to store the table arn so it can be referred to be other stacks
     */
-    this.cttsov2_icav2_dynamodb_table_arn_ssm_parameter_path = new ssm.StringParameter(
+    this.cttsov2Icav2DynamodbTableArnSsmParameterPath = new ssm.StringParameter(
       this,
       'cttsov2_icav2_pipeline_table_arn_ssm_path',
       {
@@ -41,7 +41,7 @@ export class Cttsov2Icav2PipelineTable extends cdk.Stack {
       }
     ).parameterName;
 
-    this.cttsov2_icav2_dynamodb_table_name_ssm_parameter_path = new ssm.StringParameter(
+    this.cttsov2Icav2DynamodbTableNameSsmParameterPath = new ssm.StringParameter(
       this,
       'cttsov2_icav2_pipeline_table_name_ssm_path',
       {

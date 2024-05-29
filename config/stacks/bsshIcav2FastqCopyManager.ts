@@ -1,10 +1,14 @@
 import {
   AppStage,
   icav2AccessTokenSecretName,
-  bsshFastqCopyManagerSfnName,
-  bsshFastqCopyManagerSSMName,
-  bsshFastqCopyManagerSSMArn,
+  bsshFastqCopyManagerSfnPrefix,
   eventBusName,
+  bsshFastqCopyManagerWorkflowType,
+  bsshFastqCopyManagerWorkflowTypeVersion,
+  bsshFastqCopyManagerServiceVersion,
+  bsshFastqCopyManagerReadyEventSource,
+  bsshFastqCopyManagerEventSource,
+  bsshFastqCopyManagerEventDetailType,
 } from '../constants';
 import { BsshIcav2FastqCopyManagerConfig } from '../../lib/workload/stateless/stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
 
@@ -14,6 +18,5 @@ export const getBsshIcav2FastqCopyManagerStackProps = (
   return {
     icav2CopyBatchUtilityStateMachineName: bsshFastqCopyManagerSfnName,
     eventBusName: eventBusName,
-    icav2JwtSecretsManagerPath: icav2AccessTokenSecretName[stage],
   };
 };

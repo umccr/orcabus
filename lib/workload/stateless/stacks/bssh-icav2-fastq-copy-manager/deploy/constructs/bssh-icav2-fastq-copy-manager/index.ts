@@ -19,6 +19,13 @@ interface BsshIcav2FastqCopyStateMachineConstructProps {
   bclconvertSuccessEventHandlerLambdaObj: PythonFunction; // __dirname + '/../../../lambdas/bclconvert_success_event_handler'
   // execution_check_status_lambda_path: string; // __dirname + '../lambdas/check_execution_completion'
   workflowDefinitionBodyPath: string; // __dirname + '../step_functions_templates/bclconvert_success_event_state_machine.json'
+  // Event handling //
+  detailType: string; // workflowRunStateChange
+  serviceVersion: string; // 2024.05.15
+  triggerLaunchSource: string; // orcabus.wfm
+  internalEventSource: string; // orcabus.bssh_fastq_copy
+  workflowType: string; // bssh_fastq_copy
+  workflowVersion: string; // 1.0.0
 }
 
 export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
@@ -46,11 +53,15 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
         __bclconvert_success_event_lambda_arn__: props.bclconvertSuccessEventHandlerLambdaObj.currentVersion.functionArn,
         __copy_batch_data_state_machine_arn__: props.icav2CopyBatchStateMachineObj.stateMachineArn,
         __eventbus_name__: props.eventBusObj.eventBusName,
+        __detail_type__: props.detailType,
+        __event_source__: props.internalEventSource,
       },
     });
 
     // Add execution permissions to stateMachine role
     props.bclconvertSuccessEventHandlerLambdaObj.currentVersion.grantInvoke(stateMachine.role);
+
+    // Allow the icav2 copy batch statemachine to be started by the bssh fastq copy manager
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -62,6 +73,9 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
         actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
       })
     );
+
+    // State machine
+    props.icav2CopyBatchStateMachineObj.grantStartExecution(stateMachine.role);
 
     // Trigger state machine on event
     const rule = new events.Rule(this, 'bssh_fastq_copy_trigger_rule', {
@@ -84,12 +98,5 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
 
     // Allow the statemachine to submit events to the event bus
     props.eventBusObj.grantPutEventsTo(stateMachine.role);
-
-    // Allow the icav2 copy batch statemachine to be started by the bssh fastq copy manager
-    // State machine
-    props.icav2CopyBatchStateMachineObj.grantStartExecution(stateMachine.role);
-
-    // Set outputs
-    this.icav2BclconvertSuccessEventSsmStateMachineObj = stateMachine;
   }
 }
