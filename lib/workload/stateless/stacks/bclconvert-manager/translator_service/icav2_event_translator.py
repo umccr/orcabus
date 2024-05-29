@@ -64,7 +64,7 @@ The event tranlator then returns the following:
             "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0"
             "instrumentRunId": "12345_A12345_1234_ABCDE12345",
             "basespaceRunId": "1234567",
-            "samplesheetB64gz": "test_sample_sheetB64gz"
+            "samplesheetB64gz": "H4sIAFGBVWYC/9VaUW+jOBD+Kyvu9VqBgST0njhWh046..."
         }
     }
 }
