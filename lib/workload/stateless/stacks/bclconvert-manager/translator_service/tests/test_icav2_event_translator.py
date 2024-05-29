@@ -17,7 +17,6 @@ from uuid import UUID
     "workflowVersion": "0.0.0",
     "workflowRunName": "123456_A1234_0000_TestingPattern",
     "payload": {
-        "refId": None,
         "version": "0.1.0",
         "data": {
             "projectId": "valid_project_id",
@@ -163,7 +162,6 @@ class TestICAv2EventTranslator(unittest.TestCase):
             "workflowVersion": "0.0.0",
             "workflowRunName": "123456_A1234_0000_TestingPattern",
             "payload": {
-                "refId": None,
                 "version": "0.1.0",
                 "data": {
                     "projectId": "valid_project_id",

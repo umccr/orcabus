@@ -34,7 +34,7 @@ The event tranlator then returns the following:
     "portalRunId": '20xxxxxxxxxx',
     "executionId": "valid_payload_id",
     "timestamp": "2024-00-25T00:07:00Z",
-    "status": "SUCCEEDED",
+    "status": "FAILED", (Non-SUCCEEDED status)
     "workflowName": "BclConvert",
     "workflowVersion": "4.2.7",
     workflowRunName: "123456_A1234_0000_TestingPattern",
@@ -50,7 +50,6 @@ The event tranlator then returns the following:
     "workflowVersion": "4.2.7",
     workflowRunName: "123456_A1234_0000_TestingPattern",
     "payload": {
-        "refId": None,
         "version": "0.1.0",
         "data": {
             "projectId": "valid_project_id",
@@ -156,7 +155,7 @@ def store_events_into_dynamodb(internal_ica_event, table_name, event_details) ->
                 'id_type': {'S': 'db_uuid'},
                 'analysis_id': {'S': internal_ica_event.detail.payload.get('data', '').get("analysisId", '')},
                 'analysis_status': {'S': internal_ica_event.detail.status},
-                # 'SUCCEEDED', 'FAILED', 'INPROGRESS', 'ABORTED', 'UNKNOWN
+                # 'SUCCEEDED', 'FAILED', 'ABORTED'
                 "portal_run_id": {'S': internal_ica_event.detail.portalRunId},
                 'original_external_event': {'S': json.dumps(event_details)},
                 'translated_internal_ica_event': {'S': json.dumps(internal_ica_event.detail.to_dict())},
@@ -206,7 +205,7 @@ def translate_to_aws_event(event) -> AWSEvent:
 # Convert from entity module to internal event details
 def get_event_details(event) -> WorkflowRunStateChange:
     # Extract relevant fields from the event payload
-    analysis_status = event.get("eventParameters", {}).get("analysisStatus", '')
+    analysis_status = event.get("eventParameters", {}).get("analysisStatus", 'UNSPECIFIED')
 
     payload = event.get("payload", {})
     analysis_id = payload.get("id", '')
@@ -238,7 +237,6 @@ def get_event_details(event) -> WorkflowRunStateChange:
         workflowVersion=version,
         workflowRunName=payload.get("userReference", ''),
         payload={
-            "refId": None,
             "version": "0.1.0",
             "data": PayloadDataMarshaller.marshall(succeeded_payload_data)
         }
