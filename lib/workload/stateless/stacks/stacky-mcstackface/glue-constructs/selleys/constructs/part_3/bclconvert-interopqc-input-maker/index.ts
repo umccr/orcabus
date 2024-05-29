@@ -10,11 +10,11 @@ import { WorkflowRunStateChangeInternalInputMakerConstruct } from '../../../../.
 Part 3
 
 Input Event Source: `orcabus.workflowmanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
+Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `complete`
 
 Output Event source: `orcabus.bclconvertinteropqcinputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `complete`
 
 
@@ -39,7 +39,7 @@ export class BclconvertInteropqcInputMakerConstruct extends Construct {
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
     triggerDetailType: 'WorkflowRunStateChange',
-    triggerWorkflowName: 'bssh_fastq_copy',
+    triggerWorkflowName: 'bsshFastqCopy',
     outputSource: 'orcabus.bclconvertinteropqcinputeventglue',
     outputStatus: 'ready',
     payloadVersion: '2024.05.24',
@@ -68,38 +68,43 @@ export class BclconvertInteropqcInputMakerConstruct extends Construct {
     });
 
     /*
-        Part 2: Grant the internal sfn permissions to access the ssm parameter
-        */
+    Part 2: Grant the internal sfn permissions
+    */
+
+    // access the ssm parameter
     [props.outputUriPrefixSsmParameterObj, props.icav2ProjectIdSsmParameterObj].forEach(
       (ssmParameterObj) => {
         ssmParameterObj.grantRead(inputMakerSfn.role);
       }
     );
 
+    // access the dynamodb table
+    props.tableObj.grantReadWriteData(inputMakerSfn.role);
+
     /*
-        Part 3: Build the external sfn
-        */
+    Part 3: Build the external sfn
+    */
     new WorkflowRunStateChangeInternalInputMakerConstruct(
       this,
-      'bssh_fastq_copy_manager_input_maker_external',
+      'bclconvert_interop_qc_input_maker_external',
       {
         /*
-                Set Input StateMachine Object
-                */
+        Set Input StateMachine Object
+        */
         inputStateMachineObj: inputMakerSfn,
         lambdaPrefix: this.bclconvertInteropqcInputMakerEventMap.prefix,
         payloadVersion: this.bclconvertInteropqcInputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.bclconvertInteropqcInputMakerEventMap.prefix,
 
         /*
-                Table objects
-                */
+        Table objects
+        */
         tableObj: props.tableObj,
         tablePartitionName: this.bclconvertInteropqcInputMakerEventMap.tablePartition,
 
         /*
-                Event Triggers
-                */
+        Event Triggers
+        */
         eventBusObj: props.eventBusObj,
         triggerSource: this.bclconvertInteropqcInputMakerEventMap.triggerSource,
         triggerStatus: this.bclconvertInteropqcInputMakerEventMap.triggerStatus,

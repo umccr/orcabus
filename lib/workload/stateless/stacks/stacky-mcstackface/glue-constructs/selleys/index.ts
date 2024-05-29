@@ -28,11 +28,11 @@ export class BsshFastqCopyEventHandlerConstruct extends Construct {
     /*
         Part 1
         Input Event Source: `orcabus.bsshfastqcopymanager`
-        Input Event DetailType: `orcabus.workflowrunstatechange`
+        Input Event DetailType: `WorkflowRunStateChange`
         Input Event status: `succeeded`
 
         Output Event source: `orcabus.workflowmanager`
-        Output Event DetailType: `orcabus.workflowrunstatechange`
+        Output Event DetailType: `WorkflowRunStateChange`
         Output Event status: `complete`
 
         * The BSSHFastqCopyManagerEventHandler Construct
@@ -40,20 +40,20 @@ export class BsshFastqCopyEventHandlerConstruct extends Construct {
           * Contains a standard workflow run statechange, the fastqlistrowgzipped, and instrument run id
           * Pushes a workflow run manager event saying that the BSSHFastqCopyManager has complete.
         */
-    const bsshfastqCopyManagerEventRelayerSuccessEventRelayer =
-      new BSSHFastqCopyManagerEventRelayer(
-        this,
-        'bssh_fastq_copy_manager_event_relayer_success_event_relayer',
-        {
-          eventBusObj: props.eventBusObj,
-          tableObj: props.workflowManagerTableObj,
-        }
-      );
+    // const bsshfastqCopyManagerEventRelayerSuccessEventRelayer =
+    //   new BSSHFastqCopyManagerEventRelayer(
+    //     this,
+    //     'bssh_fastq_copy_manager_event_relayer_success_event_relayer',
+    //     {
+    //       eventBusObj: props.eventBusObj,
+    //       tableObj: props.workflowManagerTableObj,
+    //     }
+    //   );
 
     /*
         Part 2
         Input Event Source: `orcabus.workflowmanager`
-        Input Event DetailType: `orcabus.workflowrunstatechange`
+        Input Event DetailType: `WorkflowRunStateChange`
         Input Event status: `complete`
 
         Output Event source: `orcabus.instrumentrunmanager`
@@ -80,11 +80,11 @@ export class BsshFastqCopyEventHandlerConstruct extends Construct {
         Part 3
 
         Input Event Source: `orcabus.workflowmanager`
-        Input Event DetailType: `orcabus.workflowrunstatechange`
+        Input Event DetailType: `WorkflowRunStateChange`
         Input Event status: `complete`
 
         Output Event source: `orcabus.bclconvertinteropqcinputeventglue`
-        Output Event DetailType: `orcabus.workflowrunstatechange`
+        Output Event DetailType: `WorkflowRunStateChange`
         Output Event status: `complete`
 
         * The BCLConvertInteropQCInputMaker Construct
@@ -106,25 +106,25 @@ export class BsshFastqCopyEventHandlerConstruct extends Construct {
         Part 4
 
         Input Event Source: `orcabus.bclconvertinteropqcinputeventglue`
-        Input Event DetailType: `orcabus.workflowrunstatechange`
+        Input Event DetailType: `WorkflowRunStateChange`
         Input Event status: `complete`
 
         Output Event source: `orcabus.workflowmanager`
-        Output Event DetailType: `orcabus.workflowrunstatechange`
+        Output Event DetailType: `WorkflowRunStateChange`
         Output Event status: `ready`
 
         * The BCLConvertInteropQCReadyEventSubmitter Construct
           * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and generates a ready event for the BCLConvertInteropQC
 
         */
-    const bclconvertInteropqcManagerReadyEvent =
-      new BclconvertInteropqcManagerReadyEventHandlerConstruct(
-        this,
-        'bclconvert_interopqc_ready_event_submitter',
-        {
-          eventBusObj: props.eventBusObj,
-          tableObj: props.workflowManagerTableObj,
-        }
-      );
+    // const bclconvertInteropqcManagerReadyEvent =
+    //   new BclconvertInteropqcManagerReadyEventHandlerConstruct(
+    //     this,
+    //     'bclconvert_interopqc_ready_event_submitter',
+    //     {
+    //       eventBusObj: props.eventBusObj,
+    //       tableObj: props.workflowManagerTableObj,
+    //     }
+    //   );
   }
 }

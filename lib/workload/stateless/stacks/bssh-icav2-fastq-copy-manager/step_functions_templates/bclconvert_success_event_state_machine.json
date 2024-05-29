@@ -62,15 +62,27 @@
         "execution_id.$": "$.ExecutionArn"
       },
       "ResultPath": "$.state_machine_parameter",
-      "Next": "Set Workflow Outputs"
+      "Next": "Set Workflow Output Detail"
     },
-    "Set Workflow Outputs": {
+    "Set Workflow Output Detail": {
       "Type": "Pass",
       "Next": "Submit Completion Event",
       "Parameters": {
-        "workflow_outputs": {
-          "instrumentRunId.$": "$.workflow_inputs.payload.data.instrumentRunId",
-          "fastqListRowsB64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz"
+        "workflow_detail": {
+          "status": "succeeded",
+          "portalRunId.$": "$.workflow_inputs.portalRunId",
+          "workflowName": "${__workflow_name__}",
+          "workflowVersion": "${__workflow_version__}",
+          "workflowRunName": "States.format(umccr__orcabus__automated__{}__{}, $.workflow_inputs.payload.data.instrumentRunId, $.workflow_inputs.portalRunId)",
+          "payload": {
+            "refId": null,
+            "version": "${__payload_version__}",
+            "data": {
+              "outputUri.$": "$.workflow_inputs.payload.data.outputUri",
+              "instrumentRunId.$": "$.workflow_inputs.payload.data.instrumentRunId",
+              "fastqListRowsB64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz"
+            }
+          }
         }
       }
     },
@@ -80,7 +92,7 @@
       "Parameters": {
         "Entries": [
           {
-            "Detail.$": "$.workflow_outputs",
+            "Detail.$": "$.workflow_detail",
             "DetailType": "${__detail_type__}",
             "EventBusName": "${__eventbus_name__}",
             "Source": "${__event_source__}"

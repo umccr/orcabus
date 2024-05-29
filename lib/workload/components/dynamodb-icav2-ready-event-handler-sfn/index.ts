@@ -40,7 +40,7 @@ export interface WfmWorkflowStateChangeIcav2ReadyEventHandlerConstructProps {
   generateInputsJsonSfn: sfn.IStateMachine;
 
   /* Internal workflowRunStateChange event details */
-  workflowType: string;
+  workflowName: string;
   workflowVersion: string;
   serviceVersion: string;
 }
@@ -115,7 +115,7 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
         __eventbus_name__: props.eventBusName,
         __event_source__: props.internalEventSource,
         /* Put event details */
-        __workflow_type__: props.workflowType,
+        __workflow_type__: props.workflowName,
         __workflow_version__: props.workflowVersion,
         __service_version__: props.serviceVersion,
         /* Lambdas */
@@ -165,7 +165,7 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
         detailType: [props.detailType],
         detail: {
           status: ['ready'],
-          workflowType: [props.workflowType],
+          workflowName: [{"equals-ignore-case": props.workflowName}],
         },
       },
     });

@@ -13,11 +13,11 @@ This Construct is known as Scotch. A stock-standard glue.
 ### Construct A (part 1)
 
 Input Event Source: `orcabus.bclconvertmanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
+Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `succeeded`
 
 Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `complete`
 
 * The BCLConvertManagerEventHandler Construct
@@ -28,7 +28,7 @@ Output Event status: `complete`
 ### Construct A (part 2)
 
 Input Event Source: `orcabus.workflowmanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
+Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `complete`
 
 Output Event source: `orcabus.instrumentmanager`
@@ -47,11 +47,11 @@ Output Event status: `libraryrunidsregistered`
 ### Construct A (part 3)
 
 Input Event Source: `orcabus.workflowmanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
+Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `complete`
 
 Output Event source: `orcabus.bsshfastqcopyinputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `complete`
 
 * The BsshFastqCopyManagerInputMaker Construct
@@ -61,11 +61,11 @@ Output Event status: `complete`
 ### Construct A (part 4)
 
 Input Event Source: `orcabus.bsshfastqcopymanagerinputeventglue`
-Input Event DetailType: `orcabus.workflowrunstatechange`
+Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `complete`
 
 Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The BsshFastqCopyManagerReadyEventSubmitter Construct
@@ -81,11 +81,11 @@ This construct will be known as Selleys.
 ### Construct B (Part 1)
 
 Input Event Source: `orcabus.bsshfastqcopymanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
+Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `succeeded`
 
 Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `complete`
 
 * The BSSHFastqCopyManagerEventHandler Construct
@@ -96,7 +96,7 @@ Output Event status: `complete`
 ### Construct B (Part 2)
 
 Input Event Source: `orcabus.workflowmanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
+Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `complete`
 
 Output Event source: `orcabus.instrumentmanager`
@@ -116,7 +116,7 @@ Input Event DetailType: `orcabus.fastqlistrowstatechange`
 Input Event status: `fastqlistrowsregistered`
 
 Output Event source: `orcabus.bclconvertinteropqcinputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `complete`
 
 * The BCLConvertInteropQCInputMaker Construct
@@ -126,11 +126,11 @@ Output Event status: `complete`
 ### Construct B (Part 4)
 
 Input Event Source: `orcabus.bclconvertinteropqcinputeventglue`
-Input Event DetailType: `orcabus.workflowrunstatechange`
+Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `complete`
 
 Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The BCLConvertInteropQCReadyEventSubmitter Construct
@@ -155,7 +155,7 @@ Input Event DetailType: `orcabus.librarystatechange`
 Input Event status: `fastqlistrowregistered`
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `awaitinginput`
 
 * The fastqListRowsToctTSOv2InputMaker Construct
@@ -167,12 +167,12 @@ Output Event status: `awaitinginput`
 ### Construct C (Part 2)
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `awaitinginput`
 
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The ctTSOv2InputMaker, subscribes to the cttsov2 input event glue (itself) and generates a ready event for the ctTSOv2ReadySfn
@@ -188,11 +188,11 @@ Output Event status: `ready`
 ### Construct C (Part 3)
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The ctTSOv2ReadyEventSubmitter Construct

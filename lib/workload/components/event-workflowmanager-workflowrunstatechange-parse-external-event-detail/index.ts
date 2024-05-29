@@ -33,8 +33,8 @@ export class WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstr
     super(scope, id);
 
     /*
-            Part 1 - Generate the two lambdas required for the AWS State Machine
-            */
+    Part 1 - Generate the two lambdas required for the AWS State Machine
+    */
 
     /* Generate the uuid lambda */
     const lambdaUuid = new LambdaUuidGeneratorConstruct(this, 'LambdaUuidGeneratorConstruct', {
@@ -82,8 +82,8 @@ export class WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstr
     });
 
     /*
-            Part 3 - Connect permissions
-            */
+    Part 3 - Connect permissions
+    */
 
     /* Allow step functions to invoke the lambda */
     [lambdaUuid, translateEventLambda].forEach((lambdaObj) => {
@@ -97,8 +97,8 @@ export class WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstr
     props.eventBusObj.grantPutEventsTo(<iam.IRole>this.stepFunctionObj.role);
 
     /*
-        Part 4 - Set up a rule to trigger the state machine
-        */
+    Part 4 - Set up a rule to trigger the state machine
+    */
     const rule = new events.Rule(this, 'workflowrunstatechangeparser_event_rule', {
       eventBus: props.eventBusObj,
       eventPattern: {

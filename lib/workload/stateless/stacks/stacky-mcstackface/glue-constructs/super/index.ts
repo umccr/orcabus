@@ -28,11 +28,11 @@ export class cttsov2GlueHandlerConstruct extends Construct {
     /*
         Part 1
         Input Event Source: `orcabus.workflowmanager`
-        Input Event DetailType: `orcabus.workflowrunstatechange`
+        Input Event DetailType: `WorkflowRunStateChange`
         Input Event status: `complete`
 
         Output Event source: `orcabus.cttsov2inputeventglue`
-        Output Event DetailType: `orcabus.workflowrunstatechange`
+        Output Event DetailType: `WorkflowRunStateChange`
         Output Event status: `awaitinginput`
 
        */
@@ -52,11 +52,11 @@ export class cttsov2GlueHandlerConstruct extends Construct {
         Part 2
 
         Input Event source: `orcabus.cttsov2inputeventglue`
-        Input Event DetailType: `orcabus.workflowrunstatechange`
+        Input Event DetailType: `WorkflowRunStateChange`
         Input Event status: `awaitinginput`
 
         Output Event source: `orcabus.cttsov2inputeventglue`
-        Output Event DetailType: `orcabus.workflowrunstatechange`
+        Output Event DetailType: `WorkflowRunStateChange`
         Output Event status: `ready`
 
         * The ctTSOv2InputMaker Construct
@@ -78,24 +78,24 @@ export class cttsov2GlueHandlerConstruct extends Construct {
         Part 3
 
         Input Event Source: `orcabus.cttsov2inputeventglue`
-        Input Event DetailType: `orcabus.workflowrunstatechange`
+        Input Event DetailType: `WorkflowRunStateChange`
         Input Event status: `ready`
 
         Output Event source: `orcabus.workflowmanager`
-        Output Event DetailType: `orcabus.workflowrunstatechange`
+        Output Event DetailType: `WorkflowRunStateChange`
         Output Event status: `ready`
 
         * The cttsov2ReadyEventSubmitter Construct
           * Subscribes to the cttsov2ReadyEventSubmitter Construct outputs and generates a ready event for the cttsov2 ICAv2 workflow
 
         */
-    const ctTSOv2InputReadyEvent = new cttsov2ManagerReadyEventHandlerConstruct(
-      this,
-      'cttsov2_ready_event_submitter',
-      {
-        eventBusObj: props.eventBusObj,
-        tableObj: props.workflowManagerTableObj,
-      }
-    );
+    // const ctTSOv2InputReadyEvent = new cttsov2ManagerReadyEventHandlerConstruct(
+    //   this,
+    //   'cttsov2_ready_event_submitter',
+    //   {
+    //     eventBusObj: props.eventBusObj,
+    //     tableObj: props.workflowManagerTableObj,
+    //   }
+    // );
   }
 }

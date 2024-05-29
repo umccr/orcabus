@@ -18,7 +18,7 @@ export class updateDataBaseOnNewFastqListRowsEventConstruct extends Construct {
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
     triggerDetailType: 'WorkflowRunStateChange',
-    triggerWorkflowName: 'bssh_fastq_copy',
+    triggerWorkflowName: 'bsshFastqCopy',
     outputSource: 'orcabus.instrumentrunmanager',
     outputStatus: 'fastqlistrowsregistered',
     outputDetailType: 'instrumentRunStateChange',
@@ -81,19 +81,18 @@ export class updateDataBaseOnNewFastqListRowsEventConstruct extends Construct {
     /*
     Part 4: Build event rule
     */
-    const eventRule = new events.Rule(this, 'update_database_on_new_samplesheet_event_rule', {
+    const eventRule = new events.Rule(this, 'update_database_on_new_fastqlistrows_event_rule', {
       eventBus: props.eventBusObj,
       eventPattern: {
         source: [this.updateDataBaseOnNewFastqListRowsEventMap.triggerSource],
         detailType: [this.updateDataBaseOnNewFastqListRowsEventMap.triggerDetailType],
         detail: {
-          status: [this.updateDataBaseOnNewFastqListRowsEventMap.triggerStatus],
-          workflowName: [this.updateDataBaseOnNewFastqListRowsEventMap.triggerWorkflowName],
+          status: [ {"equals-ignore-case": this.updateDataBaseOnNewFastqListRowsEventMap.triggerStatus }],
+          workflowName: [ {"equals-ignore-case": this.updateDataBaseOnNewFastqListRowsEventMap.triggerWorkflowName }],
         },
       },
     });
 
-    eventRule.addTarget(new eventsTargets.SfnStateMachine(this.stateMachineObj));
     eventRule.addTarget(
       new eventsTargets.SfnStateMachine(this.stateMachineObj, {
         input: events.RuleTargetInput.fromEventPath('$.detail'),

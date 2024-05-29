@@ -6,7 +6,7 @@ import {
   icav2AccessTokenSecretName,
   bclconvertInteropQcDynamoDbTableSSMArn,
   bclconvertInteropQcDynamoDbTableSSMName,
-  bclconvertInteropQcIcav2PipelineWorkflowType,
+  bclconvertInteropQcIcav2PipelineWorkflowName,
   bclconvertInteropQcIcav2ServiceVersion,
   bclconvertInteropQcIcav2PipelineWorkflowTypeVersion,
   bclconvertInteropQcIcav2EventSource,
@@ -43,7 +43,7 @@ export const getBclconvertInteropQcIcav2PipelineManagerStackProps = (
     eventBusName: eventBusName,
     icaEventPipeName: `${icaEventPipeStackName}Pipe`,
     /* Event configurations */
-    workflowType: bclconvertInteropQcIcav2PipelineWorkflowType,
+    workflowName: bclconvertInteropQcIcav2PipelineWorkflowName,
     workflowVersion: bclconvertInteropQcIcav2PipelineWorkflowTypeVersion,
     serviceVersion: bclconvertInteropQcIcav2ServiceVersion,
     triggerLaunchSource: bclconvertInteropQcIcav2ReadyEventSource,

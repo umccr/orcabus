@@ -173,7 +173,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
                 /* The inputs generation statemachine */
                 generateInputsJsonSfn: configure_inputs_sfn,
                 /* Internal workflowRunStateChange event details */
-                workflowType: props.workflowType,
+                workflowName: props.workflowType,
                 workflowVersion: props.workflowVersion,
                 serviceVersion: props.serviceVersion,
             }

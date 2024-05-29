@@ -15,7 +15,8 @@
       "Parameters": {
         "FunctionName": "${__decompress_fastq_list_rows_lambda_function_arn__}",
         "Payload": {
-          "fastq_list_rows_b64gz.$": "$.inputs.payload.data.fastqListRowsB64gz"
+          "decompress": true,
+          "input.$": "$.inputs.payload.data.fastqListRowsB64gz"
         }
       },
       "Retry": [
@@ -34,7 +35,7 @@
       "Next": "Add fastq list rows to instrument run id (LibraryFile DB)",
       "ResultPath": "$.decompress_fastq_list_rows_step",
       "ResultSelector": {
-        "fastq_list_rows": "$.Payload.fastq_list_rows"
+        "fastq_list_rows.$": "$.Payload.decompressed_dict"
       }
     },
     "Add fastq list rows to instrument run id (LibraryFile DB)": {
@@ -46,10 +47,11 @@
           "id.$": "$.inputs.payload.data.instrumentRunId",
           "id_type": "${__table_partition_name__}",
           "fastq_list_rows": {
-            "L.$": "$.decompress_fastq_list_rows_step.fastq_list_rows"
+            "S.$": "States.JsonToString($.decompress_fastq_list_rows_step.fastq_list_rows)"
           }
         }
       },
+      "ResultPath": "$.add_fastq_list_rows_to_db_step",
       "Next": "Wait 1 Second"
     },
     "Wait 1 Second": {

@@ -88,7 +88,7 @@
               "End": true,
               "ResultPath": "$.get_fastq_list_rows_from_db_step",
               "ResultSelector": {
-                "fastq_list_rows.$": "$.Item.fastq_list_rows.L"
+                "fastq_list_rows.$": "States.StringToJson($.Item.fastq_list_rows.S)"
               }
             }
           }

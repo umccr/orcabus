@@ -145,13 +145,13 @@ export const bclconvertInteropQcDynamoDbTableSSMArn = path.join(
 
 // Stateless
 
-export const bclconvertInteropQcIcav2PipelineWorkflowType = 'bclconvert_interop_qc';
+export const bclconvertInteropQcIcav2PipelineWorkflowName = 'bclconvert_interop_qc';
 export const bclconvertInteropQcIcav2PipelineWorkflowTypeVersion = '1.3.1--1.21';
 export const bclconvertInteropQcIcav2ServiceVersion = '2024.05.07';
 
-export const bclconvertInteropQcIcav2ReadyEventSource = 'orcabus.wfm';
+export const bclconvertInteropQcIcav2ReadyEventSource = 'orcabus.workflowmanager';
 export const bclconvertInteropQcIcav2EventSource = 'orcabus.bclconvertinteropqc';
-export const bclconvertInteropQcIcav2EventDetailType = 'workflowRunStateChange';
+export const bclconvertInteropQcIcav2EventDetailType = 'WorkflowRunStateChange';
 export const bclconvertInteropQcStateMachinePrefix = 'bclconvertInteropQcSfn';
 
 /*
@@ -188,9 +188,9 @@ export const cttsov2Icav2PipelineWorkflowType = 'cttsov2';
 export const cttsov2Icav2PipelineWorkflowTypeVersion = '2.1.1';
 export const cttsov2Icav2ServiceVersion = '2024.05.07';
 
-export const cttsov2Icav2ReadyEventSource = 'orcabus.wfm';
+export const cttsov2Icav2ReadyEventSource = 'orcabus.workflowmanager';
 export const cttsov2Icav2EventSource = 'orcabus.cttsov2';
-export const cttsov2Icav2EventDetailType = 'workflowRunStateChange';
+export const cttsov2Icav2EventDetailType = 'WorkflowRunStateChange';
 export const cttsov2StateMachinePrefix = 'cttsov2Sfn';
 
 // Mock Stack

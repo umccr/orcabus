@@ -24,7 +24,7 @@ interface BclConvertInteropQcIcav2PipelineManagerConstructProps {
   // Event handling
   eventBusName: string;
   icaEventPipeName: string;
-  workflowType: string;
+  workflowName: string;
   workflowVersion: string;
   serviceVersion: string;
   triggerLaunchSource: string;
@@ -117,7 +117,7 @@ export class BclConvertInteropQcIcav2PipelineConstruct extends Construct {
         internalEventSource: props.internalEventSource,
         generateInputsJsonSfn: configure_inputs_sfn,
         pipelineIdSsmPath: props.pipelineIdSsmObj.parameterName,
-        workflowType: props.workflowType,
+        workflowName: props.workflowName,
         workflowVersion: props.workflowVersion,
         serviceVersion: props.serviceVersion,
       }
@@ -135,7 +135,7 @@ export class BclConvertInteropQcIcav2PipelineConstruct extends Construct {
         icaEventPipeName: props.icaEventPipeName,
         internalEventSource: props.internalEventSource,
         generateOutputsJsonSfn: configure_outputs_sfn,
-        workflowName: props.workflowType,
+        workflowName: props.workflowName,
         workflowVersion: props.workflowVersion,
         serviceVersion: props.serviceVersion,
       }

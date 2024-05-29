@@ -36,6 +36,7 @@ def handler(event, context):
         status=event_detail_input['status'],
         workflow_name=event_detail_input['workflowName'],
         workflow_version=event_detail_input['workflowVersion'],
+        workflow_run_name=event_detail_input['workflowRunName'],
         payload=event_detail_input['payload']
     )
 
@@ -88,10 +89,11 @@ def handler(event, context):
 #     # {
 #     #   "event_detail_output": {
 #     #     "portalRunId": "20xxxxxxxxxx",
-#     #     "timestamp": "2024-05-24T01:48:36Z",
+#     #     "timestamp": "2024-05-29T09:23:37Z",
 #     #     "status": "SUCCEEDED",
 #     #     "workflowName": "BclConvert",
 #     #     "workflowVersion": "4.2.7",
+#     #     "workflowRunName": "123456_A1234_0000_TestingPattern",
 #     #     "payload": {
 #     #       "refId": "018fa7ec-281c-7b78-b055-0524cc636ead",
 #     #       "version": "0.1.0",

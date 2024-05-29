@@ -5,11 +5,11 @@ import { WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct 
 
 /*
 * Input Event Source: `orcabus.bclconvertinteropqcinputeventglue`
-* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event DetailType: `WorkflowRunStateChange`
 * Input Event status: `complete`
 
 * Output Event source: `orcabus.workflowmanager`
-* Output Event DetailType: `orcabus.workflowrunstatechange`
+* Output Event DetailType: `WorkflowRunStateChange`
 * Output Event status: `ready`
 
 * The BCLConvertInteropQCReadyEventSubmitter Construct
@@ -44,11 +44,11 @@ export class BclconvertInteropqcManagerReadyEventHandlerConstruct extends Constr
         The event output payload will be of the same construct.
 
         Input Event Source: `orcabus.bclconvertmanager`
-        Input Event DetailType: `orcabus.workflowrunstatechange`
+        Input Event DetailType: `WorkflowRunStateChange`
         Input Event status: `succeeded`
 
         Output Event source: `orcabus.workflowmanager`
-        Output Event DetailType: `orcabus.workflowrunstatechange`
+        Output Event DetailType: `WorkflowRunStateChange`
         Output Event status: `complete`
         */
 

@@ -98,6 +98,9 @@
                   "portal_run_id": {
                     "S.$": "$.workflow_inputs.portalRunId"
                   },
+                  "workflow_run_name": {
+                    "S.$": "$.workflow_inputs.workflowRunName"
+                  },
                   "launch_event_payload": {
                     "S.$": "States.JsonToString($.workflow_inputs.payload)"
                   },
@@ -111,7 +114,7 @@
                     "S": ""
                   },
                   "project_id": {
-                    "S.$": "$.workflow_inputs.payload.projectId"
+                    "S.$": "$.workflow_inputs.payload.data.projectId"
                   },
                   "analysis_return_payload": {
                     "S": ""
@@ -120,10 +123,10 @@
                     "S": ""
                   },
                   "analysis_output_uri": {
-                    "S.$": "$.workflow_inputs.payload.analysisOutputUri"
+                    "S.$": "$.workflow_inputs.payload.data.analysisOutputUri"
                   },
                   "ica_logs_uri": {
-                    "S.$": "$.workflow_inputs.payload.icaLogsUri"
+                    "S.$": "$.workflow_inputs.payload.data.icaLogsUri"
                   },
                   "analysis_output": {
                     "S": ""
@@ -232,7 +235,7 @@
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.workflow_inputs.payload.pipelineId",
+                  "Variable": "$.workflow_inputs.payload.data.pipelineId",
                   "IsPresent": true,
                   "Next": "Skip Get Parameter"
                 }
@@ -242,7 +245,7 @@
             "Skip Get Parameter": {
               "Type": "Pass",
               "Parameters": {
-                "pipeline_id": "$.workflow_inputs.payload.pipelineId"
+                "pipeline_id": "$.workflow_inputs.payload.data.pipelineId"
               },
               "ResultPath": "$.pipeline_id_var",
               "Next": "DynamoDB UpdatePipelineId"
@@ -313,9 +316,9 @@
     "Get Parameters for Launch Payload": {
       "Type": "Pass",
       "Parameters": {
-        "project_id.$": "$.get_input_parameters_from_event.payload.projectId",
+        "project_id.$": "$.get_input_parameters_from_event.payload.data.projectId",
         "pipeline_id.$": "$.get_input_parameters_from_event.pipeline_id",
-        "user_reference.$": "$.get_input_parameters_from_event.payload.userReference",
+        "user_reference.$": "$.get_input_parameters_from_event.payload.data.userReference",
         "input_json.$": "$.get_input_parameters_from_event.input_json",
         "analysis_output_uri.$": "$.get_input_parameters_from_event.payload.analysisOutputUri",
         "ica_logs_uri.$": "$.get_input_parameters_from_event.payload.icaLogsUri",
@@ -465,7 +468,7 @@
         "portalRunId.$": "$.Item.portal_run_id.S",
         "timestamp.$": "$$.State.EnteredTime",
         "status.$": "$.Item.analysis_status.S",
-        "workflowType": "${__workflow_type__}",
+        "workflowName": "${__workflow_type__}",
         "workflowVersion": "${__workflow_version__}",
         "payload": {
           "refId": null,

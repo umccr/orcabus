@@ -1,11 +1,14 @@
 # Workflow Input
 bssh_project_id="b23fb516-d852-4985-adcc-831c12e8cd22"     # BSSH-trial
 bssh_analysis_id="01bd501f-dde6-42b5-b281-5de60e43e1d7"    # The BCLConvert Analysis ID triggered by BSSH
-output_uri="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/240229_A00130_0288_BH5HM2DSXC/20240528da604011/"
+instrument_run_id="240229_A00130_0288_BH5HM2DSXC"
 
 # Event metadata
 portal_run_id="$(date --utc +%Y%m%d)$(xxd -l 4 -c 4 -p < /dev/random)"
 utc_time="$(date --utc --iso-8601=seconds | sed 's/+00:00/Z/')"
+
+output_uri="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/240229_A00130_0288_BH5HM2DSXC/${portal_run_id}/"
+
 
 # Generate the input payload
 input_payload="$( \
@@ -13,6 +16,7 @@ input_payload="$( \
     --arg bssh_project_id "${bssh_project_id}" \
     --arg bssh_analysis_id "${bssh_analysis_id}" \
     --arg output_uri "${output_uri}" \
+    --arg instrument_run_id "${instrument_run_id}" \
     '
       {
         "refId": null,
@@ -20,6 +24,7 @@ input_payload="$( \
         "data": {
           "bsshProjectId": $bssh_project_id,
           "bsshAnalysisId": $bssh_analysis_id,
+          "instrumentRunId": $instrument_run_id,
           "outputUri": $output_uri
         }
       }

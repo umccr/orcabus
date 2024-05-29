@@ -15,7 +15,7 @@ export interface BclconvertInteropQcIcav2PipelineManagerConfig {
   /*
   Event handling
   */
-  workflowType: string;
+  workflowName: string;
   workflowVersion: string;
   serviceVersion: string;
   triggerLaunchSource: string;
@@ -90,7 +90,7 @@ export class BclconvertInteropQcIcav2PipelineManagerStack extends cdk.Stack {
         triggerLaunchSource: props.triggerLaunchSource,
         internalEventSource: props.internalEventSource,
         stateMachinePrefix: props.stateMachinePrefix,
-        workflowType: props.workflowType,
+        workflowName: props.workflowName,
         workflowVersion: props.workflowVersion,
       });
 

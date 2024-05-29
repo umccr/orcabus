@@ -10,12 +10,12 @@ import { WorkflowRunStateChangeInternalInputMakerConstruct } from '../../../../.
 Part 2
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `awaitinginput`
 
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The ctTSOv2InputMaker, subscribes to the cttsov2 input event glue (itself) and generates a ready event for the ctTSOv2ReadySfn

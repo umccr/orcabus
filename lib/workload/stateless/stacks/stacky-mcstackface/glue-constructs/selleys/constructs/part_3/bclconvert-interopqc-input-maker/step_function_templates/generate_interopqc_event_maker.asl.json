@@ -15,7 +15,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id": "$.inputs.db_uuid",
+          "id.$": "$.inputs.db_uuid",
           "id_type": "${__input_maker_type__}"
         }
       },
@@ -56,10 +56,9 @@
               },
               "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
               "ResultSelector": {
-                "project_id.$": "$.Parameter.Value.project_id",
-                "project_name.$": "$.Parameter.Value.project_name"
+                "project.$": "States.StringToJson($.Parameter.Value)"
               },
-              "ResultPath": "$.get_project_id_and_name_parameter_step",
+              "ResultPath": "$.get_project_parameter_step",
               "End": true
             }
           }
@@ -67,9 +66,9 @@
       ],
       "ResultPath": "$.get_ssm_parameters_steps",
       "ResultSelector": {
-        "output_uri_prefix": "$.[0].get_output_uri_prefix_parameter_step.output_uri_prefix",
-        "project_name": "$.[1].get_project_id_and_name_parameter_step.project_name",
-        "project_id": "$.[1].get_project_id_and_name_parameter_step.project_id"
+        "output_uri_prefix.$": "$.[0].get_output_uri_prefix_parameter_step.output_uri_prefix",
+        "project_name.$": "$.[1].get_project_parameter_step.project.project_name",
+        "project_id.$": "$.[1].get_project_parameter_step.project.project_id"
       }
     },
     "Generate inputs for BCLConvert InteropQC": {
@@ -79,12 +78,11 @@
         "bclconvertReportDirectory.$": "States.Format('{}Reports/', $.get_event_detail_payload_data_from_db_step.event_data_input.outputUri)",
         "interopDirectory.$": "States.Format('{}InterOp/', $.get_event_detail_payload_data_from_db_step.event_data_input.outputUri)",
         "runId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
-        "analysisId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.analysisId",
         "analysisOutputUri.$": "States.Format('{}__portal_run_id__/out/', $.get_ssm_parameters_steps.output_uri_prefix)",
         "icaLogsUri.$": "States.Format('{}__portal_run_id__/logs/', $.get_ssm_parameters_steps.output_uri_prefix)",
         "userTags": {
-          "instrument_run_id": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
-          "project_name": "$.get_ssm_parameters_steps.project_name"
+          "instrument_run_id.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
+          "project_name.$": "$.get_ssm_parameters_steps.project_name"
         }
       },
       "ResultPath": "$.set_event_data_output",
@@ -99,7 +97,7 @@
           "id.$": "$.inputs.db_uuid",
           "id_type": "${__input_maker_type__}"
         },
-        "UpdateExpression": "SET event_detail_output = :event_detail_output",
+        "UpdateExpression": "SET event_data_output = :event_data_output",
         "ExpressionAttributeValues": {
           ":event_data_output": {
             "S.$": "States.JsonToString($.set_event_data_output)"

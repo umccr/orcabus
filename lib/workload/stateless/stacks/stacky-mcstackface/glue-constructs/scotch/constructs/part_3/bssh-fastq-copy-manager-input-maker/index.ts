@@ -10,12 +10,12 @@ import { WorkflowRunStateChangeInternalInputMakerConstruct } from '../../../../.
 Part 3
 
 * Input Event Source: `orcabus.workflowmanager`
-* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event DetailType: `WorkflowRunStateChange`
 * Input Event status: `complete`
 
 
 * Output Event source: `orcabus.bsshfastqcopyinputeventglue`
-* Output Event DetailType: `orcabus.workflowrunstatechange`
+* Output Event DetailType: `WorkflowRunStateChange`
 * Output Event status: `complete`
 
 

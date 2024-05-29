@@ -38,9 +38,16 @@ detail_json="$( \
   jq --null-input --raw-output \
     --argjson payload_json "${payload_json}" \
     '
-      {                                                                                                                                                                                  "portalRunId": "202405287f1c0a3c",                                                                                                                                               "timestamp": "2024-05-28T06:17:07Z",                                                                                                                                             "status": "SUCCEEDED",                                                                                                                                                           "workflowName": "BclConvert",                                                                                                                                                    "workflowVersion": "4.2.7",                                                                                                                                                      "workflowRunName": "240229_A00130_0288_BH5HM2DSXC_844951_4ce192",                                                                                                                "payload": $payload_json
+      {
+        "portalRunId": "202405287f1c0a3c",
+        "timestamp": "2024-05-28T06:17:07Z",
+        "status": "SUCCEEDED",
+        "workflowName": "BclConvert",
+        "workflowVersion": "4.2.7",
+        "workflowRunName": "240229_A00130_0288_BH5HM2DSXC_844951_4ce192",
+        "payload": $payload_json
       }
-    ' \
+    '
 )"
 
 event_entry="$( \

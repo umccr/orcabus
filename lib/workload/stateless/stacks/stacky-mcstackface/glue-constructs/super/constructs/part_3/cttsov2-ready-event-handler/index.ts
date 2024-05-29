@@ -5,11 +5,11 @@ import { WorkflowManagerWorkflowRunStateChangeParseExternalEventDetailConstruct 
 
 /*
 * Input Event Source: `orcabus.cttsov2inputeventglue`
-* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event DetailType: `WorkflowRunStateChange`
 * Input Event status: `complete`
 
 * Output Event source: `orcabus.workflowmanager`
-* Output Event DetailType: `orcabus.workflowrunstatechange`
+* Output Event DetailType: `WorkflowRunStateChange`
 * Output Event status: `ready`
 
 * The ctTSOv2ReadyEventSubmitter Construct
@@ -39,11 +39,11 @@ export class cttsov2ManagerReadyEventHandlerConstruct extends Construct {
     The event output payload will be of the same construct.
 
     Input Event Source: `orcabus.bclconvertmanager`
-    Input Event DetailType: `orcabus.workflowrunstatechange`
+    Input Event DetailType: `WorkflowRunStateChange`
     Input Event status: `succeeded`
 
     Output Event source: `orcabus.workflowmanager`
-    Output Event DetailType: `orcabus.workflowrunstatechange`
+    Output Event DetailType: `WorkflowRunStateChange`
     Output Event status: `complete`
     */
 

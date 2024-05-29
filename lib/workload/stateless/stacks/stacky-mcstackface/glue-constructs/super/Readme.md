@@ -15,7 +15,7 @@ Input Event DetailType: `orcabus.librarystatechange`
 Input Event status: `fastqlistrowregistered`
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `awaitinginput`
 
 * The fastqListRowsToctTSOv2InputMaker Construct
@@ -27,12 +27,12 @@ Output Event status: `awaitinginput`
 ### Construct C (Part 2)
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `awaitinginput`
 
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The ctTSOv2InputMaker, subscribes to the cttsov2 input event glue (itself) and generates a ready event for the ctTSOv2ReadySfn
@@ -48,11 +48,11 @@ Output Event status: `ready`
 ### Construct C (Part 3)
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The ctTSOv2ReadyEventSubmitter Construct

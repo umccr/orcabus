@@ -12,11 +12,11 @@ Parse the outputs from the event into a new event object with a different source
 The event output payload will be of the same construct.
 
 Input Event Source: `orcabus.bsshfastqcopymanager`
-Input Event DetailType: `orcabus.workflowrunstatechange`
+Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `succeeded`
 
 Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `complete`
 
 */
@@ -44,11 +44,11 @@ export class BSSHFastqCopyManagerEventRelayer extends Construct {
         The event output payload will be of the same construct.
 
         Input Event Source: `orcabus.bsshfastqcopymanager`
-        Input Event DetailType: `orcabus.workflowrunstatechange`
+        Input Event DetailType: `WorkflowRunStateChange`
         Input Event status: `succeeded`
 
         Output Event source: `orcabus.workflowmanager`
-        Output Event DetailType: `orcabus.workflowrunstatechange`
+        Output Event DetailType: `WorkflowRunStateChange`
         Output Event status: `complete`
         */
 

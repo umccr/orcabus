@@ -54,6 +54,9 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
         __eventbus_name__: props.eventBusObj.eventBusName,
         __detail_type__: props.detailType,
         __event_source__: props.internalEventSource,
+        __workflow_name__: props.workflowName,
+        __workflow_version__: props.workflowVersion,
+        __payload_version__: props.serviceVersion,
       },
     });
 

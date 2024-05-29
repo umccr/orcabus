@@ -7,12 +7,12 @@
 ### Part 1
 
 * Input Event Source: `orcabus.bclconvertmanager`
-* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event DetailType: `WorkflowRunStateChange`
 * Input Event status: `complete`
 
 
 * Output Event source: `orcabus.workflowmanager`
-* Output Event DetailType: `orcabus.workflowrunstatechange`
+* Output Event DetailType: `WorkflowRunStateChange`
 * Output Event status: `complete`
 
 
@@ -28,7 +28,7 @@
 ### Part 2
 
 * Input Event Source: `orcabus.workflowmanager`
-* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event DetailType: `WorkflowRunStateChange`
 * Input Event status: `complete`
 
 
@@ -56,12 +56,12 @@ OR
 ### Part 3
 
 * Input Event Source: `orcabus.workflowmanager`
-* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event DetailType: `WorkflowRunStateChange`
 * Input Event status: `complete`
 
 
 * Output Event source: `orcabus.bsshfastqcopyinputeventglue`
-* Output Event DetailType: `orcabus.workflowrunstatechange`
+* Output Event DetailType: `WorkflowRunStateChange`
 * Output Event status: `complete`
 
 
@@ -79,12 +79,12 @@ With the parent function displayed here:
 ### Part 4
 
 * Input Event Source: `orcabus.bsshfastqcopymanagerinputeventglue`
-* Input Event DetailType: `orcabus.workflowrunstatechange`
+* Input Event DetailType: `WorkflowRunStateChange`
 * Input Event status: `complete`
 
 
 * Output Event source: `orcabus.workflowmanager`
-* Output Event DetailType: `orcabus.workflowrunstatechange`
+* Output Event DetailType: `WorkflowRunStateChange`
 * Output Event status: `ready`
 
 

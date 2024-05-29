@@ -18,13 +18,13 @@ Input Event status: `fastqlistrowregistered`
 First bit:
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `awaitinginput`
 
 Second bit:
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `orcabus.workflowrunstatechange`
+Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The ctTSOv2InputMaker Construct
