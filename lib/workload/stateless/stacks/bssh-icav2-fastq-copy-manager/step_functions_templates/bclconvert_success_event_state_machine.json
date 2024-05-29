@@ -23,10 +23,9 @@
       "Parameters": {
         "FunctionName": "${__bclconvert_success_event_lambda_arn__}",
         "Payload": {
-          "project_id.$": "$.workflow_inputs.payload.bsshProjectId",
-          "analysis_id.$": "$.workflow_inputs.payload.bsshAnalysisId",
-          "portal_run_id.$": "$.workflow_inputs.portalRunId",
-          "output_uri_prefix.$": "$.workflow_inputs.payload.outputUriPrefix"
+          "project_id.$": "$.workflow_inputs.payload.data.bsshProjectId",
+          "analysis_id.$": "$.workflow_inputs.payload.data.bsshAnalysisId",
+          "output_uri.$": "$.workflow_inputs.payload.data.outputUri"
         }
       },
       "Retry": [
@@ -44,12 +43,8 @@
       ],
       "TimeoutSeconds": 60,
       "ResultSelector": {
-        "instrument_run_id.$": "$.Payload.instrument_run_id",
-        "basespace_run_id.$": "$.Payload.basespace_run_id",
-        "output_uri.$": "$.Payload.output_uri",
         "fastq_list_rows_b64gz.$": "$.Payload.fastq_list_rows_b64gz",
-        "manifest_b64gz.$": "$.Payload.manifest_b64gz",
-        "samplesheet_b64gz.$": "$.Payload.samplesheet_dict_b64gz"
+        "manifest_b64gz.$": "$.Payload.manifest_b64gz"
       },
       "ResultPath": "$.bclconvert_success_event_handler_step",
       "Next": "Launch Copy Job StateMachine"
@@ -74,11 +69,8 @@
       "Next": "Submit Completion Event",
       "Parameters": {
         "workflow_outputs": {
-          "outputUri.$": "$.bclconvert_success_event_handler_step.output_uri",
-          "instrumentRunId.$": "$.bclconvert_success_event_handler_step.instrument_run_id",
-          "basespaceRunId.$": "$.bclconvert_success_event_handler_step.basespace_run_id",
-          "fastqListRowsB64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz",
-          "samplesheetB64gz.$": "$.bclconvert_success_event_handler_step.samplesheet_b64gz"
+          "instrumentRunId.$": "$.workflow_inputs.payload.data.instrumentRunId",
+          "fastqListRowsB64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz"
         }
       }
     },

@@ -20,16 +20,15 @@ interface BsshIcav2FastqCopyStateMachineConstructProps {
   // execution_check_status_lambda_path: string; // __dirname + '../lambdas/check_execution_completion'
   workflowDefinitionBodyPath: string; // __dirname + '../step_functions_templates/bclconvert_success_event_state_machine.json'
   // Event handling //
-  detailType: string; // workflowRunStateChange
+  detailType: string; // WorkflowRunStateChange
   serviceVersion: string; // 2024.05.15
-  triggerLaunchSource: string; // orcabus.wfm
-  internalEventSource: string; // orcabus.bssh_fastq_copy
-  workflowType: string; // bssh_fastq_copy
+  triggerLaunchSource: string; // orcabus.workflowmanager
+  internalEventSource: string; // orcabus.bsshfastqcopy
+  workflowName: string; // bsshFastqCopy
   workflowVersion: string; // 1.0.0
 }
 
 export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
-  public readonly icav2BclconvertSuccessEventSsmStateMachineObj: sfn.IStateMachine;
 
   public readonly bsshIcav2FastqCopyEventMap = {
       triggerSource: "orcabus.workflowmanager",
@@ -85,6 +84,7 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
         detailType: [this.bsshIcav2FastqCopyEventMap.triggerDetailType],
         detail: {
           status: [{ 'equals-ignore-case': this.bsshIcav2FastqCopyEventMap.triggerDetailStatus }],
+          workflowName: [{ 'equals-ignore-case': props.workflowName }],
         },
       },
     });

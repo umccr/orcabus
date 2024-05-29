@@ -1,16 +1,15 @@
 # BSSH Manager
 
 <!-- TOC -->
-
 * [BSSH Manager](#bssh-manager)
   * [Overview](#overview)
-  * [Launch Inputs](#launch-inputs)
-    * [Example Launch Event Payload](#example-launch-event-payload)
-    * [Manual launching via the event bus](#manual-launching-via-the-event-bus-)
+  * [Inputs](#inputs)
+* [The important components of the inputs are:](#the-important-components-of-the-inputs-are)
   * [Outputs](#outputs)
-    * [Fastq List Rows Decompressed](#fastq-list-rows-decompressed)
-    * [SampleSheet Decompressed](#samplesheet-decompressed)
   * [Lambdas in this directory](#lambdas-in-this-directory)
+    * [Process BCLConvert Output](#process-bclconvert-output)
+  * [SSM Parameters](#ssm-parameters)
+    * [External SSM Parameters required by this CDK stack](#external-ssm-parameters-required-by-this-cdk-stack)
     * [Process BCLConvert Output](#process-bclconvert-output)
   * [AWS Secrets](#aws-secrets)
     * [External secrets required by the stack](#external-secrets-required-by-the-stack)
@@ -95,7 +94,7 @@ An example of a launch event can be seen below
 
 </details>
 
-# The important components of the inputs are:
+## The important components of the inputs are:
 
 * outputUri - Where the data will be placed
 * analysisId - (the analysis id to query in order to collect the location of the fastq list rows csv),
@@ -103,11 +102,7 @@ An example of a launch event can be seen below
 * projectId - The bssh project id that ran the analysis id.  
   * This is also the project context that the copy batch data API calls need to be run in.  
 
-
-
-
-</details>
-
+  
 
 ### Manual launching via the event bus 
 
@@ -117,12 +112,34 @@ An example of a launch event can be seen below
 
 <summary>Click to expand!</summary>
 
+{
+  "DetailType": "WorkflowRunStateChange",
+  "EventBusName": "OrcaBusMain",
+  "Source": "orcabus.workflowmanager",
+  "Detail": {
+    "portalRunId": "20240528da604011",
+    "timestamp": "2024-05-28T22:51:22Z",
+    "status": "ready",
+    "workflowName": "bsshFastqCopy",
+    "workflowVersion": "2024.05.24",
+    "payload": {
+      "refId": "018fc166-a8d2-772a-92e2-1668ee1034d7",
+      "version": "2024.05.24",
+      "data": {
+        "outputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/240229_A00130_0288_BH5HM2DSXC/20240528da604011/",
+        "analysisId": "01bd501f-dde6-42b5-b281-5de60e43e1d7",
+        "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
+        "projectId": "b23fb516-d852-4985-adcc-831c12e8cd22"
+      }
+    }
+  }
+}
+
 ```bash
 # Workflow Input
 bssh_project_id="b23fb516-d852-4985-adcc-831c12e8cd22"     # BSSH-trial
-output_project_id="7595e8f2-32d3-4c76-a324-c6a85dae87b5"   # Trial
-bssh_analysis_id="544654e7-c198-466f-b981-44b5364ee4d8"    # The BCLConvert Analysis ID triggered by BSSH
-output_uri_prefix="icav2://${output_project_id}/ilmn_primary/"
+bssh_analysis_id="01bd501f-dde6-42b5-b281-5de60e43e1d7"    # The BCLConvert Analysis ID triggered by BSSH
+output_uri="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/240229_A00130_0288_BH5HM2DSXC/20240528da604011/"
 
 # Event metadata
 portal_run_id="$(date --utc +%Y%m%d)$(xxd -l 4 -c 4 -p < /dev/random)"
@@ -131,18 +148,19 @@ utc_time="$(date --utc --iso-8601=seconds | sed 's/+00:00/Z/')"
 # Generate the input payload
 input_payload="$( \
   jq --null-input --raw-output \
-    --arg project_id "${project_id}" \
     --arg bssh_project_id "${bssh_project_id}" \
     --arg bssh_analysis_id "${bssh_analysis_id}" \
-    --arg output_uri_prefix "${output_uri_prefix}" \
+    --arg output_uri "${output_uri}" \
     '
       {
         "refId": null,
         "version": "0.1.0",
-        "bsshProjectId": $bssh_project_id,
-        "bsshAnalysisId": $bssh_analysis_id,
-        "outputUriPrefix": $output_uri_prefix
-      } 
+        "data": {
+          "bsshProjectId": $bssh_project_id,
+          "bsshAnalysisId": $bssh_analysis_id,
+          "outputUri": $output_uri
+        }
+      }
     '
 )"
 
@@ -155,7 +173,7 @@ input_detail="$(
       {
         "status": "ready",
         "portalRunId": $portal_run_id,
-        "workflowType": "bssh_fastq_copy",
+        "workflowName": "bsshFastqCopy",
         "workflowVersion": "1.0.0",
         "payload": $input_payload
       }
@@ -173,8 +191,8 @@ event_entry="$(
         "Entries": [
           {
             "EventBusName": "OrcaBusMain",
-            "DetailType": "workflowRunStateChange",
-            "Source": "orcabus.wfm",
+            "DetailType": "WorkflowRunStateChange",
+            "Source": "orcabus.WorkflowManager",
             "Time": $utc_time,
             "Resources": [],
             "Detail": ( $input_detail | tojson )

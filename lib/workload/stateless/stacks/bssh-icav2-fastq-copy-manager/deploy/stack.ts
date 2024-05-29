@@ -1,7 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
-import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import { BsshIcav2FastqCopyStateMachineConstruct } from './constructs/bssh-icav2-fastq-copy-manager';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
@@ -15,13 +13,14 @@ import { ICAv2CopyBatchUtilityConstruct } from '../../../../components/icav2-cop
 export interface BsshIcav2FastqCopyManagerConfig {
   /* Required external properties */
   icav2TokenSecretId: string; // "ICAv2JWTKey-umccr-prod-service-trial"
+  /* Event Bus Configurations */
   eventBusName: string; // OrcabusMain
-  workflowType: string; // bssh_fastq_copy
+  workflowName: string; // bsshFastqCopy
   workflowVersion: string; // 1.0.0
   serviceVersion: string; // 2024.05.15
-  triggerLaunchSource: string; // orcabus.wfm
-  internalEventSource: string; // orcabus.bssh_fastq_copy
-  detailType: string; // workflowRunStateChange
+  triggerLaunchSource: string; // orcabus.workflowmanager
+  internalEventSource: string; // orcabus.bsshFastqCopy
+  detailType: string; // WorkflowRunStateChange
 }
 
 export type BsshIcav2FastqCopyManagerStackProps = BsshIcav2FastqCopyManagerConfig & cdk.StackProps;
@@ -67,7 +66,7 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
         timeout: Duration.seconds(60),
         environment: {
           ICAV2_BASE_URL: 'https://ica.illumina.com/ica/rest',
-          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_jwt_ssm_parameter_obj.secretName,
+          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_jwt_secret_obj.secretName,
         },
       }
     );
@@ -76,13 +75,13 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
     const event_bus_obj = events.EventBus.fromEventBusName(this, 'event_bus', props.eventBusName);
 
     // Construct the icav2 copy files state machines
-    const icav2_copy_batch_state_machine = new ICAv2CopyBatchUtilityConstruct(
+    const icav2_copy_batch_state_machine_obj = new ICAv2CopyBatchUtilityConstruct(
       this,
       'icav2_copy_batch_state_machine',
       {
         icav2JwtSecretParameterObj: icav2_jwt_secret_obj,
-        stateMachineNameSingle: `${props.bsshIcav2FastqCopyManagerStateMachinePrefix}-single-icav2-files-copy`,
-        stateMachineNameBatch: `${props.bsshIcav2FastqCopyManagerStateMachinePrefix}-batch-icav2-files-copy`,
+        stateMachineNameSingle: `${this.bsshIcav2Map.prefix}-single-icav2-files-copy`,
+        stateMachineNameBatch: `${this.bsshIcav2Map.prefix}-batch-icav2-files-copy`,
       }
     );
 
@@ -91,8 +90,8 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
         /* Metadata */
         prefix: this.bsshIcav2Map.prefix,
         /* Stack objects */
-        icav2CopyBatchStateMachineObj: icav2_copy_batch_stack_state_machine_arn_obj,
-        icav2JwtSsmParameterObj: icav2_jwt_ssm_parameter_obj,
+        icav2CopyBatchStateMachineObj: icav2_copy_batch_state_machine_obj.icav2CopyFilesBatchSfnObj,
+        icav2JwtSsmParameterObj: icav2_jwt_secret_obj,
         eventBusObj: event_bus_obj,
         /* Lambda paths */
         bclconvertSuccessEventHandlerLambdaObj: bclconvert_success_event_lambda,
@@ -106,7 +105,7 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
         serviceVersion: props.serviceVersion,
         triggerLaunchSource: props.triggerLaunchSource,
         internalEventSource: props.internalEventSource,
-        workflowType: props.workflowType,
+        workflowName: props.workflowName,
         workflowVersion: props.workflowVersion,
       });
   }

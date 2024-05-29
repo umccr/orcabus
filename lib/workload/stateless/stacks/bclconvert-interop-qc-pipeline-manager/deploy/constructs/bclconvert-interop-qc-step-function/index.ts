@@ -135,7 +135,7 @@ export class BclConvertInteropQcIcav2PipelineConstruct extends Construct {
         icaEventPipeName: props.icaEventPipeName,
         internalEventSource: props.internalEventSource,
         generateOutputsJsonSfn: configure_outputs_sfn,
-        workflowType: props.workflowType,
+        workflowName: props.workflowType,
         workflowVersion: props.workflowVersion,
         serviceVersion: props.serviceVersion,
       }

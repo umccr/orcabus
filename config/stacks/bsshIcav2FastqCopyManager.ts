@@ -1,9 +1,8 @@
 import {
   AppStage,
   icav2AccessTokenSecretName,
-  bsshFastqCopyManagerSfnPrefix,
   eventBusName,
-  bsshFastqCopyManagerWorkflowType,
+  bsshFastqCopyManagerWorkflowName,
   bsshFastqCopyManagerWorkflowTypeVersion,
   bsshFastqCopyManagerServiceVersion,
   bsshFastqCopyManagerReadyEventSource,
@@ -16,7 +15,13 @@ export const getBsshIcav2FastqCopyManagerStackProps = (
   stage: AppStage
 ): BsshIcav2FastqCopyManagerConfig => {
   return {
-    icav2CopyBatchUtilityStateMachineName: bsshFastqCopyManagerSfnName,
-    eventBusName: eventBusName,
+    detailType: bsshFastqCopyManagerEventDetailType,
+    icav2TokenSecretId: icav2AccessTokenSecretName[stage],
+    internalEventSource: bsshFastqCopyManagerEventSource,
+    serviceVersion: bsshFastqCopyManagerServiceVersion,
+    triggerLaunchSource: bsshFastqCopyManagerReadyEventSource,
+    workflowName: bsshFastqCopyManagerWorkflowName,
+    workflowVersion: bsshFastqCopyManagerWorkflowTypeVersion,
+    eventBusName: eventBusName
   };
 };

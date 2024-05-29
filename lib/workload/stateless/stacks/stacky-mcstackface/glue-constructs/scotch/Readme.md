@@ -203,9 +203,9 @@ This is picked up by the BSSHFastqCopy manager to copy of the BSSH Fastqs to our
       "version": "2024.05.24",
       "data": {
         "outputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/240229_A00130_0288_BH5HM2DSXC/20240528da604011/",
-        "analysisId": "01bd501f-dde6-42b5-b281-5de60e43e1d7",
-        "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-        "projectId": "b23fb516-d852-4985-adcc-831c12e8cd22"
+        "bsshAnalysisId": "01bd501f-dde6-42b5-b281-5de60e43e1d7",
+        "bsshProjectId": "b23fb516-d852-4985-adcc-831c12e8cd22",
+        "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
       }
     }
   }

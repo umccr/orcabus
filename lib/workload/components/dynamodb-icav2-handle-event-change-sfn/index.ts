@@ -24,7 +24,7 @@ export interface Icav2AnalysisEventHandlerConstructProps {
   generateOutputsJsonSfn: sfn.IStateMachine; // Step function to generate the output json
 
   /* Internal workflowRunStateChange event details */
-  workflowType: string;
+  workflowName: string;
   workflowVersion: string;
   serviceVersion: string;
 }
@@ -64,7 +64,7 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
         /* Step function to generate the output json */
         __sfn_get_outputs_json__: props.generateOutputsJsonSfn.stateMachineArn,
         /* Put event details */
-        __workflow_type__: props.workflowType,
+        __workflow_type__: props.workflowName,
         __workflow_version__: props.workflowVersion,
         __service_version__: props.serviceVersion,
       },
@@ -93,12 +93,9 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
       eventBus: eventbus_obj,
       ruleName: `${props.stateMachineName}-rule`,
       eventPattern: {
-        // detailType: ['Event from aws:sqs'],
-        // FIXME - Pipe ${props.icaEventPipeName}
-        // source: [{ startsWith: "Pipe IcaEventPipe` }],
         detail: {
           'ica-event': {
-            // ICA_EXEC_028 is an analysis state change in ICAv2?
+            // ICA_EXEC_028 is an analysis state change in ICAv2
             eventCode: ['ICA_EXEC_028'],
           },
         },

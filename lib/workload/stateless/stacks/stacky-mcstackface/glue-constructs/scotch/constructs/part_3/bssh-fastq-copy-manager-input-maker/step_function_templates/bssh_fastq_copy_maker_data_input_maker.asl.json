@@ -41,8 +41,8 @@
       "Type": "Pass",
       "Parameters": {
         "instrumentRunId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
-        "projectId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.projectId",
-        "analysisId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.analysisId",
+        "bsshProjectId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.projectId",
+        "bsshAnalysisId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.analysisId",
         "outputUri.$": "States.Format('{}{}/__portal_run_id__/', $.get_output_uri_prefix_parameter_step.output_uri_prefix, $.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId)"
       },
       "ResultPath": "$.set_event_data_output",
