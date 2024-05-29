@@ -21,6 +21,7 @@ import {
   getBclConvertManagerTableStackProps,
   getBclConvertManagerStackProps,
 } from './stacks/bclConvertManager';
+import { getWorkflowManagerStackProps } from './stacks/workflowRunManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -64,7 +65,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
-            BclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
+            bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
+            workflowManagerStackProps: getWorkflowManagerStackProps(),
           },
         },
       };
@@ -93,7 +95,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
-            BclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
+            bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
+            workflowManagerStackProps: getWorkflowManagerStackProps(),
           },
         },
       };
@@ -122,7 +125,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
-            BclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
+            bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
+            workflowManagerStackProps: getWorkflowManagerStackProps(),
           },
         },
       };

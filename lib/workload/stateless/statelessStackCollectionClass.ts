@@ -35,6 +35,10 @@ import {
   BclConvertManagerStack,
   BclConvertManagerStackProps,
 } from './stacks/bclconvert-manager/deploy/stack';
+import {
+  WorkflowManagerStack,
+  WorkflowManagerStackProps,
+} from './stacks/workflow-manager/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
@@ -47,7 +51,8 @@ export interface StatelessStackCollectionProps {
   cttsov2Icav2PipelineManagerStackProps: cttsov2Icav2PipelineManagerStackProps;
   eventSchemaStackProps: SchemaStackProps;
   dataSchemaStackProps: SchemaStackProps;
-  BclConvertManagerStackProps: BclConvertManagerStackProps;
+  bclConvertManagerStackProps: BclConvertManagerStackProps;
+  workflowManagerStackProps: WorkflowManagerStackProps;
 }
 
 export class StatelessStackCollection {
@@ -63,6 +68,7 @@ export class StatelessStackCollection {
   readonly eventSchemaStack: Stack;
   readonly dataSchemaStack: Stack;
   readonly bclConvertManagerStack: Stack;
+  readonly workflowManagerStack: Stack;
 
   constructor(
     scope: Construct,
@@ -137,7 +143,12 @@ export class StatelessStackCollection {
 
     this.bclConvertManagerStack = new BclConvertManagerStack(scope, 'BclConvertManagerStack', {
       ...this.createTemplateProps(env, 'BclConvertManagerStack'),
-      ...statelessConfiguration.BclConvertManagerStackProps,
+      ...statelessConfiguration.bclConvertManagerStackProps,
+    });
+
+    this.workflowManagerStack = new WorkflowManagerStack(scope, 'WorkflowManagerStack', {
+      ...this.createTemplateProps(env, 'WorkflowManagerStack'),
+      ...statelessConfiguration.workflowManagerStackProps,
     });
   }
 
