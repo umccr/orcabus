@@ -1,0 +1,6 @@
+{
+  "projectId": "<uuid>",
+  "analysisId": "<uuid>",
+  "portalRunId": "21240529abcdefgh",
+  "outputUriPrefix": "icav2://x/y/z"
+}

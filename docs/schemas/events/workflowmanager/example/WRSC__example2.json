@@ -13,6 +13,6 @@
     "status": "RUNNING",
     "workflowName": "<fill-by-workflow-manager> e.g. bssh_icav2_fastq_copy",
     "workflowVersion": "<fill-by-workflow-manager> e.g. 1.2.3",
-    "workflowRunName": "<fill-by-workflow-manager> e.g. 540424_A01001_0193_BBBBMMDRX5 FASTQ Copy",
+    "workflowRunName": "<fill-by-workflow-manager> e.g. 540424_A01001_0193_BBBBMMDRX5 FASTQ Copy"
   }
 }

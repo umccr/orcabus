@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/bsshicav2fastqcopymanager/PayloadDataReady.schema.json",
+  "description": "Data schema for orcabus.bsshicav2fastqcopymanager@PayloadDataReady",
+  "title": "PayloadDataReady",
+  "required": [
+    "projectId",
+    "analysisId",
+    "portalRunId",
+    "outputUriPrefix"
+  ],
+  "properties": {
+    "projectId": {
+      "type": "string"
+    },
+    "analysisId": {
+      "type": "string"
+    },
+    "portalRunId": {
+      "type": "string"
+    },
+    "outputUriPrefix": {
+      "type": "string"
+    }
+  }
+}

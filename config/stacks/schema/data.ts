@@ -5,7 +5,7 @@ import path from 'path';
 export const getDataSchemaStackProps = (): SchemaStackProps => {
   const docBase: string = '../../../docs/schemas/data';
   const defaultProps = {
-    schemaType: 'OpenApi3',
+    schemaType: 'JSONSchemaDraft4',
   };
 
   return {
@@ -19,7 +19,7 @@ export const getDataSchemaStackProps = (): SchemaStackProps => {
         schemaDescription: 'PayloadDataSucceeded data schema by bclconvertmanager',
         schemaLocation: path.join(
           __dirname,
-          docBase + '/bclconvertmanager/PayloadDataSucceeded.json'
+          docBase + '/bclconvertmanager/PayloadDataSucceeded.schema.json'
         ),
       },
       {
@@ -28,7 +28,7 @@ export const getDataSchemaStackProps = (): SchemaStackProps => {
         schemaDescription: 'PayloadDataReady data schema by bsshicav2fastqcopymanager',
         schemaLocation: path.join(
           __dirname,
-          docBase + '/bsshicav2fastqcopymanager/PayloadDataReady.json'
+          docBase + '/bsshicav2fastqcopymanager/PayloadDataReady.schema.json'
         ),
       },
       {
@@ -37,7 +37,7 @@ export const getDataSchemaStackProps = (): SchemaStackProps => {
         schemaDescription: 'PayloadDataSucceeded data schema by bsshicav2fastqcopymanager',
         schemaLocation: path.join(
           __dirname,
-          docBase + '/bsshicav2fastqcopymanager/PayloadDataSucceeded.json'
+          docBase + '/bsshicav2fastqcopymanager/PayloadDataSucceeded.schema.json'
         ),
       },
     ],
