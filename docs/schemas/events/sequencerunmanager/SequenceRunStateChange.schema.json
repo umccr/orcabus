@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/sequencerunmanager/SequenceRunStateChange.schema.json",
+  "description": "EventBridge custom event schema for orcabus.sequencerunmanager@SequenceRunStateChange",
+  "title": "AWSEvent",
+  "type": "object",
+  "required": [
+    "detail-type",
+    "detail",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "type": "string"
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "version": {
+      "type": "string"
+    },
+    "account": {
+      "type": "string"
+    },
+    "detail-type": {
+      "type": "string"
+    },
+    "detail": {
+      "$ref": "#/definitions/SequenceRunStateChange"
+    }
+  },
+  "definitions": {
+    "SequenceRunStateChange": {
+      "type": "object",
+      "required": [
+        "id",
+        "instrumentRunId",
+        "runVolumeName",
+        "runFolderPath",
+        "runDataUri",
+        "sampleSheetName",
+        "startTime",
+        "endTime",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "instrumentRunId": {
+          "type": "string"
+        },
+        "runVolumeName": {
+          "type": "string"
+        },
+        "runFolderPath": {
+          "type": "string"
+        },
+        "runDataUri": {
+          "type": "string"
+        },
+        "sampleSheetName": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
