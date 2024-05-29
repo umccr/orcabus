@@ -249,7 +249,7 @@ def get_fastq_list_paths_from_bssh_output_and_fastq_list_csv(
     )
 
     # Update the fastqs to contain the full path
-    fastq_list_pd["Read1FileURISrc"] = fastq_list_pd.apply(
+    fastq_list_pd["Read1FileUriSrc"] = fastq_list_pd.apply(
         lambda row: convert_project_id_and_data_path_to_icav2_uri(
             project_id,
             run_output_path / row["sample_prefix"] / row["Read1File"],
@@ -258,7 +258,7 @@ def get_fastq_list_paths_from_bssh_output_and_fastq_list_csv(
         axis="columns"
     )
 
-    fastq_list_pd["Read2FileURISrc"] = fastq_list_pd.apply(
+    fastq_list_pd["Read2FileUriSrc"] = fastq_list_pd.apply(
         lambda row: convert_project_id_and_data_path_to_icav2_uri(
             project_id,
             run_output_path / row["sample_prefix"] / row["Read2File"],

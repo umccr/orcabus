@@ -99,6 +99,10 @@ The scotch pipeline is triggerd by a WorkflowRunStateChange success event by the
 
 We can emulate this event with the following code
 
+<details>
+
+<summary>Click to expand!</summary>
+
 ```shell
 data_json="$(
   jq --null-input --raw-output \
@@ -170,3 +174,42 @@ event_entry="$(
   
 aws events put-events --cli-input-json "${event_entry}"
 ```
+
+</details>
+
+## Output of Scotch Event. 
+
+After going through parts 1 - 4, part 4 will trigger an event like the following - 
+
+This is picked up by the BSSHFastqCopy manager to copy of the BSSH Fastqs to our project. 
+
+<details>
+
+<summary>Click to expand!</summary>
+
+```json
+{
+  "DetailType": "WorkflowRunStateChange",
+  "EventBusName": "OrcaBusMain",
+  "Source": "orcabus.workflowmanager",
+  "Detail": {
+    "portalRunId": "20240528da604011",
+    "timestamp": "2024-05-28T22:51:22Z",
+    "status": "ready",
+    "workflowName": "bsshFastqCopy",
+    "workflowVersion": "2024.05.24",
+    "payload": {
+      "refId": "018fc166-a8d2-772a-92e2-1668ee1034d7",
+      "version": "2024.05.24",
+      "data": {
+        "outputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/240229_A00130_0288_BH5HM2DSXC/20240528da604011/",
+        "analysisId": "01bd501f-dde6-42b5-b281-5de60e43e1d7",
+        "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
+        "projectId": "b23fb516-d852-4985-adcc-831c12e8cd22"
+      }
+    }
+  }
+}
+```
+
+</details>

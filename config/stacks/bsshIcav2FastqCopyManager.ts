@@ -13,9 +13,6 @@ export const getBsshIcav2FastqCopyManagerStackProps = (
 ): BsshIcav2FastqCopyManagerConfig => {
   return {
     icav2CopyBatchUtilityStateMachineName: bsshFastqCopyManagerSfnName,
-    bsshIcav2FastqCopyManagerStateMachineName: bsshFastqCopyManagerSfnName,
-    bsshIcav2FastqCopyManagerStateMachineNameSsmParameterPath: bsshFastqCopyManagerSSMName,
-    bsshIcav2FastqCopyManagerStateMachineArnSsmParameterPath: bsshFastqCopyManagerSSMArn,
     eventBusName: eventBusName,
     icav2JwtSecretsManagerPath: icav2AccessTokenSecretName[stage],
   };
