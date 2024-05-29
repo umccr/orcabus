@@ -185,7 +185,7 @@ pub fn ingest_bench_elements(
                                 FlatS3EventMessages(batch).sort_and_dedup(),
                             ));
 
-                            if function_name == "v2" {
+                            if function_name.contains("v2") {
                                 ingester.ingest_events_v2(events).await.unwrap();
                             } else {
                                 ingester.ingest(events).await.unwrap();
@@ -306,7 +306,7 @@ pub fn ingest_bench_database(c: &mut Criterion) {
     let runtime = Runtime::new().expect("failed to create tokio runtime");
     let pool = database_pool(&runtime);
 
-    ingest_bench_elements(c, 1000, &runtime, &pool, 200, 20);
+    ingest_bench_elements(c, 1000, &runtime, &pool, 300, 50);
 }
 
 criterion_group!(benches, ingest_bench_database);
