@@ -5,7 +5,7 @@ import path from 'path';
 export const getEventSchemaStackProps = (): SchemaStackProps => {
   const docBase: string = '../../../docs/schemas/events';
   const defaultProps = {
-    schemaType: 'OpenApi3',
+    schemaType: 'JSONSchemaDraft4',
   };
 
   return {
@@ -19,7 +19,7 @@ export const getEventSchemaStackProps = (): SchemaStackProps => {
         schemaDescription: 'State change event for sequencing run by SequenceRunManager',
         schemaLocation: path.join(
           __dirname,
-          docBase + '/sequencerunmanager/SequenceRunStateChange.json'
+          docBase + '/sequencerunmanager/SequenceRunStateChange.schema.json'
         ),
       },
       {
@@ -28,7 +28,7 @@ export const getEventSchemaStackProps = (): SchemaStackProps => {
         schemaDescription: 'State change event for workflow run by WorkflowManager',
         schemaLocation: path.join(
           __dirname,
-          docBase + '/workflowmanager/WorkflowRunStateChange.json'
+          docBase + '/workflowmanager/WorkflowRunStateChange.schema.json'
         ),
       },
       {
@@ -37,7 +37,7 @@ export const getEventSchemaStackProps = (): SchemaStackProps => {
         schemaDescription: 'State change event for workflow run by workflow execution services',
         schemaLocation: path.join(
           __dirname,
-          docBase + '/executionservice/WorkflowRunStateChange.json'
+          docBase + '/executionservice/WorkflowRunStateChange.schema.json'
         ),
       },
     ],

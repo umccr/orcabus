@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/bclconvertmanager/PayloadDataSucceeded.schema.json",
+  "description": "Data schema for orcabus.bclconvertmanager@PayloadDataSucceeded",
+  "title": "PayloadDataSucceeded",
+  "type": "object",
+  "required": [
+    "projectId",
+    "analysisId",
+    "userReference",
+    "timeCreated",
+    "timeModified",
+    "pipelineId",
+    "pipelineCode",
+    "pipelineDescription",
+    "pipelineUrn",
+    "instrumentRunId",
+    "basespaceRunId",
+    "samplesheetB64gz"
+  ],
+  "properties": {
+    "projectId": {
+      "type": "string"
+    },
+    "analysisId": {
+      "type": "string"
+    },
+    "userReference": {
+      "type": "string"
+    },
+    "timeCreated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "timeModified": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "pipelineId": {
+      "type": "string"
+    },
+    "pipelineCode": {
+      "type": "string"
+    },
+    "pipelineDescription": {
+      "type": "string"
+    },
+    "pipelineUrn": {
+      "type": "string"
+    },
+    "instrumentRunId": {
+      "type": "string"
+    },
+    "basespaceRunId": {
+      "type": "string"
+    },
+    "samplesheetB64gz": {
+      "type": "string"
+    }
+  }
+}

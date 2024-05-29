@@ -13,7 +13,7 @@ def handler(event, context):
     """event will be a workflowmanager.WorkflowRunStateChange event"""
     print(f"Processing {event}, {context}")
     
-    input_event: wfm.AWSEvent = wfm.Marshaller.unmarshall(event)
+    input_event: wfm.AWSEvent = wfm.Marshaller.unmarshall(event, wfm.AWSEvent)
     input_wrsc: wfm.WorkflowRunStateChange = input_event.detail
     
     ## Trigger signal is the announcement from the workflowmanager that the bclconvert workflow run has succeeded
