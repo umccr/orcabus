@@ -18,9 +18,9 @@ import {
 import { getEventSchemaStackProps } from './stacks/schema/events';
 import { getDataSchemaStackProps } from './stacks/schema/data';
 import {
-  getIcav2EventTranslatorTableStackProps,
-  getIcav2EventTranslatorStackProps,
-} from './stacks/icav2EventTranslator';
+  getBclConvertManagerTableStackProps,
+  getBclConvertManagerStackProps,
+} from './stacks/bclConvertManager';
 import { getWorkflowManagerStackProps } from './stacks/workflowRunManager';
 
 interface EnvironmentConfig {
@@ -52,7 +52,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
-            icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
+            BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -65,7 +65,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
-            icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
             workflowManagerStackProps: getWorkflowManagerStackProps(),
           },
         },
@@ -82,7 +82,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
-            icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
+            BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -95,7 +95,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
-            icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
             workflowManagerStackProps: getWorkflowManagerStackProps(),
           },
         },
@@ -112,7 +112,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
-            icav2EventTranslatorTableStackProps: getIcav2EventTranslatorTableStackProps(stage),
+            BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -125,7 +125,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
-            icav2EventTranslatorStackProps: getIcav2EventTranslatorStackProps(),
+            bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
             workflowManagerStackProps: getWorkflowManagerStackProps(),
           },
         },
