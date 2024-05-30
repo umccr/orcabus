@@ -1,6 +1,6 @@
 # BclConvert Manager DynamoDB Tables
 
-### ICAv2 Event Translator DynamoDB Table
+## BclConvert Manager Translator Table
 
 This table will record event translator process in BclConvert Manager.
 
