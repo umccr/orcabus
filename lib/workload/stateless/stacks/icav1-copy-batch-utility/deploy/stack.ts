@@ -79,8 +79,24 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
     });
 
+    // ICA v1 creds rotator
+    const ica_v1_creds_lambda = new PythonFunction(this, 'ICAv1 credentials lambda', {
+      entry: path.join(__dirname, '../lambdas'),
+      runtime: Runtime.PYTHON_3_12,
+      role: lambdaRole,
+      environment: {
+        ica_v1_aws_access_key_id: props.Icav1AwsAccessKeyId,
+        ica_v1_aws_secret_access_key: props.Icav1AwsSecretAccessKey, //pragma: allowlist secret
+        ica_v1_aws_session_token: props.Icav1AwsSessionToken,
+      },
+      architecture: Architecture.ARM_64,
+      timeout: Duration.seconds(28),
+      index: 'ica_secret_rotator.py',
+      handler: 'handler',
+    });
+
     // S3 Batch Ops lambda
-    const lambda = new PythonFunction(this, 'ICAv1 Copy Batch Utility lambda', {
+    const s3_batch_ops_lambda = new PythonFunction(this, 'ICAv1 Copy Batch Utility lambda', {
       entry: path.join(__dirname, '../lambdas'),
       runtime: Runtime.PYTHON_3_12,
       role: lambdaRole,
@@ -97,7 +113,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       },
       architecture: Architecture.ARM_64,
       timeout: Duration.seconds(28),
-      index: 'lambda.py',
+      index: 's3_batch_ops_copier.py',
       handler: 'handler',
     });
 
@@ -126,7 +142,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
             new iam.PolicyStatement({
               actions: ['lambda:InvokeFunction'],
               resources: [
-                `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${lambda.functionName}*`,
+                `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${s3_batch_ops_lambda.functionName}*`,
               ],
               effect: iam.Effect.ALLOW,
             }),
