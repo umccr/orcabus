@@ -3,7 +3,7 @@ import { RemovalPolicy } from 'aws-cdk-lib';
 import { BclConvertTableStackProps } from '../../lib/workload/stateful/stacks/bclconvert-dynamo-db/deploy/stack';
 import { BclConvertManagerStackProps } from '../../lib/workload/stateless/stacks/bclconvert-manager/deploy/stack';
 
-const dynamodbTableName = 'IcaEventTranslatorTable';
+const dynamodbTableName = 'BclConvertManagerTranslatorTable';
 
 export const getBclConvertManagerTableStackProps = (stage: AppStage): BclConvertTableStackProps => {
   return {
