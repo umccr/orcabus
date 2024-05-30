@@ -93,7 +93,7 @@ The AWS lambda functions put translated event following  ```WorkflowRunStateChan
     "portalRunId": '20xxxxxxxxxx',
     "executionId": "valid_payload_id",
     "timestamp": "2024-00-25T00:07:00Z",
-    "status": "INPROGRESS"
+    "status": "INPROGRESS",
     "workflowName": "BclConvert",
     "workflowVersion": "4.2.7",
     "workflowRunName": "123456_A1234_0000_TestingPattern",
@@ -121,7 +121,6 @@ The AWS lambda functions put translated event following  ```WorkflowRunStateChan
     "workflowVersion": "4.2.7",
     "workflowRunName": "540424_A01001_0193_BBBBMMDRX5_c754de_bd822f",
     "payload": {
-      "refId": null,
       "version": "0.1.0",
       "data": {
         "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
@@ -172,7 +171,7 @@ Send the orignal input and orcabus event after translation to the dynamo db for 
 
 Dynamodb format:
 | id | id_type | analysis_id | analysis_status | portal_run_id | db_uuid | original_external_event | translated_internal_ica_event | timestamp |
-| -------- | ---- | ------- | ------- | ---- | ------- | ------- | ------- |------- | 
+| -------- | ---- | ------- | ------- | ---- | ------- | ------- | ------- |------- |
 | 20xxxxxxxxxx | portal_run_id | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | | | 4xxxxx-4xxxx-4xxx-4xxx-4xxxxx | | | |
 | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | analysis_id |  |   | 20xxxxxxxxxx | 4xxxxx-4xxxx-4xxx-4xxx-4xxxxx | | | |
 | 1xxxxx-1xxxx-1xxx-1xxx-1xxxxx | db_uuid | dxxxxx-6xxxx-fxxx-1xxx-5xxxxx | INITIALIZING | 20xxxxxxxxxx | | {"correlationId": "",...} | {'portal_run_id': "",...} | 2024-01-01T00:11:35Z |
