@@ -38,36 +38,10 @@
             "Variable": "$.portal_run_id_in_db_step.db_response.Item",
             "IsPresent": true
           },
-          "Next": "Generate the DB UUiD"
+          "Next": "Add Technical Tags"
         }
       ],
       "Default": "Get PortalRunId DataBase Entry"
-    },
-    "Generate the DB UUiD": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "${__generate_db_uuid_lambda_function_arn__}",
-        "Payload": {}
-      },
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "Lambda.TooManyRequestsException"
-          ],
-          "IntervalSeconds": 1,
-          "MaxAttempts": 3,
-          "BackoffRate": 2
-        }
-      ],
-      "ResultSelector": {
-        "db_uuid.$": "$.Payload.db_uuid"
-      },
-      "ResultPath": "$.create_db_uuid_step",
-      "Next": "Add Technical Tags"
     },
     "Add Technical Tags": {
       "Type": "Pass",
@@ -93,7 +67,7 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Item": {
-                  "id.$": "$.create_db_uuid_step.db_uuid",
+                  "id.$": "$.workflow_inputs.payload.refId",
                   "id_type": "db_uuid",
                   "portal_run_id": {
                     "S.$": "$.workflow_inputs.portalRunId"
@@ -142,6 +116,27 @@
           }
         },
         {
+          "StartAt": "Put Workflow Run Name Key Item",
+          "States": {
+            "Put Workflow Run Name Key Item": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "id.$": "$.workflow_inputs.workflowRunName",
+                  "id_type": "workflow_run_name",
+                  "db_uuid": {
+                    "S.$": "$.workflow_inputs.payload.refId"
+                  }
+                }
+              },
+              "End": true,
+              "ResultPath": "$.dynamo_db_put_item_step"
+            }
+          }
+        },
+        {
           "StartAt": "Put Portal Partition Key Item",
           "States": {
             "Put Portal Partition Key Item": {
@@ -153,10 +148,7 @@
                   "id.$": "$.workflow_inputs.portalRunId",
                   "id_type": "portal_run_id",
                   "db_uuid": {
-                    "S.$": "$.create_db_uuid_step.db_uuid"
-                  },
-                  "analysis_status": {
-                    "S": "PRE_LAUNCH"
+                    "S.$": "$.workflow_inputs.payload.refId"
                   }
                 }
               },
@@ -174,10 +166,10 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Item": {
-                  "id.$": "$.create_db_uuid_step.db_uuid",
+                  "id.$": "$.workflow_inputs.payload.refId",
                   "id_type": "event_logger",
                   "db_uuid": {
-                    "S.$": "$.create_db_uuid_step.db_uuid"
+                    "S.$": "$.workflow_inputs.payload.refId"
                   },
                   "event_timestamp_list": {
                     "L": [
@@ -220,7 +212,7 @@
               "Parameters": {
                 "StateMachineArn": "${__set_input_json_state_machine_arn__}",
                 "Input": {
-                  "db_uuid.$": "$.create_db_uuid_step.db_uuid"
+                  "db_uuid.$": "$.workflow_inputs.payload.refId"
                 }
               },
               "ResultPath": "$.set_input_json_sfn_step",
@@ -269,7 +261,7 @@
                 "TableName": "${__table_name__}",
                 "Key": {
                   "id": {
-                    "S.$": "$.create_db_uuid_step.db_uuid"
+                    "S.$": "$.workflow_inputs.payload.refId"
                   },
                   "id_type": "db_uuid"
                 },
@@ -300,7 +292,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.create_db_uuid_step.db_uuid",
+          "id.$": "$.workflow_inputs.payload.refId",
           "id_type": "db_uuid"
         }
       },
@@ -381,7 +373,7 @@
                 "TableName": "${__table_name__}",
                 "Key": {
                   "id": {
-                    "S.$": "$.create_db_uuid_step.db_uuid"
+                    "S.$": "$.workflow_inputs.payload.refId"
                   },
                   "id_type": "db_uuid"
                 },
@@ -418,7 +410,7 @@
                   "id.$": "$.launch_nextflow_object_step.analysis_id",
                   "id_type": "icav2_analysis_id",
                   "db_uuid": {
-                    "S.$": "$.create_db_uuid_step.db_uuid"
+                    "S.$": "$.workflow_inputs.payload.refId"
                   }
                 }
               },
@@ -470,6 +462,7 @@
         "status.$": "$.Item.analysis_status.S",
         "workflowName": "${__workflow_type__}",
         "workflowVersion": "${__workflow_version__}",
+        "workflowRunName.$": "$.Item.workflow_run_name.S",
         "payload": {
           "refId": null,
           "version": "${__service_version__}",

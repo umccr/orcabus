@@ -157,7 +157,7 @@
         "status.$": "$.Item.analysis_status.S",
         "workflowName": "${__workflow_type__}",
         "workflowVersion": "${__workflow_version__}",
-        "workflowRunName": "$.Item.workflow_run_name.S",
+        "workflowRunName.$": "$.Item.workflow_run_name.S",
         "payload": {
           "refId": null,
           "version": "${__service_version__}",

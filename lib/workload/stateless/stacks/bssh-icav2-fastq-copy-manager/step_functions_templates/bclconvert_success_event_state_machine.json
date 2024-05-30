@@ -70,6 +70,7 @@
       "Parameters": {
         "workflow_detail": {
           "status": "succeeded",
+          "timestamp.$": "$$.State.EnteredTime",
           "portalRunId.$": "$.workflow_inputs.portalRunId",
           "workflowName": "${__workflow_name__}",
           "workflowVersion": "${__workflow_version__}",

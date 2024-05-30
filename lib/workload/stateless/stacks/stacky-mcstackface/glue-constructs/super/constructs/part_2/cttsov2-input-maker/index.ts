@@ -26,16 +26,14 @@ Output Event status: `ready`
     * cacheUri
     * projectId
     * userReference
-
-
-
 */
 
 export interface cttsov2InputMakerConstructProps {
   tableObj: dynamodb.ITableV2;
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
-  outputUriPrefixSsmParameterObj: ssm.IStringParameter;
-  cacheUriPrefixSsmParameterObj: ssm.IStringParameter;
+  outputUriSsmParameterObj: ssm.IStringParameter;
+  logsUriSsmParameterObj: ssm.IStringParameter;
+  cacheUriSsmParameterObj: ssm.IStringParameter;
   eventBusObj: events.IEventBus;
 }
 
@@ -44,8 +42,8 @@ export class cttsov2InputMakerConstruct extends Construct {
     prefix: 'cttsov2InputMaker',
     tablePartition: 'cttso_v2',
     triggerSource: 'orcabus.cttsov2inputeventglue',
-    triggerStatus: 'awaitinginput',
-    triggerDetailType: 'WorkflowRunStateChange',
+    triggerStatus: 'draft',
+    triggerDetailType: 'WorkflowDraftRunStateChange',
     triggerWorkflowName: 'cttsov2',
     outputSource: 'orcabus.cttsov2inputeventglue',
     outputStatus: 'ready',
@@ -57,18 +55,20 @@ export class cttsov2InputMakerConstruct extends Construct {
   constructor(scope: Construct, id: string, props: cttsov2InputMakerConstructProps) {
     super(scope, id);
     /*
-        Part 1: Build the internal sfn
-        */
+    Part 1: Build the internal sfn
+    */
     const inputMakerSfn = new sfn.StateMachine(this, 'cttsov2_input_maker', {
+      stateMachineName: `${this.cttsov2InputMakerEventMap.prefix}-input-maker-glue-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(__dirname, 'step_function_templates', 'generate_cttsov2_event_maker.asl.json')
       ),
       definitionSubstitutions: {
         __table_name__: props.tableObj.tableName,
         __input_maker_type__: this.cttsov2InputMakerEventMap.tablePartition,
-        __cttsov2_output_uri_ssm_parameter_name__:
-          props.outputUriPrefixSsmParameterObj.parameterName,
-        __cttsov2_cache_uri_ssm_parameter_name__: props.cacheUriPrefixSsmParameterObj.parameterName,
+        __analysis_logs_uri_ssm_parameter_name__: props.logsUriSsmParameterObj.parameterName,
+        __analysis_output_uri_ssm_parameter_name__:
+          props.outputUriSsmParameterObj.parameterName,
+        __analysis_cache_uri_ssm_parameter_name__: props.cacheUriSsmParameterObj.parameterName,
         __icav2_project_id_and_name_ssm_parameter_name__:
           props.icav2ProjectIdSsmParameterObj.parameterName,
       },
@@ -78,37 +78,38 @@ export class cttsov2InputMakerConstruct extends Construct {
     Part 2: Grant the internal sfn permissions to access the ssm parametera
     */
     [
-      props.outputUriPrefixSsmParameterObj,
+      props.outputUriSsmParameterObj,
       props.icav2ProjectIdSsmParameterObj,
-      props.cacheUriPrefixSsmParameterObj,
+      props.cacheUriSsmParameterObj,
+      props.logsUriSsmParameterObj,
     ].forEach((ssmParameterObj) => {
       ssmParameterObj.grantRead(inputMakerSfn.role);
     });
 
     /*
-        Part 3: Build the external sfn
-        */
+    Part 3: Build the external sfn
+    */
     new WorkflowRunStateChangeInternalInputMakerConstruct(
       this,
       'bssh_fastq_copy_manager_input_maker_external',
       {
         /*
-                Set Input StateMachine Object
-                */
+        Set Input StateMachine Object
+        */
         inputStateMachineObj: inputMakerSfn,
         lambdaPrefix: this.cttsov2InputMakerEventMap.prefix,
         payloadVersion: this.cttsov2InputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.cttsov2InputMakerEventMap.prefix,
 
         /*
-                Table objects
-                */
+        Table objects
+        */
         tableObj: props.tableObj,
         tablePartitionName: this.cttsov2InputMakerEventMap.tablePartition,
 
         /*
-                Event Triggers
-                */
+        Event Triggers
+        */
         eventBusObj: props.eventBusObj,
         triggerSource: this.cttsov2InputMakerEventMap.triggerSource,
         triggerStatus: this.cttsov2InputMakerEventMap.triggerStatus,

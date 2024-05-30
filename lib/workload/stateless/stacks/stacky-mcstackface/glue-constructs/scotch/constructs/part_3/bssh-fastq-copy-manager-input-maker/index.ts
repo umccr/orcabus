@@ -54,7 +54,7 @@ export class bsshFastqCopyManagerInputMakerConstruct extends Construct {
     Part 1: Build the internal sfn
     */
     const inputMakerSfn = new sfn.StateMachine(this, 'bssh_fastq_copy_manager_input_maker', {
-      stateMachineName: `${this.bsshFastqCopyManagerInputMakerEventMap.prefix}-input-maker-internal-sfn`,
+      stateMachineName: `${this.bsshFastqCopyManagerInputMakerEventMap.prefix}-input-maker-glue`,
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,

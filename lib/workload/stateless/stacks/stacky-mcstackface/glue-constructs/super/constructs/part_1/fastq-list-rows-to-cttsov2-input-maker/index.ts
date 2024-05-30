@@ -44,17 +44,17 @@ export interface fastqListRowsToCttsov2InputMakerConstructProps {
 
 export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
   public readonly fastqListRowsTocttsov2InputMakerEventMap = {
-    prefix: 'cttsov2InputMakerScatter',
+    prefix: 'superCttsov2InputMakerScatter',
     localTablePartition: 'fastqlistrows_to_cttsov2',
     samplesheetTablePartitionName: 'samplesheet_by_instrument_run',
     fastqListRowTablePartitionName: 'fastqlistrows_by_instrument_run',
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'fastqlistrowregistered',
-    triggerDetailType: 'LibraryStateChange',
+    triggerDetailType: 'InstrumentRunStateChange',
     triggerWorkflowName: 'bclconvert_interop_qc',
-    outputDetailType: 'WorkflowRunStateChange',
+    outputDetailType: 'WorkflowDraftRunStateChange',
     outputSource: 'orcabus.cttsov2inputeventglue',
-    outputStatus: 'awaitinginput',
+    outputStatus: 'draft',
     payloadVersion: '2024.05.24',
     workflowName: 'cttsov2',
     workflowVersion: '2.1.1',
@@ -64,8 +64,8 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
     super(scope, id);
 
     /*
-        Part 1: Build the lambdas
-        */
+    Part 1: Build the lambdas
+    */
 
     // Translate the libraryrunstatechange event
     const libraryrunstatechange_lambda_obj = new PythonFunction(
@@ -111,6 +111,7 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
         Part 2: Build the sfn
         */
     const inputMakerScatterSfn = new sfn.StateMachine(this, 'cttsov2_inputs_generator', {
+      stateMachineName: `${this.fastqListRowsTocttsov2InputMakerEventMap.prefix}-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,
@@ -160,8 +161,8 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
     props.eventBusObj.grantPutEventsTo(inputMakerScatterSfn.role);
 
     /*
-        Part 3: Create rule to trigger this event
-        */
+    Part 3: Create rule to trigger this event
+    */
     const eventRule = new events.Rule(
       this,
       'scatter_cttsov2_input_maker_jobs_on_new_fastq_list_rows',

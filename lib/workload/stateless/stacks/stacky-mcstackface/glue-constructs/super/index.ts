@@ -7,8 +7,7 @@ import { cttsov2InputMakerConstruct } from './constructs/part_2/cttsov2-input-ma
 import { cttsov2ManagerReadyEventHandlerConstruct } from './constructs/part_3/cttsov2-ready-event-handler';
 
 /*
-Provide the glue to get from the bclconvertmanager success event
-To triggering the bsshFastqCopyManager
+Provide the glue to get from the bssh fastq copy manager to submitting cttsov2 analyses
 */
 
 export interface cttsov2GlueHandlerConstructProps {
@@ -16,8 +15,9 @@ export interface cttsov2GlueHandlerConstructProps {
   instrumentRunTableObj: dynamodb.ITableV2;
   inputMakerTableObj: dynamodb.ITableV2;
   workflowManagerTableObj: dynamodb.ITableV2;
-  cttsov2OutputUriPrefixSsmParameterObj: ssm.IStringParameter;
-  cttsov2CacheUriPrefixSsmParameterObj: ssm.IStringParameter;
+  analysisOutputUriSsmParameterObj: ssm.IStringParameter;
+  analysisLogsUriSsmParameterObj: ssm.IStringParameter;
+  analysisCacheUriSsmParameterObj: ssm.IStringParameter;
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
 }
 
@@ -32,8 +32,8 @@ export class cttsov2GlueHandlerConstruct extends Construct {
         Input Event status: `fastqlistrowregistered`
 
         Output Event source: `orcabus.cttsov2inputeventglue`
-        Output Event DetailType: `WorkflowRunStateChange`
-        Output Event status: `awaitinginput`
+        Output Event DetailType: `WorkflowRunDraftStateChange`
+        Output Event status: `draft`
 
        */
     const fastqListRowsToctTSOv2InputMaker = new fastqListRowsToCttsov2InputMakerConstruct(
@@ -42,7 +42,7 @@ export class cttsov2GlueHandlerConstruct extends Construct {
       {
         icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
         instrumentRunTableObj: props.instrumentRunTableObj,
-        outputUriPrefixSsmParameterObj: props.cttsov2OutputUriPrefixSsmParameterObj,
+        outputUriPrefixSsmParameterObj: props.analysisOutputUriSsmParameterObj,
         eventBusObj: props.eventBusObj,
         tableObj: props.inputMakerTableObj,
       }
@@ -52,8 +52,8 @@ export class cttsov2GlueHandlerConstruct extends Construct {
         Part 2
 
         Input Event source: `orcabus.cttsov2inputeventglue`
-        Input Event DetailType: `WorkflowRunStateChange`
-        Input Event status: `awaitinginput`
+        Input Event DetailType: `WorkflowRunDraftStateChange`
+        Input Event status: `draft`
 
         Output Event source: `orcabus.cttsov2inputeventglue`
         Output Event DetailType: `WorkflowRunStateChange`
@@ -67,9 +67,10 @@ export class cttsov2GlueHandlerConstruct extends Construct {
         */
 
     const ctTSOv2InputMaker = new cttsov2InputMakerConstruct(this, 'cttso_v2_input_maker', {
-      cacheUriPrefixSsmParameterObj: props.cttsov2CacheUriPrefixSsmParameterObj,
+      cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
-      outputUriPrefixSsmParameterObj: props.cttsov2OutputUriPrefixSsmParameterObj,
+      outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+      logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
       eventBusObj: props.eventBusObj,
       tableObj: props.instrumentRunTableObj,
     });

@@ -3,8 +3,8 @@ data_json="$(
     '
       {
         "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-        "fastqListRowsB64gz": "H4sIAF2wVmYC/9Wb7WvcRhDG/xVzn2OdtC96ybfNhmwKzpdoC4FShGpfwoEdUqcU2tL/vTO6y8aNnltz92kWbN8gGfthfszsPKvVL/9s3oefXm9eXm2CczH6EKsYXQyOgmbz4opuj+/49o0ydd3U6nDt5tWP127mzzu61vDt3XzXvNnf735+3POv7W/nP9XL7bazg931H9W1Vnf62tx27fWslbm+befe3s27vvvNbvf3D5+nL4/7h/nxry39faWGydF/0fVUq76fXr21b9+p1+MHv1U13beqv5vb2tRNsx3nhy/3u69b1jI122/yUjCNzXRD0fS+meij+jh//eP36tPfm6NoJVu0+r/of19cPaXH/EKIzC94+vLBIYJ2WBM8XBNL0A4pmEZVCEEoOkeQAIbgnfO+8t5F+oouIIJtvSZ4uCaWYFunYBp1IQSh6BzBJ9iewEQEG0CwkU3wezCNphSCSHS+i0bmxq0zMM1AfRTXIFgHW9nrYKtSMI22FIJIdLaLLmtgcD5SDdLHghMS1ICglk1Qp2Aa21IIItE5gjR9ctX5yOtgpBbKECFBAwga2QRNCqaxK4UgEp0lGIkbdU/n2UsQvZOTTAsItrIJtimYxr4Ugkj0M1300Dg9m0KqwUqt6Q12Te9w7UhPiaH3bRUZbAqmceBEKLn0sqKz9Lht0ihD/ZMaKVtCRA/U3tDKptemgExxXQo+qDo7hUai5sLSPePiIRC/DvDrZPPrUkCZaErhB1Vn1z8faMGLgX08fXpUf0qvPeDxmlR+JC8FlAlVBr8TqrP1x8VH3MgDOq5ED/n1gF8vm1+fAsqELoUfVP2cB2TzXtHaR90z4vobAL9BNr8hBZQJUwo/qDpbfzx10o+K1j6aXuD6R99rfqYWzc/UKaBM2EL4YdXnuQd9gXvQYvjpk4O4losvK/o896AvcA8C6a3n8BLwQdXnuQd9gXsQyG89h5fAD6o+zz3oC9yDOH5oDpfP74Tq89yDvsA9COS3nsNL4AdVn+ce9AXuQSC/9RxeAj+o+jz3oC9wD/L4gTm8AH5YdX7+DFx1PHgeAdIgUxnw9Ag4iPapgzBiGKYnaDYFlI3laaiRyzCv+pkaPCx9/CTXcQD4DeAUzNCI5jc0KaBMdIXww6rP8xDmAg8hkN96Gi+BH1SdPYkW+RgMeXguQo4hvx7w62Xz61NAmehL4QdV5+svsvuL7CGWc9mAnzLAAxrR/ZPkpYAyMZTB74Tq/AyzVJ2v0lYo4qcAPyWbX9oUVtOo6lL4QdX5s9iR34Vwywk0z5uhiB/wgGaQzW9IAWWiKYUfVJ0/x8sV6Kl/Rr8cJkT8LPCAthbNz9YpoEyoQvhh1Xn/4P1xD3Sx87D+LFj/rOz1zzYpoEzoUvhB1dk97OXktednSMtudoD8wPpnZa9/VqWAMmFK4QdVZ/0Dv8hC7Gh+4TcivIP8NOCnZfPTKaBM2FL4QdV5/8f2PbqKjcTyDBfxM4Cfkc3ve0CZaEvhB1U/8x4SNU5qm46LjwBCfhbws7L52RRQJrpS+EHVWf/Ab614nl+WR0kn1r8W8Gtl82tTQJnoS+EHVef3X8Ly7KGKyyCK/Z/tAL9ONr8uBZSJUvZfsOof+f36H1n1Xz7MQAAA",
-	"outputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/240229_A00130_0288_BH5HM2DSXC/20240528da604011/"
+        "fastqListRowsB64gz": "H4sIAAxnWGYC/9WbW2vcSBCF/4qZ51gj9UWXvHU6bCfgvES9EFgWodjjxZCExAmBZNn/vlWaSceJzrSZeaoG21NIxj7UR1XXabX++nfzOrx8vnl6sQnOxehDrGJ0MTgKms2TC7o9vuLbV8rUdVOr/bWrZ79fu5o/7Ohaw7d3803zx9273Z/3d/xrd9fzV/V0u+3sYHf9rbrU6kZfmuuuvZy1MpfX7dzbm3nXd2/t9uP93fv5/tt0M3+Zt/T3lRomR/9F11Ot+n569sK+eKWej2/8VtV03+pave2b7tbutuP8/uO73ecta5ma7Q95KZjGZrqiaHrdTPRR3c6fv3yq/vm+OYhWskWrX0X/9+TiIT3mF0JkfsHTlw8OEbTDmuD+mliCdkjBNKpCCELROYIEMATvnPeV9y7SV3QBEWzrNcH9NbEE2zoF06gLIQhF5wg+wPYAJiLYAIKNbII/g2k0pRBEovNdNDI3bp2BaQbqo7gGwTrYyl4HW5WCabSlEESis110WQOD85FqkD4WnJCgBgS1bII6BdPYlkIQic4RpOmTq85HXgcjtVCGCAkaQNDIJmhSMI1dKQSR6CzBSNyoezrPXoLoHZ1kWkCwlU2wTcE09qUQRKIf6aL7xunZFFINVmpNb7BrevtrB3pKDL0fq8hgUzCNAydCyaWXFZ2lx22TRhnqn9RI2RIieqD2hlY2vTYFZIrrUvBB1dkpNBI1F5buGRcPgfh1gF8nm1+XAspEUwo/qDq7/vlAC14M7OPp06P6U3rtAQ/XpPIjeSmgTKgy+B1Rna0/Lj7iRh7QcSV6yK8H/HrZ/PoUUCZ0Kfyg6sc8IJv3itY+6p4R198A+A2y+Q0poEyYUvhB1dn646mTflS09tH0Atc/+l7zM7VofqZOAWXCFsIPqz7NPegz3IMWw08fHcS1XHxZ0ae5B32GexBIbz2Hl4APqj7NPegz3INAfus5vAR+UPVp7kGf4R7E8UNzuHx+R1Sf5h70Ge5BIL/1HF4CP6j6NPegz3APAvmt5/AS+EHVp7kHfYZ7kMcPzOEF8MOq8/Nn4KrjwfMAkAaZyoCnR8BBtA8dhBHDMD1BsymgbCxPQ41chnnVj9TgfunjJ7mOA8BvAKdghkY0v6FJAWWiK4QfVn2ahzBneAiB/NbTeAn8oOrsSbTIx2DIw3MRcgz59YBfL5tfnwLKRF8KP6g6X3+R3V9kD7Gcywb8lAEe0IjunyQvBZSJoQx+R1TnZ5il6nyVtkIRPwX4Kdn80qawmkZVl8IPqs6fxY78LoRbTqB53gxF/IAHNINsfkMKKBNNKfyg6vw5Xq5AT/0z+uUwIeJngQe0tWh+tk4BZUIVwg+rzvsH7w97oIudh/VnwfpnZa9/tkkBZUKXwg+qzu5hLyevPT9DWnazA+QH1j8re/2zKgWUCVMKP6g66x/4RRZiR/MLvxHhHeSnAT8tm59OAWXClsIPqs77P7bv0VVsJJZnuIifAfyMbH4/A8pEWwo/qPqR95CocVLbdFx8BBDys4Cflc3PpoAy0ZXCD6rO+gd+a8Xz/LI8Sjqy/rWAXyubX5sCykRfCj+oOr//EpZnD1VcBlHs/2wH+HWy+XUpoEyUsv+CVf/O7+//AU/7iMPMQAAA",
+	      "outputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/"
       }
     ' \
 )"
@@ -21,15 +21,21 @@ payload_json="$(
     ' \
 )"
 
+portal_run_id="$(date +"%Y%m%d")$(xxd -l 4 -c 4 -p < /dev/random)"
+utc_time="$(date --utc --iso-8601=seconds | sed 's/+00:00/Z/')"
 detail_json="$(
   jq --null-input --raw-output \
     --argjson payload_json "${payload_json}" \
+    --arg utc_time "${utc_time}" \
+    --arg portal_run_id "${portal_run_id}" \
     '
       {
         "status": "succeeded",
+	"timestamp": $utc_time,
         "workflowName": "bsshFastqCopy",
         "workflowVersion": "1.0.0",
-        "portalRunId": "20240528da604011",
+	"workflowRunName": "umccr__orcabus__automated__240229_A00130_0288_BH5HM2DSXC__\($portal_run_id)",
+        "portalRunId": $portal_run_id,
         "payload":  $payload_json
       }
     ' \
@@ -37,7 +43,7 @@ detail_json="$(
 
 event_entry="$(
   jq --null-input --raw-output --compact-output \
-    --arg utc_time "$(date --utc --iso-8601=seconds | sed 's/+00:00/Z/')" \
+    --arg utc_time "${utc_time}" \
     --argjson input_detail "${detail_json}" \
     '
       {

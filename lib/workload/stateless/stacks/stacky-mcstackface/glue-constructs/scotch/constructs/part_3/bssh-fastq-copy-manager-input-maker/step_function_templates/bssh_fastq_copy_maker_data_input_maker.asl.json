@@ -23,9 +23,9 @@
         "event_data_input.$": "States.StringToJson($.Item.event_data_input.S)"
       },
       "ResultPath": "$.get_event_detail_payload_data_from_db_step",
-      "Next": "Get OutputUri Prefix for BSSH Fastq Copy Manager"
+      "Next": "Get OutputUri For bssh FASTQ Copy Manager"
     },
-    "Get OutputUri Prefix for BSSH Fastq Copy Manager": {
+    "Get OutputUri For bssh FASTQ Copy Manager": {
       "Type": "Task",
       "Parameters": {
         "Name": "${__bclconvert_output_uri_ssm_parameter_name__}"
@@ -33,9 +33,9 @@
       "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
       "Next": "Generate inputs for BsshFastqCopyManager",
       "ResultSelector": {
-        "output_uri_prefix.$": "$.Parameter.Value"
+        "output_uri.$": "$.Parameter.Value"
       },
-      "ResultPath": "$.get_output_uri_prefix_parameter_step"
+      "ResultPath": "$.get_output_uri_parameter_step"
     },
     "Generate inputs for BsshFastqCopyManager": {
       "Type": "Pass",
@@ -43,7 +43,7 @@
         "instrumentRunId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
         "bsshProjectId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.projectId",
         "bsshAnalysisId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.analysisId",
-        "outputUri.$": "States.Format('{}{}/__portal_run_id__/', $.get_output_uri_prefix_parameter_step.output_uri_prefix, $.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId)"
+        "outputUri.$": "$.get_output_uri_parameter_step.output_uri"
       },
       "ResultPath": "$.set_event_data_output",
       "Next": "Add event data outputs (local)"

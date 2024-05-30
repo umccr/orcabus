@@ -28,13 +28,14 @@ Output Event status: `complete`
 export interface BclconvertInteropqcInputMakerConstructProps {
   tableObj: dynamodb.ITableV2;
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
-  outputUriPrefixSsmParameterObj: ssm.IStringParameter;
+  analysisOutputUriSsmParameterObj: ssm.IStringParameter;
+  analysisLogsUriSsmParameterObj: ssm.IStringParameter;
   eventBusObj: events.IEventBus;
 }
 
 export class BclconvertInteropqcInputMakerConstruct extends Construct {
   public readonly bclconvertInteropqcInputMakerEventMap = {
-    prefix: 'bclconvertInteropqcInputMaker',
+    prefix: 'bclInterOpQCInputMaker',
     tablePartition: 'bclconvert_interop_qc',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
@@ -54,14 +55,16 @@ export class BclconvertInteropqcInputMakerConstruct extends Construct {
         Part 1: Build the internal sfn
         */
     const inputMakerSfn = new sfn.StateMachine(this, 'bclconvert_interopqc_input_maker', {
+      stateMachineName: `${this.bclconvertInteropqcInputMakerEventMap.prefix}-input-maker-glue`,
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(__dirname, 'step_function_templates', 'generate_interopqc_event_maker.asl.json')
       ),
       definitionSubstitutions: {
         __table_name__: props.tableObj.tableName,
         __input_maker_type__: this.bclconvertInteropqcInputMakerEventMap.tablePartition,
-        __bclconvert_interop_qc_output_uri_ssm_parameter_name__:
-          props.outputUriPrefixSsmParameterObj.parameterName,
+        __analysis_logs_uri_ssm_parameter_name__: props.analysisLogsUriSsmParameterObj.parameterName,
+        __analysis_output_uri_ssm_parameter_name__:
+          props.analysisOutputUriSsmParameterObj.parameterName,
         __icav2_project_id_and_name_ssm_parameter_name__:
           props.icav2ProjectIdSsmParameterObj.parameterName,
       },
@@ -72,7 +75,7 @@ export class BclconvertInteropqcInputMakerConstruct extends Construct {
     */
 
     // access the ssm parameter
-    [props.outputUriPrefixSsmParameterObj, props.icav2ProjectIdSsmParameterObj].forEach(
+    [props.analysisOutputUriSsmParameterObj, props.icav2ProjectIdSsmParameterObj, props.analysisLogsUriSsmParameterObj].forEach(
       (ssmParameterObj) => {
         ssmParameterObj.grantRead(inputMakerSfn.role);
       }

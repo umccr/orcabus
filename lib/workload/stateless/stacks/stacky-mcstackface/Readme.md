@@ -10,21 +10,6 @@ This Construct is known as Scotch. A stock-standard glue.
 
 > This will be all one construct
 
-### Construct A (part 1)
-
-Input Event Source: `orcabus.bclconvertmanager`
-Input Event DetailType: `WorkflowRunStateChange`
-Input Event status: `succeeded`
-
-Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `WorkflowRunStateChange`
-Output Event status: `complete`
-
-* The BCLConvertManagerEventHandler Construct
-  * This will be triggered by the completion event from the BCLConvertManager stack.
-  * Contains a standard workflow run statechange, and includes the samplesheet gz and the instrument run id
-  * Pushes a workflow run manager event saying that the BCLConvert Manager has complete.
-
 ### Construct A (part 2)
 
 Input Event Source: `orcabus.workflowmanager`

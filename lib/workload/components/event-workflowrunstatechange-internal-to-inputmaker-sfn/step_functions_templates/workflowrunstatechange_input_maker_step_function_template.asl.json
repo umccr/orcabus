@@ -76,7 +76,7 @@
     },
     "Get inputs for updating event detail output": {
       "Type": "Parallel",
-      "Next": "Update Portal Run ID in Event Detail Output",
+      "Next": "Update PlaceHolders in Event Data Output",
       "Branches": [
         {
           "StartAt": "Get event output item",
@@ -137,13 +137,16 @@
         "portal_run_id.$": "$.[1].get_portal_run_id_step.portal_run_id"
       }
     },
-    "Update Portal Run ID in Event Detail Output": {
+    "Update PlaceHolders in Event Data Output": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
         "FunctionName": "${__update_portal_run_id_in_event_detail_lambda_function_arn__}",
         "Payload": {
           "portal_run_id.$": "$.event_detail_outputs_parallel.portal_run_id",
+          "workflow_name": "${__workflow_name__}",
+          "workflow_version": "${__workflow_version__}",
+          "event_data_input.$": "$.input_event_detail.payload.data",
           "event_data_output.$": "$.event_detail_outputs_parallel.event_data_output"
         }
       },
@@ -164,7 +167,7 @@
       "ResultSelector": {
         "event_data_output_updated.$": "$.Payload.event_data_updated"
       },
-      "ResultPath": "$.update_event_step_detail_with_portal_run_id_step"
+      "ResultPath": "$.update_placeholders_in_event_data_output_step"
     },
     "Generate workflow run name": {
       "Type": "Task",
@@ -214,7 +217,7 @@
             "S.$": "$.generate_workflow_run_name_step.workflow_run_name"
           },
           ":event_data_output": {
-            "S.$": "States.JsonToString($.update_event_step_detail_with_portal_run_id_step.event_data_output_updated)"
+            "S.$": "States.JsonToString($.update_placeholders_in_event_data_output_step.event_data_output_updated)"
           }
         }
       },
@@ -255,7 +258,7 @@
             "DetailType": "${__detail_type__}",
             "Detail": {
               "portalRunId.$": "$.get_workflow_run_items.portal_run_id",
-              "timestamp.$": "$$.Execution.StartTime",
+              "timestamp.$": "$$.State.EnteredTime",
               "status": "ready",
               "workflowName": "${__workflow_name__}",
               "workflowVersion": "${__workflow_version__}",

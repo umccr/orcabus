@@ -21,10 +21,10 @@ export interface GlueConstructProps {
   workflowManagerTableObj: dynamodb.ITableV2;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
-  bsshOutputFastqCopyUriPrefixSsmParameterObj: ssm.IStringParameter;
-  bclconvertInteropQcUriPrefixSsmParameterObj: ssm.IStringParameter;
-  cttsov2OutputUriPrefixSsmParameterObj: ssm.IStringParameter;
-  cttsov2CacheUriPrefixSsmParameterObj: ssm.IStringParameter;
+  bsshOutputFastqCopyOutputUriSsmParameterObj: ssm.IStringParameter;
+  analysisOutputUriSsmParameterObj: ssm.IStringParameter;
+  analysisCacheUriSsmParameterObj: ssm.IStringParameter;
+  analysisLogsUriSsmParameterObj: ssm.IStringParameter;
 }
 
 export class GlueConstruct extends Construct {
@@ -42,7 +42,7 @@ export class GlueConstruct extends Construct {
       inputMakerTableObj: props.inputMakerTableObj,
       instrumentRunTableObj: props.instrumentRunTableObj,
       /* SSM Parameters */
-      bsshOutputFastqCopyUriPrefixSsmParameterObj: props.bsshOutputFastqCopyUriPrefixSsmParameterObj,
+      bsshOutputFastqCopyUriPrefixSsmParameterObj: props.bsshOutputFastqCopyOutputUriSsmParameterObj,
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj
     });
 
@@ -57,8 +57,10 @@ export class GlueConstruct extends Construct {
       inputMakerTableObj: props.inputMakerTableObj,
       instrumentRunTableObj: props.instrumentRunTableObj,
       /* SSM Parameters */
-      bclconvertInteropQcUriPrefixSsmParameterObj:
-        props.bclconvertInteropQcUriPrefixSsmParameterObj,
+      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+      analysisOutputUriSsmParameterObj:
+        props.analysisOutputUriSsmParameterObj,
+
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
     });
 
@@ -74,8 +76,9 @@ export class GlueConstruct extends Construct {
       instrumentRunTableObj: props.instrumentRunTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
-      cttsov2OutputUriPrefixSsmParameterObj: props.cttsov2OutputUriPrefixSsmParameterObj,
-      cttsov2CacheUriPrefixSsmParameterObj: props.cttsov2CacheUriPrefixSsmParameterObj,
+      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
     });
   }
 }
@@ -89,10 +92,10 @@ export interface GlueStackConfig {
   workflowManagerTableName: string;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterName: string;
-  bsshOutputFastqCopyUriPrefixSsmParameterName: string;
-  bclconvertInteropQcUriPrefixSsmParameterName: string;
-  cttsov2OutputUriPrefixSsmParameterName: string;
-  cttsov2CacheUriPrefixSsmParameterName: string;
+  bsshOutputFastqCopyUriSsmParameterName: string;
+  analysisCacheUriSsmParameterName: string;
+  analysisOutputUriSsmParameterName: string;
+  analysisLogsUriSsmParameterName: string;
 }
 
 export type GlueStackProps = GlueStackConfig & cdk.StackProps;
@@ -137,26 +140,29 @@ export class GlueStack extends cdk.Stack {
       'icav2ProjectIdSsmParameterObj',
       props.icav2ProjectIdSsmParameterName
     );
-    const bclconvertInteropQcUriPrefixSsmParameterObj = ssm.StringParameter.fromStringParameterName(
-      this,
-      'bclconvertInteropQcUriPrefixSsmParameterObj',
-      props.bclconvertInteropQcUriPrefixSsmParameterName
-    );
-    const cttsov2OutputUriPrefixSsmParameterObj = ssm.StringParameter.fromStringParameterName(
-      this,
-      'cttsov2OutputUriPrefixSsmParameterObj',
-      props.cttsov2OutputUriPrefixSsmParameterName
-    );
-    const cttsov2CacheUriPrefixSsmParameterObj = ssm.StringParameter.fromStringParameterName(
-      this,
-      'cttsov2CacheUriPrefixSsmParameterObj',
-      props.cttsov2CacheUriPrefixSsmParameterName
-    );
-    const bsshOutputFastqCopyUriPrefixSsmParameterObj = ssm.StringParameter.fromStringParameterName(
+    const bsshOutputFastqCopyUriSsmParameterObj = ssm.StringParameter.fromStringParameterName(
       this,
       'bsshOutputFastqCopyUriPrefixSsmParameterObj',
-      props.bsshOutputFastqCopyUriPrefixSsmParameterName
+      props.bsshOutputFastqCopyUriSsmParameterName
     );
+
+    const analysisCacheUriSsmParameterObj = ssm.StringParameter.fromStringParameterName(
+      this,
+      'analysisCacheUriPrefixSsmParameterObj',
+      props.analysisCacheUriSsmParameterName
+    );
+    const analysisOutputUriSsmParameterObj = ssm.StringParameter.fromStringParameterName(
+      this,
+      'analysisOutputUriPrefixSsmParameterObj',
+      props.analysisOutputUriSsmParameterName
+    );
+
+    const analysisLogsUriSsmParameterObj = ssm.StringParameter.fromStringParameterName(
+      this,
+      'analysisLogsUriPrefixSsmParameterObj',
+      props.analysisLogsUriSsmParameterName
+    );
+
 
     /*
         Call the construct        
@@ -167,10 +173,10 @@ export class GlueStack extends cdk.Stack {
       inputMakerTableObj: inputMakerTableObj,
       instrumentRunTableObj: instrumentRunTableObj,
       icav2ProjectIdSsmParameterObj: icav2ProjectIdSsmParameterObj,
-      bclconvertInteropQcUriPrefixSsmParameterObj: bclconvertInteropQcUriPrefixSsmParameterObj,
-      cttsov2OutputUriPrefixSsmParameterObj: cttsov2OutputUriPrefixSsmParameterObj,
-      cttsov2CacheUriPrefixSsmParameterObj: cttsov2CacheUriPrefixSsmParameterObj,
-      bsshOutputFastqCopyUriPrefixSsmParameterObj: bsshOutputFastqCopyUriPrefixSsmParameterObj,
+      bsshOutputFastqCopyOutputUriSsmParameterObj: bsshOutputFastqCopyUriSsmParameterObj,
+      analysisOutputUriSsmParameterObj: analysisOutputUriSsmParameterObj,
+      analysisCacheUriSsmParameterObj: analysisCacheUriSsmParameterObj,
+      analysisLogsUriSsmParameterObj: analysisLogsUriSsmParameterObj,
     });
   }
 }

@@ -17,7 +17,8 @@ export interface BclconvertManagerEventHandlerConstructProps {
   workflowManagerTableObj: dynamodb.ITableV2;
   instrumentRunTableObj: dynamodb.ITableV2;
   inputMakerTableObj: dynamodb.ITableV2;
-  bclconvertInteropQcUriPrefixSsmParameterObj: ssm.IStringParameter;
+  analysisLogsUriSsmParameterObj: ssm.IStringParameter;
+  analysisOutputUriSsmParameterObj: ssm.IStringParameter;
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
 }
 
@@ -96,7 +97,8 @@ export class BsshFastqCopyEventHandlerConstruct extends Construct {
       'bclconvert_interopqc_input_maker',
       {
         eventBusObj: props.eventBusObj,
-        outputUriPrefixSsmParameterObj: props.bclconvertInteropQcUriPrefixSsmParameterObj,
+        analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+        analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
         tableObj: props.inputMakerTableObj,
         icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
       }

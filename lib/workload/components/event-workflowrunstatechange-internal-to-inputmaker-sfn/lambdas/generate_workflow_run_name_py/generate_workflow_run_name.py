@@ -13,7 +13,11 @@ def coerce_names(name: str) -> str:
     :param name:
     :return:
     """
-    return name.lower().replace(" ", "")
+    name = name.lower().replace(" ", "")
+    name = name.replace(".", "_")
+    name = name.replace("-", "_")
+
+    return name
 
 
 def handler(event: Dict, context) -> Dict:
@@ -35,5 +39,5 @@ def handler(event: Dict, context) -> Dict:
 
     # Generate the workflow run name
     return {
-        "workflow_run_name": f"umccr__automated__{workflow_name}__{workflow_version}__{portal_run_id}"
+        "workflow_run_name": coerce_names(f"umccr__automated__{workflow_name}__{workflow_version}__{portal_run_id}")
     }

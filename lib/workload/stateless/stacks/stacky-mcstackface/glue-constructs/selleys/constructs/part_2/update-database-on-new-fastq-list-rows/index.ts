@@ -13,7 +13,7 @@ export interface updateDataBaseOnNewFastqListRowsEventConstructProps {
 
 export class updateDataBaseOnNewFastqListRowsEventConstruct extends Construct {
   public readonly updateDataBaseOnNewFastqListRowsEventMap = {
-    prefix: 'updateDatabaseOnNewFastqListRows',
+    prefix: 'selleysUpdateDatabaseOnNewFastqListRows',
     tablePartition: 'fastqlistrows_by_instrument_run',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
@@ -48,6 +48,7 @@ export class updateDataBaseOnNewFastqListRowsEventConstruct extends Construct {
     Part 2: Build state machine
     */
     this.stateMachineObj = new sfn.StateMachine(this, 'update_database_on_new_fastq_list_row_sfn', {
+      stateMachineName: `${this.updateDataBaseOnNewFastqListRowsEventMap.prefix}-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,

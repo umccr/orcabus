@@ -13,7 +13,7 @@ export interface updateDataBaseOnNewSamplesheetEventConstructProps {
 
 export class updateDataBaseOnNewSamplesheetEventConstruct extends Construct {
   public readonly updateDataBaseOnNewSamplesheetEventMap = {
-    prefix: 'updateDatabaseOnNewSamplesheet',
+    prefix: 'scotchUpdateDatabaseOnNewSamplesheet',
     tablePartition: 'samplesheet_by_instrument_run',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
@@ -48,6 +48,7 @@ export class updateDataBaseOnNewSamplesheetEventConstruct extends Construct {
     Part 2: Build state machine
     */
     this.stateMachineObj = new sfn.StateMachine(this, 'update_database_on_new_samplesheet_sfn', {
+      stateMachineName: `${this.updateDataBaseOnNewSamplesheetEventMap.prefix}-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,

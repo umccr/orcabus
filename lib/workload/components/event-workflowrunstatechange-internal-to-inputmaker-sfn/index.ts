@@ -64,21 +64,21 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
     );
 
     /* Generate the workflow run name lambda */
-    const addPortalRunIdToEventPayloadDataLambdaObj = new PythonFunction(
+    const fillPlaceholdersInEventPayloadDataLambdaObj = new PythonFunction(
       this,
-      'add_portal_run_id_to_event_payload_data_lambda',
+      'fill_placeholders_in_event_payload_data_lambda',
       {
-        functionName: `${props.lambdaPrefix}-add-portal-run-id-to-event-payload`,
-        entry: path.join(__dirname, 'lambdas', 'add_portal_run_id_to_event_payload_data_py'),
-        index: 'add_portal_run_id_to_event_payload_data.py',
+        functionName: `${props.lambdaPrefix}-fill-placeholders-in-event-payload-data`,
+        entry: path.join(__dirname, 'lambdas', 'fill_placeholders_in_event_payload_data_py'),
+        index: 'fill_placeholders_in_event_payload_data.py',
         runtime: lambda.Runtime.PYTHON_3_11,
         architecture: lambda.Architecture.ARM_64,
       }
     );
 
     /*
-            Part 2 - Build the AWS State Machine
-            */
+    Part 2 - Build the AWS State Machine
+    */
     this.stepFunctionObj = new sfn.StateMachine(this, 'StateMachine', {
       stateMachineName: `${props.stateMachinePrefix}-input-maker-wrapper-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(
@@ -93,7 +93,7 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
         __generate_portal_run_id_lambda_function_arn__:
           generatePortalRunIdLambdaObj.currentVersion.functionArn,
         __update_portal_run_id_in_event_detail_lambda_function_arn__:
-          addPortalRunIdToEventPayloadDataLambdaObj.currentVersion.functionArn,
+          fillPlaceholdersInEventPayloadDataLambdaObj.currentVersion.functionArn,
         __generate_workflow_run_name_lambda_function_arn__:
           generateWorkflowRunNameLambdaObj.currentVersion.functionArn,
         /* Table configurations */
@@ -119,7 +119,7 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
     [
       generatePortalRunIdLambdaObj,
       generateWorkflowRunNameLambdaObj,
-      addPortalRunIdToEventPayloadDataLambdaObj,
+      fillPlaceholdersInEventPayloadDataLambdaObj,
     ].forEach((lambdaObj) => {
       lambdaObj.currentVersion.grantInvoke(<iam.IRole>this.stepFunctionObj.role);
     });

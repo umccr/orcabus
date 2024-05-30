@@ -2,22 +2,7 @@
 
 > Glue for the common orcabus
 
-## Four parts to this construct:
-
-### Part 1
-
-Input Event Source: `orcabus.bsshfastqcopymanager`
-Input Event DetailType: `WorkflowRunStateChange`
-Input Event status: `succeeded`
-
-Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `WorkflowRunStateChange`
-Output Event status: `complete`
-
-* The BSSHFastqCopyManagerEventHandler Construct
-  * This will be triggered by the completion event from the BSSHFastqCopyManager Construct.
-  * Contains a standard workflow run statechange, the fastqlistrowgzipped, and instrument run id
-  * Pushes a workflow run manager event saying that the BSSHFastqCopyManager has complete.
+## Four parts to this construct:.
 
 ![](images/part_1/bssh_fastq_copy_manager_event_handler_sfn.png)
 
@@ -25,7 +10,7 @@ Output Event status: `complete`
 
 Input Event Source: `orcabus.workflowmanager`
 Input Event DetailType: `WorkflowRunStateChange`
-Input Event status: `complete`
+Input Event status: `succeeded`
 
 Output Event source: `orcabus.instrumentrunmanager`
 Output Event DetailType: `orcabus.librarystatechange`
@@ -51,7 +36,7 @@ Input Event status: `complete`
 
 Output Event source: `orcabus.bclconvertinteropqcinputeventglue`
 Output Event DetailType: `WorkflowRunStateChange`
-Output Event status: `complete`
+Output Event status: `ready`
 
 * The BCLConvertInteropQCInputMaker Construct
   * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and creates the input for the BCLConvertInteropQC
@@ -62,21 +47,6 @@ Output Event status: `complete`
 With the parent function displayed here:
 
 ![](../../../../../components/event-workflowrunstatechange-internal-to-inputmaker-sfn/images/workflowrunstatechange_input_maker_step_function_sfn.png)
-
-### Part 4
-
-Input Event Source: `orcabus.bclconvertinteropqcinputeventglue`
-Input Event DetailType: `WorkflowRunStateChange`
-Input Event status: `complete`
-
-Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `WorkflowRunStateChange`
-Output Event status: `ready`
-
-* The BCLConvertInteropQCReadyEventSubmitter Construct
-  * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and generates a ready event for the BCLConvertInteropQC
-
-![](images/part_4/generate_bclconvert_interopqc_ready_event_simple_sfn.png)
 
 
 ## Triggering this construct

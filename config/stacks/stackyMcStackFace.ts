@@ -1,8 +1,8 @@
 import {
-  mockBclconvertInteropQcUriPrefixSsmParameterName,
-  mockBsshOutputFastqCopyUriPrefixSsmParameterName,
-  mockCttsov2CacheUriPrefixSsmParameterName,
-  mockCttsov2OutputUriPrefixSsmParameterName,
+  mockPrimaryOutputUriSsmParameterName,
+  mockAnalysisCacheUriSsmParameterName,
+  mockAnalysisLogsUriSsmParameterName,
+  mockAnalysisOutputUriSsmParameterName,
   mockEventBusName,
   mockIcav2ProjectIdSsmParameterName,
   mockInputMakerTableName,
@@ -14,10 +14,10 @@ import {StackyStatefulTablesConfig} from "../../lib/workload/stateful/stacks/sta
 
 export const getGlueStackProps = (): GlueStackConfig => {
   return {
-    bclconvertInteropQcUriPrefixSsmParameterName: mockBclconvertInteropQcUriPrefixSsmParameterName,
-    bsshOutputFastqCopyUriPrefixSsmParameterName: mockBsshOutputFastqCopyUriPrefixSsmParameterName,
-    cttsov2CacheUriPrefixSsmParameterName: mockCttsov2CacheUriPrefixSsmParameterName,
-    cttsov2OutputUriPrefixSsmParameterName: mockCttsov2OutputUriPrefixSsmParameterName,
+    bsshOutputFastqCopyUriSsmParameterName: mockPrimaryOutputUriSsmParameterName,
+    analysisCacheUriSsmParameterName: mockAnalysisCacheUriSsmParameterName,
+    analysisOutputUriSsmParameterName: mockAnalysisOutputUriSsmParameterName,
+    analysisLogsUriSsmParameterName: mockAnalysisLogsUriSsmParameterName,
     eventBusName: mockEventBusName,
     icav2ProjectIdSsmParameterName: mockIcav2ProjectIdSsmParameterName,
     inputMakerTableName: mockInputMakerTableName,

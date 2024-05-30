@@ -30,35 +30,35 @@
       "Next": "Generate inputs for cttsov2",
       "Branches": [
         {
-          "StartAt": "Get CacheUri Prefix for cttsov2 analysis",
+          "StartAt": "Get CacheUri For cttsov2 analysis",
           "States": {
-            "Get CacheUri Prefix for cttsov2 analysis": {
+            "Get CacheUri For cttsov2 analysis": {
               "Type": "Task",
               "Parameters": {
-                "Name": "${__cttsov2_cache_uri_ssm_parameter_name__}"
+                "Name": "${__analysis_cache_uri_ssm_parameter_name__}"
               },
               "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
               "End": true,
               "ResultSelector": {
-                "cache_uri_prefix.$": "$.Parameter.Value"
+                "cache_uri.$": "$.Parameter.Value"
               },
-              "ResultPath": "$.get_cache_uri_prefix_step"
+              "ResultPath": "$.get_cache_uri_step"
             }
           }
         },
         {
-          "StartAt": "Get OutputUri Prefix for ctTSOv2 Analysis",
+          "StartAt": "Get OutputUri for ctTSOv2 Analysis",
           "States": {
-            "Get OutputUri Prefix for ctTSOv2 Analysis": {
+            "Get OutputUri for ctTSOv2 Analysis": {
               "Type": "Task",
               "Parameters": {
-                "Name": "${__cttsov2_output_uri_ssm_parameter_name__}"
+                "Name": "${__analysis_output_uri_ssm_parameter_name__}"
               },
               "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
               "ResultSelector": {
-                "output_uri_prefix.$": "$.Parameter.Value"
+                "output_uri.$": "$.Parameter.Value"
               },
-              "ResultPath": "$.get_output_uri_prefix_parameter_step",
+              "ResultPath": "$.get_output_uri_parameter_step",
               "End": true
             }
           }
@@ -80,14 +80,32 @@
               "End": true
             }
           }
+        },
+        {
+          "StartAt": "Get LogsUri for cttsov2 Analysis",
+          "States": {
+            "Get LogsUri for cttsov2 Analysis": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__analysis_logs_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "End": true,
+              "ResultPath": "$.get_logs_uri_parameter_step",
+              "ResultSelector": {
+                "logs_uri.$": "$.Parameter.Value"
+              }
+            }
+          }
         }
       ],
       "ResultPath": "$.get_ssm_parameters_steps",
       "ResultSelector": {
-        "cache_uri_prefix.$": "$.[0]get_cache_uri_prefix_step.cache_uri_prefix",
-        "output_uri_prefix.$": "$.[1].get_output_uri_prefix_parameter_step.output_uri_prefix",
+        "cache_uri.$": "$.[0].get_cache_uri_step.cache_uri",
+        "output_uri.$": "$.[1].get_output_uri_parameter_step.output_uri",
         "project_id.$": "$.[2].get_project_id_and_name_parameter_step.project_id",
-        "project_name.$": "$.[2].get_project_id_and_name_parameter_step.project_name"
+        "project_name.$": "$.[2].get_project_id_and_name_parameter_step.project_name",
+        "logs_uri.$": "$.[3].get_logs_uri_parameter_step.logs_uri"
       }
     },
     "Generate inputs for cttsov2": {
@@ -98,12 +116,12 @@
         "samplesheetDict.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.samplesheetDict",
         "fastqListRows.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.fastqListRows",
         "instrumentRunId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
-        "cacheUri.$": "States.Format('{}__portal_run_id__/out/', $.get_ssm_parameters_steps.cache_uri_prefix)",
-        "analysisOutputUri.$": "States.Format('{}__portal_run_id__/out/', $.get_ssm_parameters_steps.output_uri_prefix)",
-        "icaLogsUri.$": "States.Format('{}__portal_run_id__/logs/', $.get_ssm_parameters_steps.output_uri_prefix)",
+        "cacheUri.$": "$.get_ssm_parameters_steps.cache_uri",
+        "analysisOutputUri.$": "$.get_ssm_parameters_steps.output_uri",
+        "icaLogsUri.$": "$.get_ssm_parameters_steps.logs_uri",
         "userTags": {
-          "library_id": "$.get_event_detail_payload_data_from_db_step.event_data_input.libraryId",
-          "project_name": "$.get_ssm_parameters_steps.project_name"
+          "library_id.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.libraryId",
+          "project_name.$": "$.get_ssm_parameters_steps.project_name"
         }
       },
       "ResultPath": "$.set_event_data_output",
@@ -118,7 +136,7 @@
           "id.$": "$.inputs.db_uuid",
           "id_type": "${__input_maker_type__}"
         },
-        "UpdateExpression": "SET event_detail_output = :event_detail_output",
+        "UpdateExpression": "SET event_data_output = :event_data_output",
         "ExpressionAttributeValues": {
           ":event_data_output": {
             "S.$": "States.JsonToString($.set_event_data_output)"
