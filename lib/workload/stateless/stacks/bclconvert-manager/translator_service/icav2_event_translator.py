@@ -153,12 +153,11 @@ def store_events_into_dynamodb(internal_ica_event, table_name, event_details) ->
             Item={
                 'id': {'S': db_uuid},
                 'id_type': {'S': 'db_uuid'},
-                'analysis_id': {'S': internal_ica_event.detail.payload.get('data', '').get("analysisId", '')},
-                'analysis_status': {'S': internal_ica_event.detail.status},
-                # 'SUCCEEDED', 'FAILED', 'ABORTED'
+                'analysis_id': {'S': event_details.get("payload", {}).get("id", '')},
+                'analysis_status': {'S': internal_ica_event.detail.status}, # 'SUCCEEDED', 'FAILED', 'ABORTED'
                 "portal_run_id": {'S': internal_ica_event.detail.portalRunId},
                 'original_external_event': {'S': json.dumps(event_details)},
-                'translated_internal_ica_event': {'S': json.dumps(internal_ica_event.detail.to_dict())},
+                'translated_internal_ica_event': {'S': json.dumps(WorkflowRunStateChangeMarshaller.marshall(internal_ica_event.detail))},
                 'timestamp': {'S': internal_ica_event.detail.timestamp}
             }
         )
@@ -168,7 +167,7 @@ def store_events_into_dynamodb(internal_ica_event, table_name, event_details) ->
         dynamodb.update_item(
             TableName=table_name,
             Key={
-                'id': {'S': internal_ica_event.detail.payload.get("data", '').get("analysisId", '')},
+                'id': {'S': event_details.get("payload", {}).get("id", '')},
                 'id_type': {'S': 'analysis_id'}
             },
             UpdateExpression='SET db_uuid = :db_uuid',
