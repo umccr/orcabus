@@ -77,6 +77,32 @@ This event is icav2 event without EventBus pipe envelop. General Event Bridge ev
 
 The AWS lambda functions put translated event following  ```WorkflowRunStateChange``` schema with the following event detail::
 
+(Non-SUCCEEDED Event without payload)
+
+```json5
+{
+  "version": "0",
+  "id": "f71aaaaa-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "WorkflowRunStateChange",
+  "source": "orcabus.bclconvertmanager",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "portalRunId": '20xxxxxxxxxx',
+    "executionId": "valid_payload_id",
+    "timestamp": "2024-00-25T00:07:00Z",
+    "status": "INPROGRESS"
+    "workflowName": "BclConvert",
+    "workflowVersion": "4.2.7",
+    "workflowRunName": "123456_A1234_0000_TestingPattern",
+  }
+}
+```
+
+(SUCCEEDED Event)
+
 ```json5
 {
   "version": "0",
