@@ -1,23 +1,23 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
-Configuration handler
-
-Get ICAv2 configuration handler
+SSM parameter helpers
 """
 
-# Standard imports
-import typing
+# Imports
 import boto3
+import typing
 from os import environ
 
-# Local imports
-from .globals import ICAV2_BASE_URL, ICAV2_ACCESS_TOKEN_URN_SSM_PATH
+# Globals
+ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
+ICAV2_ACCESS_TOKEN_URN_SSM_PATH = "/icav2/umccr-prod/service-user-trial-jwt-token-secret-arn"
+PIPELINE_ID_SSM_PARAMETER_PATH = "/icav2/umccr-prod/bclconvert_interop_qc_pipeline_id"
 
-# Type checking, only available as dev dependencies
+
 if typing.TYPE_CHECKING:
-    from mypy_boto3_ssm import SSMClient
-    from mypy_boto3_secretsmanager import SecretsManagerClient
+    from mypy_boto3_ssm.client import SSMClient
+    from mypy_boto3_secretsmanager.client import SecretsManagerClient
 
 
 # AWS things
@@ -44,11 +44,11 @@ def get_ssm_parameter_value(parameter_path) -> str:
     return get_ssm_client().get_parameter(Name=parameter_path)["Parameter"]["Value"]
 
 
-def get_secret(secret_arn: str) -> str:
+def get_secret(secret_id: str) -> str:
     """
     Return secret value
     """
-    return get_secrets_manager_client().get_secret_value(SecretId=secret_arn)["SecretString"]
+    return get_secrets_manager_client().get_secret_value(SecretId=secret_id)["SecretString"]
 
 
 # Set the icav2 environment variables
@@ -61,3 +61,14 @@ def set_icav2_env_vars():
     environ["ICAV2_ACCESS_TOKEN"] = get_secret(
         environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
     )
+
+
+def get_interop_qc_pipeline_id_from_ssm() -> str:
+    """
+
+    Collect the Pipeline ID for the bclconvert interop qc path
+
+    Returns:
+
+    """
+    return get_ssm_parameter_value(PIPELINE_ID_SSM_PARAMETER_PATH)

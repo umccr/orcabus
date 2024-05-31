@@ -23,6 +23,10 @@ import {
   BsshIcav2FastqCopyManagerStackProps,
 } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
 import {
+  BclconvertInteropQcIcav2PipelineManagerStack,
+  BclconvertInteropQcIcav2PipelineManagerStackProps,
+} from './stacks/bclconvert-interop-qc-pipeline-manager/deploy/stack';
+import {
   cttsov2Icav2PipelineManagerStackProps,
   Cttsov2Icav2PipelineManagerStack,
 } from './stacks/cttso-v2-pipeline-manager/deploy/stack';
@@ -43,6 +47,7 @@ export interface StatelessStackCollectionProps {
   fileManagerStackProps: FilemanagerProps;
   bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
+  bclconvertInteropQcIcav2PipelineManagerStackProps: BclconvertInteropQcIcav2PipelineManagerStackProps;
   cttsov2Icav2PipelineManagerStackProps: cttsov2Icav2PipelineManagerStackProps;
   eventSchemaStackProps: SchemaStackProps;
   dataSchemaStackProps: SchemaStackProps;
@@ -58,6 +63,7 @@ export class StatelessStackCollection {
   readonly sequenceRunManagerStack: Stack;
   readonly bsRunsUploadManagerStack: Stack;
   readonly bsshIcav2FastqCopyManagerStack: Stack;
+  readonly bclconvertInteropQcIcav2PipelineManagerStack: Stack;
   readonly cttsov2Icav2PipelineManagerStack: Stack;
   readonly eventSchemaStack: Stack;
   readonly dataSchemaStack: Stack;
@@ -108,15 +114,6 @@ export class StatelessStackCollection {
       }
     );
 
-    this.icav2CopyBatchUtilityStack = new ICAv2CopyBatchUtilityStack(
-      scope,
-      'ICAv2CopyBatchUtilityStack',
-      {
-        ...this.createTemplateProps(env, 'ICAv2CopyBatchUtilityStack'),
-        ...statelessConfiguration.icav2CopyBatchUtilityStackProps,
-      }
-    );
-
     this.bsshIcav2FastqCopyManagerStack = new BsshIcav2FastqCopyManagerStack(
       scope,
       'BsshIcav2FastqCopyManagerStack',
@@ -125,6 +122,16 @@ export class StatelessStackCollection {
         ...statelessConfiguration.bsshIcav2FastqCopyManagerStackProps,
       }
     );
+
+    this.bclconvertInteropQcIcav2PipelineManagerStack =
+      new BclconvertInteropQcIcav2PipelineManagerStack(
+        scope,
+        'BclconvertInteropQcIcav2PipelineManagerStack',
+        {
+          ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineManagerStack'),
+          ...statelessConfiguration.bclconvertInteropQcIcav2PipelineManagerStackProps,
+        }
+      );
 
     this.cttsov2Icav2PipelineManagerStack = new Cttsov2Icav2PipelineManagerStack(
       scope,

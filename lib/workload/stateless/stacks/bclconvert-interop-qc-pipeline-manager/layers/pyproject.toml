@@ -3,9 +3,9 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "icav2_copy_batch_utility_tools"
+name = "bclconvert_interop_qc_pipeline_manager_tools"
 version = "0.0.1"
-description = "BSSH Manager Lambda Layers"
+description = "BCLConvert Interop QC Lambda Layers"
 license = "GPL-3.0-or-later"
 authors = [
     "Alexis Lucattini"
@@ -18,7 +18,9 @@ python = "^3.11"
 boto3 = "^1.28"
 botocore = "^1.31"
 aws_requests_auth = "^0.4.3"
-wrapica = ">=1.0.0"
+v2_samplesheet_maker = "^4.2.4"
+wrapica = "^1.0.3"
+uuid6 = "^2024.1.12"
 
 [tool.poetry.group.dev]
 optional = true
