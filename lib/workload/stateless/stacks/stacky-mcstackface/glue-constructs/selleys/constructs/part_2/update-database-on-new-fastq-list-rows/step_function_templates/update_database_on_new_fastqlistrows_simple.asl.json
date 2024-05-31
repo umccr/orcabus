@@ -1,0 +1,81 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "Decompress fastq list rows",
+      "Parameters": {
+        "inputs.$": "$"
+      }
+    },
+    "Decompress fastq list rows": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__decompress_fastq_list_rows_lambda_function_arn__}",
+        "Payload": {
+          "decompress": true,
+          "input.$": "$.inputs.payload.data.fastqListRowsB64gz"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Add fastq list rows to instrument run id (LibraryFile DB)",
+      "ResultPath": "$.decompress_fastq_list_rows_step",
+      "ResultSelector": {
+        "fastq_list_rows.$": "$.Payload.decompressed_dict"
+      }
+    },
+    "Add fastq list rows to instrument run id (LibraryFile DB)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.inputs.payload.data.instrumentRunId",
+          "id_type": "${__table_partition_name__}",
+          "fastq_list_rows": {
+            "S.$": "States.JsonToString($.decompress_fastq_list_rows_step.fastq_list_rows)"
+          }
+        }
+      },
+      "ResultPath": "$.add_fastq_list_rows_to_db_step",
+      "Next": "Wait 1 Second"
+    },
+    "Wait 1 Second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "Raise event for fastqlistrows registered"
+    },
+    "Raise event for fastqlistrows registered": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "instrumentRunId.$": "$.inputs.payload.data.instrumentRunId",
+              "status": "fastqlistrowsregistered"
+            },
+            "DetailType": "${__detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}"
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}
