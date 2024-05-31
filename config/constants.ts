@@ -182,16 +182,13 @@ export const cttsov2DynamoDbTableSSMArn = path.join(
   'dynamodb_table_arn'
 );
 
-// Stateless
-export const cttsov2Icav2PipelineSfnSSMName = path.join(
-  cttsov2Icav2PipelineManagerSSMRoot,
-  'state_machine_name'
-);
-export const cttsov2Icav2PipelineSfnSSMArn = path.join(
-  cttsov2Icav2PipelineManagerSSMRoot,
-  'state_machine_arn'
-);
+// Event Handling
 
 export const cttsov2Icav2PipelineWorkflowType = 'cttsov2';
 export const cttsov2Icav2PipelineWorkflowTypeVersion = '2.1.1';
 export const cttsov2Icav2ServiceVersion = '2024.05.07';
+
+export const cttsov2Icav2ReadyEventSource = 'orcabus.workflowmanager';
+export const cttsov2Icav2EventSource = 'orcabus.cttsov2';
+export const cttsov2Icav2EventDetailType = 'WorkflowRunStateChange';
+export const cttsov2StateMachinePrefix = 'cttsov2Sfn';

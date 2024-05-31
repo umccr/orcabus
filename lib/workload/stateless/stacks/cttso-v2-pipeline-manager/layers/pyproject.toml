@@ -19,8 +19,7 @@ boto3 = "^1.28"
 botocore = "^1.31"
 aws_requests_auth = "^0.4.3"
 v2_samplesheet_maker = "^4.2.4"
-wrapica = ">=1.0.2"
-uuid6 = "^2024.1.12"
+wrapica = ">=1.0.8"
 
 [tool.poetry.group.dev]
 optional = true

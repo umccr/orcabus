@@ -7,7 +7,7 @@ Takes in a compressed samplesheet dict, generates the samplesheet as a CSV and t
 
 {
     "cache_uri": "icav2://project_id/path/to/cache",
-    "samplesheet_dict_b64gz": "H4sIAAAAAAAA/8tJLS5RsjI2VrJSSU1RyC9KTS7J"
+    "samplesheet": "{ "header": ""... }"
 }
 
 Returns the file id of the uploaded samplesheet
@@ -52,25 +52,24 @@ def handler(event, context):
     project_id = urlparse(cache_uri).netloc
     cache_path = Path(urlparse(cache_uri).path)
 
-    samplesheet_dict_b64gz = event.get("samplesheet_dict_b64gz")
+    samplesheet = event.get("samplesheet")
 
     # Check cache path
     if not cache_uri:
         raise ValueError("cache_uri is required")
     # CHeck samplesheet dict
-    if not samplesheet_dict_b64gz:
-        raise ValueError("samplesheet_dict_b64gz is required")
+    if not samplesheet:
+        raise ValueError("samplesheet is required")
 
     # Set icav2 env vars
     set_icav2_env_vars()
 
     # Samplesheet csv str
-    samplesheet_dict = decompress_dict(samplesheet_dict_b64gz)
 
     # Write samplesheet to file
     with NamedTemporaryFile(suffix='.csv') as samplesheet_tmp_h:
         # Write samplesheet to file
-        v2_samplesheet_writer(samplesheet_dict, Path(samplesheet_tmp_h.name))
+        v2_samplesheet_writer(samplesheet, Path(samplesheet_tmp_h.name))
 
         # Generate the samplesheet as a csv
         samplesheet_file_id = write_icav2_file_contents(
@@ -93,15 +92,38 @@ def handler(event, context):
 # if __name__ == "__main__":
 #     import json
 #
-#     samplesheet_dict_b64gz = """
-# H4sIACTx5mUC/41R0WrCMBT9FcnzhCa1CttTUSgDV4bWhzFGiPZqw5pUk1Qm4r/vJtVtZXsYoZCc
-# c+49veeeSQWiBEPuB2eylTXwbWOUcPwIxspGI87uBsS0mmuhAJ+ksAc9zGG9yFMWU0rj4dMcYFks
-# OB3nzZHFBAukts60CrTj7rQPdciJJRzIxfdDUxs8/Y1TvjltavAIoQklVwVnv3GpS/joF0TfOOvj
-# 3srZJomimltwTupd5ypKsXdgeOfu1dMiK6Z4irRIp3jw6tv2hOwfwjVU4iib1idKnJHKk0pqqVrF
-# /VtB2XWrQe9chbI48RJh37mtGuP4LZyAN7gII0v4MdhqktMXOoofHmkUvhvQm7cUTqD69UysUHtc
-# rCx98ZzFEY1HY3TBpfqfu9K3Nc3y1KO10HBdfojWU2mGo6cZDv6VeIik8CFgLGkW8AnvltEZrmbP
-# URSxwCR/Mpe3yyfpAP0IhwIAAA==
-#     """.replace("\n", "")
+#     samplesheet = {
+#       "header": {
+#         "file_format_version": 2,
+#         "run_name": "Tsqn-NebRNA231113-MLeeSTR_16Nov23",
+#         "instrument_type": "NovaSeq"
+#       },
+#       "reads": {
+#         "read_1_cycles": "151",
+#         "read_2_cycles": "151",
+#         "index_1_cycles": "10",
+#         "index_2_cycles": "10"
+#       },
+#       "tso500l_settings": {
+#         "adapter_read_1": "CTGTCTCTTATACACATCT",
+#         "adapter_read_2": "CTGTCTCTTATACACATCT",
+#         "adapter_behaviour": "trim",
+#         "minimum_trimmed_read_length": 35,
+#         "mask_short_reads": 35,
+#         "override_cycles": "U7N1Y143;I10;I10;U7N1Y143"
+#       },
+#       "tso500l_data": [
+#         {
+#           "sample_id": "L2301346_rerun",
+#           "sample_type": "DNA",
+#           "lane": 2,
+#           "index": "AGGTCAGATA",
+#           "index2": "TATCTTGTAG",
+#           "i7_index_id": "UDP0002",
+#           "i5_index_id": "UDP0002"
+#         }
+#       ]
+#     }
 #
 #     print(
 #         json.dumps(
@@ -109,7 +131,7 @@ def handler(event, context):
 #                 event={
 #                     "cache_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache",
 #                     "project_id": "7595e8f2-32d3-4c76-a324-c6a85dae87b5",
-#                     "samplesheet_dict_b64gz": samplesheet_dict_b64gz
+#                     "samplesheet": samplesheet
 #                 },
 #                 context=None
 #             ),
