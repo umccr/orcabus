@@ -1,0 +1,278 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "inputs.$": "$"
+      },
+      "Next": "Save event (local)"
+    },
+    "Save event (local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__local_table_name__}",
+        "Item": {
+          "id.$": "$.inputs.instrumentRunId",
+          "id_type": "${__table_partition_name__}"
+        }
+      },
+      "ResultPath": "$.save_event_local_step",
+      "Next": "Translate Event"
+    },
+    "Translate Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload.$": "$.inputs",
+        "FunctionName": "${__translate_event_lambda_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Get Instrument Run ID info from SampleSheet",
+      "ResultPath": "$.translate_event_step",
+      "ResultSelector": {
+        "instrument_run_id.$": "$.Payload.instrument_run_id"
+      }
+    },
+    "Get Instrument Run ID info from SampleSheet": {
+      "Type": "Parallel",
+      "Next": "Is Tso500 Data Section in SampleSheet",
+      "Branches": [
+        {
+          "StartAt": "Get SampleSheet from Run ID (instrument DB)",
+          "States": {
+            "Get SampleSheet from Run ID (instrument DB)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:getItem",
+              "Parameters": {
+                "TableName": "${__instrument_run_id_table_name__}",
+                "Key": {
+                  "id.$": "$.translate_event_step.instrument_run_id",
+                  "id_type": "${__samplesheet_partition_name__}"
+                }
+              },
+              "End": true,
+              "ResultSelector": {
+                "samplesheet.$": "States.StringToJson($.Item.samplesheet_dict.S)"
+              },
+              "ResultPath": "$.get_samplesheet_from_db_step"
+            }
+          }
+        },
+        {
+          "StartAt": "Get Fastq List Rows from Instrument Run ID (instrument DB)",
+          "States": {
+            "Get Fastq List Rows from Instrument Run ID (instrument DB)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:getItem",
+              "Parameters": {
+                "TableName": "${__instrument_run_id_table_name__}",
+                "Key": {
+                  "id.$": "$.translate_event_step.instrument_run_id",
+                  "id_type": "${__fastq_list_row_partition_name__}"
+                }
+              },
+              "End": true,
+              "ResultPath": "$.get_fastq_list_rows_from_db_step",
+              "ResultSelector": {
+                "fastq_list_rows.$": "States.StringToJson($.Item.fastq_list_rows.S)"
+              }
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.get_instrument_data_db_step",
+      "ResultSelector": {
+        "samplesheet.$": "$[0].get_samplesheet_from_db_step.samplesheet",
+        "fastq_list_rows.$": "$[1].get_fastq_list_rows_from_db_step.fastq_list_rows"
+      }
+    },
+    "Is Tso500 Data Section in SampleSheet": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_instrument_data_db_step.samplesheet.tso500l_data",
+          "IsPresent": true,
+          "Next": "Get library map"
+        }
+      ],
+      "Default": "Success"
+    },
+    "Get library map": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload": {
+          "samplesheet.$": "$.get_instrument_data_db_step.samplesheet"
+        },
+        "FunctionName": "${__get_library_set_lambda_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "For each library",
+      "ResultPath": "$.get_library_map_step",
+      "ResultSelector": {
+        "library_id_map.$": "$.Payload.library_id_map"
+      }
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "For each library": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Reduce items",
+        "States": {
+          "Reduce items": {
+            "Type": "Parallel",
+            "Next": "cttso draft event",
+            "Branches": [
+              {
+                "StartAt": "Slim SampleSheet",
+                "States": {
+                  "Slim SampleSheet": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                      "FunctionName": "${__slim_samplesheet_lambda_function_arn__}",
+                      "Payload": {
+                        "library_id.$": "$.library_id",
+                        "samplesheet.$": "$.samplesheet"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2
+                      }
+                    ],
+                    "ResultPath": "$.slim_samplesheet_step",
+                    "ResultSelector": {
+                      "samplesheet.$": "$.Payload.samplesheet"
+                    },
+                    "End": true
+                  }
+                }
+              },
+              {
+                "StartAt": "Slim Fastq List Rows",
+                "States": {
+                  "Slim Fastq List Rows": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                      "FunctionName": "${__slim_fastq_list_row_lambda_function_arn__}",
+                      "Payload": {
+                        "library_id.$": "$.library_id",
+                        "fastq_list_rows.$": "$.fastq_list_rows"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2
+                      }
+                    ],
+                    "End": true,
+                    "ResultPath": "$.slim_fastq_list_rows",
+                    "ResultSelector": {
+                      "fastq_list_rows.$": "$.Payload.fastq_list_rows"
+                    }
+                  }
+                }
+              }
+            ],
+            "ResultPath": "$.slim_inputs",
+            "ResultSelector": {
+              "samplesheet.$": "$.[0].slim_samplesheet_step.samplesheet",
+              "fastq_list_rows.$": "$.[1].slim_fastq_list_rows.fastq_list_rows"
+            }
+          },
+          "cttso draft event": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents",
+            "Parameters": {
+              "Entries": [
+                {
+                  "Detail": {
+                    "portalRunId": null,
+                    "timestamp.$": "$$.State.EnteredTime",
+                    "status": "${__output_status__}",
+                    "workflowName": "${__workflow_name__}",
+                    "workflowVersion": "${__workflow_version__}",
+                    "workflowRunName": null,
+                    "payload": {
+                      "refId": null,
+                      "version": "${__payload_version__}",
+                      "data": {
+                        "sampleId.$": "$.library_id",
+                        "instrumentRunId.$": "$.instrument_run_id",
+                        "samplesheet.$": "$.slim_inputs.samplesheet",
+                        "fastqListRows.$": "$.slim_inputs.fastq_list_rows"
+                      }
+                    }
+                  },
+                  "DetailType": "${__detail_type__}",
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "${__event_source__}"
+                }
+              ]
+            },
+            "End": true,
+            "ResultPath": "$.event_submission"
+          }
+        }
+      },
+      "End": true,
+      "ItemsPath": "$.get_library_map_step.library_id_map",
+      "ItemSelector": {
+        "library_id.$": "$$.Map.Item.Value",
+        "instrument_run_id.$": "$.translate_event_step.instrument_run_id",
+        "samplesheet.$": "$.get_instrument_data_db_step.samplesheet",
+        "fastq_list_rows.$": "$.get_instrument_data_db_step.fastq_list_rows"
+      }
+    }
+  }
+}
