@@ -19,10 +19,6 @@ import {
   BsRunsUploadManagerStackProps,
 } from './stacks/bs-runs-upload-manager/deploy/stack';
 import {
-  ICAv2CopyBatchUtilityStack,
-  ICAv2CopyBatchUtilityStackProps,
-} from './stacks/icav2-copy-batch-utility/deploy/stack';
-import {
   BsshIcav2FastqCopyManagerStack,
   BsshIcav2FastqCopyManagerStackProps,
 } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
@@ -46,7 +42,6 @@ export interface StatelessStackCollectionProps {
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
   bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
-  icav2CopyBatchUtilityStackProps: ICAv2CopyBatchUtilityStackProps;
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
   cttsov2Icav2PipelineManagerStackProps: cttsov2Icav2PipelineManagerStackProps;
   eventSchemaStackProps: SchemaStackProps;
@@ -62,7 +57,6 @@ export class StatelessStackCollection {
   readonly metadataManagerStack: Stack;
   readonly sequenceRunManagerStack: Stack;
   readonly bsRunsUploadManagerStack: Stack;
-  readonly icav2CopyBatchUtilityStack: Stack;
   readonly bsshIcav2FastqCopyManagerStack: Stack;
   readonly cttsov2Icav2PipelineManagerStack: Stack;
   readonly eventSchemaStack: Stack;

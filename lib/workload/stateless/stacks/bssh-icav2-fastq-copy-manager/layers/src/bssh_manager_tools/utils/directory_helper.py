@@ -70,13 +70,12 @@ def get_month_from_run_id(run_id: str) -> str:
     return run_id.split('_')[0][2:4]
 
 
-def generate_bclconvert_output_folder_path(bclconvert_run_cache_path: Path, run_id: str, basespace_run_id: int, portal_run_id: str) -> Path:
+def generate_bclconvert_output_folder_path(bclconvert_run_cache_path: Path, run_id: str, portal_run_id: str) -> Path:
     """
     Output is as follows
-    # <bclconvert_run_cache_path> / <YYYY> / <MM> / <run_id> / <basespace_run_id>
+    # <bclconvert_run_cache_path> / <run_id> / <portal_run_id>
     :param bclconvert_output_path_root:
     :param run_id:
-    :param basespace_run_id:
     :param portal_run_id:
 
     :return:
@@ -84,7 +83,6 @@ def generate_bclconvert_output_folder_path(bclconvert_run_cache_path: Path, run_
     return (
             bclconvert_run_cache_path /
             run_id /
-            str(basespace_run_id) /
             portal_run_id
     )
 

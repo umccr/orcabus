@@ -16,7 +16,7 @@ from wrapica.libica_models import (
 from wrapica.project_data import (
     find_project_data_bulk,
     get_file_by_file_name_from_project_data_list, get_project_data_obj_by_id,
-    get_project_data_folder_id_from_project_id_and_path
+    get_project_data_folder_id_from_project_id_and_path, list_project_data_non_recursively
 )
 from wrapica.project_analysis import (
     get_analysis_input_object_from_analysis_code,
@@ -51,12 +51,16 @@ def get_interop_files_from_run_folder(
     )
 
     # Return all files inside the interop directory
-    return find_project_data_bulk(
-        project_id=run_folder_obj.project_id,
-        parent_folder_id=interop_directory_id,
-        data_type=DataType.FILE
+    return list(
+        filter(
+            lambda interop_iter: interop_iter.data.details.name.endswith(".bin"),
+            list_project_data_non_recursively(
+                project_id=run_folder_obj.project_id,
+                parent_folder_id=interop_directory_id,
+                data_type=DataType.FILE
+            )
+        )
     )
-
 
 def get_run_folder_obj_from_analysis_id(project_id: str, analysis_id: str) -> ProjectData:
     """
