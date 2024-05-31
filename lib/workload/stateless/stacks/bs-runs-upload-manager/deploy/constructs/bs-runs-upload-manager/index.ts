@@ -7,6 +7,7 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as events_targets from 'aws-cdk-lib/aws-events-targets';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { IRole } from 'aws-cdk-lib/aws-iam';
 import { PythonLambdaLayerConstruct } from '../../../../../../components/python-lambda-layer';
@@ -17,6 +18,7 @@ interface BsRunsUploadManagerConstructProps {
   icaTokenSecretObj: secretsManager.ISecret;
   portalTokenSecretObj: secretsManager.ISecret;
   basespaceSecretObj: secretsManager.ISecret;
+  dataPortalApiUrlSsmParameterObj: ssm.IStringParameter;
   eventBusObj: events.IEventBus;
   /* Lambda layer paths */
   uploadV2SamplesheetToGdsBsshLambdaPath: string; // __dirname + '/../../../lambdas/upload_v2_samplesheet_to_gds_bssh'
@@ -49,6 +51,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
         environment: {
           ICA_BASE_URL: 'https://aps2.platform.illumina.com',
           ICA_ACCESS_TOKEN_SECRET_ID: props.icaTokenSecretObj.secretName,
+          PORTAL_API_URL_PARAMETER_NAME: props.dataPortalApiUrlSsmParameterObj.parameterName,
           PORTAL_TOKEN_SECRET_ID: props.portalTokenSecretObj.secretName,
         },
       }
@@ -86,8 +89,10 @@ export class BsRunsUploadManagerConstruct extends Construct {
     );
 
     // Give the lambda permission to read the PORTAL TOKEN secret
-    props.portalTokenSecretObj.grantRead(
-      // @ts-ignore
+    props.portalTokenSecretObj.grantRead(<IRole>upload_v2_samplesheet_to_gds_bssh_lambda.role);
+
+    // Give the lambda permission to read the ssm parameter value of the data portal api url
+    props.dataPortalApiUrlSsmParameterObj.grantRead(
       <IRole>upload_v2_samplesheet_to_gds_bssh_lambda.role
     );
 
@@ -101,20 +106,17 @@ export class BsRunsUploadManagerConstruct extends Construct {
       // definitionSubstitutions
       definitionSubstitutions: {
         __upload_v2_samplesheet_to_gds_bssh_function_arn__:
-          upload_v2_samplesheet_to_gds_bssh_lambda.functionArn,
-        __launch_bs_runs_upload_tes_function_arn__: launch_bs_runs_upload_tes_lambda.functionArn,
+          upload_v2_samplesheet_to_gds_bssh_lambda.currentVersion.functionArn,
+        __launch_bs_runs_upload_tes_function_arn__:
+          launch_bs_runs_upload_tes_lambda.currentVersion.functionArn,
       },
     });
 
     // Add execution permissions to stateMachine role
-    stateMachine.addToRolePolicy(
-      new iam.PolicyStatement({
-        resources: [
-          upload_v2_samplesheet_to_gds_bssh_lambda.functionArn,
-          launch_bs_runs_upload_tes_lambda.functionArn,
-        ],
-        actions: ['lambda:InvokeFunction'],
-      })
+    [upload_v2_samplesheet_to_gds_bssh_lambda, launch_bs_runs_upload_tes_lambda].forEach(
+      (lambda_obj) => {
+        lambda_obj.currentVersion.grantInvoke(stateMachine.role);
+      }
     );
 
     // Trigger state machine on event

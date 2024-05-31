@@ -99,6 +99,7 @@ Resources required for BaseSpace TES stack
  */
 
 export const basespaceAccessTokenSecretName = '/manual/BaseSpaceAccessTokenSecret'; // pragma: allowlist secret
+export const dataPortalApiUrlSsmParameterName = '/data_portal/backend/api_domain_name';
 
 /*
 ICAv2 Resources - required by various stacks

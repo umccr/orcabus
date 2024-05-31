@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import { BsRunsUploadManagerConstruct } from './constructs/bs-runs-upload-manager';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import path from 'path';
 import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda-layer';
 
@@ -11,6 +12,7 @@ export interface BsRunsUploadManagerConfig {
   icaTokenSecretId: string; // IcaSecretsPortal
   portalTokenSecretId: string; // orcabus/token-service-jwt
   basespaceTokenSecretId: string; // /manual/BaseSpaceAccessTokenSecret
+  dataPortalApiUrlSsmParameterName: string; // /data_portal/backend/api_domain_name
   gdsSystemFilesPath: string; // gds://development/primary_data/temp/bs_runs_upload_tes/
   eventbusName: string; // /umccr/orcabus/stateful/eventbridge
 }
@@ -46,6 +48,12 @@ export class BsRunsUploadManagerStack extends cdk.Stack {
       props.basespaceTokenSecretId
     );
 
+    const data_portal_api_ssm_parameter_obj = ssm.StringParameter.fromStringParameterName(
+      this,
+      'DataPortalApiUrlSsmParameter',
+      props.dataPortalApiUrlSsmParameterName
+    );
+
     const event_bus_obj = events.EventBus.fromEventBusName(this, 'event_bus', props.eventbusName);
 
     new BsRunsUploadManagerConstruct(this, 'bs-runs-upload-manager', {
@@ -54,6 +62,7 @@ export class BsRunsUploadManagerStack extends cdk.Stack {
       icaTokenSecretObj: ica_access_token_secret_obj,
       portalTokenSecretObj: portal_secret_obj,
       basespaceSecretObj: basespace_secret_obj,
+      dataPortalApiUrlSsmParameterObj: data_portal_api_ssm_parameter_obj,
       eventBusObj: event_bus_obj,
       /* Lambda paths */
       uploadV2SamplesheetToGdsBsshLambdaPath: path.join(
