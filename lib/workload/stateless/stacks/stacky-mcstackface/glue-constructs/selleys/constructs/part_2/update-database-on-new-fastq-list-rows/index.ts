@@ -4,7 +4,7 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import path from 'path';
-import {LambdaB64GzTranslatorConstruct} from "../../../../../../../../components/python-lambda-b64gz-translator";
+import { LambdaB64GzTranslatorConstruct } from '../../../../../../../../components/python-lambda-b64gz-translator';
 
 export interface updateDataBaseOnNewFastqListRowsEventConstructProps {
   tableObj: dynamodb.ITableV2;

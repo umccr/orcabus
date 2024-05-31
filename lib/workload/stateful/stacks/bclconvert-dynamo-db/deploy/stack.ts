@@ -1,6 +1,6 @@
 import { Stack, RemovalPolicy, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import {DynamodbPartitionedPipelineConstruct} from "../../../../components/dynamodb-partitioned-table";
+import { DynamodbPartitionedPipelineConstruct } from '../../../../components/dynamodb-partitioned-table';
 
 export interface BclConvertTableStackProps {
   dynamodbTableName: string;
