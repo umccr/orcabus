@@ -39,6 +39,7 @@ import {
   WorkflowManagerStack,
   WorkflowManagerStackProps,
 } from './stacks/workflow-manager/deploy/stack';
+import { GlueStack, GlueStackProps } from './stacks/stacky-mcstackface/glue-constructs';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
@@ -53,6 +54,7 @@ export interface StatelessStackCollectionProps {
   dataSchemaStackProps: SchemaStackProps;
   bclConvertManagerStackProps: BclConvertManagerStackProps;
   workflowManagerStackProps: WorkflowManagerStackProps;
+  stackyMcStackFaceProps: GlueStackProps;
 }
 
 export class StatelessStackCollection {
@@ -69,6 +71,7 @@ export class StatelessStackCollection {
   readonly dataSchemaStack: Stack;
   readonly bclConvertManagerStack: Stack;
   readonly workflowManagerStack: Stack;
+  readonly stackyMcStackFaceStack: Stack;
 
   constructor(
     scope: Construct,
@@ -150,6 +153,10 @@ export class StatelessStackCollection {
     this.workflowManagerStack = new WorkflowManagerStack(scope, 'WorkflowManagerStack', {
       ...this.createTemplateProps(env, 'WorkflowManagerStack'),
       ...statelessConfiguration.workflowManagerStackProps,
+    });
+    this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
+      ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
+      ...statelessConfiguration.stackyMcStackFaceProps,
     });
   }
 

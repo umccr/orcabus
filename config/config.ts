@@ -59,6 +59,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
               getBclconvertInteropQcIcav2PipelineTableStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
+            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -74,6 +75,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             dataSchemaStackProps: getDataSchemaStackProps(),
             bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
             workflowManagerStackProps: getWorkflowManagerStackProps(),
+            stackyMcStackFaceProps: getGlueStackProps(),
           },
         },
       };
@@ -92,6 +94,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
               getBclconvertInteropQcIcav2PipelineTableStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
+            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -107,6 +110,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             dataSchemaStackProps: getDataSchemaStackProps(),
             bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
             workflowManagerStackProps: getWorkflowManagerStackProps(),
+            stackyMcStackFaceProps: getGlueStackProps(),
           },
         },
       };
@@ -125,6 +129,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
               getBclconvertInteropQcIcav2PipelineTableStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
+            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -140,6 +145,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             dataSchemaStackProps: getDataSchemaStackProps(),
             bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
             workflowManagerStackProps: getWorkflowManagerStackProps(),
+            stackyMcStackFaceProps: getGlueStackProps(),
           },
         },
       };
