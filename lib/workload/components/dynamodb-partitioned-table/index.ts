@@ -2,19 +2,19 @@ import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { RemovalPolicy } from 'aws-cdk-lib';
 
-export interface DynamodbIcav2PipelineConstructProps {
+export interface DynamodbPartitionedPipelineConstructProps {
   tableName: string;
   removalPolicy?: RemovalPolicy;
 }
 
-export class DynamodbIcav2PipelineConstruct extends Construct {
+export class DynamodbPartitionedPipelineConstruct extends Construct {
   public readonly tableObj: dynamodb.ITableV2;
   public readonly tableNameArn: string;
 
-  constructor(scope: Construct, id: string, props: DynamodbIcav2PipelineConstructProps) {
+  constructor(scope: Construct, id: string, props: DynamodbPartitionedPipelineConstructProps) {
     super(scope, id);
 
-    this.tableObj = new dynamodb.TableV2(this, 'dynamodb_icav2_pipeline_table', {
+    this.tableObj = new dynamodb.TableV2(this, 'dynamodb_partitioned_pipeline_table', {
       /* Either a db_uuid or an icav2 analysis id or a portal run id */
       partitionKey: {
         name: 'id',
