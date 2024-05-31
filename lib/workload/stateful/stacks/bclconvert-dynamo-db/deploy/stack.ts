@@ -1,6 +1,6 @@
 import { Stack, RemovalPolicy, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { DynamodbIcav2PipelineConstruct } from '../../../../components/dynamodb-icav2-table';
+import {DynamodbPartitionedPipelineConstruct} from "../../../../components/dynamodb-partitioned-table";
 
 export interface BclConvertTableStackProps {
   dynamodbTableName: string;
@@ -14,7 +14,7 @@ export class BclConvertTable extends Stack {
   }
 
   private createICAv2EventTranslatorTable(props: BclConvertTableStackProps) {
-    return new DynamodbIcav2PipelineConstruct(this, 'icav2_event_translator_table', {
+    return new DynamodbPartitionedPipelineConstruct(this, 'icav2_event_translator_table', {
       tableName: props.dynamodbTableName,
       removalPolicy: props.removalPolicy,
     });
