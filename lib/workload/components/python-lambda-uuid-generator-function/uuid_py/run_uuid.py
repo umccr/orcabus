@@ -8,7 +8,6 @@ These are time-based UUIDs, with the timestamp encoded in the first 48 bits.
 
 from uuid6 import uuid7
 
-
 def handler(event, context):
     return {
         "db_uuid": str(uuid7())

@@ -1,13 +1,13 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """
-Miscellaneous utilities for parsing through compressed strings
+Convert b64gzip to dict or vice versa
 """
 
-import json
-from base64 import b64encode, b64decode
+from base64 import b64decode, b64encode
+from typing import Union, Dict, List
 import gzip
-from typing import Dict, List, Union
+import json
 
 
 def compress_dict(input_dict: Union[Dict, List]) -> str:
@@ -42,3 +42,13 @@ def decompress_dict(input_compressed_b64gz_str: str) -> Union[Dict, List]:
             b64decode(input_compressed_b64gz_str.encode('utf-8'))
         )
     )
+
+
+def handler(event, context):
+    if event.get('decompress', False):
+        return {
+            "decompressed_dict": decompress_dict(event['input'])
+        }
+    return {
+        "compressed_b64gz_str": compress_dict(event['input'])
+    }
