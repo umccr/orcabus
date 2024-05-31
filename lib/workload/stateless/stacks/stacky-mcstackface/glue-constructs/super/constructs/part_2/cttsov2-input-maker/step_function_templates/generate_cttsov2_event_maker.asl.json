@@ -15,7 +15,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id": "$.inputs.db_uuid",
+          "id.$": "$.inputs.db_uuid",
           "id_type": "${__input_maker_type__}"
         }
       },
@@ -73,8 +73,7 @@
               },
               "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
               "ResultSelector": {
-                "project_id.$": "$.Parameter.Value.project_id",
-                "project_name.$": "$.Parameter.Value.project_name"
+                "project.$": "States.StringToJson($.Parameter.Value)"
               },
               "ResultPath": "$.get_project_id_and_name_parameter_step",
               "End": true
@@ -103,8 +102,8 @@
       "ResultSelector": {
         "cache_uri.$": "$.[0].get_cache_uri_step.cache_uri",
         "output_uri.$": "$.[1].get_output_uri_parameter_step.output_uri",
-        "project_id.$": "$.[2].get_project_id_and_name_parameter_step.project_id",
-        "project_name.$": "$.[2].get_project_id_and_name_parameter_step.project_name",
+        "project_id.$": "$.[2].get_project_id_and_name_parameter_step.project.project_id",
+        "project_name.$": "$.[2].get_project_id_and_name_parameter_step.project.project_name",
         "logs_uri.$": "$.[3].get_logs_uri_parameter_step.logs_uri"
       }
     },
@@ -112,15 +111,15 @@
       "Type": "Pass",
       "Parameters": {
         "projectId.$": "$.get_ssm_parameters_steps.project_id",
-        "sampleId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.libraryId",
-        "samplesheetDict.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.samplesheetDict",
+        "sampleId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.sampleId",
+        "samplesheet.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.samplesheet",
         "fastqListRows.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.fastqListRows",
         "instrumentRunId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
         "cacheUri.$": "$.get_ssm_parameters_steps.cache_uri",
         "analysisOutputUri.$": "$.get_ssm_parameters_steps.output_uri",
         "icaLogsUri.$": "$.get_ssm_parameters_steps.logs_uri",
         "userTags": {
-          "library_id.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.libraryId",
+          "library_id.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.sampleId",
           "project_name.$": "$.get_ssm_parameters_steps.project_name"
         }
       },

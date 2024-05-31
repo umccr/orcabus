@@ -24,13 +24,13 @@
         "input_json": {
           "bclconvert_report_directory": {
             "class": "Directory",
-            "location.$": "$.get_input_parameters_from_event.payload.bclconvertReportDirectory"
+            "location.$": "$.get_input_parameters_from_event.payload.data.bclconvertReportDirectory"
           },
           "interop_directory": {
             "class": "Directory",
-            "location.$": "$.get_input_parameters_from_event.payload.interopDirectory"
+            "location.$": "$.get_input_parameters_from_event.payload.data.interopDirectory"
           },
-          "run_id.$": "$.get_input_parameters_from_event.payload.runId"
+          "run_id.$": "$.get_input_parameters_from_event.payload.data.runId"
         }
       },
       "ResultPath": "$.set_input_json",

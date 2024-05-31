@@ -11,11 +11,48 @@
     },
     "Get reference id from payload": {
       "Type": "Pass",
-      "Next": "Get reference Id in database (local)",
+      "Next": "Is ref id null",
       "Parameters": {
         "reference_id.$": "$.input_event_detail.payload.refId"
       },
       "ResultPath": "$.get_reference_id_step"
+    },
+    "Is ref id null": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_reference_id_step.reference_id",
+          "IsNull": true,
+          "Next": "Generate uuid"
+        }
+      ],
+      "Default": "Get reference Id in database (local)"
+    },
+    "Generate uuid": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_uuid_lambda_function_arn__}",
+        "Payload": {}
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.get_reference_id_step",
+      "ResultSelector": {
+        "reference_id.$": "$.Payload.db_uuid"
+      },
+      "Next": "Get reference Id in database (local)"
     },
     "Get reference Id in database (local)": {
       "Type": "Task",

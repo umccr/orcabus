@@ -300,7 +300,6 @@
         "payload.$": "States.StringToJson($.Item.launch_event_payload.S)",
         "input_json.$": "$.Item.input_json.S",
         "pipeline_id.$": "$.Item.analysis_pipeline_id.S",
-        "technical_tags.$": "States.StringToJson($.Item.analysis_technical_tags.S)"
       },
       "ResultPath": "$.get_input_parameters_from_event",
       "Next": "Get Parameters for Launch Payload"
@@ -310,17 +309,15 @@
       "Parameters": {
         "project_id.$": "$.get_input_parameters_from_event.payload.data.projectId",
         "pipeline_id.$": "$.get_input_parameters_from_event.pipeline_id",
-        "user_reference.$": "$.get_input_parameters_from_event.payload.data.userReference",
         "input_json.$": "$.get_input_parameters_from_event.input_json",
-        "analysis_output_uri.$": "$.get_input_parameters_from_event.payload.analysisOutputUri",
-        "ica_logs_uri.$": "$.get_input_parameters_from_event.payload.icaLogsUri",
-        "technical_tags.$": "$.get_input_parameters_from_event.technical_tags",
-        "user_tags.$": "$.get_input_parameters_from_event.payload.userTags"
+        "analysis_output_uri.$": "$.get_input_parameters_from_event.payload.data.analysisOutputUri",
+        "ica_logs_uri.$": "$.get_input_parameters_from_event.payload.data.icaLogsUri",
+        "user_tags.$": "$.get_input_parameters_from_event.payload.data.userTags",
       },
       "ResultPath": "$.get_parameters_from_payload",
-      "Next": "Lauch ICAv2 Pipeline Lambda Function"
+      "Next": "Launch ICAv2 Pipeline Lambda Function"
     },
-    "Lauch ICAv2 Pipeline Lambda Function": {
+    "Launch ICAv2 Pipeline Lambda Function": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
@@ -328,11 +325,11 @@
           "project_id.$": "$.get_parameters_from_payload.project_id",
           "pipeline_id.$": "$.get_parameters_from_payload.pipeline_id",
           "workflow_type": "${__workflow_platform_type__}",
-          "user_reference.$": "$.get_parameters_from_payload.user_reference",
+          "user_reference.$": "$.workflow_inputs.workflowRunName",
           "input_json.$": "$.get_parameters_from_payload.input_json",
           "analysis_output_uri.$": "$.get_parameters_from_payload.analysis_output_uri",
           "ica_logs_uri.$": "$.get_parameters_from_payload.ica_logs_uri",
-          "technical_tags.$": "$.get_parameters_from_payload.technical_tags",
+          "technical_tags.$": "$.add_technical_tags_step.technical_tags",
           "user_tags.$": "$.get_parameters_from_payload.user_tags"
         },
         "FunctionName": "${__launch_icav2_pipeline_lambda_function_name__}"

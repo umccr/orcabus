@@ -35,7 +35,7 @@ Output Event status: `ready`
 */
 
 export interface fastqListRowsToCttsov2InputMakerConstructProps {
-  tableObj: dynamodb.ITableV2;
+  inputMakerTableObj: dynamodb.ITableV2;
   instrumentRunTableObj: dynamodb.ITableV2;
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
   outputUriPrefixSsmParameterObj: ssm.IStringParameter;
@@ -49,9 +49,8 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
     samplesheetTablePartitionName: 'samplesheet_by_instrument_run',
     fastqListRowTablePartitionName: 'fastqlistrows_by_instrument_run',
     triggerSource: 'orcabus.instrumentrunmanager',
-    triggerStatus: 'fastqlistrowregistered',
+    triggerStatus: 'fastqlistrowsregistered',
     triggerDetailType: 'InstrumentRunStateChange',
-    triggerWorkflowName: 'bclconvert_interop_qc',
     outputDetailType: 'WorkflowDraftRunStateChange',
     outputSource: 'orcabus.cttsov2inputeventglue',
     outputStatus: 'draft',
@@ -120,7 +119,7 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
         )
       ),
       definitionSubstitutions: {
-        __local_table_name__: props.tableObj.tableName,
+        __local_table_name__: props.inputMakerTableObj.tableName,
         __table_partition_name__: this.fastqListRowsTocttsov2InputMakerEventMap.localTablePartition,
         __instrument_run_id_table_name__: props.instrumentRunTableObj.tableName,
         __samplesheet_partition_name__:
@@ -137,7 +136,9 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
           fastq_list_row_slim_lambda_obj.currentVersion.functionArn,
         __workflow_name__: this.fastqListRowsTocttsov2InputMakerEventMap.workflowName,
         __workflow_version__: this.fastqListRowsTocttsov2InputMakerEventMap.workflowVersion,
+        __payload_version__: this.fastqListRowsTocttsov2InputMakerEventMap.payloadVersion,
         __detail_type__: this.fastqListRowsTocttsov2InputMakerEventMap.outputDetailType,
+        __output_status__: this.fastqListRowsTocttsov2InputMakerEventMap.outputStatus,
         __event_bus_name__: props.eventBusObj.eventBusName,
         __event_source__: this.fastqListRowsTocttsov2InputMakerEventMap.outputSource,
       },
@@ -157,6 +158,14 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
       lambda.currentVersion.grantInvoke(inputMakerScatterSfn.role);
     });
 
+    // Allow the step function to read/write from the table
+    [
+        props.inputMakerTableObj,
+        props.instrumentRunTableObj
+    ].forEach((table) => {
+      table.grantReadWriteData(inputMakerScatterSfn.role);
+    });
+
     // Allow the step function to write to the event bus
     props.eventBusObj.grantPutEventsTo(inputMakerScatterSfn.role);
 
@@ -173,7 +182,6 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
           detailType: [this.fastqListRowsTocttsov2InputMakerEventMap.triggerDetailType],
           detail: {
             status: [this.fastqListRowsTocttsov2InputMakerEventMap.triggerStatus],
-            workflowName: [this.fastqListRowsTocttsov2InputMakerEventMap.triggerWorkflowName],
           },
         },
       }

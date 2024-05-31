@@ -161,9 +161,11 @@
         "payload": {
           "refId": null,
           "version": "${__service_version__}",
-          "projectId.$": "$.Item.project_id.S",
-          "analysisId.$": "$.Item.analysis_id.S",
-          "analysisOutput.$": "$.Item.analysis_output.S"
+          "data": {
+            "projectId.$": "$.Item.project_id.S",
+            "analysisId.$": "$.Item.analysis_id.S",
+            "analysisOutput.$": "$.Item.analysis_output.S"
+          }
         }
       },
       "ResultPath": "$.get_updated_analysis_id_in_db_step",
@@ -175,7 +177,7 @@
       "Parameters": {
         "Entries": [
           {
-            "Detail.$": "$.update_analysis_id_in_db_step",
+            "Detail.$": "$.get_updated_analysis_id_in_db_step",
             "DetailType": "WorkflowRunStateChange",
             "EventBusName": "${__eventbus_name__}",
             "Source": "${__eventsource__}"

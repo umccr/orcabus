@@ -40,11 +40,14 @@ export class cttsov2GlueHandlerConstruct extends Construct {
       this,
       'fastq_list_rows_to_cttso_v2_input_maker',
       {
-        icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
-        instrumentRunTableObj: props.instrumentRunTableObj,
-        outputUriPrefixSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+        // Event bus
         eventBusObj: props.eventBusObj,
-        tableObj: props.inputMakerTableObj,
+        // SSM Param objects
+        icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+        outputUriPrefixSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+        // Tables
+        instrumentRunTableObj: props.instrumentRunTableObj,
+        inputMakerTableObj: props.inputMakerTableObj,
       }
     );
 
@@ -72,7 +75,7 @@ export class cttsov2GlueHandlerConstruct extends Construct {
       outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
       logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
       eventBusObj: props.eventBusObj,
-      tableObj: props.instrumentRunTableObj,
+      inputMakerTableObj: props.inputMakerTableObj,
     });
 
     /*

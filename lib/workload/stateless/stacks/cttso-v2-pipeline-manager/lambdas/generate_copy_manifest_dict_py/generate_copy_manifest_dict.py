@@ -56,25 +56,19 @@ def handler(event, context):
     if cache_uri is None:
         raise ValueError("Cache uri is required")
 
+    # Split cache uri into project id and cache path
     project_id = urlparse(cache_uri).netloc
     cache_path = Path(urlparse(cache_uri).path)
 
-    # Get sample id
+    # Get the sample id
     sample_id = event.get("sample_id", None)
 
     # Get fastq list rows
-    fastq_list_rows_compressed_str = event.get("fastq_list_rows_b64gz", None)
-
-    # Check sample id
-    if sample_id is None:
-        raise ValueError("Sample id is required")
+    fastq_list_rows = event.get("fastq_list_rows", None)
 
     # Check fastq list rows
-    if fastq_list_rows_compressed_str is None:
+    if fastq_list_rows is None:
         raise ValueError("Fastq list rows are required")
-
-    # Uncompress fastq list rows
-    fastq_list_rows: List[Dict] = decompress_dict(fastq_list_rows_compressed_str)
 
     # Generate the manifest list
     fastq_cache_path = convert_project_id_and_data_path_to_icav2_uri(
@@ -98,8 +92,8 @@ def handler(event, context):
             lambda row_iter_1, row_iter_2: row_iter_1 + row_iter_2,
             map(
                 lambda fastq_list_row_iter: [
-                    fastq_list_row_iter.get("Read1FileURI"),
-                    fastq_list_row_iter.get("Read2FileURI")
+                    fastq_list_row_iter.get("Read1FileUri"),
+                    fastq_list_row_iter.get("Read2FileUri")
                 ],
                 fastq_list_rows
             )
@@ -116,40 +110,23 @@ def handler(event, context):
 # if __name__ == "__main__":
 #
 #     import json
-#
-#     fastq_list_rows_b64gz = """
-# H4sIALln6WUC/+Wd32/cNgzH/5Ugz7XPkvyzb66LaQXSl9odBgyD4fO5Q7Dk0l3TDt2w/32kstOtKatLlL7wiD6UTg64fsl+LIqm6F/+Pn9jX708f352bt
-# tusK0dWpt2YLZD17Zdqs6fncFH+tf4kQttMmXK+u5nFy/wZ2+3v29v/txeXK530+4z/uZi2i7wG4UfWqaN+uHyann75lW/m/Hzl/P0ST9frdbavFsXqkw2
-# daGTvKmLZNrMc1IbNSu91PNG69Xl1fU2mbbT1ecPy4eVNkqpcmwzlRV6zFSlxxc//nTxunjZ/1yNG52XhRrzuck2c/Jivuputp+W3e3Zp3zUY5WsK9XM9a
-# ZJiqXcwBcuZTLV6yWZJ1Wti6XZ5Nl6dfPx9v3H21U/Xb+/gm9EKaNa7XV7Y+zVeJFlanyjRvgrfTd9uP0j/e2v8/8065PWrEnN+zj/X3BVNMVSv9OJ0RuT
-# 5HMF3290nszlVBebaanhX+EEj+93l9fw/2elM23ColemLFVZNPjRPDNZNa3nTVU32XeLGgcF92Lwz7OzA8kAcdcCzrZNBzAtcG0HkuRGKMmNN8ZeCyGZ0s
-# yL5MdHjYOCEMldB+sxMDx0aQtID+6KIrnKZJJcZd4YeyODZFIzK5IjosZBQYhk6xZlSK5t2lpYkiHFprPrSgkl+WCMfS6EZEozL5IfHzUOCoJr8jAgvsPQ
-# ph3YsELblsyuKy2UZO2NsS+EkExp5kXy46PGQUF4Tcal2OJC7OpecNXR2bURSrLxxtiXQkimNPMi+fFR46AgXPG6K3nBmoyF62FwZWz9Ncl5Oe6W3cftg3
-# jWp8Lz/sa4V3/vcuwr9LE+WbYfrJ8F598pmtzUBHNywN9trwfcXQ/u8VVL8l+J5r/60sfV3se1EP6P6efF/9OiyU1NcP2HfTjij8+uIZ2HVACyepL/WjT/
-# 9Zc+rvc+boTwf0w/L/6fFk1uasI7+c5i+g+LPqCPNwLYAZD8N6L5b770cbP3scqE3ACOOoDXHeCJ8WQnJ5gDtJABdPhsDZ+V48NyuCtQ94Aik3wP2Ku/dw
-# lOVjLuAccdwOoe8NR4spMTuge4XcDgyvjuwRxekfeAKpdJf5V7A1yqZRBPi2ZFeUzcWEgIV/UsZPT4hC51BT0s8pFZfVUIpbnwBrjUCKGZFM2L5oi4sZBw
-# pAMOT5S0Ka7KWKOnSK6FklwX3gB35jJIpkWzIjkmbiwkhHfaWGqzQDIeLIFEmyS5Ekpy5Q1wZyGEZFI0L5Ij4sZCQjDDxjIZZNipdZ1wQ5saguTyQSSbUy
-# F533xUl94Ad7o2JHOyJIdFsyD5KXFjISGYXQ/4B7bHFnPs9hsk10JJrr0B7qyEkEyK5kVyRNxYSAjWsF1Puh1S2CLjU21LktwIJbnxBrizFkIyKZoXyRFx
-# YyEhnF1jI0rbpR3WsWFhpkhuMpkkN5k3wJ2NDJJp0axIjokbCwnh2vXgJiJhd7lrNCdJVkJJVt4Ye50JIZkUzYvkiLixkBA+Kda5iUgplrA7yLVJkrVQkr
-# U3wJ1KCMmkaF4kR8SNhYQj3SEtjix0nV5YxyZJNkJJPhjgTi2EZFI0L5Ij4sZCQrDihR2beGB7uGvbprPrQijJhTfAnUYIyaRoXiRHxI2FhCPzCl3TJvZr
-# Wpdm51+TrB+2T85PheR936tW3gB3ukab/GRJDotmQfJT4sZCQnhNxuJ112F23brSF0WyFkqy9ga4sxBCMimaF8kRcWMhIVi7xsH+kFWnbkgKrMokyUYoyc
-# Yb4M5SCMmkaF4kR8SNhYQjfdd4wBFnnN1NOyJJzoWSfDDAnZUQkknRvEiOiBsLCeF5RTimaLBp2+H40W/skwuhJBfeAHfWQkgmRfMiOSJuLCQEs2s3bBRP
-# Ne5f1EGRXAolufQGuLMRQjIpmhfJEXFjISHcrelGh+I+uXMskyRXQkmuvDH2JhNCMimaF8kRcWMhIXyCAvs17d0scDfenyK5Fkpy7Q1wpxJCMimaF8kRcW
-# Mh4cibLHGuP/Z4YXJt6dp1I5TkxhvgTi2EZFI0L5Ij4sZCwpEJvfh66TbFyrUrYhMkm0wmySbzBrjTyCCZFs2K5Ji4sZAQnrHppnfdTRrovvE82Qjt8TLK
-# G+BOIT1etGheJEfEjYWE8Jss8SyUO9VoXb8XSbLQHi+jvQHuFNLjRYvmRXJE3FhICK7Jbs5Aa3EiX+teg0WRLLTHyxhvgDuF9HjRonmRHBE3FhKOnGp0b5
-# TGd1hY9zILimShPV7mYIA7hfR40aJ5kRwRNxYSwj1e1p1nTLFT07b082QjtMfLFN4Adwrp8aJF8yI5Im4sJIT7rocOpw2kbt4AtogQJOdC1+T8YIA7hfR4
-# 0aJZkRwTNxYSHjdbM4+erXlyJBMDDk+fZFo0K5Jj4sZCwuMm8uXRE/lOjmRiLNrpk0yLZkVyTNxYSDhSu7buBAU+Vbb4giiKZKHZdXMwxj6XQjIpmhfJEX
-# FjIeE+yb/+C4TOMeRCoAAA
-# """.replace("\n", "")
-#
 #     # Test the handler
 #     print(
 #         json.dumps(
 #             handler(
 #                 event={
-#                     "cache_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache",  # pragma: allowlist secret
-#                     "sample_id": "L2301346_rerun",
-#                     "fastq_list_rows_b64gz": fastq_list_rows_b64gz
+#                     "cache_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_cache/cttsov2/2_1_1/202405316db95e97/",
+#                     "sample_id": "L2400163",
+#                     "fastq_list_rows": [
+#                       {
+#                         "RGID": "ATGGTTGACT.AGGACAGGCC.1",
+#                         "RGSM": "L2400163",
+#                         "RGLB": "L2400163",
+#                         "Lane": 1,
+#                         "Read1FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
+#                         "Read2FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
+#                       }
+#                     ]
 #                 },
 #                 context=None
 #             ),

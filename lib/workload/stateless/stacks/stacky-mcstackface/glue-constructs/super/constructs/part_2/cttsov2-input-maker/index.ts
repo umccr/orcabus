@@ -29,7 +29,7 @@ Output Event status: `ready`
 */
 
 export interface cttsov2InputMakerConstructProps {
-  tableObj: dynamodb.ITableV2;
+  inputMakerTableObj: dynamodb.ITableV2;
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
   outputUriSsmParameterObj: ssm.IStringParameter;
   logsUriSsmParameterObj: ssm.IStringParameter;
@@ -63,7 +63,7 @@ export class cttsov2InputMakerConstruct extends Construct {
         path.join(__dirname, 'step_function_templates', 'generate_cttsov2_event_maker.asl.json')
       ),
       definitionSubstitutions: {
-        __table_name__: props.tableObj.tableName,
+        __table_name__: props.inputMakerTableObj.tableName,
         __input_maker_type__: this.cttsov2InputMakerEventMap.tablePartition,
         __analysis_logs_uri_ssm_parameter_name__: props.logsUriSsmParameterObj.parameterName,
         __analysis_output_uri_ssm_parameter_name__:
@@ -75,8 +75,10 @@ export class cttsov2InputMakerConstruct extends Construct {
     });
 
     /*
-    Part 2: Grant the internal sfn permissions to access the ssm parametera
+    Part 2: Grant the internal sfn permissions
     */
+
+    // Access to ssm parameters
     [
       props.outputUriSsmParameterObj,
       props.icav2ProjectIdSsmParameterObj,
@@ -85,6 +87,9 @@ export class cttsov2InputMakerConstruct extends Construct {
     ].forEach((ssmParameterObj) => {
       ssmParameterObj.grantRead(inputMakerSfn.role);
     });
+
+    // Read/Write access to the tables
+    props.inputMakerTableObj.grantReadWriteData(inputMakerSfn.role);
 
     /*
     Part 3: Build the external sfn
@@ -104,13 +109,14 @@ export class cttsov2InputMakerConstruct extends Construct {
         /*
         Table objects
         */
-        tableObj: props.tableObj,
+        tableObj: props.inputMakerTableObj,
         tablePartitionName: this.cttsov2InputMakerEventMap.tablePartition,
 
         /*
         Event Triggers
         */
         eventBusObj: props.eventBusObj,
+        triggerDetailType: this.cttsov2InputMakerEventMap.triggerDetailType,
         triggerSource: this.cttsov2InputMakerEventMap.triggerSource,
         triggerStatus: this.cttsov2InputMakerEventMap.triggerStatus,
         triggerWorkflowName: this.cttsov2InputMakerEventMap.triggerWorkflowName,

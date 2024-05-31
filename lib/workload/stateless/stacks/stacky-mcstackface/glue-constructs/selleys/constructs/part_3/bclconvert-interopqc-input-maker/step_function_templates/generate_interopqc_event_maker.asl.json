@@ -86,7 +86,7 @@
         "output_uri.$": "$.[0].get_output_uri_parameter_step.output_uri",
         "project_name.$": "$.[1].get_project_parameter_step.project.project_name",
         "project_id.$": "$.[1].get_project_parameter_step.project.project_id",
-        "logs_uri.$": "$.[0].get_logs_uri_parameter_step.logs_uri"
+        "logs_uri.$": "$.[2].get_logs_uri_parameter_step.logs_uri"
       }
     },
     "Generate inputs for BCLConvert InteropQC": {
@@ -97,7 +97,7 @@
         "interopDirectory.$": "States.Format('{}InterOp/', $.get_event_detail_payload_data_from_db_step.event_data_input.outputUri)",
         "runId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
         "analysisOutputUri.$": "$.get_ssm_parameters_steps.output_uri",
-        "icaLogsUri.$": "$.get_ssm_parameters_steps.logs_uri_prefix",
+        "icaLogsUri.$": "$.get_ssm_parameters_steps.logs_uri",
         "userTags": {
           "instrument_run_id.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
           "project_name.$": "$.get_ssm_parameters_steps.project_name"

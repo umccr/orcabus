@@ -41,46 +41,16 @@
       "Type": "Parallel",
       "Branches": [
         {
-          "StartAt": "Generate Trimmed SampleSheet",
+          "StartAt": "Upload SampleSheet to Cache Path",
           "States": {
-            "Generate Trimmed SampleSheet": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${__generate_trimmed_samplesheet__}",
-                "Payload": {
-                  "samplesheet_b64gz.$": "$.get_database_entry_step.event_payload.samplesheetB64gz",
-                  "sample_id.$": "$.get_database_entry_step.event_payload.sampleId"
-                }
-              },
-              "Retry": [
-                {
-                  "ErrorEquals": [
-                    "Lambda.ServiceException",
-                    "Lambda.AWSLambdaException",
-                    "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException"
-                  ],
-                  "IntervalSeconds": 1,
-                  "MaxAttempts": 3,
-                  "BackoffRate": 2
-                }
-              ],
-              "Next": "Upload SampleSheet to Cache Path",
-              "Comment": "We expect the inputs:\n* samplesheet_b64gz\n* sample_id\n\nAnd we provide outputs as \n* samplesheet_b64gz",
-              "ResultPath": "$.generate_trimmed_samplesheet_step",
-              "ResultSelector": {
-                "samplesheet_b64gz.$": "$.Payload.samplesheet_b64gz"
-              }
-            },
             "Upload SampleSheet to Cache Path": {
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
                 "FunctionName": "${__upload_samplesheet_to_cache_dir__}",
                 "Payload": {
-                  "cache_uri.$": "$.get_database_entry_step.event_payload.cacheUri",
-                  "samplesheet_dict_b64gz.$": "$.generate_trimmed_samplesheet_step.samplesheet_b64gz"
+                  "cache_uri.$": "$.get_database_entry_step.event_payload.data.cacheUri",
+                  "samplesheet.$": "$.get_database_entry_step.event_payload.data.samplesheet"
                 }
               },
               "Retry": [
@@ -115,9 +85,9 @@
               "Parameters": {
                 "FunctionName": "${__generate_copy_manifest_dict__}",
                 "Payload": {
-                  "cache_uri.$": "$.get_database_entry_step.event_payload.cacheUri",
-                  "sample_id.$": "$.get_database_entry_step.event_payload.sampleId",
-                  "fastq_list_rows_b64gz.$": "$.get_database_entry_step.event_payload.fastqListRowsB64gz"
+                  "sample_id.$": "$.get_database_entry_step.event_payload.data.sampleId",
+                  "cache_uri.$": "$.get_database_entry_step.event_payload.data.cacheUri",
+                  "fastq_list_rows.$": "$.get_database_entry_step.event_payload.data.fastqListRows"
                 }
               },
               "Retry": [
@@ -154,7 +124,7 @@
               "Resource": "arn:aws:states:::states:startExecution.sync:2",
               "ResultPath": "$.copy_fastq_files_to_cache_directory_step",
               "ResultSelector": {
-                "jobs_list.$": "$.Output.job_list_with_attempt_counter"
+                "job_id.$": "$.Output.job_id"
               }
             }
           }
@@ -162,10 +132,9 @@
       ],
       "Next": "Update DB Entry (post-fastq copy)",
       "ResultSelector": {
-        "trimmed_samplesheet_b64gz.$": "$.[0].generate_trimmed_samplesheet_step.samplesheet_b64gz",
         "samplesheet_file_id.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_id",
         "samplesheet_file_uri.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_uri",
-        "copy_jobs_list.$": "$.[1].copy_fastq_files_to_cache_directory_step.jobs_list"
+        "copy_job_id.$": "$.[1].copy_fastq_files_to_cache_directory_step.job_id"
       },
       "ResultPath": "$.copy_files_to_cache_directory_step"
     },
@@ -186,14 +155,14 @@
         }
       },
       "ResultPath": "$.update_entry_post_fastq",
-      "Next": "Set Sample Paid IDs as Dict"
+      "Next": "Set Sample Pair IDs as Dict"
     },
-    "Set Sample Paid IDs as Dict": {
+    "Set Sample Pair IDs as Dict": {
       "Type": "Pass",
       "Parameters": {
         "sample_pair_ids_dict": [
           {
-            "sample_pair_id.$": "$.get_database_entry_step.event_payload.sampleId"
+            "sample_pair_id.$": "$.get_database_entry_step.event_payload.data.sampleId"
           }
         ]
       },
@@ -204,7 +173,7 @@
       "Type": "Pass",
       "Parameters": {
         "input_json": {
-          "run_folder.$": "$.get_database_entry_step.event_payload.cacheUri",
+          "run_folder.$": "$.get_database_entry_step.event_payload.data.cacheUri",
           "sample_sheet.$": "$.copy_files_to_cache_directory_step.samplesheet_file_uri",
           "sample_pair_ids.$": "$.set_sample_pair_ids.sample_pair_ids_dict[*].sample_pair_id",
           "StartsFromFastq": true

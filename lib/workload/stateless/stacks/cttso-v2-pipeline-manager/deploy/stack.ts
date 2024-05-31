@@ -114,26 +114,6 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
             }
         );
 
-        // Generate trimmed samplesheet lambda
-        // Also doesn't need any ssm parameters or secrets
-        const generate_trimmed_samplesheet_lambda_obj = new PythonFunction(
-            this,
-            'generate_trimmed_samplesheet_lambda_python_function',
-            {
-                entry: path.join(
-                    __dirname,
-                    '../lambdas/generate_and_trim_cttso_samplesheet_dict_py'
-                ),
-                runtime: lambda.Runtime.PYTHON_3_11,
-                architecture: lambda.Architecture.ARM_64,
-                index: 'generate_and_trim_cttso_samplesheet_dict.py',
-                handler: 'handler',
-                memorySize: 1024,
-                layers: [lambda_layer_obj.lambdaLayerVersionObj],
-                timeout: Duration.seconds(60),
-            }
-        );
-
         // upload_samplesheet_to_cache_dir_py lambda
         const upload_samplesheet_to_cache_dir_lambda_obj = new PythonFunction(
             this,
@@ -203,7 +183,6 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
             icav2CopyFilesStateMachineObj: icav2_copy_files_state_machine_obj.icav2CopyFilesSfnObj,
             pipelineIdSsmObj: pipeline_id_ssm_obj_list,
             /* Lambdas paths */
-            generateTrimmedSamplesheetLambdaObj: generate_trimmed_samplesheet_lambda_obj,
             uploadSamplesheetToCacheDirLambdaObj: upload_samplesheet_to_cache_dir_lambda_obj, // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir_py'
             generateCopyManifestDictLambdaObj: generate_copy_manifest_dict_lambda_obj, // __dirname + '/../../../lambdas/generate_copy_manifest_dict_py'
             deleteCacheUriLambdaPathObj: delete_cache_uri_lambda_function,

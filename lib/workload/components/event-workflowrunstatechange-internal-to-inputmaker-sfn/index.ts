@@ -8,6 +8,7 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import path from 'path';
 import * as cdk from 'aws-cdk-lib';
+import {PythonLambdaUuidConstruct} from "../python-lambda-uuid-generator-function";
 
 export interface WorkflowRunStateChangeInternalInputMakerProps {
   /* Object name prefixes */
@@ -21,6 +22,7 @@ export interface WorkflowRunStateChangeInternalInputMakerProps {
   triggerSource: string;
   triggerStatus: string;
   triggerWorkflowName: string;
+  triggerDetailType?: string;
   outputSource: string;
   /* Workflow metadata constants */
   workflowName: string;
@@ -32,7 +34,8 @@ export interface WorkflowRunStateChangeInternalInputMakerProps {
 
 export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct {
   public readonly stepFunctionObj: sfn.StateMachine;
-  public readonly detailType = 'WorkflowRunStateChange';
+  public readonly defaultTriggerDetailType = 'WorkflowRunStateChange'
+  public readonly outputDetailType = 'WorkflowRunStateChange';
 
   constructor(scope: Construct, id: string, props: WorkflowRunStateChangeInternalInputMakerProps) {
     super(scope, id);
@@ -76,6 +79,12 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
       }
     );
 
+    /* Take the lambda uuid generator construct */
+    const uuidGeneratorLambdaObj = new PythonLambdaUuidConstruct(
+        this,
+        'uuid_generator_lambda'
+    ).lambdaObj
+
     /*
     Part 2 - Build the AWS State Machine
     */
@@ -96,11 +105,12 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
           fillPlaceholdersInEventPayloadDataLambdaObj.currentVersion.functionArn,
         __generate_workflow_run_name_lambda_function_arn__:
           generateWorkflowRunNameLambdaObj.currentVersion.functionArn,
+        __generate_uuid_lambda_function_arn__: uuidGeneratorLambdaObj.currentVersion.functionArn,
         /* Table configurations */
         __table_name__: props.tableObj.tableName,
         /* Event configurations */
         __event_output_source__: props.outputSource,
-        __detail_type__: this.detailType,
+        __detail_type__: this.outputDetailType,
         __event_bus_name__: props.eventBusObj.eventBusName,
         __id_type__: props.tablePartitionName,
         /* Workflow name */
@@ -120,6 +130,7 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
       generatePortalRunIdLambdaObj,
       generateWorkflowRunNameLambdaObj,
       fillPlaceholdersInEventPayloadDataLambdaObj,
+      uuidGeneratorLambdaObj
     ].forEach((lambdaObj) => {
       lambdaObj.currentVersion.grantInvoke(<iam.IRole>this.stepFunctionObj.role);
     });
@@ -144,13 +155,13 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
     props.eventBusObj.grantPutEventsTo(<iam.IRole>this.stepFunctionObj.role);
 
     /*
-        Part 4 - Set up a rule to trigger the state machine
-        */
+    Part 4 - Set up a rule to trigger the state machine
+    */
     const rule = new events.Rule(this, 'workflowrunstatechangeparser_event_rule', {
       eventBus: props.eventBusObj,
       eventPattern: {
         source: [props.triggerSource],
-        detailType: [this.detailType],
+        detailType: [ props.triggerDetailType || this.defaultTriggerDetailType],
         detail: {
           status: [{ 'equals-ignore-case': props.triggerStatus }],
           workflowName: [{ 'equals-ignore-case': props.triggerWorkflowName }],

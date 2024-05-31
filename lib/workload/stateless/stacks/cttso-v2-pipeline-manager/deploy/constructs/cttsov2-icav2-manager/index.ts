@@ -40,7 +40,6 @@ interface Cttsov2Icav2PipelineManagerConstructProps {
     /* Extras */
     // Lambdas
     // SFN Input Lambdas
-    generateTrimmedSamplesheetLambdaObj: PythonFunction; // __dirname + '/../../../lambdas/generate_trimmed_samplesheet_lambda_path'
     uploadSamplesheetToCacheDirLambdaObj: PythonFunction; // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir_py'
     generateCopyManifestDictLambdaObj: PythonFunction; // __dirname + '/../../../lambdas/generate_copy_manifest_dict_py'
     // SFN Output lambdas
@@ -74,8 +73,6 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
                     /* Lambda arns */
                     __generate_copy_manifest_dict__:
                     props.generateCopyManifestDictLambdaObj.currentVersion.functionArn,
-                    __generate_trimmed_samplesheet__:
-                    props.generateTrimmedSamplesheetLambdaObj.currentVersion.functionArn,
                     __upload_samplesheet_to_cache_dir__:
                     props.uploadSamplesheetToCacheDirLambdaObj.currentVersion.functionArn,
                     /* Subfunction state machines */
@@ -90,7 +87,6 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         // Grant lambda invoke permissions to the state machine
         [
             props.generateCopyManifestDictLambdaObj,
-            props.generateTrimmedSamplesheetLambdaObj,
             props.uploadSamplesheetToCacheDirLambdaObj,
         ].forEach((lambda_obj) => {
             lambda_obj.currentVersion.grantInvoke(<iam.IRole>configure_inputs_sfn.role);
@@ -151,7 +147,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
 
         /* Add ICAv2 WfmworkflowRunStateChange wrapper around launch state machine */
         // This state machine handles the event target configurations */
-        const statemachine_launch_wrapper = new WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct(
+        new WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct(
             this,
             'cttso_v2_wfm_sfn_handler',
             {
@@ -177,27 +173,6 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
                 workflowVersion: props.workflowVersion,
                 serviceVersion: props.serviceVersion,
             }
-        );
-
-        // Trigger state machine on event
-        const rule = new events.Rule(this, 'cttso_v2_launch_step_function_rule', {
-                eventBus: props.eventBusObj,
-                eventPattern: {
-                    source: [props.triggerLaunchSource],
-                    detailType: [props.detailType],
-                    detail: {
-                        status: [{'equals-ignore-case': 'ready'}],
-                        workflowName: [{'equals-ignore-case': 'cttsov2'}],
-                    },
-                }
-            }
-        );
-
-        // Add state machine to event target
-        rule.addTarget(new eventsTargets.SfnStateMachine(statemachine_launch_wrapper.stateMachineObj, {
-                    input: events.RuleTargetInput.fromEventPath('$.detail')
-                }
-            )
         );
 
         // Create statemachine for handling any state changes of the pipeline

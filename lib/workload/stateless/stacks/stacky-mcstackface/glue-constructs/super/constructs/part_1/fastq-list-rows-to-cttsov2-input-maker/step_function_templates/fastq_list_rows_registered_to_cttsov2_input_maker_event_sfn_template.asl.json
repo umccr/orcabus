@@ -19,6 +19,7 @@
           "id_type": "${__table_partition_name__}"
         }
       },
+      "ResultPath": "$.save_event_local_step",
       "Next": "Translate Event"
     },
     "Translate Event": {
@@ -96,15 +97,15 @@
       ],
       "ResultPath": "$.get_instrument_data_db_step",
       "ResultSelector": {
-        "samplesheet.$": "$.get_samplesheet_from_db_step.samplesheet",
-        "fastq_list_rows.$": "$.get_fastq_list_rows_from_db_step.fastq_list_rows"
+        "samplesheet.$": "$[0].get_samplesheet_from_db_step.samplesheet",
+        "fastq_list_rows.$": "$[1].get_fastq_list_rows_from_db_step.fastq_list_rows"
       }
     },
     "Is Tso500 Data Section in SampleSheet": {
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.get_instrument_data_db_step,samplesheet.tso500l",
+          "Variable": "$.get_instrument_data_db_step.samplesheet.tso500l_data",
           "IsPresent": true,
           "Next": "Get library map"
         }
@@ -115,7 +116,9 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
-        "Payload.$": "$",
+        "Payload": {
+          "samplesheet.$": "$.get_instrument_data_db_step.samplesheet"
+        },
         "FunctionName": "${__get_library_set_lambda_function_arn__}"
       },
       "Retry": [
@@ -134,7 +137,7 @@
       "Next": "For each library",
       "ResultPath": "$.get_library_map_step",
       "ResultSelector": {
-        "library_id_map": "$.Payload.library_id_map"
+        "library_id_map.$": "$.Payload.library_id_map"
       }
     },
     "Success": {
@@ -150,7 +153,7 @@
         "States": {
           "Reduce items": {
             "Type": "Parallel",
-            "Next": "cttso ready event",
+            "Next": "cttso draft event",
             "Branches": [
               {
                 "StartAt": "Slim SampleSheet",
@@ -161,7 +164,7 @@
                     "Parameters": {
                       "FunctionName": "${__slim_samplesheet_lambda_function_arn__}",
                       "Payload": {
-                        "library_id": "$.library_id",
+                        "library_id.$": "$.library_id",
                         "samplesheet.$": "$.samplesheet"
                       }
                     },
@@ -195,7 +198,7 @@
                     "Parameters": {
                       "FunctionName": "${__slim_fastq_list_row_lambda_function_arn__}",
                       "Payload": {
-                        "library_id": "$.library_id",
+                        "library_id.$": "$.library_id",
                         "fastq_list_rows.$": "$.fastq_list_rows"
                       }
                     },
@@ -223,11 +226,11 @@
             ],
             "ResultPath": "$.slim_inputs",
             "ResultSelector": {
-              "samplesheet.$": "$.slim_samplesheet_step.samplesheet",
-              "fastq_list_rows.$": "$.slim_fastq_list_rows.fastq_list_rows"
+              "samplesheet.$": "$.[0].slim_samplesheet_step.samplesheet",
+              "fastq_list_rows.$": "$.[1].slim_fastq_list_rows.fastq_list_rows"
             }
           },
-          "cttso ready event": {
+          "cttso draft event": {
             "Type": "Task",
             "Resource": "arn:aws:states:::events:putEvents",
             "Parameters": {
@@ -236,17 +239,17 @@
                   "Detail": {
                     "portalRunId": null,
                     "timestamp.$": "$$.State.EnteredTime",
-                    "status": "awaitinginput",
+                    "status": "${__output_status__}",
                     "workflowName": "${__workflow_name__}",
                     "workflowVersion": "${__workflow_version__}",
                     "workflowRunName": null,
                     "payload": {
                       "refId": null,
-                      "version": "${__service_version__}",
+                      "version": "${__payload_version__}",
                       "data": {
                         "sampleId.$": "$.library_id",
                         "instrumentRunId.$": "$.instrument_run_id",
-                        "samplesheetDict.$": "$.slim_inputs.samplesheet",
+                        "samplesheet.$": "$.slim_inputs.samplesheet",
                         "fastqListRows.$": "$.slim_inputs.fastq_list_rows"
                       }
                     }
@@ -267,8 +270,8 @@
       "ItemSelector": {
         "library_id.$": "$$.Map.Item.Value",
         "instrument_run_id.$": "$.translate_event_step.instrument_run_id",
-        "samplesheet": "$.get_instrument_data_db_step.samplesheet",
-        "fastq_list_rows": "$.get_instrument_data_db_step.fastq_list_rows"
+        "samplesheet.$": "$.get_instrument_data_db_step.samplesheet",
+        "fastq_list_rows.$": "$.get_instrument_data_db_step.fastq_list_rows"
       }
     }
   }

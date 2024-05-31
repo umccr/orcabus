@@ -66,7 +66,8 @@
         "Entries": [
           {
             "Detail": {
-              "instrumentRunId.$": "$.inputs.payload.data.instrumentRunId"
+              "instrumentRunId.$": "$.inputs.payload.data.instrumentRunId",
+              "status": "fastqlistrowsregistered"
             },
             "DetailType": "${__detail_type__}",
             "EventBusName": "${__event_bus_name__}",
