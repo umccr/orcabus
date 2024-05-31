@@ -136,10 +136,10 @@ from tempfile import NamedTemporaryFile
 from os import environ
 import typing
 import boto3
+import logging
 
 # IDE imports only
 if typing.TYPE_CHECKING:
-    from mypy_boto3_ssm.client import SSMClient
     from mypy_boto3_secretsmanager.client import SecretsManagerClient
 
 # Imports
@@ -152,6 +152,10 @@ from wrapica.utils import recursively_build_open_api_body_from_libica_item
 
 # Globals
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
+
+# Set loggers
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def get_secrets_manager_client() -> 'SecretsManagerClient':
@@ -182,9 +186,11 @@ def set_icav2_env_vars():
 
 def handler(event, context):
     # Set icav2 environment variables
+    logger.info("Setting ICAv2 Env Vars")
     set_icav2_env_vars()
 
     # Get inputs
+    logger.info("Collecting lambda inputs")
     project_id = event.get("project_id", None)
     user_reference = event.get("user_reference", None)
     input_json = json.loads(event.get("input_json", {}))
@@ -229,6 +235,7 @@ def handler(event, context):
             ICAv2CWLPipelineAnalysis as ICAv2PipelineAnalysis,
         )
         # Collect the input json
+        logger.info("Collecting cwl inputs")
         icav2_analysis_input_obj = ICAv2AnalysisInput(
             input_json=input_json
         )
@@ -238,6 +245,7 @@ def handler(event, context):
             ICAv2NextflowPipelineAnalysis as ICAv2PipelineAnalysis,
         )
         # Collect the input json
+        logger.info("Collecting nextflow inputs")
         icav2_analysis_input_obj = ICAv2AnalysisInput(
             input_json=input_json,
             project_id=project_id,
@@ -247,6 +255,7 @@ def handler(event, context):
         raise ValueError(f"workflow_type should be one of 'nextflow' or 'cwl' got {workflow_type} instead")
 
     # Initialise an ICAv2CWLPipeline Analysis object
+    logger.info("Generating the analysis object")
     analysis_obj = ICAv2PipelineAnalysis(
         user_reference=user_reference,
         project_id=project_id,
@@ -263,9 +272,11 @@ def handler(event, context):
 
     # Generate the inputs and analysis object
     # Call the object to launch it
+    logger.info("Launching the ICAv2 Analysis")
     analysis_launch_obj: Analysis = analysis_obj()
 
     # Save the analysis
+    logger.info("Saving the analysis")
     with NamedTemporaryFile(suffix='.json') as temp_file:
         analysis_obj.save_analysis(Path(temp_file.name))
 

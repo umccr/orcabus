@@ -347,7 +347,7 @@
           "BackoffRate": 2
         }
       ],
-      "TimeoutSeconds": 60,
+      "TimeoutSeconds": 300,
       "ResultSelector": {
         "analysis_id.$": "$.Payload.analysis_id",
         "analysis_status.$": "$.Payload.analysis_status",

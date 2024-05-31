@@ -79,7 +79,7 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
         index: 'icav2_launch_pipeline_lambda.py',
         handler: 'handler',
         memorySize: 1024,
-        timeout: Duration.seconds(60),
+        timeout: Duration.seconds(300),
         environment: {
           ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretArn,
         },
