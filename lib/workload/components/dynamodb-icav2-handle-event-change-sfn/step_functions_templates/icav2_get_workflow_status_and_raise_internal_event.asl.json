@@ -138,7 +138,7 @@
     },
     "Wait (database - updates)": {
       "Type": "Wait",
-      "Seconds": 5,
+      "Seconds": 1,
       "Next": "Get UUID Row For Payload"
     },
     "Get UUID Row For Payload": {

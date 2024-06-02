@@ -263,7 +263,7 @@
     },
     "Wait 1 Second (post event detail output update)": {
       "Type": "Wait",
-      "Seconds": 5,
+      "Seconds": 1,
       "Next": "Get Item from DataBase (local)"
     },
     "Get Item from DataBase (local)": {
