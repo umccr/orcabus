@@ -5,7 +5,7 @@ import {
   basespaceAccessTokenSecretName,
   eventBusName,
   gdsBsRunsUploadLogPath,
-  dataPortalApiUrlSsmParameterName,
+  ssCheckApiUrlSsmParameterName,
 } from '../constants';
 import { BsRunsUploadManagerConfig } from '../../lib/workload/stateless/stacks/bs-runs-upload-manager/deploy/stack';
 
@@ -14,7 +14,7 @@ export const getBsRunsUploadManagerStackProps = (stage: AppStage): BsRunsUploadM
     icaTokenSecretId: icaAccessTokenSecretName,
     portalTokenSecretId: jwtSecretName,
     basespaceTokenSecretId: basespaceAccessTokenSecretName,
-    dataPortalApiUrlSsmParameterName: dataPortalApiUrlSsmParameterName,
+    ssCheckApiUrlSsmParameterName: ssCheckApiUrlSsmParameterName,
     eventbusName: eventBusName,
     gdsSystemFilesPath: gdsBsRunsUploadLogPath[stage],
   };

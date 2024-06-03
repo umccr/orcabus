@@ -20,7 +20,7 @@ def set_portal_token():
 
 
 def set_api_url():
-    os.environ["PORTAL_API_URL"] = get_api_url_from_ssm_parameter()
+    os.environ["SS_CHECK_API_URL"] = get_api_url_from_ssm_parameter()
 
 
 def get_portal_token_from_aws_secrets_manager():
@@ -34,7 +34,7 @@ def get_portal_token_from_aws_secrets_manager():
 
 
 def get_api_url_from_ssm_parameter():
-    ssm_parameter_name = os.environ.get("PORTAL_API_URL_PARAMETER_NAME", None)
+    ssm_parameter_name = os.environ.get("SS_CHECK_API_URL_PARAMETER_NAME", None)
 
     if ssm_parameter_name is None:
         logger.error("API_URL_PARAMETER_NAME env var is not set")

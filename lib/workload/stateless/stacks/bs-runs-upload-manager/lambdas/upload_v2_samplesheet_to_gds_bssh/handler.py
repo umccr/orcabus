@@ -16,7 +16,7 @@ With the following environment variables
 ICA_BASE_URL
 ICA_ACCESS_TOKEN_SECRET_ID
 PORTAL_TOKEN_SECRET_ID
-PORTAL_API_URL_PARAMETER_NAME
+SS_CHECK_API_URL_PARAMETER_NAME
 
 And performs the following operations:
 

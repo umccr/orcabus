@@ -26,7 +26,7 @@ def generate_v2_samplesheet(v1_samplesheet_file: Path) -> Path:
     }
 
     response = requests.post(
-        url=os.getenv("PORTAL_API_URL", None),
+        url=os.getenv("SS_CHECK_API_URL", None),
         headers=headers,
         files=files
     )
