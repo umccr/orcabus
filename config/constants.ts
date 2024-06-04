@@ -104,7 +104,7 @@ export const basespaceAccessTokenSecretName = '/manual/BaseSpaceAccessTokenSecre
 ICAv2 Resources - required by various stacks
  */
 export const icav2AccessTokenSecretName: Record<AppStage, string> = {
-  [AppStage.BETA]: 'ICAv2JWTKey-umccr-prod-service-trial', // pragma: allowlist secret
+  [AppStage.BETA]: 'ICAv2JWTKey-umccr-prod-service-dev', // pragma: allowlist secret
   [AppStage.GAMMA]: 'ICAv2JWTKey-umccr-prod-service-staging', // pragma: allowlist secret
   [AppStage.PROD]: 'ICAv2JWTKey-umccr-prod-service-prod', // pragma: allowlist secret
 };
