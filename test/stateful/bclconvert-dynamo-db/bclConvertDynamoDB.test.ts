@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { DynamodbIcav2PipelineConstruct } from '../../../lib/workload/components/dynamodb-icav2-table';
+import { DynamodbPartitionedPipelineConstruct } from '../../../lib/workload/components/dynamodb-partitioned-table';
 
 let stack: cdk.Stack;
 
@@ -13,7 +13,7 @@ describe('Icav2EventTranslatorTableStack', () => {
   stack = new cdk.Stack(app, 'TestIcav2EventTranslatorTable', {
     env: { account: '123456789', region: 'ap-southeast-2' },
   });
-  new DynamodbIcav2PipelineConstruct(stack, 'TestIcav2EventTranslatorTableStack', {
+  new DynamodbPartitionedPipelineConstruct(stack, 'TestIcav2EventTranslatorTableStack', {
     tableName: 'TestDynamoDBTableName',
     removalPolicy: cdk.RemovalPolicy.DESTROY,
   });

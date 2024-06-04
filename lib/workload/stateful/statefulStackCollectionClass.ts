@@ -12,13 +12,23 @@ import {
   BclConvertTable,
   BclConvertTableStackProps,
 } from './stacks/bclconvert-dynamo-db/deploy/stack';
+import {
+  BclconvertInteropQcIcav2PipelineTableStack,
+  BclconvertInteropQcIcav2PipelineTableStackProps,
+} from './stacks/bclconvert-interop-qc-pipeline-dynamo-db/deploy/stack';
+import {
+  StackyStatefulTablesStack,
+  StackyStatefulTablesStackProps,
+} from './stacks/stacky-mcstackface-dynamodb';
 
 export interface StatefulStackCollectionProps {
   sharedStackProps: SharedStackProps;
   tokenServiceStackProps: TokenServiceStackProps;
   icaEventPipeStackProps: IcaEventPipeStackProps;
+  bclconvertInteropQcIcav2PipelineTableStackProps: BclconvertInteropQcIcav2PipelineTableStackProps;
   cttsov2Icav2PipelineTableStackProps: Cttsov2Icav2PipelineTableStackProps;
   BclConvertTableStackProps: BclConvertTableStackProps;
+  stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
 }
 
 export class StatefulStackCollection {
@@ -27,8 +37,10 @@ export class StatefulStackCollection {
   readonly sharedStack: Stack;
   readonly tokenServiceStack: Stack;
   readonly icaEventPipeStack: Stack;
+  readonly bclconvertInteropQcIcav2PipelineTableStack: Stack;
   readonly cttsov2Icav2PipelineTableStack: Stack;
   readonly BclConvertTableStack: Stack;
+  readonly stackyStatefulTablesStack: Stack;
 
   constructor(
     scope: Construct,
@@ -50,6 +62,16 @@ export class StatefulStackCollection {
       ...statefulConfiguration.icaEventPipeStackProps,
     });
 
+    this.bclconvertInteropQcIcav2PipelineTableStack =
+      new BclconvertInteropQcIcav2PipelineTableStack(
+        scope,
+        'BclconvertInteropQcIcav2PipelineTableStack',
+        {
+          ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineTable'),
+          ...statefulConfiguration.bclconvertInteropQcIcav2PipelineTableStackProps,
+        }
+      );
+
     this.cttsov2Icav2PipelineTableStack = new Cttsov2Icav2PipelineTable(
       scope,
       'Cttsov2Icav2PipelineTableStack',
@@ -62,6 +84,14 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'BclConvertTableStack'),
       ...statefulConfiguration.BclConvertTableStackProps,
     });
+    this.stackyStatefulTablesStack = new StackyStatefulTablesStack(
+      scope,
+      'StackyStatefulTablesStack',
+      {
+        ...this.createTemplateProps(env, 'StackyStatefulTablesStack'),
+        ...statefulConfiguration.stackyStatefulTablesStackProps,
+      }
+    );
   }
 
   /**

@@ -1,0 +1,427 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Decompress SampleSheet",
+  "States": {
+    "Decompress SampleSheet": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload": {
+          "samplesheet_b64gz": "$.samplesheetB64gz"
+        },
+        "FunctionName": "${__decompress_samplesheet_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Update DataBases",
+      "Comment": "Gunzip SampleSheet",
+      "ResultPath": "$.decompress_samplesheet_step",
+      "ResultSelector": {
+        "samplesheet_json.$": "$.samplesheet_json"
+      }
+    },
+    "Update DataBases": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Registed SampleSheet by RunID (LibraryFile DB)",
+          "States": {
+            "Registed SampleSheet by RunID (LibraryFile DB)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "Column": {
+                    "S": "MyEntry"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Collect LibraryIDs from SampleSheet",
+          "States": {
+            "Collect LibraryIDs from SampleSheet": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__collect_library_ids_lambda_arn__}",
+                "Payload": {
+                  "samplesheet_json.$": "$.decompress_samplesheet_step.samplesheet_json"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Update LibraryID databases",
+              "ResultPath": "$.collect_library_ids_step",
+              "ResultSelector": {
+                "library_id_dict_list.$": "$.Payload.library_id_dict_list",
+                "library_run_id_dict_list.$": "$.Payload.library_run_id_dict_list"
+              }
+            },
+            "Update LibraryID databases": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Put LibraryRunIds",
+                  "States": {
+                    "Put LibraryRunIds": {
+                      "Type": "Map",
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Register LibraryRunIds (LibraryFileDB)",
+                        "States": {
+                          "Register LibraryRunIds (LibraryFileDB)": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:putItem",
+                            "Parameters": {
+                              "TableName": "${__table_name__}",
+                              "Item": {
+                                "Column": {
+                                  "S": "MyEntry"
+                                }
+                              }
+                            },
+                            "End": true
+                          }
+                        }
+                      },
+                      "ItemsPath": "$.collect_library_ids_step.library_run_id_dict_list",
+                      "ResultPath": "$.library_run_ids_map_step",
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Update LibraryIDs",
+                  "States": {
+                    "Update LibraryIDs": {
+                      "Type": "Map",
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Get LibraryID (LibJourney DB)",
+                        "States": {
+                          "Get LibraryID (LibJourney DB)": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:getItem",
+                            "Parameters": {
+                              "TableName": "${__table_name__}",
+                              "Key": {
+                                "Column": {
+                                  "S": "MyEntry"
+                                }
+                              }
+                            },
+                            "Next": "Is LibraryID Present in LibraryFile DB",
+                            "ResultPath": "$.get_library_id_step"
+                          },
+                          "Is LibraryID Present in LibraryFile DB": {
+                            "Type": "Choice",
+                            "Choices": [
+                              {
+                                "Variable": "$.get_library_id_step.Item",
+                                "IsPresent": true,
+                                "Next": "Append LibraryLaneIDs to LibraryId List (LibraryFileDB)"
+                              }
+                            ],
+                            "Default": "Query LabMetadata From Athena"
+                          },
+                          "Query LabMetadata From Athena": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "OutputPath": "$.Payload",
+                            "Parameters": {
+                              "FunctionName": "${__query_lab_metadata_lambda_arn__}",
+                              "Payload": {
+                                "library_id": ""
+                              }
+                            },
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "Lambda.ServiceException",
+                                  "Lambda.AWSLambdaException",
+                                  "Lambda.SdkClientException",
+                                  "Lambda.TooManyRequestsException"
+                                ],
+                                "IntervalSeconds": 1,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2
+                              }
+                            ],
+                            "Next": "Register Library ID in LibFileDB and LibJourneyDB",
+                            "ResultPath": "$.query_lab_metadata_from_athena_step"
+                          },
+                          "Register Library ID in LibFileDB and LibJourneyDB": {
+                            "Type": "Parallel",
+                            "Branches": [
+                              {
+                                "StartAt": "Put LibraryId with LibraryLaneId list (LibraryFile DB)",
+                                "States": {
+                                  "Put LibraryId with LibraryLaneId list (LibraryFile DB)": {
+                                    "Type": "Task",
+                                    "Resource": "arn:aws:states:::dynamodb:putItem",
+                                    "Parameters": {
+                                      "TableName": "${__table_name__}",
+                                      "Item": {
+                                        "Column": {
+                                          "S": "MyEntry"
+                                        }
+                                      }
+                                    },
+                                    "End": true
+                                  }
+                                }
+                              },
+                              {
+                                "StartAt": "Get Lib Journey",
+                                "States": {
+                                  "Get Lib Journey": {
+                                    "Type": "Task",
+                                    "Resource": "arn:aws:states:::lambda:invoke",
+                                    "OutputPath": "$.Payload",
+                                    "Parameters": {
+                                      "Payload.$": "$"
+                                    },
+                                    "Retry": [
+                                      {
+                                        "ErrorEquals": [
+                                          "Lambda.ServiceException",
+                                          "Lambda.AWSLambdaException",
+                                          "Lambda.SdkClientException",
+                                          "Lambda.TooManyRequestsException"
+                                        ],
+                                        "IntervalSeconds": 1,
+                                        "MaxAttempts": 3,
+                                        "BackoffRate": 2
+                                      }
+                                    ],
+                                    "Next": "Initialise Library Journey"
+                                  },
+                                  "Initialise Library Journey": {
+                                    "Type": "Parallel",
+                                    "Branches": [
+                                      {
+                                        "StartAt": "Add library id (LibJourney DB)",
+                                        "States": {
+                                          "Add library id (LibJourney DB)": {
+                                            "Type": "Task",
+                                            "Resource": "arn:aws:states:::dynamodb:putItem",
+                                            "Parameters": {
+                                              "TableName": "MyDynamoDBTable",
+                                              "Item": {
+                                                "Column": {
+                                                  "S": "MyEntry"
+                                                }
+                                              }
+                                            },
+                                            "End": true
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "StartAt": "Add journey legs to database",
+                                        "States": {
+                                          "Add journey legs to database": {
+                                            "Type": "Map",
+                                            "ItemProcessor": {
+                                              "ProcessorConfig": {
+                                                "Mode": "INLINE"
+                                              },
+                                              "StartAt": "Add Lib Journey Legs (LibJourney DB)",
+                                              "States": {
+                                                "Add Lib Journey Legs (LibJourney DB)": {
+                                                  "Type": "Task",
+                                                  "Resource": "arn:aws:states:::dynamodb:putItem",
+                                                  "Parameters": {
+                                                    "TableName": "MyDynamoDBTable",
+                                                    "Item": {
+                                                      "Column": {
+                                                        "S": "MyEntry"
+                                                      }
+                                                    }
+                                                  },
+                                                  "End": true
+                                                }
+                                              }
+                                            },
+                                            "End": true
+                                          }
+                                        }
+                                      }
+                                    ],
+                                    "End": true
+                                  }
+                                }
+                              }
+                            ],
+                            "End": true
+                          },
+                          "Append LibraryLaneIDs to LibraryId List (LibraryFileDB)": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:updateItem",
+                            "Parameters": {
+                              "TableName": "${__table_name__}",
+                              "Key": {
+                                "Column": {
+                                  "S": "MyEntry"
+                                }
+                              },
+                              "UpdateExpression": "SET MyKey = :myValueRef",
+                              "ExpressionAttributeValues": {
+                                ":myValueRef": {
+                                  "S": "MyValue"
+                                }
+                              }
+                            },
+                            "Next": "Get Updated LibraryID Journey"
+                          },
+                          "Get Updated LibraryID Journey": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "OutputPath": "$.Payload",
+                            "Parameters": {
+                              "Payload.$": "$"
+                            },
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "Lambda.ServiceException",
+                                  "Lambda.AWSLambdaException",
+                                  "Lambda.SdkClientException",
+                                  "Lambda.TooManyRequestsException"
+                                ],
+                                "IntervalSeconds": 1,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2
+                              }
+                            ],
+                            "Next": "Update Library Journey"
+                          },
+                          "Update Library Journey": {
+                            "Type": "Parallel",
+                            "End": true,
+                            "Branches": [
+                              {
+                                "StartAt": "Update Library ID (LibJourney DB)",
+                                "States": {
+                                  "Update Library ID (LibJourney DB)": {
+                                    "Type": "Task",
+                                    "Resource": "arn:aws:states:::dynamodb:updateItem",
+                                    "Parameters": {
+                                      "TableName": "MyDynamoDBTable",
+                                      "Key": {
+                                        "Column": {
+                                          "S": "MyEntry"
+                                        }
+                                      },
+                                      "UpdateExpression": "SET MyKey = :myValueRef",
+                                      "ExpressionAttributeValues": {
+                                        ":myValueRef": {
+                                          "S": "MyValue"
+                                        }
+                                      }
+                                    },
+                                    "End": true
+                                  }
+                                }
+                              },
+                              {
+                                "StartAt": "Add updated journey legs to database",
+                                "States": {
+                                  "Add updated journey legs to database": {
+                                    "Type": "Map",
+                                    "ItemProcessor": {
+                                      "ProcessorConfig": {
+                                        "Mode": "INLINE"
+                                      },
+                                      "StartAt": "Add lib journey libs (lib journey db)",
+                                      "States": {
+                                        "Add lib journey libs (lib journey db)": {
+                                          "Type": "Task",
+                                          "Resource": "arn:aws:states:::dynamodb:putItem",
+                                          "Parameters": {
+                                            "TableName": "MyDynamoDBTable",
+                                            "Item": {
+                                              "Column": {
+                                                "S": "MyEntry"
+                                              }
+                                            }
+                                          },
+                                          "End": true
+                                        }
+                                      }
+                                    },
+                                    "End": true
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "ResultPath": "$.update_library_ids",
+                      "ItemsPath": "$.collect_library_ids_step.library_id_dict_list",
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "End": true,
+              "ResultPath": "$.update_libraryid_databases"
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.update_db_step",
+      "Next": "LibraryLaneId Registered Event"
+    },
+    "LibraryLaneId Registered Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "Message": "Hello from Step Functions!",
+              "TaskToken.$": "$$.Task.Token"
+            },
+            "DetailType": "MyDetailType",
+            "EventBusName": "MyEventBusName",
+            "Source": "MySource"
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}

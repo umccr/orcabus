@@ -9,7 +9,6 @@ import { getMetadataManagerStackProps } from './stacks/metadataManager';
 import { getSequenceRunManagerStackProps } from './stacks/sequenceRunManager';
 import { getFileManagerStackProps } from './stacks/fileManager';
 import { getBsRunsUploadManagerStackProps } from './stacks/bsRunsUploadManager';
-import { getICAv2CopyBatchUtilityStackProps } from './stacks/icav2CopyBatchUtility';
 import { getBsshIcav2FastqCopyManagerStackProps } from './stacks/bsshIcav2FastqCopyManager';
 import {
   getCttsov2Icav2PipelineManagerStackProps,
@@ -22,6 +21,11 @@ import {
   getBclConvertManagerStackProps,
 } from './stacks/bclConvertManager';
 import { getWorkflowManagerStackProps } from './stacks/workflowRunManager';
+import {
+  getBclconvertInteropQcIcav2PipelineManagerStackProps,
+  getBclconvertInteropQcIcav2PipelineTableStackProps,
+} from './stacks/bclconvertInteropQcIcav2PipelineManager';
+import { getGlueStackProps, getStatefulGlueStackProps } from './stacks/stackyMcStackFace';
 
 interface EnvironmentConfig {
   name: string;
@@ -51,8 +55,11 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
+            bclconvertInteropQcIcav2PipelineTableStackProps:
+              getBclconvertInteropQcIcav2PipelineTableStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
+            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -60,13 +67,15 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
+            bclconvertInteropQcIcav2PipelineManagerStackProps:
+              getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
             bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
             workflowManagerStackProps: getWorkflowManagerStackProps(),
+            stackyMcStackFaceProps: getGlueStackProps(),
           },
         },
       };
@@ -81,8 +90,11 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
+            bclconvertInteropQcIcav2PipelineTableStackProps:
+              getBclconvertInteropQcIcav2PipelineTableStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
+            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -90,13 +102,15 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
+            bclconvertInteropQcIcav2PipelineManagerStackProps:
+              getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
             bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
             workflowManagerStackProps: getWorkflowManagerStackProps(),
+            stackyMcStackFaceProps: getGlueStackProps(),
           },
         },
       };
@@ -111,8 +125,11 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sharedStackProps: getSharedStackProps(stage),
             tokenServiceStackProps: getTokenServiceStackProps(),
             icaEventPipeStackProps: getIcaEventPipeStackProps(),
+            bclconvertInteropQcIcav2PipelineTableStackProps:
+              getBclconvertInteropQcIcav2PipelineTableStackProps(),
             cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
             BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
+            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -120,13 +137,15 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav2CopyBatchUtilityStackProps: getICAv2CopyBatchUtilityStackProps(stage),
             bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
+            bclconvertInteropQcIcav2PipelineManagerStackProps:
+              getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
             cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
             eventSchemaStackProps: getEventSchemaStackProps(),
             dataSchemaStackProps: getDataSchemaStackProps(),
             bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
             workflowManagerStackProps: getWorkflowManagerStackProps(),
+            stackyMcStackFaceProps: getGlueStackProps(),
           },
         },
       };
