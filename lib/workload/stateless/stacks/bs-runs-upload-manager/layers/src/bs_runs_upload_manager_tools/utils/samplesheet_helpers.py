@@ -16,10 +16,6 @@ def generate_v2_samplesheet(v1_samplesheet_file: Path) -> Path:
     Returns:
 
     """
-    from .portal_helpers import get_api_url
-
-    get_api_url()
-
     headers = {
         'Authorization': f"Bearer {os.getenv('PORTAL_TOKEN', '')}",
     }
@@ -30,7 +26,7 @@ def generate_v2_samplesheet(v1_samplesheet_file: Path) -> Path:
     }
 
     response = requests.post(
-        url=get_api_url(),
+        url=os.getenv("SS_CHECK_API_URL", None),
         headers=headers,
         files=files
     )

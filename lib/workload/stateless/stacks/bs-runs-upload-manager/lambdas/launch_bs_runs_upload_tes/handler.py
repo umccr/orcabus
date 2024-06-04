@@ -53,8 +53,6 @@ def handler(event, context):
     Returns:
 
     """
-    # Set environment variables ICA_BASE_URL and ICA_ACCESS_TOKEN
-    set_ica_env_vars()
 
     # Ensure environment variables are set
     for env_var in [
@@ -68,6 +66,9 @@ def handler(event, context):
             os.environ.get(env_var),
             f"{env_var} environment variable is not set"
         )
+
+    # Set environment variables ICA_BASE_URL and ICA_ACCESS_TOKEN
+    set_ica_env_vars()
 
     for event_key in [
         "gds_folder_path",
