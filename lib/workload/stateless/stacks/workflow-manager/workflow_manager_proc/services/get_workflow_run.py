@@ -46,4 +46,5 @@ def handler(event, context):
         print(w.to_dict())
     print(f"Found {len(workflow_runs)} WorkflowRun records.")
 
+    # TODO: make sure records are sorted by time, so latest one can be identified easily
     return workflow_runs  # FIXME: need to deserialise in future

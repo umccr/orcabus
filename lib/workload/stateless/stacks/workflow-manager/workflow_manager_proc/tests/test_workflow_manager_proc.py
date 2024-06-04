@@ -1,3 +1,4 @@
+import os
 from unittest import skip
 from workflow_manager.models.workflow import Workflow
 from workflow_manager_proc.lambdas import handle_service_wrsc_event
@@ -5,6 +6,11 @@ from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase
 
 
 class WorkflowManagerProcUnitTests(WorkflowManagerProcUnitTestCase):
+    def setUp(self) -> None:
+        super(WorkflowManagerProcUnitTests, self).setUp()
+
+        os.environ["EVENT_BUS_NAME"] = "default"
+
 
     @skip
     def test_handler(self):

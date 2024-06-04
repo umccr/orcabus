@@ -18,3 +18,4 @@ serverless-wsgi==3.0.3
 # for sequencerunstatechange package
 six==1.16.0
 regex==2024.4.28
+deepdiff==7.0.1
