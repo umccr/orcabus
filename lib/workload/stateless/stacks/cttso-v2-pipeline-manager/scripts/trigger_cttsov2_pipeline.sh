@@ -14,7 +14,7 @@ EVENT_BUS_NAME="OrcaBusMain"
 DETAIL_TYPE="WorkflowRunStateChange"
 SOURCE="orcabus.cttsov2inputeventglue"
 WORKFLOW_NAME="cttsov2"
-WORKFLOW_VERSION="2.1.1"
+WORKFLOW_VERSION="2.5.0"
 
 #############
 # GLOCALS
@@ -98,13 +98,13 @@ FASTQ_LIST_ROWS="$( \
 # RUNTIME
 PROJECT_NAME="trial"
 PROJECT_ID="7595e8f2-32d3-4c76-a324-c6a85dae87b5"
-WORKFLOW_RUN_NAME_PREFIX="umccr__automated__cttsov2__2_1_1__"
+WORKFLOW_RUN_NAME_PREFIX="umccr__automated__cttsov2__2_5_0__"
 PORTAL_RUN_ID="$(date +%Y%m%d)$(xxd -l 4 -c 4 -p < /dev/random)"
-CACHE_URI_PREFIX="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_cache/cttsov2/2_1_1/"
+CACHE_URI_PREFIX="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_cache/cttsov2/2_5_0/"
 
 # Outputs
-ANALYSIS_OUTPUT_URI_PREFIX="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_data/cttsov2/2_1_1/"
-ICA_LOGS_URI_PREFIX="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_logs/cttsov2/2_1_1/"
+ANALYSIS_OUTPUT_URI_PREFIX="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_data/cttsov2/2_5_0/"
+ICA_LOGS_URI_PREFIX="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_logs/cttsov2/2_5_0/"
 
 
 ###############
