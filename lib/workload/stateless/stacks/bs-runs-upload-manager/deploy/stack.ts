@@ -12,7 +12,7 @@ export interface BsRunsUploadManagerConfig {
   icaTokenSecretId: string; // IcaSecretsPortal
   portalTokenSecretId: string; // orcabus/token-service-jwt
   basespaceTokenSecretId: string; // /manual/BaseSpaceAccessTokenSecret
-  ssCheckApiUrlSsmParameterName: string; // /data_portal/backend/api_domain_name
+  ssCheckApiUrlSsmParameterName: string; // /sscheck/lambda-api-domain
   gdsSystemFilesPath: string; // gds://development/primary_data/temp/bs_runs_upload_tes/
   eventbusName: string; // /umccr/orcabus/stateful/eventbridge
 }
@@ -50,7 +50,7 @@ export class BsRunsUploadManagerStack extends cdk.Stack {
 
     const ss_check_api_ssm_parameter_obj = ssm.StringParameter.fromStringParameterName(
       this,
-      'DataPortalApiUrlSsmParameter',
+      'SsCheckApiUrlSsmParameter',
       props.ssCheckApiUrlSsmParameterName
     );
 
