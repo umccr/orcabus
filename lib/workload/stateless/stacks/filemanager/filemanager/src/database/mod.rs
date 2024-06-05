@@ -3,6 +3,8 @@
 
 use std::borrow::Cow;
 
+use crate::database::aws::ingester::Ingester;
+use crate::database::aws::ingester_paired::IngesterPaired;
 use async_trait::async_trait;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
@@ -88,11 +90,29 @@ impl<'a> Client<'a> {
     }
 }
 
+#[async_trait]
+impl<'a> Ingest<'a> for Client<'a> {
+    async fn ingest(&'a self, events: EventSourceType) -> Result<()> {
+        match events {
+            EventSourceType::S3(events) => {
+                Ingester::new(Self::from_ref(self.pool()))
+                    .ingest_events(events)
+                    .await
+            }
+            EventSourceType::S3Paired(events) => {
+                IngesterPaired::new(Self::from_ref(self.pool()))
+                    .ingest_events(events)
+                    .await
+            }
+        }
+    }
+}
+
 /// This trait ingests raw events into the database.
 #[async_trait]
-pub trait Ingest {
+pub trait Ingest<'a> {
     /// Ingest the events.
-    async fn ingest(&self, events: EventSourceType) -> Result<()>;
+    async fn ingest(&'a self, events: EventSourceType) -> Result<()>;
 }
 
 /// Trait representing database migrations.

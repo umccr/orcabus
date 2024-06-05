@@ -16,8 +16,8 @@ use crate::clients::aws::s3::Client;
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
-use crate::error::Error::S3Error;
 use crate::error::Error::{DeserializeError, SQSError};
+use crate::error::Error::{InvalidEnvironmentVariable, S3Error};
 use crate::error::Result;
 use crate::events::aws::{
     EventType, FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages,
@@ -213,6 +213,16 @@ impl Collecter {
             .collect::<Result<Vec<FlatS3EventMessage>>>()?,
         ))
     }
+
+    /// Read the whether paired ingest mode should be used.
+    pub fn paired_ingest_mode() -> Result<bool> {
+        Ok(read_env("PAIRED_INGEST_MODE")
+            .ok()
+            .map(|value| value.parse::<bool>())
+            .transpose()
+            .map_err(|_| InvalidEnvironmentVariable("ingest paired mode".to_string()))?
+            .unwrap_or_default())
+    }
 }
 
 #[async_trait]
@@ -225,7 +235,11 @@ impl Collect for Collecter {
         // Get only the known event types.
         let events = events.filter_known();
 
-        Ok(EventSourceType::S3(TransposedS3EventMessages::from(events)))
+        if Self::paired_ingest_mode()? {
+            Ok(EventSourceType::S3Paired(events.into()))
+        } else {
+            Ok(EventSourceType::S3(TransposedS3EventMessages::from(events)))
+        }
     }
 }
 
@@ -367,8 +381,6 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn assert_collected_events(result: EventSourceType) {
-        assert!(matches!(result, EventSourceType::S3(_)));
-
         match result {
             EventSourceType::S3(events) => {
                 assert_eq!(events.storage_classes[0], Some(IntelligentTiering));
@@ -377,6 +389,7 @@ pub(crate) mod tests {
                 assert_eq!(events.storage_classes[1], None);
                 assert_eq!(events.last_modified_dates[1], None);
             }
+            _ => panic!("unexpected event type"),
         }
     }
 

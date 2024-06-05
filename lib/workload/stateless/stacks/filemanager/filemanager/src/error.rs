@@ -21,6 +21,8 @@ pub enum Error {
     DeserializeError(String),
     #[error("Missing environment variable: `{0}`")]
     MissingEnvironmentVariable(String),
+    #[error("Invalid environment variable: `{0}`")]
+    InvalidEnvironmentVariable(String),
     #[error("S3 error: `{0}`")]
     S3Error(String),
     #[error("credential generator error: `{0}`")]

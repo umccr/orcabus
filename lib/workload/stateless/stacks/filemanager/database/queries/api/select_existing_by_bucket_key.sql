@@ -35,7 +35,8 @@ select
     number_duplicate_events,
     size,
     is_delete_marker,
-    event_type as "event_type!: EventType"
+    event_type as "event_type!: EventType",
+    0 as "number_reordered!"
 from input
 -- Grab the most recent object in each input group.
 cross join lateral (

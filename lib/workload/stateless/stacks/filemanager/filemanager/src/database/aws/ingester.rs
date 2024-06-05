@@ -1,22 +1,20 @@
 //! This module handles logic associated with event ingestion.
 //!
 
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{query_file, query_file_as};
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::database::{Client, CredentialGenerator, Ingest};
+use crate::database::{Client, CredentialGenerator};
 use crate::error::Result;
 use crate::events::aws::message::EventType;
 use crate::events::aws::{StorageClass, TransposedS3EventMessages};
-use crate::events::EventSourceType;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
 pub struct Ingester<'a> {
-    client: Client<'a>,
+    pub(crate) client: Client<'a>,
 }
 
 /// The type representing an insert query.
@@ -122,15 +120,6 @@ impl<'a> Ingester<'a> {
     }
 }
 
-#[async_trait]
-impl<'a> Ingest for Ingester<'a> {
-    async fn ingest(&self, events: EventSourceType) -> Result<()> {
-        match events {
-            EventSourceType::S3(events) => self.ingest_events(events).await,
-        }
-    }
-}
-
 #[cfg(test)]
 pub(crate) mod tests {
     use std::ops::Add;
@@ -142,7 +131,6 @@ pub(crate) mod tests {
     use tokio::time::Instant;
     use uuid::Uuid;
 
-    use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
     use crate::events::aws::message::EventType;
@@ -157,13 +145,14 @@ pub(crate) mod tests {
         FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages,
     };
     use crate::events::EventSourceType;
+    use crate::events::EventSourceType::S3;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {
         let events = test_events(Some(Created));
 
         let ingester = test_ingester(pool);
-        ingester.ingest_events(events).await.unwrap();
+        ingester.ingest(S3(events)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -174,17 +163,14 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created_delete_marker(pool: PgPool) {
-        let events = FlatS3EventMessages(
-            FlatS3EventMessages::from(test_events_delete_marker())
-                .0
-                .into_iter()
-                .filter(|event| event.event_type == Created)
-                .collect(),
-        )
-        .into();
+        let events: FlatS3EventMessages = FlatS3EventMessages::from(test_events_delete_marker())
+            .0
+            .into_iter()
+            .filter(|event| event.event_type == Created)
+            .collect();
 
         let ingester = test_ingester(pool);
-        ingester.ingest_events(events).await.unwrap();
+        ingester.ingest(S3(events.into())).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -205,7 +191,7 @@ pub(crate) mod tests {
         let events = test_events_delete_marker();
 
         let ingester = test_ingester(pool);
-        ingester.ingest_events(events).await.unwrap();
+        ingester.ingest(S3(events)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -239,7 +225,7 @@ pub(crate) mod tests {
             .for_each(|size| *size = Some(i64::MAX));
 
         let ingester = test_ingester(pool);
-        ingester.ingest_events(events).await.unwrap();
+        ingester.ingest(S3(events)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -260,7 +246,7 @@ pub(crate) mod tests {
         let events = test_events(None);
 
         let ingester = test_ingester(pool);
-        ingester.ingest_events(events).await.unwrap();
+        ingester.ingest(S3(events)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -724,8 +710,8 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
         );
 
-        ingester.ingest_events(events_one).await.unwrap();
-        ingester.ingest_events(events_two).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -751,8 +737,8 @@ pub(crate) mod tests {
         );
 
         // Re-order
-        ingester.ingest_events(events_two).await.unwrap();
-        ingester.ingest_events(events_one).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
 
         let s3_object_results = fetch_results_ordered(&ingester).await;
 
@@ -776,8 +762,8 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
         );
 
-        ingester.ingest_events(events_one).await.unwrap();
-        ingester.ingest_events(events_two).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -803,8 +789,8 @@ pub(crate) mod tests {
         );
 
         // Re-order
-        ingester.ingest_events(events_two).await.unwrap();
-        ingester.ingest_events(events_one).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
 
         let s3_object_results = fetch_results_ordered(&ingester).await;
 
@@ -828,8 +814,8 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
         ));
 
-        ingester.ingest_events(events_one).await.unwrap();
-        ingester.ingest_events(events_two).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -854,8 +840,8 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
         ));
 
-        ingester.ingest_events(events_two).await.unwrap();
-        ingester.ingest_events(events_one).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
 
         let s3_object_results = fetch_results_ordered(&ingester).await;
 
@@ -879,8 +865,8 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
         ));
 
-        ingester.ingest_events(events_one).await.unwrap();
-        ingester.ingest_events(events_two).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -905,8 +891,8 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
         ));
 
-        ingester.ingest_events(events_two).await.unwrap();
-        ingester.ingest_events(events_one).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
 
         let s3_object_results = fetch_results_ordered(&ingester).await;
 
@@ -925,8 +911,8 @@ pub(crate) mod tests {
         let events_one = replace_sequencers(test_events(Some(Created)), None);
         let events_two = replace_sequencers(test_events(Some(Created)), None);
 
-        ingester.ingest_events(events_one).await.unwrap();
-        ingester.ingest_events(events_two).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -957,8 +943,8 @@ pub(crate) mod tests {
         let events_one = replace_sequencers(test_events(Some(Deleted)), None);
         let events_two = replace_sequencers(test_events(Some(Deleted)), None);
 
-        ingester.ingest_events(events_one).await.unwrap();
-        ingester.ingest_events(events_two).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -987,7 +973,7 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
 
         let events = replace_sequencers(test_events(None), None);
-        ingester.ingest_events(events).await.unwrap();
+        ingester.ingest(S3(events)).await.unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -1025,9 +1011,9 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
         );
 
-        ingester.ingest_events(events_one).await.unwrap();
-        ingester.ingest_events(events_two).await.unwrap();
-        ingester.ingest_events(events_three).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
+        ingester.ingest(S3(events_three)).await.unwrap();
 
         let s3_object_results = fetch_results_ordered(&ingester).await;
 
@@ -1061,9 +1047,9 @@ pub(crate) mod tests {
         );
         let events_three = test_events(Some(Created));
 
-        ingester.ingest_events(events_one).await.unwrap();
-        ingester.ingest_events(events_two).await.unwrap();
-        ingester.ingest_events(events_three).await.unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
+        ingester.ingest(S3(events_three)).await.unwrap();
 
         let s3_object_results = fetch_results_ordered(&ingester).await;
 
@@ -1318,7 +1304,9 @@ pub(crate) mod tests {
             row_asserts(s3_object_results);
 
             // Clean up for next permutation.
-            pool.execute("truncate s3_object, object").await.unwrap();
+            pool.execute("truncate s3_object, object, s3_object_paired")
+                .await
+                .unwrap();
         }
 
         println!(
@@ -1388,22 +1376,22 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) async fn fetch_results<'a>(ingester: &'a Ingester<'a>) -> (Vec<PgRow>, Vec<PgRow>) {
+    pub(crate) async fn fetch_results<'a>(client: &Client<'a>) -> (Vec<PgRow>, Vec<PgRow>) {
         (
             sqlx::query("select * from object")
-                .fetch_all(ingester.client.pool())
+                .fetch_all(client.pool())
                 .await
                 .unwrap(),
             sqlx::query("select * from s3_object")
-                .fetch_all(ingester.client.pool())
+                .fetch_all(client.pool())
                 .await
                 .unwrap(),
         )
     }
 
-    pub(crate) async fn fetch_results_ordered<'a>(ingester: &'a Ingester<'a>) -> Vec<PgRow> {
+    pub(crate) async fn fetch_results_ordered<'a>(client: &Client<'a>) -> Vec<PgRow> {
         sqlx::query("select * from s3_object order by sequencer, key, version_id")
-            .fetch_all(ingester.client.pool())
+            .fetch_all(client.pool())
             .await
             .unwrap()
     }
@@ -1541,7 +1529,7 @@ pub(crate) mod tests {
         update_test_events(expected_events_simple_delete_marker())
     }
 
-    pub(crate) fn test_ingester<'a>(pool: PgPool) -> Ingester<'a> {
-        Ingester::new(Client::new(pool))
+    pub(crate) fn test_ingester<'a>(pool: PgPool) -> Client<'a> {
+        Client::new(pool)
     }
 }

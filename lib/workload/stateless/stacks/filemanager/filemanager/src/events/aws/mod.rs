@@ -11,7 +11,7 @@ use uuid::Uuid;
 use message::EventMessage;
 
 use crate::events::aws::message::EventType;
-use crate::events::aws::EventType::{Created, Deleted};
+use crate::events::aws::EventType::{Created, Deleted, Other};
 use crate::uuid::UuidGenerator;
 
 pub mod collecter;
@@ -216,6 +216,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                     event_type,
                     is_delete_marker,
                     number_duplicate_events: 0,
+                    number_reordered: 0,
                 }
             },
         );
@@ -224,10 +225,73 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
     }
 }
 
+/// Group by event types.
+#[derive(Debug, Clone, Default)]
+pub struct Events {
+    pub object_created: TransposedS3EventMessages,
+    pub object_deleted: TransposedS3EventMessages,
+    pub other: TransposedS3EventMessages,
+}
+
+impl Events {
+    /// Set the created objects.
+    pub fn with_object_created(mut self, object_created: TransposedS3EventMessages) -> Self {
+        self.object_created = object_created;
+        self
+    }
+
+    /// Set the deleted objects.
+    pub fn with_object_deleted(mut self, object_deleted: TransposedS3EventMessages) -> Self {
+        self.object_deleted = object_deleted;
+        self
+    }
+
+    /// Set the other events.
+    pub fn with_other(mut self, other: TransposedS3EventMessages) -> Self {
+        self.other = other;
+        self
+    }
+}
+
+impl From<FlatS3EventMessages> for Events {
+    fn from(messages: FlatS3EventMessages) -> Self {
+        let mut object_created = FlatS3EventMessages::default();
+        let mut object_removed = FlatS3EventMessages::default();
+        let mut other = FlatS3EventMessages::default();
+
+        messages
+            .into_inner()
+            .into_iter()
+            .for_each(|message| match message.event_type {
+                Created => {
+                    object_created.0.push(message);
+                }
+                Deleted => {
+                    object_removed.0.push(message);
+                }
+                Other => {
+                    other.0.push(message);
+                }
+            });
+
+        Self {
+            object_created: TransposedS3EventMessages::from(object_created),
+            object_deleted: TransposedS3EventMessages::from(object_removed),
+            other: TransposedS3EventMessages::from(other),
+        }
+    }
+}
+
 /// Flattened AWS S3 events
 #[derive(Debug, Deserialize, Eq, PartialEq, Default)]
 #[serde(from = "EventMessage")]
 pub struct FlatS3EventMessages(pub Vec<FlatS3EventMessage>);
+
+impl FromIterator<FlatS3EventMessage> for FlatS3EventMessages {
+    fn from_iter<T: IntoIterator<Item = FlatS3EventMessage>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
 
 impl FlatS3EventMessages {
     /// Create a flattened event messages vector.
@@ -387,6 +451,7 @@ pub struct FlatS3EventMessage {
     pub event_type: EventType,
     pub is_delete_marker: bool,
     pub number_duplicate_events: i64,
+    pub number_reordered: i64,
 }
 
 impl FlatS3EventMessage {
@@ -763,7 +828,7 @@ pub(crate) mod tests {
         );
     }
 
-    fn expected_flat_events(records: String) -> FlatS3EventMessages {
+    pub(crate) fn expected_flat_events(records: String) -> FlatS3EventMessages {
         let events: Message = serde_json::from_str(&records).unwrap();
         events.into()
     }

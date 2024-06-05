@@ -15,10 +15,9 @@ use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::database::aws::credentials::IamGeneratorBuilder;
-use crate::database::aws::ingester::Ingester;
 use crate::database::aws::query::Query;
 use crate::database::{Client, Ingest};
-use crate::events::aws::collecter::CollecterBuilder;
+use crate::events::aws::collecter::{Collecter, CollecterBuilder};
 use crate::events::aws::inventory::{DiffMessages, Inventory, Manifest};
 use crate::events::aws::message::EventType::Created;
 use crate::events::aws::{FlatS3EventMessages, TransposedS3EventMessages};
@@ -31,7 +30,7 @@ pub async fn receive_and_ingest(
     sqs_client: SQSClient,
     sqs_url: Option<impl Into<String>>,
     database_client: Client<'_>,
-) -> Result<Ingester<'_>, Error> {
+) -> Result<Client, Error> {
     let events = CollecterBuilder::default()
         .with_s3_client(s3_client)
         .with_sqs_client(sqs_client)
@@ -41,11 +40,8 @@ pub async fn receive_and_ingest(
         .collect()
         .await?;
 
-    let ingester = Ingester::new(database_client);
-
-    ingester.ingest(events).await?;
-
-    Ok(ingester)
+    database_client.ingest(events).await?;
+    Ok(database_client)
 }
 
 /// Handle SQS events that go through an SqsEvent.
@@ -53,7 +49,7 @@ pub async fn ingest_event(
     event: SqsEvent,
     s3_client: S3Client,
     database_client: Client<'_>,
-) -> Result<Ingester<'_>, Error> {
+) -> Result<Client, Error> {
     trace!("received event: {:?}", event);
 
     let events: FlatS3EventMessages = event
@@ -79,12 +75,8 @@ pub async fn ingest_event(
 
     trace!("ingesting events: {:?}", events);
 
-    let ingester = Ingester::new(database_client);
-
-    trace!("ingester: {:?}", ingester);
-    ingester.ingest(events).await?;
-
-    Ok(ingester)
+    database_client.ingest(events).await?;
+    Ok(database_client)
 }
 
 /// Handle an S3 inventory for ingestion.
@@ -94,7 +86,13 @@ pub async fn ingest_s3_inventory(
     bucket: Option<String>,
     key: Option<String>,
     manifest: Option<Manifest>,
-) -> Result<Ingester<'_>, Error> {
+) -> Result<Client, Error> {
+    if Collecter::paired_ingest_mode()? {
+        return Err(Error::from(
+            "paired ingest mode is not supported for S3 inventory".to_string(),
+        ));
+    }
+
     let inventory = Inventory::new(s3_client);
 
     let records = if let Some(manifest) = manifest {
@@ -147,7 +145,7 @@ pub async fn ingest_s3_inventory(
 
     if diff.is_empty() {
         debug!("no diff found between database and inventory");
-        Ok(Ingester::new(database_client))
+        Ok(database_client)
     } else {
         debug!("diff found between database and inventory: {:#?}", diff);
 
@@ -160,12 +158,8 @@ pub async fn ingest_s3_inventory(
             FlatS3EventMessages::from(diff.into_iter().collect_vec()),
         ));
 
-        let ingester = Ingester::new(database_client);
-        trace!("ingester: {:?}", ingester);
-
-        ingester.ingest(events).await?;
-
-        Ok(ingester)
+        database_client.ingest(events).await?;
+        Ok(database_client)
     }
 }
 
@@ -210,6 +204,7 @@ mod tests {
         EXPECTED_VERSION_ID,
     };
     use crate::events::aws::FlatS3EventMessage;
+    use crate::events::EventSourceType::S3;
 
     use super::*;
 
@@ -309,7 +304,7 @@ mod tests {
 
         // Delete a record so that the next ingestion has copies from before.
         sqlx::query!("delete from s3_object where key = 'inventory_test/key1'")
-            .execute(ingester.client().pool())
+            .execute(ingester.pool())
             .await
             .unwrap();
         let s3_object_results = s3_object_results(&pool).await;
@@ -384,12 +379,12 @@ mod tests {
 
         events.keys = vec!["inventory_test/key1".to_string()];
         let ingester = test_ingester(pool.clone());
-        ingester.ingest_events(events).await.unwrap();
+        ingester.ingest(S3(events)).await.unwrap();
 
         // A new created event that occurs after, on the same key should not interfere with this.
         created_events.keys = vec!["inventory_test/key1".to_string()];
         let ingester = test_ingester(pool.clone());
-        ingester.ingest_events(created_events).await.unwrap();
+        ingester.ingest(S3(created_events)).await.unwrap();
 
         let s3_object_results = s3_object_results(&pool).await;
 
