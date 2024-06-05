@@ -147,7 +147,7 @@ def send_internal_event_to_eventbus(internal_ica_event, event_bus_name) -> None:
 # Store the internal event in the DynamoDB table
 def store_events_into_dynamodb(internal_ica_event, table_name, event_details) -> None:
     try:
-        db_uuid = generate_db_uuid(None, None).get("db_uuid",'')
+        db_uuid = generate_db_uuid().get("db_uuid",'')
         dynamodb.put_item(
             TableName=table_name,
             Item={
