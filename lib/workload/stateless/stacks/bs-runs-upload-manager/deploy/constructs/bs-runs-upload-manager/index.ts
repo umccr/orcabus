@@ -18,7 +18,7 @@ interface BsRunsUploadManagerConstructProps {
   icaTokenSecretObj: secretsManager.ISecret;
   portalTokenSecretObj: secretsManager.ISecret;
   basespaceSecretObj: secretsManager.ISecret;
-  ssCheckApiUrlSsmParameterObj: ssm.IStringParameter;
+  ssCheckApiDomainSsmParameterObj: ssm.IStringParameter;
   eventBusObj: events.IEventBus;
   /* Lambda layer paths */
   uploadV2SamplesheetToGdsBsshLambdaPath: string; // __dirname + '/../../../lambdas/upload_v2_samplesheet_to_gds_bssh'
@@ -51,7 +51,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
         environment: {
           ICA_BASE_URL: 'https://aps2.platform.illumina.com',
           ICA_ACCESS_TOKEN_SECRET_ID: props.icaTokenSecretObj.secretName,
-          SS_CHECK_API_URL_PARAMETER_NAME: props.ssCheckApiUrlSsmParameterObj.parameterName,
+          SS_CHECK_API_DOMAIN_PARAMETER_NAME: props.ssCheckApiDomainSsmParameterObj.parameterName,
           PORTAL_TOKEN_SECRET_ID: props.portalTokenSecretObj.secretName,
         },
       }
@@ -92,7 +92,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
     props.portalTokenSecretObj.grantRead(<IRole>upload_v2_samplesheet_to_gds_bssh_lambda.role);
 
     // Give the lambda permission to read the ssm parameter value of the data portal api url
-    props.ssCheckApiUrlSsmParameterObj.grantRead(
+    props.ssCheckApiDomainSsmParameterObj.grantRead(
       <IRole>upload_v2_samplesheet_to_gds_bssh_lambda.role
     );
 
