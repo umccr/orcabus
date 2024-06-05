@@ -20,7 +20,7 @@ use crate::error::Error::S3Error;
 use crate::error::Error::{DeserializeError, SQSError};
 use crate::error::Result;
 use crate::events::aws::{
-    EventType, Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass,
+    EventType, FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages,
 };
 use crate::events::{Collect, EventSourceType};
 use crate::read_env;
@@ -218,12 +218,14 @@ impl Collecter {
 #[async_trait]
 impl Collect for Collecter {
     async fn collect(self) -> Result<EventSourceType> {
-        let (client, raw_events) = self.into_inner();
-        let raw_events = raw_events.sort_and_dedup();
+        let (client, events) = self.into_inner();
+        let events = events.sort_and_dedup();
 
-        let events = Self::update_events(&client, raw_events).await?;
+        let events = Self::update_events(&client, events).await?;
+        // Get only the known event types.
+        let events = events.filter_known();
 
-        Ok(EventSourceType::S3(Events::from(events)))
+        Ok(EventSourceType::S3(TransposedS3EventMessages::from(events)))
     }
 }
 
@@ -264,6 +266,8 @@ pub(crate) mod tests {
             .for_each(|(expected_event, event)| {
                 // The object id will be different for each event.
                 expected_event.s3_object_id = event.s3_object_id;
+                expected_event.object_id = event.object_id;
+                expected_event.public_id = event.public_id;
             });
 
         assert_eq!(events, expected);
@@ -367,17 +371,11 @@ pub(crate) mod tests {
 
         match result {
             EventSourceType::S3(events) => {
-                assert_eq!(
-                    events.object_created.storage_classes[0],
-                    Some(IntelligentTiering)
-                );
-                assert_eq!(
-                    events.object_created.last_modified_dates[0],
-                    Some(Default::default())
-                );
+                assert_eq!(events.storage_classes[0], Some(IntelligentTiering));
+                assert_eq!(events.last_modified_dates[0], Some(Default::default()));
 
-                assert_eq!(events.object_deleted.storage_classes[0], None);
-                assert_eq!(events.object_deleted.last_modified_dates[0], None);
+                assert_eq!(events.storage_classes[1], None);
+                assert_eq!(events.last_modified_dates[1], None);
             }
         }
     }

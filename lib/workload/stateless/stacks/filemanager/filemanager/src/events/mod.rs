@@ -4,7 +4,7 @@
 use async_trait::async_trait;
 
 use crate::error::Result;
-use crate::events::aws::Events;
+use crate::events::aws::TransposedS3EventMessages;
 
 pub mod aws;
 
@@ -19,5 +19,5 @@ pub trait Collect {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum EventSourceType {
-    S3(Events),
+    S3(TransposedS3EventMessages),
 }

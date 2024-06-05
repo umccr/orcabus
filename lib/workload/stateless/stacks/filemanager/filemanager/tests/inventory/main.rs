@@ -3,6 +3,7 @@
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_smithy_mocks_experimental::{mock, mock_client, Rule, RuleMode};
+
 use filemanager::clients::aws::s3::Client;
 use filemanager::events::aws::inventory::{Inventory, Record};
 use filemanager::events::aws::StorageClass;
