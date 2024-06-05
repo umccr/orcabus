@@ -5,6 +5,8 @@ Generate samplesheet
 """
 from pathlib import Path
 import os
+from urllib.parse import urlunparse
+
 import requests
 from tempfile import NamedTemporaryFile
 import json
@@ -26,7 +28,7 @@ def generate_v2_samplesheet(v1_samplesheet_file: Path) -> Path:
     }
 
     response = requests.post(
-        url=os.getenv("SS_CHECK_API_URL", None),
+        url=urlunparse(["https", os.getenv("SS_CHECK_API_DOMAIN", None), "", None, None, None]),
         headers=headers,
         files=files
     )

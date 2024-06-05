@@ -12,7 +12,7 @@ export interface BsRunsUploadManagerConfig {
   icaTokenSecretId: string; // IcaSecretsPortal
   portalTokenSecretId: string; // orcabus/token-service-jwt
   basespaceTokenSecretId: string; // /manual/BaseSpaceAccessTokenSecret
-  ssCheckApiUrlSsmParameterName: string; // /sscheck/lambda-api-domain
+  ssCheckApiDomainSsmParameterName: string; // /sscheck/lambda-api-domain
   gdsSystemFilesPath: string; // gds://development/primary_data/temp/bs_runs_upload_tes/
   eventbusName: string; // /umccr/orcabus/stateful/eventbridge
 }
@@ -50,8 +50,8 @@ export class BsRunsUploadManagerStack extends cdk.Stack {
 
     const ss_check_api_ssm_parameter_obj = ssm.StringParameter.fromStringParameterName(
       this,
-      'SsCheckApiUrlSsmParameter',
-      props.ssCheckApiUrlSsmParameterName
+      'SsCheckApiDomainSsmParameter',
+      props.ssCheckApiDomainSsmParameterName
     );
 
     const event_bus_obj = events.EventBus.fromEventBusName(this, 'event_bus', props.eventbusName);
@@ -62,7 +62,7 @@ export class BsRunsUploadManagerStack extends cdk.Stack {
       icaTokenSecretObj: ica_access_token_secret_obj,
       portalTokenSecretObj: portal_secret_obj,
       basespaceSecretObj: basespace_secret_obj,
-      ssCheckApiUrlSsmParameterObj: ss_check_api_ssm_parameter_obj,
+      ssCheckApiDomainSsmParameterObj: ss_check_api_ssm_parameter_obj,
       eventBusObj: event_bus_obj,
       /* Lambda paths */
       uploadV2SamplesheetToGdsBsshLambdaPath: path.join(

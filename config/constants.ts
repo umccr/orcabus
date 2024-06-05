@@ -102,7 +102,7 @@ Resources required for BaseSpace TES stack
  */
 
 export const basespaceAccessTokenSecretName = '/manual/BaseSpaceAccessTokenSecret'; // pragma: allowlist secret
-export const ssCheckApiUrlSsmParameterName = '/sscheck/lambda-api-domain';
+export const ssCheckApiDomainSsmParameterName = '/sscheck/lambda-api-domain';
 
 /*
 ICAv2 Resources - required by various stacks
