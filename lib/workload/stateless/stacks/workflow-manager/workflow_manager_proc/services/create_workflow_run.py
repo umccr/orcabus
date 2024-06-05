@@ -38,15 +38,16 @@ def handler(event, context):
         print("Persisting Workflow record.")
         workflow.save()
 
-    # first create a new payload entry and assign a unique reference ID for it
+    # if payload is not null, create a new payload entry and assign a unique reference ID for it
     input_payload: Payload = wrsc.payload
-    pld = Payload(
-        payload_ref_id = str(uuid.uuid4()),
-        version = input_payload.version,
-        data = input_payload.data
-    )
-    print("Persisting Payload record.")
-    pld.save()
+    if input_payload:
+        pld = Payload(
+            payload_ref_id = str(uuid.uuid4()),
+            version = input_payload.version,
+            data = input_payload.data
+        )
+        print("Persisting Payload record.")
+        pld.save()
 
     # then create the actual workflow run state change entry
     wfr = WorkflowRun(
