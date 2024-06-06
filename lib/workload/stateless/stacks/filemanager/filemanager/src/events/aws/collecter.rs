@@ -218,7 +218,13 @@ impl Collecter {
     pub fn paired_ingest_mode() -> Result<bool> {
         Ok(read_env("PAIRED_INGEST_MODE")
             .ok()
-            .map(|value| value.parse::<bool>())
+            .map(|value| {
+                if value == "1" {
+                    Ok(true)
+                } else {
+                    value.parse::<bool>()
+                }
+            })
             .transpose()
             .map_err(|_| InvalidEnvironmentVariable("ingest paired mode".to_string()))?
             .unwrap_or_default())
