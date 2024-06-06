@@ -97,6 +97,13 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
           'ica-event': {
             // ICA_EXEC_028 is an analysis state change in ICAv2
             eventCode: ['ICA_EXEC_028'],
+            payload: {
+              userReference: [
+                {
+                  prefix: `umccr__automated__${props.workflowName}`,
+                },
+              ],
+            },
           },
         },
       },
