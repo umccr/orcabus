@@ -1,19 +1,20 @@
 -- Bulk insert of s3 objects.
-insert into s3_object_paired (
+insert into s3_object (
     s3_object_id,
     object_id,
     public_id,
     bucket,
     key,
-    created_date,
+    date,
     size,
     sha256,
     last_modified_date,
     e_tag,
     storage_class,
     version_id,
-    created_sequencer,
-    is_delete_marker
+    sequencer,
+    is_delete_marker,
+    event_type
 )
 values (
     unnest($1::uuid[]),
@@ -29,7 +30,8 @@ values (
     unnest($11::storage_class[]),
     unnest($12::text[]),
     unnest($13::text[]),
-    unnest($14::boolean[])
-) on conflict on constraint created_sequencer_unique do update
-    set number_duplicate_events = s3_object_paired.number_duplicate_events + 1
+    unnest($14::boolean[]),
+    unnest($15::event_type[])
+) on conflict on constraint sequencer_unique do update
+    set number_duplicate_events = s3_object.number_duplicate_events + 1
     returning object_id, number_duplicate_events;

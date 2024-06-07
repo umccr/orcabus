@@ -1304,9 +1304,7 @@ pub(crate) mod tests {
             row_asserts(s3_object_results);
 
             // Clean up for next permutation.
-            pool.execute("truncate s3_object, object, s3_object_paired")
-                .await
-                .unwrap();
+            pool.execute("truncate s3_object, object").await.unwrap();
         }
 
         println!(

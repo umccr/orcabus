@@ -16,6 +16,7 @@ create type storage_class as enum (
 create type event_type as enum (
     'Created',
     'Deleted',
+    -- If using 'paired' mode, 'Other' will be the event type.
     'Other'
 );
 
@@ -66,5 +67,14 @@ create table s3_object (
 
     -- The sequencers should be unique with the bucket, key, version_id and event_type,
     -- otherwise this is a duplicate event.
-    constraint sequencer_unique unique (bucket, key, version_id, event_type, sequencer)
+    constraint sequencer_unique unique (bucket, key, version_id, event_type, sequencer),
+
+    -- The following columns are only used for `paired` mode ingestion.
+    -- When this object was deleted, a null value means that the object has not yet been deleted.
+    deleted_date timestamptz default null,
+    -- A sequencer value for when the object was deleted. Used to synchronise out of order and duplicate events.
+    deleted_sequencer text default null,
+    -- Record the number of times this event has been considered out of order, useful for debugging.
+    number_reordered bigint not null default 0,
+    constraint deleted_sequencer_unique unique (bucket, key, version_id, event_type, deleted_sequencer)
 );

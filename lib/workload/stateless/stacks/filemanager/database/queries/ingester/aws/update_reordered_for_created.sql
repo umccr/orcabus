@@ -17,7 +17,8 @@ with input as (
         $9::storage_class[],
         $10::text[],
         $11::text[],
-        $12::boolean[]
+        $12::boolean[],
+        $13::event_type[]
     ) as input (
         s3_object_id,
         bucket,
@@ -30,13 +31,14 @@ with input as (
         storage_class,
         version_id,
         created_sequencer,
-        is_delete_marker
+        is_delete_marker,
+        event_type
     )
 ),
 -- Then, select the objects that need to be updated.
 current_objects as (
     select
-        s3_object_paired.*,
+        s3_object.*,
         input.s3_object_id as input_id,
         input.bucket as input_bucket,
         input.key as input_key,
@@ -48,13 +50,14 @@ current_objects as (
         input.last_modified_date as input_last_modified_date,
         input.e_tag as input_e_tag,
         input.storage_class as input_storage_class,
-        input.is_delete_marker as input_is_delete_marker
-    from s3_object_paired
+        input.is_delete_marker as input_is_delete_marker,
+        input.event_type as input_event_type
+    from s3_object
     -- Grab the relevant values to update with.
     join input on
-        input.bucket = s3_object_paired.bucket and
-        input.key = s3_object_paired.key and
-        input.version_id = s3_object_paired.version_id
+        input.bucket = s3_object.bucket and
+        input.key = s3_object.key and
+        input.version_id = s3_object.version_id
     -- Lock this pre-emptively for the update.
     for update
 ),
@@ -69,15 +72,15 @@ objects_to_update as (
         current_objects.deleted_sequencer > current_objects.input_created_sequencer and
         (
             -- Updating a null sequencer doesn't cause the event to be reprocessed.
-            current_objects.created_sequencer is null or
+            current_objects.sequencer is null or
             -- If a sequencer already exists this event should be reprocessed because this
             -- sequencer could belong to another object.
-            current_objects.created_sequencer < current_objects.input_created_sequencer
+            current_objects.sequencer < current_objects.input_created_sequencer
         ) and
         -- And there should not be any objects with a created sequencer that is the same as the input created
         -- sequencer because this is a duplicate event that would cause a constraint error in the update.
         current_objects.input_created_sequencer not in (
-            select created_sequencer from current_objects where created_sequencer is not null
+            select sequencer from current_objects where sequencer is not null
         )
     -- Only one event entry should be updated, and that entry must be the one with the
     -- deleted sequencer that is minimum, i.e. closest to the created sequencer which
@@ -87,24 +90,25 @@ objects_to_update as (
 ),
 -- Finally, update the required objects.
 update as (
-    update s3_object_paired
-    set created_sequencer = objects_to_update.input_created_sequencer,
-        created_date = objects_to_update.input_created_date,
+    update s3_object
+    set sequencer = objects_to_update.input_created_sequencer,
+        date = objects_to_update.input_created_date,
         size = objects_to_update.input_size,
         sha256 = objects_to_update.input_sha256,
         last_modified_date = objects_to_update.input_last_modified_date,
         e_tag = objects_to_update.input_e_tag,
         is_delete_marker = objects_to_update.input_is_delete_marker,
         storage_class = objects_to_update.input_storage_class,
-        number_reordered = s3_object_paired.number_reordered +
+        event_type = objects_to_update.input_event_type,
+        number_reordered = s3_object.number_reordered +
             -- Note the asymmetry between this and the reorder for deleted query.
-            case when objects_to_update.deleted_sequencer is not null or objects_to_update.created_sequencer is not null then
+            case when objects_to_update.deleted_sequencer is not null or objects_to_update.sequencer is not null then
                 1
             else
                 0
             end
     from objects_to_update
-    where s3_object_paired.s3_object_id = objects_to_update.s3_object_id
+    where s3_object.s3_object_id = objects_to_update.s3_object_id
 )
 -- Return the old values because these need to be reprocessed.
 select
@@ -114,13 +118,13 @@ select
     public_id,
     bucket,
     key,
-    created_date as event_time,
+    date as event_time,
     last_modified_date,
     e_tag,
     sha256,
     storage_class as "storage_class?: StorageClass",
     version_id as "version_id!",
-    created_sequencer as sequencer,
+    sequencer,
     number_reordered,
     number_duplicate_events,
     size,

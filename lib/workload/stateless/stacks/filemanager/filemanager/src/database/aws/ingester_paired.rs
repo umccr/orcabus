@@ -11,6 +11,7 @@ use crate::database::{Client, CredentialGenerator};
 use crate::error::Result;
 use crate::events::aws::inventory::Inventory;
 use crate::events::aws::message::EventType;
+use crate::events::aws::message::EventType::Other;
 use crate::events::aws::{Events, TransposedS3EventMessages};
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::uuid::UuidGenerator;
@@ -136,6 +137,7 @@ impl<'a> IngesterPaired<'a> {
             &object_created.version_ids as &[String],
             &object_created.sequencers as &[Option<String>],
             &object_created.is_delete_markers as &[bool],
+            &vec![Other; object_created.s3_object_ids.len()] as &[EventType],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -160,6 +162,7 @@ impl<'a> IngesterPaired<'a> {
             &object_created.version_ids,
             &object_created.sequencers as &[Option<String>],
             &object_created.is_delete_markers as &[bool],
+            &vec![Other; object_created.s3_object_ids.len()] as &[EventType],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -193,6 +196,7 @@ impl<'a> IngesterPaired<'a> {
             &object_deleted.event_times as &[Option<DateTime<Utc>>],
             &object_deleted.version_ids,
             &object_deleted.sequencers as &[Option<String>],
+            &vec![Other; object_deleted.s3_object_ids.len()] as &[EventType],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -219,6 +223,7 @@ impl<'a> IngesterPaired<'a> {
             // Fill this with 1 reorder, because if we get here then this must be a reordered event.
             &vec![1; object_deleted.s3_object_ids.len()],
             &object_deleted.is_delete_markers as &[bool],
+            &vec![Other; object_deleted.s3_object_ids.len()] as &[EventType],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -262,6 +267,7 @@ pub(crate) mod tests {
     use tokio::time::Instant;
     use uuid::Uuid;
 
+    use crate::database::aws::ingester::tests::fetch_results;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
     use crate::events::aws::message::EventType::{Created, Deleted};
@@ -1523,7 +1529,7 @@ pub(crate) mod tests {
             object.get::<String, _>("key") == key
                 && object.get::<String, _>("bucket") == bucket
                 && object.get::<String, _>("version_id") == version_id
-                && object.get::<Option<&str>, _>("created_sequencer") == created_sequencer
+                && object.get::<Option<&str>, _>("sequencer") == created_sequencer
                 && object.get::<Option<&str>, _>("deleted_sequencer") == deleted_sequencer
         })
     }
@@ -1560,9 +1566,7 @@ pub(crate) mod tests {
             row_asserts(s3_object_results);
 
             // Clean up for next permutation.
-            pool.execute("truncate s3_object, object, s3_object_paired")
-                .await
-                .unwrap();
+            pool.execute("truncate s3_object, object").await.unwrap();
         }
 
         println!(
@@ -1643,19 +1647,6 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) async fn fetch_results<'a>(client: &Client<'a>) -> (Vec<PgRow>, Vec<PgRow>) {
-        (
-            sqlx::query("select * from object")
-                .fetch_all(client.pool())
-                .await
-                .unwrap(),
-            sqlx::query("select * from s3_object_paired")
-                .fetch_all(client.pool())
-                .await
-                .unwrap(),
-        )
-    }
-
     pub(crate) fn assert_created(s3_object_results: &PgRow) {
         assert_with(
             s3_object_results,
@@ -1688,7 +1679,7 @@ pub(crate) mod tests {
         );
         assert_eq!(
             created_sequencer,
-            s3_object_results.get::<Option<String>, _>("created_sequencer")
+            s3_object_results.get::<Option<String>, _>("sequencer")
         );
         assert_eq!(
             deleted_sequencer,
@@ -1712,7 +1703,7 @@ pub(crate) mod tests {
         );
         assert_eq!(
             created_date,
-            s3_object_results.get::<Option<DateTime<Utc>>, _>("created_date")
+            s3_object_results.get::<Option<DateTime<Utc>>, _>("date")
         );
         assert_eq!(
             deleted_date,
