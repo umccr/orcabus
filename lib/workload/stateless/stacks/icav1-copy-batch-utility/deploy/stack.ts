@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import path from 'path';
-import { Duration, aws_secretsmanager } from 'aws-cdk-lib';
+import { Duration, aws_secretsmanager, aws_ssm } from 'aws-cdk-lib';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { aws_iam as iam } from 'aws-cdk-lib';
@@ -9,9 +9,9 @@ import { aws_iam as iam } from 'aws-cdk-lib';
 export interface ICAv1CopyBatchUtilityConfig {
   AppName: string;
   Icav1TokenSecretId: string;
-  Icav1AwsAccessKeyId: string;
-  Icav1AwsSecretAccessKey: string;
-  Icav1AwsSessionToken: string;
+  // Icav1AwsAccessKeyId: string;
+  // Icav1AwsSecretAccessKey: string;
+  // Icav1AwsSessionToken: string;
   BucketForCopyDestination: string;
   BucketForCopyDestinationPrefix: string;
   BucketForManifestOrInventory: string;
@@ -79,19 +79,39 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
     });
 
+    // ICA
+
+    // ICA v1 SSM parameters
+    new aws_ssm.StringParameter(this, 'IcaV1AccessKeyId', {
+      parameterName: 'IcaV1AccessKeyId',
+      stringValue: 'null', // To be filled by rotator lambda
+    });
+
+    new aws_ssm.StringParameter(this, 'IcaV1SecretAccessKey', {
+      parameterName: 'IcaV1SecretAccessKey',
+      stringValue: 'null', // To be filled by rotator lambda
+    });
+
+    new aws_ssm.StringParameter(this, 'IcaV1SessionToken', {
+      parameterName: 'IcaV1SessionToken',
+      stringValue: 'null', // To be filled by rotator lambda
+    });
+
     // ICA v1 creds rotator
     const ica_v1_creds_lambda = new PythonFunction(this, 'ICAv1 credentials lambda', {
       entry: path.join(__dirname, '../lambdas'),
       runtime: Runtime.PYTHON_3_12,
       role: lambdaRole,
       environment: {
-        ica_v1_aws_access_key_id: props.Icav1AwsAccessKeyId,
-        ica_v1_aws_secret_access_key: props.Icav1AwsSecretAccessKey, //pragma: allowlist secret
-        ica_v1_aws_session_token: props.Icav1AwsSessionToken,
+        ica_v1_jwt: aws_secretsmanager.Secret.fromSecretNameV2(
+          this,
+          'IcaJwtToken',
+          'IcaSecretsPortal'
+        ).secretValue.toString(),
       },
       architecture: Architecture.ARM_64,
       timeout: Duration.seconds(28),
-      index: 'ica_secret_rotator.py',
+      index: 'ica_aws_secrets_rotator.py',
       handler: 'handler',
     });
 
@@ -101,9 +121,11 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       runtime: Runtime.PYTHON_3_12,
       role: lambdaRole,
       environment: {
-        ica_v1_aws_access_key_id: props.Icav1AwsAccessKeyId,
-        ica_v1_aws_secret_access_key: props.Icav1AwsSecretAccessKey, //pragma: allowlist secret
-        ica_v1_aws_session_token: props.Icav1AwsSessionToken,
+        // Populated at runtime and refreshed periodically, does not belong in the stack's env vars?
+        //
+        // ica_v1_aws_access_key_id: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1AccessKeyId", { parameterName: "IcaV1AccessKeyId" }).stringValue,
+        // ica_v1_aws_secret_access_key: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1SecretAccessKey", { parameterName: "IcaV1SecretAccessKey" }).stringValue, //pragma: allowlist secret
+        // ica_v1_aws_session_token: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1SessionToken", { parameterName: "IcaV1SessionToken"}).stringValue,
         destination_bucket: props.BucketForCopyDestination,
         destination_bucket_prefix: props.BucketForCopyDestinationPrefix,
         max_concurrency: props.TransferMaximumConcurrency.toString(),
