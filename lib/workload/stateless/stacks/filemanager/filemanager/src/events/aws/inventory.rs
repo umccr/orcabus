@@ -517,7 +517,9 @@ impl From<Record> for FlatS3EventMessage {
         } = record;
 
         Self {
+            object_id: UuidGenerator::generate(),
             s3_object_id: UuidGenerator::generate(),
+            public_id: UuidGenerator::generate(),
             // We don't know when this object was created so there is no event time.
             event_time: None,
             bucket,
@@ -534,8 +536,8 @@ impl From<Record> for FlatS3EventMessage {
             // Anything in an inventory report is always a created event.
             event_type: Created,
             is_delete_marker: is_delete_marker.unwrap_or_default(),
-            number_reordered: 0,
             number_duplicate_events: 0,
+            number_reordered: 0,
         }
     }
 }
@@ -575,6 +577,8 @@ impl From<Vec<DiffMessages>> for FlatS3EventMessages {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::collections::HashSet;
+
     use aws_sdk_s3::operation::get_object::GetObjectOutput;
     use aws_sdk_s3::primitives::ByteStream;
     use chrono::Days;
@@ -582,7 +586,6 @@ pub(crate) mod tests {
     use mockall::predicate::eq;
     use serde_json::json;
     use serde_json::Value;
-    use std::collections::HashSet;
 
     use crate::events::aws::inventory::Manifest;
 

@@ -4,7 +4,7 @@
 use async_trait::async_trait;
 
 use crate::error::Result;
-use crate::events::aws::Events;
+use crate::events::aws::{Events, TransposedS3EventMessages};
 
 pub mod aws;
 
@@ -16,8 +16,10 @@ pub trait Collect {
 }
 
 /// The type of event.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum EventSourceType {
-    S3(Events),
+    S3(TransposedS3EventMessages),
+    S3Paired(Events),
 }

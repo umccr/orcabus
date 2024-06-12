@@ -2,6 +2,9 @@
 //!
 
 pub mod ingester;
+
+pub mod ingester_paired;
+
 pub mod query;
 
 pub mod credentials;

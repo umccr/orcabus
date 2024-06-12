@@ -78,12 +78,17 @@ impl QueryResults {
 
 #[cfg(test)]
 mod tests {
-    use crate::database::aws::ingester::tests::{test_created_events, test_ingester};
-    use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::events::aws::tests::{EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_VERSION_ID};
+    use std::ops::Add;
+
     use chrono::{DateTime, Duration};
     use sqlx::PgPool;
-    use std::ops::Add;
+
+    use crate::database::aws::ingester::tests::{test_events, test_ingester};
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::Ingest;
+    use crate::events::aws::message::EventType::Created;
+    use crate::events::aws::tests::{EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_VERSION_ID};
+    use crate::events::EventSourceType::S3;
 
     use super::*;
 
@@ -92,32 +97,28 @@ mod tests {
         let ingester = test_ingester(pool.clone());
         let query = Query::new(Client::new(pool));
 
-        let mut events = test_created_events();
-        events.object_deleted = Default::default();
+        let events = test_events(Some(Created));
 
         let new_date = Some(DateTime::default().add(Duration::days(1)));
         let new_sequencer = Some(EXPECTED_NEW_SEQUENCER_ONE.to_string());
         let new_key = "key1";
 
-        let mut increase_date = test_created_events();
-        increase_date.object_created.event_times[0] = new_date;
-        increase_date.object_created.sequencers[0].clone_from(&new_sequencer);
+        let mut increase_date = test_events(Some(Created));
+        increase_date.event_times[0] = new_date;
+        increase_date.sequencers[0].clone_from(&new_sequencer);
 
-        let mut different_key = test_created_events();
-        different_key.object_created.keys[0] = new_key.to_string();
+        let mut different_key = test_events(Some(Created));
+        different_key.keys[0] = new_key.to_string();
 
-        let mut different_key_and_date = test_created_events();
-        different_key_and_date.object_created.event_times[0] = new_date;
-        different_key_and_date.object_created.keys[0] = new_key.to_string();
-        different_key_and_date.object_created.sequencers[0].clone_from(&new_sequencer);
+        let mut different_key_and_date = test_events(Some(Created));
+        different_key_and_date.event_times[0] = new_date;
+        different_key_and_date.keys[0] = new_key.to_string();
+        different_key_and_date.sequencers[0].clone_from(&new_sequencer);
 
-        ingester.ingest_events(events).await.unwrap();
-        ingester.ingest_events(increase_date).await.unwrap();
-        ingester.ingest_events(different_key).await.unwrap();
-        ingester
-            .ingest_events(different_key_and_date)
-            .await
-            .unwrap();
+        ingester.ingest(S3(events)).await.unwrap();
+        ingester.ingest(S3(increase_date)).await.unwrap();
+        ingester.ingest(S3(different_key)).await.unwrap();
+        ingester.ingest(S3(different_key_and_date)).await.unwrap();
 
         let mut tx = query.client.pool().begin().await.unwrap();
         let results = query
@@ -136,10 +137,13 @@ mod tests {
             .0;
 
         assert_eq!(results.len(), 2);
-        assert!(results.iter().any(|result| result.bucket == "bucket"
-            && result.key == "key"
-            && result.event_time == new_date));
-        assert!(results.iter().any(|result| result.bucket == "bucket"
+        assert!(results
+            .first()
+            .iter()
+            .all(|result| result.bucket == "bucket"
+                && result.key == "key"
+                && result.event_time == new_date));
+        assert!(results.get(1).iter().all(|result| result.bucket == "bucket"
             && result.key == new_key
             && result.event_time == new_date));
     }

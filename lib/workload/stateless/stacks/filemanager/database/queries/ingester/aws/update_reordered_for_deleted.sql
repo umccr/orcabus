@@ -11,14 +11,16 @@ with input as (
         $3::text[],
         $4::timestamptz[],
         $5::text[],
-        $6::text[]
+        $6::text[],
+        $7::event_type[]
     ) as input (
         s3_object_id,
         bucket,
         key,
         deleted_date,
         version_id,
-        deleted_sequencer
+        deleted_sequencer,
+        event_type
     )
 ),
 -- Then, select the objects that match the bucket, key and version_id
@@ -30,7 +32,8 @@ current_objects as (
         input.key as input_key,
         input.version_id as input_version_id,
         input.deleted_sequencer as input_deleted_sequencer,
-        input.deleted_date as input_deleted_date
+        input.deleted_date as input_deleted_date,
+        input.event_type as input_event_type
     from s3_object
     -- Grab the relevant values to update with.
     join input on
@@ -48,7 +51,7 @@ objects_to_update as (
     where
         -- Check the sequencer condition. We only update if there is a deleted
         -- sequencer that is closer to the created sequencer.
-        current_objects.created_sequencer < current_objects.input_deleted_sequencer and
+        current_objects.sequencer < current_objects.input_deleted_sequencer and
         (
             -- Updating a null sequencer doesn't cause the event to be reprocessed.
             current_objects.deleted_sequencer is null or
@@ -64,7 +67,7 @@ objects_to_update as (
     -- Only one event entry should be updated, and that entry must be the one with the
     -- created sequencer that is maximum, i.e. closest to the deleted sequencer which
     -- is going to be inserted.
-    order by current_objects.created_sequencer desc
+    order by current_objects.sequencer desc
     limit 1
 ),
 -- Finally, update the required objects.
@@ -72,6 +75,7 @@ update as (
     update s3_object
     set deleted_sequencer = objects_to_update.input_deleted_sequencer,
         deleted_date = objects_to_update.input_deleted_date,
+        event_type = objects_to_update.input_event_type,
         number_reordered = s3_object.number_reordered +
             case when objects_to_update.deleted_sequencer is null then 0 else 1 end
     from objects_to_update
@@ -81,6 +85,8 @@ update as (
 select
     -- Note, this is the passed through value from the input in order to identify this event later.
     input_id as "s3_object_id!",
+    object_id,
+    public_id,
     bucket,
     key,
     deleted_date as event_time,

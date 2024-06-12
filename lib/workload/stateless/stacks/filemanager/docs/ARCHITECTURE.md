@@ -38,6 +38,13 @@ At the database level, duplicate events are removed using a unique constraint on
 
 Within the application code, out of order events are removed within the [events] module by comparing sequencer values.
 
+By default, filemanager makes no assumption about the ordering of events, and ingests events in the order that they arrive.
+The sequencer value is stored on the `s3_object` table, which allows ordering entries when querying.
+
+#### Paired ingest mode
+Ordering events on ingestion can be turned on by setting `PAIRED_INGEST_MODE=true` as an environment variable. This has
+a performance cost on ingestion, but it removes the requirment to order events when querying the database.
+
 At the database level, events are processed as they arrive. For each object in the database, the sequencer value is
 recorded. When an event is inserted, it is first checked to see if it belongs to an already existing object, i.e. whether
 there are any objects with sequencer values that are greater (for created events) or lower (for deleted events) than the
