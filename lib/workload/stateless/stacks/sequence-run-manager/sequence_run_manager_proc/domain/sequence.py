@@ -1,8 +1,6 @@
 import json
 import logging
-import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
 from libumccr import libjson
 from libumccr.aws import libssm
@@ -23,8 +21,8 @@ ICA_WORKFLOW_PREFIX = "/iap/workflow"  # FIXME update this
 
 @dataclass
 class SequenceDomain:
-    _namespace = "orcabus.srm"
-    _version = "1.0.0"
+    # Convention: https://github.com/umccr/orcabus/tree/main/docs/schemas#namespace
+    _namespace = "orcabus.sequencerunmanager"
     sequence: Sequence
     state_has_changed: bool = False
 
@@ -32,11 +30,6 @@ class SequenceDomain:
     def namespace(self) -> str:
         """Domain event namespace"""
         return self._namespace
-
-    @property
-    def event_version(self) -> str:
-        """Domain event version"""
-        return self._version
 
     @property
     def event_type(self) -> str:
