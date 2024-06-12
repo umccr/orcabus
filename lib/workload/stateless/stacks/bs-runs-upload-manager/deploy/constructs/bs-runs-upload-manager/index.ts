@@ -123,10 +123,10 @@ export class BsRunsUploadManagerConstruct extends Construct {
     const rule = new events.Rule(this, 'bs_runs_upload_event_rule', {
       eventBus: props.eventBusObj,
       eventPattern: {
-        source: ['orcabus.srm'],
+        source: ['orcabus.sequencerunmanager'],
         detailType: ['SequenceRunStateChange'],
         detail: {
-          status: ['succeeded'],
+          status: [{ 'equals-ignore-case': 'SUCCEEDED' }],
         },
       },
     });
