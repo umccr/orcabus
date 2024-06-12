@@ -16,6 +16,7 @@ import {
   dataSchemaRegistryName,
   vpcProps,
   oncoanalyserBucket,
+  dataAccountId,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { SchemaRegistryProps } from '../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
@@ -46,6 +47,7 @@ const getEventBusConstructProps = (stage: AppStage): EventBusProps => {
     archiveName: 'OrcaBusMainArchive',
     archiveDescription: 'OrcaBus main event bus archive',
     archiveRetention: 365,
+    dataAccountId: dataAccountId,
   };
 
   const baseUniversalEventArchiverProps: EventBusArchiverProps = {

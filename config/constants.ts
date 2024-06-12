@@ -18,6 +18,8 @@ export const accountIdAlias: Record<AppStage, string> = {
   [AppStage.PROD]: '472057503814', // umccr_production
 };
 
+export const dataAccountId = '503977275616';
+
 // external ICA constants
 export const icaAwsAccountNumber = '079623148045';
 

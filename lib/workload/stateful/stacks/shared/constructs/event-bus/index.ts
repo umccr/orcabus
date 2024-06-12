@@ -1,6 +1,7 @@
 import { Construct } from 'constructs';
 import { Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import * as events from 'aws-cdk-lib/aws-events';
+import { PolicyStatement, AccountPrincipal } from 'aws-cdk-lib/aws-iam';
 import { Vpc, VpcLookupOptions, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { UniversalEventArchiverConstruct } from './custom-event-archiver/construct/universal-event-archiver';
@@ -18,6 +19,7 @@ export interface EventBusProps {
   archiveName: string;
   archiveDescription: string;
   archiveRetention: number;
+  dataAccountId: string;
 
   // Optional for custom event archiver
   addCustomEventArchiver?: boolean;
@@ -30,6 +32,14 @@ export class EventBusConstruct extends Construct {
   constructor(scope: Construct, id: string, props: EventBusProps) {
     super(scope, id);
     this.mainBus = this.createMainBus(props);
+    this.mainBus.addToResourcePolicy(
+      new PolicyStatement({
+        sid: 'AllowXAccountPutEvents',
+        actions: ['events:PutEvents'],
+        resources: [this.mainBus.eventBusArn],
+        principals: [new AccountPrincipal(props.dataAccountId)],
+      })
+    );
 
     // Optional for custom event archiver
     if (props.addCustomEventArchiver) {
