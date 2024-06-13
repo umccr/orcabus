@@ -52,6 +52,12 @@ export const oncoanalyserBucket: Record<AppStage, string> = {
   [AppStage.PROD]: 'org.umccr.data.oncoanalyser',
 };
 
+export const icav2PipelineCacheBucket: Record<AppStage, string> = {
+  [AppStage.BETA]: 'pipeline-dev-cache-503977275616-ap-southeast-2',
+  [AppStage.GAMMA]: 'pipeline-stg-cache-503977275616-ap-southeast-2',
+  [AppStage.PROD]: 'pipeline-prod-cache-503977275616-ap-southeast-2',
+};
+
 export const gdsBsRunsUploadLogPath: Record<AppStage, string> = {
   [AppStage.BETA]: 'gds://development/primary_data/temp/bs_runs_upload_tes/',
   [AppStage.GAMMA]: 'gds://staging/primary_data/temp/bs_runs_upload_tes/',
