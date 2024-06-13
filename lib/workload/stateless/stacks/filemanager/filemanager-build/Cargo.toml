@@ -1,0 +1,15 @@
+[package]
+name = "filemanager-build"
+version = "0.1.0"
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror = "1"
+clap_builder = "4"
+dotenvy = "0.15"
+envy = "0.4"
+sea-orm-cli = { version = "0.12", features = ["runtime-tokio-rustls"] }
+tokio = { version = "1", features = ["macros"] }
