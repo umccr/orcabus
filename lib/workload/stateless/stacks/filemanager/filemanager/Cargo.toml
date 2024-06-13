@@ -23,6 +23,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
 
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio", "tls-rustls", "chrono", "uuid"] }
+sea-orm = { version = "0.12", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1"
 uuid = { version = "1", features = ["v7"] }
@@ -58,3 +59,9 @@ aws-sdk-s3 = { version = "1", features = ["test-util"] }
 
 # The migrate feature is required to run sqlx tests
 filemanager = { path = ".", features = ["migrate"] }
+
+[build-dependencies]
+filemanager-build = { path = "../filemanager-build" }
+miette = { version = "7", features = ["fancy"] }
+anyhow = "1"
+eyre = "0.6"
