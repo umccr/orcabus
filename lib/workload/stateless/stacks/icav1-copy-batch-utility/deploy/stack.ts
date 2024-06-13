@@ -5,6 +5,7 @@ import { Duration, aws_secretsmanager, aws_ssm } from 'aws-cdk-lib';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { aws_iam as iam } from 'aws-cdk-lib';
+import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda-layer';
 
 export interface ICAv1CopyBatchUtilityConfig {
   AppName: string;
@@ -116,28 +117,42 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     });
 
     // S3 Batch Ops lambda
-    const s3_batch_ops_lambda = new PythonFunction(this, 'ICAv1 Copy Batch Utility lambda', {
-      entry: path.join(__dirname, '../lambdas'),
-      runtime: Runtime.PYTHON_3_12,
-      role: lambdaRole,
-      environment: {
-        // Populated at runtime and refreshed periodically, does not belong in the stack's env vars?
-        //
-        // ica_v1_aws_access_key_id: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1AccessKeyId", { parameterName: "IcaV1AccessKeyId" }).stringValue,
-        // ica_v1_aws_secret_access_key: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1SecretAccessKey", { parameterName: "IcaV1SecretAccessKey" }).stringValue, //pragma: allowlist secret
-        // ica_v1_aws_session_token: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1SessionToken", { parameterName: "IcaV1SessionToken"}).stringValue,
-        destination_bucket: props.BucketForCopyDestination,
-        destination_bucket_prefix: props.BucketForCopyDestinationPrefix,
-        max_concurrency: props.TransferMaximumConcurrency.toString(),
-        max_pool_connections: props.TransferMaxPoolConnections.toString(),
-        max_attempts: props.TransferMaxErrorRetries.toString(),
-        multipart_chunksize: props.TransferMultiPartChunkSize.toString(),
-      },
-      architecture: Architecture.ARM_64,
-      timeout: Duration.seconds(28),
-      index: 's3_batch_ops_copier.py',
-      handler: 'handler',
-    });
+    const s3_batch_ops_lambda = new PythonFunction(
+      this,
+      'ICAv1 Copy Batch Utility lambda - Boto3',
+      {
+        entry: path.join(__dirname, '../lambdas'),
+        runtime: Runtime.PYTHON_3_12,
+        role: lambdaRole,
+        environment: {
+          // Populated at runtime and refreshed periodically, does not belong in the stack's env vars?
+          //
+          // ica_v1_aws_access_key_id: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1AccessKeyId", { parameterName: "IcaV1AccessKeyId" }).stringValue,
+          // ica_v1_aws_secret_access_key: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1SecretAccessKey", { parameterName: "IcaV1SecretAccessKey" }).stringValue, //pragma: allowlist secret
+          // ica_v1_aws_session_token: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1SessionToken", { parameterName: "IcaV1SessionToken"}).stringValue,
+          destination_bucket: props.BucketForCopyDestination,
+          destination_bucket_prefix: props.BucketForCopyDestinationPrefix,
+          max_concurrency: props.TransferMaximumConcurrency.toString(),
+          max_pool_connections: props.TransferMaxPoolConnections.toString(),
+          max_attempts: props.TransferMaxErrorRetries.toString(),
+          multipart_chunksize: props.TransferMultiPartChunkSize.toString(),
+        },
+        architecture: Architecture.ARM_64,
+        timeout: Duration.seconds(28),
+        index: 's3_batch_ops_boto3.py',
+        handler: 'handler',
+      }
+    );
+
+    const s3_batch_ops_rclone = new PythonLambdaLayerConstruct(
+      this,
+      'ICAv1 Copy Batch Utility lambda - RClone',
+      {
+        layerName: 'rclone-lambda-layer',
+        layerDescription: 'layer to enable the manager tools layer',
+        layerDirectory: path.join(__dirname, '../lambdas/rclone'),
+      }
+    );
 
     // S3 Batch Operations role
     new iam.Role(this, 'S3BatchOperationsRole', {
