@@ -63,5 +63,4 @@ filemanager = { path = ".", features = ["migrate"] }
 [build-dependencies]
 filemanager-build = { path = "../filemanager-build" }
 miette = { version = "7", features = ["fancy"] }
-anyhow = "1"
-eyre = "0.6"
+tokio = { version = "1", features = ["macros"] }

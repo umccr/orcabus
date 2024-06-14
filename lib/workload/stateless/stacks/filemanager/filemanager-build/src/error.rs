@@ -1,23 +1,24 @@
 //! This module contains the crate's error types.
 //!
 
-use dotenvy::var;
+use crate::error::ErrorKind::LoadingEnvironment;
+use crate::workspace_path;
 use miette::{diagnostic, Diagnostic, NamedSource, SourceOffset};
 use std::fmt::{Display, Formatter};
+use std::fs::read_to_string;
 use std::panic::Location;
-use std::path::Path;
-use std::{fs, result};
+use std::result;
 use thiserror::Error;
 
 pub type Result<T> = result::Result<T, Error>;
 
 /// Error types for the filemanager.
-#[derive(Error, Debug, Diagnostic)]
+#[derive(Error, Debug)]
 pub enum ErrorKind {
     #[error("Error generating entities: {0}")]
     EntityGeneration(String),
-    #[error("Missing environment variable: {0}")]
-    MissingEnvironment(String),
+    #[error("Missing or incorrect environment variables: {0}")]
+    LoadingEnvironment(String),
 }
 
 #[derive(Error, Debug, Diagnostic)]
@@ -36,19 +37,27 @@ impl Display for Error {
     }
 }
 
+impl From<envy::Error> for Error {
+    #[track_caller]
+    fn from(error: envy::Error) -> Self {
+        Self::from(LoadingEnvironment(error.to_string()))
+    }
+}
+
 impl From<ErrorKind> for Error {
     /// Create an error with caller location to print error information.
     #[track_caller]
     fn from(error_kind: ErrorKind) -> Self {
         let loc = Location::caller();
 
-        if let Ok(dir) = var("CARGO_MANIFEST_DIR") {
-            if let Ok(source) = fs::read_to_string(Path::new(&dir).join("..").join(loc.file())) {
+        if let Some(path) = workspace_path() {
+            if let Ok(source) = read_to_string(path.join(loc.file())) {
                 let offset = SourceOffset::from_location(
                     source.as_str(),
                     loc.line() as usize,
                     loc.column() as usize,
                 );
+
                 return Self::new(
                     error_kind,
                     Some(NamedSource::new(loc.file(), source)),
