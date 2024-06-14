@@ -50,6 +50,8 @@ aws-arn = "0.3"
 lambda_runtime = "0.11"
 aws_lambda_events = "0.15"
 
+filemanager-macros = { path = "../filemanager-macros" }
+
 [dev-dependencies]
 lazy_static = "1"
 
@@ -64,3 +66,4 @@ filemanager = { path = ".", features = ["migrate"] }
 filemanager-build = { path = "../filemanager-build" }
 miette = { version = "7", features = ["fancy"] }
 tokio = { version = "1", features = ["macros"] }
+dotenvy = "0.15"

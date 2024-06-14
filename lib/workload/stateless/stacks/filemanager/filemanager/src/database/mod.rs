@@ -15,6 +15,7 @@ use crate::events::EventSourceType;
 use crate::read_env;
 
 pub mod aws;
+pub mod entities;
 
 /// A trait which can generate database credentials.
 #[async_trait]

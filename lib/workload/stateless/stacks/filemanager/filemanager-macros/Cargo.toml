@@ -1,0 +1,13 @@
+[package]
+name = "filemanager-macros"
+version = "0.1.0"
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+syn = "2"
+
+[lib]
+proc-macro = true

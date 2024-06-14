@@ -1,13 +1,13 @@
 //! This module contains the crate's error types.
 //!
 
-use crate::error::ErrorKind::LoadingEnvironment;
+use crate::error::ErrorKind::{IoError, LoadingEnvironment};
 use crate::workspace_path;
 use miette::{diagnostic, Diagnostic, NamedSource, SourceOffset};
 use std::fmt::{Display, Formatter};
 use std::fs::read_to_string;
 use std::panic::Location;
-use std::result;
+use std::{io, result};
 use thiserror::Error;
 
 pub type Result<T> = result::Result<T, Error>;
@@ -19,6 +19,8 @@ pub enum ErrorKind {
     EntityGeneration(String),
     #[error("Missing or incorrect environment variables: {0}")]
     LoadingEnvironment(String),
+    #[error("io error: {0}")]
+    IoError(io::Error),
 }
 
 #[derive(Error, Debug, Diagnostic)]
@@ -41,6 +43,13 @@ impl From<envy::Error> for Error {
     #[track_caller]
     fn from(error: envy::Error) -> Self {
         Self::from(LoadingEnvironment(error.to_string()))
+    }
+}
+
+impl From<io::Error> for Error {
+    #[track_caller]
+    fn from(error: io::Error) -> Self {
+        Self::from(IoError(error))
     }
 }
 

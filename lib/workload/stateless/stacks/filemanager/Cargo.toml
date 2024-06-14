@@ -8,6 +8,7 @@ members = [
     "filemanager-http-lambda",
     "filemanager-ingest-lambda",
     "filemanager-inventory-lambda",
+    "filemanager-macros",
     "filemanager-migrate-lambda"
 ]
 
