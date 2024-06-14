@@ -16,6 +16,7 @@ import {
   dataSchemaRegistryName,
   vpcProps,
   oncoanalyserBucket,
+  icav2PipelineCacheBucket,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { SchemaRegistryProps } from '../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
@@ -93,6 +94,9 @@ const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
     rules: [
       {
         bucket: oncoanalyserBucket[stage],
+      },
+      {
+        bucket: icav2PipelineCacheBucket[stage],
       },
     ],
   };
