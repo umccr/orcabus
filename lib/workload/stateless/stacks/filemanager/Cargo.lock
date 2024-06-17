@@ -1842,7 +1842,6 @@ dependencies = [
  "dotenvy",
  "filemanager",
  "filemanager-build",
- "filemanager-macros",
  "flate2",
  "futures",
  "hex",
@@ -1879,9 +1878,9 @@ dependencies = [
  "clap_builder",
  "envy",
  "miette",
+ "quote",
  "sea-orm-cli",
  "serde",
- "temp-dir",
  "thiserror",
  "tokio",
 ]
@@ -1919,13 +1918,6 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "filemanager-macros"
-version = "0.1.0"
-dependencies = [
- "syn 2.0.65",
 ]
 
 [[package]]
@@ -4857,12 +4849,6 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
-
-[[package]]
-name = "temp-dir"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f227968ec00f0e5322f9b8173c7a0cbcff6181a0a5b28e9892491c286277231"
 
 [[package]]
 name = "tempfile"

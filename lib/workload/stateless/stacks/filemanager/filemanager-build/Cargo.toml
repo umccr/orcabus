@@ -14,4 +14,4 @@ sea-orm-cli = { version = "0.12", features = ["runtime-tokio-rustls"] }
 tokio = { version = "1", features = ["macros"] }
 miette = "7"
 serde = { version = "1", features = ["derive"] }
-temp-dir = "0.1"
+quote = "1"
