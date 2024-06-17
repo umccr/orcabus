@@ -144,13 +144,13 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       }
     );
 
-    const s3_batch_ops_rclone = new PythonLambdaLayerConstruct(
+    const s3_batch_ops_rclone_layer = new PythonLambdaLayerConstruct(
       this,
       'ICAv1 Copy Batch Utility lambda - RClone',
       {
         layerName: 'rclone-lambda-layer',
         layerDescription: 'layer to enable the manager tools layer',
-        layerDirectory: path.join(__dirname, '../layers/rclone'),
+        layerDirectory: path.join(__dirname, '../layers'),
       }
     );
 
