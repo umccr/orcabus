@@ -10,6 +10,7 @@ import {
   cognitoStatusPageAppClientIdParameterName,
   cognitoUserPoolIdParameterName,
   oncoanalyserBucket,
+  icav2PipelineCacheBucket,
 } from '../constants';
 
 export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => {
@@ -24,6 +25,6 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     cognitoStatusPageAppClientIdParameterName: cognitoStatusPageAppClientIdParameterName,
     cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
     inventorySourceBuckets: ['filemanager-inventory-test'],
-    eventSourceBuckets: [oncoanalyserBucket[stage]],
+    eventSourceBuckets: [oncoanalyserBucket[stage], icav2PipelineCacheBucket[stage]],
   };
 };
