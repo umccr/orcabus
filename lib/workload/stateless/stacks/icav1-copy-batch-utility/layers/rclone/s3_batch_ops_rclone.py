@@ -8,7 +8,6 @@ import tempfile
 
 import boto3
 import botocore.config
-from ddtrace import tracer
 from pythonjsonlogger import jsonlogger
 
 from lambda_types import LambdaContext, LambdaDict
@@ -28,7 +27,6 @@ def lambda_handler(event: LambdaDict, context: LambdaContext) -> LambdaDict:
     return dict()
 
 
-@tracer.wrap()
 def update_root_logger() -> None:
     """
     update_root_logger overwrites the root logger with a custom json formatter.
@@ -69,7 +67,6 @@ def update_root_logger() -> None:
             handler.setFormatter(formatter)
 
 
-@tracer.wrap()
 async def run_rclone_sync(event: LambdaDict) -> None:
     """
     run_rclone_sync is the main function spawning an rclone process and parsing its output.
@@ -129,7 +126,6 @@ async def run_rclone_sync(event: LambdaDict) -> None:
     logger.info("Finished rclone sync")
 
 
-@tracer.wrap()
 def get_rclone_config_path(rclone_config_ssm_name: str) -> str:
     """
     get_rclone_config_path retrieves rclone config from AWS SSM and dumps it on a temp file.
@@ -149,7 +145,6 @@ def get_rclone_config_path(rclone_config_ssm_name: str) -> str:
     return f.name
 
 
-@tracer.wrap()
 async def log_stdout(stream: asyncio.StreamReader | None) -> None:
     """
     log_stdout consumes rclone stdout line by line and generates python logs out of it.
@@ -164,7 +159,6 @@ async def log_stdout(stream: asyncio.StreamReader | None) -> None:
             logger.info(line.decode())
 
 
-@tracer.wrap()
 async def log_stderr(stream: asyncio.StreamReader | None) -> None:
     """
     log_stderr consumes rclone stderr line by line and generates python logs out of it.
@@ -179,7 +173,6 @@ async def log_stderr(stream: asyncio.StreamReader | None) -> None:
             logger.error(line.decode())
 
 
-@tracer.wrap()
 def log_rclone(line: bytes) -> None:
     """
     log_rclone parses and reshapes rclone json logs.
