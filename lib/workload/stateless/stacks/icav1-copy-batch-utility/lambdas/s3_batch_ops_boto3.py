@@ -91,21 +91,6 @@ def handler(event, context):
             logger.error(e)
             resultCode = 'PermanentFailure'
             resultString = '{}'.format(str(e))
-    except Exception as e:
-        # log errors, some errors does not have a response, so handle them
-        logger.error(f"Unable to complete requested operation, see Additional Client/Service error details below:")
-        try:
-            logger.error(e.response)
-            errorCode = e.response.get('Error', {}).get('Code')
-            errorMessage = e.response.get('Error', {}).get('Message')
-            errorS3RequestID = e.response.get('ResponseMetadata', {}).get('RequestId')
-            errorS3ExtendedRequestID = e.response.get('ResponseMetadata', {}).get('HostId')
-            resultString = '{}: {}: {}: {}'.format(errorCode, errorMessage, errorS3RequestID, errorS3ExtendedRequestID)
-        except AttributeError:
-            logger.error(e)
-            resultString = 'Exception: {}'.format(str(e))
-            resultCode = 'PermanentFailure'
-
     finally:
         results.append({
         'taskId': taskId,
