@@ -30,15 +30,18 @@ class SequenceRunSrvUnitTests(SequenceRunProcUnitTestCase):
         )
         self.assertIsNotNone(seq_domain)
         logger.info(seq_domain)
-        ses_in_db: Sequence = Sequence.objects.get(
+        seq_in_db: Sequence = Sequence.objects.get(
             instrument_run_id=TestConstant.instrument_run_id.value
         )
         self.assertEqual(
-            seq_domain.sequence.instrument_run_id, ses_in_db.instrument_run_id
+            seq_domain.sequence.instrument_run_id, seq_in_db.instrument_run_id
         )
         self.assertTrue(
             seq_domain.state_has_changed
         )  # assert Sequence Run State has changed True
+
+        # assert status value are stored as upper case
+        self.assertEqual(seq_in_db.status, "STARTED")
 
     def test_create_or_update_sequence_from_bssh_event_skip(self):
         """

@@ -25,7 +25,7 @@ The two steps of the statemachine are:
 1. Generate a V2 Samplesheet and reupload it
 2. Launch an ICAv1 tes task that runs the bs runs upload command
 
-This statemachine will subscribe to the orcabus.srm events and trigger the statemachine when a new run is detected.
+This statemachine will subscribe to the `orcabus.sequencerunmanager` events and trigger the statemachine when a new run is detected.
 
 ![](images/bs_runs_upload_manager.png)
 

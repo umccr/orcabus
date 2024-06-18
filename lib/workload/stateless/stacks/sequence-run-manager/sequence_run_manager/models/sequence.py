@@ -9,10 +9,11 @@ logger = logging.getLogger(__name__)
 
 
 class SequenceStatus(models.TextChoices):
-    STARTED = "started"
-    FAILED = "failed"
-    SUCCEEDED = "succeeded"
-    ABORTED = "aborted"
+    # Convention: status values are to be stored as upper cases
+    STARTED = "STARTED"
+    FAILED = "FAILED"
+    SUCCEEDED = "SUCCEEDED"
+    ABORTED = "ABORTED"
 
     @classmethod
     def from_value(cls, value):

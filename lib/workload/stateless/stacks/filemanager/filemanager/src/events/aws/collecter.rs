@@ -2,13 +2,14 @@
 //!
 
 use async_trait::async_trait;
-use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
+use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::primitives;
 use aws_sdk_s3::types::StorageClass::Standard;
 use chrono::{DateTime, Utc};
 use futures::future::join_all;
+use futures::TryFutureExt;
 use mockall_double::double;
-use tracing::trace;
+use tracing::{trace, warn};
 
 #[double]
 use crate::clients::aws::s3::Client;
@@ -16,8 +17,8 @@ use crate::clients::aws::s3::Client;
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
+use crate::error::Error::InvalidEnvironmentVariable;
 use crate::error::Error::{DeserializeError, SQSError};
-use crate::error::Error::{InvalidEnvironmentVariable, S3Error};
 use crate::error::Result;
 use crate::events::aws::{
     EventType, FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages,
@@ -142,26 +143,16 @@ impl Collecter {
     }
 
     /// Gets S3 metadata from HeadObject such as creation/archival timestamps and statuses.
-    pub async fn head(
-        client: &Client,
-        key: &str,
-        bucket: &str,
-    ) -> Result<Option<HeadObjectOutput>> {
-        let head = client.head_object(key, bucket).await;
-
-        match head {
-            Ok(head) => Ok(Some(head)),
-            Err(err) => {
+    pub async fn head(client: &Client, key: &str, bucket: &str) -> Option<HeadObjectOutput> {
+        client
+            .head_object(key, bucket)
+            .map_err(|err| {
                 let err = err.into_service_error();
-                if let HeadObjectError::NotFound(_) = err {
-                    // Object not found, could be deleted.
-                    Ok(None)
-                } else {
-                    // I.e: Cannot connect to server
-                    Err(S3Error(err.to_string()))
-                }
-            }
-        }
+                warn!("Error received from HeadObject: {}", err);
+                err
+            })
+            .await
+            .ok()
     }
 
     /// Process events and add header and datetime fields.
@@ -182,7 +173,7 @@ impl Collecter {
                 // Race condition: it's possible that an object gets deleted so quickly that it
                 // occurs before calling head. This means that there may be cases where the storage
                 // class and other fields are not known.
-                if let Some(head) = Self::head(client, &event.key, &event.bucket).await? {
+                if let Some(head) = Self::head(client, &event.key, &event.bucket).await {
                     trace!(head = ?head, "received head object output");
 
                     let HeadObjectOutput {
@@ -254,6 +245,7 @@ pub(crate) mod tests {
     use std::result;
 
     use aws_sdk_s3::error::SdkError;
+    use aws_sdk_s3::operation::head_object::HeadObjectError;
     use aws_sdk_s3::primitives::{DateTimeFormat, SdkBody};
     use aws_sdk_s3::types;
     use aws_sdk_s3::types::error::NotFound;
@@ -331,9 +323,7 @@ pub(crate) mod tests {
 
         set_s3_client_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
 
-        let result = Collecter::head(&collecter.client, "key", "bucket")
-            .await
-            .unwrap();
+        let result = Collecter::head(&collecter.client, "key", "bucket").await;
         assert_eq!(result, Some(expected_head_object()));
     }
 
@@ -346,9 +336,7 @@ pub(crate) mod tests {
             vec![|| Err(expected_head_object_not_found())],
         );
 
-        let result = Collecter::head(&collecter.client, "key", "bucket")
-            .await
-            .unwrap();
+        let result = Collecter::head(&collecter.client, "key", "bucket").await;
         assert!(result.is_none());
     }
 

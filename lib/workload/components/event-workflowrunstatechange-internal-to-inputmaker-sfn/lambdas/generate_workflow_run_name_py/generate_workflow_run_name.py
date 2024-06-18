@@ -14,8 +14,8 @@ def coerce_names(name: str) -> str:
     :return:
     """
     name = name.lower().replace(" ", "")
-    name = name.replace(".", "_")
-    name = name.replace("-", "_")
+    name = name.replace(".", "-")
+    name = name.replace("_", "-")
 
     return name
 

@@ -17,7 +17,7 @@ def build_mock():
         run_volume_name="gds_name",
         run_folder_path="/to/gds/folder/path",
         run_data_uri="gds://gds_name/to/gds/folder/path",
-        status="Complete",
+        status="SUCCEEDED",
         start_time=now(),
         sample_sheet_name="SampleSheet.csv",
         sequence_run_id="r.AAAAAA",
@@ -28,7 +28,7 @@ def build_mock():
         run_volume_name="gds_name",
         run_folder_path="/to/gds/folder/path",
         run_data_uri="gds://gds_name/to/gds/folder/path",
-        status="Fail",
+        status="FAILED",
         start_time=now(),
         sample_sheet_name="SampleSheet.csv",
         sequence_run_id="r.BBBBBB",
@@ -43,14 +43,14 @@ class SequenceTestCase(TestCase):
         """
         build_mock()
         logger.info("Test get success sequence table")
-        get_complete_sequence = Sequence.objects.get(status="Complete")
+        get_complete_sequence = Sequence.objects.get(status="SUCCEEDED")
         self.assertEqual(
-            get_complete_sequence.status, "Complete", "Status Complete is expected"
+            get_complete_sequence.status, "SUCCEEDED", "Status SUCCEEDED is expected"
         )
         logger.info(get_complete_sequence)
 
         try:
-            Sequence.objects.get(status="Complete")
+            Sequence.objects.get(status="SUCCEEDED")
         except ObjectDoesNotExist:
             logger.info(f"Raised ObjectDoesNotExist")
 
@@ -58,13 +58,13 @@ class SequenceTestCase(TestCase):
         """
         python manage.py test sequence_run_manager.tests.test_models.SequenceTestCase.test_from_seq_run_status
         """
-        sq_status: SequenceStatus = SequenceStatus.from_seq_run_status("running")
+        sq_status: SequenceStatus = SequenceStatus.from_seq_run_status("Running")
         self.assertIs(sq_status, SequenceStatus.STARTED)
 
-        sq_status = SequenceStatus.from_seq_run_status("pendinganalysis")
+        sq_status = SequenceStatus.from_seq_run_status("PendingAnalysis")
         self.assertIs(sq_status, SequenceStatus.SUCCEEDED)
 
-        sq_status = SequenceStatus.from_seq_run_status("failed")
+        sq_status = SequenceStatus.from_seq_run_status("Failed")
         self.assertIs(sq_status, SequenceStatus.FAILED)
 
     def test_from_seq_run_status_stopped(self):
