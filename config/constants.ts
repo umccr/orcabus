@@ -206,8 +206,8 @@ export const mockInstrumentRunTableName = 'stacky-instrument-run-table';
 export const mockInputMakerTableName = 'stacky-input-maker-table';
 export const mockWorkflowManagerTableName = 'stacky-workflow-manager-table';
 export const mockIcav2ProjectIdSsmParameterName = '/orcabus/stacky/icav2_project_id_and_name_json';
-export const mockPrimaryOutputUriSsmParameterName = '/orcabus/stacky/primary_output_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/__instrument_run_id__/__portal_run_id__/
-export const mockAnalysisOutputUriSsmParameterName = '/orcabus/stacky/analysis_output_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_data/__workflow_name__/__workflow_version__/__portal_run_id__/
-export const mockAnalysisLogsUriSsmParameterName = '/orcabus/stacky/analysis_logs_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_logs/__workflow_name__/__workflow_version__/__portal_run_id__/
+export const mockPrimaryOutputUriSsmParameterName = '/orcabus/stacky/primary_output_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary/__instrument_run_id__/__portal_run_id__/
+export const mockAnalysisOutputUriSsmParameterName = '/orcabus/stacky/analysis_output_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis/__workflow_name__/__portal_run_id__/
+export const mockAnalysisLogsUriSsmParameterName = '/orcabus/stacky/analysis_logs_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/logs/__workflow_name__/__portal_run_id__/
 
-export const mockAnalysisCacheUriSsmParameterName = '/orcabus/stacky/analysis_cache_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_cache/__workflow_name__/__workflow_version__/__portal_run_id__/
+export const mockAnalysisCacheUriSsmParameterName = '/orcabus/stacky/analysis_cache_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/cache/__workflow_name__/__portal_run_id__/
