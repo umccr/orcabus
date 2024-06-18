@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/bsshicav2fastqcopymanager/PayloadDataSucceeded.schema.json",
+  "description": "Data schema for orcabus.bsshicav2fastqcopymanager@PayloadDataSucceeded",
+  "title": "PayloadDataSucceeded",
+  "required": [
+    "instrumentRunId",
+    "icav2CopyUtilityJobExecutionId",
+    "outputUri",
+    "manifestB64gz",
+    "fastqListRowsB64gz",
+    "sampleSheetB64gz",
+    "basespaceRunId"
+  ],
+  "properties": {
+    "instrumentRunId": {
+      "type": "string"
+    },
+    "icav2CopyUtilityJobExecutionId": {
+      "type": "string"
+    },
+    "outputUri": {
+      "type": "string"
+    },
+    "manifestB64gz": {
+      "type": "string"
+    },
+    "fastqListRowsB64gz": {
+      "type": "string"
+    },
+    "sampleSheetB64gz": {
+      "type": "string"
+    },
+    "basespaceRunId": {
+      "type": "string"
+    }
+  }
+}

@@ -16,6 +16,7 @@ With the following environment variables
 ICA_BASE_URL
 ICA_ACCESS_TOKEN_SECRET_ID
 PORTAL_TOKEN_SECRET_ID
+SS_CHECK_API_DOMAIN_PARAMETER_NAME
 
 And performs the following operations:
 
@@ -42,7 +43,7 @@ from datetime import datetime, timezone
 from tempfile import NamedTemporaryFile
 
 from bs_runs_upload_manager_tools.utils.ica_config_helpers import set_ica_env_vars
-from bs_runs_upload_manager_tools.utils.portal_helpers import set_portal_token
+from bs_runs_upload_manager_tools.utils.portal_helpers import set_portal_token, set_api_url
 from bs_runs_upload_manager_tools.utils.samplesheet_helpers import generate_v2_samplesheet
 
 
@@ -65,6 +66,7 @@ def handler(event, context):
     # Set environment variables ICA_BASE_URL and ICA_ACCESS_TOKEN
     set_ica_env_vars()
     set_portal_token()
+    set_api_url()
 
     # Get the event parameters
     gds_folder_path = event["gds_folder_path"]

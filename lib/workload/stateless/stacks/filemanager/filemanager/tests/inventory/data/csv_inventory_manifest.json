@@ -1,0 +1,13 @@
+{
+  "sourceBucket" : "filemanager-inventory-test",
+  "destinationBucket" : "arn:aws:s3:::filemanager-inventory-test",
+  "version" : "2016-11-30",
+  "creationTimestamp" : "1715043600000",
+  "fileFormat" : "CSV",
+  "fileSchema" : "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, ObjectLockLegalHoldStatus, IntelligentTieringAccessTier, BucketKeyStatus, ChecksumAlgorithm",
+  "files" : [ {
+    "key" : "csv_inventory.csv.gz",
+    "size" : 331,
+    "MD5checksum" : "c473bcc2407d0a5cec5229b21d967e59"
+  } ]
+}

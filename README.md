@@ -23,7 +23,7 @@ There are 2 CDK apps here:
 
   As the opposite of stateful resources, stateless resources will have the ability to redeploy quickly without worrying
   about any retainable data. For example, AWS lambdas and API Gateway have no retainable data when destroyed and spin up
-  easily. The [MicroService Applications](docs/developer/MICROSERVICE.md) resources will usually be here and they will
+  easily. The [Microservice Applications](docs/developer/MICROSERVICE.md) resources will usually be here and they will
   have a lookup from stateful resources when needed.
 
 You could access the CDK command for each app via `yarn cdk-stateless` or `yarn cdk-stateful`. The `cdk-*` is
@@ -85,25 +85,28 @@ You could list the CDK stacks with the `cdk ls` command to look at the stackId g
 yarn cdk-stateless ls
 
 OrcaBusStatelessPipeline
-OrcaBusStatelessPipeline/BetaDeployment/MetadataManagerStack
+OrcaBusStatelessPipeline/OrcaBusBeta/MetadataManagerStack
 ...
 ```
 
 For example, deploying the metadata manager stateless resources directly from your computer as follows.
 
 ```sh
-yarn cdk-stateless deploy OrcaBusStatelessPipeline/BetaDeployment/MetadataManager
+yarn cdk-stateless synth -e OrcaBusStatelessPipeline/OrcaBusBeta/MetadataManagerStack
+yarn cdk-stateless diff -e OrcaBusStatelessPipeline/OrcaBusBeta/MetadataManagerStack
+yarn cdk-stateless deploy -e OrcaBusStatelessPipeline/OrcaBusBeta/MetadataManagerStack
 ```
 
-NOTE: If you deployed manually and the pipeline starts running (e.g. a new commit at the source branch) your stack will be overridden to what you have in the main branch.
+NOTE: If you deployed manually and the pipeline starts running (e.g. a new commit at the source branch) your stack will be overridden to what you have in the main branch. You are encouraged to look around `README.md` and `Makefile` of existing service stacks (both stateful/stateless) to adapt from existing setup.
 
 ## Development
 
 _Heads up: Polyglot programming environment. We shorten some trivial steps into `Makefile` target. You may deduce step-by-step from `Makefile`, if any._
 
-To develop your microservice application please read the [microservice guide](docs/developer/MICROSERVICE.md).
-
-Do note that we have some shared resources that is expected to be used across microservices at [shared resource docs](./lib/workload/stateful/stacks/shared/README.md).
+To develop your microservice application, please read: 
+- [microservice guide](docs/developer/MICROSERVICE.md) 
+- [event schema guide](docs/event-schemas/README.md)
+- [shared resource guide](./lib/workload/stateful/stacks/shared/README.md)
 
 ### Typography
 
@@ -140,15 +143,15 @@ yarn -v
 
 Additionally, we expect the following common tools be installed and available in your system shell PATH. We provide [Brewfile](Brewfile) as an example. You may manage these common tools in any other way as see fit for your local setup.
 
-```
+```sh
 brew bundle
 ```
-
+  
 ### Mocking
 
-- We use docker compose as a mock stack for application local dev and running test suite purpose.
+- We use docker-compose as a mock stack for application local dev and running test suite purpose.
 - Typically, you will have your own application compose stack defined at your app project root, if any.
-- You can also reuse common docker compose stack, if applicable. See [shared/README.md](shared)
+- You can also reuse a common docker compose stack, if applicable. See [shared/README.md](shared)
 
 ### Microservice
 
@@ -163,6 +166,7 @@ brew bundle
 ### Code Formatting
 
 TypeScript
+
 - Run prettier: `yarn prettier`
 - Fix prettier issue: `yarn prettier-fix`
 - Opt-out prettier: See [.prettierignore](.prettierignore)
@@ -185,7 +189,18 @@ pre-commit run --all-files
 
 ### GitHub Action
 
-We have GitHub Action workflow to reinforce Lint, Code Formatting and Pre-commit Hook check as [Pull Request Build](.github/workflows/prbuild.yml) pipeline before main CI/CD automation run at CodePipeline. This is to protect any accidental secrets leak and/or pre-flight check for CI/CD automation. 
+#### Lint-Formatting-Security
+
+We have GitHub Action workflow to reinforce Lint, Code Formatting and Pre-commit Hook check as [Pull Request
+Build](.github/workflows/prbuild.yml) pipeline before the main CI/CD automation run at CodePipeline. This is to protect any
+accidental secrets leak and/or pre-flight check for CI/CD automation.
+
+#### Testing
+
+We have enabled application unit tests and stack security compliance in our GitHub Actions workflow using
+AWS CodeBuild as the runner. This provides developers with faster feedback before merging changes into the main branch.
+The deployment pipeline will run all tests again before deployment. If you believe your commit doesn't
+require GitHub Actions testing, you can include the `[skip ci]` in your commit message to skip this step.
 
 ### IDE
 

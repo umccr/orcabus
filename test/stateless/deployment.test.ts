@@ -169,6 +169,18 @@ function applyNagSuppression(stackId: string, stack: Stack) {
         ],
         true
       );
+      NagSuppressions.addResourceSuppressions(
+        stack,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              "'*' is required to access the inventory manifest and data files by the inventory function.",
+            appliesTo: ['Resource::arn:aws:s3:::filemanager-inventory-test/*'],
+          },
+        ],
+        true
+      );
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
         `/FileManagerStack/MigrateProviderFunction/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,

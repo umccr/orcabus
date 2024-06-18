@@ -1,0 +1,213 @@
+{
+  "Comment": "Set ctTSOv2 Input JSON",
+  "StartAt": "Get Database entry",
+  "States": {
+    "Get Database entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "ResultPath": "$.get_database_entry_step",
+      "ResultSelector": {
+        "event_payload.$": "States.StringToJson($.Item.launch_event_payload.S)"
+      },
+      "Next": "Update Entry Pre-Fastq Copy"
+    },
+    "Update Entry Pre-Fastq Copy": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET analysis_status = :analysis_status",
+        "ExpressionAttributeValues": {
+          ":analysis_status": {
+            "S": "CACHE_COPY_IN_PROGRESS"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_pre_fastq",
+      "Next": "Copy Files to Cache Directory"
+    },
+    "Copy Files to Cache Directory": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Upload SampleSheet to Cache Path",
+          "States": {
+            "Upload SampleSheet to Cache Path": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__upload_samplesheet_to_cache_dir__}",
+                "Payload": {
+                  "cache_uri.$": "$.get_database_entry_step.event_payload.data.cacheUri",
+                  "samplesheet.$": "$.get_database_entry_step.event_payload.data.samplesheet"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true,
+              "Comment": "We expect the inputs to be:\n\n* project_id\n* samplesheet_dict_b64gz\n\nWe expect the outputs to be:\n\n\n\n",
+              "ResultPath": "$.upload_samplesheet_to_cache_path_step",
+              "ResultSelector": {
+                "samplesheet_file_id.$": "$.Payload.samplesheet_file_id",
+                "samplesheet_file_uri.$": "$.Payload.samplesheet_file_uri"
+              }
+            }
+          }
+        },
+        {
+          "StartAt": "Generate Copy Manifest",
+          "States": {
+            "Generate Copy Manifest": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__generate_copy_manifest_dict__}",
+                "Payload": {
+                  "sample_id.$": "$.get_database_entry_step.event_payload.data.sampleId",
+                  "cache_uri.$": "$.get_database_entry_step.event_payload.data.cacheUri",
+                  "fastq_list_rows.$": "$.get_database_entry_step.event_payload.data.fastqListRows"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Copy Fastq Files to Cache Directory",
+              "Comment": "Generate a copy manifest object, ready to parse into the icav2 copy batch utility step function\n\nWe expect the following inputs:\n\n* cache_path\n* project_id\n* sample_id\n* fastq_list_rows\n\nAnd we expect the following outputs:\n\n* manifest",
+              "ResultSelector": {
+                "dest_uri.$": "$.Payload.dest_uri",
+                "source_uris.$": "$.Payload.source_uris"
+              },
+              "ResultPath": "$.generate_copy_manifest_dict_step"
+            },
+            "Copy Fastq Files to Cache Directory": {
+              "Type": "Task",
+              "End": true,
+              "Parameters": {
+                "StateMachineArn": "${__copy_icav2_files_state_machine_arn__}",
+                "Input": {
+                  "dest_uri.$": "$.generate_copy_manifest_dict_step.dest_uri",
+                  "source_uris.$": "$.generate_copy_manifest_dict_step.source_uris"
+                }
+              },
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "ResultPath": "$.copy_fastq_files_to_cache_directory_step",
+              "ResultSelector": {
+                "job_id.$": "$.Output.job_id"
+              }
+            }
+          }
+        }
+      ],
+      "Next": "Update DB Entry (post-fastq copy)",
+      "ResultSelector": {
+        "samplesheet_file_id.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_id",
+        "samplesheet_file_uri.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_uri",
+        "copy_job_id.$": "$.[1].copy_fastq_files_to_cache_directory_step.job_id"
+      },
+      "ResultPath": "$.copy_files_to_cache_directory_step"
+    },
+    "Update DB Entry (post-fastq copy)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET analysis_status = :analysis_status",
+        "ExpressionAttributeValues": {
+          ":analysis_status": {
+            "S": "CACHE_COPY_COMPLETE"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_fastq",
+      "Next": "Set Sample Pair IDs as Dict"
+    },
+    "Set Sample Pair IDs as Dict": {
+      "Type": "Pass",
+      "Parameters": {
+        "sample_pair_ids_dict": [
+          {
+            "sample_pair_id.$": "$.get_database_entry_step.event_payload.data.sampleId"
+          }
+        ]
+      },
+      "ResultPath": "$.set_sample_pair_ids",
+      "Next": "Set Input JSON Payload"
+    },
+    "Set Input JSON Payload": {
+      "Type": "Pass",
+      "Parameters": {
+        "input_json": {
+          "run_folder.$": "$.get_database_entry_step.event_payload.data.cacheUri",
+          "sample_sheet.$": "$.copy_files_to_cache_directory_step.samplesheet_file_uri",
+          "sample_pair_ids.$": "$.set_sample_pair_ids.sample_pair_ids_dict[*].sample_pair_id",
+          "StartsFromFastq": true
+        }
+      },
+      "ResultPath": "$.set_input_json",
+      "Next": "Update InputJSON in Database"
+    },
+    "Update InputJSON in Database": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.db_uuid"
+          },
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET input_json = :input_json",
+        "ExpressionAttributeValues": {
+          ":input_json": {
+            "S.$": "States.JsonToString($.set_input_json.input_json)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Wait 1 Second (Pre-execution)"
+    },
+    "Wait 1 Second (Pre-execution)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Wait for databases to sync before continuing",
+      "End": true
+    }
+  }
+}

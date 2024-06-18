@@ -21,6 +21,7 @@ describe('IcaEventPipeConstruct', () => {
     dlqMessageThreshold: 1,
     icaAwsAccountNumber: icaTestAccount,
   });
+
   const template = Template.fromStack(stack);
   // console.log(JSON.stringify(template, undefined, 2));
 

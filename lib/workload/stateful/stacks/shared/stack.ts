@@ -11,7 +11,8 @@ export interface SharedStackProps {
   /**
    * Any configuration related to the SchemaRegistryConstruct
    */
-  schemaRegistryProps: SchemaRegistryProps;
+  eventSchemaRegistryProps: SchemaRegistryProps;
+  dataSchemaRegistryProps: SchemaRegistryProps;
   /**
    * Any configuration related to the EventBusConstruct
    */
@@ -55,7 +56,12 @@ export class SharedStack extends Stack {
       ...props.databaseProps,
     });
 
-    new SchemaRegistryConstruct(this, 'SchemaRegistryConstruct', props.schemaRegistryProps);
+    new SchemaRegistryConstruct(
+      this,
+      'EventSchemaRegistryConstruct',
+      props.eventSchemaRegistryProps
+    );
+    new SchemaRegistryConstruct(this, 'DataSchemaRegistryConstruct', props.dataSchemaRegistryProps);
 
     if (props.eventSourceProps) {
       new EventSourceConstruct(this, 'EventSourceConstruct', props.eventSourceProps);

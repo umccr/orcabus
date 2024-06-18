@@ -58,7 +58,7 @@ async fn main() -> Result<(), Error> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::CloudFormationRequest::Delete;
     use crate::Event::Ignored;

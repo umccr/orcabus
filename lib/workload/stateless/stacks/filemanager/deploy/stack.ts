@@ -11,6 +11,7 @@ import { ApiGatewayConstruct } from '../../../../components/api-gateway';
 import { IQueue, Queue } from 'aws-cdk-lib/aws-sqs';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { InventoryFunction } from './constructs/functions/inventory';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 
@@ -20,6 +21,7 @@ export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & {
   eventSourceQueueName: string;
   eventSourceBuckets: string[];
+  inventorySourceBuckets: string[];
   databaseClusterEndpointHostParameter: string;
   vpcProps: VpcLookupOptions;
   migrateDatabase?: boolean;
@@ -88,6 +90,7 @@ export class Filemanager extends Stack {
 
     this.createIngestFunction(props);
     this.createQueryFunction(props);
+    this.createInventoryFunction(props);
   }
 
   /// Lambda function definitions and surrounding infra
@@ -100,6 +103,19 @@ export class Filemanager extends Stack {
       eventSources: [this.queue],
       buckets: props.eventSourceBuckets,
       ...props
+    });
+  }
+
+  /**
+   * Create the inventory function.
+   */
+  private createInventoryFunction(props: FilemanagerProps) {
+    return new InventoryFunction(this, 'InventoryFunction', {
+      vpc: this.vpc,
+      host: this.host,
+      securityGroup: this.securityGroup,
+      port: props.port,
+      buckets: props.inventorySourceBuckets,
     });
   }
 

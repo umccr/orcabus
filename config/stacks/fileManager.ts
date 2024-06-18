@@ -23,6 +23,7 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
     cognitoStatusPageAppClientIdParameterName: cognitoStatusPageAppClientIdParameterName,
     cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
+    inventorySourceBuckets: ['filemanager-inventory-test'],
     eventSourceBuckets: [oncoanalyserBucket[stage]],
   };
 };

@@ -1,0 +1,9 @@
+{
+  "instrumentRunId": "320246_A0150_XHJDHDFHJF_AKAJF",
+  "icav2CopyUtilityJobExecutionId": "<uuid>",
+  "outputUri": "icav2://x/y/z",
+  "manifestB64gz": "<compressed-base64encoded-string>",
+  "fastqListRowsB64gz": "<compressed-base64encoded-string>",
+  "sampleSheetB64gz": "<compressed-base64encoded-string>",
+  "basespaceRunId": "1234567"
+}

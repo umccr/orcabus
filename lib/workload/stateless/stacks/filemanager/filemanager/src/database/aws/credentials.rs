@@ -1,10 +1,10 @@
 //! A module for generating RDS IAM credentials.
 //!
 
-use async_trait::async_trait;
 use std::iter::empty;
 use std::time::{Duration, SystemTime};
 
+use async_trait::async_trait;
 use aws_sigv4::http_request::SignatureLocation::QueryParams;
 use aws_sigv4::http_request::{sign, SignableBody, SignableRequest, SigningSettings};
 use aws_sigv4::sign::v4::SigningParams;

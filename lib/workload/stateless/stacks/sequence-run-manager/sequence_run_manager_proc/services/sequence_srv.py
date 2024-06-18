@@ -59,7 +59,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
     # --- start mapping to internal Sequence model
 
     # status must exist in payload
-    status = SequenceStatus.from_seq_run_status(payload["status"])
+    status: SequenceStatus = SequenceStatus.from_seq_run_status(payload["status"])
 
     # derive start_time and end_time from date_modified and status
     start_time = date_modified

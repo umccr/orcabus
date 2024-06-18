@@ -68,8 +68,9 @@ export class EventSourceConstruct extends Construct {
       },
     });
 
+    let cnt = 1;
     for (const prop of props.rules) {
-      const rule = new Rule(scope, 'Rule', {
+      const rule = new Rule(scope, 'Rule' + cnt, {
         eventPattern: {
           source: ['aws.s3'],
           detailType: prop.eventTypes,
@@ -93,6 +94,7 @@ export class EventSourceConstruct extends Construct {
       });
 
       rule.addTarget(new SqsQueue(this.queue));
+      cnt += 1;
     }
 
     this.queue.grantSendMessages(new ServicePrincipal('events.amazonaws.com'));

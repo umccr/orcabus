@@ -22,7 +22,11 @@
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
         "FunctionName": "${__bclconvert_success_event_lambda_arn__}",
-        "Payload.$": "$.workflow_inputs"
+        "Payload": {
+          "project_id.$": "$.workflow_inputs.payload.data.bsshProjectId",
+          "analysis_id.$": "$.workflow_inputs.payload.data.bsshAnalysisId",
+          "output_uri.$": "$.workflow_inputs.payload.data.outputUri"
+        }
       },
       "Retry": [
         {
@@ -37,17 +41,13 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "Launch Copy Job StateMachine",
-      "ResultPath": "$.bclconvert_success_event_handler_step",
       "TimeoutSeconds": 60,
       "ResultSelector": {
-        "instrument_run_id.$": "$.Payload.instrument_run_id",
-        "basespace_run_id.$": "$.Payload.basespace_run_id",
-        "output_uri.$": "$.Payload.output_uri",
         "fastq_list_rows_b64gz.$": "$.Payload.fastq_list_rows_b64gz",
-        "manifest_b64gz.$": "$.Payload.manifest_b64gz",
-        "samplesheet_b64gz.$": "$.Payload.samplesheet_dict_b64gz"
-      }
+        "manifest_b64gz.$": "$.Payload.manifest_b64gz"
+      },
+      "ResultPath": "$.bclconvert_success_event_handler_step",
+      "Next": "Launch Copy Job StateMachine"
     },
     "Launch Copy Job StateMachine": {
       "Type": "Task",
@@ -62,20 +62,28 @@
         "execution_id.$": "$.ExecutionArn"
       },
       "ResultPath": "$.state_machine_parameter",
-      "Next": "Set Workflow Outputs"
+      "Next": "Set Workflow Output Detail"
     },
-    "Set Workflow Outputs": {
+    "Set Workflow Output Detail": {
       "Type": "Pass",
       "Next": "Submit Completion Event",
       "Parameters": {
-        "workflow_outputs": {
-          "instrument_run_id.$": "$.bclconvert_success_event_handler_step.instrument_run_id",
-          "basespace_run_id.$": "$.bclconvert_success_event_handler_step.basespace_run_id",
-          "output_uri.$": "$.bclconvert_success_event_handler_step.output_uri",
-          "fastq_list_rows_b64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz",
-          "manifest_b64gz.$": "$.bclconvert_success_event_handler_step.manifest_b64gz",
-          "samplesheet_b64gz.$": "$.bclconvert_success_event_handler_step.samplesheet_b64gz",
-          "icav2_copy_utility_job_execution_id.$": "$.state_machine_parameter.execution_id"
+        "workflow_detail": {
+          "status": "succeeded",
+          "timestamp.$": "$$.State.EnteredTime",
+          "portalRunId.$": "$.workflow_inputs.portalRunId",
+          "workflowName": "${__workflow_name__}",
+          "workflowVersion": "${__workflow_version__}",
+          "workflowRunName.$": "States.Format('umccr__orcabus__automated__{}__{}', $.workflow_inputs.payload.data.instrumentRunId, $.workflow_inputs.portalRunId)",
+          "payload": {
+            "refId": null,
+            "version": "${__payload_version__}",
+            "data": {
+              "outputUri.$": "$.workflow_inputs.payload.data.outputUri",
+              "instrumentRunId.$": "$.workflow_inputs.payload.data.instrumentRunId",
+              "fastqListRowsB64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz"
+            }
+          }
         }
       }
     },
@@ -85,10 +93,10 @@
       "Parameters": {
         "Entries": [
           {
-            "Detail.$": "$.workflow_outputs",
-            "DetailType": "bsshFastqCopyManagerComplete",
+            "Detail.$": "$.workflow_detail",
+            "DetailType": "${__detail_type__}",
             "EventBusName": "${__eventbus_name__}",
-            "Source": "orcabus.bssh_fastq_copy_manager"
+            "Source": "${__event_source__}"
           }
         ]
       },
