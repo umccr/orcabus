@@ -161,6 +161,8 @@ export const bclconvertInteropQcIcav2EventSource = 'orcabus.bclconvertinteropqc'
 export const bclconvertInteropQcIcav2EventDetailType = 'WorkflowRunStateChange';
 export const bclconvertInteropQcStateMachinePrefix = 'bclconvertInteropQcSfn';
 
+export const fileManagerIngestRoleName = 'orcabus-file-manager-ingest-role';
+
 /*
 Resources used by the bclConvert InteropQc Pipeline
 */

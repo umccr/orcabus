@@ -7,8 +7,9 @@ use aws_sdk_s3::primitives;
 use aws_sdk_s3::types::StorageClass::Standard;
 use chrono::{DateTime, Utc};
 use futures::future::join_all;
+use futures::TryFutureExt;
 use mockall_double::double;
-use tracing::trace;
+use tracing::{trace, warn};
 
 #[double]
 use crate::clients::aws::s3::Client;
@@ -143,7 +144,15 @@ impl Collecter {
 
     /// Gets S3 metadata from HeadObject such as creation/archival timestamps and statuses.
     pub async fn head(client: &Client, key: &str, bucket: &str) -> Option<HeadObjectOutput> {
-        client.head_object(key, bucket).await.ok()
+        client
+            .head_object(key, bucket)
+            .map_err(|err| {
+                let err = err.into_service_error();
+                warn!("Error received from HeadObject: {}", err);
+                err
+            })
+            .await
+            .ok()
     }
 
     /// Process events and add header and datetime fields.

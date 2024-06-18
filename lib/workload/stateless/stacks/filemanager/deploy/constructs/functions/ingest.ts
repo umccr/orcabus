@@ -1,7 +1,6 @@
 import { Construct } from 'constructs';
 import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import * as fn from './function';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { DatabaseProps } from './function';
 
@@ -18,7 +17,7 @@ export type EventSourceProps = {
    * 's3:List*' and 's3:Get*'.
    */
   readonly buckets: string[];
-}
+};
 
 /**
  * Props for the ingest function.
