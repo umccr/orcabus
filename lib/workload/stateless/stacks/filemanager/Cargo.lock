@@ -1840,6 +1840,7 @@ dependencies = [
  "chrono",
  "csv",
  "dotenvy",
+ "envy",
  "filemanager",
  "filemanager-build",
  "flate2",

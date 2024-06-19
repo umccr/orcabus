@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 pub mod entities;
 pub mod error;
 
+/// Configuration environment variables for the build process.
 #[derive(Debug, Deserialize)]
 pub struct Config {
     database_url: String,
@@ -16,6 +17,7 @@ pub struct Config {
 }
 
 impl Config {
+    /// Load environment variables into a `Config` struct.
     #[track_caller]
     pub fn load() -> Result<Self> {
         Ok(from_env::<Config>()?)
