@@ -69,7 +69,7 @@ export class LambdaSyncGsheetConstruct extends Construct {
     const gsheetSyncLambdaEventTarget = new LambdaFunction(this.lambda);
     new Rule(this, 'SyncGsheetMetadataScheduledRule', {
       description: 'Scheduled rule to sync metadata from GSheet',
-      schedule: Schedule.expression('cron(0 0 * * MON-FRI *)'),
+      schedule: Schedule.expression('cron(0 0 * * ? *)'),
       targets: [gsheetSyncLambdaEventTarget],
     });
   }
