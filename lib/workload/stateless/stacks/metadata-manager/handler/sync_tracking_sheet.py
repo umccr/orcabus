@@ -20,7 +20,7 @@ def handler(event, context):
     logger.info("Start processing update from google tracking sheet")
     logger.info(f'event: {libjson.dumps(event)}')
 
-    year_array = event.get('years', [2024])
+    year_array = event.get('years', DEFAULT_YEAR)
 
     tracking_sheet_df = download_tracking_sheet(year_array)
     sanitize_df = sanitize_lab_metadata_df(tracking_sheet_df)

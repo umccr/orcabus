@@ -1,9 +1,11 @@
 import path from 'path';
 import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
-import { PythonFunction, PythonFunctionProps } from '@aws-cdk/aws-lambda-python-alpha';
+import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
+import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import {
   DockerImageFunction,
   DockerImageFunctionProps,
@@ -44,6 +46,7 @@ export class LambdaSyncGsheetConstruct extends Construct {
         file: 'deploy/construct/lambda-sync-gsheet/lambda.Dockerfile',
       }),
       timeout: Duration.minutes(15),
+      memorySize: 3072,
     });
 
     lambdaProps.dbConnectionSecret.grantRead(this.lambda);
@@ -61,5 +64,13 @@ export class LambdaSyncGsheetConstruct extends Construct {
     );
     trackingSheetCredSSM.grantRead(this.lambda);
     trackingSheetIdSSM.grantRead(this.lambda);
+
+    // Add scheduled event to re-sync metadata every midnight
+    const gsheetSyncLambdaEventTarget = new LambdaFunction(this.lambda);
+    new Rule(this, 'SyncGsheetMetadataScheduledRule', {
+      description: 'Scheduled rule to sync metadata from GSheet',
+      schedule: Schedule.expression('cron(0 0 * * ? *)'),
+      targets: [gsheetSyncLambdaEventTarget],
+    });
   }
 }

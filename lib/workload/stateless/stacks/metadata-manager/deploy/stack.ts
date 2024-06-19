@@ -76,6 +76,7 @@ export class MetadataManagerStack extends Stack {
       vpc: vpc,
       vpcSubnets: { subnets: vpc.privateSubnets },
       architecture: Architecture.ARM_64,
+      memorySize: 1024,
     };
 
     // There are 3 lambdas for this app
