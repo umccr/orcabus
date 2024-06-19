@@ -21,6 +21,10 @@ type LambdaProps = {
    * The secret for the db connection where the lambda will need access to
    */
   dbConnectionSecret: ISecret;
+  /**
+   * If the lambda should run daily sync
+   */
+  isDailySync: boolean;
 };
 
 export class LambdaSyncGsheetConstruct extends Construct {
@@ -65,12 +69,14 @@ export class LambdaSyncGsheetConstruct extends Construct {
     trackingSheetCredSSM.grantRead(this.lambda);
     trackingSheetIdSSM.grantRead(this.lambda);
 
-    // Add scheduled event to re-sync metadata every midnight
-    const gsheetSyncLambdaEventTarget = new LambdaFunction(this.lambda);
-    new Rule(this, 'SyncGsheetMetadataScheduledRule', {
-      description: 'Scheduled rule to sync metadata from GSheet',
-      schedule: Schedule.expression('cron(0 0 * * ? *)'),
-      targets: [gsheetSyncLambdaEventTarget],
-    });
+    if (lambdaProps.isDailySync) {
+      // Add scheduled event to re-sync metadata every midnight
+      const gsheetSyncLambdaEventTarget = new LambdaFunction(this.lambda);
+      new Rule(this, 'SyncGsheetMetadataScheduledRule', {
+        description: 'Scheduled rule to sync metadata from GSheet',
+        schedule: Schedule.expression('cron(0 0 * * ? *)'),
+        targets: [gsheetSyncLambdaEventTarget],
+      });
+    }
   }
 }

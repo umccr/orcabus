@@ -26,4 +26,4 @@ To modify the diagram, open the `docs/architecture.drawio.svg` with [diagrams.ne
 ### SyncGsheetLambda
 
 - Load tracking sheet data in Google Drive and map it to the Application model
-- (PLANNED) periodically trigger the sync every 24 hour
+- Periodically trigger the sync every midnight
