@@ -46,7 +46,7 @@ export class LambdaSyncGsheetConstruct extends Construct {
         file: 'deploy/construct/lambda-sync-gsheet/lambda.Dockerfile',
       }),
       timeout: Duration.minutes(15),
-      memorySize: 3072,
+      memorySize: 4096,
     });
 
     lambdaProps.dbConnectionSecret.grantRead(this.lambda);
@@ -69,7 +69,7 @@ export class LambdaSyncGsheetConstruct extends Construct {
     const gsheetSyncLambdaEventTarget = new LambdaFunction(this.lambda);
     new Rule(this, 'SyncGsheetMetadataScheduledRule', {
       description: 'Scheduled rule to sync metadata from GSheet',
-      schedule: Schedule.expression('cron(0 0 * * ? *)'),
+      schedule: Schedule.expression('cron(0 0 * * MON-FRI *)'),
       targets: [gsheetSyncLambdaEventTarget],
     });
   }
