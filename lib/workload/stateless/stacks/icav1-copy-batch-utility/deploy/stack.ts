@@ -180,6 +180,8 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
               actions: ['lambda:InvokeFunction'],
               resources: [
                 `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${s3_batch_ops_lambda.functionName}*`,
+                `${s3_batch_ops_rclone_layer.lambdaLayerArn}*`,
+                // FIXME: Refer to pre-built rclone lambda layer here, not the rclone lambda code itself
               ],
               effect: iam.Effect.ALLOW,
             }),
