@@ -114,6 +114,7 @@ export class SequenceRunManagerStack extends Stack {
     const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
       region: this.region,
       apiName: 'SequenceRunManager',
+      customDomainNamePrefix: 'sequence-run',
       ...props,
     });
     const httpApi = srmApi.httpApi;

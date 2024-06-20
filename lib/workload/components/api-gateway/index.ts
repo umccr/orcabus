@@ -1,8 +1,9 @@
 import { Construct } from 'constructs';
 import { aws_ssm, Duration } from 'aws-cdk-lib';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
-import { CorsHttpMethod, HttpApi, CfnStage } from 'aws-cdk-lib/aws-apigatewayv2';
-import { IStringParameter } from 'aws-cdk-lib/aws-ssm';
+import { CorsHttpMethod, HttpApi, CfnStage, DomainName } from 'aws-cdk-lib/aws-apigatewayv2';
+import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
+import { IStringParameter, StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
@@ -12,6 +13,7 @@ export interface ApiGatewayConstructProps {
   cognitoUserPoolIdParameterName: string;
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
+  customDomainNamePrefix: string;
 }
 
 export class ApiGatewayConstruct extends Construct {
@@ -19,6 +21,15 @@ export class ApiGatewayConstruct extends Construct {
 
   constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
     super(scope, id);
+
+    // umccr acm arn
+    const umccr_acm_arn = StringParameter.valueFromLookup(this, '/umccr/certificate_arn');
+    const hosted_domain_name = StringParameter.valueFromLookup(this, '/hosted_zone/umccr/name');
+
+    const domainName = new DomainName(this, 'UmccrDomainName', {
+      domainName: `${props.customDomainNamePrefix}.${hosted_domain_name}`,
+      certificate: Certificate.fromCertificateArn(this, 'cert', umccr_acm_arn),
+    });
 
     this._httpApi = new HttpApi(this, 'HttpApi', {
       apiName: 'OrcaBusAPI-' + props.apiName,
@@ -34,7 +45,9 @@ export class ApiGatewayConstruct extends Construct {
         maxAge: Duration.days(10),
       },
       defaultAuthorizer: this.getAuthorizer(props),
-      // defaultDomainMapping: ... TODO
+      defaultDomainMapping: {
+        domainName: domainName,
+      },
     });
 
     // LogGroups

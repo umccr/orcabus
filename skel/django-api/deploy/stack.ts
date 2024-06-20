@@ -117,6 +117,7 @@ export class ProjectNameStack extends Stack {  // FIXME change construct name
     const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
       region: this.region,
       apiName: 'SequenceRunManager',
+      customDomainNamePrefix:'sequence-run',
       ...props,
     });
     const httpApi = srmApi.httpApi;

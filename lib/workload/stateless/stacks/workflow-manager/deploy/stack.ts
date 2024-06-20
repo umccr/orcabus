@@ -129,6 +129,7 @@ export class WorkflowManagerStack extends Stack {
     const wfmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
       region: this.region,
       apiName: 'WorkflowManager',
+      customDomainNamePrefix: 'workflow',
       ...props,
     });
     const httpApi = wfmApi.httpApi;

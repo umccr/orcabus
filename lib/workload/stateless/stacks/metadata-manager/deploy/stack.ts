@@ -29,7 +29,12 @@ export type MetadataManagerStackProps = {
   /**
    * API Gateway props
    */
-  apiGatewayCognitoProps: Omit<ApiGatewayConstructProps, 'region' | 'apiName'>;
+  apiGatewayCognitoProps: Pick<
+    ApiGatewayConstructProps,
+    | 'cognitoUserPoolIdParameterName'
+    | 'cognitoPortalAppClientIdParameterName'
+    | 'cognitoStatusPageAppClientIdParameterName'
+  >;
 };
 
 export class MetadataManagerStack extends Stack {
@@ -90,6 +95,7 @@ export class MetadataManagerStack extends Stack {
       apiGatewayConstructProps: {
         region: this.region,
         apiName: 'MetadataManager',
+        customDomainNamePrefix: 'metadata',
         ...props.apiGatewayCognitoProps,
       },
     });
