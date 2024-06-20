@@ -7,6 +7,6 @@ COPY package.json yarn.lock .yarnrc.yml ./
 RUN corepack enable
 RUN yarn --version
 
-RUN yarn install
+RUN yarn install --immutable
 RUN yarn build
 
