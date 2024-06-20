@@ -1,7 +1,7 @@
 # Sequence Run Manager
 
 ```
-Namespace: orcabus.srm
+Namespace: orcabus.sequencerunmanager
 ```
 
 ## CDK
@@ -133,7 +133,7 @@ Or visit in browser:
 #### OpenAPI v3
 
 ```
-python manage.py generateschema > orcabus.srm.openapi.yaml
+python manage.py generateschema > orcabus.sequencerunmanager.openapi.yaml
 ```
 
 ## Testing

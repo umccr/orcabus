@@ -9,7 +9,7 @@ django-environ==0.11.2
 django-simple-history==3.5.0
 # See psycopg[binary] or psycopg[c] impl https://www.psycopg.org/psycopg3/docs/basic/install.html
 psycopg[binary]==3.1.18
-Werkzeug==2.3.8
+Werkzeug==3.0.3
 libumccr==0.4.0rc3
 cachetools==5.3.3
 serverless-wsgi==3.0.3

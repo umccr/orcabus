@@ -1,0 +1,18 @@
+{
+  "version": "0",
+  "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "WorkflowRunStateChange",
+  "source": "orcabus.workflowmanager",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "portalRunId": "202405012397gatc",
+    "timestamp": "2025-05-01T09:25:44Z",
+    "status": "RUNNING",
+    "workflowName": "<fill-by-workflow-manager> e.g. bssh_icav2_fastq_copy",
+    "workflowVersion": "<fill-by-workflow-manager> e.g. 1.2.3",
+    "workflowRunName": "<fill-by-workflow-manager> e.g. 540424_A01001_0193_BBBBMMDRX5 FASTQ Copy"
+  }
+}

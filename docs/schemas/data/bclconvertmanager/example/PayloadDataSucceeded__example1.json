@@ -1,0 +1,14 @@
+{
+  "projectId": "valid_project_id",
+  "analysisId": "valid_payload_id",
+  "userReference": "123456_A1234_0000_TestingPattern",
+  "timeCreated": "2024-01-01T00:11:35Z",
+  "timeModified": "2024-01-01T01:24:29Z",
+  "pipelineId": "valid_pipeline_id",
+  "pipelineCode": "BclConvert v0_0_0",
+  "pipelineDescription": "BclConvert pipeline.",
+  "pipelineUrn": "urn:ilmn:ica:pipeline:123456-abcd-efghi-1234-acdefg1234a#BclConvert_v0_0_0",
+  "instrumentRunId": "12345_A12345_1234_ABCDE12345",
+  "basespaceRunId": "1234567",
+  "samplesheetB64gz": "H4sIAFGBVWYC/9VaUW+jOBD+Kyvu9VqBgST0njhWh046..."
+}

@@ -40,6 +40,7 @@ impl Config {
         self.inner().region().map(ToString::to_string)
     }
 
+    /// Get the inner `SdkConfig`.
     pub fn inner(&self) -> &SdkConfig {
         &self.inner
     }

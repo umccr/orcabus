@@ -8,6 +8,7 @@ use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 use crate::uuid::UuidGenerator;
 
+/// The type of S3 event.
 #[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
 #[sqlx(type_name = "event_type")]
 pub enum EventType {
@@ -23,14 +24,62 @@ impl PgHasArrayType for EventType {
     }
 }
 
-impl From<&str> for EventType {
-    fn from(value: &str) -> Self {
-        if value.contains("Object Created") || value.contains("ObjectCreated") {
-            Self::Created
-        } else if value.contains("Object Deleted") || value.contains("ObjectRemoved") {
-            Self::Deleted
-        } else {
-            Self::Other
+/// Data for converting from S3 events to the internal filemanager event type.
+#[derive(Debug)]
+pub struct EventTypeData {
+    pub event_type: String,
+    pub deletion_type: Option<String>,
+}
+
+impl EventTypeData {
+    /// Create a new event type data.
+    pub fn new(event_type: String, deletion_type: Option<String>) -> Self {
+        Self {
+            event_type,
+            deletion_type,
+        }
+    }
+}
+
+/// The parsed event type with information on whether it is a delete marker.
+#[derive(Debug)]
+pub struct EventTypeDeleteMarker {
+    pub event_type: EventType,
+    pub is_delete_marker: bool,
+}
+
+impl EventTypeDeleteMarker {
+    /// Create a new event type with a delete marker flag.
+    pub fn new(event_type: EventType, is_delete_marker: bool) -> Self {
+        Self {
+            event_type,
+            is_delete_marker,
+        }
+    }
+}
+
+impl From<EventTypeData> for EventTypeDeleteMarker {
+    fn from(event_type: EventTypeData) -> Self {
+        match event_type.event_type {
+            // Regular created event.
+            e if e.contains("Object Created") || e.contains("ObjectCreated") => {
+                Self::new(EventType::Created, false)
+            }
+            // Delete marker created event.
+            e if (e.contains("Object Deleted")
+                && event_type
+                    .deletion_type
+                    .is_some_and(|d| d.contains("Delete Marker Created")))
+                || e.contains("ObjectRemoved:DeleteMarkerCreated") =>
+            {
+                Self::new(EventType::Created, true)
+            }
+            // Regular deleted event.
+            e if e.contains("Object Deleted") || e.contains("ObjectRemoved") => {
+                Self::new(EventType::Deleted, false)
+            }
+            // Anything else.
+            _ => Self::new(EventType::Other, false),
         }
     }
 }
@@ -82,6 +131,7 @@ pub struct Record {
 pub struct S3Record {
     pub bucket: Bucket,
     pub object: Object,
+    pub deletion_type: Option<String>,
 }
 
 /// The bucket name in a message.
@@ -104,7 +154,7 @@ pub struct Object {
     pub sequencer: Option<String>,
 }
 
-impl From<Record> for FlatS3EventMessages {
+impl From<Record> for FlatS3EventMessage {
     fn from(record: Record) -> Self {
         let Record {
             time,
@@ -112,7 +162,11 @@ impl From<Record> for FlatS3EventMessages {
             detail,
         } = record;
 
-        let S3Record { bucket, object } = detail;
+        let S3Record {
+            bucket,
+            object,
+            deletion_type,
+        } = detail;
 
         let Bucket { name: bucket } = bucket;
 
@@ -124,8 +178,15 @@ impl From<Record> for FlatS3EventMessages {
             sequencer,
         } = object;
 
-        FlatS3EventMessages(vec![FlatS3EventMessage {
+        let EventTypeDeleteMarker {
+            event_type,
+            is_delete_marker,
+        } = EventTypeDeleteMarker::from(EventTypeData::new(detail_type, deletion_type));
+
+        Self {
+            object_id: UuidGenerator::generate(),
             s3_object_id: UuidGenerator::generate(),
+            public_id: UuidGenerator::generate(),
             event_time: Some(time),
             bucket,
             key,
@@ -137,10 +198,17 @@ impl From<Record> for FlatS3EventMessages {
             storage_class: None,
             last_modified_date: None,
             sha256: None,
-            event_type: detail_type.as_str().into(),
-            number_reordered: 0,
+            event_type,
+            is_delete_marker,
             number_duplicate_events: 0,
-        }])
+            number_reordered: 0,
+        }
+    }
+}
+
+impl From<Record> for FlatS3EventMessages {
+    fn from(record: Record) -> Self {
+        FlatS3EventMessages(vec![record.into()])
     }
 }
 
@@ -164,7 +232,8 @@ mod tests {
 
     use crate::events::aws::message::EventType::Created;
     use crate::events::aws::tests::{
-        assert_flat_s3_event, expected_event_bridge_record, expected_sqs_record, EXPECTED_E_TAG,
+        assert_flat_s3_event, expected_event_bridge_record,
+        expected_event_bridge_record_delete_marker, expected_sqs_record, EXPECTED_E_TAG,
         EXPECTED_REQUEST_ID, EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_VERSION_ID,
     };
     use crate::events::aws::EventType::Deleted;
@@ -213,6 +282,7 @@ mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             Some(i64::MAX),
             "null".to_string(),
+            false,
         );
     }
     #[test]
@@ -232,6 +302,7 @@ mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
+            false,
         );
     }
 
@@ -248,6 +319,46 @@ mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
+            false,
+        );
+    }
+
+    #[test]
+    fn deserialize_event_bridge_message_delete_marker() {
+        let record = expected_event_bridge_record_delete_marker().to_string();
+
+        let result: FlatS3EventMessages = serde_json::from_str(&record).unwrap();
+        let first_message = result.into_inner().first().unwrap().clone();
+
+        assert_flat_s3_event(
+            first_message,
+            &Created,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            None,
+            EXPECTED_VERSION_ID.to_string(),
+            true,
+        );
+    }
+
+    #[test]
+    fn deserialize_sqs_message_delete_marker() {
+        let mut record = expected_sqs_record();
+        record["eventName"] = json!("ObjectRemoved:DeleteMarkerCreated");
+        let message = json!({
+           "Records": [record]
+        })
+        .to_string();
+
+        let result: FlatS3EventMessages = serde_json::from_str(&message).unwrap();
+        let first_message = result.into_inner().first().unwrap().clone();
+
+        assert_flat_s3_event(
+            first_message,
+            &Created,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            None,
+            EXPECTED_VERSION_ID.to_string(),
+            true,
         );
     }
 }

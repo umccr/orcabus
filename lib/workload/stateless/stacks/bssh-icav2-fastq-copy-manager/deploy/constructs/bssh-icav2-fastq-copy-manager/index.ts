@@ -12,63 +12,60 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 
 interface BsshIcav2FastqCopyStateMachineConstructProps {
+  prefix: string; // bsshFastqCopy
   icav2CopyBatchStateMachineObj: sfn.IStateMachine;
   icav2JwtSsmParameterObj: secretsmanager.ISecret;
-  lambdasLayerObj: lambda.ILayerVersion;
   eventBusObj: events.IEventBus; // Orcabus main event
-  bclconvertSuccessEventHandlerLambdaPath: string; // __dirname + '/../../../lambdas/bclconvert_success_event_handler'
+  bclconvertSuccessEventHandlerLambdaObj: PythonFunction; // __dirname + '/../../../lambdas/bclconvert_success_event_handler'
   // execution_check_status_lambda_path: string; // __dirname + '../lambdas/check_execution_completion'
   workflowDefinitionBodyPath: string; // __dirname + '../step_functions_templates/bclconvert_success_event_state_machine.json'
+  // Event handling //
+  detailType: string; // WorkflowRunStateChange
+  serviceVersion: string; // 2024.05.15
+  triggerLaunchSource: string; // orcabus.workflowmanager
+  internalEventSource: string; // orcabus.bsshfastqcopy
+  workflowName: string; // bsshFastqCopy
+  workflowVersion: string; // 1.0.0
 }
 
 export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
-  public readonly icav2BclconvertSuccessEventSsmStateMachineObj: sfn.IStateMachine;
+  public readonly bsshIcav2FastqCopyEventMap = {
+    triggerSource: 'orcabus.workflowmanager',
+    triggerDetailType: 'WorkflowRunStateChange',
+    triggerDetailStatus: 'ready',
+  };
 
   constructor(scope: Construct, id: string, props: BsshIcav2FastqCopyStateMachineConstructProps) {
     super(scope, id);
 
-    // Workflow Session lambda
-    const bclconvert_success_event_lambda = new PythonFunction(
-      this,
-      'bclconvert_success_event_lambda_python_function',
-      {
-        entry: props.bclconvertSuccessEventHandlerLambdaPath,
-        runtime: lambda.Runtime.PYTHON_3_11,
-        architecture: lambda.Architecture.ARM_64,
-        index: 'handler.py',
-        handler: 'handler',
-        memorySize: 1024,
-        layers: [props.lambdasLayerObj],
-        timeout: Duration.seconds(60),
-        environment: {
-          ICAV2_BASE_URL: 'https://ica.illumina.com/ica/rest',
-          ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2JwtSsmParameterObj.secretName,
-        },
-      }
-    );
-
     // Add icav2 secrets permissions to lambda
-    props.icav2JwtSsmParameterObj.grantRead(<iam.IRole>bclconvert_success_event_lambda.role);
+    props.icav2JwtSsmParameterObj.grantRead(
+      <iam.IRole>props.bclconvertSuccessEventHandlerLambdaObj.currentVersion.role
+    );
 
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
     const stateMachine = new sfn.StateMachine(this, 'bssh_fastq_copy_state_machine', {
+      stateMachineName: `${props.prefix}-run-icav2-fastq-copy`,
       // defintiontemplate
       definitionBody: DefinitionBody.fromFile(props.workflowDefinitionBodyPath),
       // definitionSubstitutions
       definitionSubstitutions: {
-        __bclconvert_success_event_lambda_arn__: bclconvert_success_event_lambda.functionArn,
+        __bclconvert_success_event_lambda_arn__:
+          props.bclconvertSuccessEventHandlerLambdaObj.currentVersion.functionArn,
         __copy_batch_data_state_machine_arn__: props.icav2CopyBatchStateMachineObj.stateMachineArn,
         __eventbus_name__: props.eventBusObj.eventBusName,
+        __detail_type__: props.detailType,
+        __event_source__: props.internalEventSource,
+        __workflow_name__: props.workflowName,
+        __workflow_version__: props.workflowVersion,
+        __payload_version__: props.serviceVersion,
       },
     });
 
     // Add execution permissions to stateMachine role
-    stateMachine.addToRolePolicy(
-      new iam.PolicyStatement({
-        resources: [bclconvert_success_event_lambda.functionArn],
-        actions: ['lambda:InvokeFunction'],
-      })
-    );
+    props.bclconvertSuccessEventHandlerLambdaObj.currentVersion.grantInvoke(stateMachine.role);
+
+    // Allow the icav2 copy batch statemachine to be started by the bssh fastq copy manager
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -81,15 +78,18 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
       })
     );
 
+    // State machine
+    props.icav2CopyBatchStateMachineObj.grantStartExecution(stateMachine.role);
+
     // Trigger state machine on event
     const rule = new events.Rule(this, 'bssh_fastq_copy_trigger_rule', {
       eventBus: props.eventBusObj,
       eventPattern: {
-        // FIXME - nothing set in stone yet
-        source: ['orcabus.bssh'],
-        detailType: ['BsshBclconvertStateChange'],
+        source: [this.bsshIcav2FastqCopyEventMap.triggerSource],
+        detailType: [this.bsshIcav2FastqCopyEventMap.triggerDetailType],
         detail: {
-          status: ['succeeded'],
+          status: [{ 'equals-ignore-case': this.bsshIcav2FastqCopyEventMap.triggerDetailStatus }],
+          workflowName: [{ 'equals-ignore-case': props.workflowName }],
         },
       },
     });
@@ -103,12 +103,5 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
 
     // Allow the statemachine to submit events to the event bus
     props.eventBusObj.grantPutEventsTo(stateMachine.role);
-
-    // Allow the icav2 copy batch statemachine to be started by the bssh fastq copy manager
-    // State machine
-    props.icav2CopyBatchStateMachineObj.grantStartExecution(stateMachine.role);
-
-    // Set outputs
-    this.icav2BclconvertSuccessEventSsmStateMachineObj = stateMachine;
   }
 }

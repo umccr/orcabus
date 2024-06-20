@@ -4,11 +4,31 @@ import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 import { SharedStack, SharedStackProps } from './stacks/shared/stack';
 import { TokenServiceStackProps, TokenServiceStack } from './stacks/token-service/deploy/stack';
 import { IcaEventPipeStack, IcaEventPipeStackProps } from './stacks/ica-event-pipe/stack';
+import {
+  Cttsov2Icav2PipelineTable,
+  Cttsov2Icav2PipelineTableStackProps,
+} from './stacks/cttso-v2-pipeline-dynamo-db/deploy/stack';
+import {
+  BclConvertTable,
+  BclConvertTableStackProps,
+} from './stacks/bclconvert-dynamo-db/deploy/stack';
+import {
+  BclconvertInteropQcIcav2PipelineTableStack,
+  BclconvertInteropQcIcav2PipelineTableStackProps,
+} from './stacks/bclconvert-interop-qc-pipeline-dynamo-db/deploy/stack';
+import {
+  StackyStatefulTablesStack,
+  StackyStatefulTablesStackProps,
+} from './stacks/stacky-mcstackface-dynamodb';
 
 export interface StatefulStackCollectionProps {
   sharedStackProps: SharedStackProps;
   tokenServiceStackProps: TokenServiceStackProps;
   icaEventPipeStackProps: IcaEventPipeStackProps;
+  bclconvertInteropQcIcav2PipelineTableStackProps: BclconvertInteropQcIcav2PipelineTableStackProps;
+  cttsov2Icav2PipelineTableStackProps: Cttsov2Icav2PipelineTableStackProps;
+  BclConvertTableStackProps: BclConvertTableStackProps;
+  stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
 }
 
 export class StatefulStackCollection {
@@ -17,6 +37,10 @@ export class StatefulStackCollection {
   readonly sharedStack: Stack;
   readonly tokenServiceStack: Stack;
   readonly icaEventPipeStack: Stack;
+  readonly bclconvertInteropQcIcav2PipelineTableStack: Stack;
+  readonly cttsov2Icav2PipelineTableStack: Stack;
+  readonly BclConvertTableStack: Stack;
+  readonly stackyStatefulTablesStack: Stack;
 
   constructor(
     scope: Construct,
@@ -37,6 +61,37 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'IcaEventPipeStack'),
       ...statefulConfiguration.icaEventPipeStackProps,
     });
+
+    this.bclconvertInteropQcIcav2PipelineTableStack =
+      new BclconvertInteropQcIcav2PipelineTableStack(
+        scope,
+        'BclconvertInteropQcIcav2PipelineTableStack',
+        {
+          ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineTable'),
+          ...statefulConfiguration.bclconvertInteropQcIcav2PipelineTableStackProps,
+        }
+      );
+
+    this.cttsov2Icav2PipelineTableStack = new Cttsov2Icav2PipelineTable(
+      scope,
+      'Cttsov2Icav2PipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'Cttsov2Icav2PipelineTableStack'),
+        ...statefulConfiguration.cttsov2Icav2PipelineTableStackProps,
+      }
+    );
+    this.BclConvertTableStack = new BclConvertTable(scope, 'BclConvertTableStack', {
+      ...this.createTemplateProps(env, 'BclConvertTableStack'),
+      ...statefulConfiguration.BclConvertTableStackProps,
+    });
+    this.stackyStatefulTablesStack = new StackyStatefulTablesStack(
+      scope,
+      'StackyStatefulTablesStack',
+      {
+        ...this.createTemplateProps(env, 'StackyStatefulTablesStack'),
+        ...statefulConfiguration.stackyStatefulTablesStackProps,
+      }
+    );
   }
 
   /**

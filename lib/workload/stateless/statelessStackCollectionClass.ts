@@ -30,7 +30,24 @@ import {
   BsshIcav2FastqCopyManagerStack,
   BsshIcav2FastqCopyManagerStackProps,
 } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
+import {
+  BclconvertInteropQcIcav2PipelineManagerStack,
+  BclconvertInteropQcIcav2PipelineManagerStackProps,
+} from './stacks/bclconvert-interop-qc-pipeline-manager/deploy/stack';
+import {
+  cttsov2Icav2PipelineManagerStackProps,
+  Cttsov2Icav2PipelineManagerStack,
+} from './stacks/cttso-v2-pipeline-manager/deploy/stack';
 import { SchemaStack, SchemaStackProps } from './stacks/schema/stack';
+import {
+  BclConvertManagerStack,
+  BclConvertManagerStackProps,
+} from './stacks/bclconvert-manager/deploy/stack';
+import {
+  WorkflowManagerStack,
+  WorkflowManagerStackProps,
+} from './stacks/workflow-manager/deploy/stack';
+import { GlueStack, GlueStackProps } from './stacks/stacky-mcstackface/glue-constructs';
 
 export interface StatelessStackCollectionProps {
   postgresManagerStackProps: PostgresManagerStackProps;
@@ -39,9 +56,14 @@ export interface StatelessStackCollectionProps {
   fileManagerStackProps: FilemanagerProps;
   bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
   icav1CopyBatchUtilityStackProps: ICAv1CopyBatchUtilityStackProps;
-  icav2CopyBatchUtilityStackProps: ICAv2CopyBatchUtilityStackProps;
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
-  schemaStackProps: SchemaStackProps;
+  bclconvertInteropQcIcav2PipelineManagerStackProps: BclconvertInteropQcIcav2PipelineManagerStackProps;
+  cttsov2Icav2PipelineManagerStackProps: cttsov2Icav2PipelineManagerStackProps;
+  eventSchemaStackProps: SchemaStackProps;
+  dataSchemaStackProps: SchemaStackProps;
+  bclConvertManagerStackProps: BclConvertManagerStackProps;
+  workflowManagerStackProps: WorkflowManagerStackProps;
+  stackyMcStackFaceProps: GlueStackProps;
 }
 
 export class StatelessStackCollection {
@@ -52,18 +74,28 @@ export class StatelessStackCollection {
   readonly sequenceRunManagerStack: Stack;
   readonly bsRunsUploadManagerStack: Stack;
   readonly icav1CopyBatchUtilityStack: Stack;
-  readonly icav2CopyBatchUtilityStack: Stack;
   readonly bsshIcav2FastqCopyManagerStack: Stack;
-  readonly schemaStack: Stack;
+  readonly bclconvertInteropQcIcav2PipelineManagerStack: Stack;
+  readonly cttsov2Icav2PipelineManagerStack: Stack;
+  readonly eventSchemaStack: Stack;
+  readonly dataSchemaStack: Stack;
+  readonly bclConvertManagerStack: Stack;
+  readonly workflowManagerStack: Stack;
+  readonly stackyMcStackFaceStack: Stack;
 
   constructor(
     scope: Construct,
     env: Environment,
     statelessConfiguration: StatelessStackCollectionProps
   ) {
-    this.schemaStack = new SchemaStack(scope, 'SchemaStack', {
-      ...this.createTemplateProps(env, 'SchemaStack'),
-      ...statelessConfiguration.schemaStackProps,
+    this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
+      ...this.createTemplateProps(env, 'EventSchemaStack'),
+      ...statelessConfiguration.eventSchemaStackProps,
+    });
+
+    this.dataSchemaStack = new SchemaStack(scope, 'DataSchemaStack', {
+      ...this.createTemplateProps(env, 'DataSchemaStack'),
+      ...statelessConfiguration.dataSchemaStackProps,
     });
 
     this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
@@ -103,13 +135,6 @@ export class StatelessStackCollection {
       }
     );
     this.icav2CopyBatchUtilityStack = new ICAv2CopyBatchUtilityStack(
-      scope,
-      'ICAv2CopyBatchUtilityStack',
-      {
-        ...this.createTemplateProps(env, 'ICAv2CopyBatchUtilityStack'),
-        ...statelessConfiguration.icav2CopyBatchUtilityStackProps,
-      }
-    );
 
     this.bsshIcav2FastqCopyManagerStack = new BsshIcav2FastqCopyManagerStack(
       scope,
@@ -119,6 +144,39 @@ export class StatelessStackCollection {
         ...statelessConfiguration.bsshIcav2FastqCopyManagerStackProps,
       }
     );
+
+    this.bclconvertInteropQcIcav2PipelineManagerStack =
+      new BclconvertInteropQcIcav2PipelineManagerStack(
+        scope,
+        'BclconvertInteropQcIcav2PipelineManagerStack',
+        {
+          ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineManagerStack'),
+          ...statelessConfiguration.bclconvertInteropQcIcav2PipelineManagerStackProps,
+        }
+      );
+
+    this.cttsov2Icav2PipelineManagerStack = new Cttsov2Icav2PipelineManagerStack(
+      scope,
+      'Cttsov2Icav2PipelineManagerStack',
+      {
+        ...this.createTemplateProps(env, 'Cttsov2Icav2PipelineManagerStack'),
+        ...statelessConfiguration.cttsov2Icav2PipelineManagerStackProps,
+      }
+    );
+
+    this.bclConvertManagerStack = new BclConvertManagerStack(scope, 'BclConvertManagerStack', {
+      ...this.createTemplateProps(env, 'BclConvertManagerStack'),
+      ...statelessConfiguration.bclConvertManagerStackProps,
+    });
+
+    this.workflowManagerStack = new WorkflowManagerStack(scope, 'WorkflowManagerStack', {
+      ...this.createTemplateProps(env, 'WorkflowManagerStack'),
+      ...statelessConfiguration.workflowManagerStackProps,
+    });
+    this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
+      ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
+      ...statelessConfiguration.stackyMcStackFaceProps,
+    });
   }
 
   /**

@@ -25,7 +25,7 @@ The two steps of the statemachine are:
 1. Generate a V2 Samplesheet and reupload it
 2. Launch an ICAv1 tes task that runs the bs runs upload command
 
-This statemachine will subscribe to the orcabus.srm events and trigger the statemachine when a new run is detected.
+This statemachine will subscribe to the `orcabus.sequencerunmanager` events and trigger the statemachine when a new run is detected.
 
 ![](images/bs_runs_upload_manager.png)
 
@@ -33,17 +33,17 @@ This statemachine will subscribe to the orcabus.srm events and trigger the state
 
 The AWS Step functions takes in the following parameters
 
-* gdsFolderPath: The path to the run folder in GDS
-* gdsVolumeName: The GDS volume name
+* runFolderPath: The path to the run folder in GDS
+* runVolumeName: The GDS volume name
 * sampleSheetName: The name of the sample sheet file
 
 ### Example input
 
 ```json
 {
-  "run_folder_path": "/Runs/231109_A01052_0171_BHLJW7DSX7_r.NULhvzxcSEWmqZw8QljXfQ",
-  "run_volume_name": "bssh.acddbfda498038ed99fa94fe79523959",
-  "sample_sheet_name": "SampleSheet.csv"
+  "runFolderPath": "/Runs/231109_A01052_0171_BHLJW7DSX7_r.NULhvzxcSEWmqZw8QljXfQ",
+  "runVolumeName": "bssh.acddbfda498038ed99fa94fe79523959",
+  "sampleSheetName": "SampleSheet.csv"
 }
 ```
 

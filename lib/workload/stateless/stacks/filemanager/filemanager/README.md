@@ -26,7 +26,6 @@ Generally code that belongs to a particular cloud service should be put in its o
 [database]: src/database
 [events]: src/events
 [handlers]: src/handlers
-[env]: src/env.rs
 [error]: src/error.rs
 [mockall]: https://github.com/asomers/mockall
 [s3-events]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventNotifications.html

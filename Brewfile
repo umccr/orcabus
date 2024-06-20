@@ -3,6 +3,7 @@
 # mandatory
 brew "pre-commit"
 brew "detect-secrets"
+brew "check-jsonschema"
 
 # optional
 brew "awscli-local"

@@ -1,0 +1,19 @@
+{
+  "version": "0",
+  "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "WorkflowRunStateChange",
+  "source": "orcabus.bclconvertmanager",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "portalRunId": "202405012397gatc",
+    "executionId": "<e.g. ICAv2 analysis id>",
+    "timestamp": "2026-05-01T09:25:44Z",
+    "status": "RUNNING",
+    "workflowName": "BclConvert",
+    "workflowVersion": "4.2.7",
+    "workflowRunName": "540424_A01001_0193_BBBBMMDRX5"
+  }
+}
