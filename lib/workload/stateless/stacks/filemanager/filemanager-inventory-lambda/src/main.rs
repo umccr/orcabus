@@ -3,6 +3,7 @@ use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use serde::Deserialize;
 
 use filemanager::database::Client as DbClient;
+use filemanager::env::Config;
 use filemanager::events::aws::inventory::Manifest;
 use filemanager::handlers::aws::{create_database_pool, ingest_s3_inventory, update_credentials};
 use filemanager::handlers::init_tracing;
@@ -26,9 +27,10 @@ pub struct BucketKey {
 async fn main() -> Result<(), Error> {
     init_tracing();
 
-    let options = &create_database_pool().await?;
+    let config = &Config::load()?;
+    let options = &create_database_pool(config).await?;
     run(service_fn(|event: LambdaEvent<Request>| async move {
-        update_credentials(options).await?;
+        update_credentials(options, config).await?;
 
         let client = Client::with_defaults().await;
         let database = DbClient::from_ref(options);
@@ -41,11 +43,12 @@ async fn main() -> Result<(), Error> {
                     Some(bucket_key.bucket),
                     Some(bucket_key.key),
                     None,
+                    config,
                 )
                 .await?
             }
             Request::Manifest(manifest) => {
-                ingest_s3_inventory(client, database, None, None, Some(manifest)).await?
+                ingest_s3_inventory(client, database, None, None, Some(manifest), config).await?
             }
         };
 

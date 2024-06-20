@@ -8,6 +8,7 @@ use tracing::{debug, trace};
 use uuid::Uuid;
 
 use crate::database::{Client, CredentialGenerator};
+use crate::env::Config;
 use crate::error::Result;
 use crate::events::aws::inventory::Inventory;
 use crate::events::aws::message::EventType;
@@ -36,10 +37,11 @@ impl<'a> IngesterPaired<'a> {
     }
 
     /// Create a new ingester with a default database client.
-    pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
-        Ok(Self {
-            client: Client::from_generator(generator).await?,
-        })
+    pub async fn with_defaults(
+        generator: Option<impl CredentialGenerator>,
+        config: &Config,
+    ) -> Result<Self> {
+        Ok(Self::new(Client::from_generator(generator, config).await?))
     }
 
     fn reprocess_updated(
@@ -1808,6 +1810,6 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn test_ingester<'a>(pool: PgPool) -> Client<'a> {
-        Client::new(pool)
+        Client::from_pool(pool)
     }
 }

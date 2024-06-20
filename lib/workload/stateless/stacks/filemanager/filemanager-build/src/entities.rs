@@ -6,10 +6,10 @@ use crate::error::ErrorKind::EntityGeneration;
 use crate::error::{Error, Result};
 use crate::Config;
 use clap_builder::Parser;
+use quote::quote;
 use sea_orm_cli::{run_generate_command, Cli, Commands};
 use std::ffi::OsStr;
 use std::fs::write;
-use quote::quote;
 
 pub async fn generate_entities() -> Result<()> {
     let config = Config::load()?;
@@ -43,6 +43,6 @@ pub async fn generate_entities() -> Result<()> {
     );
 
     write(out_dir.join("entities.rs"), generated.to_string())?;
-    
+
     Ok(())
 }

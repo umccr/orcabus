@@ -7,6 +7,7 @@ use sqlx::migrate::Migrator;
 use tracing::trace;
 
 use crate::database::{Client, CredentialGenerator, Migrate};
+use crate::env::Config;
 use crate::error::Error::MigrateError;
 use crate::error::Result;
 
@@ -23,10 +24,11 @@ impl<'a> Migration<'a> {
     }
 
     /// Create a new migration with a default database client.
-    pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
-        Ok(Self {
-            client: Client::from_generator(generator).await?,
-        })
+    pub async fn with_defaults(
+        generator: Option<impl CredentialGenerator>,
+        config: &Config,
+    ) -> Result<Self> {
+        Ok(Self::new(Client::from_generator(generator, config).await?))
     }
 
     /// Get the underlying sqlx migrator for the migrations.
@@ -64,7 +66,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrations = false)]
     async fn test_migrate(pool: PgPool) {
-        let migrate = Migration::new(Client::new(pool));
+        let migrate = Migration::new(Client::from_pool(pool));
 
         let not_exists = sqlx::query!(
             "select exists (select from information_schema.tables where table_name = 'object')"

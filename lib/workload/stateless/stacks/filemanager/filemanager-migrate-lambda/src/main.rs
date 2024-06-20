@@ -7,6 +7,7 @@ use crate::Event::Provider;
 use filemanager::database::aws::migration::Migration;
 use filemanager::database::Client as DbClient;
 use filemanager::database::Migrate;
+use filemanager::env::Config;
 use filemanager::handlers::aws::{create_database_pool, update_credentials};
 use filemanager::handlers::init_tracing;
 
@@ -32,9 +33,10 @@ pub enum CloudFormationRequest {
 async fn main() -> Result<(), Error> {
     init_tracing();
 
-    let options = &create_database_pool().await?;
+    let config = &Config::load()?;
+    let options = &create_database_pool(config).await?;
     run(service_fn(|event: LambdaEvent<Event>| async move {
-        update_credentials(options).await?;
+        update_credentials(options, config).await?;
 
         // Migrate depending on the type of lifecycle event using the CDK provider framework:
         // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.custom_resources-readme.html#provider-framework

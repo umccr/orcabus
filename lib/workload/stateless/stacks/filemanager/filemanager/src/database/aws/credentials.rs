@@ -14,9 +14,9 @@ use url::Url;
 #[double]
 use crate::clients::aws::config::Config;
 use crate::database::CredentialGenerator;
+use crate::env::Config as EnvConfig;
 use crate::error::Error::CredentialGeneratorError;
 use crate::error::Result;
-use crate::read_env;
 
 /// Number of seconds that the IAM credentials expire in.
 /// Equals the max Lambda timeout.
@@ -57,32 +57,18 @@ impl IamGeneratorBuilder {
     }
 
     /// Build the credential generator.
-    pub async fn build(self) -> Result<IamGenerator> {
+    pub async fn build(self, env_config: &EnvConfig) -> Result<IamGenerator> {
         let config = if let Some(config) = self.config {
             config
         } else {
             Config::with_defaults().await
         };
 
-        let host = if let Some(host) = self.host {
-            host
-        } else {
-            read_env("PGHOST")?
-        };
-
-        let port = if let Some(port) = self.port {
-            port
-        } else {
-            read_env("PGPORT")?.parse().map_err(|_| {
-                CredentialGeneratorError("failed to parse port from PGPORT".to_string())
-            })?
-        };
-
-        let user = if let Some(user) = self.user {
-            user
-        } else {
-            read_env("PGUSER")?
-        };
+        let host =
+            EnvConfig::value_or_else(self.host.as_deref(), env_config.pg_host())?.to_string();
+        let port = EnvConfig::value_or_else(self.port, env_config.pg_port())?;
+        let user =
+            EnvConfig::value_or_else(self.user.as_deref(), env_config.pg_user())?.to_string();
 
         Ok(IamGenerator::new(config, host, port, user))
     }
@@ -192,7 +178,6 @@ impl CredentialGenerator for IamGenerator {
 mod tests {
     use std::borrow::Cow;
     use std::collections::HashMap;
-    use std::env::set_var;
     use std::future::Future;
 
     use aws_credential_types::Credentials;
@@ -209,7 +194,7 @@ mod tests {
                 .with_host("127.0.0.1".to_string())
                 .with_port(5432)
                 .with_user("filemanager".to_string())
-                .build()
+                .build(&Default::default())
                 .await
                 .unwrap()
         })
@@ -218,14 +203,20 @@ mod tests {
 
     #[tokio::test]
     async fn generate_iam_token_env() {
-        set_var("PGHOST", "127.0.0.1");
-        set_var("PGPORT", "5432");
-        set_var("PGUSER", "filemanager");
+        let env_config = EnvConfig {
+            database_url: None,
+            pgpassword: None,
+            pghost: Some("127.0.0.1".to_string()),
+            pgport: Some(5432),
+            pguser: Some("filemanager".to_string()),
+            sqs_queue_url: None,
+            paired_ingest_mode: false,
+        };
 
         test_generate_iam_token(|config| async {
             IamGeneratorBuilder::default()
                 .with_config(config)
-                .build()
+                .build(&env_config)
                 .await
                 .unwrap()
         })
