@@ -144,13 +144,32 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       }
     );
 
-    const s3_batch_ops_rclone_layer = new PythonLambdaLayerConstruct(
+    // FIXME: rclone-lambda-layer is a go layer, so either build a custom construct or
+    // just refer to the already uploaded layer by name?
+    //
+    // const s3_batch_ops_rclone_layer = new PythonLambdaLayerConstruct(
+    //   this,
+    //   'ICAv1 Copy Batch Utility lambda layer - RClone',
+    //   {
+    //     layerName: 'rclone-lambda-layer',
+    //     layerDescription: 'layer to enable the manager tools layer',
+    //     layerDirectory: path.join(__dirname, '../layers'),
+    //   }
+    // );
+
+    // FIXME: Scratch this... probably just build a lambda layer with the above construct and
+    // extend the existing construct to be able to refer to the rclone-lambda-layer (build or refer to ARN?)?
+    const s3_batch_ops_rclone_lambda = new PythonFunction(
       this,
       'ICAv1 Copy Batch Utility lambda - RClone',
       {
-        layerName: 'rclone-lambda-layer',
-        layerDescription: 'layer to enable the manager tools layer',
-        layerDirectory: path.join(__dirname, '../layers'),
+        entry: path.join(__dirname, '../layers/src/rclone'),
+        runtime: Runtime.PYTHON_3_12,
+        role: lambdaRole,
+        architecture: Architecture.ARM_64,
+        timeout: Duration.seconds(28), // FIXME: Revisit timeouts, this is a special usecase since it'll transfer big files
+        index: 's3_batch_ops_rclone.py',
+        handler: 'handler',
       }
     );
 
@@ -180,8 +199,8 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
               actions: ['lambda:InvokeFunction'],
               resources: [
                 `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${s3_batch_ops_lambda.functionName}*`,
-                `${s3_batch_ops_rclone_layer.lambdaLayerArn}*`,
-                // FIXME: Refer to pre-built rclone lambda layer here, not the rclone lambda code itself
+                `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${s3_batch_ops_rclone_lambda.functionName}*`,
+                //`${s3_batch_ops_rclone_layer.lambdaLayerArn}*`,
               ],
               effect: iam.Effect.ALLOW,
             }),

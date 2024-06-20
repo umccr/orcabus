@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def lambda_handler(event: LambdaDict, context: LambdaContext) -> LambdaDict:
+def handler(event: LambdaDict, context: LambdaContext) -> LambdaDict:
     """
     lambda_handler is the default entrypoint of the lambda.
     """
