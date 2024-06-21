@@ -49,7 +49,7 @@ async fn main() -> Result<(), Error> {
             _ => {
                 // If there's nothing to migrate, then this will just return Ok.
                 Ok::<_, Error>(
-                    Migration::new(DbClient::from_ref(options))
+                    Migration::new(DbClient::new(options.clone()))
                         .migrate()
                         .await?,
                 )

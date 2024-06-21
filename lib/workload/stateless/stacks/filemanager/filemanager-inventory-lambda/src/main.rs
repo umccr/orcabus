@@ -33,7 +33,7 @@ async fn main() -> Result<(), Error> {
         update_credentials(options, config).await?;
 
         let client = Client::with_defaults().await;
-        let database = DbClient::from_ref(options);
+        let database = DbClient::new(options.clone());
 
         match event.payload {
             Request::BucketKey(bucket_key) => {

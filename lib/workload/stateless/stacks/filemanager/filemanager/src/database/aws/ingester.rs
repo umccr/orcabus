@@ -14,8 +14,8 @@ use crate::events::aws::{StorageClass, TransposedS3EventMessages};
 
 /// An ingester for S3 events.
 #[derive(Debug)]
-pub struct Ingester<'a> {
-    pub(crate) client: Client<'a>,
+pub struct Ingester {
+    pub(crate) client: Client,
 }
 
 /// The type representing an insert query.
@@ -25,9 +25,9 @@ struct Insert {
     number_duplicate_events: i64,
 }
 
-impl<'a> Ingester<'a> {
+impl Ingester {
     /// Create a new ingester.
-    pub fn new(client: Client<'a>) -> Self {
+    pub fn new(client: Client) -> Self {
         Self { client }
     }
 
@@ -104,7 +104,7 @@ impl<'a> Ingester<'a> {
             );
 
             query_file!(
-                "../database/queries/ingester/insert_objects.sql",
+                "../database/queries/ingester/insert_object_groups.sql",
                 &object_ids,
             )
             .execute(&mut *tx)
@@ -1306,7 +1306,9 @@ pub(crate) mod tests {
             row_asserts(s3_object_results);
 
             // Clean up for next permutation.
-            pool.execute("truncate s3_object, object").await.unwrap();
+            pool.execute("truncate s3_object, object_group")
+                .await
+                .unwrap();
         }
 
         println!(
@@ -1376,9 +1378,9 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) async fn fetch_results<'a>(client: &Client<'a>) -> (Vec<PgRow>, Vec<PgRow>) {
+    pub(crate) async fn fetch_results<'a>(client: &Client) -> (Vec<PgRow>, Vec<PgRow>) {
         (
-            sqlx::query("select * from object")
+            sqlx::query("select * from object_group")
                 .fetch_all(client.pool())
                 .await
                 .unwrap(),
@@ -1389,7 +1391,7 @@ pub(crate) mod tests {
         )
     }
 
-    pub(crate) async fn fetch_results_ordered<'a>(client: &Client<'a>) -> Vec<PgRow> {
+    pub(crate) async fn fetch_results_ordered<'a>(client: &Client) -> Vec<PgRow> {
         sqlx::query("select * from s3_object order by sequencer, key, version_id")
             .fetch_all(client.pool())
             .await
@@ -1529,7 +1531,7 @@ pub(crate) mod tests {
         update_test_events(expected_events_simple_delete_marker())
     }
 
-    pub(crate) fn test_ingester<'a>(pool: PgPool) -> Client<'a> {
+    pub(crate) fn test_ingester(pool: PgPool) -> Client {
         Client::from_pool(pool)
     }
 }

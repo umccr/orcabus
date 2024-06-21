@@ -21,7 +21,7 @@ async fn main() -> Result<(), Error> {
             S3Client::with_defaults().await,
             SQSClient::with_defaults().await,
             None::<String>,
-            DbClient::from_ref(options),
+            DbClient::new(options.clone()),
             config,
         )
         .await?;

@@ -19,6 +19,8 @@ pub async fn generate_entities() -> Result<()> {
         "sea-orm-cli",
         "generate",
         "entity",
+        "--with-serde",
+        "both",
         "-u",
         &config.database_url,
         "-o",

@@ -7,17 +7,17 @@ use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 
 /// Query the filemanager via REST interface.
 #[derive(Debug)]
-pub struct Query<'a> {
-    client: Client<'a>,
+pub struct Query {
+    client: Client,
 }
 
 pub struct QueryResults {
     _results: Vec<String>, // FIXME: Adjust return type
 }
 
-impl<'a> Query<'a> {
+impl Query {
     /// Creates a new filemanager query client.
-    pub fn new(client: Client<'a>) -> Self {
+    pub fn new(client: Client) -> Self {
         Self { client }
     }
 

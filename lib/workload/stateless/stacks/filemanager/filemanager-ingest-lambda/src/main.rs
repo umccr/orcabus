@@ -19,7 +19,7 @@ async fn main() -> Result<(), Error> {
         ingest_event(
             event.payload,
             Client::with_defaults().await,
-            DbClient::from_ref(options),
+            DbClient::new(options.clone()),
             config,
         )
         .await?;

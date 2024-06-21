@@ -1,8 +1,6 @@
 //! This module handles connecting to the filemanager database for actions such as ingesting events.
 //!
 
-use std::borrow::Cow;
-
 use crate::database::aws::ingester::Ingester;
 use crate::database::aws::ingester_paired::IngesterPaired;
 use crate::env::Config;
@@ -29,24 +27,15 @@ pub trait CredentialGenerator {
 
 /// A database client handles database interaction.
 #[derive(Debug, Clone)]
-pub struct Client<'a> {
+pub struct Client {
     // Use a Cow here to allow an owned pool or a shared reference to a pool.
-    connection: Cow<'a, DatabaseConnection>,
+    connection: DatabaseConnection,
 }
 
-impl<'a> Client<'a> {
+impl Client {
     /// Create a database from an existing pool.
     pub fn new(connection: DatabaseConnection) -> Self {
-        Self {
-            connection: Cow::Owned(connection),
-        }
-    }
-
-    /// Create a database from a reference to an existing pool.
-    pub fn from_ref(connection: &'a DatabaseConnection) -> Self {
-        Self {
-            connection: Cow::Borrowed(connection),
-        }
+        Self { connection }
     }
 
     /// Create a database connection from an existing pool.
@@ -118,23 +107,24 @@ impl<'a> Client<'a> {
         self.connection.get_postgres_connection_pool()
     }
 
-    /// Get the database connection.
-    pub fn connection(&self) -> &DatabaseConnection {
-        &self.connection
+    /// Get the database connection. Clones the underlying `DatabaseConnection` which is
+    /// intended to be cheaply cloneable because it represents an Arc to a shared connection pool.
+    pub fn connection(&self) -> DatabaseConnection {
+        self.connection.clone()
     }
 }
 
 #[async_trait]
-impl<'a> Ingest<'a> for Client<'a> {
-    async fn ingest(&'a self, events: EventSourceType) -> Result<()> {
+impl Ingest for Client {
+    async fn ingest(&self, events: EventSourceType) -> Result<()> {
         match events {
             EventSourceType::S3(events) => {
-                Ingester::new(Self::from_ref(self.connection()))
+                Ingester::new(Self::new(self.connection()))
                     .ingest_events(events)
                     .await
             }
             EventSourceType::S3Paired(events) => {
-                IngesterPaired::new(Self::from_ref(self.connection()))
+                IngesterPaired::new(Self::new(self.connection()))
                     .ingest_events(events)
                     .await
             }
@@ -144,9 +134,9 @@ impl<'a> Ingest<'a> for Client<'a> {
 
 /// This trait ingests raw events into the database.
 #[async_trait]
-pub trait Ingest<'a> {
+pub trait Ingest {
     /// Ingest the events.
-    async fn ingest(&'a self, events: EventSourceType) -> Result<()>;
+    async fn ingest(&self, events: EventSourceType) -> Result<()>;
 }
 
 /// Trait representing database migrations.
@@ -196,7 +186,7 @@ pub(crate) mod tests {
         .unwrap();
 
         query_file!(
-            "../database/queries/ingester/insert_objects.sql",
+            "../database/queries/ingester/insert_object_groups.sql",
             &vec![object_id],
         )
         .fetch_all(&mut *tx)
@@ -258,7 +248,7 @@ pub(crate) mod tests {
         .unwrap();
 
         query_file!(
-            "../database/queries/ingester/insert_objects.sql",
+            "../database/queries/ingester/insert_object_groups.sql",
             &vec![object_id],
         )
         .fetch_all(&mut *tx)

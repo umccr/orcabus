@@ -13,13 +13,13 @@ use crate::error::Result;
 
 /// A struct to perform database migrations.
 #[derive(Debug)]
-pub struct Migration<'a> {
-    client: Client<'a>,
+pub struct Migration {
+    client: Client,
 }
 
-impl<'a> Migration<'a> {
+impl Migration {
     /// Create a new migration.
-    pub fn new(client: Client<'a>) -> Self {
+    pub fn new(client: Client) -> Self {
         Self { client }
     }
 
@@ -43,7 +43,7 @@ impl<'a> Migration<'a> {
 }
 
 #[async_trait]
-impl<'a> Migrate for Migration<'a> {
+impl Migrate for Migration {
     async fn migrate(&self) -> Result<()> {
         trace!("applying migrations");
         Self::migrator()
@@ -69,7 +69,7 @@ pub(crate) mod tests {
         let migrate = Migration::new(Client::from_pool(pool));
 
         let not_exists = sqlx::query!(
-            "select exists (select from information_schema.tables where table_name = 'object')"
+            "select exists (select from information_schema.tables where table_name = 'object_group')"
         )
         .fetch_one(migrate.client.pool())
         .await
@@ -80,7 +80,7 @@ pub(crate) mod tests {
         migrate.migrate().await.unwrap();
 
         let exists = sqlx::query!(
-            "select exists (select from information_schema.tables where table_name = 'object')"
+            "select exists (select from information_schema.tables where table_name = 'object_group')"
         )
         .fetch_one(migrate.client.pool())
         .await

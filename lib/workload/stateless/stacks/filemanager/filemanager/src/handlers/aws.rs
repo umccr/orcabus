@@ -26,13 +26,13 @@ use crate::events::{Collect, EventSourceType};
 
 /// Handle SQS events by manually calling the SQS receive function. This is meant
 /// to be run through something like API gateway to manually invoke ingestion.
-pub async fn receive_and_ingest<'a>(
+pub async fn receive_and_ingest(
     s3_client: S3Client,
     sqs_client: SQSClient,
     sqs_url: Option<impl Into<String>>,
-    database_client: Client<'a>,
+    database_client: Client,
     env_config: &EnvConfig,
-) -> Result<Client<'a>, Error> {
+) -> Result<Client, Error> {
     let events = CollecterBuilder::default()
         .with_s3_client(s3_client)
         .with_sqs_client(sqs_client)
@@ -47,12 +47,12 @@ pub async fn receive_and_ingest<'a>(
 }
 
 /// Handle SQS events that go through an SqsEvent.
-pub async fn ingest_event<'a>(
+pub async fn ingest_event(
     event: SqsEvent,
     s3_client: S3Client,
-    database_client: Client<'a>,
+    database_client: Client,
     env_config: &EnvConfig,
-) -> Result<Client<'a>, Error> {
+) -> Result<Client, Error> {
     trace!("received event: {:?}", event);
 
     let events: FlatS3EventMessages = event
@@ -83,14 +83,14 @@ pub async fn ingest_event<'a>(
 }
 
 /// Handle an S3 inventory for ingestion.
-pub async fn ingest_s3_inventory<'a>(
+pub async fn ingest_s3_inventory(
     s3_client: S3Client,
-    database_client: Client<'a>,
+    database_client: Client,
     bucket: Option<String>,
     key: Option<String>,
     manifest: Option<Manifest>,
     env_config: &EnvConfig,
-) -> Result<Client<'a>, Error> {
+) -> Result<Client, Error> {
     if env_config.paired_ingest_mode() {
         return Err(Error::from(
             "paired ingest mode is not supported for S3 inventory".to_string(),

@@ -19,8 +19,8 @@ use crate::uuid::UuidGenerator;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
-pub struct IngesterPaired<'a> {
-    client: Client<'a>,
+pub struct IngesterPaired {
+    client: Client,
 }
 
 /// The type representing an insert query.
@@ -30,9 +30,9 @@ struct Insert {
     number_duplicate_events: i64,
 }
 
-impl<'a> IngesterPaired<'a> {
+impl IngesterPaired {
     /// Create a new ingester.
-    pub fn new(client: Client<'a>) -> Self {
+    pub fn new(client: Client) -> Self {
         Self { client }
     }
 
@@ -179,7 +179,7 @@ impl<'a> IngesterPaired<'a> {
             );
 
             query_file!(
-                "../database/queries/ingester/insert_objects.sql",
+                "../database/queries/ingester/insert_object_groups.sql",
                 &object_ids,
             )
             .execute(&mut *tx)
@@ -240,7 +240,7 @@ impl<'a> IngesterPaired<'a> {
             );
 
             query_file!(
-                "../database/queries/ingester/insert_objects.sql",
+                "../database/queries/ingester/insert_object_groups.sql",
                 &object_ids,
             )
             .execute(&mut *tx)
@@ -1568,7 +1568,9 @@ pub(crate) mod tests {
             row_asserts(s3_object_results);
 
             // Clean up for next permutation.
-            pool.execute("truncate s3_object, object").await.unwrap();
+            pool.execute("truncate s3_object, object_group")
+                .await
+                .unwrap();
         }
 
         println!(
@@ -1809,7 +1811,7 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) fn test_ingester<'a>(pool: PgPool) -> Client<'a> {
+    pub(crate) fn test_ingester(pool: PgPool) -> Client {
         Client::from_pool(pool)
     }
 }
