@@ -9,8 +9,11 @@ export const getMetadataManagerStackProps = (stage: AppStage): MetadataManagerSt
     removalPolicy: stage === AppStage.PROD ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
   };
 
+  const isDailySync = stage == AppStage.PROD ? true : false;
+
   return {
     vpcProps,
+    isDailySync: isDailySync,
     lambdaSecurityGroupName: computeSecurityGroupName,
     apiGatewayCognitoProps: { ...cognitoApiGatewayProps, apiGwLogsConfig: logsConfig },
   };

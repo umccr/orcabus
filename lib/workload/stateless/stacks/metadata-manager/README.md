@@ -35,12 +35,14 @@ from the Google tracking sheet and mapping it to its respective model as follows
 
 Some important notes of the sync:
 
-1. The Sync will always check all data from the `2017` tab up to the current year.
+1. The sync will only run from the current year.
 2. The tracking sheet is the single source of truth, any deletion/update on any record (including the record that has
    been
    loaded) will also apply to the existing data.
 3. `LibraryId` is treated as a unique value in the tracking sheet, so for any duplicated value (including from other
-   tabs) it will only recognize the last appearance
+   tabs) it will only recognize the last appearance.
+4. In cases where multiple records share the same unique identifier (such as SampleId), only the data from the most recent record is stored. For instance, if a SampleId appears twice with differing source values, only the values from the latter record will be retained.
+5. The sync happens every night periodically. See `./deploy/README.md` for more info.
 
 Please refer to the [traking-sheet-service](proc/service/tracking_sheet_srv.py) implementation.
 

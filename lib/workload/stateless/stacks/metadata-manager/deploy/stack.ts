@@ -23,9 +23,9 @@ export type MetadataManagerStackProps = {
    */
   lambdaSecurityGroupName: string;
   /**
-   * the interval where the lambda conduct the sync from the single source of truth data
+   * A boolean to tell whether the sync lambda should run daily
    */
-  syncInterval?: Schedule;
+  isDailySync: boolean;
   /**
    * API Gateway props
    */
@@ -82,6 +82,7 @@ export class MetadataManagerStack extends Stack {
       vpc: vpc,
       vpcSubnets: { subnets: vpc.privateSubnets },
       architecture: Architecture.ARM_64,
+      memorySize: 1024,
     };
 
     // There are 3 lambdas for this app
@@ -112,6 +113,7 @@ export class MetadataManagerStack extends Stack {
     new LambdaSyncGsheetConstruct(this, 'SyncGsheetLambda', {
       basicLambdaConfig: basicLambdaConfig,
       dbConnectionSecret: dbSecret,
+      isDailySync: props.isDailySync,
     });
   }
 }
