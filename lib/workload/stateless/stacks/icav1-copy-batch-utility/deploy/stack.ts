@@ -200,7 +200,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
               resources: [
                 `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${s3_batch_ops_lambda.functionName}*`,
                 `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${s3_batch_ops_rclone_lambda.functionName}*`,
-                //`${s3_batch_ops_rclone_layer.lambdaLayerArn}*`,
+                `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${ica_v1_creds_lambda.functionName}*`,
               ],
               effect: iam.Effect.ALLOW,
             }),

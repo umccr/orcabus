@@ -23,10 +23,6 @@ import {
   ICAv1CopyBatchUtilityStackProps,
 } from './stacks/icav1-copy-batch-utility/deploy/stack';
 import {
-  ICAv2CopyBatchUtilityStack,
-  ICAv2CopyBatchUtilityStackProps,
-} from './stacks/icav2-copy-batch-utility/deploy/stack';
-import {
   BsshIcav2FastqCopyManagerStack,
   BsshIcav2FastqCopyManagerStackProps,
 } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
@@ -134,7 +130,6 @@ export class StatelessStackCollection {
         ...statelessConfiguration.icav1CopyBatchUtilityStackProps,
       }
     );
-    this.icav2CopyBatchUtilityStack = new ICAv2CopyBatchUtilityStack(
 
     this.bsshIcav2FastqCopyManagerStack = new BsshIcav2FastqCopyManagerStack(
       scope,
