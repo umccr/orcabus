@@ -109,6 +109,12 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       handler: 'handler',
     });
 
+    // Lambda cron job
+    const cronJob = new cdk.aws_events.Rule(this, 'ICAv1 Creds Rotator CronJob', {
+      schedule: cdk.aws_events.Schedule.cron({ minute: '0', hour: '0' }), // Run every day at midnight
+      targets: [new cdk.aws_events_targets.LambdaFunction(ica_v1_creds_lambda)],
+    });
+
     // S3 Batch Ops lambda
     const s3_batch_ops_lambda = new PythonFunction(
       this,
@@ -193,7 +199,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
               resources: [
                 `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${s3_batch_ops_lambda.functionName}*`,
                 `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${s3_batch_ops_rclone_lambda.functionName}*`,
-                `arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${ica_v1_creds_lambda.functionName}*`,
+                //`arn:aws:lambda:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:function:${ica_v1_creds_lambda.functionName}*`,
               ],
               effect: iam.Effect.ALLOW,
             }),
