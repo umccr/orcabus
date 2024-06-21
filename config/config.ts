@@ -63,7 +63,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
-            metadataManagerStackProps: getMetadataManagerStackProps(),
+            metadataManagerStackProps: getMetadataManagerStackProps(stage),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
@@ -98,7 +98,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
-            metadataManagerStackProps: getMetadataManagerStackProps(),
+            metadataManagerStackProps: getMetadataManagerStackProps(stage),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
@@ -133,7 +133,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
           },
           statelessConfig: {
             postgresManagerStackProps: getPostgresManagerStackProps(),
-            metadataManagerStackProps: getMetadataManagerStackProps(),
+            metadataManagerStackProps: getMetadataManagerStackProps(stage),
             sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
             fileManagerStackProps: getFileManagerStackProps(stage),
             bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),

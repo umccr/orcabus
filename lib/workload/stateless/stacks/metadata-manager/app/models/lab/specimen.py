@@ -9,11 +9,11 @@ from app.models.lab.subject import Subject
 
 
 class Source(models.TextChoices):
-    ASCITES = "ascites"
-    BLOOD = "blood"
-    BONE_MARROW = "bone-marrow"
+    ASCITES = "ascites", "Ascites"
+    BLOOD = "blood", "Blood"
+    BONE_MARROW = "bone-marrow", "BoneMarrow"
     BUCCAL = "buccal"
-    CELLLINE = "cell-line"
+    CELLLINE = "cell-line", "Cell_line"
     CFDNA = "cfDNA"
     CYST_FLUID = "cyst-fluid"
     DNA = "DNA"
@@ -25,9 +25,9 @@ class Source(models.TextChoices):
     PDX_TISSUE = "PDX-tissue"
     PLASMA_SERUM = "plasma-serum"
     RNA = "RNA"
-    TISSUE = "tissue"
+    TISSUE = "tissue", "Tissue"
     SKIN = "skin"
-    WATER = "water"
+    WATER = "water", "Water"
 
 
 class SpecimenManager(BaseManager):
