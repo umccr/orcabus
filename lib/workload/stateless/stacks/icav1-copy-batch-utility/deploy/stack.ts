@@ -10,9 +10,6 @@ import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda
 export interface ICAv1CopyBatchUtilityConfig {
   AppName: string;
   Icav1TokenSecretId: string;
-  // Icav1AwsAccessKeyId: string;
-  // Icav1AwsSecretAccessKey: string;
-  // Icav1AwsSessionToken: string;
   BucketForCopyDestination: string;
   BucketForCopyDestinationPrefix: string;
   BucketForManifestOrInventory: string;
@@ -28,13 +25,6 @@ export type ICAv1CopyBatchUtilityStackProps = ICAv1CopyBatchUtilityConfig & cdk.
 export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ICAv1CopyBatchUtilityStackProps) {
     super(scope, id, props);
-
-    // ICAv1 Access token secret
-    // const icav1_token = aws_secretsmanager.Secret.fromSecretNameV2(
-    //   this,
-    //   'Icav1Secret',
-    //   props.Icav1TokenSecretId
-    // );
 
     // Lambda execution role
     const lambdaRole = new iam.Role(this, 'lambdaRole', {
@@ -81,8 +71,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     });
 
     // ICA
-
-    // ICA v1 SSM parameters
+    /// ICA v1 SSM parameters
     new aws_ssm.StringParameter(this, 'IcaV1AccessKeyId', {
       parameterName: 'IcaV1AccessKeyId',
       stringValue: 'null', // To be filled by rotator lambda
@@ -98,7 +87,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       stringValue: 'null', // To be filled by rotator lambda
     });
 
-    // ICA v1 creds rotator
+    /// ICA v1 creds rotator
     const ica_v1_creds_lambda = new PythonFunction(this, 'ICAv1 credentials lambda', {
       entry: path.join(__dirname, '../lambdas'),
       runtime: Runtime.PYTHON_3_12,
@@ -109,7 +98,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       handler: 'handler',
     });
 
-    // Lambda cron job
+    // ICA v1 creds rotator cron job
     const cronJob = new cdk.aws_events.Rule(this, 'ICAv1 Creds Rotator CronJob', {
       schedule: cdk.aws_events.Schedule.cron({ minute: '0', hour: '0' }), // Run every day at midnight
       targets: [new cdk.aws_events_targets.LambdaFunction(ica_v1_creds_lambda)],
@@ -166,7 +155,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
         runtime: Runtime.PYTHON_3_12,
         role: lambdaRole,
         architecture: Architecture.ARM_64,
-        timeout: Duration.seconds(28), // FIXME: Revisit timeouts, this is a special usecase since it'll transfer big files
+        timeout: Duration.minutes(15),
         index: 's3_batch_ops_rclone.py',
         handler: 'handler',
       }
