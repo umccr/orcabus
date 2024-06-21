@@ -103,13 +103,6 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       entry: path.join(__dirname, '../lambdas'),
       runtime: Runtime.PYTHON_3_12,
       role: lambdaRole,
-      environment: {
-        ica_v1_jwt: aws_secretsmanager.Secret.fromSecretNameV2(
-          this,
-          'IcaJwtToken',
-          'IcaSecretsPortal'
-        ).secretValue.toString(),
-      },
       architecture: Architecture.ARM_64,
       timeout: Duration.seconds(28),
       index: 'ica_aws_secrets_rotator.py',

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import boto3
-from libica.app import gds
+# from libica.app import gds
+from libica.openapi import libgds
 
 def update_ssm(creds):
 	client = boto3.client('ssm')
@@ -42,8 +43,26 @@ def get_umccr_icav1_jwt():
 	return client.get_secret_value('IcaSecretsPortal')
 
 def main():
-	_success, creds = gds.get_folder_cred('fol.3ff7cdb1c3014da9627208d89d4636ab') # gds://development
-	update_ssm(creds)
+	ica_access_token = get_umccr_icav1_jwt()
+
+	configuration = libgds.Configuration(
+    api_key={
+        'Authorization': ica_access_token
+    },
+    api_key_prefix={
+        'Authorization': "Bearer"
+    },
+)
+	with libgds.ApiClient(configuration) as gds_client:
+		folders_api = libgds.FoldersApi(gds_client)
+		folder_id = 'fol.3ff7cdb1c3014da9627208d89d4636ab'
+		try:
+			resp: libgds.FolderResponse = folders_api.update_folder(folder_id=folder_id, include='objectStoreAccess')
+			cred: libgds.AwsS3TemporaryUploadCredentials = resp.object_store_access.aws_s3_temporary_upload_credentials
+			update_ssm(cred)
+		except libgds.ApiException as e:
+			message = f"Failed to get temporary credentials for GDS folder ID ({folder_id}). Exception - {e}"
+			print(message)
 
 if __name__ == '__main__':
 	main()
