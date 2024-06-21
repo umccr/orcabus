@@ -34,6 +34,7 @@ export type MetadataManagerStackProps = {
     | 'cognitoUserPoolIdParameterName'
     | 'cognitoPortalAppClientIdParameterName'
     | 'cognitoStatusPageAppClientIdParameterName'
+    | 'apiGwLogsConfig'
   >;
 };
 

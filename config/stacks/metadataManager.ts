@@ -1,10 +1,17 @@
-import { cognitoApiGatewayProps, computeSecurityGroupName, vpcProps } from '../constants';
+import { AppStage, cognitoApiGatewayProps, computeSecurityGroupName, vpcProps } from '../constants';
 import { MetadataManagerStackProps } from '../../lib/workload/stateless/stacks/metadata-manager/deploy/stack';
+import { RemovalPolicy } from 'aws-cdk-lib';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 
-export const getMetadataManagerStackProps = (): MetadataManagerStackProps => {
+export const getMetadataManagerStackProps = (stage: AppStage): MetadataManagerStackProps => {
+  const logsConfig = {
+    retention: stage === AppStage.PROD ? 14 : RetentionDays.TWO_YEARS,
+    removalPolicy: stage === AppStage.PROD ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+  };
+
   return {
     vpcProps,
     lambdaSecurityGroupName: computeSecurityGroupName,
-    apiGatewayCognitoProps: cognitoApiGatewayProps,
+    apiGatewayCognitoProps: { ...cognitoApiGatewayProps, apiGwLogsConfig: logsConfig },
   };
 };

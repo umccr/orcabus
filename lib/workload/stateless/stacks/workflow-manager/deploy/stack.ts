@@ -23,7 +23,10 @@ import {
 } from 'aws-cdk-lib/aws-apigatewayv2';
 import { PostgresManagerStack } from '../../../../../workload/stateless/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { ApiGatewayConstruct } from '../../../../../workload/components/api-gateway';
+import {
+  ApiGatewayConstruct,
+  ApiGwLogsConfig,
+} from '../../../../../workload/components/api-gateway';
 
 export interface WorkflowManagerStackProps extends StackProps {
   lambdaSecurityGroupName: string;
@@ -32,6 +35,7 @@ export interface WorkflowManagerStackProps extends StackProps {
   cognitoUserPoolIdParameterName: string;
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
+  apiGwLogsConfig: ApiGwLogsConfig;
 }
 
 export class WorkflowManagerStack extends Stack {

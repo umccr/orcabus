@@ -1,11 +1,22 @@
 import { Construct } from 'constructs';
-import { aws_ssm, Duration } from 'aws-cdk-lib';
+import { aws_ssm, Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { CorsHttpMethod, HttpApi, CfnStage, DomainName } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { IStringParameter, StringParameter } from 'aws-cdk-lib/aws-ssm';
-import { LogGroup } from 'aws-cdk-lib/aws-logs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+
+export interface ApiGwLogsConfig {
+  /**
+   * The number of days log events are kept in CloudWatch Logs.
+   */
+  retention: RetentionDays;
+  /**
+   * The removal policy to apply to the log group.
+   */
+  removalPolicy: RemovalPolicy;
+}
 
 export interface ApiGatewayConstructProps {
   region: string;
@@ -14,6 +25,10 @@ export interface ApiGatewayConstructProps {
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
   customDomainNamePrefix: string;
+  /**
+   * The configuration for aws cloudwatch logs
+   */
+  apiGwLogsConfig: ApiGwLogsConfig;
 }
 
 export class ApiGatewayConstruct extends Construct {
@@ -51,7 +66,7 @@ export class ApiGatewayConstruct extends Construct {
     });
 
     // LogGroups
-    this.setupAccessLogs();
+    this.setupAccessLogs(props.apiGwLogsConfig);
 
     // CloudMap
     // this.setupCloudServiceDiscovery()
@@ -63,8 +78,11 @@ export class ApiGatewayConstruct extends Construct {
 
   // TODO: Taken from https://github.com/aws/aws-cdk/issues/11100#issuecomment-904627081
   // Monitor for higher level CDK construct instead of leveraging CfnStage
-  private setupAccessLogs() {
-    const accessLogs = new LogGroup(this, 'OrcaBus-ApiGw-AccessLogs');
+  private setupAccessLogs(props: ApiGwLogsConfig) {
+    const accessLogs = new LogGroup(this, 'ApiGwAccessLogs', {
+      retention: props.retention,
+      removalPolicy: props.removalPolicy,
+    });
     const stage = this.httpApi.defaultStage?.node.defaultChild as CfnStage;
     stage.accessLogSettings = {
       destinationArn: accessLogs.logGroupArn,
