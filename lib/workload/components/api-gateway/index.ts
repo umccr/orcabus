@@ -5,7 +5,9 @@ import { CorsHttpMethod, HttpApi, CfnStage, DomainName } from 'aws-cdk-lib/aws-a
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { IStringParameter, StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
 
 export interface ApiGwLogsConfig {
   /**
@@ -24,6 +26,9 @@ export interface ApiGatewayConstructProps {
   cognitoUserPoolIdParameterName: string;
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
+  /**
+   * The prefix for the custom domain name
+   */
   customDomainNamePrefix: string;
   /**
    * The configuration for aws cloudwatch logs
@@ -38,12 +43,14 @@ export class ApiGatewayConstruct extends Construct {
     super(scope, id);
 
     // umccr acm arn
-    const umccr_acm_arn = StringParameter.valueFromLookup(this, '/umccr/certificate_arn');
-    const hosted_domain_name = StringParameter.valueFromLookup(this, '/hosted_zone/umccr/name');
+    const umccrAcmArn = StringParameter.valueFromLookup(this, '/umccr/certificate_arn');
+    const hostedDomainName = StringParameter.valueFromLookup(this, '/hosted_zone/umccr/name');
+    const hostedZoneId = StringParameter.valueFromLookup(this, '/hosted_zone/umccr/id');
 
-    const domainName = new DomainName(this, 'UmccrDomainName', {
-      domainName: `${props.customDomainNamePrefix}.${hosted_domain_name}`,
-      certificate: Certificate.fromCertificateArn(this, 'cert', umccr_acm_arn),
+    const domainName = `${props.customDomainNamePrefix}.${hostedDomainName}`;
+    const apiGWDomainName = new DomainName(this, 'UmccrDomainName', {
+      domainName: `${props.customDomainNamePrefix}.${hostedDomainName}`,
+      certificate: Certificate.fromCertificateArn(this, 'cert', umccrAcmArn),
     });
 
     this._httpApi = new HttpApi(this, 'HttpApi', {
@@ -61,8 +68,19 @@ export class ApiGatewayConstruct extends Construct {
       },
       defaultAuthorizer: this.getAuthorizer(props),
       defaultDomainMapping: {
-        domainName: domainName,
+        domainName: apiGWDomainName,
       },
+    });
+
+    new ARecord(this, 'CustomDomainARecord', {
+      zone: HostedZone.fromHostedZoneAttributes(this, 'UmccrHostedZone', {
+        hostedZoneId,
+        zoneName: hostedDomainName,
+      }),
+      recordName: domainName,
+      target: RecordTarget.fromAlias(
+        new ApiGatewayv2DomainProperties(apiGWDomainName.regionalDomainName, hostedZoneId)
+      ),
     });
 
     // LogGroups

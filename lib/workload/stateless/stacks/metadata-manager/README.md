@@ -4,6 +4,29 @@ One of the microservices in the OrcaBus that handles all the metadata informatio
 
 The metadata manager uses the Django framework.
 
+## API
+
+The API is deployed using a custom domain, `metadata`, which is appended to the hosted name of the respective account. The hosted name can be retrieved from the SSM Parameter Store at `/hosted_zone/umccr/name`.
+
+The API endpoint is structured as follows: `https://metadata.umccr.org`.
+
+Here's an example of how to use a curl command to access the API:
+
+```sh
+curl -s -H "Authorization: Bearer $PORTAL_TOKEN" "https://metadata.umccr.org/subject" | jq
+```
+
+To authenticate your requests, use a service token to obtain a JWT. This JWT can then be used to access the API
+endpoint.
+
+The API currently supports the following paths:
+
+- https://metadata.umccr.org/library
+- https://metadata.umccr.org/specimen
+- https://metadata.umccr.org/subject
+
+Filtering of results is also supported by the API. For example, to filter by `internal_id`, append the query parameter to the URL: `.../library?internal_id=LIB001`
+
 ## Schema
 
 This is the current (WIP) schema that reflects the current implementation.
