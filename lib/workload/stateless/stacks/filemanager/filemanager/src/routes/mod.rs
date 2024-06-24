@@ -5,7 +5,7 @@ pub mod list;
 
 use crate::database::Client;
 use crate::error::Error;
-use crate::routes::list::list_object_groups;
+use crate::routes::list::{list_object_groups, list_s3_objects};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
@@ -23,6 +23,7 @@ pub fn query_router(database: Client) -> Router {
 
     Router::new()
         .route("/objects", get(list_object_groups))
+        .route("/s3_objects", get(list_s3_objects))
         .with_state(state)
 }
 
