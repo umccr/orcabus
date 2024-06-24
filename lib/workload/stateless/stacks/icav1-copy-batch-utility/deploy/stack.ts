@@ -102,7 +102,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       new iam.PolicyStatement({
         actions: ['secretsmanager:GetSecretValue'],
         resources: [
-          `arn:aws:secretsmanager:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:secret:IcaSecretsPortal`,
+          `arn:aws:secretsmanager:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:secret:IcaSecretsPortal*`,
         ],
       })
     );
