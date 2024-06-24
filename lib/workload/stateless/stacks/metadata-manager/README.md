@@ -4,6 +4,34 @@ One of the microservices in the OrcaBus that handles all the metadata informatio
 
 The metadata manager uses the Django framework.
 
+## API
+
+The API is deployed using a custom domain of `metadata` followed by the hosted name of the respective account
+(`.dev.umccr.org`, `stg.umccr.org`). The hosted name can be retrieved from the SSM Parameter Store at
+`/hosted_zone/umccr/name` from each account.
+An example of the API endpoint is `https://metadata.umccr.org`.
+
+The endpoint needs an authentication token which could be retrieved from the [token service
+stack](../../../stateful/stacks/token-service/README.md). An example of retrieval is as follows.
+
+```sh
+export ORCABUS_TOKEN=$(aws secretsmanager get-secret-value --secret-id orcabus/token-service-jwt --query 'SecretString' --output text | jq -r '.id_token')
+```
+
+The API currently supports the following paths:
+
+- https://metadata.umccr.org/library
+- https://metadata.umccr.org/specimen
+- https://metadata.umccr.org/subject
+
+An example of how to use a curl command to access the API:
+
+```sh
+curl -s -H "Authorization: Bearer $ORCABUS_TOKEN" "https://metadata.umccr.org/library" | jq
+```
+
+Filtering of results is also supported by the API. For example, to filter by `internal_id`, append the query parameter to the URL: `.../library?internal_id=LIB001`
+
 ## Schema
 
 This is the current (WIP) schema that reflects the current implementation.
@@ -35,12 +63,14 @@ from the Google tracking sheet and mapping it to its respective model as follows
 
 Some important notes of the sync:
 
-1. The Sync will always check all data from the `2017` tab up to the current year.
+1. The sync will only run from the current year.
 2. The tracking sheet is the single source of truth, any deletion/update on any record (including the record that has
    been
    loaded) will also apply to the existing data.
 3. `LibraryId` is treated as a unique value in the tracking sheet, so for any duplicated value (including from other
-   tabs) it will only recognize the last appearance
+   tabs) it will only recognize the last appearance.
+4. In cases where multiple records share the same unique identifier (such as SampleId), only the data from the most recent record is stored. For instance, if a SampleId appears twice with differing source values, only the values from the latter record will be retained.
+5. The sync happens every night periodically. See `./deploy/README.md` for more info.
 
 Please refer to the [traking-sheet-service](proc/service/tracking_sheet_srv.py) implementation.
 

@@ -1,9 +1,11 @@
 import path from 'path';
 import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
-import { PythonFunction, PythonFunctionProps } from '@aws-cdk/aws-lambda-python-alpha';
+import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
+import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import {
   DockerImageFunction,
   DockerImageFunctionProps,
@@ -19,6 +21,10 @@ type LambdaProps = {
    * The secret for the db connection where the lambda will need access to
    */
   dbConnectionSecret: ISecret;
+  /**
+   * If the lambda should run daily sync
+   */
+  isDailySync: boolean;
 };
 
 export class LambdaSyncGsheetConstruct extends Construct {
@@ -44,6 +50,7 @@ export class LambdaSyncGsheetConstruct extends Construct {
         file: 'deploy/construct/lambda-sync-gsheet/lambda.Dockerfile',
       }),
       timeout: Duration.minutes(15),
+      memorySize: 4096,
     });
 
     lambdaProps.dbConnectionSecret.grantRead(this.lambda);
@@ -61,5 +68,22 @@ export class LambdaSyncGsheetConstruct extends Construct {
     );
     trackingSheetCredSSM.grantRead(this.lambda);
     trackingSheetIdSSM.grantRead(this.lambda);
+
+    // We need to store this lambda ARN somewhere so that we could refer when need to sync this manually
+    const ssmParameter = new StringParameter(this, 'SyncGsheetLambdaArnParameterStore', {
+      parameterName: '/orcabus/metadata-manager/sync-gsheet-lambda-arn',
+      description: 'The ARN of the lambda that syncs metadata from GSheet',
+      stringValue: this.lambda.functionArn,
+    });
+
+    if (lambdaProps.isDailySync) {
+      // Add scheduled event to re-sync metadata every midnight
+      const gsheetSyncLambdaEventTarget = new LambdaFunction(this.lambda);
+      new Rule(this, 'SyncGsheetMetadataScheduledRule', {
+        description: 'Scheduled rule to sync metadata from GSheet',
+        schedule: Schedule.expression('cron(30 12 * * ? *)'), // see ./deploy/readme.md
+        targets: [gsheetSyncLambdaEventTarget],
+      });
+    }
   }
 }

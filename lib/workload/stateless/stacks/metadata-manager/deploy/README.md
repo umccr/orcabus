@@ -26,4 +26,36 @@ To modify the diagram, open the `docs/architecture.drawio.svg` with [diagrams.ne
 ### SyncGsheetLambda
 
 - Load tracking sheet data in Google Drive and map it to the Application model
-- (PLANNED) periodically trigger the sync every 24 hour
+- Periodically trigger the sync every night (only in PROD)
+  - It will trigger at 22:30 AEST or 23:30 AEDT as the schedule is defined at 12:30 (pm) UTC
+  - The default synchronization process only occurs for the current year. Therefore, scheduling the sync to run every
+    night, as opposed to every morning, ensures that all entries from the day are properly synced to the system.
+
+To manually trigger the sync, the lambda ARN is stored in the SSM Parameter Store named
+`/orcabus/metadata-manager/sync-gsheet-lambda-arn`.
+
+To query in a local terminal
+
+```sh
+gsheet_sync_lambda_arn=$(aws ssm get-parameter --name '/orcabus/metadata-manager/sync-gsheet-lambda-arn' --with-decryption | jq -r .Parameter.Value)
+```
+
+The lambda handler will accept an array of years from which sheet to run from the GSheet workbook. If no year is specified, it will run the current year.
+
+```json
+{
+  "year":["2024"]
+}
+```
+
+Note that if you specify more than one year at a single invoke (e.g. `["2020", "2021"]`), there are high chances that lambda
+would timeout and the sync is not completed properly.
+
+```sh
+aws lambda invoke \
+  --function-name $gsheet_sync_lambda_arn \
+  --invocation-type Event \
+  --payload '{ "year": ["2024"] }' \
+  --cli-binary-format raw-in-base64-out \
+  res.json
+```
