@@ -38,6 +38,17 @@ def handler(event, context):
         print("Persisting Workflow record.")
         workflow.save()
 
+    # then create the actual workflow run state change entry
+    wfr = WorkflowRun(
+        workflow = workflow,
+        portal_run_id = wrsc.portalRunId,
+        execution_id = wrsc.executionId,  # the execution service WRSC does carry the execution ID
+        workflow_run_name = wrsc.workflowRunName,
+        status = wrsc.status,
+        comment = None,
+        timestamp = wrsc.timestamp
+	)
+
     # if payload is not null, create a new payload entry and assign a unique reference ID for it
     input_payload: Payload = wrsc.payload
     if input_payload:
@@ -49,17 +60,8 @@ def handler(event, context):
         print("Persisting Payload record.")
         pld.save()
 
-    # then create the actual workflow run state change entry
-    wfr = WorkflowRun(
-        workflow = workflow,
-        payload = pld,  # Note: payload type depend on workflow + status and will carry a version in it
-        portal_run_id = wrsc.portalRunId,
-        execution_id = wrsc.executionId,  # the execution service WRSC does carry the execution ID
-        workflow_run_name = wrsc.workflowRunName,
-        status = wrsc.status,
-        comment = None,
-        timestamp = wrsc.timestamp
-	)
+        wfr.payload = pld  # Note: payload type depend on workflow + status and will carry a version in it
+
     print("Persisting WorkflowRun record.")
     wfr.save()
 
