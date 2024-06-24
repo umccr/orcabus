@@ -184,7 +184,7 @@ impl From<Record> for FlatS3EventMessage {
         } = EventTypeDeleteMarker::from(EventTypeData::new(detail_type, deletion_type));
 
         Self {
-            object_id: UuidGenerator::generate(),
+            object_group_id: UuidGenerator::generate(),
             s3_object_id: UuidGenerator::generate(),
             public_id: UuidGenerator::generate(),
             event_time: Some(time),

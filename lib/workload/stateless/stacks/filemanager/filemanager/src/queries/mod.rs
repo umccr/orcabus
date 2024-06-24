@@ -48,18 +48,18 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn generate_entry(index: usize) -> (ActiveObjectGroup, ActiveS3Object) {
-        let object_id = UuidGenerator::generate();
+        let object_group_id = UuidGenerator::generate();
         let event = event_type(index);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
 
         (
             ActiveObjectGroup {
-                object_id: Set(object_id),
+                object_group_id: Set(object_group_id),
                 attributes: Set(None),
             },
             ActiveS3Object {
                 s3_object_id: Set(UuidGenerator::generate()),
-                object_id: Set(object_id),
+                object_group_id: Set(object_group_id),
                 public_id: Set(UuidGenerator::generate()),
                 event_type: Set(event.clone()),
                 // Half as many buckets as keys.

@@ -20,7 +20,7 @@ with input as (
 )
 -- Select objects into a FlatS3EventMessage struct.
 select
-    object_id,
+    object_group_id,
     s3_object_id,
     public_id,
     s3_object.bucket,

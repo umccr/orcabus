@@ -64,7 +64,10 @@ mod tests {
 
         let first = entries.first().unwrap();
         let builder = GetQueryBuilder::new(&client);
-        let result = builder.get_object_group(first.0.object_id).await.unwrap();
+        let result = builder
+            .get_object_group(first.0.object_group_id)
+            .await
+            .unwrap();
 
         assert_eq!(result.as_ref(), Some(&first.0));
     }

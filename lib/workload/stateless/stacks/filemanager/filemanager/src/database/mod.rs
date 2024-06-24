@@ -202,7 +202,7 @@ pub(crate) mod tests {
 
         let inserted = query!(
             "select s3_object_id as \"s3_object_id!\",
-                object_id as \"object_id!\",
+                object_group_id as \"object_group_id!\",
                 bucket,
                 key,
                 date,
@@ -264,7 +264,7 @@ pub(crate) mod tests {
 
         let inserted = query!(
             "select s3_object_id as \"s3_object_id!\",
-                object_id as \"object_id!\",
+                object_group_id as \"object_group_id!\",
                 bucket,
                 key,
                 date,

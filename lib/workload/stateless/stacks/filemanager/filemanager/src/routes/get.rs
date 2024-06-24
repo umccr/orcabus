@@ -67,7 +67,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri(format!("/object_groups/{}", first.0.object_id))
+                    .uri(format!("/object_groups/{}", first.0.object_group_id))
                     .body(Body::empty())
                     .unwrap(),
             )
