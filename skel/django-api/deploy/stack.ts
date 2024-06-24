@@ -11,7 +11,7 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 import { CorsHttpMethod, HttpApi, HttpMethod, HttpRoute, HttpRouteKey, HttpStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { PostgresManagerStack } from '../../../lib/workload/stateless/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { ApiGatewayConstruct } from '../../../lib/workload/components/api-gateway';
+import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../lib/workload/components/api-gateway';
 
 export interface ProjectNameStackProps { // FIXME change prop interface name
   lambdaSecurityGroupName: string;
@@ -20,6 +20,7 @@ export interface ProjectNameStackProps { // FIXME change prop interface name
   cognitoUserPoolIdParameterName: string;
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
+  apiGwLogsConfig: ApiGwLogsConfig;
 }
 
 export class ProjectNameStack extends Stack {  // FIXME change construct name
@@ -117,6 +118,7 @@ export class ProjectNameStack extends Stack {  // FIXME change construct name
     const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
       region: this.region,
       apiName: 'SequenceRunManager',
+      customDomainNamePrefix: 'sequence',
       ...props,
     });
     const httpApi = srmApi.httpApi;
