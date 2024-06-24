@@ -12,20 +12,28 @@ rust-version.workspace = true
 migrate = ["sqlx/migrate"]
 
 [dependencies]
+# Serde
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_with = "3"
 
+# Async
 async-trait = "0.1"
 futures = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
 
+# Database
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio", "tls-rustls", "chrono", "uuid"] }
 sea-orm = { version = "0.12", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "sea-orm-internal"] }
+strum = { version = "0.26", features = ["derive"] }
+
+# Query server
 axum = "0.7"
-envy = "0.4"
+tower = "0.4"
+
+# General
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1"
 uuid = { version = "1", features = ["v7"] }
@@ -33,6 +41,10 @@ mockall = "0.12"
 mockall_double = "0.3"
 itertools = "0.12"
 url = "2"
+bytes = "1.6"
+envy = "0.4"
+
+# Inventory
 csv = "1"
 flate2 = "1"
 md5 = "0.7"
@@ -41,8 +53,8 @@ parquet = { version = "50", features = ["async"] }
 arrow = { version = "50", features = ["chrono-tz"] }
 arrow-json = "50"
 orc-rust = "0.3"
-bytes = "1.6"
 
+# AWS
 aws-sdk-sqs = "1"
 aws-config = "1"
 aws-sdk-s3 = "1"

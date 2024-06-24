@@ -2,14 +2,16 @@
 //! database schema.
 //!
 
-use crate::error::ErrorKind::EntityGeneration;
-use crate::error::{Error, Result};
-use crate::Config;
+use std::ffi::OsStr;
+use std::fs::write;
+
 use clap_builder::Parser;
 use quote::quote;
 use sea_orm_cli::{run_generate_command, Cli, Commands};
-use std::ffi::OsStr;
-use std::fs::write;
+
+use crate::error::ErrorKind::EntityGeneration;
+use crate::error::{Error, Result};
+use crate::Config;
 
 pub async fn generate_entities() -> Result<()> {
     let config = Config::load()?;
@@ -21,6 +23,12 @@ pub async fn generate_entities() -> Result<()> {
         "entity",
         "--with-serde",
         "both",
+        "--enum-extra-derives",
+        "strum::FromRepr",
+        "--enum-extra-derives",
+        "strum::EnumCount",
+        "--enum-extra-attributes",
+        "repr(u8)",
         "-u",
         &config.database_url,
         "-o",

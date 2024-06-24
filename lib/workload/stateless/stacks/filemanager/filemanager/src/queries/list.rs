@@ -1,13 +1,14 @@
 //! Query builder involving list operations on the database.
 //!
 
+use sea_orm::{EntityTrait, PaginatorTrait, Select};
+
 use crate::database::entities::object_group::Entity as ObjectGroupEntity;
 use crate::database::entities::object_group::Model as ObjectGroup;
 use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::entities::s3_object::Model as S3Object;
 use crate::database::Client;
 use crate::error::Result;
-use sea_orm::{EntityTrait, PaginatorTrait, Select};
 
 /// A query builder for list operations.
 pub struct ListQueryBuilder<'a> {
@@ -56,5 +57,72 @@ impl<'a> ListQueryBuilder<'a> {
         Ok(Self::build_s3_object()
             .count(self.client.connection_ref())
             .await?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::PgPool;
+
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::Client;
+    use crate::queries::tests::initialize_database;
+
+    use super::*;
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_object_groups(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database(&client, 10).await;
+
+        let builder = ListQueryBuilder::new(&client);
+        let result = builder.list_object_groups().await.unwrap();
+
+        assert_eq!(
+            result,
+            entries
+                .into_iter()
+                .map(|(entry, _)| entry)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_objects(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database(&client, 10).await;
+
+        let builder = ListQueryBuilder::new(&client);
+        let result = builder.list_s3_objects().await.unwrap();
+
+        assert_eq!(
+            result,
+            entries
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_count_object_groups(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        initialize_database(&client, 10).await;
+
+        let builder = ListQueryBuilder::new(&client);
+        let result = builder.count_object_groups().await.unwrap();
+
+        assert_eq!(result, 10);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_count_s3_objects(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        initialize_database(&client, 10).await;
+
+        let builder = ListQueryBuilder::new(&client);
+        let result = builder.count_s3_objects().await.unwrap();
+
+        assert_eq!(result, 10);
     }
 }

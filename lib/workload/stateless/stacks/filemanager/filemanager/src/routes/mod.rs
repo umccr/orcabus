@@ -1,8 +1,11 @@
 //! This module handles API routing.
 //!
 
-pub mod get;
-pub mod list;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::routing::get;
+use axum::{Json, Router};
+use serde::Serialize;
 
 use crate::database::Client;
 use crate::error::Error;
@@ -10,11 +13,9 @@ use crate::routes::get::{get_object_group_by_id, get_s3_object_by_id};
 use crate::routes::list::{
     count_object_groups, count_s3_objects, list_object_groups, list_s3_objects,
 };
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use axum::routing::get;
-use axum::{Json, Router};
-use serde::Serialize;
+
+pub mod get;
+pub mod list;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -35,7 +36,7 @@ pub fn query_router(database: Client) -> Router {
         .with_state(state)
 }
 
-/// The errro response format returned in the API.
+/// The error response format returned in the API.
 #[derive(Serialize)]
 pub struct ErrorResponse {
     message: String,
@@ -52,5 +53,39 @@ impl IntoResponse for Error {
         };
 
         (status, Json(ErrorResponse { message })).into_response()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::body::to_bytes;
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+    use parquet::data_type::AsBytes;
+    use serde_json::{from_slice, json, Value};
+
+    use crate::error::Error;
+
+    #[tokio::test]
+    async fn sql_error_into_response() {
+        let response = Error::SQLError("error".to_string()).into_response();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        assert_eq!(
+            json!({"message": "error"}),
+            from_slice::<Value>(
+                to_bytes(response.into_body(), usize::MAX)
+                    .await
+                    .unwrap()
+                    .as_bytes()
+            )
+            .unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn internal_error_into_response() {
+        let response = Error::MigrateError("error".to_string()).into_response();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 }

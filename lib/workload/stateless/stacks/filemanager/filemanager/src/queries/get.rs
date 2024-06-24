@@ -1,14 +1,15 @@
 //! Query builder involving get operations on the database.
 //!
 
+use sea_orm::{EntityTrait, Select};
+use uuid::Uuid;
+
 use crate::database::entities::object_group::Entity as ObjectGroupEntity;
 use crate::database::entities::object_group::Model as ObjectGroup;
 use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::entities::s3_object::Model as S3Object;
 use crate::database::Client;
 use crate::error::Result;
-use sea_orm::{EntityTrait, Select};
-use uuid::Uuid;
 
 /// A query builder for get operations.
 pub struct GetQueryBuilder<'a> {
@@ -43,5 +44,43 @@ impl<'a> GetQueryBuilder<'a> {
         Ok(Self::build_s3_object_by_id(id)
             .one(self.client.connection_ref())
             .await?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::PgPool;
+
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::Client;
+    use crate::queries::tests::initialize_database;
+
+    use super::*;
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_get_object_group(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database(&client, 10).await;
+
+        let first = entries.first().unwrap();
+        let builder = GetQueryBuilder::new(&client);
+        let result = builder.get_object_group(first.0.object_id).await.unwrap();
+
+        assert_eq!(result.as_ref(), Some(&first.0));
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_objects(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database(&client, 10).await;
+
+        let first = entries.first().unwrap();
+        let builder = GetQueryBuilder::new(&client);
+        let result = builder
+            .get_s3_object_by_id(first.1.s3_object_id)
+            .await
+            .unwrap();
+
+        assert_eq!(result.as_ref(), Some(&first.1));
     }
 }

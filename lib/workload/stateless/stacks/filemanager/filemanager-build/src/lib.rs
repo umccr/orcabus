@@ -1,10 +1,13 @@
-use crate::error::Error;
-use crate::error::ErrorKind::LoadingEnvironment;
-use envy::from_env;
-use error::Result;
-use serde::Deserialize;
 use std::env::var;
 use std::path::{Path, PathBuf};
+
+use envy::from_env;
+use serde::Deserialize;
+
+use error::Result;
+
+use crate::error::Error;
+use crate::error::ErrorKind::LoadingEnvironment;
 
 pub mod entities;
 pub mod error;

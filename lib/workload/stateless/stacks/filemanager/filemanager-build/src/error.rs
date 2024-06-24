@@ -1,14 +1,16 @@
 //! This module contains the crate's error types.
 //!
 
-use crate::error::ErrorKind::{IoError, LoadingEnvironment};
-use crate::workspace_path;
-use miette::{diagnostic, Diagnostic, NamedSource, SourceOffset};
 use std::fmt::{Display, Formatter};
 use std::fs::read_to_string;
 use std::panic::Location;
 use std::{io, result};
+
+use miette::{diagnostic, Diagnostic, NamedSource, SourceOffset};
 use thiserror::Error;
+
+use crate::error::ErrorKind::{IoError, LoadingEnvironment};
+use crate::workspace_path;
 
 pub type Result<T> = result::Result<T, Error>;
 
