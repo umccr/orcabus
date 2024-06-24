@@ -25,7 +25,7 @@ class Phenotype(models.TextChoices):
 
 
 class Quality(models.TextChoices):
-    VERY_POOR = 'very-poor'
+    VERY_POOR = 'very-poor', 'VeryPoor'
     POOR = 'poor'
     GOOD = 'good'
     BORDERLINE = 'borderline'
@@ -36,15 +36,16 @@ class LibraryType(models.TextChoices):
     BIMODAL = 'BiModal'
     CT_DNA = 'ctDNA'
     CT_TSO = 'ctTSO'
-    EXOME = 'exome'
+    EXOME = 'exome', "Exome"
     ME_DIP = 'MeDIP'
     METAGENM = 'Metagenm'
     METHYL_SEQ = 'MethylSeq'
-    OTHER = 'other'
-    TSO_DNA = 'TSO-DNA'
-    TSO_RNA = 'TSO-RNA'
+    TSO_DNA = 'TSO-DNA', 'TSO_DNA'
+    TSO_RNA = 'TSO-RNA', 'TSO_RNA'
     WGS = 'WGS'
     WTS = 'WTS'
+
+    OTHER = 'other'
 
 
 class LibraryManager(BaseManager):
@@ -83,8 +84,7 @@ class Library(BaseModel):
         blank=True,
         null=True
     )
-    coverage = models.DecimalField(
-        max_digits=10, decimal_places=2,
+    coverage = models.FloatField(
         blank=True,
         null=True
     )

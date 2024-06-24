@@ -42,4 +42,3 @@ test: test-stateless test-stateful test-suite
 
 clean:
 	@yarn clean
-	@#for zf in $(shell find ./lib/workload/stateless/layers -maxdepth 1 -mindepth 1 -type f -iname '*.zip'); do rm -v $$zf; done
