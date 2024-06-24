@@ -158,7 +158,7 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     const rclone_layer_ref = LayerVersion.fromLayerVersionArn(
       this,
       'RClone Layer',
-      cdk.Fn.importValue('arn:aws:lambda:ap-southeast-2:843407916570:layer:rclone-arm64:1')
+      'arn:aws:lambda:ap-southeast-2:843407916570:layer:rclone-arm64:1'
     );
 
     const s3_batch_ops_rclone_lambda = new PythonFunction(
