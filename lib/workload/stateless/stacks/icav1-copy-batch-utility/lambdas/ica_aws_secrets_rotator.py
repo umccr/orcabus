@@ -55,7 +55,8 @@ def handler(_event, _context):
 )
 	with libgds.ApiClient(configuration) as gds_client:
 		folders_api = libgds.FoldersApi(gds_client)
-		folder_id = 'fol.3ff7cdb1c3014da9627208d89d4636ab'
+		folder_id = 'fol.3ff7cdb1c3014da9627208d89d4636ab' # gds://development
+
 		try:
 			resp: libgds.FolderResponse = folders_api.update_folder(folder_id=folder_id, include='objectStoreAccess')
 			cred: libgds.AwsS3TemporaryUploadCredentials = resp.object_store_access.aws_s3_temporary_upload_credentials
@@ -64,5 +65,5 @@ def handler(_event, _context):
 			message = f"Failed to get temporary credentials for GDS folder ID ({folder_id}). Exception - {e}"
 			print(message)
 
-# if __name__ == '__main__':
-# 	handler(None, None)
+if __name__ == '__main__':
+	handler(None, None)
