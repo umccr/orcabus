@@ -13,7 +13,7 @@ import { RemovalPolicy } from 'aws-cdk-lib';
 
 export const getWorkflowManagerStackProps = (stage: AppStage): WorkflowManagerStackProps => {
   const logsConfig = {
-    retention: stage === AppStage.PROD ? 14 : RetentionDays.TWO_YEARS,
+    retention: stage === AppStage.PROD ? RetentionDays.TWO_YEARS : RetentionDays.TWO_WEEKS,
     removalPolicy: stage === AppStage.PROD ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
   };
 
