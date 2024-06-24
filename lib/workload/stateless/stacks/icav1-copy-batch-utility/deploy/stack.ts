@@ -179,6 +179,18 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       }
     );
 
+    s3_batch_ops_rclone_lambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ssm:GetParameter'],
+        resources: [
+          `arn:aws:ssm:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:parameter/rclone-config`,
+          `arn:aws:ssm:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:parameter/icav1_aws_access_key_id`,
+          `arn:aws:ssm:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:parameter/icav1_aws_secret_access_key`,
+          `arn:aws:ssm:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:parameter/icav1_aws_session_token`,
+        ],
+      })
+    );
+
     // S3 Batch Operations role
     new iam.Role(this, 'S3BatchOperationsRole', {
       assumedBy: new iam.ServicePrincipal('batchoperations.s3.amazonaws.com'),
