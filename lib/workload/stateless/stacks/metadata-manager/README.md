@@ -6,24 +6,29 @@ The metadata manager uses the Django framework.
 
 ## API
 
-The API is deployed using a custom domain, `metadata`, which is appended to the hosted name of the respective account. The hosted name can be retrieved from the SSM Parameter Store at `/hosted_zone/umccr/name`.
+The API is deployed using a custom domain of `metadata` followed by the hosted name of the respective account
+(`.dev.umccr.org`, `stg.umccr.org`). The hosted name can be retrieved from the SSM Parameter Store at
+`/hosted_zone/umccr/name` from each account.
+An example of the API endpoint is `https://metadata.umccr.org`.
 
-The API endpoint is structured as follows: `https://metadata.umccr.org`.
-
-Here's an example of how to use a curl command to access the API:
+The endpoint needs an authentication token which could be retrieved from the [token service
+stack](../../../stateful/stacks/token-service/README.md). An example of retrieval is as follows.
 
 ```sh
-curl -s -H "Authorization: Bearer $PORTAL_TOKEN" "https://metadata.umccr.org/subject" | jq
+export ORCABUS_TOKEN=$(aws secretsmanager get-secret-value --secret-id orcabus/token-service-jwt --query 'SecretString' --output text | jq -r '.id_token')
 ```
-
-To authenticate your requests, use a service token to obtain a JWT. This JWT can then be used to access the API
-endpoint.
 
 The API currently supports the following paths:
 
 - https://metadata.umccr.org/library
 - https://metadata.umccr.org/specimen
 - https://metadata.umccr.org/subject
+
+An example of how to use a curl command to access the API:
+
+```sh
+curl -s -H "Authorization: Bearer $ORCABUS_TOKEN" "https://metadata.umccr.org/library" | jq
+```
 
 Filtering of results is also supported by the API. For example, to filter by `internal_id`, append the query parameter to the URL: `.../library?internal_id=LIB001`
 
