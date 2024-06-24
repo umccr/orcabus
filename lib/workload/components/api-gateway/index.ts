@@ -79,7 +79,10 @@ export class ApiGatewayConstruct extends Construct {
       }),
       recordName: domainName,
       target: RecordTarget.fromAlias(
-        new ApiGatewayv2DomainProperties(apiGWDomainName.regionalDomainName, hostedZoneId)
+        new ApiGatewayv2DomainProperties(
+          apiGWDomainName.regionalDomainName,
+          apiGWDomainName.regionalHostedZoneId
+        )
       ),
     });
 
