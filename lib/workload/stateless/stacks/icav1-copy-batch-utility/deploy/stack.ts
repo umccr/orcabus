@@ -3,7 +3,7 @@ import { Construct } from 'constructs';
 import path from 'path';
 import { Duration, aws_ssm } from 'aws-cdk-lib';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Architecture, LayerVersion, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { aws_iam as iam } from 'aws-cdk-lib';
 
 export interface ICAv1CopyBatchUtilityConfig {
@@ -154,14 +154,20 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     //   }
     // );
 
-    // FIXME: Scratch this... probably just build a lambda layer with the above construct and
-    // extend the existing construct to be able to refer to the rclone-lambda-layer (build or refer to ARN?)?
+    // FIXME: Add the layer building code here instead of relying on a pre-build/uploaded rclone layer
+    const rclone_layer_ref = LayerVersion.fromLayerVersionArn(
+      this,
+      'RClone Layer',
+      cdk.Fn.importValue('arn:aws:lambda:ap-southeast-2:843407916570:layer:rclone-arm64:1')
+    );
+
     const s3_batch_ops_rclone_lambda = new PythonFunction(
       this,
       'ICAv1 Copy Batch Utility lambda - RClone',
       {
         entry: path.join(__dirname, '../layers/src/rclone'),
         runtime: Runtime.PYTHON_3_12,
+        layers: [rclone_layer_ref],
         role: lambdaRole,
         architecture: Architecture.ARM_64,
         timeout: Duration.minutes(15),
