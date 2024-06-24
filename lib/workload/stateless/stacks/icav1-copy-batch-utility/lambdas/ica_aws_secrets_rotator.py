@@ -44,15 +44,17 @@ def get_umccr_icav1_jwt():
 
 def handler(_event, _context):
 	ica_access_token = get_umccr_icav1_jwt()
+	print(ica_access_token)
 
 	configuration = libgds.Configuration(
-    api_key={
-        'Authorization': ica_access_token
-    },
-    api_key_prefix={
-        'Authorization': "Bearer"
-    },
-)
+		api_key={
+			'Authorization': ica_access_token['SecretString']
+		},
+		api_key_prefix={
+			'Authorization': "Bearer"
+		},
+	)
+
 	with libgds.ApiClient(configuration) as gds_client:
 		folders_api = libgds.FoldersApi(gds_client)
 		folder_id = 'fol.3ff7cdb1c3014da9627208d89d4636ab' # gds://development
@@ -64,6 +66,5 @@ def handler(_event, _context):
 		except libgds.ApiException as e:
 			message = f"Failed to get temporary credentials for GDS folder ID ({folder_id}). Exception - {e}"
 			print(message)
-
-if __name__ == '__main__':
-	handler(None, None)
+# if __name__ == '__main__':
+# 	handler(None, None)
