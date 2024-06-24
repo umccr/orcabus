@@ -40,9 +40,9 @@ def update_ssm(creds):
 
 def get_umccr_icav1_jwt():
 	client = boto3.client('secretsmanager')
-	return client.get_secret_value('IcaSecretsPortal')
+	return client.get_secret_value(SecretId='IcaSecretsPortal') # pragma: allowlist secret
 
-def main():
+def handler(_event, _context):
 	ica_access_token = get_umccr_icav1_jwt()
 
 	configuration = libgds.Configuration(
@@ -64,5 +64,5 @@ def main():
 			message = f"Failed to get temporary credentials for GDS folder ID ({folder_id}). Exception - {e}"
 			print(message)
 
-if __name__ == '__main__':
-	main()
+# if __name__ == '__main__':
+# 	handler(None, None)

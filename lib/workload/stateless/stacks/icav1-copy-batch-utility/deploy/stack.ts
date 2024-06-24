@@ -1,11 +1,10 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import path from 'path';
-import { Duration, aws_secretsmanager, aws_ssm } from 'aws-cdk-lib';
+import { Duration, aws_ssm } from 'aws-cdk-lib';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { aws_iam as iam } from 'aws-cdk-lib';
-import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda-layer';
 
 export interface ICAv1CopyBatchUtilityConfig {
   AppName: string;
@@ -97,6 +96,16 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
       index: 'ica_aws_secrets_rotator.py',
       handler: 'handler',
     });
+
+    // Allow lambda access to secretsmanager secret 'IcaSecretsPortal'
+    ica_v1_creds_lambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: [
+          `arn:aws:secretsmanager:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:secret:IcaSecretsPortal`,
+        ],
+      })
+    );
 
     // ICA v1 creds rotator cron job
     const cronJob = new cdk.aws_events.Rule(this, 'ICAv1 Creds Rotator CronJob', {
