@@ -21,6 +21,13 @@ pub async fn list_object_groups(state: State<AppState>) -> Result<Json<Vec<Objec
     Ok(Json(query.list_object_groups().await?))
 }
 
+/// The count object groups handler.
+pub async fn count_object_groups(state: State<AppState>) -> Result<Json<u64>> {
+    let query = ListQueryBuilder::new(&state.client);
+
+    Ok(Json(query.count_object_groups().await?))
+}
+
 /// Params for a list s3 objects request.
 #[derive(Debug, Deserialize)]
 pub struct ListS3ObjectsParams {}
@@ -30,4 +37,11 @@ pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<S3Object
     let query = ListQueryBuilder::new(&state.client);
 
     Ok(Json(query.list_s3_objects().await?))
+}
+
+/// The count s3 objects handler.
+pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<u64>> {
+    let query = ListQueryBuilder::new(&state.client);
+
+    Ok(Json(query.count_s3_objects().await?))
 }

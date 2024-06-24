@@ -7,7 +7,7 @@ use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::entities::s3_object::Model as S3Object;
 use crate::database::Client;
 use crate::error::Result;
-use sea_orm::{EntityTrait, Select};
+use sea_orm::{EntityTrait, PaginatorTrait, Select};
 
 /// A query builder for list operations.
 pub struct ListQueryBuilder<'a> {
@@ -41,6 +41,20 @@ impl<'a> ListQueryBuilder<'a> {
     pub async fn list_s3_objects(&self) -> Result<Vec<S3Object>> {
         Ok(Self::build_s3_object()
             .all(self.client.connection_ref())
+            .await?)
+    }
+
+    /// Count object groups.
+    pub async fn count_object_groups(&self) -> Result<u64> {
+        Ok(Self::build_object_group()
+            .count(self.client.connection_ref())
+            .await?)
+    }
+
+    /// Count s3 objects.
+    pub async fn count_s3_objects(&self) -> Result<u64> {
+        Ok(Self::build_s3_object()
+            .count(self.client.connection_ref())
             .await?)
     }
 }
