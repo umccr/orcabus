@@ -77,7 +77,8 @@ export class BclConvertManagerStack extends Stack {
       vpcSubnets: { subnets: this.vpc.privateSubnets },
       securityGroups: [this.lambdaSG],
       architecture: Architecture.ARM_64,
-      timeout: Duration.seconds(28),
+      timeout: Duration.seconds(120),
+      memorySize: 1024,
       index: 'icav2_event_translator.py',
       handler: 'handler',
     });
