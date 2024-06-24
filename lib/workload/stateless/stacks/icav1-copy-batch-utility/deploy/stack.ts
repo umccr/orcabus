@@ -100,9 +100,12 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
     // Allow lambda access to secretsmanager secret 'IcaSecretsPortal'
     ica_v1_creds_lambda.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ['secretsmanager:GetSecretValue'],
+        actions: ['secretsmanager:GetSecretValue', 'ssm:PutParameter'],
         resources: [
           `arn:aws:secretsmanager:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:secret:IcaSecretsPortal*`,
+          `arn:aws:ssm:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:parameter/icav1_aws_access_key_id`,
+          `arn:aws:ssm:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:parameter/icav1_aws_secret_access_key`,
+          `arn:aws:ssm:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:parameter/icav1_aws_session_token`,
         ],
       })
     );

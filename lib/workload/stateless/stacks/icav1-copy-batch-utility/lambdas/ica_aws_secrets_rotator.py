@@ -38,13 +38,14 @@ def update_ssm(creds):
 	for parameter in parameters:
 		client.put_parameter(**parameter)
 
+	print("ICAv1 AWS secrets updated successfully")
+
 def get_umccr_icav1_jwt():
 	client = boto3.client('secretsmanager')
 	return client.get_secret_value(SecretId='IcaSecretsPortal') # pragma: allowlist secret
 
 def handler(_event, _context):
 	ica_access_token = get_umccr_icav1_jwt()
-	print(ica_access_token)
 
 	configuration = libgds.Configuration(
 		api_key={
