@@ -112,6 +112,11 @@ impl Client {
     pub fn connection(&self) -> DatabaseConnection {
         self.connection.clone()
     }
+
+    /// Get the database connection as a reference.
+    pub fn connection_ref(&self) -> &DatabaseConnection {
+        &self.connection
+    }
 }
 
 #[async_trait]

@@ -8,4 +8,6 @@ pub mod env;
 pub mod error;
 pub mod events;
 pub mod handlers;
+pub mod queries;
+pub mod routes;
 pub mod uuid;
