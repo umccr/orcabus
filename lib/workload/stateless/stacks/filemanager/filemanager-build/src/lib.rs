@@ -6,8 +6,8 @@ use serde::Deserialize;
 use std::env::var;
 use std::path::{Path, PathBuf};
 
-pub mod entities;
 pub mod error;
+pub mod gen_entities;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {

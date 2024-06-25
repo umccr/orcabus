@@ -17,7 +17,7 @@ use crate::read_env;
 pub mod aws;
 
 // Include the generated entities module.
-include!(concat!(env!("OUT_DIR"), "/entities.rs"));
+include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
 /// A trait which can generate database credentials.
 #[async_trait]
