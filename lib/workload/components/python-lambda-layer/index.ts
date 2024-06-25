@@ -18,7 +18,7 @@ export class PythonLambdaLayerConstruct extends Construct {
     this.lambdaLayerVersionObj = new PythonLayerVersion(this, 'python_lambda_layer', {
       layerVersionName: props.layerName,
       entry: props.layerDirectory,
-      compatibleRuntimes: [lambda.Runtime.PYTHON_3_11],
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_12],
       compatibleArchitectures: [lambda.Architecture.ARM_64],
       license: 'GPL3',
       description: props.layerDescription,
