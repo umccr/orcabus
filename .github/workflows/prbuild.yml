@@ -84,6 +84,7 @@ jobs:
       - name: Install dependencies
         run: |
           yarn install --immutable
+          pip3 install cargo-lambda
 
       - run: make test-suite
 
@@ -121,5 +122,6 @@ jobs:
       - name: Install dependencies
         run: |
           yarn install --immutable
+          pip3 install cargo-lambda
 
       - run: make test-stateless
