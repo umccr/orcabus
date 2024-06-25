@@ -49,7 +49,7 @@ export class cttsov2InputMakerConstruct extends Construct {
     outputStatus: 'ready',
     payloadVersion: '2024.05.24',
     workflowName: 'cttsov2',
-    workflowVersion: '2.1.1',
+    workflowVersion: '2.5.0',
   };
 
   constructor(scope: Construct, id: string, props: cttsov2InputMakerConstructProps) {
