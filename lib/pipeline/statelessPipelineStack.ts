@@ -66,6 +66,7 @@ export class StatelessPipelineStack extends cdk.Stack {
         //  RUST installation
         `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`,
         `source $HOME/.cargo/env`,
+        'rustup component add rustfmt',
         `pip3 install cargo-lambda`,
       ],
       commands: ['yarn install --immutable', 'make test-stateless', 'make test-suite'],
@@ -101,6 +102,7 @@ export class StatelessPipelineStack extends cdk.Stack {
         //  RUST installation
         `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`,
         `source $HOME/.cargo/env`,
+        'rustup component add rustfmt',
         `pip3 install cargo-lambda`,
       ],
       commands: ['yarn install --immutable', 'yarn run cdk-stateless synth'],
