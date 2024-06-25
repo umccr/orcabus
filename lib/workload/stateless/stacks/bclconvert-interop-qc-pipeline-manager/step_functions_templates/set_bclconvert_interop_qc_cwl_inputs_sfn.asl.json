@@ -30,7 +30,7 @@
             "class": "Directory",
             "location.$": "$.get_input_parameters_from_event.payload.data.interopDirectory"
           },
-          "run_id.$": "$.get_input_parameters_from_event.payload.data.runId"
+          "instrument_run_id.$": "$.get_input_parameters_from_event.payload.data.instrumentRunId"
         }
       },
       "ResultPath": "$.set_input_json",

@@ -333,7 +333,7 @@ input_payload="$( \
         "sampleId": $sample_id,
         "samplesheetB64gz": $samplesheet_b64gz,
         "fastqListRowsB64gz": $fastq_list_rows_b64gz,
-        "runId": $run_id,
+        "instrumentRunId": $run_id,
         "analysisOutputUri": "\($output_root_uri)\($portal_run_id)/out/",
         "icaLogsUri": "\($output_root_uri)\($portal_run_id)/logs/",
         "cacheUri": "\($cache_root_uri)\($portal_run_id)/\($sample_id)_run_cache/",
