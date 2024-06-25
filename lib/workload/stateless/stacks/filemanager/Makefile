@@ -8,6 +8,9 @@ FILEMANAGER_DATABASE_PORT ?= 4321
 DATABASE_URL ?= postgresql://filemanager:filemanager@${FILEMANAGER_DATABASE_HOST}:${FILEMANAGER_DATABASE_PORT}/filemanager #pragma: allowlist secret
 ## Override the default project name
 DOCKER_PROJECT_NAME ?= filemanager
+## The default local API server addr
+FILEMANAGER_API_SERVER_ADDR ?= localhost:8080
+
 
 ## Default target
 default: help
@@ -60,10 +63,14 @@ clean: docker-clean
 psql:
 	@docker compose exec postgres psql filemanager -U filemanager
 
+## Local API server.
+api: build
+	cargo run -p filemanager-api-server
+
 ## Help text
 help:
 	@printf "The filemanager Makefile.\n\n"
-	@printf "Usage: make <target> [POSTGRES_DATABASE_URL=<database_url>]\n"
+	@printf "Usage: make <target> [DATABASE_URL=<database_url>]\n"
 
 # No targets are files, so they are all PHONY.
 .PHONY: *

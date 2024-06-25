@@ -1,0 +1,13 @@
+[package]
+name = "filemanager-api-server"
+version = "0.1.0"
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tracing = "0.1"
+axum = "0.7"
+
+filemanager = { path = "../filemanager" }

@@ -6,6 +6,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use serde::Serialize;
+use tower_http::trace::TraceLayer;
 
 use crate::database::Client;
 use crate::error::Error;
@@ -23,8 +24,8 @@ pub struct AppState {
 }
 
 /// The main filemanager router for query read-only requests.
-pub fn query_router(database: Client) -> Router {
-    let state = AppState { client: database };
+pub fn query_router(client: Client) -> Router {
+    let state = AppState { client };
 
     Router::new()
         .route("/object_groups", get(list_object_groups))
@@ -34,6 +35,7 @@ pub fn query_router(database: Client) -> Router {
         .route("/s3_objects/:id", get(get_s3_object_by_id))
         .route("/s3_objects/count", get(count_s3_objects))
         .with_state(state)
+        .layer(TraceLayer::new_for_http())
 }
 
 /// The error response format returned in the API.

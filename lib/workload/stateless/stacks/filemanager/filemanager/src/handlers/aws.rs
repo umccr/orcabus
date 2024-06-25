@@ -169,7 +169,7 @@ pub async fn ingest_s3_inventory(
 
 /// Create a postgres database pool using an IAM credential generator.
 pub async fn create_database_pool(env_config: &EnvConfig) -> Result<DatabaseConnection, Error> {
-    Ok(Client::create_pool(
+    Ok(Client::create_connection(
         Some(IamGeneratorBuilder::default().build(env_config).await?),
         env_config,
     )
@@ -185,7 +185,7 @@ pub async fn update_credentials(
     connection
         .get_postgres_connection_pool()
         .set_connect_options(
-            Client::pg_connect_options(
+            Client::connect_options(
                 Some(IamGeneratorBuilder::default().build(env_config).await?),
                 env_config,
             )

@@ -209,8 +209,9 @@ mod tests {
             pghost: Some("127.0.0.1".to_string()),
             pgport: Some(5432),
             pguser: Some("filemanager".to_string()),
-            sqs_queue_url: None,
+            sqs_url: None,
             paired_ingest_mode: false,
+            api_server_addr: None,
         };
 
         test_generate_iam_token(|config| async {

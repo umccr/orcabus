@@ -4,7 +4,7 @@
 use std::fmt::{Display, Formatter};
 use std::fs::read_to_string;
 use std::panic::Location;
-use std::{io, result};
+use std::{fmt, io, result};
 
 use miette::{diagnostic, Diagnostic, NamedSource, SourceOffset};
 use thiserror::Error;
@@ -36,7 +36,7 @@ pub struct Error {
 }
 
 impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.error_kind)
     }
 }

@@ -4,9 +4,7 @@
 use crate::error::Error::LoadingEnvironment;
 use crate::error::Result;
 use envy::from_env;
-use serde::de::Error;
-use serde::{Deserialize, Deserializer};
-use std::result;
+use serde::Deserialize;
 
 /// Configuration environment variables for filemanager.
 #[derive(Debug, Deserialize, Default)]
@@ -16,30 +14,12 @@ pub struct Config {
     pub(crate) pghost: Option<String>,
     pub(crate) pgport: Option<u16>,
     pub(crate) pguser: Option<String>,
-    pub(crate) sqs_queue_url: Option<String>,
-    #[serde(deserialize_with = "deserialize_bool_with_num")]
+    #[serde(rename = "filemanager_sqs_url")]
+    pub(crate) sqs_url: Option<String>,
+    #[serde(default)]
     pub(crate) paired_ingest_mode: bool,
-}
-
-fn deserialize_bool_with_num<'de, D>(deserializer: D) -> result::Result<bool, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value: Option<String> = Deserialize::deserialize(deserializer)?;
-
-    Ok(value
-        .map(|value| {
-            if value == "1" {
-                Ok(true)
-            } else if value == "0" {
-                Ok(false)
-            } else {
-                value.parse::<bool>()
-            }
-        })
-        .transpose()
-        .map_err(Error::custom)?
-        .unwrap_or_default())
+    #[serde(rename = "filemanager_api_server_addr")]
+    pub(crate) api_server_addr: Option<String>,
 }
 
 impl Config {
@@ -75,12 +55,17 @@ impl Config {
 
     /// Get the SQS url.
     pub fn sqs_queue_url(&self) -> Option<&str> {
-        self.sqs_queue_url.as_deref()
+        self.sqs_url.as_deref()
     }
 
     /// Get the paired ingest mode.
     pub fn paired_ingest_mode(&self) -> bool {
         self.paired_ingest_mode
+    }
+
+    /// Get the api server address.
+    pub fn api_server_addr(&self) -> Option<&str> {
+        self.api_server_addr.as_deref()
     }
 
     /// Get the value from an optional, or else try and get a different value, unwrapping into a Result.

@@ -2,7 +2,7 @@
 //!
 
 use sea_orm::DbErr;
-use std::result;
+use std::{io, result};
 
 use sqlx::migrate::MigrateError;
 use thiserror::Error;
@@ -26,6 +26,8 @@ pub enum Error {
     CredentialGeneratorError(String),
     #[error("S3 inventory error: `{0}`")]
     S3InventoryError(String),
+    #[error("{0}")]
+    IoError(#[from] io::Error),
 }
 
 impl From<sqlx::Error> for Error {
