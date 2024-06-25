@@ -321,13 +321,18 @@ def _is_valid_jwt(this_id_token: str) -> bool:
 
     tok_payload = json.loads(str(base64.b64decode(tok_vec[1] + "=="), "utf-8"))
 
+    # Verify the claims
+
+    # Check the token_use claim. If you are only using the ID token, its value must be id.
     tok_use = tok_payload['token_use']
-    iat = tok_payload['iat']
+
+    # Decode the token and compare the exp claim to the current time.
     exp = tok_payload['exp']
 
-    iat_dt = datetime.fromtimestamp(iat, timezone.utc)
+    now_dt = datetime.now(tz=timezone.utc)
     exp_dt = datetime.fromtimestamp(exp, timezone.utc)
-    delta = exp_dt - iat_dt
+    delta = exp_dt - now_dt
+    delta_hours = delta.total_seconds() / 3600
 
     # all these must be true
-    return delta.days == 1 and tok_use == 'id'
+    return delta_hours > 22 and tok_use == 'id'
