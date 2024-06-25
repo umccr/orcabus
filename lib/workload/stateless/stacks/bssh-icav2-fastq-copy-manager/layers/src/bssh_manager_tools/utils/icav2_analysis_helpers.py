@@ -19,8 +19,8 @@ from wrapica.project_data import (
     get_project_data_folder_id_from_project_id_and_path, list_project_data_non_recursively
 )
 from wrapica.project_analysis import (
-    get_analysis_input_object_from_analysis_code,
-    get_analysis_output_object_from_analysis_code
+    get_analysis_input_object_from_analysis_input_code,
+    get_analysis_output_object_from_analysis_output_code
 )
 from wrapica.enums import DataType
 
@@ -39,7 +39,6 @@ def get_interop_files_from_run_folder(
     Get the interop files from the run folder
 
     :param run_folder_obj:
-    :param input_data_list:
 
     :return:
     """
@@ -62,12 +61,13 @@ def get_interop_files_from_run_folder(
         )
     )
 
+
 def get_run_folder_obj_from_analysis_id(project_id: str, analysis_id: str) -> ProjectData:
     """
     Query the outputs object from analysis id
     """
 
-    run_folder_input: AnalysisInput = get_analysis_input_object_from_analysis_code(
+    run_folder_input: AnalysisInput = get_analysis_input_object_from_analysis_input_code(
         project_id,
         analysis_id,
         "run_folder"
@@ -85,7 +85,7 @@ def get_bclconvert_outputs_from_analysis_id(
     analysis_id: str
 ) -> Tuple[str, List[ProjectData]]:
 
-    bclconvert_output_folder_id = get_analysis_output_object_from_analysis_code(
+    bclconvert_output_folder_id = get_analysis_output_object_from_analysis_output_code(
         project_id,
         analysis_id,
         "Output"

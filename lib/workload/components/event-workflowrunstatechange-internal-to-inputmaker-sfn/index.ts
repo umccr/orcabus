@@ -49,7 +49,7 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
       functionName: `${props.lambdaPrefix}-generate-portal-run-id`,
       entry: path.join(__dirname, 'lambdas', 'generate_portal_run_id_py'),
       index: 'generate_portal_run_id.py',
-      runtime: lambda.Runtime.PYTHON_3_11,
+      runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
     });
 
@@ -61,7 +61,7 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
         functionName: `${props.lambdaPrefix}-generate-workflow-run-name`,
         entry: path.join(__dirname, 'lambdas', 'generate_workflow_run_name_py'),
         index: 'generate_workflow_run_name.py',
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
       }
     );
@@ -74,7 +74,7 @@ export class WorkflowRunStateChangeInternalInputMakerConstruct extends Construct
         functionName: `${props.lambdaPrefix}-fill-placeholders-in-event-payload-data`,
         entry: path.join(__dirname, 'lambdas', 'fill_placeholders_in_event_payload_data_py'),
         index: 'fill_placeholders_in_event_payload_data.py',
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
       }
     );

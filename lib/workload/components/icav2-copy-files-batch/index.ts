@@ -26,7 +26,7 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     // Manifest inverter lambda
     const manifest_inverter_lambda = new PythonFunction(this, 'manifest_inverter_lambda', {
       entry: path.join(__dirname, 'manifest_handler_lambda_py'),
-      runtime: lambda.Runtime.PYTHON_3_11,
+      runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
       index: 'manifest_handler_lambda.py',
       handler: 'handler',

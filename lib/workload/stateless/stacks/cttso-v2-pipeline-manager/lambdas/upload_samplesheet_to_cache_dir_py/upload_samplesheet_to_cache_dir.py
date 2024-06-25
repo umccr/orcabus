@@ -23,16 +23,18 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlparse
 
+# Samplesheet imports
+from v2_samplesheet_maker.functions.v2_samplesheet_writer import v2_samplesheet_writer
+
+# Wrapica imports
 from wrapica.project_data import (
     write_icav2_file_contents,
     convert_project_data_obj_to_icav2_uri,
     get_project_data_obj_by_id
 )
 
-from cttso_v2_pipeline_manager_tools.utils.compression_helpers import decompress_dict
+# V2 Imports
 from cttso_v2_pipeline_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
-
-from v2_samplesheet_maker.functions.v2_samplesheet_writer import v2_samplesheet_writer
 
 
 def handler(event, context):
