@@ -220,9 +220,8 @@ mod tests {
             .await
             .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created);
         assert_row(
@@ -260,9 +259,8 @@ mod tests {
             .await
             .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created);
         assert_row(

@@ -2,9 +2,8 @@
 //!
 
 use chrono::{DateTime, Utc};
-use sqlx::{query_file, query_file_as};
+use sqlx::query_file_as;
 use tracing::debug;
-use uuid::Uuid;
 
 use crate::database::{Client, CredentialGenerator};
 use crate::error::Result;
@@ -20,7 +19,6 @@ pub struct Ingester<'a> {
 /// The type representing an insert query.
 #[derive(Debug)]
 struct Insert {
-    object_id: Uuid,
     number_duplicate_events: i64,
 }
 
@@ -37,32 +35,6 @@ impl<'a> Ingester<'a> {
         })
     }
 
-    /// Reprocess inserts to find object ids that are not duplicates from the inserted events.
-    fn reprocess_inserts(object_ids: Vec<Uuid>, inserted: &mut Vec<Insert>) -> Vec<Uuid> {
-        object_ids
-            .into_iter()
-            .rev()
-            .flat_map(|object_id| {
-                // If we cannot find the object in our new ids, this object already exists.
-                let pos = inserted.iter().rposition(|record| {
-                    // This will never be `None`, maybe this is an sqlx bug?
-                    record.object_id == object_id
-                })?;
-
-                // We can remove this to avoid searching over it again.
-                let record = inserted.remove(pos);
-                debug!(
-                    object_id = ?record.object_id,
-                    number_duplicate_events = record.number_duplicate_events,
-                    "duplicate event found"
-                );
-
-                // This is a new event so the corresponding object should be inserted.
-                Some(object_id)
-            })
-            .collect()
-    }
-
     /// Ingest the events into the database by calling the insert and update queries.
     pub async fn ingest_events(&self, events: TransposedS3EventMessages) -> Result<()> {
         let mut tx = self.client().pool().begin().await?;
@@ -71,10 +43,9 @@ impl<'a> Ingester<'a> {
                 s3_object_ids = ?events.s3_object_ids,
                 "inserting events into s3_object table"
         );
-        let mut inserted = query_file_as!(
+        let inserted = query_file_as!(
             Insert,
             "../database/queries/ingester/aws/insert_s3_objects.sql",
-            &events.object_ids,
             &events.s3_object_ids,
             &events.public_ids,
             &events.buckets,
@@ -93,20 +64,11 @@ impl<'a> Ingester<'a> {
         .fetch_all(&mut *tx)
         .await?;
 
-        let object_ids = Self::reprocess_inserts(events.object_ids, &mut inserted);
-        // Insert only the non duplicate events.
-        if !object_ids.is_empty() {
-            debug!(
-                object_ids = ?object_ids,
-                "inserting events into object table"
-            );
-
-            query_file!(
-                "../database/queries/ingester/insert_objects.sql",
-                &object_ids,
-            )
-            .execute(&mut *tx)
-            .await?;
+        let duplicates = inserted
+            .into_iter()
+            .fold(0, |acc, inserted| acc + inserted.number_duplicate_events);
+        if duplicates != 0 {
+            debug!("duplicates found when inserting: {}", duplicates);
         }
 
         tx.commit().await?;
@@ -154,9 +116,8 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
         assert_created(&s3_object_results[0]);
     }
@@ -172,9 +133,8 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events.into())).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
 
         let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true, Created);
@@ -193,9 +153,8 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
 
         let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true, Created);
@@ -227,9 +186,8 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
         assert_with(
             &s3_object_results[0],
@@ -248,9 +206,8 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_ingest_events(
             &s3_object_results[0],
@@ -271,9 +228,8 @@ pub(crate) mod tests {
             .await
             .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_eq!(
             1,
@@ -311,9 +267,8 @@ pub(crate) mod tests {
             .await
             .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 3);
         assert_eq!(s3_object_results.len(), 3);
         assert_missing_deleted(
             &s3_object_results[0],
@@ -351,9 +306,8 @@ pub(crate) mod tests {
             .await
             .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 3);
         assert_eq!(s3_object_results.len(), 3);
         assert_missing_created(
             &s3_object_results[0],
@@ -388,9 +342,8 @@ pub(crate) mod tests {
             .await
             .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_eq!(
             1,
@@ -422,9 +375,8 @@ pub(crate) mod tests {
             .await
             .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         // Order should be different here.
         assert_ingest_events(
@@ -459,9 +411,8 @@ pub(crate) mod tests {
         events.sha256s[0] = None;
         ingester.ingest(EventSourceType::S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 3);
         assert_eq!(s3_object_results.len(), 3);
         assert_ingest_events(
             &s3_object_results[0],
@@ -537,9 +488,8 @@ pub(crate) mod tests {
 
         ingester.ingest(EventSourceType::S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_ingest_events(
             &s3_object_results[0],
@@ -560,9 +510,8 @@ pub(crate) mod tests {
             .await
             .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_eq!(
             1,
@@ -666,9 +615,8 @@ pub(crate) mod tests {
 
         ingester.ingest(EventSourceType::S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 3);
         assert_eq!(s3_object_results.len(), 3);
         assert_eq!(
             0,
@@ -713,9 +661,8 @@ pub(crate) mod tests {
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_missing_deleted(
             &s3_object_results[0],
@@ -765,9 +712,8 @@ pub(crate) mod tests {
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_missing_created(
             &s3_object_results[0],
@@ -817,9 +763,8 @@ pub(crate) mod tests {
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_missing_deleted(
             &s3_object_results[0],
@@ -868,9 +813,8 @@ pub(crate) mod tests {
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_missing_created(
             &s3_object_results[0],
@@ -914,9 +858,8 @@ pub(crate) mod tests {
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_with(
             &s3_object_results[0],
@@ -946,9 +889,8 @@ pub(crate) mod tests {
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_with(
             &s3_object_results[0],
@@ -975,9 +917,8 @@ pub(crate) mod tests {
         let events = replace_sequencers(test_events(None), None);
         ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_with(
             &s3_object_results[0],
@@ -1304,7 +1245,9 @@ pub(crate) mod tests {
             row_asserts(s3_object_results);
 
             // Clean up for next permutation.
-            pool.execute("truncate s3_object, object").await.unwrap();
+            pool.execute("truncate s3_object, group_link")
+                .await
+                .unwrap();
         }
 
         println!(
@@ -1374,17 +1317,11 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) async fn fetch_results<'a>(client: &Client<'a>) -> (Vec<PgRow>, Vec<PgRow>) {
-        (
-            sqlx::query("select * from object")
-                .fetch_all(client.pool())
-                .await
-                .unwrap(),
-            sqlx::query("select * from s3_object")
-                .fetch_all(client.pool())
-                .await
-                .unwrap(),
-        )
+    pub(crate) async fn fetch_results<'a>(client: &Client<'a>) -> Vec<PgRow> {
+        sqlx::query("select * from s3_object")
+            .fetch_all(client.pool())
+            .await
+            .unwrap()
     }
 
     pub(crate) async fn fetch_results_ordered<'a>(client: &Client<'a>) -> Vec<PgRow> {

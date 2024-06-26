@@ -1,7 +1,6 @@
 -- Bulk insert of s3 objects.
 insert into s3_object (
     s3_object_id,
-    object_id,
     public_id,
     bucket,
     key,
@@ -20,20 +19,19 @@ insert into s3_object (
 values (
     unnest($1::uuid[]),
     unnest($2::uuid[]),
-    unnest($3::uuid[]),
+    unnest($3::text[]),
     unnest($4::text[]),
-    unnest($5::text[]),
-    unnest($6::timestamptz[]),
-    unnest($7::bigint[]),
-    unnest($8::text[]),
-    unnest($9::timestamptz[]),
-    unnest($10::text[]),
-    unnest($11::storage_class[]),
+    unnest($5::timestamptz[]),
+    unnest($6::bigint[]),
+    unnest($7::text[]),
+    unnest($8::timestamptz[]),
+    unnest($9::text[]),
+    unnest($10::storage_class[]),
+    unnest($11::text[]),
     unnest($12::text[]),
-    unnest($13::text[]),
-    unnest($14::bigint[]),
-    unnest($15::boolean[]),
-    unnest($16::event_type[])
+    unnest($13::bigint[]),
+    unnest($14::boolean[]),
+    unnest($15::event_type[])
 ) on conflict on constraint deleted_sequencer_unique do update
     set number_duplicate_events = s3_object.number_duplicate_events + 1
-    returning object_id, number_duplicate_events;
+    returning number_duplicate_events;
