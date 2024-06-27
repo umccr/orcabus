@@ -132,29 +132,26 @@ def get_rclone_config_path(args):
 
     ssm = boto3.client("ssm")
 
-    rclone_config = {
-        "src": {
-            "type": "s3",
-            "provider": "AWS",
-            "access_key_id": ssm.get_parameter(Name="icav1_aws_access_key_id"),
-            "secret_access_key": ssm.get_parameter(Name="icav1_aws_secret_access_key"),
-            "session_token": ssm.get_parameter(Name="icav1_aws_session_token"),
-            "region": os.environ.get("AWS_REGION", "AWS_DEFAULT_REGION")
-        },
-        "dest": {
-            "type": "s3",
-            "provider": "AWS",
-            "access_key_id": os.environ.get("AWS_ACCESS_KEY_ID"),
-            "secret_access_key": os.environ.get("AWS_SECRET_ACCESS_KEY"),
-            "session_token": os.environ.get("AWS_SESSION_TOKEN"),
-            "region": os.environ.get("AWS_REGION", "AWS_DEFAULT_REGION")
-        }
-    }
+    rclone_config = f"""
+    [src]
+    type = s3
+    provider = AWS
+    access_key_id = {ssm.get_parameter(Name="icav1_aws_access_key_id")['Parameter'].get('Value', 'NotFound')}
+    secret_access_key = {ssm.get_parameter(Name="icav1_aws_secret_access_key")['Parameter'].get('Value', 'NotFound')}
+    session_token = {ssm.get_parameter(Name="icav1_aws_session_token")['Parameter'].get('Value', 'NotFound')}
+    region = {os.environ.get("AWS_REGION", "AWS_DEFAULT_REGION")}
 
-    rclone_config_file = str(rclone_config).replace('"', '').encode()
-    print("===RCLONE CONFIG FILE===")
-    print(rclone_config)
-    print("===RCLONE CONFIG FILE===")
+    [dest]
+    type = s3
+    provider = AWS
+    access_key_id = {os.environ.get("AWS_ACCESS_KEY_ID")}
+    secret_access_key = {os.environ.get("AWS_SECRET_ACCESS_KEY")}
+    session_token = {os.environ.get("AWS_SESSION_TOKEN")}
+    region = {os.environ.get("AWS_REGION", "AWS_DEFAULT_REGION")}
+    """
+
+    rclone_config_file = str(rclone_config).encode().rstrip()
+    logger.info(rclone_config)
     f = tempfile.NamedTemporaryFile(buffering=0, delete=False)
     f.write(rclone_config_file)
 
