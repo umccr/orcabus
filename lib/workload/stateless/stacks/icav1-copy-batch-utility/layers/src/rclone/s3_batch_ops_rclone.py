@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import tempfile
-import tomllib
+import tomli_w
 
 import boto3
 from pythonjsonlogger import jsonlogger
@@ -132,29 +132,28 @@ def get_rclone_config_path(args):
 
     ssm = boto3.client("ssm")
 
-    rclone_config = f"""
-    [src]
-    type = s3
-    provider = AWS
-    access_key_id = "{ssm.get_parameter(Name='icav1_aws_access_key_id')['Parameter'].get('Value', 'NotFound')}"
-    secret_access_key = "{ssm.get_parameter(Name='icav1_aws_secret_access_key')['Parameter'].get('Value', 'NotFound')}"
-    session_token = "{ssm.get_parameter(Name='icav1_aws_session_token')['Parameter'].get('Value', 'NotFound')}"
-    region = "{os.environ.get('AWS_REGION', 'AWS_DEFAULT_REGION')}"
-
-    [dest]
-    type = s3
-    provider = AWS
-    access_key_id = "{os.environ.get('AWS_ACCESS_KEY_ID')}"
-    secret_access_key = "{os.environ.get('AWS_SECRET_ACCESS_KEY')}"
-    session_token = "{os.environ.get('AWS_SESSION_TOKEN')}"
-    region = "{os.environ.get('AWS_REGION', 'AWS_DEFAULT_REGION')}"
-    """
+    rclone_config = {
+        "src": {
+            "type": "s3",
+            "provider": "AWS",
+            "access_key_id": ssm.get_parameter(Name='icav1_aws_access_key_id')['Parameter'].get('Value', 'NotFound'),
+            "secret_access_key": ssm.get_parameter(Name='icav1_aws_secret_access_key')['Parameter'].get('Value', 'NotFound'),
+            "session_token": ssm.get_parameter(Name='icav1_aws_session_token')['Parameter'].get('Value', 'NotFound'),
+            "region": os.environ.get('AWS_REGION', 'AWS_DEFAULT_REGION')
+        },
+        "dest": {
+            "type": "s3",
+            "provider": "AWS",
+            "access_key_id": os.environ.get('AWS_ACCESS_KEY_ID'),
+            "secret_access_key": os.environ.get('AWS_SECRET_ACCESS_KEY'),
+            "session_token": os.environ.get('AWS_SESSION_TOKEN'),
+            "region": os.environ.get('AWS_REGION', 'AWS_DEFAULT_REGION')
+        }
+    }
     
-    rclone_config_toml = tomllib.loads(rclone_config)
-
-    logger.info(rclone_config_toml)
+    logger.info(rclone_config)
     f = tempfile.NamedTemporaryFile(mode='wb', buffering=0, delete=False)
-    f.write(toml_dumps(rclone_config_toml).encode())
+    toml = tomli_w.dump(rclone_config, f) # FIXME: didn't find backend called \"\\\"s3\\\"\"\n" ... sanitise
 
     return f.name
 
@@ -208,16 +207,3 @@ def log_rclone(line: bytes) -> None:
 
     # The log level does not really matter here, since rclone already specifies its own log level
     logger.error(d)
-
-def toml_dumps(toml: dict, table="") -> str:
-    document = []
-    for key, value in toml.items():
-        match value:
-            case dict():
-                table_key = f"{table}.{key}" if table else key
-                document.append(
-                    f"\n[{table_key}]\n{toml_dumps(value, table=table_key)}"
-                )
-            case _:
-                document.append(f'"{key} = "{value}"')
-    return "\n".join(document)
