@@ -461,11 +461,12 @@
         "workflowVersion": "${__workflow_version__}",
         "workflowRunName.$": "$.Item.workflow_run_name.S",
         "payload": {
-          "refId": null,
           "version": "${__service_version__}",
-          "projectId.$": "$.Item.project_id.S",
-          "analysisId.$": "$.Item.analysis_id.S",
-          "analysisOutput": ""
+          "data": {
+            "projectId.$": "$.Item.project_id.S",
+            "analysisId.$": "$.Item.analysis_id.S",
+            "analysisOutput": ""
+          }
         }
       },
       "ResultPath": "$.database_event_data"

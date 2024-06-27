@@ -88,6 +88,8 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
       })
     );
 
+    const rulePrefix = this.coerce_names(`umccr__automated__${props.workflowName}`);
+
     // Create a rule for this state machine
     const rule = new events.Rule(this, 'rule', {
       eventBus: eventbus_obj,
@@ -100,7 +102,7 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
             payload: {
               userReference: [
                 {
-                  prefix: `umccr__automated__${props.workflowName}`,
+                  prefix: rulePrefix,
                 },
               ],
             },
@@ -118,5 +120,18 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
 
     /* Grant the state machine the ability to submit events to the event bus */
     eventbus_obj.grantPutEventsTo(this.stateMachineObj.role);
+  }
+
+  private coerce_names(name: string) {
+    /*
+      Convert a workflow name to lowercase and remove any spacing
+
+      This has to be in align with Python impl:
+      lib/workload/components/event-workflowrunstatechange-internal-to-inputmaker-sfn/lambdas/generate_workflow_run_name_py/generate_workflow_run_name.py
+    */
+    let _name = name.toLowerCase().replace(new RegExp(' ', 'g'), '');
+    _name = _name.replace(new RegExp('\\.', 'g'), '-');
+    _name = _name.replace(new RegExp('_', 'g'), '-');
+    return _name;
   }
 }

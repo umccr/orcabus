@@ -13,8 +13,8 @@ pub(crate) mod tests {
     use sea_orm::{ActiveModelTrait, TryIntoModel};
     use strum::EnumCount;
 
-    use crate::database::entities::object_group::ActiveModel as ActiveObjectGroup;
-    use crate::database::entities::object_group::Model as ObjectGroup;
+    use crate::database::entities::object::ActiveModel as ActiveObject;
+    use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
@@ -22,44 +22,45 @@ pub(crate) mod tests {
     use crate::uuid::UuidGenerator;
 
     /// Initialize database state for testing.
-    pub(crate) async fn initialize_database(
-        client: &Client,
-        n: usize,
-    ) -> Vec<(ObjectGroup, S3Object)> {
+    pub(crate) async fn initialize_database(client: &Client, n: usize) -> Vec<(Object, S3Object)> {
         let mut output = vec![];
 
         for index in 0..n {
-            let (group, object) = generate_entry(index);
+            let (object, s3_object) = generate_entry(index);
 
-            group.clone().insert(client.connection_ref()).await.unwrap();
             object
+                .clone()
+                .insert(client.connection_ref())
+                .await
+                .unwrap();
+            s3_object
                 .clone()
                 .insert(client.connection_ref())
                 .await
                 .unwrap();
 
             output.push((
-                group.try_into_model().unwrap(),
                 object.try_into_model().unwrap(),
+                s3_object.try_into_model().unwrap(),
             ));
         }
 
         output
     }
 
-    pub(crate) fn generate_entry(index: usize) -> (ActiveObjectGroup, ActiveS3Object) {
-        let object_group_id = UuidGenerator::generate();
+    pub(crate) fn generate_entry(index: usize) -> (ActiveObject, ActiveS3Object) {
+        let object_id = UuidGenerator::generate();
         let event = event_type(index);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
 
         (
-            ActiveObjectGroup {
-                object_group_id: Set(object_group_id),
+            ActiveObject {
+                object_id: Set(object_id),
                 attributes: Set(None),
             },
             ActiveS3Object {
                 s3_object_id: Set(UuidGenerator::generate()),
-                object_group_id: Set(object_group_id),
+                object_id: Set(object_id),
                 public_id: Set(UuidGenerator::generate()),
                 event_type: Set(event.clone()),
                 // Half as many buckets as keys.

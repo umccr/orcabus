@@ -6,24 +6,24 @@ use axum::Json;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::database::entities::object_group::Model as ObjectGroup;
+use crate::database::entities::object::Model as Object;
 use crate::database::entities::s3_object::Model as S3Object;
 use crate::error::Result;
 use crate::queries::get::GetQueryBuilder;
 use crate::routes::AppState;
 
-/// Params for a get object group by id request.
+/// Params for a get object by id request.
 #[derive(Debug, Deserialize)]
-pub struct GetObjectGroupById {}
+pub struct GetObjectById {}
 
-/// The get object groups handler.
-pub async fn get_object_group_by_id(
+/// The get object handler.
+pub async fn get_object_by_id(
     state: State<AppState>,
     Path(id): Path<Uuid>,
-) -> Result<Json<Option<ObjectGroup>>> {
+) -> Result<Json<Option<Object>>> {
     let query = GetQueryBuilder::new(&state.client);
 
-    Ok(Json(query.get_object_group(id).await?))
+    Ok(Json(query.get_object(id).await?))
 }
 
 /// Params for a get s3 objects by id request.
@@ -51,14 +51,14 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::object_group::Model as ObjectGroup;
+    use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::database::Client;
     use crate::queries::tests::initialize_database;
     use crate::routes::query_router;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn get_object_groups_api(pool: PgPool) {
+    async fn get_objects_api(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = initialize_database(&client, 10).await;
 
@@ -67,14 +67,14 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri(format!("/object_groups/{}", first.0.object_group_id))
+                    .uri(format!("/objects/{}", first.0.object_id))
                     .body(Body::empty())
                     .unwrap(),
             )
             .await
             .unwrap();
 
-        let result = from_slice::<ObjectGroup>(
+        let result = from_slice::<Object>(
             to_bytes(response.into_body(), usize::MAX)
                 .await
                 .unwrap()

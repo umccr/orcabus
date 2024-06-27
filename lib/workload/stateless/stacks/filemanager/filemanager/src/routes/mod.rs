@@ -10,10 +10,8 @@ use tower_http::trace::TraceLayer;
 
 use crate::database::Client;
 use crate::error::Error;
-use crate::routes::get::{get_object_group_by_id, get_s3_object_by_id};
-use crate::routes::list::{
-    count_object_groups, count_s3_objects, list_object_groups, list_s3_objects,
-};
+use crate::routes::get::{get_object_by_id, get_s3_object_by_id};
+use crate::routes::list::{count_objects, count_s3_objects, list_objects, list_s3_objects};
 
 pub mod get;
 pub mod list;
@@ -28,9 +26,9 @@ pub fn query_router(client: Client) -> Router {
     let state = AppState { client };
 
     Router::new()
-        .route("/object_groups", get(list_object_groups))
-        .route("/object_groups/:id", get(get_object_group_by_id))
-        .route("/object_groups/count", get(count_object_groups))
+        .route("/objects", get(list_objects))
+        .route("/objects/:id", get(get_object_by_id))
+        .route("/objects/count", get(count_objects))
         .route("/s3_objects", get(list_s3_objects))
         .route("/s3_objects/:id", get(get_s3_object_by_id))
         .route("/s3_objects/count", get(count_s3_objects))

@@ -9,8 +9,8 @@ use error::Result;
 use crate::error::Error;
 use crate::error::ErrorKind::LoadingEnvironment;
 
-pub mod entities;
 pub mod error;
+pub mod gen_entities;
 
 /// Configuration environment variables for the build process.
 #[derive(Debug, Deserialize)]

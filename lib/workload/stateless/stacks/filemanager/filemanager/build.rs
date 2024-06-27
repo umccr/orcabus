@@ -1,4 +1,4 @@
-use filemanager_build::entities::generate_entities;
+use filemanager_build::gen_entities::generate_entities;
 use filemanager_build::rebuild_if_changed;
 use miette::Result;
 

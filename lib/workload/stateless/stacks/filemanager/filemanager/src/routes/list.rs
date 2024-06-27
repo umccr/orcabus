@@ -5,28 +5,28 @@ use axum::extract::State;
 use axum::Json;
 use serde::Deserialize;
 
-use crate::database::entities::object_group::Model as ObjectGroup;
+use crate::database::entities::object::Model as Object;
 use crate::database::entities::s3_object::Model as S3Object;
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::AppState;
 
-/// Params for a list object groups request.
+/// Params for a list objects request.
 #[derive(Debug, Deserialize)]
-pub struct ListObjectGroupsParams {}
+pub struct ListObjectsParams {}
 
-/// The list object groups handler.
-pub async fn list_object_groups(state: State<AppState>) -> Result<Json<Vec<ObjectGroup>>> {
+/// The list objects handler.
+pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<Object>>> {
     let query = ListQueryBuilder::new(&state.client);
 
-    Ok(Json(query.list_object_groups().await?))
+    Ok(Json(query.list_objects().await?))
 }
 
-/// The count object groups handler.
-pub async fn count_object_groups(state: State<AppState>) -> Result<Json<u64>> {
+/// The count objects handler.
+pub async fn count_objects(state: State<AppState>) -> Result<Json<u64>> {
     let query = ListQueryBuilder::new(&state.client);
 
-    Ok(Json(query.count_object_groups().await?))
+    Ok(Json(query.count_objects().await?))
 }
 
 /// Params for a list s3 objects request.
@@ -58,14 +58,14 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::object_group::Model as ObjectGroup;
+    use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::database::Client;
     use crate::queries::tests::initialize_database;
     use crate::routes::query_router;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_object_groups_api(pool: PgPool) {
+    async fn list_objects_api(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = initialize_database(&client, 10).await;
 
@@ -73,14 +73,14 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/object_groups")
+                    .uri("/objects")
                     .body(Body::empty())
                     .unwrap(),
             )
             .await
             .unwrap();
 
-        let result = from_slice::<Vec<ObjectGroup>>(
+        let result = from_slice::<Vec<Object>>(
             to_bytes(response.into_body(), usize::MAX)
                 .await
                 .unwrap()
@@ -131,7 +131,7 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn count_object_groups_api(pool: PgPool) {
+    async fn count_objects_api(pool: PgPool) {
         let client = Client::from_pool(pool);
         initialize_database(&client, 10).await;
 
@@ -139,7 +139,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/object_groups/count")
+                    .uri("/objects/count")
                     .body(Body::empty())
                     .unwrap(),
             )

@@ -85,7 +85,7 @@ update as (
 select
     -- Note, this is the passed through value from the input in order to identify this event later.
     input_id as "s3_object_id!",
-    object_group_id,
+    object_id,
     public_id,
     bucket,
     key,

@@ -7,7 +7,7 @@ use envy::from_env;
 use serde::Deserialize;
 
 /// Configuration environment variables for filemanager.
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Eq, PartialEq)]
 pub struct Config {
     pub(crate) database_url: Option<String>,
     pub(crate) pgpassword: Option<String>,
@@ -16,7 +16,7 @@ pub struct Config {
     pub(crate) pguser: Option<String>,
     #[serde(rename = "filemanager_sqs_url")]
     pub(crate) sqs_url: Option<String>,
-    #[serde(default)]
+    #[serde(default, rename = "filemanager_paired_ingest_mode")]
     pub(crate) paired_ingest_mode: bool,
     #[serde(rename = "filemanager_api_server_addr")]
     pub(crate) api_server_addr: Option<String>,
@@ -54,7 +54,7 @@ impl Config {
     }
 
     /// Get the SQS url.
-    pub fn sqs_queue_url(&self) -> Option<&str> {
+    pub fn sqs_url(&self) -> Option<&str> {
         self.sqs_url.as_deref()
     }
 
@@ -78,5 +78,51 @@ impl Config {
     /// Convert an optional value to a missing environment variable error.
     pub fn value_into_err<T>(value: Option<T>) -> Result<T> {
         value.ok_or_else(|| LoadingEnvironment("missing environment variable".to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use envy::from_iter;
+
+    use super::*;
+
+    #[test]
+    fn test_environment() {
+        let data = vec![
+            ("DATABASE_URL", "url"),
+            ("PGPASSWORD", "password"),
+            ("PGHOST", "host"),
+            ("PGPORT", "1234"),
+            ("PGUSER", "user"),
+            ("FILEMANAGER_SQS_URL", "url"),
+            ("FILEMANAGER_PAIRED_INGEST_MODE", "true"),
+            ("FILEMANAGER_API_SERVER_ADDR", "127.0.0.1:8080"),
+        ]
+        .into_iter()
+        .map(|(key, value)| (key.to_string(), value.to_string()));
+
+        let config: Config = from_iter(data).unwrap();
+
+        assert_eq!(
+            config,
+            Config {
+                database_url: Some("url".to_string()),
+                pgpassword: Some("password".to_string()),
+                pghost: Some("host".to_string()),
+                pgport: Some(1234),
+                pguser: Some("user".to_string()),
+                sqs_url: Some("url".to_string()),
+                paired_ingest_mode: true,
+                api_server_addr: Some("127.0.0.1:8080".to_string()),
+            }
+        )
+    }
+
+    #[test]
+    fn test_environment_defaults() {
+        let config: Config = from_iter(vec![]).unwrap();
+
+        assert_eq!(config, Default::default());
     }
 }

@@ -26,7 +26,7 @@ pub struct IngesterPaired {
 /// The type representing an insert query.
 #[derive(Debug)]
 struct Insert {
-    object_group_id: Uuid,
+    object_id: Uuid,
     number_duplicate_events: i64,
 }
 
@@ -94,13 +94,13 @@ impl IngesterPaired {
                 // If we cannot find the object in our new ids, this object already exists.
                 let pos = inserted.iter().rposition(|record| {
                     // This will never be `None`, maybe this is an sqlx bug?
-                    record.object_group_id == object_id
+                    record.object_id == object_id
                 })?;
 
                 // We can remove this to avoid searching over it again.
                 let record = inserted.remove(pos);
                 debug!(
-                    object_id = ?record.object_group_id,
+                    object_id = ?record.object_id,
                     number_duplicate_events = record.number_duplicate_events,
                     "duplicate event found"
                 );
@@ -179,7 +179,7 @@ impl IngesterPaired {
             );
 
             query_file!(
-                "../database/queries/ingester/insert_object_groups.sql",
+                "../database/queries/ingester/insert_objects.sql",
                 &object_ids,
             )
             .execute(&mut *tx)
@@ -240,7 +240,7 @@ impl IngesterPaired {
             );
 
             query_file!(
-                "../database/queries/ingester/insert_object_groups.sql",
+                "../database/queries/ingester/insert_objects.sql",
                 &object_ids,
             )
             .execute(&mut *tx)
@@ -1568,9 +1568,7 @@ pub(crate) mod tests {
             row_asserts(s3_object_results);
 
             // Clean up for next permutation.
-            pool.execute("truncate s3_object, object_group")
-                .await
-                .unwrap();
+            pool.execute("truncate s3_object, object").await.unwrap();
         }
 
         println!(

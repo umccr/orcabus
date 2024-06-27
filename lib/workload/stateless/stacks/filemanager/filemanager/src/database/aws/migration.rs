@@ -56,7 +56,9 @@ impl Migrate for Migration {
 #[cfg(test)]
 pub(crate) mod tests {
     use lazy_static::lazy_static;
+    use sqlx::postgres::PgRow;
     use sqlx::PgPool;
+    use sqlx::Row;
 
     use super::*;
 
@@ -68,24 +70,28 @@ pub(crate) mod tests {
     async fn test_migrate(pool: PgPool) {
         let migrate = Migration::new(Client::from_pool(pool));
 
-        let not_exists = sqlx::query!(
-            "select exists (select from information_schema.tables where table_name = 'object_group')"
-        )
-        .fetch_one(migrate.client.pool())
-        .await
-        .unwrap();
+        let object_exists = check_table_exists(&migrate, "object").await;
+        let s3_object_exists = check_table_exists(&migrate, "s3_object").await;
 
-        assert!(!not_exists.exists.unwrap());
+        assert!(!object_exists.get::<bool, _>("exists"));
+        assert!(!s3_object_exists.get::<bool, _>("exists"));
 
         migrate.migrate().await.unwrap();
 
-        let exists = sqlx::query!(
-            "select exists (select from information_schema.tables where table_name = 'object_group')"
-        )
-        .fetch_one(migrate.client.pool())
-        .await
-        .unwrap();
+        let object_exists = check_table_exists(&migrate, "object").await;
+        let s3_object_exists = check_table_exists(&migrate, "s3_object").await;
 
-        assert!(exists.exists.unwrap());
+        assert!(object_exists.get::<bool, _>("exists"));
+        assert!(s3_object_exists.get::<bool, _>("exists"));
+    }
+
+    async fn check_table_exists(migration: &Migration, table_name: &str) -> PgRow {
+        sqlx::query(&format!(
+            "select exists (select from information_schema.tables where table_name = '{}')",
+            table_name
+        ))
+        .fetch_one(migration.client().pool())
+        .await
+        .unwrap()
     }
 }

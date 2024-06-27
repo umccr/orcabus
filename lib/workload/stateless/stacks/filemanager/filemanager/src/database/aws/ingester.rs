@@ -21,7 +21,7 @@ pub struct Ingester {
 /// The type representing an insert query.
 #[derive(Debug)]
 struct Insert {
-    object_group_id: Uuid,
+    object_id: Uuid,
     number_duplicate_events: i64,
 }
 
@@ -48,13 +48,13 @@ impl Ingester {
                 // If we cannot find the object in our new ids, this object already exists.
                 let pos = inserted.iter().rposition(|record| {
                     // This will never be `None`, maybe this is an sqlx bug?
-                    record.object_group_id == object_id
+                    record.object_id == object_id
                 })?;
 
                 // We can remove this to avoid searching over it again.
                 let record = inserted.remove(pos);
                 debug!(
-                    object_id = ?record.object_group_id,
+                    object_id = ?record.object_id,
                     number_duplicate_events = record.number_duplicate_events,
                     "duplicate event found"
                 );
@@ -76,7 +76,7 @@ impl Ingester {
         let mut inserted = query_file_as!(
             Insert,
             "../database/queries/ingester/aws/insert_s3_objects.sql",
-            &events.object_group_ids,
+            &events.object_ids,
             &events.s3_object_ids,
             &events.public_ids,
             &events.buckets,
@@ -95,7 +95,7 @@ impl Ingester {
         .fetch_all(&mut *tx)
         .await?;
 
-        let object_ids = Self::reprocess_inserts(events.object_group_ids, &mut inserted);
+        let object_ids = Self::reprocess_inserts(events.object_ids, &mut inserted);
         // Insert only the non duplicate events.
         if !object_ids.is_empty() {
             debug!(
@@ -104,7 +104,7 @@ impl Ingester {
             );
 
             query_file!(
-                "../database/queries/ingester/insert_object_groups.sql",
+                "../database/queries/ingester/insert_objects.sql",
                 &object_ids,
             )
             .execute(&mut *tx)
@@ -1306,9 +1306,7 @@ pub(crate) mod tests {
             row_asserts(s3_object_results);
 
             // Clean up for next permutation.
-            pool.execute("truncate s3_object, object_group")
-                .await
-                .unwrap();
+            pool.execute("truncate s3_object, object").await.unwrap();
         }
 
         println!(
@@ -1380,7 +1378,7 @@ pub(crate) mod tests {
 
     pub(crate) async fn fetch_results<'a>(client: &Client) -> (Vec<PgRow>, Vec<PgRow>) {
         (
-            sqlx::query("select * from object_group")
+            sqlx::query("select * from object")
                 .fetch_all(client.pool())
                 .await
                 .unwrap(),
