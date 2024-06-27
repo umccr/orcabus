@@ -24,5 +24,11 @@ Or from the top-level OrcaBus directory:
 yarn cdk-stateless synth OrcaBusStatelessPipeline/OrcaBusBeta/ICAv1CopyBatchUtilityStack
 ```
 
+## Invoke (manually)
+
+```sh
+% aws lambda invoke --function-name OrcaBusBeta-ICAv1CopyBatc-ICAv1CopyBatchUtilitylam-1CjnVrJ26tzJ --cli-binary-format raw-in-base64-out --payload '{"RCLONE_SYNC_CONTENT_SOURCE": "s3://1f412e89-acc8-4337-b484-08d89d4636a9/Coverage_chk/SBJ03034/_manifest.json", "RCLONE_SYNC_CONTENT_DESTINATION": "s3://umccr-temp-dev/rclone-lambda-test/_manifest.json" }' response.json
+```
+
 [rclone]: https://rclone.org/
 [s3_batch_ops_greater_than_5GB]: https://aws.amazon.com/blogs/storage/copying-objects-greater-than-5-gb-with-amazon-s3-batch-operations/

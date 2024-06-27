@@ -125,11 +125,6 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
         runtime: Runtime.PYTHON_3_12,
         role: lambdaRole,
         environment: {
-          // Populated at runtime and refreshed periodically, does not belong in the stack's env vars?
-          //
-          // ica_v1_aws_access_key_id: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1AccessKeyId", { parameterName: "IcaV1AccessKeyId" }).stringValue,
-          // ica_v1_aws_secret_access_key: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1SecretAccessKey", { parameterName: "IcaV1SecretAccessKey" }).stringValue, //pragma: allowlist secret
-          // ica_v1_aws_session_token: aws_ssm.StringParameter.fromSecureStringParameterAttributes(this, "IcaV1SessionToken", { parameterName: "IcaV1SessionToken"}).stringValue,
           destination_bucket: props.BucketForCopyDestination,
           destination_bucket_prefix: props.BucketForCopyDestinationPrefix,
           max_concurrency: props.TransferMaximumConcurrency.toString(),
@@ -143,19 +138,6 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
         handler: 'handler',
       }
     );
-
-    // FIXME: rclone-lambda-layer is a go layer, so either build a custom construct or
-    // just refer to the already uploaded layer by name?
-    //
-    // const s3_batch_ops_rclone_layer = new PythonLambdaLayerConstruct(
-    //   this,
-    //   'ICAv1 Copy Batch Utility lambda layer - RClone',
-    //   {
-    //     layerName: 'rclone-lambda-layer',
-    //     layerDescription: 'layer to enable the manager tools layer',
-    //     layerDirectory: path.join(__dirname, '../layers'),
-    //   }
-    // );
 
     // FIXME: Add the layer building code here instead of relying on a pre-build/uploaded rclone layer
     const rclone_layer_ref = LayerVersion.fromLayerVersionArn(
@@ -172,6 +154,18 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
         runtime: Runtime.PYTHON_3_12,
         layers: [rclone_layer_ref],
         role: lambdaRole,
+        // environment: {
+        //   // Creds
+        //   SECURE_SRC_AWS_ACCESS_KEY_ID: "None",       // pragma: allowlist secret
+        //   SECURE_SRC_AWS_SECRET_ACCESS_KEY: "None",   // pragma: allowlist secret
+        //   SECURE_SRC_AWS_SESSION_TOKEN: "None",       // pragma: allowlist secret
+        //   SECURE_DEST_AWS_ACCESS_KEY_ID: "None",      // pragma: allowlist secret
+        //   SECURE_DEST_AWS_SECRET_ACCESS_KEY: "None",  // pragma: allowlist secret
+        //   SECURE_DEST_AWS_SESSION_TOKEN: "None",      // pragma: allowlist secret
+        //   // Objects
+        //   RCLONE_SYNC_CONTENT_SOURCE: "None",
+        //   RCLONE_SYNC_CONTENT_DESTINATION: "None",
+        // },
         architecture: Architecture.ARM_64,
         timeout: Duration.minutes(15),
         index: 's3_batch_ops_rclone.py',

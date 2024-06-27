@@ -82,7 +82,7 @@ async def run_rclone_sync(event: LambdaDict) -> None:
     # https://github.com/rclone/rclone/blob/386acaa/fs/config/configfile/configfile.go#L95-L100
     # https://github.com/rclone/rclone/blob/386acaa/fs/config/configfile/configfile.go#L53-L93
     # https://github.com/rclone/rclone/blob/386acaa/fs/config/crypt.go#L46-L187
-    filename = get_rclone_config_path(
+    config_fname = get_rclone_config_path(
         str(event.get("RCLONE_CONFIG_SSM_NAME", ""))
         or os.environ.get("RCLONE_CONFIG_SSM_NAME")
         or "rclone-config"
@@ -100,7 +100,7 @@ async def run_rclone_sync(event: LambdaDict) -> None:
     cmd = [
         "rclone",
         "--config",
-        filename,
+        config_fname,
         "--use-json-log",
         "--verbose",
         "sync",
@@ -122,25 +122,41 @@ async def run_rclone_sync(event: LambdaDict) -> None:
     #
     # https://stackoverflow.com/a/61939464
     await asyncio.gather(p.wait(), log_stdout(p.stdout), log_stderr(p.stderr))
-    os.remove(filename)
+    os.remove(config_fname)
     logger.info("Finished rclone sync")
 
-
-def get_rclone_config_path(rclone_config_ssm_name: str) -> str:
+def get_rclone_config_path(args):
     """
     get_rclone_config_path retrieves rclone config from AWS SSM and dumps it on a temp file.
     """
-    boto3_config = botocore.config.Config(
-        connect_timeout=5, read_timeout=5, retries={"max_attempts": 2}
-    )
-    ssm_client = boto3.client("ssm", config=boto3_config)
 
-    rclone_config = ssm_client.get_parameter(
-        Name=rclone_config_ssm_name, WithDecryption=True
-    )["Parameter"].get("Value", "")
+    ssm = boto3.client("ssm")
 
+    rclone_config = {
+        "src": {
+            "type": "s3",
+            "provider": "AWS",
+            "access_key_id": ssm.get_parameter(Name="icav1_aws_access_key_id"),
+            "secret_access_key": ssm.get_parameter(Name="icav1_aws_secret_access_key"),
+            "session_token": ssm.get_parameter(Name="icav1_aws_session_token"),
+            "region": os.environ.get("AWS_REGION", "AWS_DEFAULT_REGION")
+        },
+        "dest": {
+            "type": "s3",
+            "provider": "AWS",
+            "access_key_id": os.environ.get("AWS_ACCESS_KEY_ID"),
+            "secret_access_key": os.environ.get("AWS_SECRET_ACCESS_KEY"),
+            "session_token": os.environ.get("AWS_SESSION_TOKEN"),
+            "region": os.environ.get("AWS_REGION", "AWS_DEFAULT_REGION")
+        }
+    }
+
+    rclone_config_file = str(rclone_config).replace('"', '').encode()
+    print("===RCLONE CONFIG FILE===")
+    print(rclone_config)
+    print("===RCLONE CONFIG FILE===")
     f = tempfile.NamedTemporaryFile(buffering=0, delete=False)
-    f.write(rclone_config.encode())
+    f.write(rclone_config_file)
 
     return f.name
 
