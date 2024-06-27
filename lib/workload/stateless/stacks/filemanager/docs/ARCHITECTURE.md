@@ -8,6 +8,13 @@ in the `object` and `s3_object` tables.
 Some details about S3 event processing needs to be addressed in filemanager, specifically in relation to out of order
 and duplicate events.
 
+## Database schema
+
+The filemanager has the following database schema. The majority of the data is stored under the `s3_object` table. Modelling
+attributes on groups of `s3_object` is supported by using the `object_group` table and the `group_link` many-to-many relationship.
+
+![filemanager_schema.png](filemanager_schema.png)
+
 ## Event ingestion
 
 The filemanager determines the location of objects in cloud storage by ingesting events like the [AWS S3 events][s3-events].
