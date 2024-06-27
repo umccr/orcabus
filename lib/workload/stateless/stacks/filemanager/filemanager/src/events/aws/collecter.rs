@@ -97,7 +97,7 @@ impl CollecterBuilder {
     /// Build a collector by manually calling receive to obtain the raw events.
     pub async fn build_receive(mut self, config: &Config) -> Result<Collecter> {
         let url = self.sqs_url.take();
-        let url = Config::value_or_else(url.as_deref(), config.sqs_queue_url())?;
+        let url = Config::value_or_else(url.as_deref(), config.sqs_url())?;
 
         let client = self.sqs_client.take();
         if let Some(sqs_client) = &client {
