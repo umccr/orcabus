@@ -16,7 +16,7 @@ use crate::events::EventSourceType;
 pub mod aws;
 
 // Include the generated entities module.
-include!(concat!(env!("OUT_DIR"), "/entities.rs"));
+include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
 /// A trait which can generate database credentials.
 #[async_trait]
@@ -191,7 +191,7 @@ pub(crate) mod tests {
         .unwrap();
 
         query_file!(
-            "../database/queries/ingester/insert_object_groups.sql",
+            "../database/queries/ingester/insert_objects.sql",
             &vec![object_id],
         )
         .fetch_all(&mut *tx)
@@ -202,7 +202,7 @@ pub(crate) mod tests {
 
         let inserted = query!(
             "select s3_object_id as \"s3_object_id!\",
-                object_group_id as \"object_group_id!\",
+                object_id as \"object_id!\",
                 bucket,
                 key,
                 date,
@@ -253,7 +253,7 @@ pub(crate) mod tests {
         .unwrap();
 
         query_file!(
-            "../database/queries/ingester/insert_object_groups.sql",
+            "../database/queries/ingester/insert_objects.sql",
             &vec![object_id],
         )
         .fetch_all(&mut *tx)
@@ -264,7 +264,7 @@ pub(crate) mod tests {
 
         let inserted = query!(
             "select s3_object_id as \"s3_object_id!\",
-                object_group_id as \"object_group_id!\",
+                object_id as \"object_id!\",
                 bucket,
                 key,
                 date,

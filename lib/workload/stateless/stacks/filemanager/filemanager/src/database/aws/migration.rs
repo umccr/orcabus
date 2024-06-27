@@ -69,7 +69,7 @@ pub(crate) mod tests {
         let migrate = Migration::new(Client::from_pool(pool));
 
         let not_exists = sqlx::query!(
-            "select exists (select from information_schema.tables where table_name = 'object_group')"
+            "select exists (select from information_schema.tables where table_name = 'object')"
         )
         .fetch_one(migrate.client.pool())
         .await
@@ -80,7 +80,7 @@ pub(crate) mod tests {
         migrate.migrate().await.unwrap();
 
         let exists = sqlx::query!(
-            "select exists (select from information_schema.tables where table_name = 'object_group')"
+            "select exists (select from information_schema.tables where table_name = 'object')"
         )
         .fetch_one(migrate.client.pool())
         .await

@@ -3,8 +3,8 @@
 
 use sea_orm::{EntityTrait, PaginatorTrait, Select};
 
-use crate::database::entities::object_group::Entity as ObjectGroupEntity;
-use crate::database::entities::object_group::Model as ObjectGroup;
+use crate::database::entities::object::Entity as ObjectEntity;
+use crate::database::entities::object::Model as Object;
 use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::entities::s3_object::Model as S3Object;
 use crate::database::Client;
@@ -21,9 +21,9 @@ impl<'a> ListQueryBuilder<'a> {
         Self { client }
     }
 
-    /// Build a select query for finding values from object groups.
-    pub fn build_object_group() -> Select<ObjectGroupEntity> {
-        ObjectGroupEntity::find()
+    /// Build a select query for finding values from objects.
+    pub fn build_object() -> Select<ObjectEntity> {
+        ObjectEntity::find()
     }
 
     /// Build a select query for finding values from s3 objects.
@@ -31,9 +31,9 @@ impl<'a> ListQueryBuilder<'a> {
         S3ObjectEntity::find()
     }
 
-    /// Find all object groups.
-    pub async fn list_object_groups(&self) -> Result<Vec<ObjectGroup>> {
-        Ok(Self::build_object_group()
+    /// Find all objects.
+    pub async fn list_objects(&self) -> Result<Vec<Object>> {
+        Ok(Self::build_object()
             .all(self.client.connection_ref())
             .await?)
     }
@@ -45,9 +45,9 @@ impl<'a> ListQueryBuilder<'a> {
             .await?)
     }
 
-    /// Count object groups.
-    pub async fn count_object_groups(&self) -> Result<u64> {
-        Ok(Self::build_object_group()
+    /// Count objects.
+    pub async fn count_objects(&self) -> Result<u64> {
+        Ok(Self::build_object()
             .count(self.client.connection_ref())
             .await?)
     }
@@ -71,12 +71,12 @@ mod tests {
     use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_list_object_groups(pool: PgPool) {
+    async fn test_list_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = initialize_database(&client, 10).await;
 
         let builder = ListQueryBuilder::new(&client);
-        let result = builder.list_object_groups().await.unwrap();
+        let result = builder.list_objects().await.unwrap();
 
         assert_eq!(
             result,
@@ -105,12 +105,12 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_count_object_groups(pool: PgPool) {
+    async fn test_count_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
         initialize_database(&client, 10).await;
 
         let builder = ListQueryBuilder::new(&client);
-        let result = builder.count_object_groups().await.unwrap();
+        let result = builder.count_objects().await.unwrap();
 
         assert_eq!(result, 10);
     }
