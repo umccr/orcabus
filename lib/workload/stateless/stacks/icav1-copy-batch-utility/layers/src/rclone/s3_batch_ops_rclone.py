@@ -123,9 +123,9 @@ def generate_rclone_config(conf_path: Path):
         "src": {
             "type": "s3",
             "provider": "AWS",
-            "access_key_id": ssm.get_parameter(Name='icav1_aws_access_key_id')['Parameter'].get('Value', 'NotFound'),
-            "secret_access_key": ssm.get_parameter(Name='icav1_aws_secret_access_key')['Parameter'].get('Value', 'NotFound'),
-            "session_token": ssm.get_parameter(Name='icav1_aws_session_token')['Parameter'].get('Value', 'NotFound'),
+            "access_key_id": ssm.get_parameter(Name='icav1_aws_access_key_id', WithDecryption=True)['Parameter'].get('Value', 'NotFound'),
+            "secret_access_key": ssm.get_parameter(Name='icav1_aws_secret_access_key', WithDecryption=True)['Parameter'].get('Value', 'NotFound'),
+            "session_token": ssm.get_parameter(Name='icav1_aws_session_token', WithDecryption=True)['Parameter'].get('Value', 'NotFound'),
             "region": os.environ.get('AWS_REGION', 'AWS_DEFAULT_REGION')
         },
         "dest": {
