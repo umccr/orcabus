@@ -60,7 +60,7 @@ Then store the analysis configurations in the database and return an event back 
     "userReference": "bclconvert_interop__semi_automated__umccr__pipeline__20240513ba2b787f",
     "bclconvertReportDirectory": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/",
     "interopDirectory": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/",
-    "runId": "231116_A01052_0172_BHVLM5DSX7",
+    "instrumentRunId": "231116_A01052_0172_BHVLM5DSX7",
     "analysisOutputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513ba2b787f/out/",
     "icaLogsUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513ba2b787f/logs/",
     "userTags": {
