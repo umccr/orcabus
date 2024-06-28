@@ -35,7 +35,9 @@ node_modules
 # CDK asset staging directory
 .cdk.staging
 cdk.out/
-cdk.context.json
+# commented out for best practices to avoid non-deterministic behavior
+# https://docs.aws.amazon.com/cdk/v2/guide/best-practices.html#best-practices-apps
+# cdk.context.json
 
 # https://yarnpkg.com/getting-started/qa#which-files-should-be-gitignored
 .pnp.*
