@@ -9,5 +9,6 @@ authors.workspace = true
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
 axum = "0.7"
+dotenvy = "0.15"
 
 filemanager = { path = "../filemanager" }

@@ -32,14 +32,32 @@ pub fn query_router(client: Client) -> Router {
         .route("/s3_objects", get(list_s3_objects))
         .route("/s3_objects/:id", get(get_s3_object_by_id))
         .route("/s3_objects/count", get(count_s3_objects))
+        .fallback(fallback)
         .with_state(state)
         .layer(TraceLayer::new_for_http())
+}
+
+/// The fallback route.
+async fn fallback() -> impl IntoResponse {
+    ErrorResponse::new("not found".to_string()).response(StatusCode::NOT_FOUND)
 }
 
 /// The error response format returned in the API.
 #[derive(Serialize)]
 pub struct ErrorResponse {
     message: String,
+}
+
+impl ErrorResponse {
+    /// Create an error response.
+    pub fn new(message: String) -> Self {
+        Self { message }
+    }
+
+    /// Create the response from this error.
+    pub fn response(self, status_code: StatusCode) -> impl IntoResponse {
+        (status_code, Json(self)).into_response()
+    }
 }
 
 impl IntoResponse for Error {
@@ -52,7 +70,7 @@ impl IntoResponse for Error {
             ),
         };
 
-        (status, Json(ErrorResponse { message })).into_response()
+        ErrorResponse::new(message).response(status).into_response()
     }
 }
 
