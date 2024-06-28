@@ -1,10 +1,24 @@
 import { Construct } from 'constructs';
-import { aws_ssm, Duration } from 'aws-cdk-lib';
+import { aws_ssm, Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
-import { CorsHttpMethod, HttpApi, CfnStage } from 'aws-cdk-lib/aws-apigatewayv2';
-import { IStringParameter } from 'aws-cdk-lib/aws-ssm';
-import { LogGroup } from 'aws-cdk-lib/aws-logs';
+import { CorsHttpMethod, HttpApi, CfnStage, DomainName } from 'aws-cdk-lib/aws-apigatewayv2';
+import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
+import { IStringParameter, StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
+
+export interface ApiGwLogsConfig {
+  /**
+   * The number of days log events are kept in CloudWatch Logs.
+   */
+  retention: RetentionDays;
+  /**
+   * The removal policy to apply to the log group.
+   */
+  removalPolicy: RemovalPolicy;
+}
 
 export interface ApiGatewayConstructProps {
   region: string;
@@ -12,6 +26,14 @@ export interface ApiGatewayConstructProps {
   cognitoUserPoolIdParameterName: string;
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
+  /**
+   * The prefix for the custom domain name
+   */
+  customDomainNamePrefix: string;
+  /**
+   * The configuration for aws cloudwatch logs
+   */
+  apiGwLogsConfig: ApiGwLogsConfig;
 }
 
 export class ApiGatewayConstruct extends Construct {
@@ -19,6 +41,17 @@ export class ApiGatewayConstruct extends Construct {
 
   constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
     super(scope, id);
+
+    // umccr acm arn
+    const umccrAcmArn = StringParameter.valueFromLookup(this, '/umccr/certificate_arn');
+    const hostedDomainName = StringParameter.valueFromLookup(this, '/hosted_zone/umccr/name');
+    const hostedZoneId = StringParameter.valueFromLookup(this, '/hosted_zone/umccr/id');
+
+    const domainName = `${props.customDomainNamePrefix}.${hostedDomainName}`;
+    const apiGWDomainName = new DomainName(this, 'UmccrDomainName', {
+      domainName: `${props.customDomainNamePrefix}.${hostedDomainName}`,
+      certificate: Certificate.fromCertificateArn(this, 'cert', umccrAcmArn),
+    });
 
     this._httpApi = new HttpApi(this, 'HttpApi', {
       apiName: 'OrcaBusAPI-' + props.apiName,
@@ -34,11 +67,27 @@ export class ApiGatewayConstruct extends Construct {
         maxAge: Duration.days(10),
       },
       defaultAuthorizer: this.getAuthorizer(props),
-      // defaultDomainMapping: ... TODO
+      defaultDomainMapping: {
+        domainName: apiGWDomainName,
+      },
+    });
+
+    new ARecord(this, 'CustomDomainARecord', {
+      zone: HostedZone.fromHostedZoneAttributes(this, 'UmccrHostedZone', {
+        hostedZoneId,
+        zoneName: hostedDomainName,
+      }),
+      recordName: domainName,
+      target: RecordTarget.fromAlias(
+        new ApiGatewayv2DomainProperties(
+          apiGWDomainName.regionalDomainName,
+          apiGWDomainName.regionalHostedZoneId
+        )
+      ),
     });
 
     // LogGroups
-    this.setupAccessLogs();
+    this.setupAccessLogs(props.apiGwLogsConfig);
 
     // CloudMap
     // this.setupCloudServiceDiscovery()
@@ -50,8 +99,11 @@ export class ApiGatewayConstruct extends Construct {
 
   // TODO: Taken from https://github.com/aws/aws-cdk/issues/11100#issuecomment-904627081
   // Monitor for higher level CDK construct instead of leveraging CfnStage
-  private setupAccessLogs() {
-    const accessLogs = new LogGroup(this, 'OrcaBus-ApiGw-AccessLogs');
+  private setupAccessLogs(props: ApiGwLogsConfig) {
+    const accessLogs = new LogGroup(this, 'ApiGwAccessLogs', {
+      retention: props.retention,
+      removalPolicy: props.removalPolicy,
+    });
     const stage = this.httpApi.defaultStage?.node.defaultChild as CfnStage;
     stage.accessLogSettings = {
       destinationArn: accessLogs.logGroupArn,

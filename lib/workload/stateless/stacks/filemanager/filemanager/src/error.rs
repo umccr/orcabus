@@ -23,8 +23,6 @@ pub enum Error {
     MissingEnvironmentVariable(String),
     #[error("Invalid environment variable: `{0}`")]
     InvalidEnvironmentVariable(String),
-    #[error("S3 error: `{0}`")]
-    S3Error(String),
     #[error("credential generator error: `{0}`")]
     CredentialGeneratorError(String),
     #[error("S3 inventory error: `{0}`")]

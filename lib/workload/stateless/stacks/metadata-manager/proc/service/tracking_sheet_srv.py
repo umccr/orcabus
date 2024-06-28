@@ -13,6 +13,9 @@ from libumccr.aws import libssm
 import logging
 
 from app.models import Subject, Specimen, Library
+from app.models.lab.library import Quality, LibraryType, Phenotype, WorkflowType
+from app.models.lab.specimen import Source
+from app.models.lab.utils import get_value_from_human_readable_label
 from proc.service.utils import clean_model_history
 
 logger = logging.getLogger()
@@ -99,7 +102,7 @@ def persist_lab_metadata(df: pd.DataFrame):
                 internal_id=record.get('sample_id'),
                 defaults={
                     "internal_id": record.get('sample_id'),
-                    "source": record.get('source'),
+                    "source": get_value_from_human_readable_label(Source.choices, record.get('source')),
                 }
             )
             if is_spc_created:
@@ -111,10 +114,10 @@ def persist_lab_metadata(df: pd.DataFrame):
                 internal_id=record.get('library_id'),
                 defaults={
                     'internal_id': record.get('library_id'),
-                    'phenotype': record.get('phenotype'),
-                    'workflow': record.get('workflow'),
-                    'quality': sanitize_library_quality(record.get('quality')),
-                    'type': record.get('type'),
+                    'phenotype': get_value_from_human_readable_label(Phenotype.choices, record.get('phenotype')),
+                    'workflow': get_value_from_human_readable_label(WorkflowType.choices, record.get('workflow')),
+                    'quality': get_value_from_human_readable_label(Quality.choices, record.get('quality')),
+                    'type': get_value_from_human_readable_label(LibraryType.choices, record.get('type')),
                     'assay': record.get('assay'),
                     'coverage': sanitize_library_coverage(record.get('coverage')),
                     'specimen_id': specimen.id
@@ -168,9 +171,9 @@ def persist_lab_metadata(df: pd.DataFrame):
     }
 
 
-def download_tracking_sheet(year_array: List[str]) -> pd.DataFrame:
+def download_tracking_sheet(year_array: List[int]) -> pd.DataFrame:
     """
-    Download the full original metadata from google tracking sheet
+    Download the full original metadata from Google tracking sheet
     """
     sheet_id = libssm.get_secret(SSM_NAME_TRACKING_SHEET_ID)
     account_info = libssm.get_secret(SSM_NAME_GDRIVE_ACCOUNT)
@@ -248,16 +251,6 @@ def _clean_data_cell(value):
     if value == 'NA' or value == '_' or value == '-' or value == '' or value != value or value == np.nan:
         value = None
 
-    return value
-
-
-def sanitize_library_quality(value: str):
-    """
-    convert value that is valid in the tracking sheet to return a value that is recognizable by the Django Model
-    """
-
-    if value == 'VeryPoor':
-        return 'very-poor'
     return value
 
 

@@ -9,7 +9,6 @@ import { getMetadataManagerStackProps } from './stacks/metadataManager';
 import { getSequenceRunManagerStackProps } from './stacks/sequenceRunManager';
 import { getFileManagerStackProps } from './stacks/fileManager';
 import { getBsRunsUploadManagerStackProps } from './stacks/bsRunsUploadManager';
-import { getICAv1CopyBatchUtilityStackProps } from './stacks/icav1CopyBatchUtility';
 import { getBsshIcav2FastqCopyManagerStackProps } from './stacks/bsshIcav2FastqCopyManager';
 import {
   getCttsov2Icav2PipelineManagerStackProps,
@@ -45,41 +44,42 @@ interface EnvironmentConfig {
  * @returns the configuration for the given app stage
  */
 export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null => {
+  const stackProps = {
+    statefulConfig: {
+      sharedStackProps: getSharedStackProps(stage),
+      tokenServiceStackProps: getTokenServiceStackProps(),
+      icaEventPipeStackProps: getIcaEventPipeStackProps(),
+      bclconvertInteropQcIcav2PipelineTableStackProps:
+        getBclconvertInteropQcIcav2PipelineTableStackProps(),
+      cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
+      BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
+      stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
+    },
+    statelessConfig: {
+      postgresManagerStackProps: getPostgresManagerStackProps(),
+      metadataManagerStackProps: getMetadataManagerStackProps(stage),
+      sequenceRunManagerStackProps: getSequenceRunManagerStackProps(stage),
+      fileManagerStackProps: getFileManagerStackProps(stage),
+      bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+      bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
+      bclconvertInteropQcIcav2PipelineManagerStackProps:
+        getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
+      cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
+      eventSchemaStackProps: getEventSchemaStackProps(),
+      dataSchemaStackProps: getDataSchemaStackProps(),
+      bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
+      workflowManagerStackProps: getWorkflowManagerStackProps(stage),
+      stackyMcStackFaceProps: getGlueStackProps(),
+    },
+  };
+
   switch (stage) {
     case AppStage.BETA:
       return {
         name: 'beta',
         region,
         accountId: accountIdAlias[stage], // umccr_development
-        stackProps: {
-          statefulConfig: {
-            sharedStackProps: getSharedStackProps(stage),
-            tokenServiceStackProps: getTokenServiceStackProps(),
-            icaEventPipeStackProps: getIcaEventPipeStackProps(),
-            bclconvertInteropQcIcav2PipelineTableStackProps:
-              getBclconvertInteropQcIcav2PipelineTableStackProps(),
-            cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
-            BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
-            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
-          },
-          statelessConfig: {
-            postgresManagerStackProps: getPostgresManagerStackProps(),
-            metadataManagerStackProps: getMetadataManagerStackProps(),
-            sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
-            fileManagerStackProps: getFileManagerStackProps(stage),
-            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav1CopyBatchUtilityStackProps: getICAv1CopyBatchUtilityStackProps(stage),
-            bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
-            bclconvertInteropQcIcav2PipelineManagerStackProps:
-              getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
-            cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
-            eventSchemaStackProps: getEventSchemaStackProps(),
-            dataSchemaStackProps: getDataSchemaStackProps(),
-            bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
-            workflowManagerStackProps: getWorkflowManagerStackProps(),
-            stackyMcStackFaceProps: getGlueStackProps(),
-          },
-        },
+        stackProps: stackProps,
       };
 
     case AppStage.GAMMA:
@@ -87,35 +87,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
         name: 'gamma',
         region,
         accountId: accountIdAlias[stage], // umccr_staging
-        stackProps: {
-          statefulConfig: {
-            sharedStackProps: getSharedStackProps(stage),
-            tokenServiceStackProps: getTokenServiceStackProps(),
-            icaEventPipeStackProps: getIcaEventPipeStackProps(),
-            bclconvertInteropQcIcav2PipelineTableStackProps:
-              getBclconvertInteropQcIcav2PipelineTableStackProps(),
-            cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
-            BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
-            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
-          },
-          statelessConfig: {
-            postgresManagerStackProps: getPostgresManagerStackProps(),
-            metadataManagerStackProps: getMetadataManagerStackProps(),
-            sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
-            fileManagerStackProps: getFileManagerStackProps(stage),
-            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav1CopyBatchUtilityStackProps: getICAv1CopyBatchUtilityStackProps(stage),
-            bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
-            bclconvertInteropQcIcav2PipelineManagerStackProps:
-              getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
-            cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
-            eventSchemaStackProps: getEventSchemaStackProps(),
-            dataSchemaStackProps: getDataSchemaStackProps(),
-            bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
-            workflowManagerStackProps: getWorkflowManagerStackProps(),
-            stackyMcStackFaceProps: getGlueStackProps(),
-          },
-        },
+        stackProps: stackProps,
       };
 
     case AppStage.PROD:
@@ -123,35 +95,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
         name: 'prod',
         region,
         accountId: accountIdAlias[stage], // umccr_production
-        stackProps: {
-          statefulConfig: {
-            sharedStackProps: getSharedStackProps(stage),
-            tokenServiceStackProps: getTokenServiceStackProps(),
-            icaEventPipeStackProps: getIcaEventPipeStackProps(),
-            bclconvertInteropQcIcav2PipelineTableStackProps:
-              getBclconvertInteropQcIcav2PipelineTableStackProps(),
-            cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
-            BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
-            stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
-          },
-          statelessConfig: {
-            postgresManagerStackProps: getPostgresManagerStackProps(),
-            metadataManagerStackProps: getMetadataManagerStackProps(),
-            sequenceRunManagerStackProps: getSequenceRunManagerStackProps(),
-            fileManagerStackProps: getFileManagerStackProps(stage),
-            bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
-            icav1CopyBatchUtilityStackProps: getICAv1CopyBatchUtilityStackProps(stage),
-            bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
-            bclconvertInteropQcIcav2PipelineManagerStackProps:
-              getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
-            cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
-            eventSchemaStackProps: getEventSchemaStackProps(),
-            dataSchemaStackProps: getDataSchemaStackProps(),
-            bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
-            workflowManagerStackProps: getWorkflowManagerStackProps(),
-            stackyMcStackFaceProps: getGlueStackProps(),
-          },
-        },
+        stackProps: stackProps,
       };
   }
 };

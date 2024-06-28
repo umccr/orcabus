@@ -23,13 +23,19 @@ export type MetadataManagerStackProps = {
    */
   lambdaSecurityGroupName: string;
   /**
-   * the interval where the lambda conduct the sync from the single source of truth data
+   * A boolean to tell whether the sync lambda should run daily
    */
-  syncInterval?: Schedule;
+  isDailySync: boolean;
   /**
    * API Gateway props
    */
-  apiGatewayCognitoProps: Omit<ApiGatewayConstructProps, 'region' | 'apiName'>;
+  apiGatewayCognitoProps: Pick<
+    ApiGatewayConstructProps,
+    | 'cognitoUserPoolIdParameterName'
+    | 'cognitoPortalAppClientIdParameterName'
+    | 'cognitoStatusPageAppClientIdParameterName'
+    | 'apiGwLogsConfig'
+  >;
 };
 
 export class MetadataManagerStack extends Stack {
@@ -76,6 +82,7 @@ export class MetadataManagerStack extends Stack {
       vpc: vpc,
       vpcSubnets: { subnets: vpc.privateSubnets },
       architecture: Architecture.ARM_64,
+      memorySize: 1024,
     };
 
     // There are 3 lambdas for this app
@@ -90,6 +97,7 @@ export class MetadataManagerStack extends Stack {
       apiGatewayConstructProps: {
         region: this.region,
         apiName: 'MetadataManager',
+        customDomainNamePrefix: 'metadata',
         ...props.apiGatewayCognitoProps,
       },
     });
@@ -105,6 +113,7 @@ export class MetadataManagerStack extends Stack {
     new LambdaSyncGsheetConstruct(this, 'SyncGsheetLambda', {
       basicLambdaConfig: basicLambdaConfig,
       dbConnectionSecret: dbSecret,
+      isDailySync: props.isDailySync,
     });
   }
 }
