@@ -76,13 +76,13 @@ _manual deployment from local computer to AWS account_
 You may want to see your resources deployed quickly without relying on the pipeline to do it for you. You could do so by
 deploying to the `beta` account by specifying the stack name with the relevant AWS Credentials.
 
-You could use the `yarn cdk-*` command described above to deploy the microservice. Remember you use the credential to
+You could use the `yarn cdk-stateless --help` command described above to deploy the microservice. Remember you use the credential to
 where the resource will be deployed and **NOT** the pipeline (toolchain) credential.
 
-You could list the CDK stacks with the `cdk ls` command to look at the stackId given to your microservice app.
+You could list the CDK stacks with the `yarn cdk-stateless list` command to look at the stack ID given to your microservice app.
 
 ```sh
-yarn cdk-stateless ls
+yarn cdk-stateless list
 
 OrcaBusStatelessPipeline
 OrcaBusStatelessPipeline/OrcaBusBeta/MetadataManagerStack
@@ -105,7 +105,7 @@ _Heads up: Polyglot programming environment. We shorten some trivial steps into 
 
 To develop your microservice application, please read: 
 - [microservice guide](docs/developer/MICROSERVICE.md) 
-- [event schema guide](docs/event-schemas/README.md)
+- [event schema guide](docs/schemas/README.md)
 - [shared resource guide](./lib/workload/stateful/stacks/shared/README.md)
 
 ### Typography
@@ -131,14 +131,14 @@ _Setting up baseline toolchain_
 
 ```
 docker --version
-Docker version 24.0.7, build afdd53b
+Docker version 26.1.4, build 5650f9b
 
 node -v
-v18.19.0
+v20.14.0
 
 npm i -g yarn
 yarn -v
-3.5.1
+4.3.0
 ```
 
 Additionally, we expect the following common tools be installed and available in your system shell PATH. We provide [Brewfile](Brewfile) as an example. You may manage these common tools in any other way as see fit for your local setup.
@@ -161,7 +161,7 @@ brew bundle
 
 - Run lint: `yarn lint`
 - Fix lint issue: `yarn lint-fix`
-- Opt-out lint: See [.eslintignore](.eslintignore)
+- Opt-out lint: See [eslint.config.mjs](eslint.config.mjs)
 
 ### Code Formatting
 

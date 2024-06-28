@@ -174,6 +174,17 @@ function applyNagSuppression(stackId: string, stack: Stack) {
         [
           {
             id: 'AwsSolutions-IAM5',
+            reason: "'*' is required to access objects in the indexed bucket by filemanager.",
+            appliesTo: ['Resource::arn:aws:s3:::pipeline-prod-cache-503977275616-ap-southeast-2/*'],
+          },
+        ],
+        true
+      );
+      NagSuppressions.addResourceSuppressions(
+        stack,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
             reason:
               "'*' is required to access the inventory manifest and data files by the inventory function.",
             appliesTo: ['Resource::arn:aws:s3:::filemanager-inventory-test/*'],

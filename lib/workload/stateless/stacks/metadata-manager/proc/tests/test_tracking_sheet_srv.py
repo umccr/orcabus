@@ -1,10 +1,10 @@
 import pandas as pd
-from django.core.exceptions import ObjectDoesNotExist
 
 from django.test import TestCase
-
+from libumccr import libjson
 from app.models import Library, Specimen, Subject
-from proc.service.tracking_sheet_srv import persist_lab_metadata, sanitize_lab_metadata_df
+
+from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata
 
 RECORD_1 = {
     "LibraryID": "L10001",
@@ -195,3 +195,21 @@ class TrackingSheetSrvUnitTests(TestCase):
         deleted_lib = Library.objects.filter(internal_id__in=[RECORD_1.get('LibraryID'), RECORD_2.get('LibraryID')])
         self.assertEqual(deleted_lib.count(), 0, 'these library query should all be deleted')
         self.assertEqual(result.get("library").get("delete_count"), 2, "2 library should be deleted")
+
+    def test_save_choice_from_human_readable_label(self) -> None:
+        """
+        python manage.py test \
+        proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_save_choice_from_human_readable_label
+        """
+
+        mock_record = RECORD_1.copy()
+        mock_record['Source'] = 'Water'  # 'Water' with capital W is the human-readable value
+        mock_sheet_data = [mock_record]
+
+        metadata_pd = pd.json_normalize(mock_sheet_data)
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        persist_lab_metadata(metadata_pd)
+
+        spc = Specimen.objects.get(internal_id=mock_record.get("SampleID"))
+        self.assertIsNotNone(spc)
+        self.assertEqual(spc.source, 'water', "incorrect value stored")

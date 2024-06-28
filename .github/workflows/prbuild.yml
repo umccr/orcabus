@@ -78,10 +78,13 @@ jobs:
 
       - name: Rust installation
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
 
       - name: Install dependencies
         run: |
           yarn install --immutable
+          pip3 install cargo-lambda
 
       - run: make test-suite
 
@@ -113,9 +116,12 @@ jobs:
 
       - name: Rust installation
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
 
       - name: Install dependencies
         run: |
           yarn install --immutable
+          pip3 install cargo-lambda
 
       - run: make test-stateless

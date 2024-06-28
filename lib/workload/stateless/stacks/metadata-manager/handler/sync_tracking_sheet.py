@@ -13,14 +13,12 @@ from proc.service.tracking_sheet_srv import download_tracking_sheet, sanitize_la
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-DEFAULT_YEAR = [str(i) for i in range(2017, (datetime.date.today().year + 1), 1)]
-
 
 def handler(event, context):
     logger.info("Start processing update from google tracking sheet")
     logger.info(f'event: {libjson.dumps(event)}')
 
-    year_array = event.get('years', [2024])
+    year_array = event.get('years', [datetime.date.today().year])
 
     tracking_sheet_df = download_tracking_sheet(year_array)
     sanitize_df = sanitize_lab_metadata_df(tracking_sheet_df)

@@ -51,10 +51,14 @@ def map_db_record_to_wrsc(db_record: WorkflowRun) -> wfm.WorkflowRunStateChange:
         workflowName=db_record.workflow.workflow_name,
         workflowVersion=db_record.workflow.workflow_version,
         workflowRunName=db_record.workflow_run_name,
-        payload=wfm.Payload(
+    )
+
+    # handle condition: Payload is optional
+    if db_record.payload:
+        wrsc.payload = wfm.Payload(
             refId=db_record.payload.payload_ref_id,
             version=db_record.payload.version,
             data=db_record.payload.data
         )
-    )
+
     return wrsc

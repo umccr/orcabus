@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
 import { ISecurityGroup, IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Architecture, Version } from 'aws-cdk-lib/aws-lambda';
-import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 import { RustFunction } from 'cargo-lambda-cdk';
 import path from 'path';
 import { exec } from 'cargo-lambda-cdk/lib/util';
@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { print } from 'aws-cdk/lib/logging';
 import { PostgresManagerStack } from '../../../../postgres-manager/deploy/stack';
 import { FILEMANAGER_SERVICE_NAME } from '../../stack';
+import { NamedLambdaRole } from '../../../../../../components/named-lambda-role';
 
 /**
  * Properties for the database.
@@ -27,7 +28,7 @@ export type DatabaseProps = {
    * The database security group.
    */
   readonly securityGroup: ISecurityGroup;
-}
+};
 
 /**
  * Props for a Rust function without the package.
@@ -42,6 +43,10 @@ export type FunctionPropsNoPackage = {
    */
   readonly rustLog?: string;
   /**
+   * The role which the Function assumes.
+   */
+  readonly role?: Role;
+  /**
    * Vpc for the function.
    */
   readonly vpc: IVpc;
@@ -50,16 +55,17 @@ export type FunctionPropsNoPackage = {
 /**
  * Props for the Rust function.
  */
-export type FunctionProps = FunctionPropsNoPackage & DatabaseProps & {
-  /**
-   * The package to build for this function.
-   */
-  readonly package: string;
-  /**
-   * Name of the Lambda function resource.
-   */
-  readonly functionName?: string;
-};
+export type FunctionProps = FunctionPropsNoPackage &
+  DatabaseProps & {
+    /**
+     * The package to build for this function.
+     */
+    readonly package: string;
+    /**
+     * Name of the Lambda function resource.
+     */
+    readonly functionName?: string;
+  };
 
 /**
  * A construct for a Rust Lambda function.
@@ -72,14 +78,13 @@ export class Function extends Construct {
     super(scope, id);
 
     // Lambda role needs SQS execution role.
-    this._role = new Role(this, 'Role', {
-      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-      description: 'Lambda execution role for ' + id,
-    });
+    this._role = props.role ?? new NamedLambdaRole(this, 'Role');
     // Lambda needs VPC access if it is created in a VPC.
     this.addAwsManagedPolicy('service-role/AWSLambdaVPCAccessExecutionRole');
     // Using RDS IAM credentials, so we add the managed policy created by the postgres manager.
-    this.addCustomerManagedPolicy(PostgresManagerStack.formatRdsPolicyName(FILEMANAGER_SERVICE_NAME));
+    this.addCustomerManagedPolicy(
+      PostgresManagerStack.formatRdsPolicyName(FILEMANAGER_SERVICE_NAME)
+    );
 
     // Lambda needs to be able to reach out to access S3, security manager, etc.
     // Could this use an endpoint instead?
@@ -89,7 +94,7 @@ export class Function extends Construct {
       description: 'Security group that allows a filemanager Lambda function to egress out.',
     });
 
-    const manifestPath =  path.join(__dirname, '..', '..', '..');
+    const manifestPath = path.join(__dirname, '..', '..', '..');
     const uuid = randomUUID();
     const localDatabaseUrl = this.resolveLocalDatabaseUrl(uuid, manifestPath);
 
@@ -104,7 +109,7 @@ export class Function extends Construct {
         },
         dockerOptions: {
           network: 'host',
-        }
+        },
       },
       memorySize: 128,
       timeout: Duration.seconds(28),
@@ -124,7 +129,7 @@ export class Function extends Construct {
       securityGroups: [
         securityGroup,
         // Allow access to database.
-        props.securityGroup
+        props.securityGroup,
       ],
       functionName: props.functionName,
     });
@@ -138,12 +143,8 @@ export class Function extends Construct {
   private resolveLocalDatabaseUrl(uuid: string, manifestPath: string) {
     const execMake = (commandArgs: string) => {
       print(`running \`make ${commandArgs}\``);
-      return exec(
-        'make',
-        [commandArgs],
-        { cwd: manifestPath, shell: true }
-      );
-    }
+      return exec('make', [commandArgs], { cwd: manifestPath, shell: true });
+    };
 
     print('trying to find running filemanager container');
 
@@ -187,7 +188,7 @@ export class Function extends Construct {
    * Add a policy statement to this function's role.
    */
   addToPolicy(policyStatement: PolicyStatement) {
-    this._role.addToPolicy(policyStatement)
+    this._role.addToPolicy(policyStatement);
   }
 
   /**
@@ -195,11 +196,13 @@ export class Function extends Construct {
    */
   addPoliciesForBuckets(buckets: string[]) {
     buckets.map((bucket) => {
-      this.addToPolicy(new PolicyStatement({
-        actions: ['s3:ListBucket', 's3:GetObject'],
-        resources: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
-      }));
-    })
+      this.addToPolicy(
+        new PolicyStatement({
+          actions: ['s3:ListBucket', 's3:GetObject'],
+          resources: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
+        })
+      );
+    });
   }
 
   /**
