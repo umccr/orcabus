@@ -2,10 +2,7 @@ import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 
 import { FilemanagerProps, Filemanager } from './stacks/filemanager/deploy/stack';
-import {
-  PostgresManagerStack,
-  PostgresManagerStackProps,
-} from './stacks/postgres-manager/deploy/stack';
+
 import {
   MetadataManagerStack,
   MetadataManagerStackProps,
@@ -42,7 +39,6 @@ import {
 import { GlueStack, GlueStackProps } from './stacks/stacky-mcstackface/glue-constructs';
 
 export interface StatelessStackCollectionProps {
-  postgresManagerStackProps: PostgresManagerStackProps;
   metadataManagerStackProps: MetadataManagerStackProps;
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
@@ -59,7 +55,6 @@ export interface StatelessStackCollectionProps {
 
 export class StatelessStackCollection {
   // You could add more stack here and initiate it at the constructor. See example below for reference
-  readonly postgresManagerStack: Stack;
   readonly fileManagerStack: Stack;
   readonly metadataManagerStack: Stack;
   readonly sequenceRunManagerStack: Stack;
@@ -86,11 +81,6 @@ export class StatelessStackCollection {
     this.dataSchemaStack = new SchemaStack(scope, 'DataSchemaStack', {
       ...this.createTemplateProps(env, 'DataSchemaStack'),
       ...statelessConfiguration.dataSchemaStackProps,
-    });
-
-    this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
-      ...this.createTemplateProps(env, 'PostgresManagerStack'),
-      ...statelessConfiguration.postgresManagerStackProps,
     });
 
     this.fileManagerStack = new Filemanager(scope, 'FileManagerStack', {

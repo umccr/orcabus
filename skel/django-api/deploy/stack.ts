@@ -9,7 +9,7 @@ import { aws_events_targets, aws_lambda, aws_secretsmanager, Duration, Stack, St
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { CorsHttpMethod, HttpApi, HttpMethod, HttpRoute, HttpRouteKey, HttpStage } from 'aws-cdk-lib/aws-apigatewayv2';
-import { PostgresManagerStack } from '../../../lib/workload/stateless/stacks/postgres-manager/deploy/stack';
+import { PostgresManagerStack } from '../../../lib/workload/stateful/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../lib/workload/components/api-gateway';
 

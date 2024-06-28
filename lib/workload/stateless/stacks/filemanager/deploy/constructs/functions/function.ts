@@ -8,7 +8,7 @@ import path from 'path';
 import { exec } from 'cargo-lambda-cdk/lib/util';
 import { randomUUID } from 'node:crypto';
 import { print } from 'aws-cdk/lib/logging';
-import { PostgresManagerStack } from '../../../../postgres-manager/deploy/stack';
+import { PostgresManagerStack } from '../../../../../../stateful/stacks/postgres-manager/deploy/stack';
 import { FILEMANAGER_SERVICE_NAME } from '../../stack';
 import { NamedLambdaRole } from '../../../../../../components/named-lambda-role';
 

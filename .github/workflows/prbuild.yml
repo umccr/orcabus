@@ -66,7 +66,7 @@ jobs:
         run: |
           make check
 
-  test-stateless-suite:
+  test-stateless-app-suite:
     # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
     # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
     # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
@@ -86,9 +86,9 @@ jobs:
           yarn install --immutable
           pip3 install cargo-lambda
 
-      - run: make test-suite
+      - run: make test-stateless-app-suite
 
-  test-stateful-stack:
+  test-all-stateful-tests:
     # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
     # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
     # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
@@ -102,9 +102,11 @@ jobs:
         run: |
           yarn install --immutable
 
-      - run: make test-stateful
+      - run: make test-stateful-iac
 
-  test-stateless-stack:
+      - run: make test-stateful-app-suite
+
+  test-stateless-iac:
     # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
     # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
     # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
@@ -124,4 +126,4 @@ jobs:
           yarn install --immutable
           pip3 install cargo-lambda
 
-      - run: make test-stateless
+      - run: make test-stateless-iac
