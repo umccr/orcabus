@@ -154,18 +154,6 @@ export class ICAv1CopyBatchUtilityStack extends cdk.Stack {
         runtime: Runtime.PYTHON_3_12,
         layers: [rclone_layer_ref],
         role: lambdaRole,
-        // environment: {
-        //   // Creds
-        //   SECURE_SRC_AWS_ACCESS_KEY_ID: "None",       // pragma: allowlist secret
-        //   SECURE_SRC_AWS_SECRET_ACCESS_KEY: "None",   // pragma: allowlist secret
-        //   SECURE_SRC_AWS_SESSION_TOKEN: "None",       // pragma: allowlist secret
-        //   SECURE_DEST_AWS_ACCESS_KEY_ID: "None",      // pragma: allowlist secret
-        //   SECURE_DEST_AWS_SECRET_ACCESS_KEY: "None",  // pragma: allowlist secret
-        //   SECURE_DEST_AWS_SESSION_TOKEN: "None",      // pragma: allowlist secret
-        //   // Objects
-        //   RCLONE_SYNC_CONTENT_SOURCE: "None",
-        //   RCLONE_SYNC_CONTENT_DESTINATION: "None",
-        // },
         architecture: Architecture.ARM_64,
         timeout: Duration.minutes(15),
         index: 's3_batch_ops_rclone.py',

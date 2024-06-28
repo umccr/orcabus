@@ -27,7 +27,7 @@ yarn cdk-stateless synth OrcaBusStatelessPipeline/OrcaBusBeta/ICAv1CopyBatchUtil
 ## Invoke (manually)
 
 ```sh
-aws lambda invoke --function-name OrcaBusBeta-ICAv1CopyBatc-ICAv1CopyBatchUtilitylam-1CjnVrJ26tzJ --cli-binary-format raw-in-base64-out --payload '{"RCLONE_SYNC_CONTENT_SOURCE": "src:1f412e89-acc8-4337-b484-08d89d4636a9/Coverage_chk/SBJ03034/_manifest.json", "RCLONE_SYNC_CONTENT_DESTINATION": "dest:umccr-temp-dev/rclone-lambda-test/_manifest.json" }' response.json
+aws lambda invoke --function-name OrcaBusBeta-ICAv1CopyBatc-ICAv1CopyBatchUtilitylam-1CjnVrJ26tzJ --cli-binary-format raw-in-base64-out --payload '{"RCLONE_SYNC_CONTENT_SOURCE": "src:stratus-gds-aps2/1f412e89-acc8-4337-b484-08d89d4636a9/Coverage_chk/SBJ03034/_manifest.json", "RCLONE_SYNC_CONTENT_DESTINATION": "dest:umccr-temp-dev/rclone-lambda-test/_manifest.json" }' response.json
 ```
 
 [rclone]: https://rclone.org/
