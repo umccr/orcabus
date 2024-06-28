@@ -1,4 +1,3 @@
-import { Client } from 'pg';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { MicroserviceConfig } from './type';
 

@@ -25,7 +25,11 @@ export class StatefulPipelineStack extends cdk.Stack {
     });
 
     const unitTest = new pipelines.CodeBuildStep('UnitTest', {
-      commands: ['yarn install --immutable', 'make test-stateful'],
+      commands: [
+        'yarn install --immutable',
+        'make test-stateful-iac',
+        'make test-stateful-app-suite',
+      ],
       input: sourceFile,
       primaryOutputDirectory: '.',
       buildEnvironment: {

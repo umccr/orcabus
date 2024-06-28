@@ -19,26 +19,28 @@ deep: scan
 baseline:
 	@detect-secrets scan --exclude-files '^(yarn.lock|.yarn/|.local/|openapi/)' > .secrets.baseline
 
-# Test only section 
-test-stateful:
+test-stateful-iac:
 	@yarn run test ./test/stateful
-test-stateless:
+
+test-stateless-iac:
 	@yarn run test ./test/stateless
 
-# Run all test suites for each app/microservice
+# Run all test suites for each app/microservice/stack
 # Each app root should have Makefile `test` target; that run your app test pipeline including compose stack up/down
 # Note by running `make suite` target from repo root means your local dev env is okay with all app toolchains i.e.
 # 	Python (conda or venv), Rust and Cargo, TypeScript and Node environment, Docker and Container runtimes
-test-suite:
+test-stateful-app-suite:
+	@(cd lib/workload/stateful/stacks/postgres-manager && $(MAKE) test)
+
+test-stateless-app-suite:
 	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) test)
 	@(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) test)
 	@(cd lib/workload/stateless/stacks/filemanager && $(MAKE) test)
-	@(cd lib/workload/stateless/stacks/postgres-manager && $(MAKE) test)
 	@(cd lib/workload/stateless/stacks/bclconvert-manager && $(MAKE) test)
 	@(cd lib/workload/stateless/stacks/workflow-manager && $(MAKE) test)
 
-# The default outer `test` target only run the top level cdk application unit tests under `./test`
-test: test-stateless test-stateful test-suite
+# The default outer `test` target run all test in this repo
+test: test-stateful-iac test-stateless-iac test-stateful-app-suite test-stateless-app-suite
 
 clean:
 	@yarn clean

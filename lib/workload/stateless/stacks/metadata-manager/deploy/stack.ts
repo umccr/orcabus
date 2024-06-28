@@ -11,7 +11,7 @@ import { LambdaSyncGsheetConstruct } from './construct/lambda-sync-gsheet';
 import { LambdaMigrationConstruct } from './construct/lambda-migration';
 import { LambdaAPIConstruct } from './construct/lambda-api';
 import { ApiGatewayConstructProps } from '../../../../components/api-gateway';
-import { PostgresManagerStack } from '../../postgres-manager/deploy/stack';
+import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
 
 export type MetadataManagerStackProps = {
   /**

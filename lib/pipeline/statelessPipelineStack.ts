@@ -69,7 +69,11 @@ export class StatelessPipelineStack extends cdk.Stack {
         'rustup component add rustfmt',
         `pip3 install cargo-lambda`,
       ],
-      commands: ['yarn install --immutable', 'make test-stateless', 'make test-suite'],
+      commands: [
+        'yarn install --immutable',
+        'make test-stateless-iac',
+        'make test-stateless-app-suite',
+      ],
       input: sourceFile,
       primaryOutputDirectory: '.',
       buildEnvironment: {

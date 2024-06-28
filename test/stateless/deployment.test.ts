@@ -143,20 +143,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
         ]
       );
       break;
-    case 'PostgresManagerStack':
-      NagSuppressions.addResourceSuppressionsByPath(
-        stack,
-        `/PostgresManagerStack/UpdatePgProviderFunction/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,
-        [
-          {
-            id: 'AwsSolutions-IAM5',
-            reason:
-              'The provider function needs to be able to invoke the configured function. It uses' +
-              "`lambda.Function.grantInvoke` to achieve this which contains a '*' and is not changeable.",
-          },
-        ]
-      );
-      break;
+
     case 'FileManagerStack':
       NagSuppressions.addResourceSuppressions(
         stack,
