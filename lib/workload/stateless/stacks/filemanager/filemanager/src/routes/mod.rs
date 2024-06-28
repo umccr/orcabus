@@ -3,19 +3,34 @@
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
 use axum::{Json, Router};
+use axum_extra::routing::RouterExt;
 use serde::Serialize;
 use tower_http::trace::TraceLayer;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use crate::database::Client;
 use crate::error::Error;
-use crate::routes::get::{get_object_by_id, get_s3_object_by_id};
-use crate::routes::list::{count_objects, count_s3_objects, list_objects, list_s3_objects};
+use crate::routes::get::*;
+use crate::routes::list::*;
 
 pub mod get;
 pub mod list;
 
+/// API docs.
+#[derive(OpenApi)]
+#[openapi(paths(
+    list_objects,
+    get_object_by_id,
+    count_objects,
+    list_s3_objects,
+    get_s3_object_by_id,
+    count_s3_objects
+))]
+pub struct ApiDoc;
+
+/// App state containing database client.
 #[derive(Debug, Clone)]
 pub struct AppState {
     client: Client,
@@ -26,15 +41,16 @@ pub fn query_router(client: Client) -> Router {
     let state = AppState { client };
 
     Router::new()
-        .route("/objects", get(list_objects))
-        .route("/objects/:id", get(get_object_by_id))
-        .route("/objects/count", get(count_objects))
-        .route("/s3_objects", get(list_s3_objects))
-        .route("/s3_objects/:id", get(get_s3_object_by_id))
-        .route("/s3_objects/count", get(count_s3_objects))
+        .typed_get(list_objects)
+        .typed_get(get_object_by_id)
+        .typed_get(count_objects)
+        .typed_get(list_s3_objects)
+        .typed_get(get_s3_object_by_id)
+        .typed_get(count_s3_objects)
         .fallback(fallback)
         .with_state(state)
         .layer(TraceLayer::new_for_http())
+        .merge(SwaggerUi::new("/swagger_ui").url("/api_docs/openapi.json", ApiDoc::openapi()))
 }
 
 /// The fallback route.

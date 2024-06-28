@@ -1,8 +1,9 @@
 //! Route logic for get API calls.
 //!
 
-use axum::extract::{Path, State};
+use axum::extract::State;
 use axum::Json;
+use axum_extra::routing::TypedPath;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -16,10 +17,26 @@ use crate::routes::AppState;
 #[derive(Debug, Deserialize)]
 pub struct GetObjectById {}
 
+/// Typed path for the objets get handler.
+#[derive(Debug, Deserialize, TypedPath)]
+#[typed_path("/objects/:id")]
+pub struct GetObjectByIdPath {
+    id: Uuid,
+}
+
 /// The get object handler.
+#[utoipa::path(
+    get,
+    path = "/objects/{id}",
+    responses(
+        (status = OK, description = "Get an object by its object_id", body = Option<Object>),
+        (status = NOT_FOUND, description = "Object not found")
+    ),
+    params()
+)]
 pub async fn get_object_by_id(
+    GetObjectByIdPath { id }: GetObjectByIdPath,
     state: State<AppState>,
-    Path(id): Path<Uuid>,
 ) -> Result<Json<Option<Object>>> {
     let query = GetQueryBuilder::new(&state.client);
 
@@ -30,10 +47,26 @@ pub async fn get_object_by_id(
 #[derive(Debug, Deserialize)]
 pub struct GetS3ObjectById {}
 
+/// Typed path for the s3 objects get handler.
+#[derive(Debug, Deserialize, TypedPath)]
+#[typed_path("/s3_objects/:id")]
+pub struct GetS3ObjectByIdPath {
+    id: Uuid,
+}
+
 /// The get s3 objects handler.
+#[utoipa::path(
+    get,
+    path = "/s3_objects/{id}",
+    responses(
+        (status = OK, description = "Get an s3object by its s3_object_id", body = Option<S3Object>),
+        (status = NOT_FOUND, description = "S3 object not found")
+    ),
+    params()
+)]
 pub async fn get_s3_object_by_id(
+    GetS3ObjectByIdPath { id }: GetS3ObjectByIdPath,
     state: State<AppState>,
-    Path(id): Path<Uuid>,
 ) -> Result<Json<Option<S3Object>>> {
     let query = GetQueryBuilder::new(&state.client);
 

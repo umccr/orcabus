@@ -29,6 +29,8 @@ pub async fn generate_entities() -> Result<()> {
         "strum::EnumCount",
         "--enum-extra-attributes",
         "repr(u8)",
+        "--model-extra-derives",
+        "utoipa::ToSchema",
         "-u",
         &config.database_url,
         "-o",
