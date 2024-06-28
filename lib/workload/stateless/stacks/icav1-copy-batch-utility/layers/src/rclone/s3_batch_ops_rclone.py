@@ -4,8 +4,8 @@ import asyncio
 import json
 import logging
 import os
-import tempfile
 import tomli_w
+from pathlib import Path
 
 import boto3
 from pythonjsonlogger import jsonlogger
@@ -72,20 +72,8 @@ async def run_rclone_sync(event: LambdaDict) -> None:
     run_rclone_sync is the main function spawning an rclone process and parsing its output.
     """
     logger.info("Starting rclone sync")
-    # Passing rclone config through stdin does not work
-    # Thus we need to dump the config in a real file first
-    #
-    # $ cat ~/.config/rclone/rclone.conf | rclone listremotes --config=/dev/stdin
-    # Failed to load config file "/dev/stdin": seek /dev/stdin: illegal seek
-    #
-    # https://github.com/rclone/rclone/blob/386acaa/fs/config/config.go#L343
-    # https://github.com/rclone/rclone/blob/386acaa/fs/config/configfile/configfile.go#L95-L100
-    # https://github.com/rclone/rclone/blob/386acaa/fs/config/configfile/configfile.go#L53-L93
-    # https://github.com/rclone/rclone/blob/386acaa/fs/config/crypt.go#L46-L187
-    config_fname = get_rclone_config_path(
-        str(event.get("RCLONE_CONFIG_SSM_NAME", ""))
-        or os.environ.get("RCLONE_CONFIG_SSM_NAME")
-        or "rclone-config"
+    config_fname = generate_rclone_config(
+        Path("/tmp/rclone.conf")
     )
     source = (
         str(event.get("RCLONE_SYNC_CONTENT_SOURCE", ""))
@@ -122,10 +110,9 @@ async def run_rclone_sync(event: LambdaDict) -> None:
     #
     # https://stackoverflow.com/a/61939464
     await asyncio.gather(p.wait(), log_stdout(p.stdout), log_stderr(p.stderr))
-    os.remove(config_fname)
     logger.info("Finished rclone sync")
 
-def get_rclone_config_path(args):
+def generate_rclone_config(conf_path: Path):
     """
     get_rclone_config_path retrieves rclone config from AWS SSM and dumps it on a temp file.
     """
@@ -150,13 +137,20 @@ def get_rclone_config_path(args):
             "region": os.environ.get('AWS_REGION', 'AWS_DEFAULT_REGION')
         }
     }
-    
-    logger.info(rclone_config)
-    f = tempfile.NamedTemporaryFile(mode='wb', buffering=0, delete=False)
-    toml = tomli_w.dump(rclone_config, f) # FIXME: didn't find backend called \"\\\"s3\\\"\"\n" ... sanitise
 
-    return f.name
+    # Write configuration file
+    with open(conf_path, 'wb') as config:
+        tomli_w.dump(rclone_config, config)
 
+    # Fix the quotes
+    with open(conf_path, 'r+') as no_quotes:
+        to_clean = no_quotes.read()
+        clean = to_clean.replace('"', '')
+        no_quotes.seek(0)
+        no_quotes.write(clean)
+        no_quotes.truncate()
+        no_quotes.close()
+        return no_quotes.name
 
 async def log_stdout(stream: asyncio.StreamReader | None) -> None:
     """
