@@ -19,7 +19,6 @@ deep: scan
 baseline:
 	@detect-secrets scan --exclude-files '^(yarn.lock|.yarn/|.local/|openapi/)' > .secrets.baseline
 
-# Test only section 
 test-stateful-iac:
 	@yarn run test ./test/stateful
 
