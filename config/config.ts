@@ -9,6 +9,7 @@ import { getMetadataManagerStackProps } from './stacks/metadataManager';
 import { getSequenceRunManagerStackProps } from './stacks/sequenceRunManager';
 import { getFileManagerStackProps } from './stacks/fileManager';
 import { getBsRunsUploadManagerStackProps } from './stacks/bsRunsUploadManager';
+import { getICAv1CopyBatchUtilityStackProps } from './stacks/icav1CopyBatchUtility';
 import { getBsshIcav2FastqCopyManagerStackProps } from './stacks/bsshIcav2FastqCopyManager';
 import {
   getCttsov2Icav2PipelineManagerStackProps,
@@ -26,6 +27,7 @@ import {
   getBclconvertInteropQcIcav2PipelineTableStackProps,
 } from './stacks/bclconvertInteropQcIcav2PipelineManager';
 import { getGlueStackProps, getStatefulGlueStackProps } from './stacks/stackyMcStackFace';
+import { ICAv1CopyBatchUtilityStack } from '../lib/workload/stateless/stacks/icav1-copy-batch-utility/deploy/stack';
 
 interface EnvironmentConfig {
   name: string;
@@ -61,6 +63,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       sequenceRunManagerStackProps: getSequenceRunManagerStackProps(stage),
       fileManagerStackProps: getFileManagerStackProps(stage),
       bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
+      ICAv1CopyBatchUtilityStackProps: getICAv1CopyBatchUtilityStackProps(stage),
       bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
       bclconvertInteropQcIcav2PipelineManagerStackProps:
         getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
@@ -70,6 +73,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
       workflowManagerStackProps: getWorkflowManagerStackProps(stage),
       stackyMcStackFaceProps: getGlueStackProps(),
+      icav1CopyBatchUtilityStackProps: getICAv1CopyBatchUtilityStackProps(stage),
     },
   };
 
