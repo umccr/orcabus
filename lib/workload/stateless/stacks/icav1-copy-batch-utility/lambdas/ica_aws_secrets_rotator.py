@@ -48,6 +48,7 @@ def handler(_event, _context):
 	ica_access_token = get_umccr_icav1_jwt()
 
 	configuration = libgds.Configuration(
+		host="https://aps2.platform.illumina.com",
 		api_key={
 			'Authorization': ica_access_token['SecretString']
 		},
