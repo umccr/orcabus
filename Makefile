@@ -31,7 +31,7 @@ test-stateless-iac:
 # Note by running `make suite` target from repo root means your local dev env is okay with all app toolchains i.e.
 # 	Python (conda or venv), Rust and Cargo, TypeScript and Node environment, Docker and Container runtimes
 test-stateful-app-suite:
-	@(cd lib/workload/stateless/stacks/postgres-manager && $(MAKE) test)
+	@(cd lib/workload/stateful/stacks/postgres-manager && $(MAKE) test)
 
 test-stateless-app-suite:
 	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) test)

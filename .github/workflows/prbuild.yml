@@ -104,6 +104,7 @@ jobs:
 
       - run: make test-stateful-iac
 
+      # stateful app suite test is a small test so would run this together with the IaC for now
       - run: make test-stateful-app-suite
 
   test-stateless-iac:
