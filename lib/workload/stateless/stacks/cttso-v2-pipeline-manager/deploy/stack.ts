@@ -85,8 +85,8 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
     const eventBusObj = events.EventBus.fromEventBusName(this, 'event_bus', props.eventBusName);
 
     /*
-        Build lambdas
-        */
+    Build lambdas
+    */
     /*
     Part 1: Set up the lambdas needed for the input json generation state machine
     Quite a bit more complicated than regular ICAv2 workflow setup since we need to
@@ -101,7 +101,7 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       'generate_copy_manifest_dict_lambda_python_function',
       {
         entry: path.join(__dirname, '../lambdas/generate_copy_manifest_dict_py'),
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
         index: 'generate_copy_manifest_dict.py',
         handler: 'handler',
@@ -117,7 +117,7 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       'upload_samplesheet_to_cache_dir_lambda_python_function',
       {
         entry: path.join(__dirname, '../lambdas/upload_samplesheet_to_cache_dir_py'),
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
         index: 'upload_samplesheet_to_cache_dir.py',
         handler: 'handler',
@@ -136,7 +136,7 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       'delete_cache_uri_lambda_python_function',
       {
         entry: path.join(__dirname, '../lambdas/delete_cache_uri_py'),
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
         index: 'delete_cache_uri.py',
         handler: 'handler',
@@ -155,7 +155,7 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       'set_output_json_lambda_python_function',
       {
         entry: path.join(__dirname, '../lambdas/set_output_json_py'),
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
         index: 'set_output_json.py',
         handler: 'handler',

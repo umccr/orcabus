@@ -32,10 +32,15 @@ from typing import List
 from urllib.parse import urlparse
 import boto3
 from os import environ
+import typing
 
 # Wrapica imports
 from wrapica.job import get_job
 from wrapica.project_data import convert_icav2_uri_to_data_obj, project_data_copy_batch_handler
+
+if typing.TYPE_CHECKING:
+    from mypy_boto3_ssm import SSMClient
+    from mypy_boto3_secretsmanager import SecretsManagerClient
 
 # Globals
 SUCCESS_STATES = [

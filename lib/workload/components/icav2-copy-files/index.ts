@@ -23,7 +23,7 @@ export class ICAv2CopyFilesConstruct extends Construct {
     // Job Status Handler
     const check_or_launch_job_lambda = new PythonFunction(this, 'check_or_launch_job_lambda', {
       entry: path.join(__dirname, 'check_or_launch_job_lambda_py'),
-      runtime: lambda.Runtime.PYTHON_3_11,
+      runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
       index: 'check_or_launch_job_lambda.py',
       handler: 'handler',

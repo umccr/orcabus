@@ -5,7 +5,7 @@ import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
-import { PythonFunction, PythonFunctionProps } from '@aws-cdk/aws-lambda-python-alpha';
+import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Icav2AnalysisEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-handle-event-change-sfn';
 import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-ready-event-handler-sfn';
 import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
@@ -70,7 +70,7 @@ export class BclConvertInteropQcIcav2PipelineConstruct extends Construct {
       this,
       'set_outputs_json_lambda_function',
       {
-        runtime: Runtime.PYTHON_3_11,
+        runtime: Runtime.PYTHON_3_12,
         entry: props.setOutputJsonLambdaPath,
         architecture: Architecture.ARM_64,
         handler: 'handler',

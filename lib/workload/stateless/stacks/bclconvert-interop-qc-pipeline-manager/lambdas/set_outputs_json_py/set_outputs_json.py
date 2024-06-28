@@ -26,8 +26,6 @@ Instead we just take the output uri and find the directories as expected
 # Standard imports
 from os import environ
 import typing
-from pathlib import Path
-from urllib.parse import urlparse, urlunparse
 import boto3
 
 # IDE imports only

@@ -74,7 +74,7 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
         entry: path.join(__dirname, 'lambdas', 'handle_libraryrunstatechange_py'),
         index: 'handle_libraryrunstatechange.py',
         handler: 'handler',
-        runtime: Runtime.PYTHON_3_11,
+        runtime: Runtime.PYTHON_3_12,
         architecture: Architecture.ARM_64,
       }
     );
@@ -84,7 +84,7 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
       entry: path.join(__dirname, 'lambdas', 'get_library_ids_py'),
       index: 'get_library_ids.py',
       handler: 'handler',
-      runtime: Runtime.PYTHON_3_11,
+      runtime: Runtime.PYTHON_3_12,
       architecture: Architecture.ARM_64,
     });
 
@@ -93,7 +93,7 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
       entry: path.join(__dirname, 'lambdas', 'slim_samplesheet_py'),
       index: 'slim_samplesheet.py',
       handler: 'handler',
-      runtime: Runtime.PYTHON_3_11,
+      runtime: Runtime.PYTHON_3_12,
       architecture: Architecture.ARM_64,
     });
 
@@ -102,7 +102,7 @@ export class fastqListRowsToCttsov2InputMakerConstruct extends Construct {
       entry: path.join(__dirname, 'lambdas', 'slim_fastq_list_rows_py'),
       index: 'slim_fastq_list_rows.py',
       handler: 'handler',
-      runtime: Runtime.PYTHON_3_11,
+      runtime: Runtime.PYTHON_3_12,
       architecture: Architecture.ARM_64,
     });
 

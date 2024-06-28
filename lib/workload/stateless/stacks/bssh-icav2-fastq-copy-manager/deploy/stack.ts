@@ -54,7 +54,7 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
       {
         functionName: `${this.bsshIcav2Map.prefix}-bclconvert-success-event-handler`,
         entry: path.join(__dirname, '../lambdas/query_bclconvert_outputs_handler_py'),
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
         index: 'query_bclconvert_outputs_handler.py',
         handler: 'handler',

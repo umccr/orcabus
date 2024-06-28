@@ -74,8 +74,8 @@ def handler(event, context):
         not_fastq_file_obj = next(
             filter(
                 lambda project_data_obj_iter: (
-                    ( not project_data_obj_iter.data.details.name.endswith(".fastq.gz") ) or
-                    ( not DataType[project_data_obj_iter.data.details.data_type] == DataType.FILE )
+                        (not project_data_obj_iter.data.details.name.endswith(".fastq.gz")) or
+                        (not DataType[project_data_obj_iter.data.details.data_type] == DataType.FILE)
                 ),
                 sample_folder_list
             )

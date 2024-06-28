@@ -29,7 +29,6 @@ from pathlib import Path
 from typing import Dict
 from urllib.parse import urlparse
 import pandas as pd
-from bssh_manager_tools.utils.samplesheet_helper import read_v2_samplesheet
 from wrapica.enums import DataType
 import logging
 
@@ -37,27 +36,21 @@ import logging
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
     get_project_data_obj_by_id,
-    read_icav2_file_contents_to_string, get_project_data_folder_id_from_project_id_and_path,
+    read_icav2_file_contents_to_string,
+    get_project_data_folder_id_from_project_id_and_path,
     convert_project_id_and_data_path_to_icav2_uri
 )
 
 # Local imports
 from bssh_manager_tools.utils.manifest_helper import generate_run_manifest, get_dest_uri_from_src_uri
 from bssh_manager_tools.utils.sample_helper import get_fastq_list_paths_from_bssh_output_and_fastq_list_csv
-from bssh_manager_tools.utils.directory_helper import (
-    get_basespace_run_id_from_bssh_json_output,
-    generate_bclconvert_output_folder_path
-)
 from bssh_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
 from bssh_manager_tools.utils.icav2_analysis_helpers import (
     get_bssh_json_file_id_from_analysis_output_list,
-    get_run_info_xml_file_id_analysis_output_list,
     get_fastq_list_csv_file_id_from_analysis_output_list, get_run_folder_obj_from_analysis_id,
     get_interop_files_from_run_folder, get_bclconvert_outputs_from_analysis_id,
-    get_samplesheet_file_id_from_analysis_output_list
 )
 from bssh_manager_tools.utils.compression_helpers import compress_dict
-from bssh_manager_tools.utils.xml_helpers import parse_runinfo_xml, get_run_id_from_run_info_xml_dict
 from bssh_manager_tools.utils.logger import set_basic_logger
 
 # Set logger
@@ -138,16 +131,17 @@ def handler(event, context):
     bclconvert_output_data_list = list(
         filter(
             lambda data_obj:
-            (
-                # File is inside 'output' directory
+                (
+                    # File is inside 'output' directory
                     data_obj.data.details.path.startswith(
                         str(bcl_convert_output_path) + "/"
-                    ) and not (
-                # File is not the fastq_list_s3.csv or TSO500L_fastq_list_s3.csv
-                # This file is just a list of presigned urls that will expire in a week
-                data_obj.data.details.name.endswith("fastq_list_s3.csv")
-            )
-            ),
+                    ) and
+                    not (
+                        # File is not the fastq_list_s3.csv or TSO500L_fastq_list_s3.csv
+                        # This file is just a list of presigned urls that will expire in a week
+                        data_obj.data.details.name.endswith("fastq_list_s3.csv")
+                    )
+                ),
             bclconvert_output_data_list
         )
     )

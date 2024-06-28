@@ -41,7 +41,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
       'upload_v2_samplesheet_to_gds_bssh_lambda',
       {
         entry: props.uploadV2SamplesheetToGdsBsshLambdaPath,
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
         index: 'handler.py',
         handler: 'handler',
@@ -63,7 +63,7 @@ export class BsRunsUploadManagerConstruct extends Construct {
       'launch_bs_runs_upload_tes_lambda',
       {
         entry: props.launchBsRunsUploadTesLambdaPath,
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
         index: 'handler.py',
         handler: 'handler',

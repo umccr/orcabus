@@ -11,7 +11,7 @@ export class PythonLambdaUuidConstruct extends Construct {
     super(scope, id);
 
     this.lambdaObj = new lambda_python.PythonFunction(this, 'uuid_python_function', {
-      runtime: lambda.Runtime.PYTHON_3_11,
+      runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
       entry: path.join(__dirname, 'uuid_py'),
       index: 'run_uuid.py',

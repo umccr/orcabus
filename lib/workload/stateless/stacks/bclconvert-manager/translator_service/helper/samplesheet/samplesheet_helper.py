@@ -99,4 +99,3 @@ def read_v2_samplesheet(project_id: str, data_id: str) -> Dict:
             )
         )
     )
-
