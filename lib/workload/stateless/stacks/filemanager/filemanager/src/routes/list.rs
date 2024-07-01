@@ -3,7 +3,6 @@
 
 use axum::extract::State;
 use axum::Json;
-use axum_extra::routing::TypedPath;
 use serde::Deserialize;
 
 use crate::database::entities::object::Model as Object;
@@ -16,11 +15,6 @@ use crate::routes::AppState;
 #[derive(Debug, Deserialize)]
 pub struct ListObjectsParams {}
 
-/// Typed path for the list objects handler
-#[derive(Debug, Deserialize, TypedPath)]
-#[typed_path("/objects")]
-pub struct ListObjectsPath;
-
 /// The list objects handler.
 #[utoipa::path(
     get,
@@ -31,16 +25,11 @@ pub struct ListObjectsPath;
     ),
     params()
 )]
-pub async fn list_objects(_: ListObjectsPath, state: State<AppState>) -> Result<Json<Vec<Object>>> {
+pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<Object>>> {
     let query = ListQueryBuilder::new(&state.client);
 
     Ok(Json(query.list_objects().await?))
 }
-
-/// Typed path for the count s3 objects handler
-#[derive(Debug, Deserialize, TypedPath)]
-#[typed_path("/objects/count")]
-pub struct CountObjectsPath;
 
 /// The count objects handler.
 #[utoipa::path(
@@ -52,7 +41,7 @@ pub struct CountObjectsPath;
     ),
     params()
 )]
-pub async fn count_objects(_: CountObjectsPath, state: State<AppState>) -> Result<Json<u64>> {
+pub async fn count_objects(state: State<AppState>) -> Result<Json<u64>> {
     let query = ListQueryBuilder::new(&state.client);
 
     Ok(Json(query.count_objects().await?))
@@ -61,11 +50,6 @@ pub async fn count_objects(_: CountObjectsPath, state: State<AppState>) -> Resul
 /// Params for a list s3 objects request.
 #[derive(Debug, Deserialize)]
 pub struct ListS3ObjectsParams {}
-
-/// Typed path for the list s3 objects handler
-#[derive(Debug, Deserialize, TypedPath)]
-#[typed_path("/s3_objects")]
-pub struct ListS3ObjectsPath;
 
 /// The list s3 objects handler.
 #[utoipa::path(
@@ -77,19 +61,11 @@ pub struct ListS3ObjectsPath;
     ),
     params()
 )]
-pub async fn list_s3_objects(
-    _: ListS3ObjectsPath,
-    state: State<AppState>,
-) -> Result<Json<Vec<S3Object>>> {
+pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<S3Object>>> {
     let query = ListQueryBuilder::new(&state.client);
 
     Ok(Json(query.list_s3_objects().await?))
 }
-
-/// Typed path for the count s3 objects handler
-#[derive(Debug, Deserialize, TypedPath)]
-#[typed_path("/s3_objects/count")]
-pub struct CountS3ObjectsPath;
 
 /// The count s3 objects handler.
 #[utoipa::path(
@@ -101,7 +77,7 @@ pub struct CountS3ObjectsPath;
     ),
     params()
 )]
-pub async fn count_s3_objects(_: CountS3ObjectsPath, state: State<AppState>) -> Result<Json<u64>> {
+pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<u64>> {
     let query = ListQueryBuilder::new(&state.client);
 
     Ok(Json(query.count_s3_objects().await?))

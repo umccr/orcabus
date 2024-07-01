@@ -3,8 +3,9 @@
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::routing::get;
 use axum::{Json, Router};
-use axum_extra::routing::RouterExt;
+use sea_orm::{DbErr, RuntimeErr};
 use serde::Serialize;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
@@ -41,12 +42,12 @@ pub fn query_router(client: Client) -> Router {
     let state = AppState { client };
 
     Router::new()
-        .typed_get(list_objects)
-        .typed_get(get_object_by_id)
-        .typed_get(count_objects)
-        .typed_get(list_s3_objects)
-        .typed_get(get_s3_object_by_id)
-        .typed_get(count_s3_objects)
+        .route("/objects", get(list_objects))
+        .route("/objects/:id", get(get_object_by_id))
+        .route("/objects/count", get(count_objects))
+        .route("/s3_objects", get(list_s3_objects))
+        .route("/s3_objects/:id", get(get_s3_object_by_id))
+        .route("/s3_objects/count", get(count_s3_objects))
         .fallback(fallback)
         .with_state(state)
         .layer(TraceLayer::new_for_http())
@@ -64,6 +65,66 @@ pub struct ErrorResponse {
     message: String,
 }
 
+/// An enum representing http status code errors returned by the API.
+#[derive(thiserror::Error, Debug)]
+pub enum ErrorStatusCode {
+    #[error("{0}")]
+    BadRequest(String),
+    #[error("{0}")]
+    InternalServerError(String),
+}
+
+impl From<sqlx::Error> for ErrorStatusCode {
+    fn from(err: sqlx::Error) -> Self {
+        match err {
+            sqlx::Error::RowNotFound
+            | sqlx::Error::TypeNotFound { .. }
+            | sqlx::Error::ColumnIndexOutOfBounds { .. }
+            | sqlx::Error::ColumnNotFound(_) => Self::BadRequest(err.to_string()),
+            _ => Self::InternalServerError(err.to_string()),
+        }
+    }
+}
+
+impl From<DbErr> for ErrorStatusCode {
+    fn from(err: DbErr) -> Self {
+        if let Some(err) = err.sql_err() {
+            Self::BadRequest(err.to_string())
+        } else {
+            match err {
+                DbErr::Exec(RuntimeErr::SqlxError(err))
+                | DbErr::Query(RuntimeErr::SqlxError(err))
+                | DbErr::Conn(RuntimeErr::SqlxError(err)) => Self::from(err),
+                DbErr::RecordNotFound(_)
+                | DbErr::TryIntoErr { .. }
+                | DbErr::Type(_)
+                | DbErr::Json(_)
+                | DbErr::RecordNotInserted
+                | DbErr::RecordNotUpdated => Self::BadRequest(err.to_string()),
+                _ => Self::InternalServerError(err.to_string()),
+            }
+        }
+    }
+}
+
+impl From<Error> for ErrorStatusCode {
+    fn from(err: Error) -> Self {
+        match err {
+            Error::DatabaseError(err) => Self::from(err),
+            _ => Self::InternalServerError("unexpected error".to_string()),
+        }
+    }
+}
+
+impl From<ErrorStatusCode> for (StatusCode, String) {
+    fn from(err: ErrorStatusCode) -> Self {
+        match err {
+            ErrorStatusCode::BadRequest(err) => (StatusCode::BAD_REQUEST, err),
+            ErrorStatusCode::InternalServerError(err) => (StatusCode::INTERNAL_SERVER_ERROR, err),
+        }
+    }
+}
+
 impl ErrorResponse {
     /// Create an error response.
     pub fn new(message: String) -> Self {
@@ -78,14 +139,7 @@ impl ErrorResponse {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        let (status, message) = match self {
-            Error::SQLError(err) => (StatusCode::NOT_FOUND, err.to_string()),
-            _ => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "unexpected error".to_string(),
-            ),
-        };
-
+        let (status, message) = ErrorStatusCode::from(self).into();
         ErrorResponse::new(message).response(status).into_response()
     }
 }
@@ -96,13 +150,15 @@ mod tests {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
     use parquet::data_type::AsBytes;
+    use sea_orm::DbErr;
     use serde_json::{from_slice, json, Value};
 
     use crate::error::Error;
 
     #[tokio::test]
     async fn sql_error_into_response() {
-        let response = Error::SQLError("error".to_string()).into_response();
+        let response =
+            Error::DatabaseError(DbErr::RecordNotFound("not found".to_string())).into_response();
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
         assert_eq!(
