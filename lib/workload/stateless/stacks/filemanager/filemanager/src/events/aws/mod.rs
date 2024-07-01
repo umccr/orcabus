@@ -513,7 +513,7 @@ impl FlatS3EventMessage {
         self
     }
 
-    /// Set the object id.
+    /// Set the object group id.
     pub fn with_object_id(mut self, object_id: Uuid) -> Self {
         self.object_id = object_id;
         self

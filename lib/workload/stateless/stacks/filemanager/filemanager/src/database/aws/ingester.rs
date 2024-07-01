@@ -7,14 +7,15 @@ use tracing::debug;
 use uuid::Uuid;
 
 use crate::database::{Client, CredentialGenerator};
+use crate::env::Config;
 use crate::error::Result;
 use crate::events::aws::message::EventType;
 use crate::events::aws::{StorageClass, TransposedS3EventMessages};
 
 /// An ingester for S3 events.
 #[derive(Debug)]
-pub struct Ingester<'a> {
-    pub(crate) client: Client<'a>,
+pub struct Ingester {
+    pub(crate) client: Client,
 }
 
 /// The type representing an insert query.
@@ -24,17 +25,18 @@ struct Insert {
     number_duplicate_events: i64,
 }
 
-impl<'a> Ingester<'a> {
+impl Ingester {
     /// Create a new ingester.
-    pub fn new(client: Client<'a>) -> Self {
+    pub fn new(client: Client) -> Self {
         Self { client }
     }
 
     /// Create a new ingester with a default database client.
-    pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
-        Ok(Self {
-            client: Client::from_generator(generator).await?,
-        })
+    pub async fn with_defaults(
+        generator: Option<impl CredentialGenerator>,
+        config: &Config,
+    ) -> Result<Self> {
+        Ok(Self::new(Client::from_generator(generator, config).await?))
     }
 
     /// Reprocess inserts to find object ids that are not duplicates from the inserted events.
@@ -1374,7 +1376,7 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) async fn fetch_results<'a>(client: &Client<'a>) -> (Vec<PgRow>, Vec<PgRow>) {
+    pub(crate) async fn fetch_results<'a>(client: &Client) -> (Vec<PgRow>, Vec<PgRow>) {
         (
             sqlx::query("select * from object")
                 .fetch_all(client.pool())
@@ -1387,7 +1389,7 @@ pub(crate) mod tests {
         )
     }
 
-    pub(crate) async fn fetch_results_ordered<'a>(client: &Client<'a>) -> Vec<PgRow> {
+    pub(crate) async fn fetch_results_ordered<'a>(client: &Client) -> Vec<PgRow> {
         sqlx::query("select * from s3_object order by sequencer, key, version_id")
             .fetch_all(client.pool())
             .await
@@ -1527,7 +1529,7 @@ pub(crate) mod tests {
         update_test_events(expected_events_simple_delete_marker())
     }
 
-    pub(crate) fn test_ingester<'a>(pool: PgPool) -> Client<'a> {
-        Client::new(pool)
+    pub(crate) fn test_ingester(pool: PgPool) -> Client {
+        Client::from_pool(pool)
     }
 }

@@ -7,26 +7,28 @@ use sqlx::migrate::Migrator;
 use tracing::trace;
 
 use crate::database::{Client, CredentialGenerator, Migrate};
+use crate::env::Config;
 use crate::error::Error::MigrateError;
 use crate::error::Result;
 
 /// A struct to perform database migrations.
 #[derive(Debug)]
-pub struct Migration<'a> {
-    client: Client<'a>,
+pub struct Migration {
+    client: Client,
 }
 
-impl<'a> Migration<'a> {
+impl Migration {
     /// Create a new migration.
-    pub fn new(client: Client<'a>) -> Self {
+    pub fn new(client: Client) -> Self {
         Self { client }
     }
 
     /// Create a new migration with a default database client.
-    pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
-        Ok(Self {
-            client: Client::from_generator(generator).await?,
-        })
+    pub async fn with_defaults(
+        generator: Option<impl CredentialGenerator>,
+        config: &Config,
+    ) -> Result<Self> {
+        Ok(Self::new(Client::from_generator(generator, config).await?))
     }
 
     /// Get the underlying sqlx migrator for the migrations.
@@ -41,7 +43,7 @@ impl<'a> Migration<'a> {
 }
 
 #[async_trait]
-impl<'a> Migrate for Migration<'a> {
+impl Migrate for Migration {
     async fn migrate(&self) -> Result<()> {
         trace!("applying migrations");
         Self::migrator()
@@ -54,7 +56,9 @@ impl<'a> Migrate for Migration<'a> {
 #[cfg(test)]
 pub(crate) mod tests {
     use lazy_static::lazy_static;
+    use sqlx::postgres::PgRow;
     use sqlx::PgPool;
+    use sqlx::Row;
 
     use super::*;
 
@@ -64,26 +68,30 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrations = false)]
     async fn test_migrate(pool: PgPool) {
-        let migrate = Migration::new(Client::new(pool));
+        let migrate = Migration::new(Client::from_pool(pool));
 
-        let not_exists = sqlx::query!(
-            "select exists (select from information_schema.tables where table_name = 'object')"
-        )
-        .fetch_one(migrate.client.pool())
-        .await
-        .unwrap();
+        let object_exists = check_table_exists(&migrate, "object").await;
+        let s3_object_exists = check_table_exists(&migrate, "s3_object").await;
 
-        assert!(!not_exists.exists.unwrap());
+        assert!(!object_exists.get::<bool, _>("exists"));
+        assert!(!s3_object_exists.get::<bool, _>("exists"));
 
         migrate.migrate().await.unwrap();
 
-        let exists = sqlx::query!(
-            "select exists (select from information_schema.tables where table_name = 'object')"
-        )
-        .fetch_one(migrate.client.pool())
-        .await
-        .unwrap();
+        let object_exists = check_table_exists(&migrate, "object").await;
+        let s3_object_exists = check_table_exists(&migrate, "s3_object").await;
 
-        assert!(exists.exists.unwrap());
+        assert!(object_exists.get::<bool, _>("exists"));
+        assert!(s3_object_exists.get::<bool, _>("exists"));
+    }
+
+    async fn check_table_exists(migration: &Migration, table_name: &str) -> PgRow {
+        sqlx::query(&format!(
+            "select exists (select from information_schema.tables where table_name = '{}')",
+            table_name
+        ))
+        .fetch_one(migration.client().pool())
+        .await
+        .unwrap()
     }
 }

@@ -8,6 +8,7 @@ use tracing::{debug, trace};
 use uuid::Uuid;
 
 use crate::database::{Client, CredentialGenerator};
+use crate::env::Config;
 use crate::error::Result;
 use crate::events::aws::inventory::Inventory;
 use crate::events::aws::message::EventType;
@@ -18,8 +19,8 @@ use crate::uuid::UuidGenerator;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
-pub struct IngesterPaired<'a> {
-    client: Client<'a>,
+pub struct IngesterPaired {
+    client: Client,
 }
 
 /// The type representing an insert query.
@@ -29,17 +30,18 @@ struct Insert {
     number_duplicate_events: i64,
 }
 
-impl<'a> IngesterPaired<'a> {
+impl IngesterPaired {
     /// Create a new ingester.
-    pub fn new(client: Client<'a>) -> Self {
+    pub fn new(client: Client) -> Self {
         Self { client }
     }
 
     /// Create a new ingester with a default database client.
-    pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
-        Ok(Self {
-            client: Client::from_generator(generator).await?,
-        })
+    pub async fn with_defaults(
+        generator: Option<impl CredentialGenerator>,
+        config: &Config,
+    ) -> Result<Self> {
+        Ok(Self::new(Client::from_generator(generator, config).await?))
     }
 
     fn reprocess_updated(
@@ -1807,7 +1809,7 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) fn test_ingester<'a>(pool: PgPool) -> Client<'a> {
-        Client::new(pool)
+    pub(crate) fn test_ingester(pool: PgPool) -> Client {
+        Client::from_pool(pool)
     }
 }
