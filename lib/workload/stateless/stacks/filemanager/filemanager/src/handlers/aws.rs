@@ -169,11 +169,13 @@ pub async fn ingest_s3_inventory(
 
 /// Create a postgres database pool using an IAM credential generator.
 pub async fn create_database_pool(env_config: &EnvConfig) -> Result<DatabaseConnection, Error> {
-    Ok(Client::create_pool(
+    let client = Client::from_generator(
         Some(IamGeneratorBuilder::default().build(env_config).await?),
         env_config,
     )
-    .await?)
+    .await?;
+
+    Ok(client.into_inner())
 }
 
 /// Update connection options with new credentials.

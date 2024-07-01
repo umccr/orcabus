@@ -5,9 +5,9 @@ use crate::database::aws::ingester::Ingester;
 use crate::database::aws::ingester_paired::IngesterPaired;
 use crate::env::Config;
 use async_trait::async_trait;
-use sea_orm::{ConnectOptions, Database, DatabaseConnection, SqlxPostgresConnector};
+use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
 use sqlx::postgres::PgConnectOptions;
-use sqlx::{ConnectOptions as SqlxConnectOptions, PgPool};
+use sqlx::PgPool;
 use tracing::debug;
 
 use crate::error::Result;
@@ -49,7 +49,7 @@ impl Client {
         generator: Option<impl CredentialGenerator>,
         config: &Config,
     ) -> Result<Self> {
-        Ok(Self::new(Self::create_pool(generator, config).await?))
+        Ok(Self::from_pool(Self::create_pool(generator, config).await?))
     }
 
     /// Create a database connection pool using credential loading logic defined in
@@ -57,20 +57,8 @@ impl Client {
     pub async fn create_pool(
         generator: Option<impl CredentialGenerator>,
         config: &Config,
-    ) -> Result<DatabaseConnection> {
-        Ok(Database::connect(Self::connect_options(generator, config).await?).await?)
-    }
-
-    /// Create database connect options using a series of credential loading logic.
-    pub async fn connect_options(
-        generator: Option<impl CredentialGenerator>,
-        config: &Config,
-    ) -> Result<ConnectOptions> {
-        Ok(ConnectOptions::new(
-            Self::pg_connect_options(generator, config)
-                .await?
-                .to_url_lossy(),
-        ))
+    ) -> Result<PgPool> {
+        Ok(PgPool::connect_with(Self::pg_connect_options(generator, config).await?).await?)
     }
 
     /// Create database connect options using a series of credential loading logic.
@@ -116,6 +104,11 @@ impl Client {
     /// Get the database connection as a reference.
     pub fn connection_ref(&self) -> &DatabaseConnection {
         &self.connection
+    }
+
+    /// Get the inner database connection.
+    pub fn into_inner(self) -> DatabaseConnection {
+        self.connection
     }
 }
 
