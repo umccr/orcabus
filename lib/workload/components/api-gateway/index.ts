@@ -43,9 +43,12 @@ export class ApiGatewayConstruct extends Construct {
     super(scope, id);
 
     // umccr acm arn
-    const umccrAcmArn = StringParameter.valueFromLookup(this, '/umccr/certificate_arn');
-    const hostedDomainName = StringParameter.valueFromLookup(this, '/hosted_zone/umccr/name');
-    const hostedZoneId = StringParameter.valueFromLookup(this, '/hosted_zone/umccr/id');
+    const umccrAcmArn = StringParameter.valueForStringParameter(this, '/umccr/certificate_arn');
+    const hostedDomainName = StringParameter.valueForStringParameter(
+      this,
+      '/hosted_zone/umccr/name'
+    );
+    const hostedZoneId = StringParameter.valueForStringParameter(this, '/hosted_zone/umccr/id');
 
     const domainName = `${props.customDomainNamePrefix}.${hostedDomainName}`;
     const apiGWDomainName = new DomainName(this, 'UmccrDomainName', {
