@@ -31,6 +31,3 @@ skel/
 docs/
 openapi/
 venv/
-
-# TODO still early days let ignore prettier them (microservice apps) for now
-lib/workload/stateless/stacks/filemanager/

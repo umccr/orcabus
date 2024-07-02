@@ -27,6 +27,7 @@ import {
   ApiGatewayConstruct,
   ApiGwLogsConfig,
 } from '../../../../../workload/components/api-gateway';
+import { ApiGatewayProxyIntegration } from '../../../../components/api-gateway-proxy-integration';
 
 export interface WorkflowManagerStackProps extends StackProps {
   lambdaSecurityGroupName: string;
@@ -130,20 +131,14 @@ export class WorkflowManagerStack extends Stack {
       timeout: Duration.seconds(28),
     });
 
-    const wfmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
-      region: this.region,
-      apiName: 'WorkflowManager',
-      customDomainNamePrefix: 'workflow',
-      ...props,
-    });
-    const httpApi = wfmApi.httpApi;
-
-    const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
-
-    new HttpRoute(this, 'HttpRoute', {
-      httpApi: httpApi,
-      integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
+    new ApiGatewayProxyIntegration(this, 'ProxyIntegration', {
+      handler: apiFn,
+      apiGatewayProps: {
+        region: this.region,
+        apiName: 'WorkflowManager',
+        customDomainNamePrefix: 'workflow',
+        ...props,
+      },
     });
   }
 

@@ -1,13 +1,22 @@
 import { Construct } from 'constructs';
 import { aws_ssm, Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
-import { CorsHttpMethod, HttpApi, CfnStage, DomainName } from 'aws-cdk-lib/aws-apigatewayv2';
+import {
+  CorsHttpMethod,
+  HttpApi,
+  CfnStage,
+  DomainName,
+  HttpRoute,
+  HttpRouteKey,
+  HttpMethod,
+} from 'aws-cdk-lib/aws-apigatewayv2';
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { IStringParameter, StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
+import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 
 export interface ApiGwLogsConfig {
   /**
