@@ -11,7 +11,7 @@ fn default_api_server_addr() -> String {
 }
 
 /// Configuration environment variables for filemanager.
-#[derive(Debug, Deserialize, Default, Eq, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Default, Eq, PartialEq)]
 pub struct Config {
     pub(crate) database_url: Option<String>,
     pub(crate) pgpassword: Option<String>,

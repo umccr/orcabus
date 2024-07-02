@@ -96,16 +96,15 @@ mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
-    use crate::database::Client;
     use crate::queries::tests::initialize_database;
-    use crate::routes::query_router;
+    use crate::routes::{api_router, AppState};
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_objects_api(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await;
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await;
 
-        let app = query_router(client);
+        let app = api_router(state);
         let response = app
             .oneshot(
                 Request::builder()
@@ -135,10 +134,10 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await;
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await;
 
-        let app = query_router(client);
+        let app = api_router(state);
         let response = app
             .oneshot(
                 Request::builder()
@@ -168,10 +167,10 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_objects_api(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        initialize_database(&client, 10).await;
+        let state = AppState::from_pool(pool);
+        initialize_database(state.client(), 10).await;
 
-        let app = query_router(client);
+        let app = api_router(state);
         let response = app
             .oneshot(
                 Request::builder()
@@ -195,10 +194,10 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_objects_api(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        initialize_database(&client, 10).await;
+        let state = AppState::from_pool(pool);
+        initialize_database(state.client(), 10).await;
 
-        let app = query_router(client);
+        let app = api_router(state);
         let response = app
             .oneshot(
                 Request::builder()

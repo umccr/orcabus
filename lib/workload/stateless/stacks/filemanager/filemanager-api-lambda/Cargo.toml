@@ -1,5 +1,5 @@
 [package]
-name = "filemanager-http-lambda"
+name = "filemanager-api-lambda"
 description = "This crate is a lambda function which runs the filemanager api endpoints"
 version = "0.1.0"
 license.workspace = true
@@ -10,6 +10,7 @@ rust-version.workspace = true
 [dependencies]
 tokio = { version = "1", features = ["macros"] }
 tracing = { version = "0.1" }
+axum = "0.7"
 
 lambda_http = "0.11"
 lambda_runtime = "0.11"

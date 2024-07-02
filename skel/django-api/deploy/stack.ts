@@ -12,6 +12,7 @@ import { CorsHttpMethod, HttpApi, HttpMethod, HttpRoute, HttpRouteKey, HttpStage
 import { PostgresManagerStack } from '../../../lib/workload/stateful/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../lib/workload/components/api-gateway';
+import { ApiGatewayProxyIntegration } from '../../../lib/workload/components/api-gateway-proxy-integration';
 
 export interface ProjectNameStackProps { // FIXME change prop interface name
   lambdaSecurityGroupName: string;
@@ -115,20 +116,14 @@ export class ProjectNameStack extends Stack {  // FIXME change construct name
       timeout: Duration.seconds(28),
     });
 
-    const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
-      region: this.region,
-      apiName: 'SequenceRunManager',
-      customDomainNamePrefix: 'sequence',
-      ...props,
-    });
-    const httpApi = srmApi.httpApi;
-
-    const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
-
-    new HttpRoute(this, 'HttpRoute', {
-      httpApi: httpApi,
-      integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
+    new ApiGatewayProxyIntegration(this, 'ProxyIntegration', {
+      handler: apiFn,
+      apiGatewayProps: {
+        region: this.region,
+        apiName: 'SequenceRunManager',
+        customDomainNamePrefix: 'sequence',
+        ...props,
+      }
     });
   }
 

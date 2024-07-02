@@ -81,14 +81,12 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::Client;
-    use crate::routes::query_router;
+    use crate::routes::api_router;
+    use crate::routes::AppState;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_swagger_ui(pool: PgPool) {
-        let client = Client::from_pool(pool);
-
-        let app = query_router(client);
+        let app = api_router(AppState::from_pool(pool));
         let response = app
             .oneshot(
                 Request::builder()

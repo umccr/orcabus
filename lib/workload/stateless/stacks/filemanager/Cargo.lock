@@ -1749,6 +1749,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "filemanager-api-lambda"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "filemanager",
+ "lambda_http",
+ "lambda_runtime",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "filemanager-api-server"
 version = "0.1.0"
 dependencies = [
@@ -1774,17 +1786,6 @@ dependencies = [
  "syn 2.0.65",
  "thiserror",
  "tokio",
-]
-
-[[package]]
-name = "filemanager-http-lambda"
-version = "0.1.0"
-dependencies = [
- "filemanager",
- "lambda_http",
- "lambda_runtime",
- "tokio",
- "tracing",
 ]
 
 [[package]]

@@ -3,20 +3,25 @@
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use sea_orm::{DbErr, RuntimeErr};
 use serde::Serialize;
+use sqlx::PgPool;
+use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 use utoipa::{IntoResponses, ToSchema};
 
 use crate::database::Client;
+use crate::env::Config;
 use crate::error::Error;
 use crate::routes::get::*;
+use crate::routes::ingest::ingest_from_sqs;
 use crate::routes::list::*;
 use crate::routes::openapi::swagger_ui;
 
 pub mod get;
+mod ingest;
 pub mod list;
 pub mod openapi;
 
@@ -24,12 +29,33 @@ pub mod openapi;
 #[derive(Debug, Clone)]
 pub struct AppState {
     client: Client,
+    config: Arc<Config>,
 }
 
-/// The main filemanager router for query read-only requests.
-pub fn query_router(client: Client) -> Router {
-    let state = AppState { client };
+impl AppState {
+    /// Create new state.
+    pub fn new(client: Client, config: Arc<Config>) -> Self {
+        Self { client, config }
+    }
 
+    /// Create a new state from an existing pool with default config.
+    pub fn from_pool(pool: PgPool) -> Self {
+        Self::new(Client::from_pool(pool), Default::default())
+    }
+
+    /// Get the client.
+    pub fn client(&self) -> &Client {
+        &self.client
+    }
+
+    /// Get the config.
+    pub fn config(&self) -> &Arc<Config> {
+        &self.config
+    }
+}
+
+/// The main filemanager router for requests.
+pub fn api_router(state: AppState) -> Router {
     Router::new()
         .route("/objects", get(list_objects))
         .route("/objects/:id", get(get_object_by_id))
@@ -37,6 +63,7 @@ pub fn query_router(client: Client) -> Router {
         .route("/s3_objects", get(list_s3_objects))
         .route("/s3_objects/:id", get(get_s3_object_by_id))
         .route("/s3_objects/count", get(count_s3_objects))
+        .route("/ingest_from_sqs", post(ingest_from_sqs))
         .fallback(fallback)
         .with_state(state)
         .layer(TraceLayer::new_for_http())
@@ -73,6 +100,12 @@ pub enum ErrorStatusCode {
         example = json!({"message": "Failed to acquire connection from pool: Connection pool timed out"}),
     )]
     InternalServerError(ErrorResponse),
+    #[response(
+        status = REQUEST_TIMEOUT,
+        description = "the request could not be processed",
+        example = json!({"message": "failed to update database credentials"}),
+    )]
+    RequestTimeout(ErrorResponse),
 }
 
 impl IntoResponse for ErrorStatusCode {
@@ -83,6 +116,9 @@ impl IntoResponse for ErrorStatusCode {
             }
             ErrorStatusCode::InternalServerError(err) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, Json(err)).into_response()
+            }
+            ErrorStatusCode::RequestTimeout(err) => {
+                (StatusCode::REQUEST_TIMEOUT, Json(err)).into_response()
             }
         }
     }
@@ -162,9 +198,8 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::Client;
     use crate::error::Error;
-    use crate::routes::query_router;
+    use crate::routes::{api_router, AppState};
 
     #[tokio::test]
     async fn sql_error_into_response() {
@@ -192,9 +227,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_unknown_path(pool: PgPool) {
-        let client = Client::from_pool(pool);
-
-        let app = query_router(client);
+        let app = api_router(AppState::from_pool(pool));
         let response = app
             .oneshot(
                 Request::builder()

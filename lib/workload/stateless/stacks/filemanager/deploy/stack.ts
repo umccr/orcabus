@@ -13,6 +13,7 @@ import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { InventoryFunction } from './constructs/functions/inventory';
 import { NamedLambdaRole } from '../../../../components/named-lambda-role';
+import { ApiGatewayProxyIntegration } from '../../../../components/api-gateway-proxy-integration';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 
@@ -92,12 +93,12 @@ export class Filemanager extends Stack {
     );
 
     this.createIngestFunction(props);
-    this.createQueryFunction(props);
+    this.createApiFunction(props);
     this.createInventoryFunction(props);
   }
 
   private createIngestRole(name: string) {
-    return new NamedLambdaRole(this, 'IngestFunctionRole', { name })
+    return new NamedLambdaRole(this, 'IngestFunctionRole', { name });
   }
 
   /**
@@ -131,7 +132,7 @@ export class Filemanager extends Stack {
   /**
    * Query function and API Gateway fronting the function.
    */
-  private createQueryFunction(props: FilemanagerProps) {
+  private createApiFunction(props: FilemanagerProps) {
     let objectsQueryLambda = new QueryFunction(this, 'ObjectsQueryFunction', {
       vpc: this.vpc,
       host: this.host,
@@ -139,21 +140,14 @@ export class Filemanager extends Stack {
       ...props,
     });
 
-    const ApiGateway = new ApiGatewayConstruct(this, 'ApiGateway', {
-      region: this.region,
-      apiName: 'FileManager',
-      customDomainNamePrefix: 'file',
-      ...props,
-    });
-    const httpApi = ApiGateway.httpApi;
-
-    const apiIntegration = new HttpLambdaIntegration('ApiIntegration', objectsQueryLambda.function);
-
-    new HttpRoute(this, 'HttpRoute', {
-      // FIXME: Should not be just proxy but objects/{:id}
-      httpApi: httpApi,
-      integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
+    new ApiGatewayProxyIntegration(this, 'ProxyIntegration', {
+      handler: objectsQueryLambda.function,
+      apiGatewayProps: {
+        region: this.region,
+        apiName: 'FileManager',
+        customDomainNamePrefix: 'file',
+        ...props,
+      },
     });
   }
 }

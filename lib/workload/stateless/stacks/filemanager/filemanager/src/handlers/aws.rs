@@ -18,6 +18,7 @@ use crate::database::aws::credentials::IamGeneratorBuilder;
 use crate::database::aws::query::Query;
 use crate::database::{Client, Ingest};
 use crate::env::Config as EnvConfig;
+use crate::error;
 use crate::events::aws::collecter::CollecterBuilder;
 use crate::events::aws::inventory::{DiffMessages, Inventory, Manifest};
 use crate::events::aws::message::EventType::Created;
@@ -26,13 +27,13 @@ use crate::events::{Collect, EventSourceType};
 
 /// Handle SQS events by manually calling the SQS receive function. This is meant
 /// to be run through something like API gateway to manually invoke ingestion.
-pub async fn receive_and_ingest(
+pub async fn receive_and_ingest<'a>(
     s3_client: S3Client,
     sqs_client: SQSClient,
     sqs_url: Option<impl Into<String>>,
-    database_client: Client,
-    env_config: &EnvConfig,
-) -> Result<Client, Error> {
+    database_client: &'a Client,
+    env_config: &'a EnvConfig,
+) -> Result<&'a Client, error::Error> {
     let events = CollecterBuilder::default()
         .with_s3_client(s3_client)
         .with_sqs_client(sqs_client)
@@ -236,17 +237,13 @@ mod tests {
         set_sqs_client_expectations(&mut sqs_client);
         set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
 
-        let ingester = receive_and_ingest(
-            s3_client,
-            sqs_client,
-            Some("url"),
-            Client::from_pool(pool),
-            &Default::default(),
-        )
-        .await
-        .unwrap();
+        let client = Client::from_pool(pool);
+        let config = Default::default();
+        let ingester = receive_and_ingest(s3_client, sqs_client, Some("url"), &client, &config)
+            .await
+            .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let (object_results, s3_object_results) = fetch_results(ingester).await;
 
         assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
