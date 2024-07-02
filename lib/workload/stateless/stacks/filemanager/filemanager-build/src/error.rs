@@ -19,6 +19,8 @@ pub type Result<T> = result::Result<T, Error>;
 pub enum ErrorKind {
     #[error("Error generating entities: {0}")]
     EntityGeneration(String),
+    #[error("Error generating OpenAPI definitions: {0}")]
+    OpenAPIGeneration(String),
     #[error("Missing or incorrect environment variables: {0}")]
     LoadingEnvironment(String),
     #[error("io error: {0}")]
