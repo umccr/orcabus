@@ -3,11 +3,15 @@
 //!
 
 use std::ffi::OsStr;
-use std::fs::write;
+use std::fs::{read_dir, read_to_string, write};
 
 use clap_builder::Parser;
+use heck::AsPascalCase;
+use prettyplease::unparse;
 use quote::quote;
 use sea_orm_cli::{run_generate_command, Cli, Commands};
+use syn::__private::Span;
+use syn::{parse_file, parse_quote, Ident, Item};
 
 use crate::error::ErrorKind::EntityGeneration;
 use crate::error::{Error, Result};
@@ -24,12 +28,12 @@ pub async fn generate_entities() -> Result<()> {
         "--with-serde",
         "both",
         "--enum-extra-derives",
-        "strum::FromRepr",
-        "--enum-extra-derives",
-        "strum::EnumCount",
+        "strum::FromRepr, strum::EnumCount",
+        "--model-extra-derives",
+        "utoipa::ToSchema",
         "--enum-extra-attributes",
         "repr(u8)",
-        "--model-extra-derives",
+        "--enum-extra-derives",
         "utoipa::ToSchema",
         "-u",
         &config.database_url,
@@ -56,5 +60,30 @@ pub async fn generate_entities() -> Result<()> {
 
     let out_file = out_dir.join("generated.rs");
     write(out_file, format!("{}\n\n{}", generated_comment, generated))?;
+
+    for path in read_dir(out_dir)? {
+        let path = path?.path();
+        let content = read_to_string(&path)?;
+
+        let mut tokens = parse_file(&content).map_err(|err| EntityGeneration(err.to_string()))?;
+        let stem = path.file_stem().ok_or_else(|| {
+            EntityGeneration("expected file with name when generating entities".to_string())
+        })?;
+        let name = "File".to_string() + &AsPascalCase(stem.to_string_lossy()).to_string();
+
+        tokens.items.iter_mut().for_each(|item| {
+            if let Item::Struct(item_struct) = item {
+                if item_struct.ident == Ident::new("Model", Span::call_site()) {
+                    let use_path: Ident = Ident::new(&name, Span::call_site());
+                    item_struct
+                        .attrs
+                        .push(parse_quote! { #[schema(as = #use_path)] });
+                }
+            }
+        });
+
+        write(path, unparse(&tokens))?;
+    }
+
     Ok(())
 }

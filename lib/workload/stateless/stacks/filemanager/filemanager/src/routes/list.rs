@@ -5,11 +5,11 @@ use axum::extract::State;
 use axum::Json;
 use serde::Deserialize;
 
-use crate::database::entities::object::Model as Object;
-use crate::database::entities::s3_object::Model as S3Object;
+use crate::database::entities::object::Model as FileObject;
+use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
-use crate::routes::AppState;
+use crate::routes::{AppState, ErrorStatusCode};
 
 /// Params for a list objects request.
 #[derive(Debug, Deserialize)]
@@ -20,12 +20,12 @@ pub struct ListObjectsParams {}
     get,
     path = "/objects",
     responses(
-        (status = OK, description = "List all objects", body = Vec<Object>),
-        (status = NOT_FOUND, description = "Failed to perform list query")
+        (status = OK, description = "List all objects", body = Vec<FileObject>),
+        ErrorStatusCode,
     ),
-    params()
+    context_path = "/file/v1",
 )]
-pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<Object>>> {
+pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<FileObject>>> {
     let query = ListQueryBuilder::new(&state.client);
 
     Ok(Json(query.list_objects().await?))
@@ -37,9 +37,9 @@ pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<Object>>> {
     path = "/objects/count",
     responses(
         (status = OK, description = "Get the count of all objects", body = u64),
-        (status = NOT_FOUND, description = "Failed to perform count query")
+        ErrorStatusCode,
     ),
-    params()
+    context_path = "/file/v1",
 )]
 pub async fn count_objects(state: State<AppState>) -> Result<Json<u64>> {
     let query = ListQueryBuilder::new(&state.client);
@@ -56,12 +56,12 @@ pub struct ListS3ObjectsParams {}
     get,
     path = "/s3_objects",
     responses(
-        (status = OK, description = "List all s3 objects", body = Vec<S3Object>),
-        (status = NOT_FOUND, description = "Failed to perform list query")
+        (status = OK, description = "List all s3 objects", body = Vec<FileS3Object>),
+        ErrorStatusCode,
     ),
-    params()
+    context_path = "/file/v1",
 )]
-pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<S3Object>>> {
+pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<FileS3Object>>> {
     let query = ListQueryBuilder::new(&state.client);
 
     Ok(Json(query.list_s3_objects().await?))
@@ -73,9 +73,9 @@ pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<S3Object
     path = "/s3_objects/count",
     responses(
         (status = OK, description = "Get the count of all s3 objects", body = u64),
-        (status = NOT_FOUND, description = "Failed to perform count query")
+        ErrorStatusCode,
     ),
-    params()
+    context_path = "/file/v1",
 )]
 pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<u64>> {
     let query = ListQueryBuilder::new(&state.client);
