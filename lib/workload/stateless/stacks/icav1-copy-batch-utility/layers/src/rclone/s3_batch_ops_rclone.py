@@ -85,10 +85,14 @@ async def run_rclone_sync(event: LambdaDict) -> None:
         or os.environ.get("RCLONE_SYNC_CONTENT_DESTINATION")
         or "destination:/"
     )
+
+    extra_flags = event.get("RCLONE_SYNC_EXTRA_FLAGS", "").split()
+
     cmd = [
         "rclone",
         "--config",
         config_fname,
+        extra_flags,
         "--use-json-log",
         "--verbose",
         "sync",
@@ -96,8 +100,10 @@ async def run_rclone_sync(event: LambdaDict) -> None:
         "10s",
         source,
         destination,
-        *os.environ.get("RCLONE_SYNC_EXTRA_FLAGS", "").split(),
     ]
+
+    cmd = flatten(cmd)
+
     if os.environ.get("RCLONE_SYNC_DRY_RUN", "false") != "false":
         cmd.append("--dry-run")
     logger.info(f"Running command {cmd}")
@@ -201,3 +207,15 @@ def log_rclone(line: bytes) -> None:
 
     # The log level does not really matter here, since rclone already specifies its own log level
     logger.error(d)
+
+# https://stackoverflow.com/a/4590652
+def flatten(xs):
+    res = []
+    def loop(ys):
+        for i in ys:
+            if isinstance(i, list):
+                loop(i)
+            else:
+                res.append(i)
+    loop(xs)
+    return res
