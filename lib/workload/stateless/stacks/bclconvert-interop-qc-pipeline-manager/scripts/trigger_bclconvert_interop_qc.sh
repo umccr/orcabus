@@ -59,7 +59,7 @@ data_json="$( \
         "interopDirectory": "\($interop_directory_uri)",
         "analysisOutputUri": "\($analysis_output_uri_prefix)\($portal_run_id)/",
         "icaLogsUri": "\($ica_logs_uri_prefix)\($portal_run_id)/",
-        "runId": $instrument_run_id,
+        "instrumentRunId": $instrument_run_id,
         "projectId": $project_id
       }
     ' \

@@ -151,14 +151,20 @@ impl IntoResponse for Error {
 
 #[cfg(test)]
 mod tests {
-    use axum::body::to_bytes;
+    use aws_lambda_events::http::Request;
+    use axum::body::{to_bytes, Body};
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
     use parquet::data_type::AsBytes;
     use sea_orm::DbErr;
     use serde_json::{from_slice, json, Value};
+    use sqlx::PgPool;
+    use tower::ServiceExt;
 
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::Client;
     use crate::error::Error;
+    use crate::routes::query_router;
 
     #[tokio::test]
     async fn sql_error_into_response() {
@@ -182,5 +188,23 @@ mod tests {
     async fn internal_error_into_response() {
         let response = Error::MigrateError("error".to_string()).into_response();
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn get_unknown_path(pool: PgPool) {
+        let client = Client::from_pool(pool);
+
+        let app = query_router(client);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/not_found")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 }

@@ -10,7 +10,7 @@ import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../../components/api-gateway';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
-import { PostgresManagerStack } from '../../postgres-manager/deploy/stack';
+import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
 
 export interface SequenceRunManagerStackProps {
   lambdaSecurityGroupName: string;

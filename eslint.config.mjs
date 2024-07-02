@@ -28,6 +28,7 @@ export default [
       '**/docs/',
       '**/openapi/',
       '**/shared/',
+      '.venv',
       'lib/workload/stateless/stacks/*', // FIXME: early days ignore them (microservices) for now
     ],
   },

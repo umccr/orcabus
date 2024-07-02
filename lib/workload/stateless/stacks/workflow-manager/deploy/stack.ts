@@ -21,7 +21,7 @@ import {
   HttpRouteKey,
   HttpStage,
 } from 'aws-cdk-lib/aws-apigatewayv2';
-import { PostgresManagerStack } from '../../../../../workload/stateless/stacks/postgres-manager/deploy/stack';
+import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import {
   ApiGatewayConstruct,

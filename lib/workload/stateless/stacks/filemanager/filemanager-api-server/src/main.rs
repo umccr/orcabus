@@ -18,7 +18,6 @@ async fn main() -> Result<()> {
     debug!(?config, "running with config");
 
     let client = Client::from_config(&config).await?;
-
     let app = query_router(client);
 
     let listener = TcpListener::bind(config.api_server_addr()).await?;

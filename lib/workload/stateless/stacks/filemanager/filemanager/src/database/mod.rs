@@ -47,9 +47,7 @@ impl Client {
     /// Create a database using default credential loading logic and without
     /// a credential generator.
     pub async fn from_config(config: &Config) -> Result<Self> {
-        Ok(Self::new(
-            Self::create_connection(None::<IamGenerator>, config).await?,
-        ))
+        Self::from_generator(None::<IamGenerator>, config).await
     }
 
     /// Create a database using default credential loading logic as defined in
@@ -58,17 +56,7 @@ impl Client {
         generator: Option<impl CredentialGenerator>,
         config: &Config,
     ) -> Result<Self> {
-        Ok(Self::new(Self::create_connection(generator, config).await?))
-    }
-
-    /// Create a database connection pool.
-    pub async fn create_connection(
-        generator: Option<impl CredentialGenerator>,
-        config: &Config,
-    ) -> Result<DatabaseConnection> {
-        Ok(SqlxPostgresConnector::from_sqlx_postgres_pool(
-            Self::create_pool(generator, config).await?,
-        ))
+        Ok(Self::from_pool(Self::create_pool(generator, config).await?))
     }
 
     /// Create a database connection pool using credential loading logic defined in
@@ -77,7 +65,7 @@ impl Client {
         generator: Option<impl CredentialGenerator>,
         config: &Config,
     ) -> Result<PgPool> {
-        Ok(PgPool::connect_with(Self::connect_options(generator, config).await?).await?)
+        Ok(PgPool::connect_with(Self::pg_connect_options(generator, config).await?).await?)
     }
 
     /// Create database connect options using a series of credential loading logic.
@@ -85,7 +73,7 @@ impl Client {
     /// First, this tries to load a DATABASE_URL environment variable to connect.
     /// Then, it uses the generator if it is not None and PGPASSWORD is not set.
     /// Otherwise, uses default logic defined in PgConnectOptions::default.
-    pub async fn connect_options(
+    pub async fn pg_connect_options(
         generator: Option<impl CredentialGenerator>,
         config: &Config,
     ) -> Result<PgConnectOptions> {
@@ -123,6 +111,11 @@ impl Client {
     /// Get the database connection as a reference.
     pub fn connection_ref(&self) -> &DatabaseConnection {
         &self.connection
+    }
+
+    /// Get the inner database connection.
+    pub fn into_inner(self) -> DatabaseConnection {
+        self.connection
     }
 }
 

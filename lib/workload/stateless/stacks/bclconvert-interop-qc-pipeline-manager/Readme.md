@@ -160,7 +160,7 @@ The AWS Step functions requires the following event detail information
   * userReference: The user reference for the icav2 pipeline
   * bclconvertReportDirectory: The icav2 uri that the report directory resides at 
   * interopDirectory: The icav2 uri that the interop directory resides at
-  * runId: The illumina instrument run id
+  * instrumentRunId: The illumina instrument run id
   * analysisOutputUri: The icav2 uri that the analysis output should be stored at
   * icaLogsUri: The icav2 uri that the ica logs should be stored at (note that this currently doesn't work) - see https://github.com/umccr-illumina/ica_v2/issues/184 for more info
   * userTags: A dictionary of user tags that should be added to the analysis
@@ -197,7 +197,7 @@ The AWS Step functions requires the following event detail information
             "userReference": "bclconvert_interop__semi_automated__umccr__pipeline",
             "bclconvertReportDirectory": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/",
             "interopDirectory": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/",
-            "runId": "231116_A01052_0172_BHVLM5DSX7",
+            "instrumentRunId": "231116_A01052_0172_BHVLM5DSX7",
             "analysisOutputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0030/out/",
             "icaLogsUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0030/logs/",
             "userTags": {
@@ -248,7 +248,7 @@ input_payload="$( \
         "userReference": "bclconvert_interop__semi_automated__umccr__pipeline__\($portal_run_id)",
         "bclconvertReportDirectory": $report_uri,
         "interopDirectory": $interop_uri,
-        "runId": $run_id,
+        "instrumentRunId": $run_id,
         "analysisOutputUri": "\($output_root_uri)\($portal_run_id)/out/",
         "icaLogsUri": "\($output_root_uri)\($portal_run_id)/logs/",
         "userTags": {
