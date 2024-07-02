@@ -16,6 +16,10 @@ import {
   BsRunsUploadManagerStackProps,
 } from './stacks/bs-runs-upload-manager/deploy/stack';
 import {
+  ICAv1CopyBatchUtilityStack,
+  ICAv1CopyBatchUtilityStackProps,
+} from './stacks/icav1-copy-batch-utility/deploy/stack';
+import {
   BsshIcav2FastqCopyManagerStack,
   BsshIcav2FastqCopyManagerStackProps,
 } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
@@ -43,6 +47,7 @@ export interface StatelessStackCollectionProps {
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
   bsRunsUploadManagerStackProps: BsRunsUploadManagerStackProps;
+  icav1CopyBatchUtilityStackProps: ICAv1CopyBatchUtilityStackProps;
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
   bclconvertInteropQcIcav2PipelineManagerStackProps: BclconvertInteropQcIcav2PipelineManagerStackProps;
   cttsov2Icav2PipelineManagerStackProps: cttsov2Icav2PipelineManagerStackProps;
@@ -59,6 +64,7 @@ export class StatelessStackCollection {
   readonly metadataManagerStack: Stack;
   readonly sequenceRunManagerStack: Stack;
   readonly bsRunsUploadManagerStack: Stack;
+  readonly icav1CopyBatchUtilityStack: Stack;
   readonly bsshIcav2FastqCopyManagerStack: Stack;
   readonly bclconvertInteropQcIcav2PipelineManagerStack: Stack;
   readonly cttsov2Icav2PipelineManagerStack: Stack;
@@ -104,6 +110,14 @@ export class StatelessStackCollection {
       {
         ...this.createTemplateProps(env, 'BsRunsUploadManagerStack'),
         ...statelessConfiguration.bsRunsUploadManagerStackProps,
+      }
+    );
+    this.icav1CopyBatchUtilityStack = new ICAv1CopyBatchUtilityStack(
+      scope,
+      'ICAv1CopyBatchUtilityStack',
+      {
+        ...this.createTemplateProps(env, 'ICAv1CopyBatchUtilityStack'),
+        ...statelessConfiguration.icav1CopyBatchUtilityStackProps,
       }
     );
 

@@ -1,0 +1,4 @@
+python-json-logger
+boto3
+botocore
+tomli-w

@@ -111,6 +111,25 @@ export const basespaceAccessTokenSecretName = '/manual/BaseSpaceAccessTokenSecre
 export const ssCheckApiDomainSsmParameterName = '/sscheck/lambda-api-domain';
 
 /*
+ICAv1 Resources
+ */
+export const icav1AccessTokenSecretName: Record<AppStage, string> = {
+  [AppStage.BETA]: 'IcaSecretsPortal', // pragma: allowlist secret
+  [AppStage.GAMMA]: 'IcaSecretsPortal', // pragma: allowlist secret
+  [AppStage.PROD]: 'IcaSecretsPortal', // pragma: allowlist secret
+};
+
+export const icav1CopyBatchUtilityName = 'icav1_copy_batch_utility';
+export const icav1BucketForCopyDestination = 'umccr-temp-dev';
+export const icav1BucketForCopyDestinationPrefix = 'icav1_copy_destination_prefix';
+export const icav1BucketForManifestOrInventory = 'umccr-temp-dev';
+export const icav1BucketForBatchOpsReport = 'umccr-temp-dev';
+export const icav1TransferMaximumConcurrency = 940;
+export const icav1TransferMaxPoolConnections = 940;
+export const icav1TransferMaxErrorRetries = 100;
+export const icav1TransferMultiPartChunkSize = 16777216;
+
+/*
 ICAv2 Resources - required by various stacks
  */
 export const icav2AccessTokenSecretName: Record<AppStage, string> = {
