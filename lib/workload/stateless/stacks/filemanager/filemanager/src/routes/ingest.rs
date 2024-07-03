@@ -33,7 +33,7 @@ pub struct IngestCount {
         (status = NO_CONTENT, description = "Ingest objects into the database from the SQS queue", body = IngestCount),
         ErrorStatusCode,
     ),
-    context_path = "/file/v1",
+    context_path = "/api/v1",
 )]
 pub async fn ingest_from_sqs(state: State<AppState>) -> Result<Json<IngestCount>> {
     let n_records = receive_and_ingest(

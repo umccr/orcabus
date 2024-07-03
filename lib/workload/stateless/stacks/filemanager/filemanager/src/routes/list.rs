@@ -31,7 +31,7 @@ pub struct ListObjectsParams {}
         (status = OK, description = "List all objects", body = Vec<FileObject>),
         ErrorStatusCode,
     ),
-    context_path = "/file/v1",
+    context_path = "/api/v1",
 )]
 pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<FileObject>>> {
     let query = ListQueryBuilder::new(&state.client);
@@ -47,7 +47,7 @@ pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<FileObject>
         (status = OK, description = "Get the count of all objects", body = ListCount),
         ErrorStatusCode,
     ),
-    context_path = "/file/v1",
+    context_path = "/api/v1",
 )]
 pub async fn count_objects(state: State<AppState>) -> Result<Json<ListCount>> {
     let query = ListQueryBuilder::new(&state.client);
@@ -69,7 +69,7 @@ pub struct ListS3ObjectsParams {}
         (status = OK, description = "List all s3 objects", body = Vec<FileS3Object>),
         ErrorStatusCode,
     ),
-    context_path = "/file/v1",
+    context_path = "/api/v1",
 )]
 pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<FileS3Object>>> {
     let query = ListQueryBuilder::new(&state.client);
@@ -85,7 +85,7 @@ pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<FileS3Ob
         (status = OK, description = "Get the count of all s3 objects", body = ListCount),
         ErrorStatusCode,
     ),
-    context_path = "/file/v1",
+    context_path = "/api/v1",
 )]
 pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<ListCount>> {
     let query = ListQueryBuilder::new(&state.client);

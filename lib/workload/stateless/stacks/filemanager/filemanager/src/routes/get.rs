@@ -24,7 +24,7 @@ pub struct GetObjectById {}
         (status = OK, description = "Get an object by its object_id", body = Option<FileObject>),
         ErrorStatusCode,
     ),
-    context_path = "/file/v1",
+    context_path = "/api/v1",
 )]
 pub async fn get_object_by_id(
     state: State<AppState>,
@@ -47,7 +47,7 @@ pub struct GetS3ObjectById {}
         (status = OK, description = "Get an s3object by its s3_object_id", body = Option<FileS3Object>),
         ErrorStatusCode,
     ),
-    context_path = "/file/v1",
+    context_path = "/api/v1",
 )]
 pub async fn get_s3_object_by_id(
     state: State<AppState>,

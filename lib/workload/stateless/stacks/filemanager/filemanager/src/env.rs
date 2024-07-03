@@ -6,10 +6,6 @@ use crate::error::Result;
 use envy::from_env;
 use serde::Deserialize;
 
-fn default_api_server_addr() -> String {
-    "localhost:8080".to_string()
-}
-
 /// Configuration environment variables for filemanager.
 #[derive(Debug, Clone, Deserialize, Default, Eq, PartialEq)]
 pub struct Config {
@@ -22,11 +18,8 @@ pub struct Config {
     pub(crate) sqs_url: Option<String>,
     #[serde(default, rename = "filemanager_paired_ingest_mode")]
     pub(crate) paired_ingest_mode: bool,
-    #[serde(
-        rename = "filemanager_api_server_addr",
-        default = "default_api_server_addr"
-    )]
-    pub(crate) api_server_addr: String,
+    #[serde(default, rename = "filemanager_api_server_addr")]
+    pub(crate) api_server_addr: Option<String>,
 }
 
 impl Config {
@@ -84,8 +77,8 @@ impl Config {
     }
 
     /// Get the api server address.
-    pub fn api_server_addr(&self) -> &str {
-        &self.api_server_addr
+    pub fn api_server_addr(&self) -> Option<&str> {
+        self.api_server_addr.as_deref()
     }
 
     /// Get the value from an optional, or else try and get a different value, unwrapping into a Result.
@@ -134,7 +127,7 @@ mod tests {
                 pguser: Some("user".to_string()),
                 sqs_url: Some("url".to_string()),
                 paired_ingest_mode: true,
-                api_server_addr: "127.0.0.1:8080".to_string(),
+                api_server_addr: Some("127.0.0.1:8080".to_string()),
             }
         )
     }
@@ -143,12 +136,6 @@ mod tests {
     fn test_environment_defaults() {
         let config: Config = from_iter(vec![]).unwrap();
 
-        assert_eq!(
-            config,
-            Config {
-                api_server_addr: default_api_server_addr(),
-                ..Default::default()
-            }
-        );
+        assert_eq!(config, Default::default(),);
     }
 }

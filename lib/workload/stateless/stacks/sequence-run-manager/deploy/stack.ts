@@ -11,7 +11,6 @@ import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../../components/api-gateway';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
-import { ApiGatewayProxyIntegration } from '../../../../components/api-gateway-proxy-integration';
 
 export interface SequenceRunManagerStackProps {
   lambdaSecurityGroupName: string;
@@ -113,14 +112,20 @@ export class SequenceRunManagerStack extends Stack {
       timeout: Duration.seconds(28),
     });
 
-    new ApiGatewayProxyIntegration(this, 'ProxyIntegration', {
-      handler: apiFn,
-      apiGatewayProps: {
-        region: this.region,
-        apiName: 'SequenceRunManager',
-        customDomainNamePrefix: 'sequence',
-        ...props,
-      },
+    const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
+      region: this.region,
+      apiName: 'SequenceRunManager',
+      customDomainNamePrefix: 'sequence',
+      ...props,
+    });
+    const httpApi = srmApi.httpApi;
+
+    const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
+
+    new HttpRoute(this, 'HttpRoute', {
+      httpApi: httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
     });
   }
 

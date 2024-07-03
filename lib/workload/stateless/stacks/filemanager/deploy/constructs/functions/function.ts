@@ -39,6 +39,10 @@ export type FunctionPropsNoPackage = {
    */
   readonly buildEnvironment?: { [key: string]: string };
   /**
+   * Additional environment variables to set inside the Lambda function
+   */
+  readonly environment?: { [key: string]: string };
+  /**
    * RUST_LOG string, defaults to trace on local crates and info everywhere else.
    */
   readonly rustLog?: string;
@@ -121,6 +125,7 @@ export class Function extends Construct {
         PGUSER: FILEMANAGER_SERVICE_NAME,
         RUST_LOG:
           props.rustLog ?? `info,${props.package.replace('-', '_')}=trace,filemanager=trace`,
+        ...props.environment,
       },
       architecture: Architecture.ARM_64,
       role: this._role,

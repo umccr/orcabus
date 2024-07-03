@@ -8,7 +8,6 @@ import {
   ApiGatewayConstruct,
   ApiGatewayConstructProps,
 } from '../../../../../../components/api-gateway';
-import { ApiGatewayProxyIntegration } from '../../../../../../components/api-gateway-proxy-integration';
 
 type LambdaProps = {
   /**
@@ -31,6 +30,12 @@ export class LambdaAPIConstruct extends Construct {
   constructor(scope: Construct, id: string, lambdaProps: LambdaProps) {
     super(scope, id);
 
+    const apiGW = new ApiGatewayConstruct(
+      this,
+      'OrcaBusAPI-MetadataManager',
+      lambdaProps.apiGatewayConstructProps
+    );
+
     this.lambda = new PythonFunction(this, 'APILambda', {
       ...lambdaProps.basicLambdaConfig,
       index: 'handler/api.py',
@@ -39,9 +44,13 @@ export class LambdaAPIConstruct extends Construct {
     });
     lambdaProps.dbConnectionSecret.grantRead(this.lambda);
 
-    new ApiGatewayProxyIntegration(this, 'OrcaBusAPI-MetadataManager', {
-      handler: this.lambda,
-      apiGatewayProps: lambdaProps.apiGatewayConstructProps,
+    // add some integration to the http api gw
+    const apiIntegration = new HttpLambdaIntegration('ApiLambdaIntegration', this.lambda);
+
+    new HttpRoute(this, 'ApiLambdaHttpRoute', {
+      httpApi: apiGW.httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
     });
   }
 }

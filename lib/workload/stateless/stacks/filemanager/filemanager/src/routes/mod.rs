@@ -5,7 +5,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use sea_orm::{DbErr, RuntimeErr};
+use sea_orm::DbErr;
 use serde::Serialize;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -54,6 +54,14 @@ impl AppState {
     }
 }
 
+/// Prefixed router with a version number, swagger ui and fallback route.
+pub fn router(state: AppState) -> Router {
+    Router::new()
+        .nest("/api/v1", api_router(state))
+        .fallback(fallback)
+        .merge(swagger_ui())
+}
+
 /// The main filemanager router for requests.
 pub fn api_router(state: AppState) -> Router {
     Router::new()
@@ -64,10 +72,8 @@ pub fn api_router(state: AppState) -> Router {
         .route("/s3_objects/:id", get(get_s3_object_by_id))
         .route("/s3_objects/count", get(count_s3_objects))
         .route("/ingest_from_sqs", post(ingest_from_sqs))
-        .fallback(fallback)
         .with_state(state)
         .layer(TraceLayer::new_for_http())
-        .merge(swagger_ui())
 }
 
 /// The fallback route.
@@ -90,7 +96,7 @@ pub struct ErrorResponse {
 pub enum ErrorStatusCode {
     #[response(
         status = BAD_REQUEST,
-        description = "the request could not be parsed or the request triggered a logical error in the database",
+        description = "the request could not be parsed or the request triggered a constraint error in the database",
         example = json!({"message": "Json Error: parsing json"}),
     )]
     BadRequest(ErrorResponse),
@@ -115,35 +121,12 @@ impl IntoResponse for ErrorStatusCode {
     }
 }
 
-impl From<sqlx::Error> for ErrorStatusCode {
-    fn from(err: sqlx::Error) -> Self {
-        match err {
-            sqlx::Error::RowNotFound
-            | sqlx::Error::TypeNotFound { .. }
-            | sqlx::Error::ColumnIndexOutOfBounds { .. }
-            | sqlx::Error::ColumnNotFound(_) => Self::BadRequest(err.to_string().into()),
-            _ => Self::InternalServerError(err.to_string().into()),
-        }
-    }
-}
-
 impl From<DbErr> for ErrorStatusCode {
     fn from(err: DbErr) -> Self {
         if let Some(err) = err.sql_err() {
             Self::BadRequest(ErrorResponse::new(err.to_string()))
         } else {
-            match err {
-                DbErr::Exec(RuntimeErr::SqlxError(err))
-                | DbErr::Query(RuntimeErr::SqlxError(err))
-                | DbErr::Conn(RuntimeErr::SqlxError(err)) => Self::from(err),
-                DbErr::RecordNotFound(_)
-                | DbErr::TryIntoErr { .. }
-                | DbErr::Type(_)
-                | DbErr::Json(_)
-                | DbErr::RecordNotInserted
-                | DbErr::RecordNotUpdated => Self::BadRequest(err.to_string().into()),
-                _ => Self::InternalServerError(err.to_string().into()),
-            }
+            Self::InternalServerError(err.to_string().into())
         }
     }
 }
@@ -179,36 +162,15 @@ impl IntoResponse for Error {
 #[cfg(test)]
 mod tests {
     use aws_lambda_events::http::Request;
-    use axum::body::{to_bytes, Body};
+    use axum::body::Body;
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
-    use parquet::data_type::AsBytes;
-    use sea_orm::DbErr;
-    use serde_json::{from_slice, json, Value};
     use sqlx::PgPool;
     use tower::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::error::Error;
-    use crate::routes::{api_router, AppState};
-
-    #[tokio::test]
-    async fn sql_error_into_response() {
-        let response =
-            Error::DatabaseError(DbErr::Json("parsing json".to_string())).into_response();
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-
-        assert_eq!(
-            json!({"message": "Json Error: parsing json"}),
-            from_slice::<Value>(
-                to_bytes(response.into_body(), usize::MAX)
-                    .await
-                    .unwrap()
-                    .as_bytes()
-            )
-            .unwrap()
-        );
-    }
+    use crate::routes::{router, AppState};
 
     #[tokio::test]
     async fn internal_error_into_response() {
@@ -218,7 +180,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_unknown_path(pool: PgPool) {
-        let app = api_router(AppState::from_pool(pool));
+        let app = router(AppState::from_pool(pool));
         let response = app
             .oneshot(
                 Request::builder()

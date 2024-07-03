@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { IngestFunction } from './constructs/functions/ingest';
 import { MigrateFunction } from './constructs/functions/migrate';
-import { QueryFunction } from './constructs/functions/query';
+import { ApiFunction } from './constructs/functions/api';
 import { DatabaseProps } from './constructs/functions/function';
 import { Vpc, SecurityGroup, VpcLookupOptions, IVpc, ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Arn, Stack, StackProps } from 'aws-cdk-lib';
@@ -13,7 +13,6 @@ import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { InventoryFunction } from './constructs/functions/inventory';
 import { NamedLambdaRole } from '../../../../components/named-lambda-role';
-import { ApiGatewayProxyIntegration } from '../../../../components/api-gateway-proxy-integration';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 
@@ -133,21 +132,28 @@ export class Filemanager extends Stack {
    * Query function and API Gateway fronting the function.
    */
   private createApiFunction(props: FilemanagerProps) {
-    let objectsQueryLambda = new QueryFunction(this, 'ObjectsQueryFunction', {
+    let apiLambda = new ApiFunction(this, 'ApiFunction', {
       vpc: this.vpc,
       host: this.host,
       securityGroup: this.securityGroup,
       ...props,
     });
 
-    new ApiGatewayProxyIntegration(this, 'ProxyIntegration', {
-      handler: objectsQueryLambda.function,
-      apiGatewayProps: {
-        region: this.region,
-        apiName: 'FileManager',
-        customDomainNamePrefix: 'file',
-        ...props,
-      },
+    const ApiGateway = new ApiGatewayConstruct(this, 'ApiGateway', {
+      region: this.region,
+      apiName: 'FileManager',
+      customDomainNamePrefix: 'file',
+      ...props,
+    });
+    const httpApi = ApiGateway.httpApi;
+
+    const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiLambda.function);
+
+    new HttpRoute(this, 'HttpRoute', {
+      // FIXME: Should not be just proxy but objects/{:id}
+      httpApi: httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
     });
   }
 }

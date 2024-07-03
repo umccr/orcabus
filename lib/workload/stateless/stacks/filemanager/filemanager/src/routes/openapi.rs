@@ -16,12 +16,12 @@ use crate::routes::ingest::*;
 use crate::routes::list::*;
 use crate::routes::ErrorResponse;
 
-/// A newtype representing a chrono DateTime used to link to the utoipa `DateTime` known value.
+/// A newtype equivalent to a `DateTime` with a time zone.
 #[derive(ToSchema)]
 #[schema(value_type = DateTime)]
 pub struct DateTimeWithTimeZone(pub DateTime<FixedOffset>);
 
-/// A newtype representing a json Value used to link to the utoipa `Value` known value.
+/// A newtype equivalent to an arbitrary JSON `Value`.
 #[derive(ToSchema)]
 #[schema(value_type = Value)]
 pub struct Json(pub Value);
@@ -52,7 +52,7 @@ pub struct Json(pub Value);
         )
     ),
     modifiers(&SecurityAddon),
-    security(("orcabus_api_key" = []))
+    security(("orcabus_api_token" = []))
 )]
 pub struct ApiDoc;
 
@@ -64,7 +64,7 @@ impl Modify for SecurityAddon {
     fn modify(&self, openapi: &mut openapi::OpenApi) {
         if let Some(components) = openapi.components.as_mut() {
             components.add_security_scheme(
-                "orcabus_api_key",
+                "orcabus_api_token",
                 SecurityScheme::Http(Http::new(HttpAuthScheme::Bearer)),
             )
         }
@@ -85,12 +85,12 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::routes::api_router;
+    use crate::routes::router;
     use crate::routes::AppState;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_swagger_ui(pool: PgPool) {
-        let app = api_router(AppState::from_pool(pool));
+        let app = router(AppState::from_pool(pool));
         let response = app
             .oneshot(
                 Request::builder()
