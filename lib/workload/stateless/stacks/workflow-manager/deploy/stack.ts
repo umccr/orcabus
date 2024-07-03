@@ -13,20 +13,10 @@ import {
 } from 'aws-cdk-lib';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import {
-  CorsHttpMethod,
-  HttpApi,
-  HttpMethod,
-  HttpRoute,
-  HttpRouteKey,
-  HttpStage,
-} from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import {
-  ApiGatewayConstruct,
-  ApiGwLogsConfig,
-} from '../../../../../workload/components/api-gateway';
+import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../../components/api-gateway';
 
 export interface WorkflowManagerStackProps extends StackProps {
   lambdaSecurityGroupName: string;
@@ -164,7 +154,9 @@ export class WorkflowManagerStack extends Stack {
 
     eventRule.addTarget(new aws_events_targets.LambdaFunction(procFn));
     eventRule.addEventPattern({
-      source: ['{ "anything-but": "orcabus.workflowmanager" }'],
+      // See https://github.com/aws/aws-cdk/issues/30220
+      // @ts-ignore
+      source: [{ 'anything-but': 'orcabus.workflowmanager' }],
       detailType: ['WorkflowRunStateChange'],
     });
   }
