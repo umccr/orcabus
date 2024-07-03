@@ -39,3 +39,44 @@ pub async fn ingest_from_sqs(state: State<AppState>) -> Result<Json<()>> {
 
     Ok(Json(()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Method, Request};
+    use sqlx::PgPool;
+    use std::sync::Arc;
+    use tower::ServiceExt;
+
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::handlers::aws::tests::test_receive_and_ingest_with;
+    use crate::routes::{api_router, AppState};
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_from_sqs_api(pool: PgPool) {
+        let mut state = AppState::from_pool(pool);
+        Arc::get_mut(&mut state.config)
+            .unwrap()
+            .sqs_url
+            .get_or_insert("url".to_string());
+
+        test_receive_and_ingest_with(state.client(), |sqs_client, s3_client| async {
+            let sqs_ctx = SQSClient::with_defaults_context();
+            sqs_ctx.expect().return_once(|| sqs_client);
+            let s3_ctx = S3Client::with_defaults_context();
+            s3_ctx.expect().return_once(|| s3_client);
+
+            let app = api_router(state.clone());
+            app.oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/ingest_from_sqs")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        })
+        .await;
+    }
+}

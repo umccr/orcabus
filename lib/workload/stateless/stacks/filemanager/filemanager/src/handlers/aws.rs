@@ -199,10 +199,11 @@ pub async fn update_credentials(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use aws_lambda_events::sqs::SqsMessage;
     use chrono::DateTime;
     use sqlx::postgres::PgRow;
+    use std::future::Future;
 
     use crate::database::aws::ingester::tests::{
         assert_row, expected_message, fetch_results, remove_version_ids, replace_sequencers,
@@ -231,39 +232,14 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_receive_and_ingest(pool: PgPool) {
-        let mut sqs_client = SQSClient::default();
-        let mut s3_client = S3Client::default();
-
-        set_sqs_client_expectations(&mut sqs_client);
-        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
-
         let client = Client::from_pool(pool);
-        let config = Default::default();
-        let ingester = receive_and_ingest(s3_client, sqs_client, Some("url"), &client, &config)
-            .await
-            .unwrap();
-
-        let (object_results, s3_object_results) = fetch_results(ingester).await;
-
-        assert_eq!(object_results.len(), 2);
-        assert_eq!(s3_object_results.len(), 2);
-        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created);
-        assert_row(
-            &s3_object_results[0],
-            message,
-            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
-            Some(Default::default()),
-        );
-
-        let message = expected_message(None, EXPECTED_VERSION_ID.to_string(), false, Deleted)
-            .with_sha256(None)
-            .with_last_modified_date(None);
-        assert_row(
-            &s3_object_results[1],
-            message,
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            Some(Default::default()),
-        );
+        test_receive_and_ingest_with(&client, |sqs_client, s3_client| async {
+            let config = Default::default();
+            receive_and_ingest(s3_client, sqs_client, Some("url"), &client, &config)
+                .await
+                .unwrap();
+        })
+        .await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -383,6 +359,42 @@ mod tests {
             message,
             Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
             Some(DateTime::default()),
+        );
+    }
+
+    pub(crate) async fn test_receive_and_ingest_with<F, Fut>(client: &Client, f: F)
+    where
+        F: FnOnce(SQSClient, S3Client) -> Fut,
+        Fut: Future<Output = ()>,
+    {
+        let mut sqs_client = SQSClient::default();
+        let mut s3_client = S3Client::default();
+
+        set_sqs_client_expectations(&mut sqs_client);
+        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
+
+        f(sqs_client, s3_client).await;
+
+        let (object_results, s3_object_results) = fetch_results(client).await;
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_results.len(), 2);
+        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created);
+        assert_row(
+            &s3_object_results[0],
+            message,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            Some(Default::default()),
+        );
+
+        let message = expected_message(None, EXPECTED_VERSION_ID.to_string(), false, Deleted)
+            .with_sha256(None)
+            .with_last_modified_date(None);
+        assert_row(
+            &s3_object_results[1],
+            message,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            Some(Default::default()),
         );
     }
 
