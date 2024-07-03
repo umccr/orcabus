@@ -12,7 +12,29 @@ pub mod aws;
 #[async_trait]
 pub trait Collect {
     /// Collect into events.
-    async fn collect(self) -> Result<EventSourceType>;
+    async fn collect(self) -> Result<EventSource>;
+}
+
+/// The event source with a type and the number of (potentially duplicate) records contained.
+#[derive(Debug)]
+pub struct EventSource {
+    event_type: EventSourceType,
+    n_records: usize,
+}
+
+impl EventSource {
+    /// Create a new event source.
+    pub fn new(event_type: EventSourceType, n_records: usize) -> Self {
+        Self {
+            event_type,
+            n_records,
+        }
+    }
+
+    /// Get the inner values.
+    pub fn into_inner(self) -> (EventSourceType, usize) {
+        (self.event_type, self.n_records)
+    }
 }
 
 /// The type of event.

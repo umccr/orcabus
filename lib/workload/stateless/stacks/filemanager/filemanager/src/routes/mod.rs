@@ -100,12 +100,6 @@ pub enum ErrorStatusCode {
         example = json!({"message": "Failed to acquire connection from pool: Connection pool timed out"}),
     )]
     InternalServerError(ErrorResponse),
-    #[response(
-        status = REQUEST_TIMEOUT,
-        description = "the request could not be processed",
-        example = json!({"message": "failed to update database credentials"}),
-    )]
-    RequestTimeout(ErrorResponse),
 }
 
 impl IntoResponse for ErrorStatusCode {
@@ -116,9 +110,6 @@ impl IntoResponse for ErrorStatusCode {
             }
             ErrorStatusCode::InternalServerError(err) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, Json(err)).into_response()
-            }
-            ErrorStatusCode::RequestTimeout(err) => {
-                (StatusCode::REQUEST_TIMEOUT, Json(err)).into_response()
             }
         }
     }

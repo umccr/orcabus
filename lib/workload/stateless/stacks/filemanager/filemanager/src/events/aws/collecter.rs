@@ -23,7 +23,7 @@ use crate::error::Result;
 use crate::events::aws::{
     EventType, FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages,
 };
-use crate::events::{Collect, EventSourceType};
+use crate::events::{Collect, EventSource, EventSourceType};
 
 /// Build an AWS collector struct.
 #[derive(Default, Debug)]
@@ -115,12 +115,15 @@ impl CollecterBuilder {
     }
 }
 
-/// Collect raw events into the processed form which the database module accepts.
+/// Collect raw events into the processed form which the database module accepts. Tracks the
+/// number of (potentially duplicate) records that are processed by this collector. The number of
+/// records is None before any events have been processed.
 #[derive(Debug)]
 pub struct Collecter<'a> {
     client: Client,
     raw_events: FlatS3EventMessages,
     config: &'a Config,
+    n_records: Option<usize>,
 }
 
 impl<'a> Collecter<'a> {
@@ -130,6 +133,7 @@ impl<'a> Collecter<'a> {
             client,
             raw_events,
             config,
+            n_records: None,
         }
     }
 
@@ -209,12 +213,19 @@ impl<'a> Collecter<'a> {
             .collect::<Result<Vec<FlatS3EventMessage>>>()?,
         ))
     }
+
+    /// Get the number of records processed.
+    pub fn n_records(&self) -> Option<usize> {
+        self.n_records
+    }
 }
 
 #[async_trait]
 impl<'a> Collect for Collecter<'a> {
-    async fn collect(self) -> Result<EventSourceType> {
+    async fn collect(mut self) -> Result<EventSource> {
         let (client, events, config) = self.into_inner();
+
+        let n_records = events.0.len();
         let events = events.sort_and_dedup();
 
         let events = Self::update_events(&client, events).await?;
@@ -222,9 +233,15 @@ impl<'a> Collect for Collecter<'a> {
         let events = events.filter_known();
 
         if config.paired_ingest_mode() {
-            Ok(EventSourceType::S3Paired(events.into()))
+            Ok(EventSource::new(
+                EventSourceType::S3Paired(events.into()),
+                n_records,
+            ))
         } else {
-            Ok(EventSourceType::S3(TransposedS3EventMessages::from(events)))
+            Ok(EventSource::new(
+                EventSourceType::S3(TransposedS3EventMessages::from(events)),
+                n_records,
+            ))
         }
     }
 }
@@ -291,7 +308,9 @@ pub(crate) mod tests {
             .unwrap()
             .collect()
             .await
-            .unwrap();
+            .unwrap()
+            .into_inner()
+            .0;
 
         assert_collected_events(events);
     }
@@ -362,7 +381,7 @@ pub(crate) mod tests {
 
         set_s3_client_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
 
-        let result = collecter.collect().await.unwrap();
+        let result = collecter.collect().await.unwrap().into_inner().0;
 
         assert_collected_events(result);
     }

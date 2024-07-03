@@ -3,13 +3,21 @@
 
 use axum::extract::State;
 use axum::Json;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::database::entities::object::Model as FileObject;
 use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::{AppState, ErrorStatusCode};
+
+/// The return value for count operations showing the number of records in the database.
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+pub struct ListCount {
+    /// The number of records.
+    n_records: u64,
+}
 
 /// Params for a list objects request.
 #[derive(Debug, Deserialize)]
@@ -36,15 +44,17 @@ pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<FileObject>
     get,
     path = "/objects/count",
     responses(
-        (status = OK, description = "Get the count of all objects", body = u64),
+        (status = OK, description = "Get the count of all objects", body = ListCount),
         ErrorStatusCode,
     ),
     context_path = "/file/v1",
 )]
-pub async fn count_objects(state: State<AppState>) -> Result<Json<u64>> {
+pub async fn count_objects(state: State<AppState>) -> Result<Json<ListCount>> {
     let query = ListQueryBuilder::new(&state.client);
 
-    Ok(Json(query.count_objects().await?))
+    Ok(Json(ListCount {
+        n_records: query.count_objects().await?,
+    }))
 }
 
 /// Params for a list s3 objects request.
@@ -72,15 +82,17 @@ pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<FileS3Ob
     get,
     path = "/s3_objects/count",
     responses(
-        (status = OK, description = "Get the count of all s3 objects", body = u64),
+        (status = OK, description = "Get the count of all s3 objects", body = ListCount),
         ErrorStatusCode,
     ),
     context_path = "/file/v1",
 )]
-pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<u64>> {
+pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<ListCount>> {
     let query = ListQueryBuilder::new(&state.client);
 
-    Ok(Json(query.count_s3_objects().await?))
+    Ok(Json(ListCount {
+        n_records: query.count_s3_objects().await?,
+    }))
 }
 
 #[cfg(test)]
@@ -97,6 +109,7 @@ mod tests {
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::queries::tests::initialize_database;
+    use crate::routes::list::ListCount;
     use crate::routes::{api_router, AppState};
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -181,7 +194,7 @@ mod tests {
             .await
             .unwrap();
 
-        let result = from_slice::<u64>(
+        let result = from_slice::<ListCount>(
             to_bytes(response.into_body(), usize::MAX)
                 .await
                 .unwrap()
@@ -189,7 +202,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(result, 10);
+        assert_eq!(result.n_records, 10);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -208,7 +221,7 @@ mod tests {
             .await
             .unwrap();
 
-        let result = from_slice::<u64>(
+        let result = from_slice::<ListCount>(
             to_bytes(response.into_body(), usize::MAX)
                 .await
                 .unwrap()
@@ -216,6 +229,6 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(result, 10);
+        assert_eq!(result.n_records, 10);
     }
 }

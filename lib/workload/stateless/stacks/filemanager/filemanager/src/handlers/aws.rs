@@ -26,25 +26,27 @@ use crate::events::aws::{FlatS3EventMessages, TransposedS3EventMessages};
 use crate::events::{Collect, EventSourceType};
 
 /// Handle SQS events by manually calling the SQS receive function. This is meant
-/// to be run through something like API gateway to manually invoke ingestion.
+/// to be run through something like API gateway to manually invoke ingestion. Returns
+/// the number of records processed.
 pub async fn receive_and_ingest<'a>(
     s3_client: S3Client,
     sqs_client: SQSClient,
     sqs_url: Option<impl Into<String>>,
     database_client: &'a Client,
     env_config: &'a EnvConfig,
-) -> Result<&'a Client, error::Error> {
-    let events = CollecterBuilder::default()
+) -> Result<usize, error::Error> {
+    let (events, n_records) = CollecterBuilder::default()
         .with_s3_client(s3_client)
         .with_sqs_client(sqs_client)
         .set_sqs_url(sqs_url)
         .build_receive(env_config)
         .await?
         .collect()
-        .await?;
+        .await?
+        .into_inner();
 
     database_client.ingest(events).await?;
-    Ok(database_client)
+    Ok(n_records)
 }
 
 /// Handle SQS events that go through an SqsEvent.
@@ -75,7 +77,9 @@ pub async fn ingest_event(
         .build(events, env_config)
         .await
         .collect()
-        .await?;
+        .await?
+        .into_inner()
+        .0;
 
     trace!("ingesting events: {:?}", events);
 

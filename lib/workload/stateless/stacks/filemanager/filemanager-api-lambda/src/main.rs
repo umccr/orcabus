@@ -37,7 +37,7 @@ async fn update_credentials_middleware(
     let result = update_credentials(state.client().connection_ref(), state.config()).await;
 
     if let Err(err) = result {
-        return ErrorStatusCode::RequestTimeout(ErrorResponse::new(format!(
+        return ErrorStatusCode::InternalServerError(ErrorResponse::new(format!(
             "failed to update credentials: {}",
             err
         )))

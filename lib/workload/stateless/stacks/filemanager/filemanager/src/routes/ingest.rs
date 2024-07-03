@@ -11,24 +11,32 @@ use crate::routes::{AppState, ErrorStatusCode};
 use axum::extract::State;
 use axum::Json;
 use mockall_double::double;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Params for ingesting from the SQS queue.
 #[derive(Debug, Deserialize)]
 pub struct IngestFromSQS {}
+
+/// The return value for ingest endpoints indicating how many records were processed.
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+pub struct IngestCount {
+    /// The number of events processed. This potentially includes duplicate records.
+    n_records: usize,
+}
 
 /// The ingest from sqs handler.
 #[utoipa::path(
     post,
     path = "/ingest_from_sqs",
     responses(
-        (status = NO_CONTENT, description = "Ingest objects into the database from the SQS queue", body = ()),
+        (status = NO_CONTENT, description = "Ingest objects into the database from the SQS queue", body = IngestCount),
         ErrorStatusCode,
     ),
     context_path = "/file/v1",
 )]
-pub async fn ingest_from_sqs(state: State<AppState>) -> Result<Json<()>> {
-    receive_and_ingest(
+pub async fn ingest_from_sqs(state: State<AppState>) -> Result<Json<IngestCount>> {
+    let n_records = receive_and_ingest(
         S3Client::with_defaults().await,
         SQSClient::with_defaults().await,
         None::<String>,
@@ -37,7 +45,7 @@ pub async fn ingest_from_sqs(state: State<AppState>) -> Result<Json<()>> {
     )
     .await?;
 
-    Ok(Json(()))
+    Ok(Json(IngestCount { n_records }))
 }
 
 #[cfg(test)]
