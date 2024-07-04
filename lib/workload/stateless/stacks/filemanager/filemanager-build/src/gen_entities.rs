@@ -13,6 +13,7 @@ use crate::error::ErrorKind::EntityGeneration;
 use crate::error::{Error, Result};
 use crate::Config;
 
+/// Generate sea-orm entities into the `OUT_DIR`.
 pub async fn generate_entities() -> Result<()> {
     let config = Config::load()?;
 
@@ -24,11 +25,13 @@ pub async fn generate_entities() -> Result<()> {
         "--with-serde",
         "both",
         "--enum-extra-derives",
-        "strum::FromRepr",
-        "--enum-extra-derives",
-        "strum::EnumCount",
+        "strum::FromRepr, strum::EnumCount",
+        "--model-extra-derives",
+        "utoipa::ToSchema",
         "--enum-extra-attributes",
         "repr(u8)",
+        "--enum-extra-derives",
+        "utoipa::ToSchema",
         "-u",
         &config.database_url,
         "-o",
@@ -54,5 +57,6 @@ pub async fn generate_entities() -> Result<()> {
 
     let out_file = out_dir.join("generated.rs");
     write(out_file, format!("{}\n\n{}", generated_comment, generated))?;
+
     Ok(())
 }

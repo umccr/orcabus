@@ -6,21 +6,30 @@ use axum::Json;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::database::entities::object::Model as Object;
-use crate::database::entities::s3_object::Model as S3Object;
+use crate::database::entities::object::Model as FileObject;
+use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::error::Result;
 use crate::queries::get::GetQueryBuilder;
-use crate::routes::AppState;
+use crate::routes::{AppState, ErrorStatusCode};
 
 /// Params for a get object by id request.
 #[derive(Debug, Deserialize)]
 pub struct GetObjectById {}
 
 /// The get object handler.
+#[utoipa::path(
+    get,
+    path = "/objects/{id}",
+    responses(
+        (status = OK, description = "Get an object by its object_id", body = Option<FileObject>),
+        ErrorStatusCode,
+    ),
+    context_path = "/api/v1",
+)]
 pub async fn get_object_by_id(
     state: State<AppState>,
     Path(id): Path<Uuid>,
-) -> Result<Json<Option<Object>>> {
+) -> Result<Json<Option<FileObject>>> {
     let query = GetQueryBuilder::new(&state.client);
 
     Ok(Json(query.get_object(id).await?))
@@ -31,10 +40,19 @@ pub async fn get_object_by_id(
 pub struct GetS3ObjectById {}
 
 /// The get s3 objects handler.
+#[utoipa::path(
+    get,
+    path = "/s3_objects/{id}",
+    responses(
+        (status = OK, description = "Get an s3object by its s3_object_id", body = Option<FileS3Object>),
+        ErrorStatusCode,
+    ),
+    context_path = "/api/v1",
+)]
 pub async fn get_s3_object_by_id(
     state: State<AppState>,
     Path(id): Path<Uuid>,
-) -> Result<Json<Option<S3Object>>> {
+) -> Result<Json<Option<FileS3Object>>> {
     let query = GetQueryBuilder::new(&state.client);
 
     Ok(Json(query.get_s3_object_by_id(id).await?))
@@ -53,17 +71,16 @@ mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
-    use crate::database::Client;
     use crate::queries::tests::initialize_database;
-    use crate::routes::query_router;
+    use crate::routes::{api_router, AppState};
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_objects_api(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await;
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await;
 
         let first = entries.first().unwrap();
-        let app = query_router(client);
+        let app = api_router(state);
         let response = app
             .oneshot(
                 Request::builder()
@@ -87,11 +104,11 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_s3_objects_api(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await;
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await;
 
         let first = entries.first().unwrap();
-        let app = query_router(client);
+        let app = api_router(state);
         let response = app
             .oneshot(
                 Request::builder()

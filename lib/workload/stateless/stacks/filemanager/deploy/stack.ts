@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { IngestFunction } from './constructs/functions/ingest';
 import { MigrateFunction } from './constructs/functions/migrate';
-import { QueryFunction } from './constructs/functions/query';
+import { ApiFunction } from './constructs/functions/api';
 import { DatabaseProps } from './constructs/functions/function';
 import { Vpc, SecurityGroup, VpcLookupOptions, IVpc, ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Arn, Stack, StackProps } from 'aws-cdk-lib';
@@ -92,12 +92,12 @@ export class Filemanager extends Stack {
     );
 
     this.createIngestFunction(props);
-    this.createQueryFunction(props);
+    this.createApiFunction(props);
     this.createInventoryFunction(props);
   }
 
   private createIngestRole(name: string) {
-    return new NamedLambdaRole(this, 'IngestFunctionRole', { name })
+    return new NamedLambdaRole(this, 'IngestFunctionRole', { name });
   }
 
   /**
@@ -131,8 +131,8 @@ export class Filemanager extends Stack {
   /**
    * Query function and API Gateway fronting the function.
    */
-  private createQueryFunction(props: FilemanagerProps) {
-    let objectsQueryLambda = new QueryFunction(this, 'ObjectsQueryFunction', {
+  private createApiFunction(props: FilemanagerProps) {
+    let apiLambda = new ApiFunction(this, 'ApiFunction', {
       vpc: this.vpc,
       host: this.host,
       securityGroup: this.securityGroup,
@@ -147,7 +147,7 @@ export class Filemanager extends Stack {
     });
     const httpApi = ApiGateway.httpApi;
 
-    const apiIntegration = new HttpLambdaIntegration('ApiIntegration', objectsQueryLambda.function);
+    const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiLambda.function);
 
     new HttpRoute(this, 'HttpRoute', {
       // FIXME: Should not be just proxy but objects/{:id}

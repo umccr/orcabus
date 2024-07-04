@@ -78,12 +78,19 @@ Which runs `cargo test -- --ignored`.
 
 To connect to the local postgres database, run:
 
-```bash
+```sh
 make psql
 ```
 
 Alternatively, just `brew install dbeaver-community` to easily browse the database contents (or any other DB viewer you prefer).
 
+## Local API server
+
+To use the local API server, run:
+
+```sh
+make api
+```
 
 ### Compilation and migrations
 
@@ -105,18 +112,33 @@ docker system prune -a --volumes
 [deploy]: ./deploy
 [env-example]: .env.example
 
+## Architecture
+
+The filemanager ingest functionality operates to ensure eventual consistency in the database records. See the 
+[ARCHITECTURE.md][architecture] for more details.
+
 ## Project Layout
 
 The project is divided into multiple crates that serve different functionality.
 
 * [filemanager]: This is the bulk of the filemanager logic, and handles database connections and event processing.
-* [filemanager-http-lambda]: This is a Lambda function which calls the SQS queue manually to ingest events.
+* [filemanager-api-lambda]: This is a Lambda function which responds to API Gateway requests.
+* [filemanager-api-server]: A local server instance of the filemanager API.
+* [filemanager-build]: Build related functionality such as database entity generation.
 * [filemanager-ingest-lambda]: This is a Lambda function which ingests events directly passed from an SQS queue.
+* [filemanager-inventory-lambda]: This function ingests events using [S3 Inventory][inventory].
+* [filemanager-migrate-lambda]: A Lambda function to apply database migrations.
 * [deploy]: CDK deployment code.
 * [database]: Database migration files and queries.
 
+[architecture]: docs/ARCHITECTURE.md
 [filemanager]: filemanager
-[filemanager-http-lambda]: filemanager-http-lambda
+[filemanager-api-lambda]: filemanager-api-lambda
+[filemanager-api-server]: filemanager-api-server
+[filemanager-build]: filemanager-build
 [filemanager-ingest-lambda]: filemanager-ingest-lambda
+[filemanager-inventory-lambda]: filemanager-inventory-lambda
+[filemanager-migrate-lambda]: filemanager-migrate-lambda
+[inventory]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html
 [deploy]: deploy
 [database]: database

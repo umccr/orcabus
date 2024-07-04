@@ -3,30 +3,58 @@
 
 use axum::extract::State;
 use axum::Json;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-use crate::database::entities::object::Model as Object;
-use crate::database::entities::s3_object::Model as S3Object;
+use crate::database::entities::object::Model as FileObject;
+use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
-use crate::routes::AppState;
+use crate::routes::{AppState, ErrorStatusCode};
+
+/// The return value for count operations showing the number of records in the database.
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+pub struct ListCount {
+    /// The number of records.
+    n_records: u64,
+}
 
 /// Params for a list objects request.
 #[derive(Debug, Deserialize)]
 pub struct ListObjectsParams {}
 
 /// The list objects handler.
-pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<Object>>> {
+#[utoipa::path(
+    get,
+    path = "/objects",
+    responses(
+        (status = OK, description = "List all objects", body = Vec<FileObject>),
+        ErrorStatusCode,
+    ),
+    context_path = "/api/v1",
+)]
+pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<FileObject>>> {
     let query = ListQueryBuilder::new(&state.client);
 
     Ok(Json(query.list_objects().await?))
 }
 
 /// The count objects handler.
-pub async fn count_objects(state: State<AppState>) -> Result<Json<u64>> {
+#[utoipa::path(
+    get,
+    path = "/objects/count",
+    responses(
+        (status = OK, description = "Get the count of all objects", body = ListCount),
+        ErrorStatusCode,
+    ),
+    context_path = "/api/v1",
+)]
+pub async fn count_objects(state: State<AppState>) -> Result<Json<ListCount>> {
     let query = ListQueryBuilder::new(&state.client);
 
-    Ok(Json(query.count_objects().await?))
+    Ok(Json(ListCount {
+        n_records: query.count_objects().await?,
+    }))
 }
 
 /// Params for a list s3 objects request.
@@ -34,17 +62,37 @@ pub async fn count_objects(state: State<AppState>) -> Result<Json<u64>> {
 pub struct ListS3ObjectsParams {}
 
 /// The list s3 objects handler.
-pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<S3Object>>> {
+#[utoipa::path(
+    get,
+    path = "/s3_objects",
+    responses(
+        (status = OK, description = "List all s3 objects", body = Vec<FileS3Object>),
+        ErrorStatusCode,
+    ),
+    context_path = "/api/v1",
+)]
+pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<FileS3Object>>> {
     let query = ListQueryBuilder::new(&state.client);
 
     Ok(Json(query.list_s3_objects().await?))
 }
 
 /// The count s3 objects handler.
-pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<u64>> {
+#[utoipa::path(
+    get,
+    path = "/s3_objects/count",
+    responses(
+        (status = OK, description = "Get the count of all s3 objects", body = ListCount),
+        ErrorStatusCode,
+    ),
+    context_path = "/api/v1",
+)]
+pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<ListCount>> {
     let query = ListQueryBuilder::new(&state.client);
 
-    Ok(Json(query.count_s3_objects().await?))
+    Ok(Json(ListCount {
+        n_records: query.count_s3_objects().await?,
+    }))
 }
 
 #[cfg(test)]
@@ -60,16 +108,16 @@ mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
-    use crate::database::Client;
     use crate::queries::tests::initialize_database;
-    use crate::routes::query_router;
+    use crate::routes::list::ListCount;
+    use crate::routes::{api_router, AppState};
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_objects_api(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await;
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await;
 
-        let app = query_router(client);
+        let app = api_router(state);
         let response = app
             .oneshot(
                 Request::builder()
@@ -99,10 +147,10 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await;
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await;
 
-        let app = query_router(client);
+        let app = api_router(state);
         let response = app
             .oneshot(
                 Request::builder()
@@ -132,10 +180,10 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_objects_api(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        initialize_database(&client, 10).await;
+        let state = AppState::from_pool(pool);
+        initialize_database(state.client(), 10).await;
 
-        let app = query_router(client);
+        let app = api_router(state);
         let response = app
             .oneshot(
                 Request::builder()
@@ -146,7 +194,7 @@ mod tests {
             .await
             .unwrap();
 
-        let result = from_slice::<u64>(
+        let result = from_slice::<ListCount>(
             to_bytes(response.into_body(), usize::MAX)
                 .await
                 .unwrap()
@@ -154,15 +202,15 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(result, 10);
+        assert_eq!(result.n_records, 10);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_objects_api(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        initialize_database(&client, 10).await;
+        let state = AppState::from_pool(pool);
+        initialize_database(state.client(), 10).await;
 
-        let app = query_router(client);
+        let app = api_router(state);
         let response = app
             .oneshot(
                 Request::builder()
@@ -173,7 +221,7 @@ mod tests {
             .await
             .unwrap();
 
-        let result = from_slice::<u64>(
+        let result = from_slice::<ListCount>(
             to_bytes(response.into_body(), usize::MAX)
                 .await
                 .unwrap()
@@ -181,6 +229,6 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(result, 10);
+        assert_eq!(result.n_records, 10);
     }
 }

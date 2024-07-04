@@ -1,6 +1,7 @@
 //! This module handles connecting to the filemanager database for actions such as ingesting events.
 //!
 
+use crate::database::aws::credentials::IamGenerator;
 use crate::database::aws::ingester::Ingester;
 use crate::database::aws::ingester_paired::IngesterPaired;
 use crate::env::Config;
@@ -41,6 +42,12 @@ impl Client {
     /// Create a database connection from an existing pool.
     pub fn from_pool(pool: PgPool) -> Self {
         Self::new(SqlxPostgresConnector::from_sqlx_postgres_pool(pool))
+    }
+
+    /// Create a database using default credential loading logic and without
+    /// a credential generator.
+    pub async fn from_config(config: &Config) -> Result<Self> {
+        Self::from_generator(None::<IamGenerator>, config).await
     }
 
     /// Create a database using default credential loading logic as defined in

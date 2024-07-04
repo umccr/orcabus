@@ -211,6 +211,7 @@ mod tests {
             pguser: Some("filemanager".to_string()),
             sqs_url: None,
             paired_ingest_mode: false,
+            api_server_addr: Some("127.0.0.1:8080".to_string()),
         };
 
         test_generate_iam_token(|config| async {

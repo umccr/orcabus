@@ -22,7 +22,7 @@ async-trait = "0.1"
 futures = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "ansi"] }
 
 # Database
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio", "tls-rustls", "chrono", "uuid"] }
@@ -31,7 +31,10 @@ strum = { version = "0.26", features = ["derive"] }
 
 # Query server
 axum = "0.7"
+utoipa = { version = "4", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "7", features = ["axum"] }
 tower = "0.4"
+tower-http = { version = "0.5", features = ["trace"] }
 
 # General
 chrono = { version = "0.4", features = ["serde"] }
@@ -39,7 +42,7 @@ thiserror = "1"
 uuid = { version = "1", features = ["v7"] }
 mockall = "0.12"
 mockall_double = "0.3"
-itertools = "0.12"
+itertools = "0.13"
 url = "2"
 bytes = "1.6"
 envy = "0.4"
@@ -49,9 +52,9 @@ csv = "1"
 flate2 = "1"
 md5 = "0.7"
 hex = "0.4"
-parquet = { version = "50", features = ["async"] }
-arrow = { version = "50", features = ["chrono-tz"] }
-arrow-json = "50"
+parquet = { version = "52", features = ["async"] }
+arrow = { version = "52", features = ["chrono-tz"] }
+arrow-json = "52"
 orc-rust = "0.3"
 
 # AWS
@@ -61,7 +64,7 @@ aws-sdk-s3 = "1"
 aws-credential-types = "1"
 aws-sigv4 = "1"
 aws-arn = "0.3"
-lambda_runtime = "0.11"
+lambda_runtime = "0.12"
 aws_lambda_events = "0.15"
 
 [dev-dependencies]
