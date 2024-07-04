@@ -27,7 +27,7 @@ yarn cdk-stateless synth OrcaBusStatelessPipeline/OrcaBusBeta/ICAv1CopyBatchUtil
 ## Invoke (manually)
 
 ```sh
-aws lambda invoke --function-name OrcaBusBeta-ICAv1CopyBatc-ICAv1CopyBatchUtilitylam-1CjnVrJ26tzJ --cli-binary-format raw-in-base64-out --invocation-type Event --payload '{"RCLONE_SYNC_CONTENT_SOURCE": "src:stratus-gds-aps2/1f412e89-acc8-4337-b484-08d89d4636a9/analysis_data/SBJ04375/wgs_tumor_normal/202310191d3d07c3/L2301202_L2301201_dragen_somatic/", "RCLONE_SYNC_CONTENT_DESTINATION": "dest:umccr-temp-dev/rclone-lambda-test/", "RCLONE_SYNC_EXTRA_FLAGS": "--include MDX230471_tumor.bam" }' response.json
+aws lambda invoke --function-name OrcaBusBeta-ICAv1CopyBatc-ICAv1CopyBatchUtilitylam-1CjnVrJ26tzJ --cli-binary-format raw-in-base64-out --invocation-type Event --payload '{"RCLONE_SYNC_CONTENT_SOURCE": "src:stratus-gds-aps2/1f412e89-acc8-4337-b484-08d89d4636a9/analysis_data/SBJ04375/wgs_tumor_normal/202310191d3d07c3/L2301202_L2301201_dragen_somatic/", "RCLONE_SYNC_CONTENT_DESTINATION": "dest:umccr-temp-dev/rclone-lambda-test/", "RCLONE_SYNC_EXTRA_FLAGS": "--include MDX230471_tumor.bam --s3-disable-checksum" }'
 ```
 
 [rclone]: https://rclone.org/

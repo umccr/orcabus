@@ -86,7 +86,7 @@ async def run_rclone_sync(event: LambdaDict) -> None:
         or "destination:/"
     )
 
-    extra_flags = event.get("RCLONE_SYNC_EXTRA_FLAGS", "").split()
+    extra_flags = str(event.get("RCLONE_SYNC_EXTRA_FLAGS", "")).split()
 
     cmd = [
         "rclone",
@@ -95,6 +95,7 @@ async def run_rclone_sync(event: LambdaDict) -> None:
         extra_flags,
         "--use-json-log",
         "--verbose",
+        "--verbose", # twice for stats to show up on cloudwatch
         "sync",
         "--stats",
         "10s",
