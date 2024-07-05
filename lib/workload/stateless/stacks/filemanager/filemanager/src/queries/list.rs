@@ -1,7 +1,9 @@
 //! Query builder involving list operations on the database.
 //!
 
-use sea_orm::{EntityTrait, PaginatorTrait, Select};
+use sea_orm::{
+    EntityOrSelect, EntityTrait, FromQueryResult, ModelTrait, PaginatorTrait, QuerySelect, Select,
+};
 
 use crate::database::entities::object::Entity as ObjectEntity;
 use crate::database::entities::object::Model as Object;
@@ -11,52 +13,68 @@ use crate::database::Client;
 use crate::error::Result;
 
 /// A query builder for list operations.
-pub struct ListQueryBuilder<'a> {
+pub struct ListQueryBuilder<'a, T>
+where
+    T: EntityTrait,
+{
     client: &'a Client,
+    select: Select<T>,
 }
 
-impl<'a> ListQueryBuilder<'a> {
+impl<'a> ListQueryBuilder<'a, ObjectEntity> {
     /// Create a new query builder.
     pub fn new(client: &'a Client) -> Self {
-        Self { client }
+        Self {
+            client,
+            select: Self::build_object(),
+        }
     }
 
     /// Build a select query for finding values from objects.
     pub fn build_object() -> Select<ObjectEntity> {
         ObjectEntity::find()
     }
+}
+
+impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
+    /// Create a new query builder.
+    pub fn new(client: &'a Client) -> Self {
+        Self {
+            client,
+            select: Self::build_object(),
+        }
+    }
 
     /// Build a select query for finding values from s3 objects.
-    pub fn build_s3_object() -> Select<S3ObjectEntity> {
+    pub fn build_object() -> Select<S3ObjectEntity> {
         S3ObjectEntity::find()
     }
+}
 
-    /// Find all objects.
-    pub async fn list_objects(&self) -> Result<Vec<Object>> {
-        Ok(Self::build_object()
-            .all(self.client.connection_ref())
-            .await?)
+impl<'a, T, M> ListQueryBuilder<'a, T>
+where
+    T: EntityTrait<Model = M>,
+    M: FromQueryResult + Send + Sync,
+{
+    /// Execute the prepared query, fetching all values.
+    pub async fn all(self) -> Result<Vec<M>> {
+        Ok(self.select.all(self.client.connection_ref()).await?)
     }
 
-    /// Find all s3 objects.
-    pub async fn list_s3_objects(&self) -> Result<Vec<S3Object>> {
-        Ok(Self::build_s3_object()
-            .all(self.client.connection_ref())
-            .await?)
+    /// Execute the prepared query, fetching one value.
+    pub async fn one(self) -> Result<Option<M>> {
+        Ok(self.select.one(self.client.connection_ref()).await?)
     }
 
-    /// Count objects.
-    pub async fn count_objects(&self) -> Result<u64> {
-        Ok(Self::build_object()
-            .count(self.client.connection_ref())
-            .await?)
+    /// Execute the prepared query, counting all values.
+    pub async fn count(self) -> Result<u64> {
+        Ok(self.select.count(self.client.connection_ref()).await?)
     }
 
-    /// Count s3 objects.
-    pub async fn count_s3_objects(&self) -> Result<u64> {
-        Ok(Self::build_s3_object()
-            .count(self.client.connection_ref())
-            .await?)
+    /// Paginate the query for the given page and page_size.
+    pub async fn paginate(mut self, page: u64, page_size: u64) -> Self {
+        self.select = self.select.offset(page * page_size).limit(page_size);
+        self
     }
 }
 
@@ -75,8 +93,8 @@ mod tests {
         let client = Client::from_pool(pool);
         let entries = initialize_database(&client, 10).await;
 
-        let builder = ListQueryBuilder::new(&client);
-        let result = builder.list_objects().await.unwrap();
+        let builder = ListQueryBuilder::<ObjectEntity>::new(&client);
+        let result = builder.all().await.unwrap();
 
         assert_eq!(
             result,
@@ -92,8 +110,8 @@ mod tests {
         let client = Client::from_pool(pool);
         let entries = initialize_database(&client, 10).await;
 
-        let builder = ListQueryBuilder::new(&client);
-        let result = builder.list_s3_objects().await.unwrap();
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
+        let result = builder.all().await.unwrap();
 
         assert_eq!(
             result,
@@ -109,8 +127,8 @@ mod tests {
         let client = Client::from_pool(pool);
         initialize_database(&client, 10).await;
 
-        let builder = ListQueryBuilder::new(&client);
-        let result = builder.count_objects().await.unwrap();
+        let builder = ListQueryBuilder::<ObjectEntity>::new(&client);
+        let result = builder.count().await.unwrap();
 
         assert_eq!(result, 10);
     }
@@ -120,8 +138,8 @@ mod tests {
         let client = Client::from_pool(pool);
         initialize_database(&client, 10).await;
 
-        let builder = ListQueryBuilder::new(&client);
-        let result = builder.count_s3_objects().await.unwrap();
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
+        let result = builder.count().await.unwrap();
 
         assert_eq!(result, 10);
     }

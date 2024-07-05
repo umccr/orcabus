@@ -6,7 +6,9 @@ use axum::Json;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::database::entities::object::Entity as ObjectEntity;
 use crate::database::entities::object::Model as FileObject;
+use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
@@ -23,6 +25,39 @@ pub struct ListCount {
 #[derive(Debug, Deserialize)]
 pub struct ListObjectsParams {}
 
+/// Pagination query parameters for list operations.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct Pagination {
+    /// The page to fetch from the list of objects.
+    /// Increments by 1 from 0.
+    /// Defaults to the beginning of the collection.
+    page: u64,
+    /// The page to fetch from the list of objects.
+    /// Defaults to 1000.
+    page_size: u64,
+}
+
+/// The response type for list operations.
+#[derive(Debug, Deserialize, ToSchema)]
+#[aliases(ListResponseObject = ListResponse<FileObject>, ListResponseS3Object = ListResponse<FileS3Object>)]
+pub struct ListResponse<T> {
+    /// The results of the list operation.
+    results: T,
+    /// The next page if fetching additional pages.
+    /// Use this as the `page` parameter in the next request if fetching additional pages.
+    /// Empty if there are no more objects available in the collection.
+    next_page: Option<u64>,
+}
+
+impl Default for Pagination {
+    fn default() -> Self {
+        Self {
+            page: 0,
+            page_size: 1000,
+        }
+    }
+}
+
 /// The list objects handler.
 #[utoipa::path(
     get,
@@ -34,9 +69,9 @@ pub struct ListObjectsParams {}
     context_path = "/api/v1",
 )]
 pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<FileObject>>> {
-    let query = ListQueryBuilder::new(&state.client);
+    let query = ListQueryBuilder::<ObjectEntity>::new(&state.client);
 
-    Ok(Json(query.list_objects().await?))
+    Ok(Json(query.all().await?))
 }
 
 /// The count objects handler.
@@ -50,10 +85,10 @@ pub async fn list_objects(state: State<AppState>) -> Result<Json<Vec<FileObject>
     context_path = "/api/v1",
 )]
 pub async fn count_objects(state: State<AppState>) -> Result<Json<ListCount>> {
-    let query = ListQueryBuilder::new(&state.client);
+    let query = ListQueryBuilder::<ObjectEntity>::new(&state.client);
 
     Ok(Json(ListCount {
-        n_records: query.count_objects().await?,
+        n_records: query.count().await?,
     }))
 }
 
@@ -72,9 +107,9 @@ pub struct ListS3ObjectsParams {}
     context_path = "/api/v1",
 )]
 pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<FileS3Object>>> {
-    let query = ListQueryBuilder::new(&state.client);
+    let query = ListQueryBuilder::<S3ObjectEntity>::new(&state.client);
 
-    Ok(Json(query.list_s3_objects().await?))
+    Ok(Json(query.all().await?))
 }
 
 /// The count s3 objects handler.
@@ -88,10 +123,10 @@ pub async fn list_s3_objects(state: State<AppState>) -> Result<Json<Vec<FileS3Ob
     context_path = "/api/v1",
 )]
 pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<ListCount>> {
-    let query = ListQueryBuilder::new(&state.client);
+    let query = ListQueryBuilder::<S3ObjectEntity>::new(&state.client);
 
     Ok(Json(ListCount {
-        n_records: query.count_s3_objects().await?,
+        n_records: query.count().await?,
     }))
 }
 
