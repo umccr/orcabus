@@ -11,6 +11,7 @@ use crate::error::{Error, Result};
 use crate::routes::list::{ListCount, ListResponse, Pagination};
 
 /// A query builder for list operations.
+#[derive(Debug, Clone)]
 pub struct ListQueryBuilder<'a, T>
 where
     T: EntityTrait,
@@ -84,20 +85,21 @@ where
         self,
         pagination: Pagination,
     ) -> Result<ListResponse<M>> {
-        let query = self.paginate(pagination.page, pagination.page_size).await?;
+        let page = pagination.page();
+        let page_size = pagination.page_size();
+        let query = self.paginate(page, page_size).await?;
 
         let mut results = query.all().await?;
 
         // Check if there are more pages using the knowledge that we fetched one additional record.
         let next_page = if results.len()
-            <= usize::try_from(pagination.page_size)
-                .map_err(|err| Error::ConversionError(err.to_string()))?
+            <= usize::try_from(page_size).map_err(|err| Error::ConversionError(err.to_string()))?
         {
             None
         } else {
             // Remove the last element because we fetched one additional result.
             results.pop();
-            Some(pagination.page_size)
+            Some(page.checked_add(1).ok_or_else(|| OverflowError)?)
         };
 
         Ok(ListResponse::new(results, next_page))
@@ -137,6 +139,27 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_paginate_objects_to_list_response(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database(&client, 10).await;
+
+        let builder = ListQueryBuilder::<ObjectEntity>::new(&client);
+        let result = builder
+            .paginate_to_list_response(Pagination::new(0, 2))
+            .await
+            .unwrap();
+
+        assert_eq!(result.next_page(), Some(1));
+        assert_eq!(
+            result.results(),
+            &entries
+                .into_iter()
+                .map(|(entry, _)| entry)
+                .collect::<Vec<_>>()[0..2]
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_s3_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = initialize_database(&client, 10).await;
@@ -154,14 +177,35 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_paginate_s3_objects_to_list_response(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database(&client, 10).await;
+
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
+        let result = builder
+            .paginate_to_list_response(Pagination::new(0, 2))
+            .await
+            .unwrap();
+
+        assert_eq!(result.next_page(), Some(1));
+        assert_eq!(
+            result.results(),
+            &entries
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()[0..2]
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_count_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
         initialize_database(&client, 10).await;
 
         let builder = ListQueryBuilder::<ObjectEntity>::new(&client);
-        let result = builder.count().await.unwrap();
 
-        assert_eq!(result, 10);
+        assert_eq!(builder.clone().count().await.unwrap(), 10);
+        assert_eq!(builder.to_list_count().await.unwrap(), ListCount::new(10));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -170,8 +214,8 @@ mod tests {
         initialize_database(&client, 10).await;
 
         let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
-        let result = builder.count().await.unwrap();
 
-        assert_eq!(result, 10);
+        assert_eq!(builder.clone().count().await.unwrap(), 10);
+        assert_eq!(builder.to_list_count().await.unwrap(), ListCount::new(10));
     }
 }

@@ -5,7 +5,7 @@ use axum::extract::{Query, State};
 use axum::Json;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::result;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::database::entities::object::Entity as ObjectEntity;
 use crate::database::entities::object::Model as FileObject;
@@ -16,7 +16,7 @@ use crate::queries::list::ListQueryBuilder;
 use crate::routes::{AppState, ErrorStatusCode};
 
 /// The return value for count operations showing the number of records in the database.
-#[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
 pub struct ListCount {
     /// The number of records.
     n_records: u64,
@@ -27,6 +27,11 @@ impl ListCount {
     pub fn new(n_records: u64) -> Self {
         ListCount { n_records }
     }
+
+    /// Get the number of records.
+    pub fn n_records(&self) -> u64 {
+        self.n_records
+    }
 }
 
 /// Params for a list objects request.
@@ -34,24 +39,40 @@ impl ListCount {
 pub struct ListObjectsParams {}
 
 /// Pagination query parameters for list operations.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
 #[serde(default)]
 pub struct Pagination {
     /// The zero-indexed page to fetch from the list of objects.
     /// Increments by 1 starting from 0.
     /// Defaults to the beginning of the collection.
-    pub(crate) page: u64,
+    #[param(nullable, default = 0)]
+    page: u64,
     /// The page to fetch from the list of objects.
-    /// Defaults to 1000.
     /// If this is zero then the default is used.
+    #[param(nullable, default = 1000)]
     #[serde(deserialize_with = "deserialize_zero_page_as_default")]
-    pub(crate) page_size: u64,
+    page_size: u64,
+}
+
+impl Pagination {
+    /// Create a new pagination struct.
+    pub fn new(page: u64, page_size: u64) -> Self {
+        Self { page, page_size }
+    }
+
+    /// Get the page.
+    pub fn page(&self) -> u64 {
+        self.page
+    }
+
+    /// Get the page size.
+    pub fn page_size(&self) -> u64 {
+        self.page_size
+    }
 }
 
 /// The default page size.
-fn default_page_size() -> u64 {
-    1000
-}
+const DEFAULT_PAGE_SIZE: u64 = 1000;
 
 /// Deserializer to convert a 0 value to the default pagination size.
 fn deserialize_zero_page_as_default<'de, D>(deserializer: D) -> result::Result<u64, D::Error>
@@ -60,7 +81,7 @@ where
 {
     let value: u64 = Deserialize::deserialize(deserializer)?;
     if value == 0 {
-        Ok(default_page_size())
+        Ok(DEFAULT_PAGE_SIZE)
     } else {
         Ok(value)
     }
@@ -83,13 +104,23 @@ impl<M> ListResponse<M> {
     pub fn new(results: Vec<M>, next_page: Option<u64>) -> Self {
         ListResponse { results, next_page }
     }
+
+    /// Get the results.
+    pub fn results(&self) -> &[M] {
+        &self.results
+    }
+
+    /// Get the next page.
+    pub fn next_page(&self) -> Option<u64> {
+        self.next_page
+    }
 }
 
 impl Default for Pagination {
     fn default() -> Self {
         Self {
             page: 0,
-            page_size: default_page_size(),
+            page_size: DEFAULT_PAGE_SIZE,
         }
     }
 }
@@ -102,6 +133,7 @@ impl Default for Pagination {
         (status = OK, description = "List all objects", body = Vec<FileObject>),
         ErrorStatusCode,
     ),
+    params(Pagination),
     context_path = "/api/v1",
 )]
 pub async fn list_objects(
@@ -145,6 +177,7 @@ pub struct ListS3ObjectsParams {}
         (status = OK, description = "List all s3 objects", body = Vec<FileS3Object>),
         ErrorStatusCode,
     ),
+    params(Pagination),
     context_path = "/api/v1",
 )]
 pub async fn list_s3_objects(
@@ -236,7 +269,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/objects?page=1&page_size=2")
+                    .uri("/objects?page=2&page_size=2")
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -251,13 +284,13 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(result.next_page, Some(2));
+        assert_eq!(result.next_page, Some(3));
         assert_eq!(
             result.results,
             entries
                 .into_iter()
                 .map(|(entry, _)| entry)
-                .collect::<Vec<_>>()[2..4]
+                .collect::<Vec<_>>()[4..6]
         );
     }
 
