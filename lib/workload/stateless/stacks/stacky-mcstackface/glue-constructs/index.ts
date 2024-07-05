@@ -2,10 +2,11 @@ import { Construct } from 'constructs';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import { BsshFastqCopyEventHandlerConstruct } from './selleys';
-import { cttsov2GlueHandlerConstruct } from './super';
 import * as cdk from 'aws-cdk-lib';
-import { BclconvertManagerEventHandlerConstruct } from './scotch';
+import { showerGlueHandlerConstruct } from './clag';
+import { BclconvertToBsshFastqCopyEventHandlerConstruct } from './elmer';
+import { BsshFastqCopyToBclconvertInteropQcConstruct } from './gorilla';
+import { Cttsov2GlueHandlerConstruct } from './jb-weld';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -19,6 +20,7 @@ export interface GlueConstructProps {
   instrumentRunTableObj: dynamodb.ITableV2;
   inputMakerTableObj: dynamodb.ITableV2;
   workflowManagerTableObj: dynamodb.ITableV2;
+  cttsov2GlueTableObj: dynamodb.ITableV2;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
   bsshOutputFastqCopyOutputUriSsmParameterObj: ssm.IStringParameter;
@@ -32,15 +34,23 @@ export class GlueConstruct extends Construct {
     super(scope, id);
 
     /*
-    Part A: Glue the bclconvertmanager success event to the bsshFastqCopyManager
-    */
-    const scotch = new BclconvertManagerEventHandlerConstruct(this, 'scotch', {
+        Part A: Send 'showered' events if a new samplesheet arrives or new fastq list rows arrive
+        */
+    const clag = new showerGlueHandlerConstruct(this, 'clag', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
       /* Tables */
-      workflowManagerTableObj: props.workflowManagerTableObj,
-      inputMakerTableObj: props.inputMakerTableObj,
       instrumentRunTableObj: props.instrumentRunTableObj,
+    });
+
+    /*
+        Part B: Copy the fastq list rows by connecting the bclconvert manager completion with the bsshfastqcopy manager
+        */
+    const elmer = new BclconvertToBsshFastqCopyEventHandlerConstruct(this, 'elmer', {
+      /* Event Bus */
+      eventBusObj: props.eventBusObj,
+      /* Tables */
+      inputMakerTableObj: props.inputMakerTableObj,
       /* SSM Parameters */
       bsshOutputFastqCopyUriPrefixSsmParameterObj:
         props.bsshOutputFastqCopyOutputUriSsmParameterObj,
@@ -48,38 +58,44 @@ export class GlueConstruct extends Construct {
     });
 
     /*
-    Part B: Connect the bsshFastqCopyManager completion to the BCLConvert InterOp QC Manager
-    */
-    const selleys = new BsshFastqCopyEventHandlerConstruct(this, 'selleys', {
-      /* Event Bus */
+        Part C: Connect the bclconvert interop qc
+        */
+    const gorilla = new BsshFastqCopyToBclconvertInteropQcConstruct(this, 'gorilla', {
+      /* Event Objects */
       eventBusObj: props.eventBusObj,
-      /* Tables */
-      workflowManagerTableObj: props.workflowManagerTableObj,
+      /* Table Objects */
       inputMakerTableObj: props.inputMakerTableObj,
-      instrumentRunTableObj: props.instrumentRunTableObj,
-      /* SSM Parameters */
+      /* SSM Parameter Ojbects */
       analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
       analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
-
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
     });
 
     /*
-    Part C: Connect the BSSH Copy Completion to the cttsov2Manager
-    */
-    const super_glue = new cttsov2GlueHandlerConstruct(this, 'super', {
+        Part D: Plumber-up the cttso v2 to the shower services
+        */
+    const jb_weld = new Cttsov2GlueHandlerConstruct(this, 'jb_weld', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
       /* Tables */
-      workflowManagerTableObj: props.workflowManagerTableObj,
       inputMakerTableObj: props.inputMakerTableObj,
-      instrumentRunTableObj: props.instrumentRunTableObj,
+      cttsov2GlueTableObj: props.cttsov2GlueTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
       analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
       analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
       analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
     });
+
+    /*
+        Part E: Plumber-up the WGTS QC Execution Service to the shower services
+        */
+    // TODO
+
+    /*
+        Part F: Plumber-up the Tumor-Normal Execution Service to the shower services
+        */
+    // TODO
   }
 }
 
@@ -90,6 +106,7 @@ export interface GlueStackConfig {
   instrumentRunTableName: string;
   inputMakerTableName: string;
   workflowManagerTableName: string;
+  cttsov2GlueTableName: string;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterName: string;
   bsshOutputFastqCopyUriSsmParameterName: string;
@@ -131,6 +148,11 @@ export class GlueStack extends cdk.Stack {
       'instrumentRunTableObj',
       props.instrumentRunTableName
     );
+    const cttsov2GlueTableObj = dynamodb.Table.fromTableName(
+      this,
+      'cttsov2GlueTableObj',
+      props.cttsov2GlueTableName
+    );
 
     /*
         Get the SSM Parameters
@@ -164,10 +186,11 @@ export class GlueStack extends cdk.Stack {
     );
 
     /*
-        Call the construct        
+        Call the construct
         */
     new GlueConstruct(this, 'stacky_glue', {
       eventBusObj: eventBusObj,
+      cttsov2GlueTableObj: cttsov2GlueTableObj,
       workflowManagerTableObj: workflowManagerTableObj,
       inputMakerTableObj: inputMakerTableObj,
       instrumentRunTableObj: instrumentRunTableObj,

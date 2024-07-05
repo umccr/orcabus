@@ -1,0 +1,193 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Get Event Data",
+  "States": {
+    "Get Event Data": {
+      "Type": "Pass",
+      "Next": "Get Libraries from Instrument Run",
+      "Parameters": {
+        "fastq_list_row_shower_complete_event_data": "$.payload.data"
+      }
+    },
+    "Get Libraries from Instrument Run": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId",
+          "id_type": "${__instrument_run_partition_name__}"
+        }
+      },
+      "ResultSelector": {
+        "library_list": "$.Item.library_list"
+      },
+      "Next": "Iterate over each library",
+      "ResultPath": "$.get_libraries_step"
+    },
+    "Iterate over each library": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Get RGIDs from Library",
+        "States": {
+          "Get RGIDs from Library": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "$.library_id",
+                "id_type": "${__library_partition_name__}"
+              }
+            },
+            "Next": "For each rgid",
+            "ResultPath": "$.get_rgids_step",
+            "ResultSelector": {
+              "internal_id.$": "$.Item.internal_id",
+              "rgid_list.$": "$.Item.rgid_list"
+            }
+          },
+          "For each rgid": {
+            "Type": "Map",
+            "ItemProcessor": {
+              "ProcessorConfig": {
+                "Mode": "INLINE"
+              },
+              "StartAt": "Get Row Data",
+              "States": {
+                "Get Row Data": {
+                  "Type": "Parallel",
+                  "Branches": [
+                    {
+                      "StartAt": "Get Fastq List Row Data",
+                      "States": {
+                        "Get Fastq List Row Data": {
+                          "Type": "Task",
+                          "Resource": "arn:aws:states:::dynamodb:getItem",
+                          "Parameters": {
+                            "TableName": "${__table_name__}",
+                            "Key": {
+                              "id.$": "$.rgid",
+                              "id_type": "${__fastq_list_row_partition_name__}"
+                            }
+                          },
+                          "End": true,
+                          "ResultSelector": {
+                            "fastq_list_row.$": "States.StringToJson($.Item.fastq_list_row)"
+                          },
+                          "ResultPath": "$.get_fastq_list_row_step"
+                        }
+                      }
+                    },
+                    {
+                      "StartAt": "Get BCLConvert Data",
+                      "States": {
+                        "Get BCLConvert Data": {
+                          "Type": "Task",
+                          "Resource": "arn:aws:states:::dynamodb:getItem",
+                          "Parameters": {
+                            "TableName": "${__table_name__}",
+                            "Key": {
+                              "id.$": "$.rgid",
+                              "id_type": "${__bclconvert_data_row_partition_name__}"
+                            }
+                          },
+                          "End": true,
+                          "ResultSelector": {
+                            "bclconvert_data_row.$": "States.StringToJson($.Item.bclconvert_data_row)"
+                          },
+                          "ResultPath": "$.get_bclconvert_data_row_step"
+                        }
+                      }
+                    }
+                  ],
+                  "End": true,
+                  "ResultSelector": {
+                    "fastq_list_row.$": "$.[0].get_fastq_list_row_step.fastq_list_row",
+                    "bclconvert_data_row.$": "$.[1].get_bclconvert_data_row_step.bclconvert_data_row"
+                  }
+                }
+              }
+            },
+            "ItemsPath": "$.get_rgids_step.rgid_list",
+            "ItemSelector": {
+              "rgid.$": "$$.Map.Item.Value"
+            },
+            "Next": "Generate SampleSheet Json from DB Inputs",
+            "ResultPath": "$.get_fastq_list_row_values_step"
+          },
+          "Generate SampleSheet Json from DB Inputs": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "${__generate_samplesheet_lambda_function_arn__}",
+              "Payload": {
+                "instrument_run_id.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId",
+                "library_id.$": "$.get_rgids_step.internal_id",
+                "bclconvert_data_rows.$": "$.get_fastq_list_row_values_step[*].bclconvert_data_row"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2
+              }
+            ],
+            "Next": "Push cttsov2 draft event",
+            "ResultPath": "$.generate_samplesheet_step",
+            "ResultSelector": {
+              "samplesheet.$": "$.Payload.samplesheet"
+            }
+          },
+          "Push cttsov2 draft event": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents",
+            "Parameters": {
+              "Entries": [
+                {
+                  "Detail": {
+                    "portalRunId": null,
+                    "timestamp.$": "$$.State.EnteredTime",
+                    "status": "${__output_status__}",
+                    "workflowName": "${__workflow_name__}",
+                    "workflowVersion": "${__workflow_version__}",
+                    "workflowRunName": null,
+                    "payload": {
+                      "refId": null,
+                      "version": "${__payload_version__}",
+                      "data": {
+                        "sampleId.$": "$.get_rgids_step.internal_id",
+                        "instrumentRunId.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId",
+                        "samplesheet.$": "$.generate_samplesheet_step.samplesheet",
+                        "fastqListRows.$": "$.get_fastq_list_row_values_step[*].fastq_list_rows"
+                      }
+                    }
+                  },
+                  "DetailType": "${__detail_type__}",
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "${__event_source__}"
+                }
+              ]
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true,
+      "ItemsPath": "$.get_libraries_step.library_list",
+      "ItemSelector": {
+        "library_id.$": "$$.Map.Item.Value"
+      }
+    }
+  }
+}
