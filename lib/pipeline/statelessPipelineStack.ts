@@ -193,27 +193,23 @@ export class StatelessPipelineStack extends cdk.Stack {
       { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
     );
 
-    // Since the stateless stack might need to reference the stateful resources (e.g. db, sg), we might comment this out
-    // to prevent cdk from looking up for non existence resource. Currently the stateful resource is only deployed in
-    // dev
-
-    // /**
-    //  * Deployment to Prod account
-    //  */
-    // const prodConfig = getEnvironmentConfig(AppStage.PROD);
-    // if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
-    // pipeline.addStage(
-    //   new OrcaBusStatelessDeploymentStage(
-    //     this,
-    //     'OrcaBusProd',
-    //     prodConfig.stackProps.statelessConfig,
-    //     {
-    //       account: prodConfig.accountId,
-    //       region: prodConfig.region,
-    //     }
-    //   ),
-    //   { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
-    // );
+    /**
+     * Deployment to Prod account
+     */
+    const prodConfig = getEnvironmentConfig(AppStage.PROD);
+    if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
+    pipeline.addStage(
+      new OrcaBusStatelessDeploymentStage(
+        this,
+        'OrcaBusProd',
+        prodConfig.stackProps.statelessConfig,
+        {
+          account: prodConfig.accountId,
+          region: prodConfig.region,
+        }
+      ),
+      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+    );
 
     // need to build pipeline so we could add notification at the pipeline construct
     pipeline.buildPipeline();
