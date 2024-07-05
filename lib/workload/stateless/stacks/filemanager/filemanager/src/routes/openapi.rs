@@ -49,6 +49,8 @@ pub struct Json(pub Value);
             IngestCount,
             DateTimeWithTimeZone,
             Json,
+            ListResponseObject,
+            ListResponseS3Object
         )
     ),
     modifiers(&SecurityAddon),

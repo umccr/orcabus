@@ -28,6 +28,10 @@ pub enum Error {
     S3InventoryError(String),
     #[error("{0}")]
     IoError(#[from] io::Error),
+    #[error("Numerical operation overflowed")]
+    OverflowError,
+    #[error("Numerical conversion failed: {0}")]
+    ConversionError(String),
 }
 
 impl From<sqlx::Error> for Error {

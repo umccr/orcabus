@@ -135,6 +135,9 @@ impl From<Error> for ErrorStatusCode {
     fn from(err: Error) -> Self {
         match err {
             Error::DatabaseError(err) => Self::from(err),
+            Error::OverflowError | Error::ConversionError(_) => {
+                Self::BadRequest(err.to_string().into())
+            }
             _ => Self::InternalServerError("unexpected error".to_string().into()),
         }
     }
