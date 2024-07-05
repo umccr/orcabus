@@ -10,14 +10,14 @@ This Construct is known as Scotch. A stock-standard glue.
 
 > This will be all one construct
 
-### Construct A (part 2)
+### Construct A (part 1)
 
 Input Event Source: `orcabus.workflowmanager`
 Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `complete`
 
 Output Event source: `orcabus.instrumentmanager`
-Output Event DetailType: `orcabus.InstrumentRunStateChange`
+Output Event DetailType: `InstrumentRunStateChange`
 Output Event status: `libraryrunidsregistered`
 
 * The UpdateDataBaseOnNewSampleSheet Construct
@@ -29,7 +29,7 @@ Output Event status: `libraryrunidsregistered`
       * type
       * workflow etc.
 
-### Construct A (part 3)
+### Construct A (part 2)
 
 Input Event Source: `orcabus.workflowmanager`
 Input Event DetailType: `WorkflowRunStateChange`
@@ -43,49 +43,20 @@ Output Event status: `complete`
   * Subscribes to the BCLConvertManagerEventHandler Stack outputs and creates the input for the BSSHFastqCopyManager
   * Pushes an event payload of the input for the BsshFastqCopyManagerReadyEventSubmitter
 
-### Construct A (part 4)
-
-Input Event Source: `orcabus.bsshfastqcopymanagerinputeventglue`
-Input Event DetailType: `WorkflowRunStateChange`
-Input Event status: `complete`
-
-Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `WorkflowRunStateChange`
-Output Event status: `ready`
-
-* The BsshFastqCopyManagerReadyEventSubmitter Construct
-  * Subscribes to the BCLConvertManagerEventHandler Stack outputs and generates a ready event for the BSSHFastqCopyManager
-
 
 ## Part B - Glue the BSSHFastqCopyManager to BCLConvertInteropQC
 
 > This will be all one construct
 
-This construct will be known as Selleys. 
 
 ### Construct B (Part 1)
-
-Input Event Source: `orcabus.bsshfastqcopymanager`
-Input Event DetailType: `WorkflowRunStateChange`
-Input Event status: `succeeded`
-
-Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `WorkflowRunStateChange`
-Output Event status: `complete`
-
-* The BSSHFastqCopyManagerEventHandler Construct
-  * This will be triggered by the completion event from the BSSHFastqCopyManager Construct.
-  * Contains a standard workflow run statechange, the fastqlistrowgzipped, and instrument run id
-  * Pushes a workflow run manager event saying that the BSSHFastqCopyManager has complete.
-
-### Construct B (Part 2)
 
 Input Event Source: `orcabus.workflowmanager`
 Input Event DetailType: `WorkflowRunStateChange`
 Input Event status: `complete`
 
 Output Event source: `orcabus.instrumentmanager`
-Output Event DetailType: `orcabus.fastqlistrowstatechange`
+Output Event DetailType: `InstrumentRunStateChange`
 Output Event status: `fastqlistrowsregistered`
 
 * The UpdateDataBaseOnNewFastqListRows Construct
@@ -94,11 +65,11 @@ Output Event status: `fastqlistrowsregistered`
     * Appends libraryrunids to the library ids in the samplesheet
     * Pushes an event to say that some fastq list rows have been added to the database, with a list of affected library ids and the instrument run id
 
-### Construct B (Part 3)
+### Construct B (Part 2)
 
-Input Event Source: `orcabus.instrumentmanager`
-Input Event DetailType: `orcabus.fastqlistrowstatechange`
-Input Event status: `fastqlistrowsregistered`
+Input Event Source: `orcabus.workflowmanager`
+Input Event DetailType: `WorkflowRunStateChange`
+Input Event status: `complete`
 
 Output Event source: `orcabus.bclconvertinteropqcinputeventglue`
 Output Event DetailType: `WorkflowRunStateChange`
@@ -107,26 +78,7 @@ Output Event status: `complete`
 * The BCLConvertInteropQCInputMaker Construct
   * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and creates the input for the BCLConvertInteropQC
   * Pushes an event payload of the input for the BCLConvertInteropQCReadyEventSubmitter
-
-### Construct B (Part 4)
-
-Input Event Source: `orcabus.bclconvertinteropqcinputeventglue`
-Input Event DetailType: `WorkflowRunStateChange`
-Input Event status: `complete`
-
-Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `WorkflowRunStateChange`
-Output Event status: `ready`
-
-* The BCLConvertInteropQCReadyEventSubmitter Construct
-  * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and generates a ready event for the BCLConvertInteropQC
     
-## Part C - Glue the FastqListRow Output Event to the ctTSOv2ReadySfn
-
-> This will be all one stack
-
-The most important glue of them all. Super Glue!
-
 ## Part C - Glue the FastqListRow Output Event to the ctTSOv2ReadySfn
 
 > This will be all one stack
@@ -136,11 +88,11 @@ The most important glue of them all. Super Glue!
 ### Construct C (Part 1)
 
 Input Event Source: `orcabus.instrumentrunmanager`
-Input Event DetailType: `orcabus.librarystatechange`
+Input Event DetailType: `InstrumentRunStateChange`
 Input Event status: `fastqlistrowregistered`
 
 Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `WorkflowRunStateChange`
+Output Event DetailType: `WorkflowRunDraftStateChange`
 Output Event status: `awaitinginput`
 
 * The fastqListRowsToctTSOv2InputMaker Construct
@@ -151,10 +103,9 @@ Output Event status: `awaitinginput`
 
 ### Construct C (Part 2)
 
-Output Event source: `orcabus.cttsov2inputeventglue`
-Output Event DetailType: `WorkflowRunStateChange`
-Output Event status: `awaitinginput`
-
+Input Event source: `orcabus.cttsov2inputeventglue`
+Input Event DetailType: `WorkflowRunDraftStateChange`
+Input Event status: `awaitinginput`
 
 Output Event source: `orcabus.cttsov2inputeventglue`
 Output Event DetailType: `WorkflowRunStateChange`
@@ -164,29 +115,45 @@ Output Event status: `ready`
   * For the cttso v2 workflow we require a samplesheet, a set of fastq list rows (provided in the last step)
   * However, in order to be 'ready' we need to use a few more variables such as  
     * icaLogsUri,
-    * analysisOuptutUri
+    * analysisOutputUri
     * cacheUri
     * projectId
     * userReference
 
 
-### Construct C (Part 3)
+## Part D - Glue the FastqListRow Output Event to the wgtsQcReadySfn
 
-Output Event source: `orcabus.cttsov2inputeventglue`
+
+### Construct D - (Part 1)
+
+Input Event Source: `orcabus.instrumentrunmanager`
+Input Event DetailType: `InstrumentRunStateChange`
+Input Event status: `fastqlistrowregistered`
+
+Output Event source: `orcabus.wgtsinputeventglue`
+Output Event DetailType: `WorkflowRunDraftStateChange`
+Output Event status: `awaitinginput`
+
+* The fastqListRowsToWgtsQcInputMaker Construct
+  * Subscribes to the FastqListRowEventHandler Construct outputs and creates the input for the wgtsQcReadySfn
+  * Pushes an event payload of the input for the wgtsQcReadyEventSubmitters
+  * From the awaiting input event, we then generate a workflow ready status for each of the WGTS QC Run Workflows
+
+
+### Construct D - (Part 2)
+
+Input Event source: `orcabus.wgtsinputeventglue`
+Input Event DetailType: `WorkflowRunDraftStateChange`
+Input Event status: `awaitinginput`
+
+Output Event source: `orcabus.wgtsinputeventglue`
 Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
-Output Event source: `orcabus.workflowmanager`
-Output Event DetailType: `WorkflowRunStateChange`
-Output Event status: `ready`
-
-* The ctTSOv2ReadyEventSubmitter Construct
-  * Subscribes to the ctTSOv2InputMaker Construct outputs and generates a ready event for the ctTSOv2ReadySfn
-
-
-
-## Kicking things off
-
-We need a BCLConvertManager Success event to get things started! 
-
-An example is as follows:
+* The wgtsQcInputMaker, subscribes to the wgts input event glue (itself) and generates a ready event for the wgtsQcReadySfn
+  * The awaiting input event is almost ready, however we need to use a few more variables such as 
+    * icaLogsUri,
+    * analysisOutputUri
+    * cacheUri
+    * projectId
+    * userReference
