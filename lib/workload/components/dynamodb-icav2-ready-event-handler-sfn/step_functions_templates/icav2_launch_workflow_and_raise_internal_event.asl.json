@@ -48,7 +48,8 @@
       "Parameters": {
         "technical_tags": {
           "portal_run_id.$": "$.workflow_inputs.portalRunId",
-          "step_functions_execution_arn.$": "$$.Execution.Id"
+          "step_functions_execution_arn.$": "$$.Execution.Id",
+          "analysis_output_uri.$": "$.workflow_inputs.payload.data.analysisOutputUri"
         }
       },
       "ResultPath": "$.add_technical_tags_step",
