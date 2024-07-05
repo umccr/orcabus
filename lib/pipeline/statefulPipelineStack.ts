@@ -122,24 +122,24 @@ export class StatefulPipelineStack extends cdk.Stack {
 
     // Some stack have dependencies to the 'shared stack' so we need to deploy it first beforehand
     // should only be a one-off initial deployment
-    //
-    // /**
-    //  * Deployment to Prod account
-    //  */
-    // const prodConfig = getEnvironmentConfig(AppStage.PROD);
-    // if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
-    // pipeline.addStage(
-    //   new OrcaBusStatefulDeploymentStage(
-    //     this,
-    //     'OrcaBusProd',
-    //     prodConfig.stackProps.statefulConfig,
-    //     {
-    //       account: prodConfig.accountId,
-    //       region: prodConfig.region,
-    //     }
-    //   ),
-    //   { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
-    // );
+
+    /**
+     * Deployment to Prod account
+     */
+    const prodConfig = getEnvironmentConfig(AppStage.PROD);
+    if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
+    pipeline.addStage(
+      new OrcaBusStatefulDeploymentStage(
+        this,
+        'OrcaBusProd',
+        prodConfig.stackProps.statefulConfig,
+        {
+          account: prodConfig.accountId,
+          region: prodConfig.region,
+        }
+      ),
+      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+    );
 
     // need to build pipeline so we could add notification at the pipeline construct
     pipeline.buildPipeline();
