@@ -139,11 +139,24 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_paginate_objects_to_list_response(pool: PgPool) {
+    async fn test_paginate_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = initialize_database(&client, 10).await;
 
         let builder = ListQueryBuilder::<ObjectEntity>::new(&client);
+
+        let result = paginate_all(builder.clone(), 3, 3).await;
+        assert_eq!(
+            result,
+            &entries
+                .clone()
+                .into_iter()
+                .map(|(entry, _)| entry)
+                .collect::<Vec<_>>()[9..]
+        );
+        // Empty result when paginating above the collection size.
+        assert!(paginate_all(builder.clone(), 10, 2).await.is_empty());
+
         let result = builder
             .paginate_to_list_response(Pagination::new(0, 2))
             .await
@@ -177,11 +190,24 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_paginate_s3_objects_to_list_response(pool: PgPool) {
+    async fn test_paginate_s3_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = initialize_database(&client, 10).await;
 
         let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
+
+        let result = paginate_all(builder.clone(), 3, 3).await;
+        assert_eq!(
+            result,
+            &entries
+                .clone()
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()[9..]
+        );
+        // Empty result when paginating above the collection size.
+        assert!(paginate_all(builder.clone(), 10, 2).await.is_empty());
+
         let result = builder
             .paginate_to_list_response(Pagination::new(0, 2))
             .await
@@ -217,5 +243,23 @@ mod tests {
 
         assert_eq!(builder.clone().count().await.unwrap(), 10);
         assert_eq!(builder.to_list_count().await.unwrap(), ListCount::new(10));
+    }
+
+    async fn paginate_all<T, M>(
+        builder: ListQueryBuilder<'_, T>,
+        page: u64,
+        page_size: u64,
+    ) -> Vec<M>
+    where
+        T: EntityTrait<Model = M>,
+        M: FromQueryResult + Send + Sync,
+    {
+        builder
+            .paginate(page, page_size)
+            .await
+            .unwrap()
+            .all()
+            .await
+            .unwrap()
     }
 }
