@@ -242,5 +242,13 @@
   "security-group:account=843407916570:region=ap-southeast-2:securityGroupName=OrcaBusSharedComputeSecurityGroup:vpcId=vpc-00eafc63c0dfca266": {
     "securityGroupId": "sg-03abb47eba799e044",
     "allowAllOutbound": false
+  },
+  "security-group:account=455634345446:region=ap-southeast-2:securityGroupName=OrcaBusSharedComputeSecurityGroup:vpcId=vpc-0e226f3aa0f9c5781": {
+    "securityGroupId": "sg-069849c9157d4fb66",
+    "allowAllOutbound": false
+  },
+  "security-group:account=472057503814:region=ap-southeast-2:securityGroupName=OrcaBusSharedComputeSecurityGroup:vpcId=vpc-0dc99f521ceaa3f2d": {
+    "securityGroupId": "sg-02e363a39220c955f",
+    "allowAllOutbound": false
   }
 }
