@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/instrumentrunmanager-stacky/PayloadDataNewFastqListRowEvent.schema.json",
+  "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataNewFastqListRow",
+  "title": "PayloadDataNewFastqListRow",
+  "required": [
+    "instrumentRunId",
+    "fastqListRow"
+  ],
+  "properties": {
+    "instrumentRunId": {
+      "type": "string"
+    },
+    "fastqListRow": {
+      "type": "object",
+      "required": [
+        "rgid",
+        "rgsm",
+        "rglb",
+        "lane",
+        "read1FileUri"
+      ],
+      "properties": {
+        "rgid": {
+          "type": "string"
+        },
+        "rgsm": {
+          "type": "string"
+        },
+        "rglb": {
+          "type": "string"
+        },
+        "lane": {
+          "type": "integer"
+        },
+        "read1FileUri": {
+          "type": "string"
+        },
+        "read2FileUri": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
