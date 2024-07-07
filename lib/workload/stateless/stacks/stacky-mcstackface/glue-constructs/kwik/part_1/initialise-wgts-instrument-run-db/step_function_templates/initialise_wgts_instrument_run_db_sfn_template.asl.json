@@ -1,0 +1,37 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Set DB Inputs",
+  "States": {
+    "Set DB Inputs": {
+      "Type": "Pass",
+      "Next": "Initialise Instrument Run Item",
+      "ResultPath": "$.db_inputs",
+      "Parameters": {
+        "instrument_run_id.$": "$.payload.data.instrumentRunId"
+      }
+    },
+    "Initialise Instrument Run Item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id": {
+            "S.$": "$.db_inputs.instrument_run_id"
+          },
+          "id_type": {
+            "S": "${__instrument_run_partition_name__}"
+          },
+          "library_set": {
+            "SS": []
+          },
+          "fastq_list_row_id_set": {
+            "SS": []
+          }
+        }
+      },
+      "End": true,
+      "ResultPath": null
+    }
+  }
+}

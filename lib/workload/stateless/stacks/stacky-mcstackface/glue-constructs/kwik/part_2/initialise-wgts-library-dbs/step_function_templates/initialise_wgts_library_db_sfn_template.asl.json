@@ -1,0 +1,147 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "Get FastqListRowID From BCLConvert Outputs",
+      "Parameters": {
+        "inputs.$": "$",
+        "input_payload_data.$": "$.payload.data"
+      }
+    },
+    "Get FastqListRowID From BCLConvert Outputs": {
+      "Type": "Map",
+      "ItemsPath": "$.input_payload_data.bclconvertDataRows",
+      "ItemSelector": {
+        "bclconvert_data_row.$": "$$.Map.Item.Value",
+        "instrument_run_id.$": "$.input_payload_data.instrumentRunId",
+        "library_id.$": "$.input_payload_data.library.internalId"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Get FastqListRowID from BCLConvert Data",
+        "States": {
+          "Get FastqListRowID from BCLConvert Data": {
+            "Type": "Pass",
+            "Parameters": {
+              "fastq_list_row_id.$": "States.Format('{}.{}.{}.{}.{}', $.bclconvert_data_row.index, $.bclconvert_data_row.index2, $.bclconvert_data_row.lane, $.instrument_run_id, $.library_id)"
+            },
+            "ResultPath": "$.get_fastq_list_row_id_step",
+            "Next": "Set Map Outputs"
+          },
+          "Set Map Outputs": {
+            "Type": "Pass",
+            "End": true,
+            "Parameters": {
+              "fastq_list_row_id.$": "$.get_fastq_list_row_id_step.fastq_list_row_id"
+            }
+          }
+        }
+      },
+      "Next": "Add DataBase Inputs",
+      "ResultPath": "$.bclconvert_and_fastq_list_row_id_inputs"
+    },
+    "Add DataBase Inputs": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Append Library and FastqListRowID to Instrument Run ID",
+          "States": {
+            "Append Library and FastqListRowID to Instrument Run ID": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.input_payload_data.instrumentRunId",
+                  "id_type": "${__instrument_run_partition_name__}"
+                },
+                "UpdateExpression": "ADD library_set :library_set, fastq_list_row_id_set :fastq_list_row_id_set",
+                "ExpressionAttributeValues": {
+                  ":library_set": {
+                    "SS.$": "States.Array(States.Hash($.input_payload_data.library.id, 'SHA-1'))"
+                  },
+                  ":fastq_list_row_id_set": {
+                    "SS.$": "$.bclconvert_and_fastq_list_row_id_inputs[*].fastq_list_row_id"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Initialise Library ID",
+          "States": {
+            "Initialise Library ID": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "id": {
+                    "S.$": "States.Hash($.input_payload_data.library.id, 'SHA-1')"
+                  },
+                  "id_type": {
+                    "S": "${__library_partition_name__}"
+                  },
+                  "metadata_db_id": {
+                    "N.$": "States.Format('{}', $.input_payload_data.library.id)"
+                  },
+                  "internal_id": {
+                    "S.$": "$.input_payload_data.library.internalId"
+                  },
+                  "fastq_list_row_id_set": {
+                    "SS.$": "$.bclconvert_and_fastq_list_row_id_inputs[*].fastq_list_row_id"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "For each FastqListRowID",
+          "States": {
+            "For each FastqListRowID": {
+              "Type": "Map",
+              "ItemsPath": "$.bclconvert_and_fastq_list_row_id_inputs",
+              "ItemSelector": {
+                "fastq_list_row_id.$": "$$.Map.Item.Value.fastq_list_row_id"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Initialise Fastq List Row",
+                "States": {
+                  "Initialise Fastq List Row": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:putItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Item": {
+                        "id": {
+                          "S.$": "$.fastq_list_row_id"
+                        },
+                        "id_type": {
+                          "S": "${__fastq_list_row_partition_name__}"
+                        }
+                      }
+                    },
+                    "End": true
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "End": true
+    }
+  }
+}

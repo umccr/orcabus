@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/wgts/PayloadDataWgtsDraft.schema.json",
+  "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataWgtsDraft",
+  "title": "PayloadDataWgtsDraft",
+  "required": [
+    "outputFilePrefix",
+    "outputDirectoryName",
+    "referenceTarUri",
+    "sampleType",
+    "fastqListRowId",
+    "fastqListRow"
+  ],
+  "properties": {
+    "outputFilePrefix": {
+      "type": "string"
+    },
+    "outputDirectoryName": {
+      "type": "string"
+    },
+    "referenceTarUri": {
+      "type": "string"
+    },
+    "sampleType": {
+      "type": "string"
+    },
+    "annotationFileUri": {
+      "type": "string"
+    },
+    "fastqListRowId": {
+      "type": "string"
+    },
+    "fastqListRow":  {
+      "type": "object",
+      "required": [
+        "rgid",
+        "rgsm",
+        "rglb",
+        "lane",
+        "read1FileUri"
+      ],
+      "properties": {
+        "rgid": {
+          "type": "string"
+        },
+        "rgsm": {
+          "type": "string"
+        },
+        "rglb": {
+          "type": "string"
+        },
+        "lane": {
+          "type": "integer"
+        },
+        "read1FileUri": {
+          "type": "string"
+        },
+        "read2FileUri": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

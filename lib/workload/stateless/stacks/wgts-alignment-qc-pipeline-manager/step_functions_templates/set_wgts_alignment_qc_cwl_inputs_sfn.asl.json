@@ -1,0 +1,133 @@
+{
+  "Comment": "Launch Icav2 Pipeline and log in db",
+  "StartAt": "Get DataBase Entry",
+  "States": {
+    "Get DataBase Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "ResultSelector": {
+        "payload.$": "States.StringToJson($.Item.launch_event_payload.S)"
+      },
+      "ResultPath": "$.get_input_parameters_from_event_step",
+      "Next": "Convert Fastq List Rows to CWL Input Objects"
+    },
+    "Convert Fastq List Rows to CWL Input Objects": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload": {
+          "fastq_list_rows.$": "$.get_input_parameters_from_event_step.payload.data.fastqListRows"
+        },
+        "FunctionName": "${__convert_fastq_list_rows_to_cwl_input_objects_lambda_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Set Basic Input JSON",
+      "ResultPath": "$.convert_fastq_list_rows_to_cwl_input_objects_step",
+      "ResultSelector": {
+        "fastq_list_rows.$": "$.Payload.fastq_list_rows"
+      }
+    },
+    "Set Basic Input JSON": {
+      "Type": "Pass",
+      "Next": "Is RNA Sample",
+      "Parameters": {
+        "input_json": {
+          "enable_duplicate_marking": true,
+          "enable_map_align_output": true,
+          "enable_rna": false,
+          "enable_sort": true,
+          "fastq_list_rows.$": "$.convert_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows",
+          "output_directory.$": "$.get_input_parameters_from_event_step.payload.data.outputDirectoryName",
+          "output_file_prefix.$": "$.get_input_parameters_from_event_step.payload.data.outputFilePrefix",
+          "reference_tar": {
+            "class": "File",
+            "location": "$.get_input_parameters_from_event_step.payload.data.referenceTarUri"
+          }
+        }
+      },
+      "ResultPath": "$.set_input_json_step"
+    },
+    "Is RNA Sample": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_input_parameters_from_event_step.payload.data.sampleType",
+          "StringEquals": "WTS",
+          "Next": "Set WTS Input JSON Extension"
+        }
+      ],
+      "Default": "Update Database Entry"
+    },
+    "Set WTS Input JSON Extension": {
+      "Type": "Pass",
+      "Next": "Merge WTS JSON with Basic Input JSON",
+      "Parameters": {
+        "input_json": {
+          "enable_duplicate_marking": false,
+          "enable_rna": true,
+          "enable_rna_quantification": true,
+          "enable_rrna_filter": true,
+          "annotation_file": {
+            "class": "File",
+            "location": "$.get_input_parameters_from_event_step.payload.data.annotationFileUri"
+          }
+        }
+      },
+      "ResultPath": "$.set_rna_json_step"
+    },
+    "Merge WTS JSON with Basic Input JSON": {
+      "Type": "Pass",
+      "Next": "Update Database Entry",
+      "Parameters": {
+        "input_json.$": "States.JsonMerge($.set_input_json_step.input_json, $.set_rna_json_step.input_json)"
+      },
+      "ResultPath": "$.set_input_json_step"
+    },
+    "Update Database Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.db_uuid"
+          },
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET input_json = :input_json",
+        "ExpressionAttributeValues": {
+          ":input_json": {
+            "S.$": "States.JsonToString($.set_input_json_step.input_json)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Wait 1 Second (Pre-execution)"
+    },
+    "Wait 1 Second (Pre-execution)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Wait for databases to sync before continuing",
+      "End": true
+    }
+  }
+}
