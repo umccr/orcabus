@@ -222,7 +222,7 @@ mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
-    use crate::queries::tests::initialize_database;
+    use crate::queries::tests::{initialize_database, initialize_database_reorder};
     use crate::routes::list::{ListCount, ListResponse};
     use crate::routes::{api_router, AppState};
 
@@ -331,7 +331,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await;
+        let entries = initialize_database_reorder(state.client(), 10).await;
 
         let app = api_router(state);
         let response = app
@@ -365,7 +365,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api_paginate(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await;
+        let entries = initialize_database_reorder(state.client(), 10).await;
 
         let app = api_router(state);
         let response = app
@@ -399,7 +399,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api_zero_page_size(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await;
+        let entries = initialize_database_reorder(state.client(), 10).await;
 
         let app = api_router(state);
         let response = app

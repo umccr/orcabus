@@ -1,9 +1,10 @@
 //! Query builder involving list operations on the database.
 //!
 
-use sea_orm::{EntityTrait, FromQueryResult, PaginatorTrait, QuerySelect, Select};
+use sea_orm::{EntityTrait, FromQueryResult, PaginatorTrait, QueryOrder, QuerySelect, Select};
 
 use crate::database::entities::object::Entity as ObjectEntity;
+use crate::database::entities::s3_object::Column as S3Column;
 use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::Client;
 use crate::error::Error::OverflowError;
@@ -46,7 +47,7 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
 
     /// Build a select query for finding values from s3 objects.
     pub fn build_object() -> Select<S3ObjectEntity> {
-        S3ObjectEntity::find()
+        S3ObjectEntity::find().order_by_asc(S3Column::Sequencer)
     }
 }
 
@@ -117,7 +118,7 @@ mod tests {
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::Client;
-    use crate::queries::tests::initialize_database;
+    use crate::queries::tests::{initialize_database, initialize_database_reorder};
 
     use super::*;
 
@@ -175,7 +176,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_s3_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await;
+        let entries = initialize_database_reorder(&client, 10).await;
 
         let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
         let result = builder.all().await.unwrap();
@@ -192,7 +193,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_paginate_s3_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await;
+        let entries = initialize_database_reorder(&client, 10).await;
 
         let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
 
