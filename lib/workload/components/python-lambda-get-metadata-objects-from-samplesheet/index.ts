@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import path from 'path';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { MetadataToolsPythonLambdaLayer } from '../python-metadata-tools-layer';
 import { Duration } from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
@@ -15,8 +16,8 @@ export class GetLibraryObjectsFromSamplesheetConstruct extends Construct {
   public readonly lambdaObj: PythonFunction;
 
   // Globals
-  private readonly hostnameSsmParameterPath: '/hosted_zone/umccr/name';
-  private readonly orcabusTokenSecretId: 'orcabus/token-service-jwt'; // pragma: allowlist secret
+  private readonly hostnameSsmParameterPath = '/hosted_zone/umccr/name';
+  private readonly orcabusTokenSecretId = 'orcabus/token-service-jwt'; // pragma: allowlist secret
 
   constructor(scope: Construct, id: string, props: GetLibraryObjectsFromSamplesheetProps) {
     super(scope, id);
@@ -51,11 +52,17 @@ export class GetLibraryObjectsFromSamplesheetConstruct extends Construct {
       memorySize: 1024,
       layers: [metadataLayerObj.lambdaLayerVersionObj],
       environment: {
-        HOSTNAME_SSM_PARAMETER: hostnameSsmParameterObj.stringValue,
+        HOSTNAME_SSM_PARAMETER: hostnameSsmParameterObj.parameterName,
         ORCABUS_TOKEN_SECRET_ID: orcabusTokenSecretObj.secretName,
       },
       // We dont know how big the database will get so will may need a longer timeout
       timeout: Duration.seconds(120),
     });
+
+    // Allow the lambda to read the secret
+    orcabusTokenSecretObj.grantRead(<iam.IRole>this.lambdaObj.currentVersion.role);
+
+    // Allow the lambda to read the ssm parameter
+    hostnameSsmParameterObj.grantRead(<iam.IRole>this.lambdaObj.currentVersion.role);
   }
 }

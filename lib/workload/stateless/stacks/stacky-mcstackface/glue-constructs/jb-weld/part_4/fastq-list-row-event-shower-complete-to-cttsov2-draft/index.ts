@@ -3,6 +3,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import path from 'path';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 
@@ -33,13 +34,13 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
     tablePartition: {
       instrumentRun: 'instrument_run',
       library: 'library',
-      bclconvertDataRow: 'bclconvert_data_row',
+      bclconvertData: 'bclconvert_data',
       fastqListRow: 'fastq_list_row',
     },
     /* Input Event Settings */
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'FastqListRowEventShowerComplete',
-    triggerDetailType: 'FastqListRowStateChange',
+    triggerDetailType: 'FastqListRowShowerStateChange',
     /* Output Event Settings */
     outputSource: 'orcabus.cttsov2inputeventglue',
     outputStatus: 'draft',
@@ -62,7 +63,7 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
     Part 1: Build the lambdas
     */
     const buildCttsoV2Samplesheet = new PythonFunction(this, 'build_cttsov2_samplesheet', {
-      entry: path.join(__dirname, 'build_cttso_v2_samplesheet_py'),
+      entry: path.join(__dirname, 'lambdas', 'build_cttsov2_samplesheet_py'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
       index: 'build_cttso_v2_samplesheet.py',
@@ -93,7 +94,7 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
           /* Table partitions */
           __bclconvert_data_row_partition_name__:
             this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.tablePartition
-              .bclconvertDataRow,
+              .bclconvertData,
           __fastq_list_row_partition_name__:
             this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.tablePartition
               .fastqListRow,
@@ -141,6 +142,30 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
     /*
     Part 4: Subscribe to the event bus for this event type
     */
-    // TODO
+    const rule = new events.Rule(this, 'cttsov2_subscribe_to_fastq_list_row_shower_complete', {
+      ruleName: `stacky-${this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.prefix}-rule`,
+      eventBus: props.eventBusObj,
+      eventPattern: {
+        source: [this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.triggerSource],
+        detailType: [
+          this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.triggerDetailType,
+        ],
+        detail: {
+          status: [
+            {
+              'equals-ignore-case':
+                this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.triggerStatus,
+            },
+          ],
+        },
+      },
+    });
+
+    // Add target of event to be the state machine
+    rule.addTarget(
+      new eventsTargets.SfnStateMachine(inputMakerSfn, {
+        input: events.RuleTargetInput.fromEventPath('$.detail'),
+      })
+    );
   }
 }

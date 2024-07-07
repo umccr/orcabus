@@ -3,7 +3,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import path from 'path';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
-import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 
 /*
 Part 2
@@ -27,12 +27,12 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
       instrument: 'instrument_run',
       library: 'library',
       bclconvertDataRow: 'bclconvert_data',
-      tso500lDataRow: 'tso500l_data',
       fastqListRow: 'fastq_list_row',
     },
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'LibraryInSamplesheet',
     triggerDetailType: 'SamplesheetMetadataUnion',
+    triggerAssayType: 'cttsov2',
   };
 
   constructor(
@@ -51,7 +51,7 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
         path.join(
           __dirname,
           'step_function_templates',
-          'initialise_cttsov2_instrument_run_db_sfn_template.asl.json'
+          'initialise_cttsov2_library_db_sfn_template.asl.json'
         )
       ),
       definitionSubstitutions: {
@@ -67,8 +67,6 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
           this.Cttsov2InitialiseLibraryAndFastqListRowMap.tablePartition.fastqListRow,
         __bclconvert_data_row_partition_name__:
           this.Cttsov2InitialiseLibraryAndFastqListRowMap.tablePartition.bclconvertDataRow,
-        __tso500l_data_row_partition_name__:
-          this.Cttsov2InitialiseLibraryAndFastqListRowMap.tablePartition.tso500lDataRow,
       },
     });
 
@@ -79,8 +77,35 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
     props.tableObj.grantReadWriteData(inputMakerSfn.role);
 
     /*
-    Subscribe to the library events from the event bus where the library assay type is cttsov2
+    Part 4: Subscribe to the library events from the event bus where the library assay type is cttsov2
     */
-    // TODO
+    const rule = new events.Rule(this, 'initialise_library_assay', {
+      eventBus: props.eventBusObj,
+      eventPattern: {
+        source: [this.Cttsov2InitialiseLibraryAndFastqListRowMap.triggerSource],
+        detailType: [this.Cttsov2InitialiseLibraryAndFastqListRowMap.triggerDetailType],
+        detail: {
+          payload: {
+            data: {
+              library: {
+                assay: [
+                  {
+                    'equals-ignore-case':
+                      this.Cttsov2InitialiseLibraryAndFastqListRowMap.triggerAssayType,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Add target of event to be the state machine
+    rule.addTarget(
+      new eventsTargets.SfnStateMachine(inputMakerSfn, {
+        input: events.RuleTargetInput.fromEventPath('$.detail'),
+      })
+    );
   }
 }

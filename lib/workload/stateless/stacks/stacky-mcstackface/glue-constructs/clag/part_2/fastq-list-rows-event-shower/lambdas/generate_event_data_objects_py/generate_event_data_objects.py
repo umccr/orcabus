@@ -25,11 +25,12 @@ def pascal_to_camel_case(pascal_str: str) -> str:
     return pascal_str[0].lower() + pascal_str[1:]
 
 
-def generate_fastq_list_row_event(fastq_list_row: Dict) -> Dict:
+def generate_fastq_list_row_event(fastq_list_row: Dict, instrument_run_id: str) -> Dict:
     """
     Generate the fastq list row event
 
     :param fastq_list_row:
+    :param instrument_run_id:
     :return:
     """
 
@@ -43,7 +44,18 @@ def generate_fastq_list_row_event(fastq_list_row: Dict) -> Dict:
             continue
         new_fastq_list_row_dict[pascal_to_camel_case(key)] = value
 
-    return new_fastq_list_row_dict
+    fastq_list_row_id = '.'.join(
+        [
+            new_fastq_list_row_dict["rgid"],
+            instrument_run_id,new_fastq_list_row_dict["rgsm"],
+        ]
+    )
+
+    return {
+        "id": fastq_list_row_id,
+        "fastqListRow": new_fastq_list_row_dict,
+        "instrumentRunId": instrument_run_id,
+    }
 
 
 def handler(event, context):
@@ -61,7 +73,7 @@ def handler(event, context):
     # Generate the fastq list row events
     fastq_list_row_event_data_list = list(
         map(
-            generate_fastq_list_row_event,
+            lambda fastq_list_row_iter: generate_fastq_list_row_event(fastq_list_row_iter, instrument_run_id),
             fastq_list_rows
         )
     )
@@ -408,300 +420,448 @@ def handler(event, context):
 #     #     },
 #     #     "fastq_list_rows_event_data_list": [
 #     #         {
-#     #             "rgid": "GAATTCGT.TTATGAGT.1",
-#     #             "rgsm": "L2400102",
-#     #             "rglb": "L2400102",
-#     #             "lane": 1,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400102/L2400102_S1_L001_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400102/L2400102_S1_L001_R2_001.fastq.gz"
+#     #             "id": "GAATTCGT.TTATGAGT.1.240229_A00130_0288_BH5HM2DSXC.L2400102",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GAATTCGT.TTATGAGT.1",
+#     #                 "rgsm": "L2400102",
+#     #                 "rglb": "L2400102",
+#     #                 "lane": 1,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400102/L2400102_S1_L001_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400102/L2400102_S1_L001_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GAGAATGGTT.TTGCTGCCGA.1",
-#     #             "rgsm": "L2400159",
-#     #             "rglb": "L2400159",
-#     #             "lane": 1,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400159/L2400159_S2_L001_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400159/L2400159_S2_L001_R2_001.fastq.gz"
+#     #             "id": "GAGAATGGTT.TTGCTGCCGA.1.240229_A00130_0288_BH5HM2DSXC.L2400159",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GAGAATGGTT.TTGCTGCCGA.1",
+#     #                 "rgsm": "L2400159",
+#     #                 "rglb": "L2400159",
+#     #                 "lane": 1,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400159/L2400159_S2_L001_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400159/L2400159_S2_L001_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "AGAGGCAACC.CCATCATTAG.1",
-#     #             "rgsm": "L2400160",
-#     #             "rglb": "L2400160",
-#     #             "lane": 1,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400160/L2400160_S3_L001_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400160/L2400160_S3_L001_R2_001.fastq.gz"
+#     #             "id": "AGAGGCAACC.CCATCATTAG.1.240229_A00130_0288_BH5HM2DSXC.L2400160",
+#     #             "fastqListRow": {
+#     #                 "rgid": "AGAGGCAACC.CCATCATTAG.1",
+#     #                 "rgsm": "L2400160",
+#     #                 "rglb": "L2400160",
+#     #                 "lane": 1,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400160/L2400160_S3_L001_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400160/L2400160_S3_L001_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "CCATCATTAG.AGAGGCAACC.1",
-#     #             "rgsm": "L2400161",
-#     #             "rglb": "L2400161",
-#     #             "lane": 1,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400161/L2400161_S4_L001_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400161/L2400161_S4_L001_R2_001.fastq.gz"
+#     #             "id": "CCATCATTAG.AGAGGCAACC.1.240229_A00130_0288_BH5HM2DSXC.L2400161",
+#     #             "fastqListRow": {
+#     #                 "rgid": "CCATCATTAG.AGAGGCAACC.1",
+#     #                 "rgsm": "L2400161",
+#     #                 "rglb": "L2400161",
+#     #                 "lane": 1,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400161/L2400161_S4_L001_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400161/L2400161_S4_L001_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GATAGGCCGA.GCCATGTGCG.1",
-#     #             "rgsm": "L2400162",
-#     #             "rglb": "L2400162",
-#     #             "lane": 1,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400162/L2400162_S5_L001_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400162/L2400162_S5_L001_R2_001.fastq.gz"
+#     #             "id": "GATAGGCCGA.GCCATGTGCG.1.240229_A00130_0288_BH5HM2DSXC.L2400162",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GATAGGCCGA.GCCATGTGCG.1",
+#     #                 "rgsm": "L2400162",
+#     #                 "rglb": "L2400162",
+#     #                 "lane": 1,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400162/L2400162_S5_L001_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400162/L2400162_S5_L001_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "ATGGTTGACT.AGGACAGGCC.1",
-#     #             "rgsm": "L2400163",
-#     #             "rglb": "L2400163",
-#     #             "lane": 1,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
+#     #             "id": "ATGGTTGACT.AGGACAGGCC.1.240229_A00130_0288_BH5HM2DSXC.L2400163",
+#     #             "fastqListRow": {
+#     #                 "rgid": "ATGGTTGACT.AGGACAGGCC.1",
+#     #                 "rgsm": "L2400163",
+#     #                 "rglb": "L2400163",
+#     #                 "lane": 1,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "TATTGCGCTC.CCTAACACAG.1",
-#     #             "rgsm": "L2400164",
-#     #             "rglb": "L2400164",
-#     #             "lane": 1,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400164/L2400164_S7_L001_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400164/L2400164_S7_L001_R2_001.fastq.gz"
+#     #             "id": "TATTGCGCTC.CCTAACACAG.1.240229_A00130_0288_BH5HM2DSXC.L2400164",
+#     #             "fastqListRow": {
+#     #                 "rgid": "TATTGCGCTC.CCTAACACAG.1",
+#     #                 "rgsm": "L2400164",
+#     #                 "rglb": "L2400164",
+#     #                 "lane": 1,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400164/L2400164_S7_L001_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400164/L2400164_S7_L001_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "TTCTACATAC.TTACAGTTAG.1",
-#     #             "rgsm": "L2400166",
-#     #             "rglb": "L2400166",
-#     #             "lane": 1,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400166/L2400166_S8_L001_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400166/L2400166_S8_L001_R2_001.fastq.gz"
+#     #             "id": "TTCTACATAC.TTACAGTTAG.1.240229_A00130_0288_BH5HM2DSXC.L2400166",
+#     #             "fastqListRow": {
+#     #                 "rgid": "TTCTACATAC.TTACAGTTAG.1",
+#     #                 "rgsm": "L2400166",
+#     #                 "rglb": "L2400166",
+#     #                 "lane": 1,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400166/L2400166_S8_L001_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_1/L2400166/L2400166_S8_L001_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "ATGAGGCC.CAATTAAC.2",
-#     #             "rgsm": "L2400195",
-#     #             "rglb": "L2400195",
-#     #             "lane": 2,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400195/L2400195_S9_L002_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400195/L2400195_S9_L002_R2_001.fastq.gz"
+#     #             "id": "ATGAGGCC.CAATTAAC.2.240229_A00130_0288_BH5HM2DSXC.L2400195",
+#     #             "fastqListRow": {
+#     #                 "rgid": "ATGAGGCC.CAATTAAC.2",
+#     #                 "rgsm": "L2400195",
+#     #                 "rglb": "L2400195",
+#     #                 "lane": 2,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400195/L2400195_S9_L002_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400195/L2400195_S9_L002_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "ACTAAGAT.CCGCGGTT.2",
-#     #             "rgsm": "L2400196",
-#     #             "rglb": "L2400196",
-#     #             "lane": 2,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400196/L2400196_S10_L002_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400196/L2400196_S10_L002_R2_001.fastq.gz"
+#     #             "id": "ACTAAGAT.CCGCGGTT.2.240229_A00130_0288_BH5HM2DSXC.L2400196",
+#     #             "fastqListRow": {
+#     #                 "rgid": "ACTAAGAT.CCGCGGTT.2",
+#     #                 "rgsm": "L2400196",
+#     #                 "rglb": "L2400196",
+#     #                 "lane": 2,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400196/L2400196_S10_L002_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400196/L2400196_S10_L002_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GTCGGAGC.TTATAACC.2",
-#     #             "rgsm": "L2400197",
-#     #             "rglb": "L2400197",
-#     #             "lane": 2,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400197/L2400197_S11_L002_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400197/L2400197_S11_L002_R2_001.fastq.gz"
+#     #             "id": "GTCGGAGC.TTATAACC.2.240229_A00130_0288_BH5HM2DSXC.L2400197",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GTCGGAGC.TTATAACC.2",
+#     #                 "rgsm": "L2400197",
+#     #                 "rglb": "L2400197",
+#     #                 "lane": 2,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400197/L2400197_S11_L002_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400197/L2400197_S11_L002_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "TCGTAGTG.CCAAGTCT.2",
-#     #             "rgsm": "L2400231",
-#     #             "rglb": "L2400231",
-#     #             "lane": 2,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400231/L2400231_S12_L002_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400231/L2400231_S12_L002_R2_001.fastq.gz"
+#     #             "id": "TCGTAGTG.CCAAGTCT.2.240229_A00130_0288_BH5HM2DSXC.L2400231",
+#     #             "fastqListRow": {
+#     #                 "rgid": "TCGTAGTG.CCAAGTCT.2",
+#     #                 "rgsm": "L2400231",
+#     #                 "rglb": "L2400231",
+#     #                 "lane": 2,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400231/L2400231_S12_L002_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400231/L2400231_S12_L002_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GGAGCGTC.GCACGGAC.2",
-#     #             "rgsm": "L2400238",
-#     #             "rglb": "L2400238",
-#     #             "lane": 2,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400238/L2400238_S13_L002_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400238/L2400238_S13_L002_R2_001.fastq.gz"
+#     #             "id": "GGAGCGTC.GCACGGAC.2.240229_A00130_0288_BH5HM2DSXC.L2400238",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GGAGCGTC.GCACGGAC.2",
+#     #                 "rgsm": "L2400238",
+#     #                 "rglb": "L2400238",
+#     #                 "lane": 2,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400238/L2400238_S13_L002_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400238/L2400238_S13_L002_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "ATGGCATG.GGTACCTT.2",
-#     #             "rgsm": "L2400239",
-#     #             "rglb": "L2400239",
-#     #             "lane": 2,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400239/L2400239_S14_L002_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400239/L2400239_S14_L002_R2_001.fastq.gz"
+#     #             "id": "ATGGCATG.GGTACCTT.2.240229_A00130_0288_BH5HM2DSXC.L2400239",
+#     #             "fastqListRow": {
+#     #                 "rgid": "ATGGCATG.GGTACCTT.2",
+#     #                 "rgsm": "L2400239",
+#     #                 "rglb": "L2400239",
+#     #                 "lane": 2,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400239/L2400239_S14_L002_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400239/L2400239_S14_L002_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GCAATGCA.AACGTTCC.2",
-#     #             "rgsm": "L2400240",
-#     #             "rglb": "L2400240",
-#     #             "lane": 2,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400240/L2400240_S15_L002_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400240/L2400240_S15_L002_R2_001.fastq.gz"
+#     #             "id": "GCAATGCA.AACGTTCC.2.240229_A00130_0288_BH5HM2DSXC.L2400240",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GCAATGCA.AACGTTCC.2",
+#     #                 "rgsm": "L2400240",
+#     #                 "rglb": "L2400240",
+#     #                 "lane": 2,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400240/L2400240_S15_L002_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_2/L2400240/L2400240_S15_L002_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "ATGAGGCC.CAATTAAC.3",
-#     #             "rgsm": "L2400195",
-#     #             "rglb": "L2400195",
-#     #             "lane": 3,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400195/L2400195_S9_L003_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400195/L2400195_S9_L003_R2_001.fastq.gz"
+#     #             "id": "ATGAGGCC.CAATTAAC.3.240229_A00130_0288_BH5HM2DSXC.L2400195",
+#     #             "fastqListRow": {
+#     #                 "rgid": "ATGAGGCC.CAATTAAC.3",
+#     #                 "rgsm": "L2400195",
+#     #                 "rglb": "L2400195",
+#     #                 "lane": 3,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400195/L2400195_S9_L003_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400195/L2400195_S9_L003_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "ACTAAGAT.CCGCGGTT.3",
-#     #             "rgsm": "L2400196",
-#     #             "rglb": "L2400196",
-#     #             "lane": 3,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400196/L2400196_S10_L003_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400196/L2400196_S10_L003_R2_001.fastq.gz"
+#     #             "id": "ACTAAGAT.CCGCGGTT.3.240229_A00130_0288_BH5HM2DSXC.L2400196",
+#     #             "fastqListRow": {
+#     #                 "rgid": "ACTAAGAT.CCGCGGTT.3",
+#     #                 "rgsm": "L2400196",
+#     #                 "rglb": "L2400196",
+#     #                 "lane": 3,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400196/L2400196_S10_L003_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400196/L2400196_S10_L003_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GTCGGAGC.TTATAACC.3",
-#     #             "rgsm": "L2400197",
-#     #             "rglb": "L2400197",
-#     #             "lane": 3,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400197/L2400197_S11_L003_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400197/L2400197_S11_L003_R2_001.fastq.gz"
+#     #             "id": "GTCGGAGC.TTATAACC.3.240229_A00130_0288_BH5HM2DSXC.L2400197",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GTCGGAGC.TTATAACC.3",
+#     #                 "rgsm": "L2400197",
+#     #                 "rglb": "L2400197",
+#     #                 "lane": 3,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400197/L2400197_S11_L003_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400197/L2400197_S11_L003_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "TCGTAGTG.CCAAGTCT.3",
-#     #             "rgsm": "L2400231",
-#     #             "rglb": "L2400231",
-#     #             "lane": 3,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400231/L2400231_S12_L003_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400231/L2400231_S12_L003_R2_001.fastq.gz"
+#     #             "id": "TCGTAGTG.CCAAGTCT.3.240229_A00130_0288_BH5HM2DSXC.L2400231",
+#     #             "fastqListRow": {
+#     #                 "rgid": "TCGTAGTG.CCAAGTCT.3",
+#     #                 "rgsm": "L2400231",
+#     #                 "rglb": "L2400231",
+#     #                 "lane": 3,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400231/L2400231_S12_L003_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400231/L2400231_S12_L003_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GGAGCGTC.GCACGGAC.3",
-#     #             "rgsm": "L2400238",
-#     #             "rglb": "L2400238",
-#     #             "lane": 3,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400238/L2400238_S13_L003_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400238/L2400238_S13_L003_R2_001.fastq.gz"
+#     #             "id": "GGAGCGTC.GCACGGAC.3.240229_A00130_0288_BH5HM2DSXC.L2400238",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GGAGCGTC.GCACGGAC.3",
+#     #                 "rgsm": "L2400238",
+#     #                 "rglb": "L2400238",
+#     #                 "lane": 3,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400238/L2400238_S13_L003_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400238/L2400238_S13_L003_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "ATGGCATG.GGTACCTT.3",
-#     #             "rgsm": "L2400239",
-#     #             "rglb": "L2400239",
-#     #             "lane": 3,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400239/L2400239_S14_L003_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400239/L2400239_S14_L003_R2_001.fastq.gz"
+#     #             "id": "ATGGCATG.GGTACCTT.3.240229_A00130_0288_BH5HM2DSXC.L2400239",
+#     #             "fastqListRow": {
+#     #                 "rgid": "ATGGCATG.GGTACCTT.3",
+#     #                 "rgsm": "L2400239",
+#     #                 "rglb": "L2400239",
+#     #                 "lane": 3,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400239/L2400239_S14_L003_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400239/L2400239_S14_L003_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GCAATGCA.AACGTTCC.3",
-#     #             "rgsm": "L2400240",
-#     #             "rglb": "L2400240",
-#     #             "lane": 3,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400240/L2400240_S15_L003_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400240/L2400240_S15_L003_R2_001.fastq.gz"
+#     #             "id": "GCAATGCA.AACGTTCC.3.240229_A00130_0288_BH5HM2DSXC.L2400240",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GCAATGCA.AACGTTCC.3",
+#     #                 "rgsm": "L2400240",
+#     #                 "rglb": "L2400240",
+#     #                 "lane": 3,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400240/L2400240_S15_L003_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_3/L2400240/L2400240_S15_L003_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "ACGCCTTGTT.ACGTTCCTTA.4",
-#     #             "rgsm": "L2400165",
-#     #             "rglb": "L2400165",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400165/L2400165_S16_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400165/L2400165_S16_L004_R2_001.fastq.gz"
+#     #             "id": "ACGCCTTGTT.ACGTTCCTTA.4.240229_A00130_0288_BH5HM2DSXC.L2400165",
+#     #             "fastqListRow": {
+#     #                 "rgid": "ACGCCTTGTT.ACGTTCCTTA.4",
+#     #                 "rgsm": "L2400165",
+#     #                 "rglb": "L2400165",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400165/L2400165_S16_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400165/L2400165_S16_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GCACGGAC.TGCGAGAC.4",
-#     #             "rgsm": "L2400191",
-#     #             "rglb": "L2400191",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400191/L2400191_S17_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400191/L2400191_S17_L004_R2_001.fastq.gz"
+#     #             "id": "GCACGGAC.TGCGAGAC.4.240229_A00130_0288_BH5HM2DSXC.L2400191",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GCACGGAC.TGCGAGAC.4",
+#     #                 "rgsm": "L2400191",
+#     #                 "rglb": "L2400191",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400191/L2400191_S17_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400191/L2400191_S17_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GTCGGAGC.TTATAACC.4",
-#     #             "rgsm": "L2400197",
-#     #             "rglb": "L2400197",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400197/L2400197_S11_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400197/L2400197_S11_L004_R2_001.fastq.gz"
+#     #             "id": "GTCGGAGC.TTATAACC.4.240229_A00130_0288_BH5HM2DSXC.L2400197",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GTCGGAGC.TTATAACC.4",
+#     #                 "rgsm": "L2400197",
+#     #                 "rglb": "L2400197",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400197/L2400197_S11_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400197/L2400197_S11_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "CTTGGTAT.GGACTTGG.4",
-#     #             "rgsm": "L2400198",
-#     #             "rglb": "L2400198",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400198/L2400198_S18_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400198/L2400198_S18_L004_R2_001.fastq.gz"
+#     #             "id": "CTTGGTAT.GGACTTGG.4.240229_A00130_0288_BH5HM2DSXC.L2400198",
+#     #             "fastqListRow": {
+#     #                 "rgid": "CTTGGTAT.GGACTTGG.4",
+#     #                 "rgsm": "L2400198",
+#     #                 "rglb": "L2400198",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400198/L2400198_S18_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400198/L2400198_S18_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GTTCCAAT.GCAGAATT.4",
-#     #             "rgsm": "L2400241",
-#     #             "rglb": "L2400241",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400241/L2400241_S19_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400241/L2400241_S19_L004_R2_001.fastq.gz"
+#     #             "id": "GTTCCAAT.GCAGAATT.4.240229_A00130_0288_BH5HM2DSXC.L2400241",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GTTCCAAT.GCAGAATT.4",
+#     #                 "rgsm": "L2400241",
+#     #                 "rglb": "L2400241",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400241/L2400241_S19_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400241/L2400241_S19_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "ACCTTGGC.ATGAGGCC.4",
-#     #             "rgsm": "L2400242",
-#     #             "rglb": "L2400242",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400242/L2400242_S20_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400242/L2400242_S20_L004_R2_001.fastq.gz"
+#     #             "id": "ACCTTGGC.ATGAGGCC.4.240229_A00130_0288_BH5HM2DSXC.L2400242",
+#     #             "fastqListRow": {
+#     #                 "rgid": "ACCTTGGC.ATGAGGCC.4",
+#     #                 "rgsm": "L2400242",
+#     #                 "rglb": "L2400242",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400242/L2400242_S20_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400242/L2400242_S20_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "AGTTTCGA.CCTACGAT.4",
-#     #             "rgsm": "L2400249",
-#     #             "rglb": "L2400249",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400249/L2400249_S21_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400249/L2400249_S21_L004_R2_001.fastq.gz"
+#     #             "id": "AGTTTCGA.CCTACGAT.4.240229_A00130_0288_BH5HM2DSXC.L2400249",
+#     #             "fastqListRow": {
+#     #                 "rgid": "AGTTTCGA.CCTACGAT.4",
+#     #                 "rgsm": "L2400249",
+#     #                 "rglb": "L2400249",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400249/L2400249_S21_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400249/L2400249_S21_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GAACCTCT.GTCTGCGC.4",
-#     #             "rgsm": "L2400250",
-#     #             "rglb": "L2400250",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400250/L2400250_S22_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400250/L2400250_S22_L004_R2_001.fastq.gz"
+#     #             "id": "GAACCTCT.GTCTGCGC.4.240229_A00130_0288_BH5HM2DSXC.L2400250",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GAACCTCT.GTCTGCGC.4",
+#     #                 "rgsm": "L2400250",
+#     #                 "rglb": "L2400250",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400250/L2400250_S22_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400250/L2400250_S22_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GCCCAGTG.CCGCAATT.4",
-#     #             "rgsm": "L2400251",
-#     #             "rglb": "L2400251",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400251/L2400251_S23_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400251/L2400251_S23_L004_R2_001.fastq.gz"
+#     #             "id": "GCCCAGTG.CCGCAATT.4.240229_A00130_0288_BH5HM2DSXC.L2400251",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GCCCAGTG.CCGCAATT.4",
+#     #                 "rgsm": "L2400251",
+#     #                 "rglb": "L2400251",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400251/L2400251_S23_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400251/L2400251_S23_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "TGACAGCT.CCCGTAGG.4",
-#     #             "rgsm": "L2400252",
-#     #             "rglb": "L2400252",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400252/L2400252_S24_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400252/L2400252_S24_L004_R2_001.fastq.gz"
+#     #             "id": "TGACAGCT.CCCGTAGG.4.240229_A00130_0288_BH5HM2DSXC.L2400252",
+#     #             "fastqListRow": {
+#     #                 "rgid": "TGACAGCT.CCCGTAGG.4",
+#     #                 "rgsm": "L2400252",
+#     #                 "rglb": "L2400252",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400252/L2400252_S24_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400252/L2400252_S24_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "CATCACCC.ATATAGCA.4",
-#     #             "rgsm": "L2400253",
-#     #             "rglb": "L2400253",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400253/L2400253_S25_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400253/L2400253_S25_L004_R2_001.fastq.gz"
+#     #             "id": "CATCACCC.ATATAGCA.4.240229_A00130_0288_BH5HM2DSXC.L2400253",
+#     #             "fastqListRow": {
+#     #                 "rgid": "CATCACCC.ATATAGCA.4",
+#     #                 "rgsm": "L2400253",
+#     #                 "rglb": "L2400253",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400253/L2400253_S25_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400253/L2400253_S25_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "CTGGAGTA.GTTCGGTT.4",
-#     #             "rgsm": "L2400254",
-#     #             "rglb": "L2400254",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400254/L2400254_S26_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400254/L2400254_S26_L004_R2_001.fastq.gz"
+#     #             "id": "CTGGAGTA.GTTCGGTT.4.240229_A00130_0288_BH5HM2DSXC.L2400254",
+#     #             "fastqListRow": {
+#     #                 "rgid": "CTGGAGTA.GTTCGGTT.4",
+#     #                 "rgsm": "L2400254",
+#     #                 "rglb": "L2400254",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400254/L2400254_S26_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400254/L2400254_S26_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GATCCGGG.AAGCAGGT.4",
-#     #             "rgsm": "L2400255",
-#     #             "rglb": "L2400255",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400255/L2400255_S27_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400255/L2400255_S27_L004_R2_001.fastq.gz"
+#     #             "id": "GATCCGGG.AAGCAGGT.4.240229_A00130_0288_BH5HM2DSXC.L2400255",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GATCCGGG.AAGCAGGT.4",
+#     #                 "rgsm": "L2400255",
+#     #                 "rglb": "L2400255",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400255/L2400255_S27_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400255/L2400255_S27_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "AACACCTG.CGCATGGG.4",
-#     #             "rgsm": "L2400256",
-#     #             "rglb": "L2400256",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400256/L2400256_S28_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400256/L2400256_S28_L004_R2_001.fastq.gz"
+#     #             "id": "AACACCTG.CGCATGGG.4.240229_A00130_0288_BH5HM2DSXC.L2400256",
+#     #             "fastqListRow": {
+#     #                 "rgid": "AACACCTG.CGCATGGG.4",
+#     #                 "rgsm": "L2400256",
+#     #                 "rglb": "L2400256",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400256/L2400256_S28_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400256/L2400256_S28_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         },
 #     #         {
-#     #             "rgid": "GTGACGTT.TCCCAGAT.4",
-#     #             "rgsm": "L2400257",
-#     #             "rglb": "L2400257",
-#     #             "lane": 4,
-#     #             "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400257/L2400257_S29_L004_R1_001.fastq.gz",
-#     #             "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400257/L2400257_S29_L004_R2_001.fastq.gz"
+#     #             "id": "GTGACGTT.TCCCAGAT.4.240229_A00130_0288_BH5HM2DSXC.L2400257",
+#     #             "fastqListRow": {
+#     #                 "rgid": "GTGACGTT.TCCCAGAT.4",
+#     #                 "rgsm": "L2400257",
+#     #                 "rglb": "L2400257",
+#     #                 "lane": 4,
+#     #                 "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400257/L2400257_S29_L004_R1_001.fastq.gz",
+#     #                 "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/20240621fe580652/Samples/Lane_4/L2400257/L2400257_S29_L004_R2_001.fastq.gz"
+#     #             },
+#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
 #     #         }
 #     #     ]
 #     # }

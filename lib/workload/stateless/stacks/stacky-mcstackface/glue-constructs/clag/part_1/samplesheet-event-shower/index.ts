@@ -153,8 +153,8 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
     });
 
     /*
-        Part 3: Wire up permissions
-        */
+    Part 3: Wire up permissions
+    */
 
     /* Allow state machine to write to the table */
     props.tableObj.grantReadWriteData(this.stateMachineObj);
@@ -170,9 +170,10 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
     props.eventBusObj.grantPutEventsTo(this.stateMachineObj);
 
     /*
-        Part 4: Build event rule
-        */
+    Part 4: Build event rule
+    */
     const eventRule = new events.Rule(this, 'update_database_on_new_samplesheet_event_rule', {
+      ruleName: `stacky-${this.newSamplesheetEventShowerMap.prefix}-event-rule`,
       eventBus: props.eventBusObj,
       eventPattern: {
         source: [this.newSamplesheetEventShowerMap.triggerSource],

@@ -4,7 +4,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import path from 'path';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
-import { WorkflowRunStateChangeInternalInputMakerConstruct } from '../../../../../../../components/event-workflowrunstatechange-internal-to-inputmaker-sfn';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 
 /*
 Part 1
@@ -65,6 +65,25 @@ export class Cttsov2InitialiseInstrumentRunDbRowConstruct extends Construct {
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn
     */
-    // TODO
+    const rule = new events.Rule(this, 'cttsov2_subscribe_to_samplesheet_shower', {
+      ruleName: `stacky-${this.Cttsov2InitialiseInstrumentRunDbRowMap.prefix}-rule`,
+      eventBus: props.eventBusObj,
+      eventPattern: {
+        source: [this.Cttsov2InitialiseInstrumentRunDbRowMap.triggerSource],
+        detailType: [this.Cttsov2InitialiseInstrumentRunDbRowMap.triggerDetailType],
+        detail: {
+          status: [
+            { 'equals-ignore-case': this.Cttsov2InitialiseInstrumentRunDbRowMap.triggerStatus },
+          ],
+        },
+      },
+    });
+
+    // Add target of event to be the state machine
+    rule.addTarget(
+      new eventsTargets.SfnStateMachine(inputMakerSfn, {
+        input: events.RuleTargetInput.fromEventPath('$.detail'),
+      })
+    );
   }
 }

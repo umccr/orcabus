@@ -92,7 +92,7 @@
     },
     "FastqListRow Event Shower Starting": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Resource": "arn:aws:states:::events:putEvents",
       "Parameters": {
         "Entries": [
           {
@@ -110,6 +110,7 @@
           }
         ]
       },
+      "ResultPath": null,
       "Next": "For each fastq list row pair"
     },
     "For each fastq list row pair": {
@@ -149,7 +150,7 @@
       "ItemsPath": "$.generate_event_maps_step.fastq_list_rows_event_data_list",
       "ResultPath": null,
       "ItemSelector": {
-        "fastq_list_row_event_data": "$$.Map.Item.Value"
+        "fastq_list_row_event_data.$": "$$.Map.Item.Value"
       }
     },
     "Wait 5 Seconds": {

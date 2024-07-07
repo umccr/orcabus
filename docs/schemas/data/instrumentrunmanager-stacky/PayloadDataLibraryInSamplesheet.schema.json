@@ -59,12 +59,12 @@
       "items": {
         "type": "object",
         "required": [
-          "sample_id",
+          "sampleId",
           "lane",
           "index"
         ],
         "properties": {
-          "sample_id": {
+          "sampleId": {
             "type": "string"
           },
           "lane": {
@@ -76,7 +76,7 @@
           "index2": {
             "type": "string"
           },
-          "override_cycles": {
+          "overrideCycles": {
             "type": "string"
           }
         }

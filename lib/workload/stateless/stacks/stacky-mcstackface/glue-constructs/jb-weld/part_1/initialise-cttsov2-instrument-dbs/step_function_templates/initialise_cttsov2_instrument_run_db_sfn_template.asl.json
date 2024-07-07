@@ -7,7 +7,7 @@
       "Next": "Initialise Instrument Run Item",
       "ResultPath": "$.db_inputs",
       "Parameters": {
-        "instrument_run_id": "$.payload.data.instrumentRunId"
+        "instrument_run_id.$": "$.payload.data.instrumentRunId"
       }
     },
     "Initialise Instrument Run Item": {
@@ -22,11 +22,11 @@
           "id_type": {
             "S": "${__instrument_run_partition_name__}"
           },
-          "rgids": {
-            "L": []
+          "fastq_list_row_id_set": {
+            "SS": []
           },
-          "library_ids": {
-            "L": []
+          "library_set": {
+            "SS": []
           }
         }
       },

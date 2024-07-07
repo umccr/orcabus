@@ -14,10 +14,16 @@ Generate the events for
 from typing import Dict, List
 
 
-def generate_subject_event_data_object_from_subject(subject_obj: Dict) -> Dict:
+def generate_subject_event_data_object_from_subject(subject_obj: Dict, instrument_run_id: str) -> Dict:
     return {
         "id": subject_obj.get("id"),
-        "event_data": subject_obj
+        "event_data": {
+            "instrumentRunId": instrument_run_id,
+            "subject": {
+                "id": subject_obj.get("id"),
+                "internalId": subject_obj.get("internal_id")
+            }
+        }
     }
 
 
@@ -96,12 +102,54 @@ def generate_library_event_data_object_from_library_specimen_and_subject(
         }
     )
 
+    library_event_obj = {
+      "id": library_obj.get("id"),
+      "internalId": library_obj.get("internal_id"),
+      "phenotype": library_obj.get("phenotype", None),
+      "workflow": library_obj.get("workflow", None),
+      "quality": library_obj.get("quality", None),
+      "type": library_obj.get("type", None),
+      "assay": library_obj.get("assay", None),
+      "coverage": library_obj.get("coverage", None),
+      "specimen": library_obj.get("specimen", None),
+    }
+
+    # Trim library event object to non-null values
+    library_event_obj = dict(
+        filter(
+            lambda kv: kv[1] is not None,
+            library_event_obj.items()
+        )
+    )
+
+    # Filter re-key bclconvert data rows
+    bclconvert_data_rows_event_obj = []
+
+    for bclconvert_row_obj in bclconvert_rows:
+        bclconvert_row_event_obj = {
+            "sampleId": bclconvert_row_obj.get("sample_id"),
+            "index": bclconvert_row_obj.get("index"),
+            "index2": bclconvert_row_obj.get("index2", None),
+            "lane": bclconvert_row_obj.get("lane"),
+            "overrideCycles": bclconvert_row_obj.get("override_cycles", None)
+        }
+
+        # Trim bclconvert row event object to non-null values
+        bclconvert_row_event_obj = dict(
+            filter(
+                lambda kv: kv[1] is not None,
+                bclconvert_row_event_obj.items()
+            )
+        )
+
+        bclconvert_data_rows_event_obj.append(bclconvert_row_event_obj)
+
     return {
         "id": library_obj.get("id"),
         "event_data": {
             "instrumentRunId": instrument_run_id,
-            "library": library_obj,
-            "bclconvertDataRows": bclconvert_rows
+            "library": library_event_obj,
+            "bclconvertDataRows": bclconvert_data_rows_event_obj
         }
     }
 
@@ -133,7 +181,9 @@ def handler(event, context):
     # For each subject, generate the subject event data object
     subject_event_data_list = list(
         map(
-            generate_subject_event_data_object_from_subject,
+            lambda subject_obj_iter: (
+                generate_subject_event_data_object_from_subject(subject_obj_iter, instrument_run_id)
+            ),
             subject_obj_list
         )
     )
@@ -179,6 +229,7 @@ def handler(event, context):
 
 
 # if __name__ == "__main__":
+#     import json
 #     print(
 #         json.dumps(
 #             handler(
@@ -1201,92 +1252,131 @@ def handler(event, context):
 #     #     {
 #     #       "id": 57,
 #     #       "event_data": {
-#     #         "id": 57,
-#     #         "internal_id": "SBJ00029"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 57,
+#     #           "internalId": "SBJ00029"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 58,
 #     #       "event_data": {
-#     #         "id": 58,
-#     #         "internal_id": "SBJ00006"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 58,
+#     #           "internalId": "SBJ00006"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 104,
 #     #       "event_data": {
-#     #         "id": 104,
-#     #         "internal_id": "SBJ00005"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 104,
+#     #           "internalId": "SBJ00005"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 1272,
 #     #       "event_data": {
-#     #         "id": 1272,
-#     #         "internal_id": "SBJ01143"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 1272,
+#     #           "internalId": "SBJ01143"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 3903,
 #     #       "event_data": {
-#     #         "id": 3903,
-#     #         "internal_id": "SBJ04407"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 3903,
+#     #           "internalId": "SBJ04407"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 3984,
 #     #       "event_data": {
-#     #         "id": 3984,
-#     #         "internal_id": "SBJ04488"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 3984,
+#     #           "internalId": "SBJ04488"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 4143,
 #     #       "event_data": {
-#     #         "id": 4143,
-#     #         "internal_id": "SBJ04648"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 4143,
+#     #           "internalId": "SBJ04648"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 4148,
 #     #       "event_data": {
-#     #         "id": 4148,
-#     #         "internal_id": "SBJ04653"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 4148,
+#     #           "internalId": "SBJ04653"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 4149,
 #     #       "event_data": {
-#     #         "id": 4149,
-#     #         "internal_id": "SBJ04654"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 4149,
+#     #           "internalId": "SBJ04654"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 4152,
 #     #       "event_data": {
-#     #         "id": 4152,
-#     #         "internal_id": "SBJ04659"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 4152,
+#     #           "internalId": "SBJ04659"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 4153,
 #     #       "event_data": {
-#     #         "id": 4153,
-#     #         "internal_id": "SBJ04660"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 4153,
+#     #           "internalId": "SBJ04660"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 4154,
 #     #       "event_data": {
-#     #         "id": 4154,
-#     #         "internal_id": "SBJ04661"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 4154,
+#     #           "internalId": "SBJ04661"
+#     #         }
 #     #       }
 #     #     },
 #     #     {
 #     #       "id": 4155,
 #     #       "event_data": {
-#     #         "id": 4155,
-#     #         "internal_id": "SBJ04662"
+#     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #         "subject": {
+#     #           "id": 4155,
+#     #           "internalId": "SBJ04662"
+#     #         }
 #     #       }
 #     #     }
 #     #   ],
@@ -1297,7 +1387,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10723,
-#     #           "internal_id": "L2400102",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "research",
 #     #           "quality": "borderline",
@@ -1308,11 +1397,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 1,
-#     #             "sample_id": "L2400102",
+#     #             "sampleId": "L2400102",
 #     #             "index": "GAATTCGT",
 #     #             "index2": "TTATGAGT",
-#     #             "override_cycles": "U7N1Y143;I8N2;I8N2;U7N1Y143"
+#     #             "lane": 1,
+#     #             "overrideCycles": "U7N1Y143;I8N2;I8N2;U7N1Y143"
 #     #           }
 #     #         ]
 #     #       }
@@ -1323,7 +1412,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10830,
-#     #           "internal_id": "L2400159",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "manual",
 #     #           "quality": "good",
@@ -1334,13 +1422,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 1,
-#     #             "sample_id": "L2400159",
+#     #             "sampleId": "L2400159",
 #     #             "index": "GAGAATGGTT",
 #     #             "index2": "TTGCTGCCGA",
-#     #             "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
-#     #             "adapter_read_1": "CTGTCTCTTATACACATCT",
-#     #             "adapter_read_2": "CTGTCTCTTATACACATCT"
+#     #             "lane": 1,
+#     #             "overrideCycles": "U7N1Y143;I10;I10;U7N1Y143"
 #     #           }
 #     #         ]
 #     #       }
@@ -1351,7 +1437,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10831,
-#     #           "internal_id": "L2400160",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "manual",
 #     #           "quality": "good",
@@ -1362,13 +1447,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 1,
-#     #             "sample_id": "L2400160",
+#     #             "sampleId": "L2400160",
 #     #             "index": "AGAGGCAACC",
 #     #             "index2": "CCATCATTAG",
-#     #             "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
-#     #             "adapter_read_1": "CTGTCTCTTATACACATCT",
-#     #             "adapter_read_2": "CTGTCTCTTATACACATCT"
+#     #             "lane": 1,
+#     #             "overrideCycles": "U7N1Y143;I10;I10;U7N1Y143"
 #     #           }
 #     #         ]
 #     #       }
@@ -1379,7 +1462,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10832,
-#     #           "internal_id": "L2400161",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "manual",
 #     #           "quality": "good",
@@ -1390,13 +1472,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 1,
-#     #             "sample_id": "L2400161",
+#     #             "sampleId": "L2400161",
 #     #             "index": "CCATCATTAG",
 #     #             "index2": "AGAGGCAACC",
-#     #             "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
-#     #             "adapter_read_1": "CTGTCTCTTATACACATCT",
-#     #             "adapter_read_2": "CTGTCTCTTATACACATCT"
+#     #             "lane": 1,
+#     #             "overrideCycles": "U7N1Y143;I10;I10;U7N1Y143"
 #     #           }
 #     #         ]
 #     #       }
@@ -1407,7 +1487,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10833,
-#     #           "internal_id": "L2400162",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "manual",
 #     #           "quality": "good",
@@ -1418,13 +1497,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 1,
-#     #             "sample_id": "L2400162",
+#     #             "sampleId": "L2400162",
 #     #             "index": "GATAGGCCGA",
 #     #             "index2": "GCCATGTGCG",
-#     #             "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
-#     #             "adapter_read_1": "CTGTCTCTTATACACATCT",
-#     #             "adapter_read_2": "CTGTCTCTTATACACATCT"
+#     #             "lane": 1,
+#     #             "overrideCycles": "U7N1Y143;I10;I10;U7N1Y143"
 #     #           }
 #     #         ]
 #     #       }
@@ -1435,7 +1512,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10834,
-#     #           "internal_id": "L2400163",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "manual",
 #     #           "quality": "good",
@@ -1446,13 +1522,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 1,
-#     #             "sample_id": "L2400163",
+#     #             "sampleId": "L2400163",
 #     #             "index": "ATGGTTGACT",
 #     #             "index2": "AGGACAGGCC",
-#     #             "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
-#     #             "adapter_read_1": "CTGTCTCTTATACACATCT",
-#     #             "adapter_read_2": "CTGTCTCTTATACACATCT"
+#     #             "lane": 1,
+#     #             "overrideCycles": "U7N1Y143;I10;I10;U7N1Y143"
 #     #           }
 #     #         ]
 #     #       }
@@ -1463,7 +1537,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10835,
-#     #           "internal_id": "L2400164",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "manual",
 #     #           "quality": "good",
@@ -1474,13 +1547,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 1,
-#     #             "sample_id": "L2400164",
+#     #             "sampleId": "L2400164",
 #     #             "index": "TATTGCGCTC",
 #     #             "index2": "CCTAACACAG",
-#     #             "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
-#     #             "adapter_read_1": "CTGTCTCTTATACACATCT",
-#     #             "adapter_read_2": "CTGTCTCTTATACACATCT"
+#     #             "lane": 1,
+#     #             "overrideCycles": "U7N1Y143;I10;I10;U7N1Y143"
 #     #           }
 #     #         ]
 #     #       }
@@ -1491,7 +1562,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10836,
-#     #           "internal_id": "L2400165",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "manual",
 #     #           "quality": "good",
@@ -1502,13 +1572,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400165",
+#     #             "sampleId": "L2400165",
 #     #             "index": "ACGCCTTGTT",
 #     #             "index2": "ACGTTCCTTA",
-#     #             "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
-#     #             "adapter_read_1": "CTGTCTCTTATACACATCT",
-#     #             "adapter_read_2": "CTGTCTCTTATACACATCT"
+#     #             "lane": 4,
+#     #             "overrideCycles": "U7N1Y143;I10;I10;U7N1Y143"
 #     #           }
 #     #         ]
 #     #       }
@@ -1519,7 +1587,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10837,
-#     #           "internal_id": "L2400166",
 #     #           "phenotype": "negative-control",
 #     #           "workflow": "manual",
 #     #           "quality": "good",
@@ -1530,13 +1597,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 1,
-#     #             "sample_id": "L2400166",
+#     #             "sampleId": "L2400166",
 #     #             "index": "TTCTACATAC",
 #     #             "index2": "TTACAGTTAG",
-#     #             "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
-#     #             "adapter_read_1": "CTGTCTCTTATACACATCT",
-#     #             "adapter_read_2": "CTGTCTCTTATACACATCT"
+#     #             "lane": 1,
+#     #             "overrideCycles": "U7N1Y143;I10;I10;U7N1Y143"
 #     #           }
 #     #         ]
 #     #       }
@@ -1547,7 +1612,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10862,
-#     #           "internal_id": "L2400191",
 #     #           "phenotype": "normal",
 #     #           "workflow": "research",
 #     #           "quality": "good",
@@ -1558,11 +1622,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400191",
+#     #             "sampleId": "L2400191",
 #     #             "index": "GCACGGAC",
 #     #             "index2": "TGCGAGAC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1573,7 +1637,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10866,
-#     #           "internal_id": "L2400195",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "research",
 #     #           "quality": "good",
@@ -1584,18 +1647,18 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 2,
-#     #             "sample_id": "L2400195",
+#     #             "sampleId": "L2400195",
 #     #             "index": "ATGAGGCC",
 #     #             "index2": "CAATTAAC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 2,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           },
 #     #           {
-#     #             "lane": 3,
-#     #             "sample_id": "L2400195",
+#     #             "sampleId": "L2400195",
 #     #             "index": "ATGAGGCC",
 #     #             "index2": "CAATTAAC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 3,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1606,7 +1669,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10867,
-#     #           "internal_id": "L2400196",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "research",
 #     #           "quality": "good",
@@ -1617,18 +1679,18 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 2,
-#     #             "sample_id": "L2400196",
+#     #             "sampleId": "L2400196",
 #     #             "index": "ACTAAGAT",
 #     #             "index2": "CCGCGGTT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 2,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           },
 #     #           {
-#     #             "lane": 3,
-#     #             "sample_id": "L2400196",
+#     #             "sampleId": "L2400196",
 #     #             "index": "ACTAAGAT",
 #     #             "index2": "CCGCGGTT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 3,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1639,7 +1701,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10868,
-#     #           "internal_id": "L2400197",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "research",
 #     #           "quality": "good",
@@ -1650,25 +1711,25 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
+#     #             "sampleId": "L2400197",
+#     #             "index": "GTCGGAGC",
+#     #             "index2": "TTATAACC",
 #     #             "lane": 2,
-#     #             "sample_id": "L2400197",
-#     #             "index": "GTCGGAGC",
-#     #             "index2": "TTATAACC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           },
 #     #           {
+#     #             "sampleId": "L2400197",
+#     #             "index": "GTCGGAGC",
+#     #             "index2": "TTATAACC",
 #     #             "lane": 3,
-#     #             "sample_id": "L2400197",
-#     #             "index": "GTCGGAGC",
-#     #             "index2": "TTATAACC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           },
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400197",
+#     #             "sampleId": "L2400197",
 #     #             "index": "GTCGGAGC",
 #     #             "index2": "TTATAACC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1679,7 +1740,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10869,
-#     #           "internal_id": "L2400198",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "research",
 #     #           "quality": "good",
@@ -1690,11 +1750,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400198",
+#     #             "sampleId": "L2400198",
 #     #             "index": "CTTGGTAT",
 #     #             "index2": "GGACTTGG",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1705,7 +1765,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10902,
-#     #           "internal_id": "L2400231",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "clinical",
 #     #           "quality": "poor",
@@ -1716,18 +1775,18 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 2,
-#     #             "sample_id": "L2400231",
+#     #             "sampleId": "L2400231",
 #     #             "index": "TCGTAGTG",
 #     #             "index2": "CCAAGTCT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 2,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           },
 #     #           {
-#     #             "lane": 3,
-#     #             "sample_id": "L2400231",
+#     #             "sampleId": "L2400231",
 #     #             "index": "TCGTAGTG",
 #     #             "index2": "CCAAGTCT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 3,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1738,7 +1797,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10909,
-#     #           "internal_id": "L2400238",
 #     #           "phenotype": "normal",
 #     #           "workflow": "clinical",
 #     #           "quality": "good",
@@ -1749,18 +1807,18 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 2,
-#     #             "sample_id": "L2400238",
+#     #             "sampleId": "L2400238",
 #     #             "index": "GGAGCGTC",
 #     #             "index2": "GCACGGAC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 2,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           },
 #     #           {
-#     #             "lane": 3,
-#     #             "sample_id": "L2400238",
+#     #             "sampleId": "L2400238",
 #     #             "index": "GGAGCGTC",
 #     #             "index2": "GCACGGAC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 3,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1771,7 +1829,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10910,
-#     #           "internal_id": "L2400239",
 #     #           "phenotype": "normal",
 #     #           "workflow": "clinical",
 #     #           "quality": "good",
@@ -1782,18 +1839,18 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 2,
-#     #             "sample_id": "L2400239",
+#     #             "sampleId": "L2400239",
 #     #             "index": "ATGGCATG",
 #     #             "index2": "GGTACCTT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 2,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           },
 #     #           {
-#     #             "lane": 3,
-#     #             "sample_id": "L2400239",
+#     #             "sampleId": "L2400239",
 #     #             "index": "ATGGCATG",
 #     #             "index2": "GGTACCTT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 3,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1804,7 +1861,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10911,
-#     #           "internal_id": "L2400240",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "clinical",
 #     #           "quality": "poor",
@@ -1815,18 +1871,18 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 2,
-#     #             "sample_id": "L2400240",
+#     #             "sampleId": "L2400240",
 #     #             "index": "GCAATGCA",
 #     #             "index2": "AACGTTCC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 2,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           },
 #     #           {
-#     #             "lane": 3,
-#     #             "sample_id": "L2400240",
+#     #             "sampleId": "L2400240",
 #     #             "index": "GCAATGCA",
 #     #             "index2": "AACGTTCC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 3,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1837,7 +1893,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10912,
-#     #           "internal_id": "L2400241",
 #     #           "phenotype": "negative-control",
 #     #           "workflow": "control",
 #     #           "quality": "good",
@@ -1848,11 +1903,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400241",
+#     #             "sampleId": "L2400241",
 #     #             "index": "GTTCCAAT",
 #     #             "index2": "GCAGAATT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1863,7 +1918,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10913,
-#     #           "internal_id": "L2400242",
 #     #           "phenotype": "normal",
 #     #           "workflow": "control",
 #     #           "quality": "good",
@@ -1874,11 +1928,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400242",
+#     #             "sampleId": "L2400242",
 #     #             "index": "ACCTTGGC",
 #     #             "index2": "ATGAGGCC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1889,7 +1943,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10920,
-#     #           "internal_id": "L2400249",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "control",
 #     #           "quality": "good",
@@ -1900,11 +1953,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400249",
+#     #             "sampleId": "L2400249",
 #     #             "index": "AGTTTCGA",
 #     #             "index2": "CCTACGAT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1915,7 +1968,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10921,
-#     #           "internal_id": "L2400250",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "research",
 #     #           "quality": "good",
@@ -1926,11 +1978,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400250",
+#     #             "sampleId": "L2400250",
 #     #             "index": "GAACCTCT",
 #     #             "index2": "GTCTGCGC",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1941,7 +1993,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10922,
-#     #           "internal_id": "L2400251",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "research",
 #     #           "quality": "good",
@@ -1952,11 +2003,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400251",
+#     #             "sampleId": "L2400251",
 #     #             "index": "GCCCAGTG",
 #     #             "index2": "CCGCAATT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1967,7 +2018,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10923,
-#     #           "internal_id": "L2400252",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "research",
 #     #           "quality": "good",
@@ -1978,11 +2028,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400252",
+#     #             "sampleId": "L2400252",
 #     #             "index": "TGACAGCT",
 #     #             "index2": "CCCGTAGG",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -1993,7 +2043,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10924,
-#     #           "internal_id": "L2400253",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "research",
 #     #           "quality": "good",
@@ -2004,11 +2053,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400253",
+#     #             "sampleId": "L2400253",
 #     #             "index": "CATCACCC",
 #     #             "index2": "ATATAGCA",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -2019,7 +2068,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10925,
-#     #           "internal_id": "L2400254",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "research",
 #     #           "quality": "borderline",
@@ -2030,11 +2078,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400254",
+#     #             "sampleId": "L2400254",
 #     #             "index": "CTGGAGTA",
 #     #             "index2": "GTTCGGTT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -2045,7 +2093,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10926,
-#     #           "internal_id": "L2400255",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "clinical",
 #     #           "quality": "very-poor",
@@ -2056,11 +2103,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400255",
+#     #             "sampleId": "L2400255",
 #     #             "index": "GATCCGGG",
 #     #             "index2": "AAGCAGGT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -2071,7 +2118,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10927,
-#     #           "internal_id": "L2400256",
 #     #           "phenotype": "tumor",
 #     #           "workflow": "clinical",
 #     #           "quality": "very-poor",
@@ -2082,11 +2128,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400256",
+#     #             "sampleId": "L2400256",
 #     #             "index": "AACACCTG",
 #     #             "index2": "CGCATGGG",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }
@@ -2097,7 +2143,6 @@ def handler(event, context):
 #     #         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
 #     #         "library": {
 #     #           "id": 10928,
-#     #           "internal_id": "L2400257",
 #     #           "phenotype": "negative-control",
 #     #           "workflow": "control",
 #     #           "quality": "good",
@@ -2108,11 +2153,11 @@ def handler(event, context):
 #     #         },
 #     #         "bclconvertDataRows": [
 #     #           {
-#     #             "lane": 4,
-#     #             "sample_id": "L2400257",
+#     #             "sampleId": "L2400257",
 #     #             "index": "GTGACGTT",
 #     #             "index2": "TCCCAGAT",
-#     #             "override_cycles": "Y151;I8N2;I8N2;Y151"
+#     #             "lane": 4,
+#     #             "overrideCycles": "Y151;I8N2;I8N2;Y151"
 #     #           }
 #     #         ]
 #     #       }

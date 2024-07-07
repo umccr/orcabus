@@ -6,8 +6,9 @@
       "Type": "Pass",
       "Next": "DynamoDB GetItem",
       "Parameters": {
-        "fastq_list_row_event_data": "$.payload.data.fastqListRow",
-        "instrument_run_id": "$.payload.data.instrumentRunId"
+        "fastq_list_row_id.$": "$.payload.data.id",
+        "fastq_list_row_event_data.$": "$.payload.data.fastqListRow",
+        "instrument_run_id.$": "$.payload.data.instrumentRunId"
       }
     },
     "DynamoDB GetItem": {
@@ -16,17 +17,18 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.fastq_list_row_event_data.rgid",
+          "id.$": "$.fastq_list_row_id",
           "id_type": "${__fastq_list_row_partition_name__}"
         }
       },
-      "Next": "Check if Fastq List Row is in the DB"
+      "Next": "Check if Fastq List Row is in the DB",
+      "ResultPath": "$.get_fastq_list_row_from_db"
     },
     "Check if Fastq List Row is in the DB": {
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.get_rgid_item_test.Item",
+          "Variable": "$.get_fastq_list_row_from_db.Item",
           "IsPresent": true,
           "Next": "Update Fastq List Row"
         }
@@ -43,13 +45,13 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.fastq_list_row_event_data.rgid",
+          "id.$": "$.fastq_list_row_id",
           "id_type": "${__fastq_list_row_partition_name__}"
         },
         "UpdateExpression": "SET fastq_list_row_json = :fastq_list_row_json",
         "ExpressionAttributeValues": {
           ":fastq_list_row_json": {
-            "S.$": "States.StringToJson($.fastq_list_row_event_data.rgid)"
+            "S.$": "States.JsonToString($.fastq_list_row_event_data)"
           }
         }
       },

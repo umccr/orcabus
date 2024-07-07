@@ -6,7 +6,7 @@
       "Type": "Pass",
       "Next": "Get Libraries from Instrument Run",
       "Parameters": {
-        "fastq_list_row_shower_complete_event_data": "$.payload.data"
+        "fastq_list_row_shower_complete_event_data.$": "$.payload.data"
       }
     },
     "Get Libraries from Instrument Run": {
@@ -20,37 +20,42 @@
         }
       },
       "ResultSelector": {
-        "library_list": "$.Item.library_list"
+        "library_list.$": "$.Item.library_set.SS"
       },
       "Next": "Iterate over each library",
       "ResultPath": "$.get_libraries_step"
     },
     "Iterate over each library": {
       "Type": "Map",
+      "ItemsPath": "$.get_libraries_step.library_list",
+      "ItemSelector": {
+        "library_id_hash.$": "$$.Map.Item.Value",
+        "instrument_run_id.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId"
+      },
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Get RGIDs from Library",
+        "StartAt": "Get FastqListRowIds from Library",
         "States": {
-          "Get RGIDs from Library": {
+          "Get FastqListRowIds from Library": {
             "Type": "Task",
             "Resource": "arn:aws:states:::dynamodb:getItem",
             "Parameters": {
               "TableName": "${__table_name__}",
               "Key": {
-                "id.$": "$.library_id",
+                "id.$": "$.library_id_hash",
                 "id_type": "${__library_partition_name__}"
               }
             },
-            "Next": "For each rgid",
-            "ResultPath": "$.get_rgids_step",
+            "Next": "For each FastqListRowID",
+            "ResultPath": "$.get_fastq_list_row_ids_step",
             "ResultSelector": {
               "internal_id.$": "$.Item.internal_id",
-              "rgid_list.$": "$.Item.rgid_list"
+              "fastq_list_row_id_list.$": "$.Item.fastq_list_row_id_set.SS"
             }
           },
-          "For each rgid": {
+          "For each FastqListRowID": {
             "Type": "Map",
             "ItemProcessor": {
               "ProcessorConfig": {
@@ -70,13 +75,13 @@
                           "Parameters": {
                             "TableName": "${__table_name__}",
                             "Key": {
-                              "id.$": "$.rgid",
+                              "id.$": "$.fastq_list_row_id",
                               "id_type": "${__fastq_list_row_partition_name__}"
                             }
                           },
                           "End": true,
                           "ResultSelector": {
-                            "fastq_list_row.$": "States.StringToJson($.Item.fastq_list_row)"
+                            "fastq_list_row.$": "States.StringToJson($.Item.fastq_list_row_json.S)"
                           },
                           "ResultPath": "$.get_fastq_list_row_step"
                         }
@@ -91,13 +96,13 @@
                           "Parameters": {
                             "TableName": "${__table_name__}",
                             "Key": {
-                              "id.$": "$.rgid",
+                              "id.$": "$.fastq_list_row_id",
                               "id_type": "${__bclconvert_data_row_partition_name__}"
                             }
                           },
                           "End": true,
                           "ResultSelector": {
-                            "bclconvert_data_row.$": "States.StringToJson($.Item.bclconvert_data_row)"
+                            "bclconvert_data_row.$": "States.StringToJson($.Item.bclconvert_data_row.S)"
                           },
                           "ResultPath": "$.get_bclconvert_data_row_step"
                         }
@@ -112,9 +117,9 @@
                 }
               }
             },
-            "ItemsPath": "$.get_rgids_step.rgid_list",
+            "ItemsPath": "$.get_fastq_list_row_ids_step.fastq_list_row_id_list",
             "ItemSelector": {
-              "rgid.$": "$$.Map.Item.Value"
+              "fastq_list_row_id.$": "$$.Map.Item.Value"
             },
             "Next": "Generate SampleSheet Json from DB Inputs",
             "ResultPath": "$.get_fastq_list_row_values_step"
@@ -125,8 +130,8 @@
             "Parameters": {
               "FunctionName": "${__generate_samplesheet_lambda_function_arn__}",
               "Payload": {
-                "instrument_run_id.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId",
-                "library_id.$": "$.get_rgids_step.internal_id",
+                "instrument_run_id.$": "$.instrument_run_id",
+                "library_id.$": "$.get_fastq_list_row_ids_step.internal_id",
                 "bclconvert_data_rows.$": "$.get_fastq_list_row_values_step[*].bclconvert_data_row"
               }
             },
@@ -166,8 +171,8 @@
                       "refId": null,
                       "version": "${__payload_version__}",
                       "data": {
-                        "sampleId.$": "$.get_rgids_step.internal_id",
-                        "instrumentRunId.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId",
+                        "sampleId.$": "$.get_fastq_list_row_ids_step.internal_id",
+                        "instrumentRunId.$": "$.instrument_run_id",
                         "samplesheet.$": "$.generate_samplesheet_step.samplesheet",
                         "fastqListRows.$": "$.get_fastq_list_row_values_step[*].fastq_list_rows"
                       }
@@ -183,11 +188,7 @@
           }
         }
       },
-      "End": true,
-      "ItemsPath": "$.get_libraries_step.library_list",
-      "ItemSelector": {
-        "library_id.$": "$$.Map.Item.Value"
-      }
+      "End": true
     }
   }
 }

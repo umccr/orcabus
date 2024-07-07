@@ -89,7 +89,7 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
         path.join(
           __dirname,
           'step_function_templates',
-          'update_database_on_new_fastqlistrows_simple.asl.json'
+          'fastq_list_row_event_shower_sfn_template.asl.json'
         )
       ),
       definitionSubstitutions: {
@@ -152,6 +152,7 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
     Part 4: Build event rule
     */
     const eventRule = new events.Rule(this, 'update_database_on_new_fastqlistrows_event_rule', {
+      ruleName: `stacky-${this.newFastqListRowsEventShowerMap.prefix}-event-rule`,
       eventBus: props.eventBusObj,
       eventPattern: {
         source: [this.newFastqListRowsEventShowerMap.triggerSource],

@@ -4,10 +4,13 @@
   "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataNewFastqListRow",
   "title": "PayloadDataNewFastqListRow",
   "required": [
-    "instrumentRunId",
+    "id",
     "fastqListRow"
   ],
   "properties": {
+    "id": {
+      "type": "string"
+    },
     "instrumentRunId": {
       "type": "string"
     },
