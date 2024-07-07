@@ -5,8 +5,8 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Cttsov2InitialiseInstrumentRunDbRowConstruct } from './part_1/initialise-cttsov2-instrument-dbs';
 import { Cttsov2InitialiseLibraryAndFastqListRowConstruct } from './part_2/initialise-cttsov2-library-dbs';
 import { Cttsov2PopulateFastqListRowConstruct } from './part_3/populate-fastq-list-row-dbs';
-import { Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct } from './part_4/fastq-list-row-event-shower-complete-to-cttsov2-submit';
-import { Cttsov2InputMakerConstruct } from './part_5/cttsov2-input-maker';
+import { Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct } from './part_4/fastq-list-row-event-shower-complete-to-cttsov2-draft';
+import { Cttsov2InputMakerConstruct } from './part_5/cttsov2-draft-to-ready';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting cttsov2 analyses

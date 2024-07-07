@@ -26,15 +26,15 @@ Return a icav2 copy files dict
 }
 
 """
+
+# Standard imports
 from functools import reduce
 from pathlib import Path
-from typing import Dict, List
 from urllib.parse import urlparse
 
+# Wrapica imports
 from wrapica.enums import DataType
 from wrapica.project_data import convert_project_id_and_data_path_to_icav2_uri
-
-from cttso_v2_pipeline_manager_tools.utils.compression_helpers import decompress_dict
 
 
 def handler(event, context):

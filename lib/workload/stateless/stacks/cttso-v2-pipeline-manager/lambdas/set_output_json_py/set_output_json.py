@@ -25,9 +25,12 @@ https://github.com/umccr-illumina/ica_v2/issues/185
 
 Instead we just take the output uri (and a sample id) and find the directories as expected
 """
+# Standard imports
 import json
 
 # ICA imports
+
+# Wrapica imports
 from wrapica.enums import DataType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
@@ -35,6 +38,8 @@ from wrapica.project_data import (
     list_project_data_non_recursively, read_icav2_file_contents_to_string,
     convert_project_data_obj_to_icav2_uri
 )
+
+# Local imports
 from cttso_v2_pipeline_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
 
 
