@@ -2145,6 +2145,7 @@ dependencies = [
  "mockall_double",
  "orc-rust",
  "parquet",
+ "rand",
  "sea-orm",
  "serde",
  "serde_json",

@@ -9,6 +9,8 @@ pub(crate) mod tests {
     use std::ops::Add;
 
     use chrono::{DateTime, Days};
+    use rand::seq::SliceRandom;
+    use rand::thread_rng;
     use sea_orm::Set;
     use sea_orm::{ActiveModelTrait, TryIntoModel};
     use strum::EnumCount;
@@ -21,13 +23,39 @@ pub(crate) mod tests {
     use crate::database::Client;
     use crate::uuid::UuidGenerator;
 
+    /// Initialize the database state for testing and shuffle entries to simulate
+    /// out of order events.
+    pub(crate) async fn initialize_database_reorder(
+        client: &Client,
+        n: usize,
+    ) -> Vec<(Object, S3Object)> {
+        let mut data = initialize_database_with_shuffle(client, n, true).await;
+
+        // Return the correct ordering for test purposes
+        data.sort_by(|(_, a), (_, b)| a.sequencer.cmp(&b.sequencer));
+
+        data
+    }
+
     /// Initialize database state for testing.
     pub(crate) async fn initialize_database(client: &Client, n: usize) -> Vec<(Object, S3Object)> {
+        initialize_database_with_shuffle(client, n, false).await
+    }
+
+    async fn initialize_database_with_shuffle(
+        client: &Client,
+        n: usize,
+        shuffle: bool,
+    ) -> Vec<(Object, S3Object)> {
         let mut output = vec![];
 
-        for index in 0..n {
-            let (object, s3_object) = generate_entry(index);
+        let mut entries: Vec<_> = (0..n).map(generate_entry).collect();
 
+        if shuffle {
+            entries.shuffle(&mut thread_rng());
+        }
+
+        for (object, s3_object) in entries {
             object
                 .clone()
                 .insert(client.connection_ref())
