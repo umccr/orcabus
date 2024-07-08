@@ -193,7 +193,7 @@ impl From<Record> for FlatS3EventMessage {
             size,
             e_tag: etag,
             sequencer,
-            version_id: version_id.unwrap_or_else(FlatS3EventMessage::default_version_id),
+            version_id: version_id.unwrap_or_else(default_version_id),
             // Head fields are fetched later.
             storage_class: None,
             last_modified_date: None,
@@ -224,6 +224,11 @@ impl From<Message> for FlatS3EventMessages {
                 }),
         )
     }
+}
+
+/// The default version id.
+pub fn default_version_id() -> String {
+    "null".to_string()
 }
 
 #[cfg(test)]

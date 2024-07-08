@@ -135,8 +135,8 @@ pub(crate) mod tests {
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
-    use crate::events::aws::message::EventType;
     use crate::events::aws::message::EventType::{Created, Deleted};
+    use crate::events::aws::message::{default_version_id, EventType};
     use crate::events::aws::tests::{
         expected_events_simple, expected_events_simple_delete_marker, expected_flat_events_simple,
         EXPECTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
@@ -546,7 +546,7 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -577,7 +577,7 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -617,7 +617,7 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -645,7 +645,7 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -826,7 +826,7 @@ pub(crate) mod tests {
         assert_missing_deleted(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -851,7 +851,7 @@ pub(crate) mod tests {
         assert_missing_deleted(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -877,7 +877,7 @@ pub(crate) mod tests {
         assert_missing_created(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -902,7 +902,7 @@ pub(crate) mod tests {
         assert_missing_created(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -1115,15 +1115,10 @@ pub(crate) mod tests {
                 .with_sequencer(Some("1".to_string())),
         ];
 
-        let message = expected_message(
-            None,
-            FlatS3EventMessage::default_version_id(),
-            false,
-            Created,
-        )
-        .with_sha256(None)
-        .with_e_tag(None)
-        .with_last_modified_date(None);
+        let message = expected_message(None, default_version_id(), false, Created)
+            .with_sha256(None)
+            .with_e_tag(None)
+            .with_last_modified_date(None);
         // 720 permutations
         run_permutation_test(&pool, event_permutations, 6, |s3_object_results| {
             assert_row(
@@ -1359,7 +1354,7 @@ pub(crate) mod tests {
         events
             .version_ids
             .iter_mut()
-            .for_each(|version_id| *version_id = FlatS3EventMessage::default_version_id());
+            .for_each(|version_id| *version_id = default_version_id());
 
         events
     }

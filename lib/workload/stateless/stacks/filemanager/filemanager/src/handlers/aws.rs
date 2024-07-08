@@ -209,6 +209,7 @@ pub(crate) mod tests {
     use sqlx::postgres::PgRow;
     use std::future::Future;
 
+    use super::*;
     use crate::database::aws::ingester::tests::{
         assert_row, expected_message, fetch_results, remove_version_ids, replace_sequencers,
         test_events, test_ingester,
@@ -222,6 +223,7 @@ pub(crate) mod tests {
         EXPECTED_LAST_MODIFIED_ONE, EXPECTED_LAST_MODIFIED_THREE, EXPECTED_LAST_MODIFIED_TWO,
         MANIFEST_BUCKET,
     };
+    use crate::events::aws::message::default_version_id;
     use crate::events::aws::message::EventType::Deleted;
     use crate::events::aws::tests::{
         expected_event_record_simple, EXPECTED_SEQUENCER_CREATED_ONE,
@@ -231,8 +233,6 @@ pub(crate) mod tests {
     use crate::events::aws::FlatS3EventMessage;
     use crate::events::EventSourceType::S3;
     use sqlx::PgPool;
-
-    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_receive_and_ingest(pool: PgPool) {
@@ -463,7 +463,7 @@ pub(crate) mod tests {
                 .with_bucket("bucket".to_string())
                 .with_key("inventory_test/key1".to_string())
                 .with_size(Some(0))
-                .with_version_id(FlatS3EventMessage::default_version_id().to_string())
+                .with_version_id(default_version_id())
                 .with_e_tag(Some(EXPECTED_E_TAG_EMPTY.to_string()))
                 .with_last_modified_date(Some(DateTime::default()))
                 .with_sha256(Some(EXPECTED_SHA256.to_string())),
@@ -521,7 +521,7 @@ pub(crate) mod tests {
             .with_bucket("bucket".to_string())
             .with_key(key)
             .with_size(Some(size))
-            .with_version_id(FlatS3EventMessage::default_version_id().to_string())
+            .with_version_id(default_version_id())
             .with_last_modified_date(Some(last_modified.parse().unwrap()))
             .with_e_tag(Some(e_tag.to_string()));
 

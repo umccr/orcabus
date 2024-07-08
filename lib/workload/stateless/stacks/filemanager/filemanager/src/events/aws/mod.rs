@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use message::EventMessage;
 
-use crate::events::aws::message::EventType;
+use crate::events::aws::message::{default_version_id, EventType};
 use crate::events::aws::EventType::{Created, Deleted, Other};
 use crate::uuid::UuidGenerator;
 
@@ -551,7 +551,7 @@ impl FlatS3EventMessage {
 
     /// Set the version id.
     pub fn with_default_version_id(mut self) -> Self {
-        self.version_id = Self::default_version_id();
+        self.version_id = default_version_id();
         self
     }
 
@@ -601,10 +601,6 @@ impl FlatS3EventMessage {
     pub fn with_sha256(mut self, sha256: Option<String>) -> Self {
         self.sha256 = sha256;
         self
-    }
-
-    pub fn default_version_id() -> String {
-        "null".to_string()
     }
 }
 
