@@ -29,7 +29,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use crate::clients::aws::s3::Client;
 use crate::error::Error::S3InventoryError;
 use crate::error::{Error, Result};
-use crate::events::aws::message::EventType::Created;
+use crate::events::aws::message::{default_version_id, quote_e_tag, EventType::Created};
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::uuid::UuidGenerator;
 
@@ -525,11 +525,11 @@ impl From<Record> for FlatS3EventMessage {
             bucket,
             key,
             size,
-            e_tag,
+            e_tag: e_tag.map(quote_e_tag),
             // Set this to the empty string so that any deleted events after this can bind to this
             // created event, as they are always greater than this event.
             sequencer: Some(Inventory::inventory_sequencer()),
-            version_id: version_id.unwrap_or_else(FlatS3EventMessage::default_version_id),
+            version_id: version_id.unwrap_or_else(default_version_id),
             storage_class,
             last_modified_date,
             sha256: None,
@@ -587,9 +587,9 @@ pub(crate) mod tests {
     use serde_json::json;
     use serde_json::Value;
 
-    use crate::events::aws::inventory::Manifest;
-
     use super::*;
+    use crate::events::aws::inventory::Manifest;
+    use crate::events::aws::tests::EXPECTED_E_TAG;
 
     const CSV_MANIFEST_SCHEMA: &str = "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, \
                 LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, \
@@ -601,8 +601,8 @@ pub(crate) mod tests {
     pub(crate) const MANIFEST_BUCKET: &str = "example-inventory-destination-bucket";
     const EXPECTED_CHECKSUM: &str = "f11166069f1990abeb9c97ace9cdfabc"; // pragma: allowlist secret
 
-    pub(crate) const EXPECTED_E_TAG_EMPTY: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
     pub(crate) const EXPECTED_E_TAG_KEY_2: &str = "d8e8fca2dc0f896fd7cb4cb0031ba249"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_QUOTED_E_TAG_KEY_2: &str = "\"d8e8fca2dc0f896fd7cb4cb0031ba249\""; // pragma: allowlist secret
     pub(crate) const EXPECTED_LAST_MODIFIED_ONE: &str = "2024-04-22T01:11:06.000Z";
     pub(crate) const EXPECTED_LAST_MODIFIED_TWO: &str = "2024-04-22T01:13:28.000Z";
     pub(crate) const EXPECTED_LAST_MODIFIED_THREE: &str = "2024-04-22T01:14:53.000Z";
@@ -663,7 +663,7 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn parse_csv_manifest_from_checksum() {
-        let (mut client, checksum) = test_csv_manifest(None);
+        let (mut client, checksum) = test_csv_manifest(None, csv_data_empty_string());
 
         let bytes = csv_manifest_to_json(checksum);
         let checksum = format!("{}\n", hex::encode(md5::compute(bytes.as_slice()).0))
@@ -705,60 +705,56 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn parse_csv_manifest() {
-        let (client, checksum) = test_csv_manifest(None);
-
-        let inventory = Inventory::new(client);
-        let result = inventory
-            .parse_manifest(expected_csv_manifest(
-                Some(checksum),
-                Some(CSV_MANIFEST_SCHEMA.to_string()),
-            ))
-            .await
-            .unwrap();
-
-        assert_csv_records(result.as_slice());
+        assert_csv_with(
+            None,
+            csv_data_empty_string(),
+            Some(CSV_MANIFEST_SCHEMA.to_string()),
+            true,
+        )
+        .await;
+        assert_csv_with(
+            None,
+            csv_data_missing(),
+            Some(CSV_MANIFEST_SCHEMA.to_string()),
+            true,
+        )
+        .await;
     }
 
     #[tokio::test]
     async fn parse_csv_manifest_no_checksum() {
-        let (client, _) = test_csv_manifest(None);
-
-        let inventory = Inventory::new(client);
-        let result = inventory
-            .parse_manifest(expected_csv_manifest(
-                None,
-                Some(CSV_MANIFEST_SCHEMA.to_string()),
-            ))
-            .await
-            .unwrap();
-
-        assert_csv_records(result.as_slice());
+        assert_csv_with(
+            None,
+            csv_data_empty_string(),
+            Some(CSV_MANIFEST_SCHEMA.to_string()),
+            false,
+        )
+        .await;
+        assert_csv_with(
+            None,
+            csv_data_missing(),
+            Some(CSV_MANIFEST_SCHEMA.to_string()),
+            false,
+        )
+        .await;
     }
 
     #[tokio::test]
     async fn parse_csv_manifest_with_headers() {
-        let (client, checksum) = test_csv_manifest(Some(CSV_MANIFEST_SCHEMA));
-
-        let inventory = Inventory::new(client);
-        let result = inventory
-            .parse_manifest(expected_csv_manifest(Some(checksum), None))
-            .await
-            .unwrap();
-
-        assert_csv_records(result.as_slice());
+        assert_csv_with(
+            Some(CSV_MANIFEST_SCHEMA),
+            csv_data_empty_string(),
+            None,
+            true,
+        )
+        .await;
+        assert_csv_with(Some(CSV_MANIFEST_SCHEMA), csv_data_missing(), None, true).await;
     }
 
     #[tokio::test]
     async fn parse_csv_manifest_default_schema() {
-        let (client, checksum) = test_csv_manifest(None);
-
-        let inventory = Inventory::new(client);
-        let result = inventory
-            .parse_manifest(expected_csv_manifest(Some(checksum), None))
-            .await
-            .unwrap();
-
-        assert_csv_records(result.as_slice());
+        assert_csv_with(None, csv_data_empty_string(), None, true).await;
+        assert_csv_with(None, csv_data_missing(), None, true).await;
     }
 
     #[tokio::test]
@@ -833,8 +829,27 @@ pub(crate) mod tests {
         );
     }
 
+    async fn assert_csv_with(
+        headers: Option<&str>,
+        data: String,
+        schema: Option<String>,
+        use_checksum: bool,
+    ) {
+        let (client, checksum) = test_csv_manifest(headers, data);
+
+        let checksum = if use_checksum { Some(checksum) } else { None };
+
+        let inventory = Inventory::new(client);
+        let result = inventory
+            .parse_manifest(expected_csv_manifest(checksum, schema))
+            .await
+            .unwrap();
+
+        assert_csv_records(result.as_slice());
+    }
+
     pub(crate) fn csv_manifest_from_key_expectations() -> Client {
-        let (mut client, checksum) = test_csv_manifest(None);
+        let (mut client, checksum) = test_csv_manifest(None, csv_data_empty_string());
 
         let bytes = csv_manifest_to_json(checksum);
         set_client_manifest_expectations(&mut client, bytes);
@@ -862,8 +877,8 @@ pub(crate) mod tests {
             });
     }
 
-    fn test_csv_manifest(headers: Option<&str>) -> (Client, String) {
-        let mut data = concat!(
+    fn csv_data_empty_string() -> String {
+        concat!(
             r#""bucket","inventory_test/","","true","false","0","2024-04-22T01:11:06.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
             "\n",
             r#""bucket","inventory_test/key1","","true","false","0","2024-04-22T01:13:28.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
@@ -871,8 +886,22 @@ pub(crate) mod tests {
             r#""bucket","inventory_test/key2","","true","false","5","2024-04-22T01:14:53.000Z","d8e8fca2dc0f896fd7cb4cb0031ba249","STANDARD","false","","SSE-S3","","","","","DISABLED","","e30K","""#, // pragma: allowlist secret
             "\n\n"
         )
-        .to_string();
+        .to_string()
+    }
 
+    fn csv_data_missing() -> String {
+        concat!(
+            r#""bucket","inventory_test/",,"true","false","0","2024-04-22T01:11:06.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false",,"SSE-S3",,,,,"DISABLED",,"e30K","#, // pragma: allowlist secret
+            "\n",
+            r#""bucket","inventory_test/key1",,"true","false","0","2024-04-22T01:13:28.000Z","d41d8cd98f00b204e9800998ecf8427e","STANDARD","false",,"SSE-S3",,,,,"DISABLED",,"e30K","#, // pragma: allowlist secret
+            "\n",
+            r#""bucket","inventory_test/key2",,"true","false","5","2024-04-22T01:14:53.000Z","d8e8fca2dc0f896fd7cb4cb0031ba249","STANDARD","false",,"SSE-S3",,,,,"DISABLED",,"e30K","#, // pragma: allowlist secret
+            "\n\n"
+        )
+        .to_string()
+    }
+
+    fn test_csv_manifest(headers: Option<&str>, mut data: String) -> (Client, String) {
         if let Some(headers) = headers {
             data = format!("{}\n{}", headers, data);
         }
@@ -982,7 +1011,7 @@ pub(crate) mod tests {
                     is_delete_marker: Some(false),
                     size: Some(0),
                     last_modified_date: Some(EXPECTED_LAST_MODIFIED_ONE.parse().unwrap()),
-                    e_tag: Some(EXPECTED_E_TAG_EMPTY.to_string()),
+                    e_tag: Some(EXPECTED_E_TAG.to_string()),
                     storage_class: Some(StorageClass::Standard),
                 },
                 Record {
@@ -992,7 +1021,7 @@ pub(crate) mod tests {
                     is_delete_marker: Some(false),
                     size: Some(0),
                     last_modified_date: Some(EXPECTED_LAST_MODIFIED_TWO.parse().unwrap()),
-                    e_tag: Some(EXPECTED_E_TAG_EMPTY.to_string()),
+                    e_tag: Some(EXPECTED_E_TAG.to_string()),
                     storage_class: Some(StorageClass::Standard),
                 },
                 Record {

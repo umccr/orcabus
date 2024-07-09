@@ -191,9 +191,9 @@ impl From<Record> for FlatS3EventMessage {
             bucket,
             key,
             size,
-            e_tag: etag,
+            e_tag: etag.map(quote_e_tag),
             sequencer,
-            version_id: version_id.unwrap_or_else(FlatS3EventMessage::default_version_id),
+            version_id: version_id.unwrap_or_else(default_version_id),
             // Head fields are fetched later.
             storage_class: None,
             last_modified_date: None,
@@ -226,10 +226,30 @@ impl From<Message> for FlatS3EventMessages {
     }
 }
 
+/// Quote an e_tag if it has not already been quoted. This doesn't check the
+/// validity of an e_tag, it only applies quoting if it is missing.
+pub fn quote_e_tag(mut e_tag: String) -> String {
+    if !e_tag.starts_with('"') && !e_tag.starts_with("W/\"") {
+        e_tag.insert(0, '"');
+    }
+
+    if !e_tag.ends_with('"') || e_tag == "\"" || e_tag == "W/\"" {
+        e_tag.push('"');
+    }
+
+    e_tag
+}
+
+/// The default version id.
+pub fn default_version_id() -> String {
+    "null".to_string()
+}
+
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use serde_json::{json, Value};
 
+    use crate::events::aws::message::quote_e_tag;
     use crate::events::aws::message::EventType::Created;
     use crate::events::aws::tests::{
         assert_flat_s3_event, expected_event_bridge_record,
@@ -238,6 +258,28 @@ mod tests {
     };
     use crate::events::aws::EventType::Deleted;
     use crate::events::aws::FlatS3EventMessages;
+
+    #[test]
+    fn test_e_tag_quoting() {
+        // e_tag is already valid.
+        assert_eq!(quote_e_tag("\"e_tag\"".to_string()), "\"e_tag\"");
+        assert_eq!(quote_e_tag("W/\"e_tag\"".to_string()), "W/\"e_tag\"");
+        assert_eq!(quote_e_tag("\"\"".to_string()), "\"\"");
+        assert_eq!(quote_e_tag("W/\"\"".to_string()), "W/\"\"");
+
+        // No quoting present on e_tag.
+        assert_eq!(quote_e_tag("e_tag".to_string()), "\"e_tag\"");
+        assert_eq!(quote_e_tag("".to_string()), "\"\"");
+
+        // Partial quoting present on e_tag.
+        assert_eq!(quote_e_tag("\"e_tag".to_string()), "\"e_tag\"");
+        assert_eq!(quote_e_tag("e_tag\"".to_string()), "\"e_tag\"");
+        assert_eq!(quote_e_tag("W/\"e_tag".to_string()), "W/\"e_tag\"");
+
+        // Single quote character e_tag.
+        assert_eq!(quote_e_tag("\"".to_string()), "\"\"");
+        assert_eq!(quote_e_tag("W/\"".to_string()), "W/\"\"");
+    }
 
     #[test]
     fn deserialize_large_size() {
@@ -285,42 +327,17 @@ mod tests {
             false,
         );
     }
+
     #[test]
     fn deserialize_sqs_message() {
-        let record = expected_sqs_record();
-        let message = json!({
-           "Records": [record]
-        })
-        .to_string();
-
-        let result: FlatS3EventMessages = serde_json::from_str(&message).unwrap();
-        let first_message = result.into_inner().first().unwrap().clone();
-
-        assert_flat_s3_event(
-            first_message,
-            &Deleted,
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            None,
-            EXPECTED_VERSION_ID.to_string(),
-            false,
-        );
+        test_deserialize_sqs_message(expected_sqs_record(false));
+        test_deserialize_sqs_message(expected_sqs_record(true));
     }
 
     #[test]
     fn deserialize_event_bridge_message() {
-        let record = expected_event_bridge_record().to_string();
-
-        let result: FlatS3EventMessages = serde_json::from_str(&record).unwrap();
-        let first_message = result.into_inner().first().unwrap().clone();
-
-        assert_flat_s3_event(
-            first_message,
-            &Deleted,
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            None,
-            EXPECTED_VERSION_ID.to_string(),
-            false,
-        );
+        test_deserialize_event_bridge_message(&expected_event_bridge_record(false).to_string());
+        test_deserialize_event_bridge_message(&expected_event_bridge_record(true).to_string());
     }
 
     #[test]
@@ -342,7 +359,7 @@ mod tests {
 
     #[test]
     fn deserialize_sqs_message_delete_marker() {
-        let mut record = expected_sqs_record();
+        let mut record = expected_sqs_record(false);
         record["eventName"] = json!("ObjectRemoved:DeleteMarkerCreated");
         let message = json!({
            "Records": [record]
@@ -359,6 +376,39 @@ mod tests {
             None,
             EXPECTED_VERSION_ID.to_string(),
             true,
+        );
+    }
+
+    fn test_deserialize_sqs_message(record: Value) {
+        let message = json!({
+           "Records": [record]
+        })
+        .to_string();
+
+        let result: FlatS3EventMessages = serde_json::from_str(&message).unwrap();
+        let first_message = result.into_inner().first().unwrap().clone();
+
+        assert_flat_s3_event(
+            first_message,
+            &Deleted,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            None,
+            EXPECTED_VERSION_ID.to_string(),
+            false,
+        );
+    }
+
+    fn test_deserialize_event_bridge_message(record: &str) {
+        let result: FlatS3EventMessages = serde_json::from_str(record).unwrap();
+        let first_message = result.into_inner().first().unwrap().clone();
+
+        assert_flat_s3_event(
+            first_message,
+            &Deleted,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            None,
+            EXPECTED_VERSION_ID.to_string(),
+            false,
         );
     }
 }

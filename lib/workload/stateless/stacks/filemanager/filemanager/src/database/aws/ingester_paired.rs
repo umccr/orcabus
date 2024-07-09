@@ -272,12 +272,14 @@ pub(crate) mod tests {
     use crate::database::aws::ingester::tests::fetch_results;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
+    use crate::events::aws::message::default_version_id;
     use crate::events::aws::message::EventType::{Created, Deleted};
     use crate::events::aws::tests::{
         expected_event_record_simple, expected_flat_events, expected_flat_events_simple,
+        EXPECTED_QUOTED_E_TAG,
     };
     use crate::events::aws::tests::{
-        EXPECTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
+        EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
         EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_SHA256,
         EXPECTED_VERSION_ID,
     };
@@ -684,10 +686,7 @@ pub(crate) mod tests {
         assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
         assert_eq!(0, s3_object_results[0].get::<i64, _>("number_reordered"));
-        assert_ingest_events(
-            &s3_object_results[0],
-            &FlatS3EventMessage::default_version_id(),
-        );
+        assert_ingest_events(&s3_object_results[0], &default_version_id());
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -710,10 +709,7 @@ pub(crate) mod tests {
             2,
             s3_object_results[0].get::<i64, _>("number_duplicate_events")
         );
-        assert_ingest_events(
-            &s3_object_results[0],
-            &FlatS3EventMessage::default_version_id(),
-        );
+        assert_ingest_events(&s3_object_results[0], &default_version_id());
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -747,10 +743,7 @@ pub(crate) mod tests {
             2,
             s3_object_results[0].get::<i64, _>("number_duplicate_events")
         );
-        assert_ingest_events(
-            &s3_object_results[0],
-            &FlatS3EventMessage::default_version_id(),
-        );
+        assert_ingest_events(&s3_object_results[0], &default_version_id());
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -782,7 +775,7 @@ pub(crate) mod tests {
             Some(0),
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            FlatS3EventMessage::default_version_id(),
+            default_version_id(),
             Some(Default::default()),
             Some(Default::default()),
         );
@@ -987,7 +980,7 @@ pub(crate) mod tests {
         assert_missing_deleted(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -1017,7 +1010,7 @@ pub(crate) mod tests {
         assert_missing_deleted(
             &s3_object_results[1],
             &s3_object_results[0],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -1046,7 +1039,7 @@ pub(crate) mod tests {
         assert_missing_created(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -1076,7 +1069,7 @@ pub(crate) mod tests {
         assert_missing_created(
             &s3_object_results[1],
             &s3_object_results[0],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -1331,7 +1324,7 @@ pub(crate) mod tests {
                 &s3_object_results,
                 "key",
                 "bucket",
-                &FlatS3EventMessage::default_version_id(),
+                &default_version_id(),
                 Some("1"),
                 Some("2"),
             )
@@ -1340,7 +1333,7 @@ pub(crate) mod tests {
                 &s3_object_results,
                 "key",
                 "bucket",
-                &FlatS3EventMessage::default_version_id(),
+                &default_version_id(),
                 None,
                 Some("3"),
             )
@@ -1349,7 +1342,7 @@ pub(crate) mod tests {
                 &s3_object_results,
                 "key",
                 "bucket",
-                &FlatS3EventMessage::default_version_id(),
+                &default_version_id(),
                 Some("4"),
                 None,
             )
@@ -1358,7 +1351,7 @@ pub(crate) mod tests {
                 &s3_object_results,
                 "key",
                 "bucket",
-                &FlatS3EventMessage::default_version_id(),
+                &default_version_id(),
                 Some("5"),
                 None,
             )
@@ -1367,7 +1360,7 @@ pub(crate) mod tests {
                 &s3_object_results,
                 "key1",
                 "bucket",
-                &FlatS3EventMessage::default_version_id(),
+                &default_version_id(),
                 Some("1"),
                 None,
             )
@@ -1624,12 +1617,12 @@ pub(crate) mod tests {
             .object_deleted
             .version_ids
             .iter_mut()
-            .for_each(|version_id| *version_id = FlatS3EventMessage::default_version_id());
+            .for_each(|version_id| *version_id = default_version_id());
         events
             .object_created
             .version_ids
             .iter_mut()
-            .for_each(|version_id| *version_id = FlatS3EventMessage::default_version_id());
+            .for_each(|version_id| *version_id = default_version_id());
 
         events
     }
@@ -1728,7 +1721,7 @@ pub(crate) mod tests {
             .with_size(size)
             .with_version_id(version_id)
             .with_last_modified_date(Some(DateTime::<Utc>::default()))
-            .with_e_tag(Some(EXPECTED_E_TAG.to_string()))
+            .with_e_tag(Some(EXPECTED_QUOTED_E_TAG.to_string()))
             .with_sha256(Some(EXPECTED_SHA256.to_string()))
             .with_is_delete_marker(is_delete_marker)
     }
