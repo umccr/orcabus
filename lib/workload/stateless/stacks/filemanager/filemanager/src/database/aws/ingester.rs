@@ -139,7 +139,7 @@ pub(crate) mod tests {
     use crate::events::aws::message::{default_version_id, EventType};
     use crate::events::aws::tests::{
         expected_events_simple, expected_events_simple_delete_marker, expected_flat_events_simple,
-        EXPECTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
+        EXPECTED_QUOTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
         EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_SHA256,
         EXPECTED_VERSION_ID,
     };
@@ -1464,7 +1464,7 @@ pub(crate) mod tests {
             .with_size(size)
             .with_version_id(version_id)
             .with_last_modified_date(Some(DateTime::<Utc>::default()))
-            .with_e_tag(Some(EXPECTED_E_TAG.to_string()))
+            .with_e_tag(Some(EXPECTED_QUOTED_E_TAG.to_string()))
             .with_sha256(Some(EXPECTED_SHA256.to_string()))
             .with_is_delete_marker(is_delete_marker)
             .with_event_type(event_type)

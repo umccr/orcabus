@@ -628,6 +628,7 @@ pub(crate) mod tests {
     pub(crate) const EXPECTED_SEQUENCER_DELETED_TWO: &str = "0055AED6DCD90281E9"; // pragma: allowlist secret
 
     pub(crate) const EXPECTED_E_TAG: &str = "d41d8cd98f00b204e9800998ecf8427e"; // pragma: allowlist secret
+    pub(crate) const EXPECTED_QUOTED_E_TAG: &str = "\"d41d8cd98f00b204e9800998ecf8427e\""; // pragma: allowlist secret
 
     pub(crate) const EXPECTED_VERSION_ID: &str = "096fKKXTRTtl3on89fVO.nfljtsv6qko";
     pub(crate) const EXPECTED_SHA256: &str = "Y0sCextp4SQtQNU+MSs7SsdxD1W+gfKJtUlEbvZ3i+4="; // pragma: allowlist secret
@@ -757,7 +758,7 @@ pub(crate) mod tests {
         assert_eq!(event.key, "key");
         assert_eq!(event.version_id, version_id);
         assert_eq!(event.size, size);
-        assert_eq!(event.e_tag, Some(EXPECTED_E_TAG.to_string()));
+        assert_eq!(event.e_tag, Some(EXPECTED_QUOTED_E_TAG.to_string()));
         assert_eq!(event.sequencer, sequencer);
         assert_eq!(event.storage_class, None);
         assert_eq!(event.last_modified_date, None);
@@ -779,7 +780,10 @@ pub(crate) mod tests {
             events.version_ids[position],
             EXPECTED_VERSION_ID.to_string()
         );
-        assert_eq!(events.e_tags[position], Some(EXPECTED_E_TAG.to_string()));
+        assert_eq!(
+            events.e_tags[position],
+            Some(EXPECTED_QUOTED_E_TAG.to_string())
+        );
         assert_eq!(events.sequencers[position], Some(sequencer.to_string()));
         assert_eq!(events.storage_classes[position], None);
         assert_eq!(events.last_modified_dates[position], None);
@@ -864,7 +868,7 @@ pub(crate) mod tests {
     }
 
     /// https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
-    pub(crate) fn expected_event_bridge_record() -> Value {
+    pub(crate) fn expected_event_bridge_record(quote_e_tag: bool) -> Value {
         json!({
             "version": "0",
             "id": "2ee9cc15-d022-99ea-1fb8-1b1bac4850f9",
@@ -883,7 +887,7 @@ pub(crate) mod tests {
                 },
                 "object": {
                     "key": "key",
-                    "etag": EXPECTED_E_TAG,
+                    "etag": if quote_e_tag { EXPECTED_QUOTED_E_TAG } else { EXPECTED_E_TAG },
                     "version-id": EXPECTED_VERSION_ID,
                     "sequencer": EXPECTED_SEQUENCER_DELETED_ONE,
                 },
@@ -898,13 +902,13 @@ pub(crate) mod tests {
 
     /// https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
     pub(crate) fn expected_event_bridge_record_delete_marker() -> Value {
-        let mut value = expected_event_bridge_record();
+        let mut value = expected_event_bridge_record(false);
         value["detail"]["deletion-type"] = json!("Delete Marker Created");
         value
     }
 
     /// https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-content-structure.html
-    pub(crate) fn expected_sqs_record() -> Value {
+    pub(crate) fn expected_sqs_record(quote_e_tag: bool) -> Value {
         json!({
             "eventVersion": "2.2",
             "eventSource": "aws:s3",
@@ -933,7 +937,7 @@ pub(crate) mod tests {
                 },
                 "object": {
                     "key": "key",
-                    "eTag": EXPECTED_E_TAG,
+                    "eTag": if quote_e_tag { EXPECTED_QUOTED_E_TAG } else { EXPECTED_E_TAG },
                     "versionId": EXPECTED_VERSION_ID,
                     "sequencer": EXPECTED_SEQUENCER_DELETED_ONE,
                 }
@@ -948,7 +952,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn expected_event_record_full(is_delete_marker: bool) -> String {
-        let object = expected_sqs_record();
+        let object = expected_sqs_record(false);
 
         let mut object_created_one = object.clone();
         object_created_one["eventName"] = if is_delete_marker {

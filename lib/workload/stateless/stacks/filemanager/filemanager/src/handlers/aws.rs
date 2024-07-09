@@ -219,14 +219,14 @@ pub(crate) mod tests {
         expected_head_object, set_s3_client_expectations, set_sqs_client_expectations,
     };
     use crate::events::aws::inventory::tests::{
-        csv_manifest_from_key_expectations, EXPECTED_E_TAG_EMPTY, EXPECTED_E_TAG_KEY_2,
-        EXPECTED_LAST_MODIFIED_ONE, EXPECTED_LAST_MODIFIED_THREE, EXPECTED_LAST_MODIFIED_TWO,
+        csv_manifest_from_key_expectations, EXPECTED_LAST_MODIFIED_ONE,
+        EXPECTED_LAST_MODIFIED_THREE, EXPECTED_LAST_MODIFIED_TWO, EXPECTED_QUOTED_E_TAG_KEY_2,
         MANIFEST_BUCKET,
     };
     use crate::events::aws::message::default_version_id;
     use crate::events::aws::message::EventType::Deleted;
     use crate::events::aws::tests::{
-        expected_event_record_simple, EXPECTED_SEQUENCER_CREATED_ONE,
+        expected_event_record_simple, EXPECTED_QUOTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE,
         EXPECTED_SEQUENCER_CREATED_TWO, EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SHA256,
         EXPECTED_VERSION_ID,
     };
@@ -440,21 +440,21 @@ pub(crate) mod tests {
             "inventory_test/".to_string(),
             0,
             EXPECTED_LAST_MODIFIED_ONE,
-            EXPECTED_E_TAG_EMPTY,
+            EXPECTED_QUOTED_E_TAG,
         );
         assert_inventory_records(
             &s3_object_results[1],
             "inventory_test/key1".to_string(),
             0,
             EXPECTED_LAST_MODIFIED_TWO,
-            EXPECTED_E_TAG_EMPTY,
+            EXPECTED_QUOTED_E_TAG,
         );
         assert_inventory_records(
             &s3_object_results[2],
             "inventory_test/key2".to_string(),
             5,
             EXPECTED_LAST_MODIFIED_THREE,
-            EXPECTED_E_TAG_KEY_2,
+            EXPECTED_QUOTED_E_TAG_KEY_2,
         );
 
         (
@@ -464,7 +464,7 @@ pub(crate) mod tests {
                 .with_key("inventory_test/key1".to_string())
                 .with_size(Some(0))
                 .with_version_id(default_version_id())
-                .with_e_tag(Some(EXPECTED_E_TAG_EMPTY.to_string()))
+                .with_e_tag(Some(EXPECTED_QUOTED_E_TAG.to_string()))
                 .with_last_modified_date(Some(DateTime::default()))
                 .with_sha256(Some(EXPECTED_SHA256.to_string())),
         )
@@ -492,21 +492,21 @@ pub(crate) mod tests {
             "inventory_test/".to_string(),
             0,
             EXPECTED_LAST_MODIFIED_ONE,
-            EXPECTED_E_TAG_EMPTY,
+            EXPECTED_QUOTED_E_TAG,
         );
         assert_inventory_records(
             &s3_object_results[1],
             "inventory_test/key1".to_string(),
             0,
             EXPECTED_LAST_MODIFIED_TWO,
-            EXPECTED_E_TAG_EMPTY,
+            EXPECTED_QUOTED_E_TAG,
         );
         assert_inventory_records(
             &s3_object_results[2],
             "inventory_test/key2".to_string(),
             5,
             EXPECTED_LAST_MODIFIED_THREE,
-            EXPECTED_E_TAG_KEY_2,
+            EXPECTED_QUOTED_E_TAG_KEY_2,
         );
     }
 
