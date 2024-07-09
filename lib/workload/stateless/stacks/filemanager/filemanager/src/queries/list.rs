@@ -9,7 +9,8 @@ use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::Client;
 use crate::error::Error::OverflowError;
 use crate::error::{Error, Result};
-use crate::routes::list::{ListCount, ListResponse, Pagination};
+use crate::routes::list::{ListCount, ListResponse};
+use crate::routes::pagination::Pagination;
 
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
