@@ -35,6 +35,7 @@ utoipa = { version = "4", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "7", features = ["axum"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["trace"] }
+serde_qs = { version = "0.13", features = ["axum"] }
 
 # General
 chrono = { version = "0.4", features = ["serde"] }

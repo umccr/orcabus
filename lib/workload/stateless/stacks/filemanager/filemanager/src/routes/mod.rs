@@ -20,6 +20,7 @@ use crate::routes::ingest::ingest_from_sqs;
 use crate::routes::list::*;
 use crate::routes::openapi::swagger_ui;
 
+pub mod filtering;
 pub mod get;
 pub mod ingest;
 pub mod list;

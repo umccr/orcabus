@@ -1,7 +1,7 @@
 //! Query builder involving list operations on the database.
 //!
 
-use sea_orm::{EntityTrait, FromQueryResult, PaginatorTrait, QueryOrder, QuerySelect, Select};
+use sea_orm::{EntityTrait, FromQueryResult, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Select};
 
 use crate::database::entities::object::Entity as ObjectEntity;
 use crate::database::entities::s3_object::Column as S3Column;
@@ -9,6 +9,7 @@ use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::Client;
 use crate::error::Error::OverflowError;
 use crate::error::{Error, Result};
+use crate::routes::filtering::ObjectsFilterByAll;
 use crate::routes::list::{ListCount, ListResponse};
 use crate::routes::pagination::Pagination;
 
@@ -49,6 +50,11 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
     /// Build a select query for finding values from s3 objects.
     pub fn build_object() -> Select<S3ObjectEntity> {
         S3ObjectEntity::find().order_by_asc(S3Column::Sequencer)
+    }
+    
+    pub async fn filter_all(mut self, filter: ObjectsFilterByAll) -> Self {
+        self.select.filter()
+        self
     }
 }
 

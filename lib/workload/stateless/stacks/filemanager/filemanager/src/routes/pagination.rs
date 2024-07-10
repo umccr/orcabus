@@ -2,10 +2,10 @@
 //!
 
 use serde::{Deserialize, Deserializer};
-use utoipa::IntoParams;
+use utoipa::{IntoParams, ToSchema};
 
 /// Pagination query parameters for list operations.
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
 #[serde(default)]
 pub struct Pagination {
     /// The zero-indexed page to fetch from the list of objects.

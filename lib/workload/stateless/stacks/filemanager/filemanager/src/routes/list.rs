@@ -4,6 +4,7 @@
 use axum::extract::{Query, State};
 use axum::Json;
 use serde::{Deserialize, Serialize};
+use serde_qs::axum::QsQuery;
 use utoipa::ToSchema;
 
 use crate::database::entities::object::Entity as ObjectEntity;
@@ -12,6 +13,7 @@ use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
+use crate::routes::filtering::{ObjectsFilterByAll, S3ObjectsFilterByAll};
 use crate::routes::pagination::Pagination;
 use crate::routes::{AppState, ErrorStatusCode};
 
@@ -75,12 +77,13 @@ impl<M> ListResponse<M> {
         (status = OK, description = "List all objects", body = Vec<FileObject>),
         ErrorStatusCode,
     ),
-    params(Pagination),
+    params(Pagination, ObjectsFilterByAll),
     context_path = "/api/v1",
 )]
 pub async fn list_objects(
     state: State<AppState>,
     Query(pagination): Query<Pagination>,
+    QsQuery(filter_by_all): QsQuery<ObjectsFilterByAll>,
 ) -> Result<Json<ListResponse<FileObject>>> {
     let response = ListQueryBuilder::<ObjectEntity>::new(&state.client)
         .paginate_to_list_response(pagination)
@@ -119,12 +122,13 @@ pub struct ListS3ObjectsParams {}
         (status = OK, description = "List all s3 objects", body = Vec<FileS3Object>),
         ErrorStatusCode,
     ),
-    params(Pagination),
+    params(Pagination, S3ObjectsFilterByAll),
     context_path = "/api/v1",
 )]
 pub async fn list_s3_objects(
     state: State<AppState>,
     Query(pagination): Query<Pagination>,
+    QsQuery(filter_by_all): QsQuery<S3ObjectsFilterByAll>,
 ) -> Result<Json<ListResponse<FileS3Object>>> {
     let response = ListQueryBuilder::<S3ObjectEntity>::new(&state.client)
         .paginate_to_list_response(pagination)
