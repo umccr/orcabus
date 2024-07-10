@@ -6,7 +6,7 @@
   "required": [
     "outputFilePrefix",
     "outputDirectoryName",
-    "referenceTarUri",
+    "referenceVersion",
     "sampleType",
     "fastqListRowId",
     "fastqListRow"
@@ -18,13 +18,13 @@
     "outputDirectoryName": {
       "type": "string"
     },
-    "referenceTarUri": {
+    "referenceVersion": {
       "type": "string"
     },
     "sampleType": {
       "type": "string"
     },
-    "annotationFileUri": {
+    "gencodeAnnotationVersion": {
       "type": "string"
     },
     "fastqListRowId": {

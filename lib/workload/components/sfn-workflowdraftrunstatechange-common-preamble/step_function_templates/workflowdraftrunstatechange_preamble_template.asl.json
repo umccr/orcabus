@@ -1,0 +1,99 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "Generate Portal Run ID",
+      "Parameters": {
+        "inputs.$": "$"
+      }
+    },
+    "Generate Portal Run ID": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${__generate_portal_run_id_lambda_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Generate Workflow Run Name",
+      "ResultPath": "$.generate_portal_run_id_step",
+      "ResultSelector": {
+        "portal_run_id.$": "$.Payload.portal_run_id"
+      }
+    },
+    "Generate Workflow Run Name": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_workflow_run_name_lambda_function_arn__}",
+        "Payload": {
+          "portal_run_id.$": "$.generate_portal_run_id_step",
+          "workflow_name": "${__workflow_name__}",
+          "workflow_version": "${__workflow_version__}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Save Portal Run ID To Input Maker DB",
+      "ResultPath": "$.generate_workflow_run_name_step",
+      "ResultSelector": {
+        "workflow_run_name": "$.Payload.workflow_run_name"
+      }
+    },
+    "Save Portal Run ID To Input Maker DB": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.generate_portal_run_id_step.portal_run_id",
+          "id_type": "${__portal_run_partition_name__}",
+          "workflow_name": "${__workflow_name__}",
+          "workflow_version": "${__workflow_version__}",
+          "workflow_run_name.$": "$.generate_workflow_run_name_step.workflow_run_name",
+          "status": "draft"
+        }
+      },
+      "Next": "Wait 1 Second",
+      "ResultPath": null
+    },
+    "Wait 1 Second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "Set SFN Outputs"
+    },
+    "Set SFN Outputs": {
+      "Type": "Pass",
+      "End": true,
+      "Parameters": {
+        "portal_run_id.$": "$.generate_portal_run_id_step.portal_run_id",
+        "workflow_run_name.$": "$.generate_workflow_run_name_step.workflow_run_name"
+      }
+    }
+  }
+}

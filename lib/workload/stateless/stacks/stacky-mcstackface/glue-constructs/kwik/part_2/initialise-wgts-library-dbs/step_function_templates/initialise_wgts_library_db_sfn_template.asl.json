@@ -110,7 +110,9 @@
               "Type": "Map",
               "ItemsPath": "$.bclconvert_and_fastq_list_row_id_inputs",
               "ItemSelector": {
-                "fastq_list_row_id.$": "$$.Map.Item.Value.fastq_list_row_id"
+                "fastq_list_row_id.$": "$$.Map.Item.Value.fastq_list_row_id",
+                "library_id_hash.$": "States.Hash($.input_payload_data.library.id, 'SHA-1')",
+                "instrument_run_id.$": "$.input_payload_data.instrumentRunId"
               },
               "ItemProcessor": {
                 "ProcessorConfig": {
@@ -129,6 +131,12 @@
                         },
                         "id_type": {
                           "S": "${__fastq_list_row_partition_name__}"
+                        },
+                        "library_db_id": {
+                          "S.$": "$.library_id_hash"
+                        },
+                        "instrument_run_id": {
+                          "S.$": "$.instrument_run_id"
                         }
                       }
                     },

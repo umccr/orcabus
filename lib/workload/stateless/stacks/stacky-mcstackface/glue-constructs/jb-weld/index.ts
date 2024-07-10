@@ -103,8 +103,9 @@ export class Cttsov2GlueHandlerConstruct extends Construct {
         this,
         'fastq_list_row_shower_complete_to_workflow_draft',
         {
+          workflowsTableObj: props.inputMakerTableObj,
           eventBusObj: props.eventBusObj,
-          tableObj: props.cttsov2GlueTableObj,
+          cttsov2GlueTableObj: props.cttsov2GlueTableObj,
         }
       );
 

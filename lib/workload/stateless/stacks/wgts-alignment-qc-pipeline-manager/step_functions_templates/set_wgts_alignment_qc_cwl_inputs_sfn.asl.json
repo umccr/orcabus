@@ -16,34 +16,141 @@
         "payload.$": "States.StringToJson($.Item.launch_event_payload.S)"
       },
       "ResultPath": "$.get_input_parameters_from_event_step",
-      "Next": "Convert Fastq List Rows to CWL Input Objects"
+      "Next": "Configure Inputs"
     },
-    "Convert Fastq List Rows to CWL Input Objects": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "Payload": {
-          "fastq_list_rows.$": "$.get_input_parameters_from_event_step.payload.data.fastqListRows"
-        },
-        "FunctionName": "${__convert_fastq_list_rows_to_cwl_input_objects_lambda_function_arn__}"
-      },
-      "Retry": [
+    "Configure Inputs": {
+      "Type": "Parallel",
+      "Next": "Set Basic Input JSON",
+      "Branches": [
         {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "Lambda.TooManyRequestsException"
-          ],
-          "IntervalSeconds": 1,
-          "MaxAttempts": 3,
-          "BackoffRate": 2
+          "StartAt": "Convert Fastq List Rows to CWL Input Objects",
+          "States": {
+            "Convert Fastq List Rows to CWL Input Objects": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "Payload": {
+                  "fastq_list_rows.$": "$.get_input_parameters_from_event_step.payload.data.fastqListRows"
+                },
+                "FunctionName": "${__convert_fastq_list_rows_to_cwl_input_objects_lambda_function_arn__}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultPath": "$.convert_fastq_list_rows_to_cwl_input_objects_step",
+              "ResultSelector": {
+                "fastq_list_rows.$": "States.Array($.Payload.fastq_list_row)"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Is Reference Version Set",
+          "States": {
+            "Is Reference Version Set": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.payload.data.referenceVersion",
+                  "IsPresent": false,
+                  "Comment": "Get Default Version",
+                  "Next": "Set Reference Version as Default"
+                }
+              ],
+              "Default": "Reference Version Set"
+            },
+            "Reference Version Set": {
+              "Type": "Pass",
+              "Next": "Get the Reference Version uri",
+              "ResultPath": "$.get_reference_version_step",
+              "Parameters": {
+                "reference_version.$": "$.get_input_parameters_from_event_step.payload.data.referenceVersion"
+              }
+            },
+            "Set Reference Version as Default": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_version": "default"
+              },
+              "ResultPath": "$.get_reference_version_step",
+              "Next": "Get the Reference Version uri"
+            },
+            "Get the Reference Version uri": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__reference_version_uri__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "End": true,
+              "ResultPath": "$.get_reference_version_uri_step",
+              "ResultSelector": {
+                "reference_uri": "States.StringToJson($.Parameter.Value)[$.get_reference_version_step.reference_version]"
+              }
+            }
+          }
+        },
+        {
+          "StartAt": "Is Annotation Version Set",
+          "States": {
+            "Is Annotation Version Set": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.payload.data.gencodeAnnotationVersion",
+                  "IsPresent": false,
+                  "Comment": "Get Default Version",
+                  "Next": "Set Annotation Version as Default"
+                }
+              ],
+              "Default": "Annotation Version Set"
+            },
+            "Annotation Version Set": {
+              "Type": "Pass",
+              "Next": "Get the Annotation Version Uri",
+              "Parameters": {
+                "annotation_version.$": "$.get_input_parameters_from_event_step.payload.data.gencodeAnnotationVersion"
+              },
+              "ResultPath": "$.get_annotation_version_step"
+            },
+            "Set Annotation Version as Default": {
+              "Type": "Pass",
+              "Next": "Get the Annotation Version Uri",
+              "Parameters": {
+                "annotation_version": "default"
+              },
+              "ResultPath": "$.get_annotation_version_step"
+            },
+            "Get the Annotation Version Uri": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__annotation_version_uri__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "End": true,
+              "ResultPath": "$.get_annotation_version_uri_step",
+              "ResultSelector": {
+                "annotation_uri": "States.StringToJson($.Parameter.Value)[$.get_annotation_version_step.annotation_version]"
+              }
+            }
+          }
         }
       ],
-      "Next": "Set Basic Input JSON",
-      "ResultPath": "$.convert_fastq_list_rows_to_cwl_input_objects_step",
+      "ResultPath": "$.configure_inputs_step",
       "ResultSelector": {
-        "fastq_list_rows.$": "$.Payload.fastq_list_rows"
+        "fastq_list_rows_cwl.$": "$.[0].convert_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows",
+        "reference_uri.$": "$.[1].get_reference_version_uri_step.reference_uri",
+        "annotation_uri.$": "$.[2].get_annotation_version_uri_step.annotation_uri"
       }
     },
     "Set Basic Input JSON": {
@@ -55,12 +162,12 @@
           "enable_map_align_output": true,
           "enable_rna": false,
           "enable_sort": true,
-          "fastq_list_rows.$": "$.convert_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows",
+          "fastq_list_rows.$": "$.configure_inputs_step.fastq_list_rows_cwl",
           "output_directory.$": "$.get_input_parameters_from_event_step.payload.data.outputDirectoryName",
           "output_file_prefix.$": "$.get_input_parameters_from_event_step.payload.data.outputFilePrefix",
           "reference_tar": {
             "class": "File",
-            "location": "$.get_input_parameters_from_event_step.payload.data.referenceTarUri"
+            "location.$": "$.configure_inputs_step.reference_uri"
           }
         }
       },
@@ -88,7 +195,7 @@
           "enable_rrna_filter": true,
           "annotation_file": {
             "class": "File",
-            "location": "$.get_input_parameters_from_event_step.payload.data.annotationFileUri"
+            "location.$": "$.configure_inputs_step.annotation_uri"
           }
         }
       },
@@ -108,9 +215,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id": {
-            "S.$": "$.db_uuid"
-          },
+          "id.$": "$.db_uuid",
           "id_type": "db_uuid"
         },
         "UpdateExpression": "SET input_json = :input_json",

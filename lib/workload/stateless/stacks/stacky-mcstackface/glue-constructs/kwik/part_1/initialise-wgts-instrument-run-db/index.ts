@@ -15,28 +15,32 @@ Input Event status: `SamplesheetRegisteredEventShowerStarting`
 * Initialise wgts instrument db construct
 */
 
-export interface WgtsInitialiseInstrumentRunDbRowConstructProps {
+export interface WgtsQcInitialiseInstrumentRunDbRowConstructProps {
   tableObj: dynamodb.ITableV2;
   eventBusObj: events.IEventBus;
 }
 
-export class WgtsInitialiseInstrumentRunDbRowConstruct extends Construct {
-  public readonly WgtsInitialiseInstrumentRunDbRowMap = {
-    prefix: 'wgtsInitialiseInstrumentRunDbRow',
+export class WgtsQcInitialiseInstrumentRunDbRowConstruct extends Construct {
+  public readonly WgtsQcInitialiseInstrumentRunDbRowMap = {
+    prefix: 'wgtsQcInitialiseInstrumentRunDbRow',
     tablePartition: 'instrument_run',
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'SamplesheetRegisteredEventShowerStarting',
     triggerDetailType: 'SamplesheetShowerStateChange',
   };
 
-  constructor(scope: Construct, id: string, props: WgtsInitialiseInstrumentRunDbRowConstructProps) {
+  constructor(
+    scope: Construct,
+    id: string,
+    props: WgtsQcInitialiseInstrumentRunDbRowConstructProps
+  ) {
     super(scope, id);
 
     /*
     Part 1: Build the internal sfn
     */
     const inputMakerSfn = new sfn.StateMachine(this, 'initialise_instrument_run_db_row', {
-      stateMachineName: `${this.WgtsInitialiseInstrumentRunDbRowMap.prefix}-initialise-run-db-row`,
+      stateMachineName: `${this.WgtsQcInitialiseInstrumentRunDbRowMap.prefix}-initialise-run-db-row`,
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,
@@ -46,7 +50,8 @@ export class WgtsInitialiseInstrumentRunDbRowConstruct extends Construct {
       ),
       definitionSubstitutions: {
         __table_name__: props.tableObj.tableName,
-        __instrument_run_partition_name__: this.WgtsInitialiseInstrumentRunDbRowMap.tablePartition,
+        __instrument_run_partition_name__:
+          this.WgtsQcInitialiseInstrumentRunDbRowMap.tablePartition,
       },
     });
 
@@ -60,14 +65,14 @@ export class WgtsInitialiseInstrumentRunDbRowConstruct extends Construct {
     Part 3: Subscribe to the event bus and trigger the internal sfn
     */
     const rule = new events.Rule(this, 'wgts_subscribe_to_samplesheet_shower', {
-      ruleName: `stacky-${this.WgtsInitialiseInstrumentRunDbRowMap.prefix}-rule`,
+      ruleName: `stacky-${this.WgtsQcInitialiseInstrumentRunDbRowMap.prefix}-rule`,
       eventBus: props.eventBusObj,
       eventPattern: {
-        source: [this.WgtsInitialiseInstrumentRunDbRowMap.triggerSource],
-        detailType: [this.WgtsInitialiseInstrumentRunDbRowMap.triggerDetailType],
+        source: [this.WgtsQcInitialiseInstrumentRunDbRowMap.triggerSource],
+        detailType: [this.WgtsQcInitialiseInstrumentRunDbRowMap.triggerDetailType],
         detail: {
           status: [
-            { 'equals-ignore-case': this.WgtsInitialiseInstrumentRunDbRowMap.triggerStatus },
+            { 'equals-ignore-case': this.WgtsQcInitialiseInstrumentRunDbRowMap.triggerStatus },
           ],
         },
       },

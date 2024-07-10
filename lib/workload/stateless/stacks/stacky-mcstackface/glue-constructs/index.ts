@@ -44,16 +44,15 @@ export class GlueConstruct extends Construct {
     });
 
     /*
-        Part B: Copy the fastq list rows by connecting the bclconvert manager completion with the bsshfastqcopy manager
-        */
+    Part B: Copy the fastq list rows by connecting the bclconvert manager completion with the bsshfastqcopy manager
+    */
     const elmer = new BclconvertToBsshFastqCopyEventHandlerConstruct(this, 'elmer', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
       /* Tables */
       inputMakerTableObj: props.inputMakerTableObj,
       /* SSM Parameters */
-      bsshOutputFastqCopyUriPrefixSsmParameterObj:
-        props.bsshOutputFastqCopyOutputUriSsmParameterObj,
+      bsshOutputFastqCopyUriSsmParameterObj: props.bsshOutputFastqCopyOutputUriSsmParameterObj,
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
     });
 

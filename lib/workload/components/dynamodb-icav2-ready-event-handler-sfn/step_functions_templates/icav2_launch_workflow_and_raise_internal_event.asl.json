@@ -49,7 +49,7 @@
         "technical_tags": {
           "portal_run_id.$": "$.workflow_inputs.portalRunId",
           "step_functions_execution_arn.$": "$$.Execution.Id",
-          "analysis_output_uri.$": "$.workflow_inputs.payload.data.analysisOutputUri"
+          "analysis_output_uri.$": "$.workflow_inputs.payload.data.engineParameters.outputUri"
         }
       },
       "ResultPath": "$.add_technical_tags_step",
@@ -76,7 +76,7 @@
                   "workflow_run_name": {
                     "S.$": "$.workflow_inputs.workflowRunName"
                   },
-                  "launch_event_payload": {
+                  "ready_event_payload": {
                     "S.$": "States.JsonToString($.workflow_inputs.payload)"
                   },
                   "state_machine_execution_arn": {
@@ -98,10 +98,10 @@
                     "S": ""
                   },
                   "analysis_output_uri": {
-                    "S.$": "$.workflow_inputs.payload.data.analysisOutputUri"
+                    "S.$": "$.workflow_inputs.payload.data.engineParameters.outputUri"
                   },
                   "ica_logs_uri": {
-                    "S.$": "$.workflow_inputs.payload.data.icaLogsUri"
+                    "S.$": "$.workflow_inputs.payload.data.engineParameters.logsUri"
                   },
                   "analysis_output": {
                     "S": ""
@@ -228,7 +228,7 @@
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.workflow_inputs.payload.data.pipelineId",
+                  "Variable": "$.workflow_inputs.payload.data.engineParameters.pipelineId",
                   "IsPresent": true,
                   "Next": "Skip Get Parameter"
                 }
@@ -238,7 +238,7 @@
             "Skip Get Parameter": {
               "Type": "Pass",
               "Parameters": {
-                "pipeline_id": "$.workflow_inputs.payload.data.pipelineId"
+                "pipeline_id": "$.workflow_inputs.payload.data.engineParameters.pipelineId"
               },
               "ResultPath": "$.pipeline_id_var",
               "Next": "DynamoDB UpdatePipelineId"
@@ -298,7 +298,7 @@
         }
       },
       "ResultSelector": {
-        "payload.$": "States.StringToJson($.Item.launch_event_payload.S)",
+        "payload.$": "States.StringToJson($.Item.ready_event_payload.S)",
         "input_json.$": "$.Item.input_json.S",
         "pipeline_id.$": "$.Item.analysis_pipeline_id.S"
       },
@@ -308,11 +308,11 @@
     "Get Parameters for Launch Payload": {
       "Type": "Pass",
       "Parameters": {
-        "project_id.$": "$.get_input_parameters_from_event.payload.data.projectId",
+        "project_id.$": "$.get_input_parameters_from_event.payload.data.engineParameters.projectId",
         "pipeline_id.$": "$.get_input_parameters_from_event.pipeline_id",
         "input_json.$": "$.get_input_parameters_from_event.input_json",
-        "analysis_output_uri.$": "$.get_input_parameters_from_event.payload.data.analysisOutputUri",
-        "ica_logs_uri.$": "$.get_input_parameters_from_event.payload.data.icaLogsUri",
+        "analysis_output_uri.$": "$.get_input_parameters_from_event.payload.data.engineParameters.outputUri",
+        "ica_logs_uri.$": "$.get_input_parameters_from_event.payload.data.engineParameters.logsUri",
         "user_tags.$": "$.get_input_parameters_from_event.payload.data.userTags"
       },
       "ResultPath": "$.get_parameters_from_payload",

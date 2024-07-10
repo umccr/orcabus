@@ -6,6 +6,9 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../../../../components/sfn-workflowdraftrunstatechange-common-preamble';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cdk from 'aws-cdk-lib';
 
 /*
 Part 4
@@ -22,7 +25,8 @@ Output Event status: `draft`
 */
 
 export interface Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowConstructProps {
-  tableObj: dynamodb.ITableV2;
+  cttsov2GlueTableObj: dynamodb.ITableV2;
+  workflowsTableObj: dynamodb.ITableV2;
   eventBusObj: events.IEventBus;
 }
 
@@ -31,12 +35,13 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
     /* General settings */
     prefix: 'cttsov2FastqListRowShowerCompleteToWorkflowDraftRun',
     /* Table Partition Settings */
-    tablePartition: {
+    cttsov2GlueTablePartition: {
       instrumentRun: 'instrument_run',
       library: 'library',
       bclconvertData: 'bclconvert_data',
       fastqListRow: 'fastq_list_row',
     },
+    portalRunPartitionName: 'portal_run', // For workflow table
     /* Input Event Settings */
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'FastqListRowEventShowerComplete',
@@ -72,9 +77,26 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
     });
 
     /*
+    Part 1: Generate the preamble (sfn to generate the portal run id and the workflow run name)
+    */
+    const sfn_preamble = new WorkflowDraftRunStateChangeCommonPreambleConstruct(
+      this,
+      `${this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.prefix}_sfn_preamble`,
+      {
+        portalRunTablePartitionName:
+          this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.portalRunPartitionName,
+        stateMachinePrefix: this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.prefix,
+        tableObj: props.workflowsTableObj,
+        workflowName: this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.workflowName,
+        workflowVersion:
+          this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.workflowVersion,
+      }
+    ).stepFunctionObj;
+
+    /*
     Part 2: Build the sfn
     */
-    const inputMakerSfn = new sfn.StateMachine(
+    const draftMakerSfn = new sfn.StateMachine(
       this,
       'fastq_list_row_complete_to_workflow_draft_run_events',
       {
@@ -89,20 +111,21 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
         definitionSubstitutions: {
           /* General Settings */
           __event_bus_name__: props.eventBusObj.eventBusName,
-          __table_name__: props.tableObj.tableName,
+          __table_name__: props.cttsov2GlueTableObj.tableName,
 
           /* Table partitions */
           __bclconvert_data_row_partition_name__:
-            this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.tablePartition
-              .bclconvertData,
+            this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap
+              .cttsov2GlueTablePartition.bclconvertData,
           __fastq_list_row_partition_name__:
-            this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.tablePartition
-              .fastqListRow,
+            this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap
+              .cttsov2GlueTablePartition.fastqListRow,
           __instrument_run_partition_name__:
-            this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.tablePartition
-              .instrumentRun,
+            this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap
+              .cttsov2GlueTablePartition.instrumentRun,
           __library_partition_name__:
-            this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap.tablePartition.library,
+            this.Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap
+              .cttsov2GlueTablePartition.library,
 
           /* Output event settings */
           // Event detail
@@ -123,6 +146,9 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
           /* Lambdas */
           __generate_samplesheet_lambda_function_arn__:
             buildCttsoV2Samplesheet.currentVersion.functionArn,
+
+          /* Subfunctions */
+          __sfn_preamble_state_machine_arn__: sfn_preamble.stateMachineArn,
         },
       }
     );
@@ -131,13 +157,27 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
     Part 3: Grant the internal sfn permissions
     */
     // access the dynamodb table
-    props.tableObj.grantReadWriteData(inputMakerSfn.role);
+    props.cttsov2GlueTableObj.grantReadWriteData(draftMakerSfn.role);
 
     // Allow the sfn to invoke the lambda
-    buildCttsoV2Samplesheet.currentVersion.grantInvoke(inputMakerSfn.role);
+    buildCttsoV2Samplesheet.currentVersion.grantInvoke(draftMakerSfn.role);
 
     // Allow the sfn to submit events to the event bus
-    props.eventBusObj.grantPutEventsTo(inputMakerSfn.role);
+    props.eventBusObj.grantPutEventsTo(draftMakerSfn.role);
+
+    /* Allow step function to call nested state machine */
+    // Because we run a nested state machine, we need to add the permissions to the state machine role
+    // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
+    draftMakerSfn.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
+        ],
+        actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
+      })
+    );
+    // Allow the state machine to be able to invoke the preamble sfn
+    sfn_preamble.grantStartExecution(draftMakerSfn.role);
 
     /*
     Part 4: Subscribe to the event bus for this event type
@@ -163,7 +203,7 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
 
     // Add target of event to be the state machine
     rule.addTarget(
-      new eventsTargets.SfnStateMachine(inputMakerSfn, {
+      new eventsTargets.SfnStateMachine(draftMakerSfn, {
         input: events.RuleTargetInput.fromEventPath('$.detail'),
       })
     );

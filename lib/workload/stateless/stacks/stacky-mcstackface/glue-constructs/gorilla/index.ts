@@ -2,7 +2,9 @@ import { Construct } from 'constructs';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import { BclconvertInteropqcInputMakerConstruct } from './part_1/bclconvert-interop-qc-input-maker';
+import { BsshFastqCopyManagerDraftMakerConstruct } from '../elmer/part_1/bclconvert-succeeded-to-bssh-fastq-copy-draft';
+import { BclconvertInteropQcDraftMakerConstruct } from './part_1/bclconvert-interop-qc-draft-event-maker';
+import { BclconvertInteropQcDraftToReadyMakerConstruct } from './part_2/bclconvert-interop-qc-input-maker';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -34,6 +36,7 @@ export class BsshFastqCopyToBclconvertInteropQcConstruct extends Construct {
     Input Event Source: `orcabus.workflowmanager`
     Input Event DetailType: `WorkflowRunStateChange`
     Input Event status: `complete`
+    Input Event WorkflowName: `bsshFastqCopy`
 
     Output Event source: `orcabus.bclconvertinteropqcinputeventglue`
     Output Event DetailType: `WorkflowRunStateChange`
@@ -43,13 +46,23 @@ export class BsshFastqCopyToBclconvertInteropQcConstruct extends Construct {
       * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and creates the input for the BCLConvertInteropQC
       * Pushes an event payload of the input for the BCLConvertInteropQCReadyEventSubmitter
     */
-    const bclconvertInteropqcInputMaker = new BclconvertInteropqcInputMakerConstruct(
+    const bsshFastqCopyCompleteToBclConvertInteropQcDraft =
+      new BclconvertInteropQcDraftMakerConstruct(
+        this,
+        'bssh_fastq_copy_complete_to_bclconvert_interop_qc_draft_maker',
+        {
+          eventBusObj: props.eventBusObj,
+          tableObj: props.inputMakerTableObj,
+        }
+      );
+
+    const bclconvertInteropqcInputMaker = new BclconvertInteropQcDraftToReadyMakerConstruct(
       this,
       'bclconvert_interopqc_input_maker',
       {
+        logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+        outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
         eventBusObj: props.eventBusObj,
-        analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
-        analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
         tableObj: props.inputMakerTableObj,
         icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
       }

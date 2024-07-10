@@ -4,7 +4,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import path from 'path';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
-import { WorkflowRunStateChangeInternalInputMakerConstruct } from '../../../../../../../components/event-workflowrunstatechange-internal-to-inputmaker-sfn';
+import { WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/event-workflowdraftrunstatechange-to-workflowrunstatechange-ready';
 
 /*
 Part 5
@@ -56,53 +56,17 @@ export class Cttsov2InputMakerConstruct extends Construct {
 
   constructor(scope: Construct, id: string, props: Cttsov2InputMakerConstructProps) {
     super(scope, id);
-    /*
-    Part 1: Build the internal sfn
-    */
-    const inputMakerSfn = new sfn.StateMachine(this, 'cttsov2_input_maker_glue_sfn', {
-      stateMachineName: `${this.cttsov2InputMakerEventMap.prefix}-input-maker-glue-sfn`,
-      definitionBody: sfn.DefinitionBody.fromFile(
-        path.join(__dirname, 'step_function_templates', 'generate_cttsov2_event_maker.asl.json')
-      ),
-      definitionSubstitutions: {
-        __table_name__: props.inputMakerTableObj.tableName,
-        __input_maker_type__: this.cttsov2InputMakerEventMap.tablePartition,
-        __analysis_logs_uri_ssm_parameter_name__: props.logsUriSsmParameterObj.parameterName,
-        __analysis_output_uri_ssm_parameter_name__: props.outputUriSsmParameterObj.parameterName,
-        __analysis_cache_uri_ssm_parameter_name__: props.cacheUriSsmParameterObj.parameterName,
-        __icav2_project_id_and_name_ssm_parameter_name__:
-          props.icav2ProjectIdSsmParameterObj.parameterName,
-      },
-    });
 
     /*
-    Part 2: Grant the internal sfn permissions
+    Part 1: Build the draft to ready maker
     */
-
-    // Access to ssm parameters
-    [
-      props.outputUriSsmParameterObj,
-      props.icav2ProjectIdSsmParameterObj,
-      props.cacheUriSsmParameterObj,
-      props.logsUriSsmParameterObj,
-    ].forEach((ssmParameterObj) => {
-      ssmParameterObj.grantRead(inputMakerSfn.role);
-    });
-
-    // Read/Write access to the tables
-    props.inputMakerTableObj.grantReadWriteData(inputMakerSfn.role);
-
-    /*
-    Part 3: Build the external sfn
-    */
-    new WorkflowRunStateChangeInternalInputMakerConstruct(
+    new WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct(
       this,
-      'cttso_v2_copy_manager_internal_input_maker',
+      'cttso_v2_draft_to_ready_sfn',
       {
         /*
         Set Input StateMachine Object
         */
-        inputStateMachineObj: inputMakerSfn,
         lambdaPrefix: this.cttsov2InputMakerEventMap.prefix,
         payloadVersion: this.cttsov2InputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.cttsov2InputMakerEventMap.prefix,
@@ -120,10 +84,17 @@ export class Cttsov2InputMakerConstruct extends Construct {
         triggerDetailType: this.cttsov2InputMakerEventMap.triggerDetailType,
         triggerSource: this.cttsov2InputMakerEventMap.triggerSource,
         triggerStatus: this.cttsov2InputMakerEventMap.triggerStatus,
-        triggerWorkflowName: this.cttsov2InputMakerEventMap.triggerWorkflowName,
         outputSource: this.cttsov2InputMakerEventMap.outputSource,
         workflowName: this.cttsov2InputMakerEventMap.workflowName,
         workflowVersion: this.cttsov2InputMakerEventMap.workflowVersion,
+
+        /*
+        SSM Parameters
+        */
+        icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+        outputUriSsmParameterObj: props.outputUriSsmParameterObj,
+        logsUriSsmParameterObj: props.logsUriSsmParameterObj,
+        cacheUriSsmParameterObj: props.cacheUriSsmParameterObj,
       }
     );
   }

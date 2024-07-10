@@ -1,0 +1,134 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "Get SSM Parameter Objects",
+      "Parameters": {
+        "inputs.$": "$"
+      }
+    },
+    "Get SSM Parameter Objects": {
+      "Type": "Map",
+      "ItemsPath": "$.inputs.ssm_parameters_list",
+      "ItemSelector": {
+        "engine_parameter_key": "$$.Map.Item.Value.engine_parameter_key",
+        "ssm_name": "$$.Map.Item.Value.ssm_name"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Is SSM Name Null",
+        "States": {
+          "Is SSM Name Null": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Variable": "$.ssm_name",
+                "StringMatches": "",
+                "Comment": "Empty SSM",
+                "Next": "Set Map Output Blank"
+              }
+            ],
+            "Default": "Get EngineParameter URI"
+          },
+          "Set Map Output Blank": {
+            "Type": "Pass",
+            "End": true,
+            "Result": {
+              "output.$": "States.StringToJson(States.Format('\\{\"{}\":\\{\"S\":\"{}\"\\}\\}', $.engine_parameter_key, ''))"
+            }
+          },
+          "Get EngineParameter URI": {
+            "Type": "Task",
+            "Parameters": {
+              "Name": "$.ssm_name"
+            },
+            "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+            "ResultSelector": {
+              "engine_parameter_uri.$": "$.Parameter.Value"
+            },
+            "ResultPath": "$.get_uri_step",
+            "Next": "Is Project Id"
+          },
+          "Is Project Id": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Variable": "$.engine_parameter_key",
+                "StringMatches": "projectId",
+                "Next": "Set Map Output For Project ID"
+              }
+            ],
+            "Default": "Set Map Output"
+          },
+          "Set Map Output For Project ID": {
+            "Type": "Pass",
+            "End": true,
+            "Parameters": {
+              "output.$": "States.StringToJson(States.Format('\\{\"{}\":\\{\"S\":\"{}\"\\}\\}', $.engine_parameter_key, States.StringToJson($.get_uri_step.engine_parameter_uri).projectId))"
+            }
+          },
+          "Set Map Output": {
+            "Type": "Pass",
+            "End": true,
+            "Parameters": {
+              "output.$": "States.StringToJson(States.Format('\\{\"{}\":\\{\"S\":\"{}\"\\}\\}', $.engine_parameter_key, $.get_uri_step.engine_parameter_uri))"
+            }
+          }
+        }
+      },
+      "ResultPath": "$.get_ssm_parameters_step",
+      "Next": "Collect Output attributes of each map state"
+    },
+    "Collect Output attributes of each map state": {
+      "Type": "Pass",
+      "Next": "Fill Placeholders In Engine Parameters",
+      "Parameters": {
+        "map_json.$": "States.JsonMerge($.get_ssm_parameters_step[*].output)"
+      },
+      "ResultPath": "$.get_engine_parameters_step"
+    },
+    "Fill Placeholders In Engine Parameters": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__fill_placeholders_in_engine_parameters_lambda_function_arn__}",
+        "Payload": {
+          "portal_run_id.$": "$.inputs.portal_run_id",
+          "workflow_name.$": "$.inputs.workflow_name",
+          "workflow_version.$": "$.inputs.workflow_version",
+          "event_data_input.$": "$.inputs.event_data_input",
+          "engine_parameters.$": "$.get_engine_parameters_step.map_json"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Set SFN Outputs",
+      "ResultSelector": {
+        "engine_parameters.$": "$.Payload.engine_parameters_updated"
+      },
+      "ResultPath": "$.fill_engine_parameters_step"
+    },
+    "Set SFN Outputs": {
+      "Type": "Pass",
+      "End": true,
+      "Parameters": {
+        "engine_parameters.$": "$.fill_engine_parameters_step.engine_parameters"
+      }
+    }
+  }
+}

@@ -74,14 +74,17 @@
           "portalRunId.$": "$.workflow_inputs.portalRunId",
           "workflowName": "${__workflow_name__}",
           "workflowVersion": "${__workflow_version__}",
-          "workflowRunName.$": "States.Format('umccr__orcabus__automated__{}__{}', $.workflow_inputs.payload.data.instrumentRunId, $.workflow_inputs.portalRunId)",
+          "workflowRunName.$": "$.workflow_inputs.workflowRunName",
           "payload": {
             "refId": null,
             "version": "${__payload_version__}",
             "data": {
-              "outputUri.$": "$.workflow_inputs.payload.data.outputUri",
-              "instrumentRunId.$": "$.workflow_inputs.payload.data.instrumentRunId",
-              "fastqListRowsB64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz"
+              "engineParameters": "$.workflow_inputs.payload.data.engineParameters",
+              "outputs": {
+                "outputUri.$": "$.workflow_inputs.payload.data.engineParameters.outputUri",
+                "instrumentRunId.$": "$.workflow_inputs.payload.data.inputs.instrumentRunId",
+                "fastqListRowsB64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz"
+              }
             }
           }
         }
