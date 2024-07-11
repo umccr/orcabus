@@ -14,41 +14,41 @@ use utoipa::{IntoParams, ToSchema};
 pub struct S3ObjectsFilterByAll {
     #[param(nullable)]
     /// Query by event type.
-    event_type: Option<EventType>,
+    pub(crate) event_type: Option<EventType>,
     #[param(nullable)]
     /// Query by bucket.
-    bucket: Option<String>,
+    pub(crate) bucket: Option<String>,
     #[param(nullable)]
     /// Query by key.
-    key: Option<String>,
+    pub(crate) key: Option<String>,
     #[param(nullable)]
     /// Query by version_id.
-    version_id: Option<String>,
+    pub(crate) version_id: Option<String>,
     #[param(nullable)]
     /// Query by date.
-    date: Option<DateTimeWithTimeZone>,
+    pub(crate) date: Option<DateTimeWithTimeZone>,
     #[param(nullable)]
     /// Query by size.
-    size: Option<i64>,
+    pub(crate) size: Option<i64>,
     #[param(nullable)]
     /// Query by the sha256 checksum.
-    sha256: Option<String>,
+    pub(crate) sha256: Option<String>,
     #[param(nullable)]
     /// Query by the last modified date.
-    last_modified_date: Option<DateTimeWithTimeZone>,
+    pub(crate) last_modified_date: Option<DateTimeWithTimeZone>,
     #[param(nullable)]
     /// Query by the e_tag.
-    e_tag: Option<String>,
+    pub(crate) e_tag: Option<String>,
     #[param(nullable)]
     /// Query by the storage class.
-    storage_class: Option<StorageClass>,
+    pub(crate) storage_class: Option<StorageClass>,
     #[param(nullable)]
     /// Query by the object delete marker.
-    is_delete_marker: bool,
+    pub(crate) is_delete_marker: Option<bool>,
     #[param(nullable)]
     /// Query by JSON attributes. Supports nested syntax to access inner
     /// fields, e.g. `?attributes[attribute_id]=...`
-    attributes: Option<Json>
+    pub(crate) attributes: Option<Json>,
 }
 
 /// The available fields to filter `object` queries by. Each query parameter represents
@@ -60,5 +60,5 @@ pub struct ObjectsFilterByAll {
     #[param(nullable)]
     /// Query by JSON attributes. Supports nested syntax to access inner
     /// fields, e.g. `?attributes[attribute_id]=...`
-    attributes: Option<Json>
+    pub(crate) attributes: Option<Json>,
 }

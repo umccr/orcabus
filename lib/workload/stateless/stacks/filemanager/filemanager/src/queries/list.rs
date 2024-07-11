@@ -1,15 +1,20 @@
 //! Query builder involving list operations on the database.
 //!
 
-use sea_orm::{EntityTrait, FromQueryResult, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Select};
+use sea_orm::prelude::Expr;
+use sea_orm::sea_query::extension::postgres::PgExpr;
+use sea_orm::{
+    ColumnTrait, Condition, EntityTrait, FromQueryResult, PaginatorTrait, QueryFilter, QueryOrder,
+    QuerySelect, Select,
+};
 
 use crate::database::entities::object::Entity as ObjectEntity;
-use crate::database::entities::s3_object::Column as S3Column;
 use crate::database::entities::s3_object::Entity as S3ObjectEntity;
+use crate::database::entities::s3_object::{Column as S3ObjectColumn, Column as ObjectColumn};
 use crate::database::Client;
 use crate::error::Error::OverflowError;
 use crate::error::{Error, Result};
-use crate::routes::filtering::ObjectsFilterByAll;
+use crate::routes::filtering::{ObjectsFilterByAll, S3ObjectsFilterByAll};
 use crate::routes::list::{ListCount, ListResponse};
 use crate::routes::pagination::Pagination;
 
@@ -28,13 +33,25 @@ impl<'a> ListQueryBuilder<'a, ObjectEntity> {
     pub fn new(client: &'a Client) -> Self {
         Self {
             client,
-            select: Self::build_object(),
+            select: Self::build_objects(),
         }
     }
 
     /// Build a select query for finding values from objects.
-    pub fn build_object() -> Select<ObjectEntity> {
+    pub fn build_objects() -> Select<ObjectEntity> {
         ObjectEntity::find()
+    }
+
+    /// Filter records by all fields in the filter variable.
+    pub async fn filter_all(mut self, filter: ObjectsFilterByAll) -> Self {
+        let condition = Condition::all().add_option(
+            filter
+                .attributes
+                .map(|v| Expr::col(ObjectColumn::Attributes).contains(v)),
+        );
+
+        self.select = self.select.filter(condition);
+        self
     }
 }
 
@@ -43,17 +60,48 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
     pub fn new(client: &'a Client) -> Self {
         Self {
             client,
-            select: Self::build_object(),
+            select: Self::build_s3_objects(),
         }
     }
 
     /// Build a select query for finding values from s3 objects.
-    pub fn build_object() -> Select<S3ObjectEntity> {
-        S3ObjectEntity::find().order_by_asc(S3Column::Sequencer)
+    pub fn build_s3_objects() -> Select<S3ObjectEntity> {
+        S3ObjectEntity::find().order_by_asc(S3ObjectColumn::Sequencer)
     }
-    
-    pub async fn filter_all(mut self, filter: ObjectsFilterByAll) -> Self {
-        self.select.filter()
+
+    /// Filter records by all fields in the filter variable.
+    pub async fn filter_all(mut self, filter: S3ObjectsFilterByAll) -> Self {
+        let condition = Condition::all()
+            .add_option(filter.event_type.map(|v| S3ObjectColumn::EventType.eq(v)))
+            .add_option(filter.bucket.map(|v| S3ObjectColumn::Bucket.eq(v)))
+            .add_option(filter.key.map(|v| S3ObjectColumn::Key.eq(v)))
+            .add_option(filter.version_id.map(|v| S3ObjectColumn::VersionId.eq(v)))
+            .add_option(filter.date.map(|v| S3ObjectColumn::Date.eq(v)))
+            .add_option(filter.size.map(|v| S3ObjectColumn::Size.eq(v)))
+            .add_option(filter.sha256.map(|v| S3ObjectColumn::Sha256.eq(v)))
+            .add_option(
+                filter
+                    .last_modified_date
+                    .map(|v| S3ObjectColumn::LastModifiedDate.eq(v)),
+            )
+            .add_option(filter.e_tag.map(|v| S3ObjectColumn::ETag.eq(v)))
+            .add_option(
+                filter
+                    .storage_class
+                    .map(|v| S3ObjectColumn::StorageClass.eq(v)),
+            )
+            .add_option(
+                filter
+                    .is_delete_marker
+                    .map(|v| S3ObjectColumn::IsDeleteMarker.eq(v)),
+            )
+            .add_option(
+                filter
+                    .attributes
+                    .map(|v| Expr::col(S3ObjectColumn::Attributes).contains(v)),
+            );
+
+        self.select = self.select.filter(condition);
         self
     }
 }

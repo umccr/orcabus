@@ -86,6 +86,8 @@ pub async fn list_objects(
     QsQuery(filter_by_all): QsQuery<ObjectsFilterByAll>,
 ) -> Result<Json<ListResponse<FileObject>>> {
     let response = ListQueryBuilder::<ObjectEntity>::new(&state.client)
+        .filter_all(filter_by_all)
+        .await
         .paginate_to_list_response(pagination)
         .await?;
 
@@ -131,6 +133,8 @@ pub async fn list_s3_objects(
     QsQuery(filter_by_all): QsQuery<S3ObjectsFilterByAll>,
 ) -> Result<Json<ListResponse<FileS3Object>>> {
     let response = ListQueryBuilder::<S3ObjectEntity>::new(&state.client)
+        .filter_all(filter_by_all)
+        .await
         .paginate_to_list_response(pagination)
         .await?;
 
