@@ -87,7 +87,6 @@ pub async fn list_objects(
 ) -> Result<Json<ListResponse<FileObject>>> {
     let response = ListQueryBuilder::<ObjectEntity>::new(&state.client)
         .filter_all(filter_by_all)
-        .await
         .paginate_to_list_response(pagination)
         .await?;
 
@@ -134,7 +133,6 @@ pub async fn list_s3_objects(
 ) -> Result<Json<ListResponse<FileS3Object>>> {
     let response = ListQueryBuilder::<S3ObjectEntity>::new(&state.client)
         .filter_all(filter_by_all)
-        .await
         .paginate_to_list_response(pagination)
         .await?;
 
@@ -172,6 +170,7 @@ mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
+    use crate::database::entities::sea_orm_active_enums::EventType;
     use crate::queries::tests::{initialize_database, initialize_database_reorder};
     use crate::routes::list::{ListCount, ListResponse};
     use crate::routes::{api_router, AppState};
@@ -211,6 +210,86 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_objects_api_filter_attributes(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await;
+
+        let app = api_router(state);
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/objects?attributes[attribute_id]=1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let result = from_slice::<ListResponse<Object>>(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(
+            result.results,
+            vec![entries
+                .clone()
+                .into_iter()
+                .map(|(entry, _)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
+        );
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/objects?attributes[nested_id][attribute_id]=1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let result = from_slice::<ListResponse<Object>>(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(
+            result.results,
+            vec![entries
+                .clone()
+                .into_iter()
+                .map(|(entry, _)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
+        );
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/objects?attributes[non_existent_id]=1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let result = from_slice::<ListResponse<Object>>(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        assert!(result.results.is_empty());
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = initialize_database_reorder(state.client(), 10).await;
@@ -241,6 +320,203 @@ mod tests {
                 .into_iter()
                 .map(|(_, entry)| entry)
                 .collect::<Vec<_>>()
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_objects_filter_event_type(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await;
+
+        let app = api_router(state);
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/s3_objects?event_type=Deleted")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let result = from_slice::<ListResponse<S3Object>>(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+
+        assert_eq!(result.results().len(), 5);
+        assert_eq!(
+            result.results,
+            entries
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .filter(|entry| entry.event_type == EventType::Deleted)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_objects_multiple_filters(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await;
+
+        let app = api_router(state);
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/s3_objects?bucket=1&key=2")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let result = from_slice::<ListResponse<S3Object>>(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(
+            result.results,
+            vec![entries
+                .clone()
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()[2]
+                .clone()]
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_objects_filter_attributes(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await;
+
+        let app = api_router(state);
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/s3_objects?attributes[attribute_id]=1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let result = from_slice::<ListResponse<S3Object>>(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(
+            result.results,
+            vec![entries
+                .clone()
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
+        );
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/s3_objects?attributes[nested_id][attribute_id]=1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let result = from_slice::<ListResponse<S3Object>>(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(
+            result.results,
+            vec![entries
+                .clone()
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
+        );
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/s3_objects?attributes[non_existent_id]=1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let result = from_slice::<ListResponse<S3Object>>(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        assert!(result.results.is_empty());
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/s3_objects?attributes[attribute_id]=1&key=2")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let result = from_slice::<ListResponse<S3Object>>(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        assert!(result.results.is_empty());
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/s3_objects?attributes[attribute_id]=1&key=1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let result = from_slice::<ListResponse<S3Object>>(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(
+            result.results,
+            vec![entries
+                .clone()
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
         );
     }
 

@@ -43,7 +43,7 @@ impl<'a> ListQueryBuilder<'a, ObjectEntity> {
     }
 
     /// Filter records by all fields in the filter variable.
-    pub async fn filter_all(mut self, filter: ObjectsFilterByAll) -> Self {
+    pub fn filter_all(mut self, filter: ObjectsFilterByAll) -> Self {
         let condition = Condition::all().add_option(
             filter
                 .attributes
@@ -70,7 +70,7 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
     }
 
     /// Filter records by all fields in the filter variable.
-    pub async fn filter_all(mut self, filter: S3ObjectsFilterByAll) -> Self {
+    pub fn filter_all(mut self, filter: S3ObjectsFilterByAll) -> Self {
         let condition = Condition::all()
             .add_option(filter.event_type.map(|v| S3ObjectColumn::EventType.eq(v)))
             .add_option(filter.bucket.map(|v| S3ObjectColumn::Bucket.eq(v)))
@@ -169,9 +169,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use sqlx::PgPool;
 
     use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::entities::sea_orm_active_enums::EventType;
     use crate::database::Client;
     use crate::queries::tests::{initialize_database, initialize_database_reorder};
 
@@ -192,6 +194,67 @@ mod tests {
                 .map(|(entry, _)| entry)
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_objects_filter_attributes(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database(&client, 10).await;
+
+        let builder = ListQueryBuilder::<ObjectEntity>::new(&client);
+
+        let result = builder
+            .clone()
+            .filter_all(ObjectsFilterByAll {
+                attributes: Some(json!({
+                    "attribute_id": "1"
+                })),
+            })
+            .all()
+            .await
+            .unwrap();
+        assert_eq!(
+            result,
+            vec![entries
+                .clone()
+                .into_iter()
+                .map(|(entry, _)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
+        );
+
+        let result = builder
+            .clone()
+            .filter_all(ObjectsFilterByAll {
+                attributes: Some(json!({
+                    "nested_id": {
+                        "attribute_id": "1"
+                    }
+                })),
+            })
+            .all()
+            .await
+            .unwrap();
+        assert_eq!(
+            result,
+            vec![entries
+                .clone()
+                .into_iter()
+                .map(|(entry, _)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
+        );
+
+        let result = builder
+            .filter_all(ObjectsFilterByAll {
+                attributes: Some(json!({
+                    "non_existent_id": "1"
+                })),
+            })
+            .all()
+            .await
+            .unwrap();
+        assert!(result.is_empty());
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -242,6 +305,157 @@ mod tests {
                 .into_iter()
                 .map(|(_, entry)| entry)
                 .collect::<Vec<_>>()
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_objects_filter_event_type(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database_reorder(&client, 10).await;
+
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
+        let result = builder
+            .filter_all(S3ObjectsFilterByAll {
+                event_type: Some(EventType::Created),
+                ..Default::default()
+            })
+            .all()
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 5);
+        assert_eq!(
+            result,
+            entries
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .filter(|entry| entry.event_type == EventType::Created)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_objects_multiple_filters(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database_reorder(&client, 10).await;
+
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
+        let result = builder
+            .filter_all(S3ObjectsFilterByAll {
+                bucket: Some("0".to_string()),
+                key: Some("1".to_string()),
+                ..Default::default()
+            })
+            .all()
+            .await
+            .unwrap();
+
+        assert_eq!(
+            result,
+            vec![entries
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_objects_filter_attributes(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database_reorder(&client, 10).await;
+
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
+
+        let result = builder
+            .clone()
+            .filter_all(S3ObjectsFilterByAll {
+                attributes: Some(json!({
+                    "attribute_id": "1"
+                })),
+                ..Default::default()
+            })
+            .all()
+            .await
+            .unwrap();
+        assert_eq!(
+            result,
+            vec![entries
+                .clone()
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
+        );
+
+        let result = builder
+            .clone()
+            .filter_all(S3ObjectsFilterByAll {
+                attributes: Some(json!({
+                    "nested_id": {
+                        "attribute_id": "1"
+                    }
+                })),
+                ..Default::default()
+            })
+            .all()
+            .await
+            .unwrap();
+        assert_eq!(
+            result,
+            vec![entries
+                .clone()
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
+        );
+
+        let result = builder
+            .clone()
+            .filter_all(S3ObjectsFilterByAll {
+                attributes: Some(json!({
+                    "non_existent_id": "1"
+                })),
+                ..Default::default()
+            })
+            .all()
+            .await
+            .unwrap();
+        assert!(result.is_empty());
+
+        let result = builder
+            .clone()
+            .filter_all(S3ObjectsFilterByAll {
+                attributes: Some(json!({
+                    "attribute_id": "1"
+                })),
+                key: Some("2".to_string()),
+                ..Default::default()
+            })
+            .all()
+            .await
+            .unwrap();
+        assert!(result.is_empty());
+
+        let result = builder
+            .filter_all(S3ObjectsFilterByAll {
+                attributes: Some(json!({
+                    "attribute_id": "1"
+                })),
+                key: Some("1".to_string()),
+                ..Default::default()
+            })
+            .all()
+            .await
+            .unwrap();
+        assert_eq!(
+            result,
+            vec![entries
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect::<Vec<_>>()[1]
+                .clone()]
         );
     }
 
