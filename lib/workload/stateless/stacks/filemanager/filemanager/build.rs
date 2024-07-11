@@ -1,4 +1,5 @@
 use filemanager_build::gen_entities::generate_entities;
+use filemanager_build::gen_openapi::generate_openapi;
 use filemanager_build::rebuild_if_changed;
 use miette::Result;
 
@@ -8,5 +9,7 @@ async fn main() -> Result<()> {
     let _ = dotenvy::dotenv();
 
     generate_entities().await?;
+    generate_openapi().await?;
+
     Ok(rebuild_if_changed()?)
 }

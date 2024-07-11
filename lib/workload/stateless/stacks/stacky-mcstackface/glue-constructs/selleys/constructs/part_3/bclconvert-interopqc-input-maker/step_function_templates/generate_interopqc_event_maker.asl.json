@@ -95,7 +95,7 @@
         "projectId.$": "$.get_ssm_parameters_steps.project_id",
         "bclconvertReportDirectory.$": "States.Format('{}Reports/', $.get_event_detail_payload_data_from_db_step.event_data_input.outputUri)",
         "interopDirectory.$": "States.Format('{}InterOp/', $.get_event_detail_payload_data_from_db_step.event_data_input.outputUri)",
-        "runId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
+        "instrumentRunId.$": "$.get_event_detail_payload_data_from_db_step.event_data_input.instrumentRunId",
         "analysisOutputUri.$": "$.get_ssm_parameters_steps.output_uri",
         "icaLogsUri.$": "$.get_ssm_parameters_steps.logs_uri",
         "userTags": {

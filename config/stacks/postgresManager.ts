@@ -1,7 +1,7 @@
 import { Duration } from 'aws-cdk-lib';
 import { FILEMANAGER_SERVICE_NAME } from '../../lib/workload/stateless/stacks/filemanager/deploy/stack';
-import { PostgresManagerStackProps } from '../../lib/workload/stateless/stacks/postgres-manager/deploy/stack';
-import { DbAuthType } from '../../lib/workload/stateless/stacks/postgres-manager/function/type';
+import { PostgresManagerStackProps } from '../../lib/workload/stateful/stacks/postgres-manager/deploy/stack';
+import { DbAuthType } from '../../lib/workload/stateful/stacks/postgres-manager/function/type';
 import {
   computeSecurityGroupName,
   databasePort,

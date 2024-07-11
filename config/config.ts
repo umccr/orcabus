@@ -47,6 +47,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
   const stackProps = {
     statefulConfig: {
       sharedStackProps: getSharedStackProps(stage),
+      postgresManagerStackProps: getPostgresManagerStackProps(),
       tokenServiceStackProps: getTokenServiceStackProps(),
       icaEventPipeStackProps: getIcaEventPipeStackProps(),
       bclconvertInteropQcIcav2PipelineTableStackProps:
@@ -56,7 +57,6 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
     },
     statelessConfig: {
-      postgresManagerStackProps: getPostgresManagerStackProps(),
       metadataManagerStackProps: getMetadataManagerStackProps(stage),
       sequenceRunManagerStackProps: getSequenceRunManagerStackProps(stage),
       fileManagerStackProps: getFileManagerStackProps(stage),

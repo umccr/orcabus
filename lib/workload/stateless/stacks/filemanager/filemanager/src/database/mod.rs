@@ -1,18 +1,18 @@
 //! This module handles connecting to the filemanager database for actions such as ingesting events.
 //!
 
-use std::borrow::Cow;
-
+use crate::database::aws::credentials::IamGenerator;
 use crate::database::aws::ingester::Ingester;
 use crate::database::aws::ingester_paired::IngesterPaired;
+use crate::env::Config;
 use async_trait::async_trait;
+use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
 use tracing::debug;
 
 use crate::error::Result;
 use crate::events::EventSourceType;
-use crate::read_env;
 
 pub mod aws;
 
@@ -28,36 +28,44 @@ pub trait CredentialGenerator {
 
 /// A database client handles database interaction.
 #[derive(Debug, Clone)]
-pub struct Client<'a> {
+pub struct Client {
     // Use a Cow here to allow an owned pool or a shared reference to a pool.
-    pool: Cow<'a, PgPool>,
+    connection: DatabaseConnection,
 }
 
-impl<'a> Client<'a> {
+impl Client {
     /// Create a database from an existing pool.
-    pub fn new(pool: PgPool) -> Self {
-        Self {
-            pool: Cow::Owned(pool),
-        }
+    pub fn new(connection: DatabaseConnection) -> Self {
+        Self { connection }
     }
 
-    /// Create a database from a reference to an existing pool.
-    pub fn from_ref(pool: &'a PgPool) -> Self {
-        Self {
-            pool: Cow::Borrowed(pool),
-        }
+    /// Create a database connection from an existing pool.
+    pub fn from_pool(pool: PgPool) -> Self {
+        Self::new(SqlxPostgresConnector::from_sqlx_postgres_pool(pool))
+    }
+
+    /// Create a database using default credential loading logic and without
+    /// a credential generator.
+    pub async fn from_config(config: &Config) -> Result<Self> {
+        Self::from_generator(None::<IamGenerator>, config).await
     }
 
     /// Create a database using default credential loading logic as defined in
     /// `Self::connect_options`.
-    pub async fn from_generator(generator: Option<impl CredentialGenerator>) -> Result<Self> {
-        Ok(Self::new(Self::create_pool(generator).await?))
+    pub async fn from_generator(
+        generator: Option<impl CredentialGenerator>,
+        config: &Config,
+    ) -> Result<Self> {
+        Ok(Self::from_pool(Self::create_pool(generator, config).await?))
     }
 
     /// Create a database connection pool using credential loading logic defined in
     /// `Self::connect_options`.
-    pub async fn create_pool(generator: Option<impl CredentialGenerator>) -> Result<PgPool> {
-        Ok(PgPool::connect_with(Self::connect_options(generator).await?).await?)
+    pub async fn create_pool(
+        generator: Option<impl CredentialGenerator>,
+        config: &Config,
+    ) -> Result<PgPool> {
+        Ok(PgPool::connect_with(Self::pg_connect_options(generator, config).await?).await?)
     }
 
     /// Create database connect options using a series of credential loading logic.
@@ -65,15 +73,17 @@ impl<'a> Client<'a> {
     /// First, this tries to load a DATABASE_URL environment variable to connect.
     /// Then, it uses the generator if it is not None and PGPASSWORD is not set.
     /// Otherwise, uses default logic defined in PgConnectOptions::default.
-    pub async fn connect_options(
+    pub async fn pg_connect_options(
         generator: Option<impl CredentialGenerator>,
+        config: &Config,
     ) -> Result<PgConnectOptions> {
         // If the DATABASE_URL is defined, use that.
-        if let Ok(url) = read_env("DATABASE_URL") {
+        if let Some(url) = config.database_url() {
             return Ok(url.parse()?);
         }
+
         // If PGPASSWORD is set, use default options.
-        if read_env("PGPASSWORD").is_ok() {
+        if config.pg_password().is_some() {
             return Ok(PgConnectOptions::default());
         }
 
@@ -89,21 +99,37 @@ impl<'a> Client<'a> {
 
     /// Get the database pool.
     pub fn pool(&self) -> &PgPool {
-        &self.pool
+        self.connection.get_postgres_connection_pool()
+    }
+
+    /// Get the database connection. Clones the underlying `DatabaseConnection` which is
+    /// intended to be cheaply cloneable because it represents an Arc to a shared connection pool.
+    pub fn connection(&self) -> DatabaseConnection {
+        self.connection.clone()
+    }
+
+    /// Get the database connection as a reference.
+    pub fn connection_ref(&self) -> &DatabaseConnection {
+        &self.connection
+    }
+
+    /// Get the inner database connection.
+    pub fn into_inner(self) -> DatabaseConnection {
+        self.connection
     }
 }
 
 #[async_trait]
-impl<'a> Ingest<'a> for Client<'a> {
-    async fn ingest(&'a self, events: EventSourceType) -> Result<()> {
+impl Ingest for Client {
+    async fn ingest(&self, events: EventSourceType) -> Result<()> {
         match events {
             EventSourceType::S3(events) => {
-                Ingester::new(Self::from_ref(self.pool()))
+                Ingester::new(Self::new(self.connection()))
                     .ingest_events(events)
                     .await
             }
             EventSourceType::S3Paired(events) => {
-                IngesterPaired::new(Self::from_ref(self.pool()))
+                IngesterPaired::new(Self::new(self.connection()))
                     .ingest_events(events)
                     .await
             }
@@ -113,9 +139,9 @@ impl<'a> Ingest<'a> for Client<'a> {
 
 /// This trait ingests raw events into the database.
 #[async_trait]
-pub trait Ingest<'a> {
+pub trait Ingest {
     /// Ingest the events.
-    async fn ingest(&'a self, events: EventSourceType) -> Result<()>;
+    async fn ingest(&self, events: EventSourceType) -> Result<()>;
 }
 
 /// Trait representing database migrations.

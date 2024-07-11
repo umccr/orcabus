@@ -15,3 +15,6 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 miette = "7"
 serde = { version = "1", features = ["derive"] }
 quote = "1"
+syn = { version = "2", features = ["full", "extra-traits", "visit-mut"] }
+prettyplease = "0.2"
+heck = "0.5"

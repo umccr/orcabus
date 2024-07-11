@@ -25,7 +25,11 @@ export class StatefulPipelineStack extends cdk.Stack {
     });
 
     const unitTest = new pipelines.CodeBuildStep('UnitTest', {
-      commands: ['yarn install --immutable', 'make test-stateful'],
+      commands: [
+        'yarn install --immutable',
+        'make test-stateful-iac',
+        'make test-stateful-app-suite',
+      ],
       input: sourceFile,
       primaryOutputDirectory: '.',
       buildEnvironment: {
@@ -116,8 +120,11 @@ export class StatefulPipelineStack extends cdk.Stack {
       { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
     );
 
+    // Some stack have dependencies to the 'shared stack' so we need to deploy it first beforehand
+    // should only be a one-off initial deployment
+
     /**
-     * Deployment to Prod account (DISABLED)
+     * Deployment to Prod account
      */
     const prodConfig = getEnvironmentConfig(AppStage.PROD);
     if (!prodConfig) throw new Error(`No 'Prod' account configuration`);

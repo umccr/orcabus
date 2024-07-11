@@ -116,7 +116,7 @@ ICAv2 Resources - required by various stacks
 export const icav2AccessTokenSecretName: Record<AppStage, string> = {
   [AppStage.BETA]: 'ICAv2JWTKey-umccr-prod-service-dev', // pragma: allowlist secret
   [AppStage.GAMMA]: 'ICAv2JWTKey-umccr-prod-service-staging', // pragma: allowlist secret
-  [AppStage.PROD]: 'ICAv2JWTKey-umccr-prod-service-prod', // pragma: allowlist secret
+  [AppStage.PROD]: 'ICAv2JWTKey-umccr-prod-service-production', // pragma: allowlist secret
 };
 
 /*
@@ -166,6 +166,9 @@ export const fileManagerIngestRoleName = 'orcabus-file-manager-ingest-role';
 /*
 Resources used by the bclConvert InteropQc Pipeline
 */
+
+// Release can be found here: https://github.com/umccr/cwl-ica/releases/tag/bclconvert-interop-qc%2F1.3.1--1.21__20240627051309
+// Pipeline ID is: 35cae57c-8895-4814-ae89-db4b5e9668b2
 export const bclconvertInteropQcIcav2PipelineIdSSMParameterPath =
   '/icav2/umccr-prod/bclconvert_interop_qc_pipeline_id';
 

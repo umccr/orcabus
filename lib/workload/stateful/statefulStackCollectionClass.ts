@@ -20,9 +20,14 @@ import {
   StackyStatefulTablesStack,
   StackyStatefulTablesStackProps,
 } from './stacks/stacky-mcstackface-dynamodb';
+import {
+  PostgresManagerStack,
+  PostgresManagerStackProps,
+} from './stacks/postgres-manager/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   sharedStackProps: SharedStackProps;
+  postgresManagerStackProps: PostgresManagerStackProps;
   tokenServiceStackProps: TokenServiceStackProps;
   icaEventPipeStackProps: IcaEventPipeStackProps;
   bclconvertInteropQcIcav2PipelineTableStackProps: BclconvertInteropQcIcav2PipelineTableStackProps;
@@ -35,6 +40,7 @@ export class StatefulStackCollection {
   // You could add more stack here and initiate it at the constructor. See example below for reference
 
   readonly sharedStack: Stack;
+  readonly postgresManagerStack: Stack;
   readonly tokenServiceStack: Stack;
   readonly icaEventPipeStack: Stack;
   readonly bclconvertInteropQcIcav2PipelineTableStack: Stack;
@@ -50,6 +56,11 @@ export class StatefulStackCollection {
     this.sharedStack = new SharedStack(scope, 'SharedStack', {
       ...this.createTemplateProps(env, 'SharedStack'),
       ...statefulConfiguration.sharedStackProps,
+    });
+
+    this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
+      ...this.createTemplateProps(env, 'PostgresManagerStack'),
+      ...statefulConfiguration.postgresManagerStackProps,
     });
 
     this.tokenServiceStack = new TokenServiceStack(scope, 'TokenServiceStack', {

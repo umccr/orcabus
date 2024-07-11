@@ -123,6 +123,29 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       );
       break;
 
+    case 'PostgresManagerStack':
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/PostgresManagerStack/UpdatePgProviderFunction/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              'The provider function needs to be able to invoke the configured function. It uses' +
+              "`lambda.Function.grantInvoke` to achieve this which contains a '*' and is not changeable.",
+          },
+        ]
+      );
+
+      // FIXME one day we should remove this `AwsSolutions-IAM4` suppression and tackle any use of AWS managed policies
+      //  in all our stacks. See https://github.com/umccr/orcabus/issues/174
+      NagSuppressions.addStackSuppressions(
+        stack,
+        [{ id: 'AwsSolutions-IAM4', reason: 'allow to use AWS managed policy' }],
+        true
+      );
+      break;
+
     default:
       break;
   }

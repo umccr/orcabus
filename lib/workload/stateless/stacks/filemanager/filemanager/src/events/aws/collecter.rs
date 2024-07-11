@@ -17,14 +17,13 @@ use crate::clients::aws::s3::Client;
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
-use crate::error::Error::InvalidEnvironmentVariable;
+use crate::env::Config;
 use crate::error::Error::{DeserializeError, SQSError};
 use crate::error::Result;
 use crate::events::aws::{
     EventType, FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages,
 };
-use crate::events::{Collect, EventSourceType};
-use crate::read_env;
+use crate::events::{Collect, EventSource, EventSourceType};
 
 /// Build an AWS collector struct.
 #[derive(Default, Debug)]
@@ -59,11 +58,11 @@ impl CollecterBuilder {
     }
 
     /// Build a collector using the raw events.
-    pub async fn build(self, raw_events: FlatS3EventMessages) -> Collecter {
+    pub async fn build(self, raw_events: FlatS3EventMessages, config: &Config) -> Collecter<'_> {
         if let Some(s3_client) = self.s3_client {
-            Collecter::new(s3_client, raw_events)
+            Collecter::new(s3_client, raw_events, config)
         } else {
-            Collecter::new(S3Client::with_defaults().await, raw_events)
+            Collecter::new(S3Client::with_defaults().await, raw_events, config)
         }
     }
 
@@ -96,41 +95,51 @@ impl CollecterBuilder {
     }
 
     /// Build a collector by manually calling receive to obtain the raw events.
-    pub async fn build_receive(mut self) -> Result<Collecter> {
+    pub async fn build_receive(mut self, config: &Config) -> Result<Collecter> {
         let url = self.sqs_url.take();
-        let url = if let Some(url) = url {
-            url
-        } else {
-            read_env("SQS_QUEUE_URL")?
-        };
+        let url = Config::value_or_else(url.as_deref(), config.sqs_url())?;
 
         let client = self.sqs_client.take();
         if let Some(sqs_client) = &client {
-            Ok(self.build(Self::receive(sqs_client, &url).await?).await)
+            Ok(self
+                .build(Self::receive(sqs_client, url).await?, config)
+                .await)
         } else {
             Ok(self
-                .build(Self::receive(&SQSClient::with_defaults().await, &url).await?)
+                .build(
+                    Self::receive(&SQSClient::with_defaults().await, url).await?,
+                    config,
+                )
                 .await)
         }
     }
 }
 
-/// Collect raw events into the processed form which the database module accepts.
+/// Collect raw events into the processed form which the database module accepts. Tracks the
+/// number of (potentially duplicate) records that are processed by this collector. The number of
+/// records is None before any events have been processed.
 #[derive(Debug)]
-pub struct Collecter {
+pub struct Collecter<'a> {
     client: Client,
     raw_events: FlatS3EventMessages,
+    config: &'a Config,
+    n_records: Option<usize>,
 }
 
-impl Collecter {
+impl<'a> Collecter<'a> {
     /// Create a new collector.
-    pub(crate) fn new(client: Client, raw_events: FlatS3EventMessages) -> Self {
-        Self { client, raw_events }
+    pub(crate) fn new(client: Client, raw_events: FlatS3EventMessages, config: &'a Config) -> Self {
+        Self {
+            client,
+            raw_events,
+            config,
+            n_records: None,
+        }
     }
 
     /// Get the inner values.
-    pub fn into_inner(self) -> (Client, FlatS3EventMessages) {
-        (self.client, self.raw_events)
+    pub fn into_inner(self) -> (Client, FlatS3EventMessages, &'a Config) {
+        (self.client, self.raw_events, self.config)
     }
 
     /// Converts an AWS datetime to a standard database format.
@@ -205,37 +214,34 @@ impl Collecter {
         ))
     }
 
-    /// Read the whether paired ingest mode should be used.
-    pub fn paired_ingest_mode() -> Result<bool> {
-        Ok(read_env("PAIRED_INGEST_MODE")
-            .ok()
-            .map(|value| {
-                if value == "1" {
-                    Ok(true)
-                } else {
-                    value.parse::<bool>()
-                }
-            })
-            .transpose()
-            .map_err(|_| InvalidEnvironmentVariable("ingest paired mode".to_string()))?
-            .unwrap_or_default())
+    /// Get the number of records processed.
+    pub fn n_records(&self) -> Option<usize> {
+        self.n_records
     }
 }
 
 #[async_trait]
-impl Collect for Collecter {
-    async fn collect(self) -> Result<EventSourceType> {
-        let (client, events) = self.into_inner();
+impl<'a> Collect for Collecter<'a> {
+    async fn collect(mut self) -> Result<EventSource> {
+        let (client, events, config) = self.into_inner();
+
+        let n_records = events.0.len();
         let events = events.sort_and_dedup();
 
         let events = Self::update_events(&client, events).await?;
         // Get only the known event types.
         let events = events.filter_known();
 
-        if Self::paired_ingest_mode()? {
-            Ok(EventSourceType::S3Paired(events.into()))
+        if config.paired_ingest_mode() {
+            Ok(EventSource::new(
+                EventSourceType::S3Paired(events.into()),
+                n_records,
+            ))
         } else {
-            Ok(EventSourceType::S3(TransposedS3EventMessages::from(events)))
+            Ok(EventSource::new(
+                EventSourceType::S3(TransposedS3EventMessages::from(events)),
+                n_records,
+            ))
         }
     }
 }
@@ -297,12 +303,14 @@ pub(crate) mod tests {
             .with_sqs_client(sqs_client)
             .with_s3_client(s3_client)
             .with_sqs_url("url")
-            .build_receive()
+            .build_receive(&Default::default())
             .await
             .unwrap()
             .collect()
             .await
-            .unwrap();
+            .unwrap()
+            .into_inner()
+            .0;
 
         assert_collected_events(events);
     }
@@ -319,7 +327,8 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn head() {
-        let mut collecter = test_collecter().await;
+        let config = Default::default();
+        let mut collecter = test_collecter(&config).await;
 
         set_s3_client_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
 
@@ -329,7 +338,8 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn head_not_found() {
-        let mut collecter = test_collecter().await;
+        let config = Default::default();
+        let mut collecter = test_collecter(&config).await;
 
         set_s3_client_expectations(
             &mut collecter.client,
@@ -342,7 +352,8 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn update_events() {
-        let mut collecter = test_collecter().await;
+        let config = Default::default();
+        let mut collecter = test_collecter(&config).await;
 
         let events = expected_flat_events_simple().sort_and_dedup();
 
@@ -365,11 +376,12 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn collect() {
-        let mut collecter = test_collecter().await;
+        let config = Default::default();
+        let mut collecter = test_collecter(&config).await;
 
         set_s3_client_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
 
-        let result = collecter.collect().await.unwrap();
+        let result = collecter.collect().await.unwrap().into_inner().0;
 
         assert_collected_events(result);
     }
@@ -429,8 +441,8 @@ pub(crate) mod tests {
         )
     }
 
-    async fn test_collecter() -> Collecter {
-        Collecter::new(Client::default(), expected_flat_events_simple())
+    async fn test_collecter(config: &Config) -> Collecter<'_> {
+        Collecter::new(Client::default(), expected_flat_events_simple(), config)
     }
 
     fn expected_receive_message() -> ReceiveMessageOutput {

@@ -1,13 +1,15 @@
 {
-  "sourceBucket" : "filemanager-inventory-test",
-  "destinationBucket" : "arn:aws:s3:::filemanager-inventory-test",
-  "version" : "2016-11-30",
-  "creationTimestamp" : "1715043600000",
-  "fileFormat" : "CSV",
-  "fileSchema" : "Bucket, Key, Size, LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, ObjectLockLegalHoldStatus, IntelligentTieringAccessTier, BucketKeyStatus, ChecksumAlgorithm",
-  "files" : [ {
-    "key" : "csv_inventory_no_version.csv.gz",
-    "size" : 193,
-    "MD5checksum" : "6d99ec633ee163ebf37ac34f8f6daa63"
-  } ]
+  "sourceBucket": "filemanager-inventory-test",
+  "destinationBucket": "arn:aws:s3:::filemanager-inventory-test",
+  "version": "2016-11-30",
+  "creationTimestamp": "1715043600000",
+  "fileFormat": "CSV",
+  "fileSchema": "Bucket, Key, Size, LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, ObjectLockLegalHoldStatus, IntelligentTieringAccessTier, BucketKeyStatus, ChecksumAlgorithm",
+  "files": [
+    {
+      "key": "csv_inventory_no_version.csv.gz",
+      "size": 193,
+      "MD5checksum": "6d99ec633ee163ebf37ac34f8f6daa63"
+    }
+  ]
 }

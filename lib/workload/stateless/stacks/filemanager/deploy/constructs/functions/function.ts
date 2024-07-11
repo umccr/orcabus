@@ -8,7 +8,7 @@ import path from 'path';
 import { exec } from 'cargo-lambda-cdk/lib/util';
 import { randomUUID } from 'node:crypto';
 import { print } from 'aws-cdk/lib/logging';
-import { PostgresManagerStack } from '../../../../postgres-manager/deploy/stack';
+import { PostgresManagerStack } from '../../../../../../stateful/stacks/postgres-manager/deploy/stack';
 import { FILEMANAGER_SERVICE_NAME } from '../../stack';
 import { NamedLambdaRole } from '../../../../../../components/named-lambda-role';
 
@@ -38,6 +38,10 @@ export type FunctionPropsNoPackage = {
    * Additional build environment variables when building the Lambda function.
    */
   readonly buildEnvironment?: { [key: string]: string };
+  /**
+   * Additional environment variables to set inside the Lambda function
+   */
+  readonly environment?: { [key: string]: string };
   /**
    * RUST_LOG string, defaults to trace on local crates and info everywhere else.
    */
@@ -121,6 +125,7 @@ export class Function extends Construct {
         PGUSER: FILEMANAGER_SERVICE_NAME,
         RUST_LOG:
           props.rustLog ?? `info,${props.package.replace('-', '_')}=trace,filemanager=trace`,
+        ...props.environment,
       },
       architecture: Architecture.ARM_64,
       role: this._role,

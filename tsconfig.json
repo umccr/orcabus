@@ -30,6 +30,8 @@
   "exclude": [
     "node_modules",
     "cdk.out",
-    "lib/workload/stateless/**",
+
+    // postgres-manager build using docker, so don't check dependencies locally
+    "**/postgres-manager",
   ]
 }

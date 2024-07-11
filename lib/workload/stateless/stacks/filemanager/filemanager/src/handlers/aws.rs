@@ -7,7 +7,7 @@ use aws_lambda_events::sqs::SqsEvent;
 use itertools::Itertools;
 use lambda_runtime::Error;
 use mockall_double::double;
-use sqlx::PgPool;
+use sea_orm::DatabaseConnection;
 use tracing::{debug, trace};
 
 #[double]
@@ -17,38 +17,44 @@ use crate::clients::aws::sqs::Client as SQSClient;
 use crate::database::aws::credentials::IamGeneratorBuilder;
 use crate::database::aws::query::Query;
 use crate::database::{Client, Ingest};
-use crate::events::aws::collecter::{Collecter, CollecterBuilder};
+use crate::env::Config as EnvConfig;
+use crate::error;
+use crate::events::aws::collecter::CollecterBuilder;
 use crate::events::aws::inventory::{DiffMessages, Inventory, Manifest};
 use crate::events::aws::message::EventType::Created;
 use crate::events::aws::{FlatS3EventMessages, TransposedS3EventMessages};
 use crate::events::{Collect, EventSourceType};
 
 /// Handle SQS events by manually calling the SQS receive function. This is meant
-/// to be run through something like API gateway to manually invoke ingestion.
-pub async fn receive_and_ingest(
+/// to be run through something like API gateway to manually invoke ingestion. Returns
+/// the number of records processed.
+pub async fn receive_and_ingest<'a>(
     s3_client: S3Client,
     sqs_client: SQSClient,
     sqs_url: Option<impl Into<String>>,
-    database_client: Client<'_>,
-) -> Result<Client, Error> {
-    let events = CollecterBuilder::default()
+    database_client: &'a Client,
+    env_config: &'a EnvConfig,
+) -> Result<usize, error::Error> {
+    let (events, n_records) = CollecterBuilder::default()
         .with_s3_client(s3_client)
         .with_sqs_client(sqs_client)
         .set_sqs_url(sqs_url)
-        .build_receive()
+        .build_receive(env_config)
         .await?
         .collect()
-        .await?;
+        .await?
+        .into_inner();
 
     database_client.ingest(events).await?;
-    Ok(database_client)
+    Ok(n_records)
 }
 
 /// Handle SQS events that go through an SqsEvent.
 pub async fn ingest_event(
     event: SqsEvent,
     s3_client: S3Client,
-    database_client: Client<'_>,
+    database_client: Client,
+    env_config: &EnvConfig,
 ) -> Result<Client, Error> {
     trace!("received event: {:?}", event);
 
@@ -68,10 +74,12 @@ pub async fn ingest_event(
 
     let events = CollecterBuilder::default()
         .with_s3_client(s3_client)
-        .build(events)
+        .build(events, env_config)
         .await
         .collect()
-        .await?;
+        .await?
+        .into_inner()
+        .0;
 
     trace!("ingesting events: {:?}", events);
 
@@ -82,12 +90,13 @@ pub async fn ingest_event(
 /// Handle an S3 inventory for ingestion.
 pub async fn ingest_s3_inventory(
     s3_client: S3Client,
-    database_client: Client<'_>,
+    database_client: Client,
     bucket: Option<String>,
     key: Option<String>,
     manifest: Option<Manifest>,
+    env_config: &EnvConfig,
 ) -> Result<Client, Error> {
-    if Collecter::paired_ingest_mode()? {
+    if env_config.paired_ingest_mode() {
         return Err(Error::from(
             "paired ingest mode is not supported for S3 inventory".to_string(),
         ));
@@ -164,26 +173,43 @@ pub async fn ingest_s3_inventory(
 }
 
 /// Create a postgres database pool using an IAM credential generator.
-pub async fn create_database_pool() -> Result<PgPool, Error> {
-    Ok(Client::create_pool(Some(IamGeneratorBuilder::default().build().await?)).await?)
+pub async fn create_database_pool(env_config: &EnvConfig) -> Result<DatabaseConnection, Error> {
+    let client = Client::from_generator(
+        Some(IamGeneratorBuilder::default().build(env_config).await?),
+        env_config,
+    )
+    .await?;
+
+    Ok(client.into_inner())
 }
 
 /// Update connection options with new credentials.
 /// Todo, replace this with sqlx `before_connect` once it is implemented.
-pub async fn update_credentials(pool: &PgPool) -> Result<(), Error> {
-    pool.set_connect_options(
-        Client::connect_options(Some(IamGeneratorBuilder::default().build().await?)).await?,
-    );
+pub async fn update_credentials(
+    connection: &DatabaseConnection,
+    env_config: &EnvConfig,
+) -> Result<(), Error> {
+    connection
+        .get_postgres_connection_pool()
+        .set_connect_options(
+            Client::pg_connect_options(
+                Some(IamGeneratorBuilder::default().build(env_config).await?),
+                env_config,
+            )
+            .await?,
+        );
 
     Ok(())
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use aws_lambda_events::sqs::SqsMessage;
     use chrono::DateTime;
     use sqlx::postgres::PgRow;
+    use std::future::Future;
 
+    use super::*;
     use crate::database::aws::ingester::tests::{
         assert_row, expected_message, fetch_results, remove_version_ids, replace_sequencers,
         test_events, test_ingester,
@@ -193,54 +219,31 @@ mod tests {
         expected_head_object, set_s3_client_expectations, set_sqs_client_expectations,
     };
     use crate::events::aws::inventory::tests::{
-        csv_manifest_from_key_expectations, EXPECTED_E_TAG_EMPTY, EXPECTED_E_TAG_KEY_2,
-        EXPECTED_LAST_MODIFIED_ONE, EXPECTED_LAST_MODIFIED_THREE, EXPECTED_LAST_MODIFIED_TWO,
+        csv_manifest_from_key_expectations, EXPECTED_LAST_MODIFIED_ONE,
+        EXPECTED_LAST_MODIFIED_THREE, EXPECTED_LAST_MODIFIED_TWO, EXPECTED_QUOTED_E_TAG_KEY_2,
         MANIFEST_BUCKET,
     };
+    use crate::events::aws::message::default_version_id;
     use crate::events::aws::message::EventType::Deleted;
     use crate::events::aws::tests::{
-        expected_event_record_simple, EXPECTED_SEQUENCER_CREATED_ONE,
+        expected_event_record_simple, EXPECTED_QUOTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE,
         EXPECTED_SEQUENCER_CREATED_TWO, EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SHA256,
         EXPECTED_VERSION_ID,
     };
     use crate::events::aws::FlatS3EventMessage;
     use crate::events::EventSourceType::S3;
-
-    use super::*;
+    use sqlx::PgPool;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_receive_and_ingest(pool: PgPool) {
-        let mut sqs_client = SQSClient::default();
-        let mut s3_client = S3Client::default();
-
-        set_sqs_client_expectations(&mut sqs_client);
-        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
-
-        let ingester = receive_and_ingest(s3_client, sqs_client, Some("url"), Client::new(pool))
-            .await
-            .unwrap();
-
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
-
-        assert_eq!(object_results.len(), 2);
-        assert_eq!(s3_object_results.len(), 2);
-        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created);
-        assert_row(
-            &s3_object_results[0],
-            message,
-            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
-            Some(Default::default()),
-        );
-
-        let message = expected_message(None, EXPECTED_VERSION_ID.to_string(), false, Deleted)
-            .with_sha256(None)
-            .with_last_modified_date(None);
-        assert_row(
-            &s3_object_results[1],
-            message,
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-            Some(Default::default()),
-        );
+        let client = Client::from_pool(pool);
+        test_receive_and_ingest_with(&client, |sqs_client, s3_client| async {
+            let config = Default::default();
+            receive_and_ingest(s3_client, sqs_client, Some("url"), &client, &config)
+                .await
+                .unwrap();
+        })
+        .await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -256,9 +259,14 @@ mod tests {
             }],
         };
 
-        let ingester = ingest_event(event, s3_client, Client::new(pool))
-            .await
-            .unwrap();
+        let ingester = ingest_event(
+            event,
+            s3_client,
+            Client::from_pool(pool),
+            &Default::default(),
+        )
+        .await
+        .unwrap();
 
         let (object_results, s3_object_results) = fetch_results(&ingester).await;
 
@@ -294,10 +302,11 @@ mod tests {
 
         let ingester = ingest_s3_inventory(
             client,
-            Client::new(pool.clone()),
+            Client::from_pool(pool.clone()),
             Some(MANIFEST_BUCKET.to_string()),
             Some("manifest.json".to_string()),
             None,
+            &Default::default(),
         )
         .await
         .unwrap();
@@ -357,6 +366,42 @@ mod tests {
         );
     }
 
+    pub(crate) async fn test_receive_and_ingest_with<F, Fut>(client: &Client, f: F)
+    where
+        F: FnOnce(SQSClient, S3Client) -> Fut,
+        Fut: Future<Output = ()>,
+    {
+        let mut sqs_client = SQSClient::default();
+        let mut s3_client = S3Client::default();
+
+        set_sqs_client_expectations(&mut sqs_client);
+        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
+
+        f(sqs_client, s3_client).await;
+
+        let (object_results, s3_object_results) = fetch_results(client).await;
+
+        assert_eq!(object_results.len(), 2);
+        assert_eq!(s3_object_results.len(), 2);
+        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created);
+        assert_row(
+            &s3_object_results[0],
+            message,
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            Some(Default::default()),
+        );
+
+        let message = expected_message(None, EXPECTED_VERSION_ID.to_string(), false, Deleted)
+            .with_sha256(None)
+            .with_last_modified_date(None);
+        assert_row(
+            &s3_object_results[1],
+            message,
+            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            Some(Default::default()),
+        );
+    }
+
     async fn test_inventory_ingestion_reorder(
         pool: PgPool,
         mut created_events: TransposedS3EventMessages,
@@ -365,10 +410,11 @@ mod tests {
 
         ingest_s3_inventory(
             client,
-            Client::new(pool.clone()),
+            Client::from_pool(pool.clone()),
             Some(MANIFEST_BUCKET.to_string()),
             Some("manifest.json".to_string()),
             None,
+            &Default::default(),
         )
         .await
         .unwrap();
@@ -394,21 +440,21 @@ mod tests {
             "inventory_test/".to_string(),
             0,
             EXPECTED_LAST_MODIFIED_ONE,
-            EXPECTED_E_TAG_EMPTY,
+            EXPECTED_QUOTED_E_TAG,
         );
         assert_inventory_records(
             &s3_object_results[1],
             "inventory_test/key1".to_string(),
             0,
             EXPECTED_LAST_MODIFIED_TWO,
-            EXPECTED_E_TAG_EMPTY,
+            EXPECTED_QUOTED_E_TAG,
         );
         assert_inventory_records(
             &s3_object_results[2],
             "inventory_test/key2".to_string(),
             5,
             EXPECTED_LAST_MODIFIED_THREE,
-            EXPECTED_E_TAG_KEY_2,
+            EXPECTED_QUOTED_E_TAG_KEY_2,
         );
 
         (
@@ -417,8 +463,8 @@ mod tests {
                 .with_bucket("bucket".to_string())
                 .with_key("inventory_test/key1".to_string())
                 .with_size(Some(0))
-                .with_version_id(FlatS3EventMessage::default_version_id().to_string())
-                .with_e_tag(Some(EXPECTED_E_TAG_EMPTY.to_string()))
+                .with_version_id(default_version_id())
+                .with_e_tag(Some(EXPECTED_QUOTED_E_TAG.to_string()))
                 .with_last_modified_date(Some(DateTime::default()))
                 .with_sha256(Some(EXPECTED_SHA256.to_string())),
         )
@@ -429,10 +475,11 @@ mod tests {
 
         ingest_s3_inventory(
             client,
-            Client::new(pool.clone()),
+            Client::from_pool(pool.clone()),
             Some(MANIFEST_BUCKET.to_string()),
             Some("manifest.json".to_string()),
             None,
+            &Default::default(),
         )
         .await
         .unwrap();
@@ -445,21 +492,21 @@ mod tests {
             "inventory_test/".to_string(),
             0,
             EXPECTED_LAST_MODIFIED_ONE,
-            EXPECTED_E_TAG_EMPTY,
+            EXPECTED_QUOTED_E_TAG,
         );
         assert_inventory_records(
             &s3_object_results[1],
             "inventory_test/key1".to_string(),
             0,
             EXPECTED_LAST_MODIFIED_TWO,
-            EXPECTED_E_TAG_EMPTY,
+            EXPECTED_QUOTED_E_TAG,
         );
         assert_inventory_records(
             &s3_object_results[2],
             "inventory_test/key2".to_string(),
             5,
             EXPECTED_LAST_MODIFIED_THREE,
-            EXPECTED_E_TAG_KEY_2,
+            EXPECTED_QUOTED_E_TAG_KEY_2,
         );
     }
 
@@ -474,7 +521,7 @@ mod tests {
             .with_bucket("bucket".to_string())
             .with_key(key)
             .with_size(Some(size))
-            .with_version_id(FlatS3EventMessage::default_version_id().to_string())
+            .with_version_id(default_version_id())
             .with_last_modified_date(Some(last_modified.parse().unwrap()))
             .with_e_tag(Some(e_tag.to_string()));
 

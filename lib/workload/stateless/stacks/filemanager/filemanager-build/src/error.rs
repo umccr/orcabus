@@ -1,14 +1,16 @@
 //! This module contains the crate's error types.
 //!
 
-use crate::error::ErrorKind::{IoError, LoadingEnvironment};
-use crate::workspace_path;
-use miette::{diagnostic, Diagnostic, NamedSource, SourceOffset};
 use std::fmt::{Display, Formatter};
 use std::fs::read_to_string;
 use std::panic::Location;
-use std::{io, result};
+use std::{fmt, io, result};
+
+use miette::{diagnostic, Diagnostic, NamedSource, SourceOffset};
 use thiserror::Error;
+
+use crate::error::ErrorKind::{IoError, LoadingEnvironment};
+use crate::workspace_path;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -17,6 +19,8 @@ pub type Result<T> = result::Result<T, Error>;
 pub enum ErrorKind {
     #[error("Error generating entities: {0}")]
     EntityGeneration(String),
+    #[error("Error generating OpenAPI definitions: {0}")]
+    OpenAPIGeneration(String),
     #[error("Missing or incorrect environment variables: {0}")]
     LoadingEnvironment(String),
     #[error("io error: {0}")]
@@ -34,7 +38,7 @@ pub struct Error {
 }
 
 impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.error_kind)
     }
 }

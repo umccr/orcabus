@@ -7,14 +7,15 @@ use tracing::debug;
 use uuid::Uuid;
 
 use crate::database::{Client, CredentialGenerator};
+use crate::env::Config;
 use crate::error::Result;
 use crate::events::aws::message::EventType;
 use crate::events::aws::{StorageClass, TransposedS3EventMessages};
 
 /// An ingester for S3 events.
 #[derive(Debug)]
-pub struct Ingester<'a> {
-    pub(crate) client: Client<'a>,
+pub struct Ingester {
+    pub(crate) client: Client,
 }
 
 /// The type representing an insert query.
@@ -24,17 +25,18 @@ struct Insert {
     number_duplicate_events: i64,
 }
 
-impl<'a> Ingester<'a> {
+impl Ingester {
     /// Create a new ingester.
-    pub fn new(client: Client<'a>) -> Self {
+    pub fn new(client: Client) -> Self {
         Self { client }
     }
 
     /// Create a new ingester with a default database client.
-    pub async fn with_defaults(generator: Option<impl CredentialGenerator>) -> Result<Self> {
-        Ok(Self {
-            client: Client::from_generator(generator).await?,
-        })
+    pub async fn with_defaults(
+        generator: Option<impl CredentialGenerator>,
+        config: &Config,
+    ) -> Result<Self> {
+        Ok(Self::new(Client::from_generator(generator, config).await?))
     }
 
     /// Reprocess inserts to find object ids that are not duplicates from the inserted events.
@@ -133,11 +135,11 @@ pub(crate) mod tests {
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
-    use crate::events::aws::message::EventType;
     use crate::events::aws::message::EventType::{Created, Deleted};
+    use crate::events::aws::message::{default_version_id, EventType};
     use crate::events::aws::tests::{
         expected_events_simple, expected_events_simple_delete_marker, expected_flat_events_simple,
-        EXPECTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
+        EXPECTED_QUOTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
         EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_SHA256,
         EXPECTED_VERSION_ID,
     };
@@ -544,7 +546,7 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -575,7 +577,7 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -615,7 +617,7 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -643,7 +645,7 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -824,7 +826,7 @@ pub(crate) mod tests {
         assert_missing_deleted(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -849,7 +851,7 @@ pub(crate) mod tests {
         assert_missing_deleted(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -875,7 +877,7 @@ pub(crate) mod tests {
         assert_missing_created(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -900,7 +902,7 @@ pub(crate) mod tests {
         assert_missing_created(
             &s3_object_results[0],
             &s3_object_results[1],
-            &FlatS3EventMessage::default_version_id(),
+            &default_version_id(),
         );
     }
 
@@ -1113,15 +1115,10 @@ pub(crate) mod tests {
                 .with_sequencer(Some("1".to_string())),
         ];
 
-        let message = expected_message(
-            None,
-            FlatS3EventMessage::default_version_id(),
-            false,
-            Created,
-        )
-        .with_sha256(None)
-        .with_e_tag(None)
-        .with_last_modified_date(None);
+        let message = expected_message(None, default_version_id(), false, Created)
+            .with_sha256(None)
+            .with_e_tag(None)
+            .with_last_modified_date(None);
         // 720 permutations
         run_permutation_test(&pool, event_permutations, 6, |s3_object_results| {
             assert_row(
@@ -1357,7 +1354,7 @@ pub(crate) mod tests {
         events
             .version_ids
             .iter_mut()
-            .for_each(|version_id| *version_id = FlatS3EventMessage::default_version_id());
+            .for_each(|version_id| *version_id = default_version_id());
 
         events
     }
@@ -1374,7 +1371,7 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) async fn fetch_results<'a>(client: &Client<'a>) -> (Vec<PgRow>, Vec<PgRow>) {
+    pub(crate) async fn fetch_results<'a>(client: &Client) -> (Vec<PgRow>, Vec<PgRow>) {
         (
             sqlx::query("select * from object")
                 .fetch_all(client.pool())
@@ -1387,7 +1384,7 @@ pub(crate) mod tests {
         )
     }
 
-    pub(crate) async fn fetch_results_ordered<'a>(client: &Client<'a>) -> Vec<PgRow> {
+    pub(crate) async fn fetch_results_ordered<'a>(client: &Client) -> Vec<PgRow> {
         sqlx::query("select * from s3_object order by sequencer, key, version_id")
             .fetch_all(client.pool())
             .await
@@ -1467,7 +1464,7 @@ pub(crate) mod tests {
             .with_size(size)
             .with_version_id(version_id)
             .with_last_modified_date(Some(DateTime::<Utc>::default()))
-            .with_e_tag(Some(EXPECTED_E_TAG.to_string()))
+            .with_e_tag(Some(EXPECTED_QUOTED_E_TAG.to_string()))
             .with_sha256(Some(EXPECTED_SHA256.to_string()))
             .with_is_delete_marker(is_delete_marker)
             .with_event_type(event_type)
@@ -1527,7 +1524,7 @@ pub(crate) mod tests {
         update_test_events(expected_events_simple_delete_marker())
     }
 
-    pub(crate) fn test_ingester<'a>(pool: PgPool) -> Client<'a> {
-        Client::new(pool)
+    pub(crate) fn test_ingester(pool: PgPool) -> Client {
+        Client::from_pool(pool)
     }
 }
