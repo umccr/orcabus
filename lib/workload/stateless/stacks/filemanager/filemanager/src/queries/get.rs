@@ -60,27 +60,27 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_get_object(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await;
+        let entries = initialize_database(&client, 10).await.objects;
 
         let first = entries.first().unwrap();
         let builder = GetQueryBuilder::new(&client);
-        let result = builder.get_object(first.0.object_id).await.unwrap();
+        let result = builder.get_object(first.object_id).await.unwrap();
 
-        assert_eq!(result.as_ref(), Some(&first.0));
+        assert_eq!(result.as_ref(), Some(first));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_s3_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await;
+        let entries = initialize_database(&client, 10).await.s3_objects;
 
         let first = entries.first().unwrap();
         let builder = GetQueryBuilder::new(&client);
         let result = builder
-            .get_s3_object_by_id(first.1.s3_object_id)
+            .get_s3_object_by_id(first.s3_object_id)
             .await
             .unwrap();
 
-        assert_eq!(result.as_ref(), Some(&first.1));
+        assert_eq!(result.as_ref(), Some(first));
     }
 }

@@ -60,73 +60,33 @@ pub async fn get_s3_object_by_id(
 
 #[cfg(test)]
 mod tests {
-    use axum::body::to_bytes;
-    use axum::body::Body;
-    use axum::http::Request;
-    use parquet::data_type::AsBytes;
-    use serde_json::from_slice;
     use sqlx::PgPool;
-    use tower::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::queries::tests::initialize_database;
-    use crate::routes::{api_router, AppState};
+    use crate::routes::list::tests::response_from;
+    use crate::routes::AppState;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await;
+        let entries = initialize_database(state.client(), 10).await.objects;
 
         let first = entries.first().unwrap();
-        let app = api_router(state);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri(format!("/objects/{}", first.0.object_id))
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        let result = from_slice::<Object>(
-            to_bytes(response.into_body(), usize::MAX)
-                .await
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
-
-        assert_eq!(result, first.0);
+        let result: Object = response_from(state, &format!("/objects/{}", first.object_id)).await;
+        assert_eq!(&result, first);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_s3_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await;
+        let entries = initialize_database(state.client(), 10).await.s3_objects;
 
         let first = entries.first().unwrap();
-        let app = api_router(state);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri(format!("/s3_objects/{}", first.1.s3_object_id))
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        let result = from_slice::<S3Object>(
-            to_bytes(response.into_body(), usize::MAX)
-                .await
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
-
-        assert_eq!(result, first.1);
+        let result: S3Object =
+            response_from(state, &format!("/s3_objects/{}", first.s3_object_id)).await;
+        assert_eq!(&result, first);
     }
 }
