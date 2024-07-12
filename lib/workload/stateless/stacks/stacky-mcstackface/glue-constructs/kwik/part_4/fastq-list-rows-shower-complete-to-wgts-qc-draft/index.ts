@@ -101,7 +101,7 @@ export class WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct extends Co
         definitionBody: sfn.DefinitionBody.fromFile(
           path.join(
             __dirname,
-            'step_function_templates',
+            'step_functions_templates',
             'fastq_list_row_shower_complete_event_to_wgts_qc_draft_events_sfn_template.asl.json'
           )
         ),

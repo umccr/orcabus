@@ -1,0 +1,237 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Get Event Data",
+  "States": {
+    "Get Event Data": {
+      "Type": "Pass",
+      "Next": "Get Libraries from Instrument Run",
+      "Parameters": {
+        "fastq_list_row_shower_complete_event_data.$": "$.payload.data"
+      }
+    },
+    "Get Libraries from Instrument Run": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "stacky-cttsov2-workflow-glue-table",
+        "Key": {
+          "id.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId",
+          "id_type": "instrument_run"
+        }
+      },
+      "ResultSelector": {
+        "library_list.$": "$.Item.library_set.SS"
+      },
+      "ResultPath": "$.get_libraries_step",
+      "Next": "Iterate over each library"
+    },
+    "Iterate over each library": {
+      "Type": "Map",
+      "ItemsPath": "$.get_libraries_step.library_list",
+      "ItemSelector": {
+        "library_id_hash.$": "$$.Map.Item.Value",
+        "instrument_run_id.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Get Draft Event Inputs",
+        "States": {
+          "Get Draft Event Inputs": {
+            "Type": "Parallel",
+            "Branches": [
+              {
+                "StartAt": "Get FastqListRowIds from Library",
+                "States": {
+                  "Get FastqListRowIds from Library": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:getItem",
+                    "Parameters": {
+                      "TableName": "stacky-cttsov2-workflow-glue-table",
+                      "Key": {
+                        "id.$": "$.library_id_hash",
+                        "id_type": "library"
+                      }
+                    },
+                    "ResultPath": "$.get_fastq_list_row_ids_step",
+                    "ResultSelector": {
+                      "internal_id.$": "$.Item.internal_id.S",
+                      "fastq_list_row_id_list.$": "$.Item.fastq_list_row_id_set.SS"
+                    },
+                    "Next": "For each FastqListRowID"
+                  },
+                  "For each FastqListRowID": {
+                    "Type": "Map",
+                    "ItemsPath": "$.get_fastq_list_row_ids_step.fastq_list_row_id_list",
+                    "ItemSelector": {
+                      "fastq_list_row_id.$": "$$.Map.Item.Value"
+                    },
+                    "ItemProcessor": {
+                      "ProcessorConfig": {
+                        "Mode": "INLINE"
+                      },
+                      "StartAt": "Get Row Data",
+                      "States": {
+                        "Get Row Data": {
+                          "Type": "Parallel",
+                          "Branches": [
+                            {
+                              "StartAt": "Get Fastq List Row Data",
+                              "States": {
+                                "Get Fastq List Row Data": {
+                                  "Type": "Task",
+                                  "Resource": "arn:aws:states:::dynamodb:getItem",
+                                  "Parameters": {
+                                    "TableName": "stacky-cttsov2-workflow-glue-table",
+                                    "Key": {
+                                      "id.$": "$.fastq_list_row_id",
+                                      "id_type": "fastq_list_row"
+                                    }
+                                  },
+                                  "End": true,
+                                  "ResultSelector": {
+                                    "fastq_list_row.$": "States.StringToJson($.Item.fastq_list_row_json.S)"
+                                  },
+                                  "ResultPath": "$.get_fastq_list_row_step"
+                                }
+                              }
+                            },
+                            {
+                              "StartAt": "Get BCLConvert Data",
+                              "States": {
+                                "Get BCLConvert Data": {
+                                  "Type": "Task",
+                                  "Resource": "arn:aws:states:::dynamodb:getItem",
+                                  "Parameters": {
+                                    "TableName": "stacky-cttsov2-workflow-glue-table",
+                                    "Key": {
+                                      "id.$": "$.fastq_list_row_id",
+                                      "id_type": "bclconvert_data"
+                                    }
+                                  },
+                                  "End": true,
+                                  "ResultSelector": {
+                                    "bclconvert_data_row.$": "States.StringToJson($.Item.bclconvert_data_row.S)"
+                                  },
+                                  "ResultPath": "$.get_bclconvert_data_row_step"
+                                }
+                              }
+                            }
+                          ],
+                          "ResultSelector": {
+                            "fastq_list_row.$": "$.[0].get_fastq_list_row_step.fastq_list_row",
+                            "bclconvert_data_row.$": "$.[1].get_bclconvert_data_row_step.bclconvert_data_row"
+                          },
+                          "End": true
+                        }
+                      }
+                    },
+                    "ResultSelector": {
+                      "bclconvert_data_rows.$": "$.[*].bclconvert_data_row",
+                      "fastq_list_rows.$": "$.[*].fastq_list_row"
+                    },
+                    "ResultPath": "$.get_fastq_list_row_values_step",
+                    "Next": "Generate SampleSheet Json from DB Inputs"
+                  },
+                  "Generate SampleSheet Json from DB Inputs": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                      "FunctionName": "arn:aws:lambda:ap-southeast-2:843407916570:function:OrcaBusBeta-StackyMcStack-stackygluejbweldfastqlis-09BnJPPlxKbk:1",
+                      "Payload": {
+                        "instrument_run_id.$": "$.instrument_run_id",
+                        "bclconvert_data_rows.$": "$.get_fastq_list_row_values_step.bclconvert_data_rows"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2
+                      }
+                    ],
+                    "ResultPath": "$.generate_samplesheet_step",
+                    "ResultSelector": {
+                      "samplesheet.$": "$.Payload.samplesheet"
+                    },
+                    "End": true
+                  }
+                }
+              },
+              {
+                "StartAt": "Get Portal Run ID and Workflow Run Name",
+                "States": {
+                  "Get Portal Run ID and Workflow Run Name": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::states:startExecution.sync:2",
+                    "Parameters": {
+                      "StateMachineArn": "arn:aws:states:ap-southeast-2:843407916570:stateMachine:cttsov2FastqListRowShowerCompleteToWorkflowDraftRun-preamble-sfn",
+                      "Input": {}
+                    },
+                    "ResultPath": "$.get_sfn_preamble_outputs_step",
+                    "ResultSelector": {
+                      "portal_run_id.$": "$.Output.portal_run_id",
+                      "workflow_run_name.$": "$.Output.workflow_run_name"
+                    },
+                    "End": true
+                  }
+                }
+              }
+            ],
+            "ResultSelector": {
+              "sample_id.$": "$[0].get_fastq_list_row_ids_step.internal_id",
+              "samplesheet.$": "$[0].generate_samplesheet_step.samplesheet",
+              "fastq_list_rows.$": "$[0].get_fastq_list_row_values_step.fastq_list_rows",
+              "portal_run_id.$": "$[1].get_sfn_preamble_outputs_step.portal_run_id",
+              "workflow_run_name.$": "$[1].get_sfn_preamble_outputs_step.workflow_run_name"
+            },
+            "ResultPath": "$.get_draft_inputs",
+            "Next": "Push cttsov2 draft event"
+          },
+          "Push cttsov2 draft event": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents",
+            "Parameters": {
+              "Entries": [
+                {
+                  "Detail": {
+                    "portalRunId.$": "$.get_draft_inputs.portal_run_id",
+                    "timestamp.$": "$$.State.EnteredTime",
+                    "status": "draft",
+                    "workflowName": "cttsov2",
+                    "workflowVersion": "2.5.0",
+                    "workflowRunName.$": "$.get_draft_inputs.workflow_run_name",
+                    "payload": {
+                      "refId": null,
+                      "version": "0.1.0",
+                      "data": {
+                        "inputs": {
+                          "sampleId.$": "$.get_draft_inputs.sample_id",
+                          "instrumentRunId.$": "$.instrument_run_id",
+                          "samplesheet.$": "$.get_draft_inputs.samplesheet",
+                          "fastqListRows.$": "$.get_draft_inputs.fastq_list_rows"
+                        }
+                      }
+                    }
+                  },
+                  "DetailType": "WorkflowDraftRunStateChange",
+                  "EventBusName": "OrcaBusMain",
+                  "Source": "orcabus.cttsov2inputeventglue"
+                }
+              ]
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

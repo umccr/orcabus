@@ -46,11 +46,6 @@
                     "bclconvertReportDirectory.$": "States.Format('{}Reports/', $.inputs.payload.data.outputs.outputUri)",
                     "interopDirectory.$": "States.Format('{}InterOp/', $.inputs.payload.data.outputs.outputUri)",
                     "instrumentRunId.$": "$.inputs.payload.data.outputs.instrumentRunId"
-                  },
-                  "tags": {
-                    "userTags": {
-                      "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId"
-                    }
                   }
                 }
               }

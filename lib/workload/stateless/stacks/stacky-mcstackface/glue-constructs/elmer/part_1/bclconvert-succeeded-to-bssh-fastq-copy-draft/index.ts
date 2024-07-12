@@ -3,6 +3,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import path from 'path';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../../../../components/sfn-workflowdraftrunstatechange-common-preamble';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
@@ -21,7 +22,7 @@ Part 1
 * Output Event status: `draft`
 
 
-* The BCLConvertSuccededToBsshFastqCopyDraft Construct
+* The BCLConvertSucceededToBsshFastqCopyDraft Construct
   * Subscribes to the BCLConvertManagerEventHandler Stack outputs and creates the input for the BSSHFastqCopyManager
   * Pushes an event payload of the input for the BCLConvertSuccededToBsshFastqCopyDraft Construct
 
@@ -75,7 +76,7 @@ export class BsshFastqCopyManagerDraftMakerConstruct extends Construct {
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,
-          'step_function_templates',
+          'step_functions_templates',
           'bclconvert_succeeded_to_bssh_fastq_copy_draft_template.asl.json'
         )
       ),
@@ -115,5 +116,31 @@ export class BsshFastqCopyManagerDraftMakerConstruct extends Construct {
 
     // Add state machine execution permissions to stateMachine role
     sfn_preamble.grantStartExecution(draftMakerSfn.role);
+
+    const eventRule = new events.Rule(this, 'update_database_on_new_samplesheet_event_rule', {
+      ruleName: `stacky-${this.bsshFastqCopyManagerDraftMakerEventMap.prefix}-event-rule`,
+      eventBus: props.eventBusObj,
+      eventPattern: {
+        source: [this.bsshFastqCopyManagerDraftMakerEventMap.triggerSource],
+        detailType: [this.bsshFastqCopyManagerDraftMakerEventMap.triggerDetailType],
+        detail: {
+          status: [
+            { 'equals-ignore-case': this.bsshFastqCopyManagerDraftMakerEventMap.triggerStatus },
+          ],
+          workflowName: [
+            {
+              'equals-ignore-case': this.bsshFastqCopyManagerDraftMakerEventMap.triggerWorkflowName,
+            },
+          ],
+        },
+      },
+    });
+
+    // Add target to event rule
+    eventRule.addTarget(
+      new eventsTargets.SfnStateMachine(draftMakerSfn, {
+        input: events.RuleTargetInput.fromEventPath('$.detail'),
+      })
+    );
   }
 }

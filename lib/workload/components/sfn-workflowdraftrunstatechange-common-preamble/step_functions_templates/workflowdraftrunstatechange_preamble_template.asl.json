@@ -41,7 +41,7 @@
       "Parameters": {
         "FunctionName": "${__generate_workflow_run_name_lambda_function_arn__}",
         "Payload": {
-          "portal_run_id.$": "$.generate_portal_run_id_step",
+          "portal_run_id.$": "$.generate_portal_run_id_step.portal_run_id",
           "workflow_name": "${__workflow_name__}",
           "workflow_version": "${__workflow_version__}"
         }
@@ -62,7 +62,7 @@
       "Next": "Save Portal Run ID To Input Maker DB",
       "ResultPath": "$.generate_workflow_run_name_step",
       "ResultSelector": {
-        "workflow_run_name": "$.Payload.workflow_run_name"
+        "workflow_run_name.$": "$.Payload.workflow_run_name"
       }
     },
     "Save Portal Run ID To Input Maker DB": {

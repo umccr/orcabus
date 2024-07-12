@@ -14,6 +14,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import { PythonLambdaUuidConstruct } from '../python-lambda-uuid-generator-function';
+import { PythonLambdaFlattenListOfObjectsConstruct } from '../python-lambda-flatten-list-of-objects';
 
 export interface WorkflowRunStateChangeInternalInputMakerProps {
   /* Object name prefixes */
@@ -65,6 +66,12 @@ export class WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct e
       }
     );
 
+    /* Flatten Object list py */
+    const flattenObjectListLambdaObj = new PythonLambdaFlattenListOfObjectsConstruct(
+      this,
+      'flatten_object_list_lambda'
+    ).lambdaObj;
+
     /* Generate the statemachine */
     const engineParameterGeneratorStateMachineSfn = new sfn.StateMachine(
       this,
@@ -80,7 +87,9 @@ export class WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct e
         ),
         definitionSubstitutions: {
           __fill_placeholders_in_engine_parameters_lambda_function_arn__:
-            fillPlaceholdersInEventPayloadDataLambdaObj.functionArn,
+            fillPlaceholdersInEventPayloadDataLambdaObj.currentVersion.functionArn,
+          __flatten_list_of_objects_lambda_function_arn__:
+            flattenObjectListLambdaObj.currentVersion.functionArn,
         },
       }
     );
@@ -100,12 +109,21 @@ export class WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct e
       ssmParameterObj.grantRead(engineParameterGeneratorStateMachineSfn.role);
     });
 
+    // Add permissions for the statemachine to fill in the placeholders
+    [flattenObjectListLambdaObj, fillPlaceholdersInEventPayloadDataLambdaObj].forEach(
+      (lambdaObj) => {
+        lambdaObj.currentVersion.grantInvoke(engineParameterGeneratorStateMachineSfn.role);
+      }
+    );
+
     /*
     Part 2 - Build the AWS State Machine
     */
     /* Build the uuid generator lambda */
     const uuidGeneratorLambda = new PythonLambdaUuidConstruct(this, 'uuid_generator_lambda');
 
+    // FIXME - sfn should check that the data object in the input
+    // FIXME matches the dataobject in the database first before raising the event
     this.stepFunctionObj = new sfn.StateMachine(this, 'StateMachine', {
       stateMachineName: `${props.stateMachinePrefix}-draft-to-ready-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(

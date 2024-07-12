@@ -7,6 +7,8 @@ import { WgtsQcInitialiseLibraryAndFastqListRowConstruct } from './part_2/initia
 import { WgtsQcPopulateFastqListRowConstruct } from './part_3/populate-fastq-list-row-dbs';
 import { WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct } from './part_4/fastq-list-rows-shower-complete-to-wgts-qc-draft';
 import { WgtsQcInputMakerConstruct } from './part_5/wgts-qc-draft-to-ready';
+import { FastqListRowQcCompleteConstruct } from './part_6/push-fastq-list-row-qc-complete-event';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting wgts qc analyses
@@ -23,6 +25,8 @@ export interface wgtsQcGlueHandlerConstructProps {
   analysisLogsUriSsmParameterObj: ssm.IStringParameter;
   analysisCacheUriSsmParameterObj: ssm.IStringParameter;
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
+  /* Secrets */
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class WgtsQcGlueHandlerConstruct extends Construct {
@@ -134,5 +138,45 @@ export class WgtsQcGlueHandlerConstruct extends Construct {
         inputMakerTableObj: props.inputMakerTableObj,
       }
     );
+
+    /*
+    Part 6
+
+    Input Event Source: `orcabus.workflowmanager`
+    Input Event DetailType: `WorkflowRunStateChange`
+    Input Event status: `succeeded`
+    Input Event WorkflowName: `wgts_qc`
+
+    Output Event Source: `orcabus.wgtsqcinputeventglue`
+    Output Event DetailType: `FastqListRowStateChange`
+    Output Event status: `QcComplete`
+
+    * Subscribe to workflow run state change events, map the fastq list row id from the portal run id in the data base
+    * We output the fastq list row id to the event bus with the status `QcComplete`
+    */
+    const wgtsQcCompleteToFastqListRowQcComplete = new FastqListRowQcCompleteConstruct(
+      this,
+      'fastq_list_row_qc_complete',
+      {
+        eventBusObj: props.eventBusObj,
+        tableObj: props.wgtsQcGlueTableObj,
+        icav2JwtSecretsObj: props.icav2AccessTokenSecretObj,
+      }
+    );
+
+    /*
+    Part 7
+
+    Input Event Source: `orcabus.wgtsqcinputeventglue`
+    Input Event DetailType: `FastqListRowStateChange`
+    Input Event status: `QcComplete`
+
+    Output Event Source: `orcabus.wgtsqcinputeventglue`
+    Output Event DetailType: `LibraryStateChange`
+    Output Event status: `QcComplete`
+
+    * Once all fastq list rows have been processed for a given library, we fire off a library state change event
+    * This will contain the qc information such as coverage + duplicate rate (for wgs) or exon coverage (for wts)
+    */
   }
 }

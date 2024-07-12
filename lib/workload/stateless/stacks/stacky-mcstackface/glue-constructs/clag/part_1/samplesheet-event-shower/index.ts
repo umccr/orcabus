@@ -93,7 +93,7 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,
-          'step_function_templates',
+          'step_functions_templates',
           'samplesheet_event_shower_sfn_template.asl.json'
         )
       ),

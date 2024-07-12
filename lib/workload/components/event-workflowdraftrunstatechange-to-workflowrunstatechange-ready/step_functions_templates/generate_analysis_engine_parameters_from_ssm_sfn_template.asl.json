@@ -13,8 +13,8 @@
       "Type": "Map",
       "ItemsPath": "$.inputs.ssm_parameters_list",
       "ItemSelector": {
-        "engine_parameter_key": "$$.Map.Item.Value.engine_parameter_key",
-        "ssm_name": "$$.Map.Item.Value.ssm_name"
+        "engine_parameter_key.$": "$$.Map.Item.Value.engine_parameter_key",
+        "ssm_name.$": "$$.Map.Item.Value.ssm_name"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
@@ -38,13 +38,13 @@
             "Type": "Pass",
             "End": true,
             "Result": {
-              "output.$": "States.StringToJson(States.Format('\\{\"{}\":\\{\"S\":\"{}\"\\}\\}', $.engine_parameter_key, ''))"
+              "output.$": "States.StringToJson(States.Format('\\{\"{}\":\"{}\"\\}', $.engine_parameter_key, ''))"
             }
           },
           "Get EngineParameter URI": {
             "Type": "Task",
             "Parameters": {
-              "Name": "$.ssm_name"
+              "Name.$": "$.ssm_name"
             },
             "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
             "ResultSelector": {
@@ -59,39 +59,70 @@
               {
                 "Variable": "$.engine_parameter_key",
                 "StringMatches": "projectId",
-                "Next": "Set Map Output For Project ID"
+                "Next": "Convert String to Json for Project ID SSM Parameter"
               }
             ],
             "Default": "Set Map Output"
+          },
+          "Convert String to Json for Project ID SSM Parameter": {
+            "Type": "Pass",
+            "Next": "Set Map Output For Project ID",
+            "Parameters": {
+              "project_as_json.$": "States.StringToJson($.get_uri_step.engine_parameter_uri)"
+            },
+            "ResultPath": "$.get_project_id_from_ssm_step"
           },
           "Set Map Output For Project ID": {
             "Type": "Pass",
             "End": true,
             "Parameters": {
-              "output.$": "States.StringToJson(States.Format('\\{\"{}\":\\{\"S\":\"{}\"\\}\\}', $.engine_parameter_key, States.StringToJson($.get_uri_step.engine_parameter_uri).projectId))"
+              "output.$": "States.StringToJson(States.Format('\\{\"{}\":\"{}\"\\}', $.engine_parameter_key, $.get_project_id_from_ssm_step.project_as_json.project_id))"
             }
           },
           "Set Map Output": {
             "Type": "Pass",
             "End": true,
             "Parameters": {
-              "output.$": "States.StringToJson(States.Format('\\{\"{}\":\\{\"S\":\"{}\"\\}\\}', $.engine_parameter_key, $.get_uri_step.engine_parameter_uri))"
+              "output.$": "States.StringToJson(States.Format('\\{\"{}\":\"{}\"\\}', $.engine_parameter_key, $.get_uri_step.engine_parameter_uri))"
             }
           }
         }
       },
-      "ResultPath": "$.get_ssm_parameters_step",
-      "Next": "Collect Output attributes of each map state"
-    },
-    "Collect Output attributes of each map state": {
-      "Type": "Pass",
-      "Next": "Fill Placeholders In Engine Parameters",
-      "Parameters": {
-        "map_json.$": "States.JsonMerge($.get_ssm_parameters_step[*].output)"
+      "ResultSelector": {
+        "output.$": "$.[*].output"
       },
-      "ResultPath": "$.get_engine_parameters_step"
+      "ResultPath": "$.get_ssm_parameters_step",
+      "Next": "Flatten list of objects"
     },
-    "Fill Placeholders In Engine Parameters": {
+    "Flatten list of objects": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__flatten_list_of_objects_lambda_function_arn__}",
+        "Payload": {
+          "object_list.$": "$.get_ssm_parameters_step.output"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Fill placeholders in engine parameters",
+      "ResultPath": "$.get_engine_parameters_step",
+      "ResultSelector": {
+        "flattened_object.$": "$.Payload.flattened_object"
+      }
+    },
+    "Fill placeholders in engine parameters": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
@@ -100,8 +131,8 @@
           "portal_run_id.$": "$.inputs.portal_run_id",
           "workflow_name.$": "$.inputs.workflow_name",
           "workflow_version.$": "$.inputs.workflow_version",
-          "event_data_input.$": "$.inputs.event_data_input",
-          "engine_parameters.$": "$.get_engine_parameters_step.map_json"
+          "event_data_inputs.$": "$.inputs.event_data_inputs",
+          "engine_parameters.$": "$.get_engine_parameters_step.flattened_object"
         }
       },
       "Retry": [

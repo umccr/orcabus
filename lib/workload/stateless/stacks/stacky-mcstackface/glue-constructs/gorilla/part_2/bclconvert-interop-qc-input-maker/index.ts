@@ -33,10 +33,10 @@ export class BclconvertInteropQcDraftToReadyMakerConstruct extends Construct {
   public readonly bclconvertInteropQcDraftToReadyMakerEventMap = {
     prefix: 'bclconvertInteropQc',
     tablePartition: 'bclconvert_interop_qc',
-    triggerSource: 'orcabus.bsshfastqcopyinputeventglue',
+    triggerSource: 'orcabus.bclconvertinteropqcinputeventglue',
     triggerStatus: 'draft',
     triggerDetailType: 'WorkflowDraftRunStateChange',
-    outputSource: 'orcabus.bsshfastqcopyinputeventglue',
+    outputSource: 'orcabus.bclconvertinteropqcinputeventglue',
     outputStatus: 'ready',
     payloadVersion: '2024.05.24',
     workflowName: 'bclconvertInteropQc',

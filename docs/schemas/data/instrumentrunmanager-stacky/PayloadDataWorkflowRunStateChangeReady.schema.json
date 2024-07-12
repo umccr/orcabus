@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/instrumentrunmanager-stacky/PayloadDataWorkflowRunStateChangeReady.schema.json",
+  "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataWorkflowRunStateChangeReady",
+  "title": "PayloadDataWorkflowRunStateChangeReady",
+  "required": [
+    "inputs",
+    "engineParameters"
+  ],
+  "properties": {
+    "inputs": {
+      "type": "object"
+    },
+    "engineParameters": {
+      "type": "object",
+      "properties": {
+        "outputUri": {
+          "type": "string"
+        },
+        "cacheUri": {
+          "type": "string"
+        },
+        "logsUri": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "analysisId": {
+          "type": "string"
+        },
+        "pipelineId": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

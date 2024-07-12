@@ -44,7 +44,7 @@ export class WgtsQcPopulateFastqListRowConstruct extends Construct {
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,
-          'step_function_templates',
+          'step_functions_templates',
           'update_fastq_list_row_sfn_template.asl.json'
         )
       ),

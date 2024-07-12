@@ -21,17 +21,17 @@ Output Event Source: `orcabus.wgtsqcinputeventglue`
 Output Event DetailType: `FastqListRowStateChange`
 Output Event status: `QcComplete`
 
-* Subscribe to workflow run state change events, collect the fastq list row id from the user tags attribute
+* Subscribe to workflow run state change events, map the fastq list row id from the portal run id in the data base
 * We output the fastq list row id to the event bus with the status `QcComplete`
 */
 
-export interface WgtsQcCompleteConstructProps {
+export interface FastqListRowQcCompleteConstructProps {
   eventBusObj: events.IEventBus;
   tableObj: dynamodb.ITableV2;
   icav2JwtSecretsObj: secretsManager.ISecret;
 }
 
-export class WgtsQcCompleteConstruct extends Construct {
+export class FastqListRowQcCompleteConstruct extends Construct {
   public readonly WgtsQcCompleteMap = {
     prefix: 'wgtsQcComplete',
     tablePartition: 'fastq_list_row',
@@ -46,7 +46,7 @@ export class WgtsQcCompleteConstruct extends Construct {
     payloadVersion: '2024.05.24',
   };
 
-  constructor(scope: Construct, id: string, props: WgtsQcCompleteConstructProps) {
+  constructor(scope: Construct, id: string, props: FastqListRowQcCompleteConstructProps) {
     super(scope, id);
 
     /*
@@ -87,7 +87,7 @@ export class WgtsQcCompleteConstruct extends Construct {
     const qcCompleteSfn = new sfn.StateMachine(this, 'qc_complete_sfn', {
       stateMachineName: `${this.WgtsQcCompleteMap.prefix}-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(
-        path.join(__dirname, 'step_function_templates', 'wgts_qc_complete_sfn_template.asl.json')
+        path.join(__dirname, 'step_functions_templates', 'wgts_qc_complete_sfn_template.asl.json')
       ),
       definitionSubstitutions: {
         /* Events */

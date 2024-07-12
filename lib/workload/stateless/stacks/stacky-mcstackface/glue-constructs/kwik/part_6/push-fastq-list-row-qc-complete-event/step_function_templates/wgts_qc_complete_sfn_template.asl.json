@@ -94,7 +94,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.collect_tags_from_analysis_event_step.user_tags.fastq_list_row_id",
+          "id.$": "$.get_fastq_list_row_id_from_portal_run_id.fastq_list_row_id",
           "id_type": "${__fastq_list_row_partition__}"
         },
         "UpdateExpression": "SET qc_metrics_json = :qc_metrics_json",
@@ -117,7 +117,7 @@
       "Parameters": {
         "FunctionName": "${__generate_event_output_objects_lambda_function_arn__}",
         "Payload": {
-          "fastq_list_row_id.$": "$.collect_tags_from_analysis_event_step.user_tags.fastq_list_row_id",
+          "fastq_list_row_id.$": "$.get_fastq_list_row_id_from_portal_run_id.fastq_list_row_id",
           "sample_type.$": "$.get_library_info_step.sample_type",
           "qc_metrics.$": "$.get_qc_metrics_step.qc_metrics",
           "library_internal_id.$": "$.get_library_info_step.internal_id"

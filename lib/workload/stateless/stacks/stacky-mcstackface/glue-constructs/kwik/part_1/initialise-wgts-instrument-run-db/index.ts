@@ -44,7 +44,7 @@ export class WgtsQcInitialiseInstrumentRunDbRowConstruct extends Construct {
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,
-          'step_function_templates',
+          'step_functions_templates',
           'initialise_wgts_instrument_run_db_sfn_template.asl.json'
         )
       ),

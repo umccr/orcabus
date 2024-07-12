@@ -23,9 +23,9 @@
       "Parameters": {
         "FunctionName": "${__bclconvert_success_event_lambda_arn__}",
         "Payload": {
-          "project_id.$": "$.workflow_inputs.payload.data.bsshProjectId",
-          "analysis_id.$": "$.workflow_inputs.payload.data.bsshAnalysisId",
-          "output_uri.$": "$.workflow_inputs.payload.data.outputUri"
+          "project_id.$": "$.workflow_inputs.payload.data.inputs.bsshProjectId",
+          "analysis_id.$": "$.workflow_inputs.payload.data.inputs.bsshAnalysisId",
+          "output_uri.$": "$.workflow_inputs.payload.data.engineParameters.outputUri"
         }
       },
       "Retry": [
@@ -79,6 +79,7 @@
             "refId": null,
             "version": "${__payload_version__}",
             "data": {
+              "inputs": "$.workflow_inputs.payload.data.inputs",
               "engineParameters": "$.workflow_inputs.payload.data.engineParameters",
               "outputs": {
                 "outputUri.$": "$.workflow_inputs.payload.data.engineParameters.outputUri",

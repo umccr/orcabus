@@ -12,9 +12,10 @@
           "id_type": "db_uuid"
         }
       },
-      "ResultPath": "$.get_database_entry_step",
+      "ResultPath": "$.get_ready_event_step",
       "ResultSelector": {
-        "event_payload.$": "States.StringToJson($.Item.launch_event_payload.S)"
+        "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "engine_parameters.$": "States.StringToJson($.Item.engine_parameters.S)"
       },
       "Next": "Update Entry Pre-Fastq Copy"
     },
@@ -49,8 +50,8 @@
               "Parameters": {
                 "FunctionName": "${__upload_samplesheet_to_cache_dir__}",
                 "Payload": {
-                  "cache_uri.$": "$.get_database_entry_step.event_payload.data.cacheUri",
-                  "samplesheet.$": "$.get_database_entry_step.event_payload.data.samplesheet"
+                  "cache_uri.$": "$.get_ready_event_step.engine_parameters.cacheUri",
+                  "samplesheet.$": "$.get_ready_event_step.inputs.samplesheet"
                 }
               },
               "Retry": [
@@ -85,9 +86,9 @@
               "Parameters": {
                 "FunctionName": "${__generate_copy_manifest_dict__}",
                 "Payload": {
-                  "sample_id.$": "$.get_database_entry_step.event_payload.data.sampleId",
-                  "cache_uri.$": "$.get_database_entry_step.event_payload.data.cacheUri",
-                  "fastq_list_rows.$": "$.get_database_entry_step.event_payload.data.fastqListRows"
+                  "sample_id.$": "$.get_ready_event_step.inputs.sampleId",
+                  "cache_uri.$": "$.get_ready_event_step.engine_parameters.cacheUri",
+                  "fastq_list_rows.$": "$.get_ready_event_step.inputs.fastqListRows"
                 }
               },
               "Retry": [
@@ -162,7 +163,7 @@
       "Parameters": {
         "sample_pair_ids_dict": [
           {
-            "sample_pair_id.$": "$.get_database_entry_step.event_payload.data.sampleId"
+            "sample_pair_id.$": "$.get_ready_event_step.inputs.sampleId"
           }
         ]
       },
@@ -173,7 +174,7 @@
       "Type": "Pass",
       "Parameters": {
         "input_json": {
-          "run_folder.$": "$.get_database_entry_step.event_payload.data.cacheUri",
+          "run_folder.$": "$.get_ready_event_step.engine_parameters.cacheUri",
           "sample_sheet.$": "$.copy_files_to_cache_directory_step.samplesheet_file_uri",
           "sample_pair_ids.$": "$.set_sample_pair_ids.sample_pair_ids_dict[*].sample_pair_id",
           "StartsFromFastq": true

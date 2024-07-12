@@ -16,7 +16,7 @@
         "FunctionName": "${__decompress_fastq_list_rows_lambda_function_arn__}",
         "Payload": {
           "decompress": true,
-          "input.$": "$.inputs.payload.data.fastqListRowsB64gz"
+          "input.$": "$.inputs.payload.data.outputs.fastqListRowsB64gz"
         }
       },
       "Retry": [
@@ -44,7 +44,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Item": {
-          "id.$": "$.inputs.payload.data.instrumentRunId",
+          "id.$": "$.inputs.payload.data.outputs.instrumentRunId",
           "id_type": "${__table_partition_name__}",
           "fastq_list_rows": {
             "S.$": "States.JsonToString($.decompress_fastq_list_rows_step.fastq_list_rows)"
@@ -66,7 +66,7 @@
         "FunctionName": "${__generate_event_maps_lambda_function_arn__}",
         "Payload": {
           "fastq_list_rows.$": "$.decompress_fastq_list_rows_step.fastq_list_rows",
-          "instrument_run_id.$": "$.inputs.payload.data.instrumentRunId"
+          "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId"
         }
       },
       "Retry": [

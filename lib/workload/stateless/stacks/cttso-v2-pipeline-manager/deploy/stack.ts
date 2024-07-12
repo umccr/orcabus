@@ -11,6 +11,7 @@ import { ICAv2CopyFilesConstruct } from '../../../../components/icav2-copy-files
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
+import { DockerImageCode, DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
 
 export interface Cttsov2Icav2PipelineManagerConfig {
   /* ICAv2 Pipeline analysis essentials */
@@ -22,8 +23,8 @@ export interface Cttsov2Icav2PipelineManagerConfig {
   eventBusName: string;
   icaEventPipeName: string;
   /*
-    Event handling
-    */
+      Event handling
+      */
   workflowType: string;
   workflowVersion: string;
   serviceVersion: string;
@@ -31,8 +32,8 @@ export interface Cttsov2Icav2PipelineManagerConfig {
   internalEventSource: string;
   detailType: string;
   /*
-    Names for statemachines
-    */
+      Names for statemachines
+      */
   stateMachinePrefix: string;
 }
 
@@ -85,15 +86,15 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
     const eventBusObj = events.EventBus.fromEventBusName(this, 'event_bus', props.eventBusName);
 
     /*
-    Build lambdas
-    */
+        Build lambdas
+        */
     /*
-    Part 1: Set up the lambdas needed for the input json generation state machine
-    Quite a bit more complicated than regular ICAv2 workflow setup since we need to
-    1. Convert the samplesheet from json into csv format
-    2. Upload the samplesheet to icav2
-    3. Copy fastqs into a particular directory setup type
-    */
+        Part 1: Set up the lambdas needed for the input json generation state machine
+        Quite a bit more complicated than regular ICAv2 workflow setup since we need to
+        1. Convert the samplesheet from json into csv format
+        2. Upload the samplesheet to icav2
+        3. Copy fastqs into a particular directory setup type
+        */
 
     // generate_copy_manifest_dict_py lambda
     const generate_copy_manifest_dict_lambda_obj = new PythonFunction(
@@ -129,6 +130,10 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         },
       }
     );
+
+    /*
+        Part 2: Build lambdas for output json generation
+        */
 
     // Delete the cache uri directory lambda
     const delete_cache_uri_lambda_function = new PythonFunction(
@@ -168,6 +173,31 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       }
     );
 
+    // Get vcfs
+    const get_vcfs_lambda_function = new PythonFunction(this, 'get_vcfs_lambda_python_function', {
+      entry: path.join(__dirname, '../lambdas/find_all_vcf_files_py'),
+      runtime: lambda.Runtime.PYTHON_3_12,
+      architecture: lambda.Architecture.ARM_64,
+      index: 'find_all_vcf_files.py',
+      handler: 'handler',
+      memorySize: 1024,
+      timeout: Duration.seconds(60),
+      environment: {
+        ICAV2_ACCSES_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
+      },
+    });
+
+    // Compress vcf
+    const compress_vcf_lambda_function = new DockerImageFunction(this, 'compress_vcf_lambda', {
+      description: 'Compress Vcfs',
+      code: DockerImageCode.fromImageAsset('../lambdas/compress_icav2_vcf', {
+        file: 'Dockerfile',
+      }),
+      timeout: Duration.seconds(900), // Maximum length of lambda duration is 15 minutes
+      retryAttempts: 0, // Never perform a retry if it fails
+      memorySize: 2048, // Don't want pandas to kill the lambda
+    });
+
     // Create the state machine to launch the nextflow workflow on ICAv2
     const cttso_v2_launch_state_machine = new Cttsov2Icav2PipelineManagerConstruct(this, id, {
       /* Stack Objects */
@@ -178,8 +208,10 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       /* Lambdas paths */
       uploadSamplesheetToCacheDirLambdaObj: upload_samplesheet_to_cache_dir_lambda_obj, // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir_py'
       generateCopyManifestDictLambdaObj: generate_copy_manifest_dict_lambda_obj, // __dirname + '/../../../lambdas/generate_copy_manifest_dict_py'
-      deleteCacheUriLambdaPathObj: delete_cache_uri_lambda_function,
-      setOutputJsonLambdaPathObj: set_output_json_lambda_function,
+      deleteCacheUriLambdaObj: delete_cache_uri_lambda_function,
+      setOutputJsonLambdaObj: set_output_json_lambda_function,
+      getVcfsLambdaObj: get_vcfs_lambda_function,
+      compressVcfLambdaObj: compress_vcf_lambda_function,
       /* Step function templates */
       generateInputJsonSfnTemplatePath: path.join(
         __dirname,

@@ -39,7 +39,7 @@ export class WorkflowDraftRunStateChangeCommonPreambleConstruct extends Construc
     const portalRunIdLambda = new PythonFunction(this, 'generate_portal_run_id_lambda', {
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
-      entry: path.join(__dirname, 'generate_portal_run_id_py'),
+      entry: path.join(__dirname, 'lambdas', 'generate_portal_run_id_py'),
       index: 'generate_portal_run_id.py',
       handler: 'handler',
       memorySize: 1024,
@@ -53,7 +53,7 @@ export class WorkflowDraftRunStateChangeCommonPreambleConstruct extends Construc
       {
         runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
-        entry: path.join(__dirname, 'generate_workflow_run_name_py'),
+        entry: path.join(__dirname, 'lambdas', 'generate_workflow_run_name_py'),
         index: 'generate_workflow_run_name.py',
         handler: 'handler',
         memorySize: 1024,
@@ -65,12 +65,12 @@ export class WorkflowDraftRunStateChangeCommonPreambleConstruct extends Construc
     Part 2 - Build the AWS State Machine
     */
     this.stepFunctionObj = new sfn.StateMachine(this, 'StateMachine', {
-      stateMachineName: `${props.stateMachinePrefix}-draft-preamble-dfn`,
+      stateMachineName: `${props.stateMachinePrefix}-preamble-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,
           'step_functions_templates',
-          'workflowrunstatechange_draft_to_ready_step_function_template.asl.json'
+          'workflowdraftrunstatechange_preamble_template.asl.json'
         )
       ),
       definitionSubstitutions: {

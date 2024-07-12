@@ -7,7 +7,8 @@
     "fastqListRowId",
     "libraryInternalId",
     "instrumentRunId",
-    "sampleType"
+    "sampleType",
+    "qcMetrics"
   ],
   "properties": {
     "fastqListRowId": {
@@ -22,14 +23,19 @@
     "sampleType": {
       "type": "string"
     },
-    "duplicationRate": {
-      "type": "number"
-    },
-    "genomeCoverage": {
-      "type": "number"
-    },
-    "exonFoldCoverage": {
-      "type": "number"
+    "qcMetrics": {
+      "type": "object",
+      "properties": {
+        "duplicationRate": {
+          "type": "number"
+        },
+        "genomeCoverage": {
+          "type": "number"
+        },
+        "exonFoldCoverage": {
+          "type": "number"
+        }
+      }
     }
   }
 }

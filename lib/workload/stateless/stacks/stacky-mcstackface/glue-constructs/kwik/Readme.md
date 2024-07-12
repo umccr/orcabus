@@ -42,13 +42,10 @@ Output Event status: `ready`
     * cacheUri
     * projectId
     * userReference
-    * userTags
-
-The userTags is very important here as it will contain the rgid.
 
 We have another event that will subscribe to the wgts workflow run state change events for
 complete wgts workflows. If the workflow is complete, this service will find the rgid of the workflow
-from the userTags and launch a QC Complete event for this rgid.  
+from the portal run id.
 
 This qc complete event will be used by the tumor normal service to 'tick-off' rgids as ready for running.  
 

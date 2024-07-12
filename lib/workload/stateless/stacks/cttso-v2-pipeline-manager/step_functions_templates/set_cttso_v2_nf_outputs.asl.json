@@ -4,7 +4,6 @@
   "States": {
     "Delete Cache and Set Outputs JSON": {
       "Type": "Parallel",
-      "Next": "Wait 1 Second (Post database-updates)",
       "Branches": [
         {
           "StartAt": "Get Cache URI from Database",
@@ -128,16 +127,93 @@
                 }
               },
               "ResultPath": "$.update_entry_post_launch_step",
+              "Next": "Wait 1 Second (Post database-updates)"
+            },
+            "Wait 1 Second (Post database-updates)": {
+              "Type": "Wait",
+              "Seconds": 1,
+              "Comment": "Wait for databases to sync before continuing",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Find all vcf files in the output directory",
+          "States": {
+            "Find all vcf files in the output directory": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload": {
+                  "icav2_uri.$": "$.get_analysis_output_uri_step.analysis_output_uri"
+                },
+                "FunctionName": "${__find_all_vcf_files_lambda_function_arn__}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "For each vcf file",
+              "ResultSelector": {
+                "vcf_files_list.$": "$.Payload.vcf_icav2_uri_list"
+              },
+              "ResultPath": "$.get_vcf_files_step"
+            },
+            "For each vcf file": {
+              "Type": "Map",
+              "ItemsPath": "$.get_vcf_files_step.vcf_files_list",
+              "ItemSelector": {
+                "vcf_icav2_uri.$": "$$.Map.Item.Value"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Compress vcf file",
+                "States": {
+                  "Compress vcf file": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                      "FunctionName": "${__compress_vcf_file_lambda_function_arn__}",
+                      "Payload": {
+                        "vcf_icav2_uri.$": "$.vcf_icav2_uri"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2
+                      }
+                    ],
+                    "ResultPath": null,
+                    "End": true
+                  }
+                }
+              },
+              "ResultPath": null,
               "End": true
             }
           }
         }
-      ]
-    },
-    "Wait 1 Second (Post database-updates)": {
-      "Type": "Wait",
-      "Seconds": 1,
-      "Comment": "Wait for databases to sync before continuing",
+      ],
       "End": true
     }
   }

@@ -1,9 +1,9 @@
 import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
 import path from 'path';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../../../../components/sfn-workflowdraftrunstatechange-common-preamble';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
@@ -77,7 +77,7 @@ export class BclconvertInteropQcDraftMakerConstruct extends Construct {
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,
-          'step_function_templates',
+          'step_functions_templates',
           'generate_bclconvert_interop_qc_draft_event_sfn_template.asl.json'
         )
       ),
@@ -117,5 +117,31 @@ export class BclconvertInteropQcDraftMakerConstruct extends Construct {
 
     // Add state machine execution permissions to stateMachine role
     sfn_preamble.grantStartExecution(draftMakerSfn.role);
+
+    /*
+    Part 3: Subscribe to the event bus for this event type
+    */
+    const rule = new events.Rule(this, 'bclconvert_interop_qc_subscribe_to_bssh_fastq_copy_event', {
+      ruleName: `stacky-${this.bclconvertInteropQcDraftMakerEventMap.prefix}-rule`,
+      eventBus: props.eventBusObj,
+      eventPattern: {
+        source: [this.bclconvertInteropQcDraftMakerEventMap.triggerSource],
+        detailType: [this.bclconvertInteropQcDraftMakerEventMap.triggerDetailType],
+        detail: {
+          status: [
+            {
+              'equals-ignore-case': this.bclconvertInteropQcDraftMakerEventMap.triggerStatus,
+            },
+          ],
+        },
+      },
+    });
+
+    // Add target of event to be the state machine
+    rule.addTarget(
+      new eventsTargets.SfnStateMachine(draftMakerSfn, {
+        input: events.RuleTargetInput.fromEventPath('$.detail'),
+      })
+    );
   }
 }

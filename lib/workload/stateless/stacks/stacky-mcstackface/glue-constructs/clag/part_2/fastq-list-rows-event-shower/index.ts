@@ -88,7 +88,7 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
       definitionBody: sfn.DefinitionBody.fromFile(
         path.join(
           __dirname,
-          'step_function_templates',
+          'step_functions_templates',
           'fastq_list_row_event_shower_sfn_template.asl.json'
         )
       ),

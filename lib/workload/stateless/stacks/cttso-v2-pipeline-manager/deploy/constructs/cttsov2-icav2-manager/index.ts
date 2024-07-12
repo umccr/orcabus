@@ -14,6 +14,7 @@ import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Icav2AnalysisEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-handle-event-change-sfn';
 import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-ready-event-handler-sfn';
+import { DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
 
 interface Cttsov2Icav2PipelineManagerConstructProps {
   /* Stack Objects */
@@ -41,8 +42,10 @@ interface Cttsov2Icav2PipelineManagerConstructProps {
   uploadSamplesheetToCacheDirLambdaObj: PythonFunction; // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir_py'
   generateCopyManifestDictLambdaObj: PythonFunction; // __dirname + '/../../../lambdas/generate_copy_manifest_dict_py'
   // SFN Output lambdas
-  deleteCacheUriLambdaPathObj: PythonFunction;
-  setOutputJsonLambdaPathObj: PythonFunction;
+  deleteCacheUriLambdaObj: PythonFunction;
+  setOutputJsonLambdaObj: PythonFunction;
+  getVcfsLambdaObj: PythonFunction;
+  compressVcfLambdaObj: DockerImageFunction;
   // ICAv2 Copy Batch State Machine Object
   icav2CopyFilesStateMachineObj: sfn.IStateMachine;
 }
@@ -112,7 +115,12 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         */
 
     // Add icav2 secrets permissions to lambdas
-    [props.deleteCacheUriLambdaPathObj, props.setOutputJsonLambdaPathObj].forEach((lambda_obj) => {
+    [
+      props.deleteCacheUriLambdaObj,
+      props.setOutputJsonLambdaObj,
+      props.getVcfsLambdaObj,
+      props.compressVcfLambdaObj,
+    ].forEach((lambda_obj) => {
       props.icav2AccessTokenSecretObj.grantRead(<iam.Role>lambda_obj.currentVersion.role);
     });
 
@@ -125,9 +133,13 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         /* Dynamodb tables */
         __table_name__: props.dynamodbTableObj.tableName,
         __delete_cache_uri_lambda_function_arn__:
-          props.deleteCacheUriLambdaPathObj.currentVersion.functionArn,
+          props.deleteCacheUriLambdaObj.currentVersion.functionArn,
         __set_outputs_json_lambda_function_arn__:
-          props.setOutputJsonLambdaPathObj.currentVersion.functionArn,
+          props.setOutputJsonLambdaObj.currentVersion.functionArn,
+        __find_all_vcf_files_lambda_function_arn__:
+          props.getVcfsLambdaObj.currentVersion.functionArn,
+        __compress_vcf_file_lambda_function_arn__:
+          props.compressVcfLambdaObj.currentVersion.functionArn,
       },
     });
 
@@ -135,7 +147,12 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     props.dynamodbTableObj.grantReadWriteData(configure_outputs_sfn.role);
 
     // Allow the state machine to invoke the lambdas
-    [props.deleteCacheUriLambdaPathObj, props.setOutputJsonLambdaPathObj].forEach((lambda_obj) => {
+    [
+      props.deleteCacheUriLambdaObj,
+      props.setOutputJsonLambdaObj,
+      props.getVcfsLambdaObj,
+      props.compressVcfLambdaObj,
+    ].forEach((lambda_obj) => {
       lambda_obj.currentVersion.grantInvoke(<iam.IRole>configure_outputs_sfn.role);
     });
 

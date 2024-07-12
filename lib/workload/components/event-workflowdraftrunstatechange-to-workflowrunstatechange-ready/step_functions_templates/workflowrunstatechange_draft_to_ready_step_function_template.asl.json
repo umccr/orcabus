@@ -4,74 +4,37 @@
   "States": {
     "move inputs": {
       "Type": "Pass",
-      "Next": "Get reference id from payload",
+      "Next": "Get portal run id from payload",
       "Parameters": {
         "input_event_detail.$": "$"
       }
     },
-    "Get reference id from payload": {
+    "Get portal run id from payload": {
       "Type": "Pass",
-      "Next": "Is ref id null",
+      "Next": "Get portal run Id in database (local)",
       "Parameters": {
-        "reference_id.$": "$.input_event_detail.payload.refId"
+        "portal_run_id.$": "$.input_event_detail.portalRunId"
       },
-      "ResultPath": "$.get_reference_id_step"
+      "ResultPath": "$.get_portal_run_id_step"
     },
-    "Is ref id null": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.get_reference_id_step.reference_id",
-          "IsNull": true,
-          "Next": "Generate uuid"
-        }
-      ],
-      "Default": "Get reference Id in database (local)"
-    },
-    "Generate uuid": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "${__generate_uuid_lambda_function_arn__}",
-        "Payload": {}
-      },
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "Lambda.TooManyRequestsException"
-          ],
-          "IntervalSeconds": 1,
-          "MaxAttempts": 3,
-          "BackoffRate": 2
-        }
-      ],
-      "ResultPath": "$.get_reference_id_step",
-      "ResultSelector": {
-        "reference_id.$": "$.Payload.db_uuid"
-      },
-      "Next": "Get reference Id in database (local)"
-    },
-    "Get reference Id in database (local)": {
+    "Get portal run Id in database (local)": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.get_reference_id_step.reference_id",
+          "id.$": "$.get_portal_run_id_step.portal_run_id",
           "id_type": "${__workflow_type_partition_name__}"
         }
       },
-      "ResultPath": "$.get_reference_id_in_db_step",
-      "Next": "is reference id in database"
+      "ResultPath": "$.get_portal_run_id_in_db_step",
+      "Next": "is portal run id in database"
     },
-    "is reference id in database": {
+    "is portal run id in database": {
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.get_reference_id_in_db_step.Item",
+          "Variable": "$.get_portal_run_id_in_db_step.Item",
           "IsPresent": true,
           "Next": "Get Item from DataBase (local)"
         }
@@ -84,17 +47,17 @@
       "Parameters": {
         "StateMachineArn": "${__engine_parameters_maker_state_machine_arn__}",
         "Input": {
-          "portal_run_id.$": "$.input_event_detail.payload.portalRunId",
-          "workflow_name.$": "$.input_event_detail.payload.workflowName",
-          "workflow_version.$": "$.input_event_detail.payload.workflowVersion",
-          "event_data_input.$": "$.input_event_detail.payload.data.inputs",
+          "portal_run_id.$": "$.input_event_detail.portalRunId",
+          "workflow_name.$": "$.input_event_detail.workflowName",
+          "workflow_version.$": "$.input_event_detail.workflowVersion",
+          "event_data_inputs.$": "$.input_event_detail.payload.data.inputs",
           "ssm_parameters_list": [
             {
               "engine_parameter_key": "outputUri",
               "ssm_name": "${__output_uri_ssm_parameter_name__}"
             },
             {
-              "engine_parameter_key": "logs",
+              "engine_parameter_key": "logsUri",
               "ssm_name": "${__logs_uri_ssm_parameter_name__}"
             },
             {
@@ -116,7 +79,6 @@
     },
     "Update workflow table database": {
       "Type": "Parallel",
-      "Next": "Wait 1 Second (post event detail output update)",
       "Branches": [
         {
           "StartAt": "Initialise Event Data Item with Inputs Engine Parameters",
@@ -127,16 +89,16 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id.$": "$.get_reference_id_step.reference_id",
+                  "id.$": "$.get_portal_run_id_step.portal_run_id",
                   "id_type": "${__workflow_type_partition_name__}"
                 },
                 "UpdateExpression": "SET event_data_inputs = :event_data_inputs, workflow_run_name = :workflow_run_name, portal_run_id = :portal_run_id, event_data_engine_parameters = :event_data_engine_parameters",
                 "ExpressionAttributeValues": {
                   ":portal_run_id": {
-                    "S.$": "$.input_event_detail.payload.portalRunId"
+                    "S.$": "$.input_event_detail.portalRunId"
                   },
                   ":workflow_run_name": {
-                    "S.$": "$.input_event_detail.payload.workflowRunName"
+                    "S.$": "$.input_event_detail.workflowRunName"
                   },
                   ":event_data_inputs": {
                     "S.$": "States.JsonToString($.input_event_detail.payload.data.inputs)"
@@ -160,12 +122,12 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id.$": "$.input_event_detail.payload.portalRunId",
+                  "id.$": "$.input_event_detail.portalRunId",
                   "id_type": "${__portal_run_partition_name__}"
                 },
-                "UpdateExpression": "SET status = :status",
+                "UpdateExpression": "SET analysis_status = :analysis_status",
                 "ExpressionAttributeValues": {
-                  ":status": {
+                  ":analysis_status": {
                     "S": "ready"
                   }
                 }
@@ -175,7 +137,9 @@
             }
           }
         }
-      ]
+      ],
+      "ResultPath": null,
+      "Next": "Wait 1 Second (post event detail output update)"
     },
     "Wait 1 Second (post event detail output update)": {
       "Type": "Wait",
@@ -188,15 +152,16 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.get_reference_id_step.reference_id",
+          "id.$": "$.get_portal_run_id_step.portal_run_id",
           "id_type": "${__workflow_type_partition_name__}"
         }
       },
       "Next": "EventBridge PutEvents",
-      "ResultPath": "$.get_event_data_output_step",
       "ResultSelector": {
-        "event_data_output.$": "States.StringToJson($.Item.event_data_output.S)"
-      }
+        "inputs.$": "States.StringToJson($.Item.event_data_inputs.S)",
+        "engine_parameters.$": "States.StringToJson($.Item.event_data_engine_parameters.S)"
+      },
+      "ResultPath": "$.get_event_data_output_step"
     },
     "EventBridge PutEvents": {
       "Type": "Task",
@@ -208,19 +173,18 @@
             "EventBusName": "${__event_bus_name__}",
             "DetailType": "${__detail_type__}",
             "Detail": {
-              "portalRunId.$": "$.input_event_detail.payload.portalRunId",
+              "portalRunId.$": "$.input_event_detail.portalRunId",
               "timestamp.$": "$$.State.EnteredTime",
               "status": "ready",
-              "workflowName": "$.input_event_detail.payload.workflowName",
-              "workflowVersion": "$.input_event_detail.payload.workflowVersion",
-              "workflowRunName.$": "$.input_event_detail.payload.workflowRunName",
+              "workflowName.$": "$.input_event_detail.workflowName",
+              "workflowVersion.$": "$.input_event_detail.workflowVersion",
+              "workflowRunName.$": "$.input_event_detail.workflowRunName",
               "payload": {
                 "refId": null,
                 "version": "${__payload_version__}",
                 "data": {
-                  "inputs": "$.get_event_data_output_step.event_data_inputs",
-                  "engineParameters": "$.get_event_data_output_step.engine_parameters",
-                  "tags": "$.input_event_detail.payload.data.tags"
+                  "inputs.$": "$.get_event_data_output_step.inputs",
+                  "engineParameters.$": "$.get_event_data_output_step.engine_parameters"
                 }
               }
             }
