@@ -3,9 +3,9 @@
 
 use axum::extract::{Query, State};
 use axum::Json;
-use serde::{Deserialize, Deserializer, Serialize};
-use std::result;
-use utoipa::{IntoParams, ToSchema};
+use serde::{Deserialize, Serialize};
+use serde_qs::axum::QsQuery;
+use utoipa::ToSchema;
 
 use crate::database::entities::object::Entity as ObjectEntity;
 use crate::database::entities::object::Model as FileObject;
@@ -13,6 +13,8 @@ use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
+use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
+use crate::routes::pagination::Pagination;
 use crate::routes::{AppState, ErrorStatusCode};
 
 /// The return value for count operations showing the number of records in the database.
@@ -37,55 +39,6 @@ impl ListCount {
 /// Params for a list objects request.
 #[derive(Debug, Deserialize)]
 pub struct ListObjectsParams {}
-
-/// Pagination query parameters for list operations.
-#[derive(Debug, Deserialize, IntoParams)]
-#[serde(default)]
-pub struct Pagination {
-    /// The zero-indexed page to fetch from the list of objects.
-    /// Increments by 1 starting from 0.
-    /// Defaults to the beginning of the collection.
-    #[param(nullable, default = 0)]
-    page: u64,
-    /// The page to fetch from the list of objects.
-    /// If this is zero then the default is used.
-    #[param(nullable, default = 1000)]
-    #[serde(deserialize_with = "deserialize_zero_page_as_default")]
-    page_size: u64,
-}
-
-impl Pagination {
-    /// Create a new pagination struct.
-    pub fn new(page: u64, page_size: u64) -> Self {
-        Self { page, page_size }
-    }
-
-    /// Get the page.
-    pub fn page(&self) -> u64 {
-        self.page
-    }
-
-    /// Get the page size.
-    pub fn page_size(&self) -> u64 {
-        self.page_size
-    }
-}
-
-/// The default page size.
-const DEFAULT_PAGE_SIZE: u64 = 1000;
-
-/// Deserializer to convert a 0 value to the default pagination size.
-fn deserialize_zero_page_as_default<'de, D>(deserializer: D) -> result::Result<u64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value: u64 = Deserialize::deserialize(deserializer)?;
-    if value == 0 {
-        Ok(DEFAULT_PAGE_SIZE)
-    } else {
-        Ok(value)
-    }
-}
 
 /// The response type for list operations.
 #[derive(Debug, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
@@ -116,15 +69,6 @@ impl<M> ListResponse<M> {
     }
 }
 
-impl Default for Pagination {
-    fn default() -> Self {
-        Self {
-            page: 0,
-            page_size: DEFAULT_PAGE_SIZE,
-        }
-    }
-}
-
 /// The list objects handler.
 #[utoipa::path(
     get,
@@ -133,14 +77,16 @@ impl Default for Pagination {
         (status = OK, description = "List all objects", body = Vec<FileObject>),
         ErrorStatusCode,
     ),
-    params(Pagination),
+    params(Pagination, ObjectsFilterAll),
     context_path = "/api/v1",
 )]
 pub async fn list_objects(
     state: State<AppState>,
     Query(pagination): Query<Pagination>,
+    QsQuery(filter_all): QsQuery<ObjectsFilterAll>,
 ) -> Result<Json<ListResponse<FileObject>>> {
     let response = ListQueryBuilder::<ObjectEntity>::new(&state.client)
+        .filter_all(filter_all)
         .paginate_to_list_response(pagination)
         .await?;
 
@@ -177,14 +123,16 @@ pub struct ListS3ObjectsParams {}
         (status = OK, description = "List all s3 objects", body = Vec<FileS3Object>),
         ErrorStatusCode,
     ),
-    params(Pagination),
+    params(Pagination, S3ObjectsFilterAll),
     context_path = "/api/v1",
 )]
 pub async fn list_s3_objects(
     state: State<AppState>,
     Query(pagination): Query<Pagination>,
+    QsQuery(filter_all): QsQuery<S3ObjectsFilterAll>,
 ) -> Result<Json<ListResponse<FileS3Object>>> {
     let response = ListQueryBuilder::<S3ObjectEntity>::new(&state.client)
+        .filter_all(filter_all)
         .paginate_to_list_response(pagination)
         .await?;
 
@@ -210,11 +158,11 @@ pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<ListCount>>
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use axum::body::to_bytes;
     use axum::body::Body;
     use axum::http::Request;
-    use parquet::data_type::AsBytes;
+    use serde::de::DeserializeOwned;
     use serde_json::from_slice;
     use sqlx::PgPool;
     use tower::ServiceExt;
@@ -222,212 +170,112 @@ mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
+    use crate::database::entities::sea_orm_active_enums::EventType;
     use crate::queries::tests::{initialize_database, initialize_database_reorder};
-    use crate::routes::list::{ListCount, ListResponse};
-    use crate::routes::{api_router, AppState};
+    use crate::routes::api_router;
+
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await;
+        let entries = initialize_database(state.client(), 10).await.objects;
 
-        let app = api_router(state);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/objects")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        let result = from_slice::<ListResponse<Object>>(
-            to_bytes(response.into_body(), usize::MAX)
-                .await
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
-
+        let result: ListResponse<Object> = response_from(state, "/objects").await;
         assert!(result.next_page.is_none());
-        assert_eq!(
-            result.results,
-            entries
-                .into_iter()
-                .map(|(entry, _)| entry)
-                .collect::<Vec<_>>()
-        );
+        assert_eq!(result.results, entries);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_objects_api_paginate(pool: PgPool) {
+    async fn list_objects_api_filter_attributes(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await;
+        let entries = initialize_database(state.client(), 10).await.objects;
 
-        let app = api_router(state);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/objects?page=2&page_size=2")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
+        let result: ListResponse<Object> =
+            response_from(state.clone(), "/objects?attributes[attribute_id]=1").await;
+        assert_eq!(result.results, vec![entries[1].clone()]);
 
-        let result = from_slice::<ListResponse<Object>>(
-            to_bytes(response.into_body(), usize::MAX)
-                .await
-                .unwrap()
-                .as_bytes(),
+        let result: ListResponse<Object> = response_from(
+            state.clone(),
+            "/objects?attributes[nested_id][attribute_id]=2",
         )
-        .unwrap();
+        .await;
+        assert_eq!(result.results, vec![entries[2].clone()]);
 
-        assert_eq!(result.next_page, Some(3));
-        assert_eq!(
-            result.results,
-            entries
-                .into_iter()
-                .map(|(entry, _)| entry)
-                .collect::<Vec<_>>()[4..6]
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_objects_api_zero_page_size(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await;
-
-        let app = api_router(state);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/s3_objects?page_size=0")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        let result = from_slice::<ListResponse<Object>>(
-            to_bytes(response.into_body(), usize::MAX)
-                .await
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
-
-        assert_eq!(result.next_page, None);
-        assert_eq!(
-            result.results,
-            entries
-                .into_iter()
-                .map(|(entry, _)| entry)
-                .collect::<Vec<_>>()
-        );
+        let result: ListResponse<Object> =
+            response_from(state.clone(), "/objects?attributes[non_existent_id]=1").await;
+        assert!(result.results.is_empty());
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database_reorder(state.client(), 10).await;
-
-        let app = api_router(state);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/s3_objects")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+        let entries = initialize_database_reorder(state.client(), 10)
             .await
-            .unwrap();
+            .s3_objects;
 
-        let result = from_slice::<ListResponse<S3Object>>(
-            to_bytes(response.into_body(), usize::MAX)
-                .await
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
-
+        let result: ListResponse<S3Object> = response_from(state, "/s3_objects").await;
         assert!(result.next_page.is_none());
+        assert_eq!(result.results, entries);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_objects_filter_event_type(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await.s3_objects;
+
+        let result: ListResponse<S3Object> =
+            response_from(state, "/s3_objects?event_type=Deleted").await;
+        assert_eq!(result.results().len(), 5);
         assert_eq!(
             result.results,
             entries
                 .into_iter()
-                .map(|(_, entry)| entry)
+                .filter(|entry| entry.event_type == EventType::Deleted)
                 .collect::<Vec<_>>()
         );
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_objects_api_paginate(pool: PgPool) {
+    async fn list_s3_objects_multiple_filters(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database_reorder(state.client(), 10).await;
+        let entries = initialize_database(state.client(), 10).await.s3_objects;
 
-        let app = api_router(state);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/s3_objects?page=1&page_size=2")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        let result = from_slice::<ListResponse<S3Object>>(
-            to_bytes(response.into_body(), usize::MAX)
-                .await
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
-
-        assert_eq!(result.next_page, Some(2));
-        assert_eq!(
-            result.results,
-            entries
-                .into_iter()
-                .map(|(_, entry)| entry)
-                .collect::<Vec<_>>()[2..4]
-        );
+        let result: ListResponse<S3Object> =
+            response_from(state, "/s3_objects?bucket=1&key=2").await;
+        assert_eq!(result.results, vec![entries[2].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_objects_api_zero_page_size(pool: PgPool) {
+    async fn list_s3_objects_filter_attributes(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database_reorder(state.client(), 10).await;
+        let entries = initialize_database(state.client(), 10).await.s3_objects;
 
-        let app = api_router(state);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/s3_objects?page_size=0")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
+        let result: ListResponse<S3Object> =
+            response_from(state.clone(), "/s3_objects?attributes[attribute_id]=1").await;
+        assert_eq!(result.results, vec![entries[1].clone()]);
 
-        let result = from_slice::<ListResponse<S3Object>>(
-            to_bytes(response.into_body(), usize::MAX)
-                .await
-                .unwrap()
-                .as_bytes(),
+        let result: ListResponse<S3Object> = response_from(
+            state.clone(),
+            "/s3_objects?attributes[nested_id][attribute_id]=4",
         )
-        .unwrap();
+        .await;
+        assert_eq!(result.results, vec![entries[4].clone()]);
 
-        assert_eq!(result.next_page, None);
-        assert_eq!(
-            result.results,
-            entries
-                .into_iter()
-                .map(|(_, entry)| entry)
-                .collect::<Vec<_>>()
-        );
+        let result: ListResponse<S3Object> =
+            response_from(state.clone(), "/s3_objects?attributes[non_existent_id]=1").await;
+        assert!(result.results.is_empty());
+
+        let result: ListResponse<S3Object> = response_from(
+            state.clone(),
+            "/s3_objects?attributes[attribute_id]=1&key=2",
+        )
+        .await;
+        assert!(result.results.is_empty());
+
+        let result: ListResponse<S3Object> =
+            response_from(state, "/s3_objects?attributes[attribute_id]=1&key=1").await;
+        assert_eq!(result.results, vec![entries[1].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -435,25 +283,7 @@ mod tests {
         let state = AppState::from_pool(pool);
         initialize_database(state.client(), 10).await;
 
-        let app = api_router(state);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/objects/count")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        let result = from_slice::<ListCount>(
-            to_bytes(response.into_body(), usize::MAX)
-                .await
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
-
+        let result: ListCount = response_from(state, "/objects/count").await;
         assert_eq!(result.n_records, 10);
     }
 
@@ -462,25 +292,21 @@ mod tests {
         let state = AppState::from_pool(pool);
         initialize_database(state.client(), 10).await;
 
+        let result: ListCount = response_from(state, "/s3_objects/count").await;
+        assert_eq!(result.n_records, 10);
+    }
+
+    pub(crate) async fn response_from<T: DeserializeOwned>(state: AppState, uri: &str) -> T {
         let app = api_router(state);
         let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/s3_objects/count")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
             .await
             .unwrap();
 
-        let result = from_slice::<ListCount>(
-            to_bytes(response.into_body(), usize::MAX)
-                .await
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
-
-        assert_eq!(result.n_records, 10);
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap()
+            .to_vec();
+        from_slice::<T>(bytes.as_slice()).unwrap()
     }
 }

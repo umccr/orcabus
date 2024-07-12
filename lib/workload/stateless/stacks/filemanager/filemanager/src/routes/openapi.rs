@@ -50,7 +50,7 @@ pub struct Json(pub Value);
             DateTimeWithTimeZone,
             Json,
             ListResponseObject,
-            ListResponseS3Object
+            ListResponseS3Object,
         )
     ),
     modifiers(&SecurityAddon),

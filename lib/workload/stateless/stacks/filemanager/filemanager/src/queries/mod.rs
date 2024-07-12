@@ -13,6 +13,7 @@ pub(crate) mod tests {
     use rand::thread_rng;
     use sea_orm::Set;
     use sea_orm::{ActiveModelTrait, TryIntoModel};
+    use serde_json::json;
     use strum::EnumCount;
 
     use crate::database::entities::object::ActiveModel as ActiveObject;
@@ -23,23 +24,38 @@ pub(crate) mod tests {
     use crate::database::Client;
     use crate::uuid::UuidGenerator;
 
+    /// Container for generated database entries
+    pub(crate) struct Entries {
+        pub(crate) objects: Vec<Object>,
+        pub(crate) s3_objects: Vec<S3Object>,
+    }
+
+    impl From<Vec<(Object, S3Object)>> for Entries {
+        fn from(objects: Vec<(Object, S3Object)>) -> Self {
+            let (objects, s3_objects) = objects.into_iter().unzip();
+            Self {
+                objects,
+                s3_objects,
+            }
+        }
+    }
+
     /// Initialize the database state for testing and shuffle entries to simulate
     /// out of order events.
-    pub(crate) async fn initialize_database_reorder(
-        client: &Client,
-        n: usize,
-    ) -> Vec<(Object, S3Object)> {
+    pub(crate) async fn initialize_database_reorder(client: &Client, n: usize) -> Entries {
         let mut data = initialize_database_with_shuffle(client, n, true).await;
 
         // Return the correct ordering for test purposes
         data.sort_by(|(_, a), (_, b)| a.sequencer.cmp(&b.sequencer));
 
-        data
+        data.into()
     }
 
     /// Initialize database state for testing.
-    pub(crate) async fn initialize_database(client: &Client, n: usize) -> Vec<(Object, S3Object)> {
-        initialize_database_with_shuffle(client, n, false).await
+    pub(crate) async fn initialize_database(client: &Client, n: usize) -> Entries {
+        initialize_database_with_shuffle(client, n, false)
+            .await
+            .into()
     }
 
     async fn initialize_database_with_shuffle(
@@ -80,11 +96,17 @@ pub(crate) mod tests {
         let object_id = UuidGenerator::generate();
         let event = event_type(index);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
+        let attributes = Some(json!({
+            "attribute_id": format!("{}", index),
+            "nested_id": {
+                "attribute_id": format!("{}", index)
+            }
+        }));
 
         (
             ActiveObject {
                 object_id: Set(object_id),
-                attributes: Set(None),
+                attributes: Set(attributes.clone()),
             },
             ActiveS3Object {
                 s3_object_id: Set(UuidGenerator::generate()),
@@ -104,7 +126,7 @@ pub(crate) mod tests {
                 sequencer: Set(Some(index.to_string())),
                 is_delete_marker: Set(false),
                 number_duplicate_events: Set(0),
-                attributes: Set(None),
+                attributes: Set(attributes),
                 deleted_date: if event == EventType::Deleted {
                     date()
                 } else {

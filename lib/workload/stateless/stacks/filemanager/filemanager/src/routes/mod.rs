@@ -20,10 +20,12 @@ use crate::routes::ingest::ingest_from_sqs;
 use crate::routes::list::*;
 use crate::routes::openapi::swagger_ui;
 
+pub mod filtering;
 pub mod get;
-mod ingest;
+pub mod ingest;
 pub mod list;
 pub mod openapi;
+pub mod pagination;
 
 /// App state containing database client.
 #[derive(Debug, Clone)]
