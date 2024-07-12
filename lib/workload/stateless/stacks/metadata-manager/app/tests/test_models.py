@@ -18,9 +18,9 @@ class MetadataTestCase(TestCase):
 
         specimen = Specimen.objects.create(
             internal_id='SPC001',
+            subject=subject,
         )
         specimen.full_clean()
-        specimen.subjects.add(subject)
         specimen.save()
 
         library = Library.objects.create(
@@ -62,12 +62,8 @@ class MetadataTestCase(TestCase):
 
         # find the linked specimen
         spc_one = lib_one.specimen
-        self.assertEqual(spc_one.internal_id, "SPC001", 'only 1 specimen should be linked from library')
+        self.assertEqual(spc_one.internal_id, "SPC001", "incorrect specimen 'id' should linked to library")
 
         # find the linked subject
-        subjects_qs = spc_one.subjects.all()
-        self.assertEqual(len(subjects_qs), 1, 'only 1 subject should be linked from the specimen')
-
-        # check specimen id
-        sbj_one = subjects_qs[0]
-        self.assertEqual(sbj_one.internal_id, "SBJ001", "incorrect 'id' linked within the subject")
+        sub_one = spc_one.subject
+        self.assertEqual(sub_one.internal_id, "SBJ001", "incorrect subject 'id' linked to specimen")

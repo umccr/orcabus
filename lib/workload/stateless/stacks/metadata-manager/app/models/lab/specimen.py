@@ -43,6 +43,6 @@ class Specimen(BaseModel):
         null=True
     )
     source = models.CharField(choices=Source.choices, blank=True, null=True)
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True)
 
-    subjects = models.ManyToManyField(Subject, blank=True)
-    history = HistoricalRecords(m2m_fields=[subjects])
+    history = HistoricalRecords()

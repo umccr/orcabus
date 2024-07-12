@@ -143,8 +143,8 @@ class TrackingSheetSrvUnitTests(TestCase):
         # check if all lib is the same with sbj_1
         for rec in mock_sheet_data:
             lib = Library.objects.get(internal_id=rec.get("LibraryID"))
-            for s in lib.specimen.subjects.all().iterator():
-                self.assertEqual(s.internal_id, RECORD_1.get("SubjectID"), "library is not linked to the sabe subject")
+            self.assertEqual(lib.specimen.subject.internal_id, RECORD_1.get("SubjectID"),
+                             "library is not linked to the same subject")
 
     def test_persist_lab_metadata_alter_sbj(self):
         """
