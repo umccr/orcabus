@@ -26,6 +26,7 @@ import {
   getBclconvertInteropQcIcav2PipelineTableStackProps,
 } from './stacks/bclconvertInteropQcIcav2PipelineManager';
 import { getGlueStackProps, getStatefulGlueStackProps } from './stacks/stackyMcStackFace';
+import { getDataBucketStackProps } from './stacks/dataBucket';
 
 interface EnvironmentConfig {
   name: string;
@@ -46,6 +47,7 @@ interface EnvironmentConfig {
 export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null => {
   const stackProps = {
     statefulConfig: {
+      dataBucketStackProps: getDataBucketStackProps(stage),
       sharedStackProps: getSharedStackProps(stage),
       postgresManagerStackProps: getPostgresManagerStackProps(),
       tokenServiceStackProps: getTokenServiceStackProps(),

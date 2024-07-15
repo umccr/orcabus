@@ -4,7 +4,6 @@ from typing import List
 
 import pandas as pd
 import numpy as np
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 from libumccr import libgdrive, libjson
@@ -60,28 +59,40 @@ def persist_lab_metadata(df: pd.DataFrame):
     for sbj in Subject.objects.exclude(internal_id__in=df['subject_id'].tolist()).iterator():
         subject_deleted.append(sbj)
         sbj.delete()
-    # removing relation of spc <-> sbj when needed as this is the many-to-many relationship
 
-    # adding relation between specimen and subject could be done per library records
-    # but removal will need all records to consider before the removing
-    # this `spc_sbj_df` will convert mapping between `sample_id` to all related `subject_id` as list
-    spc_sbj_df = df.loc[:, df.columns.isin(['sample_id', 'subject_id'])] \
-        .groupby('sample_id')['subject_id'] \
-        .apply(list) \
-        .reset_index(name='subject_id_list')
+    # Update: 12/07/2024. 'Subject' -> 'Specimen' is now ONE to Many, therefore the process of unliking the many to
+    # many is not needed. The following code is commented for future reference when the 'Individual' concept is
+    # introduced (which will have many-to-many as 'Individual' <-> 'Subject').
 
-    for record in spc_sbj_df.to_dict('records'):
-        specimen_id = record.get("sample_id")
-        subject_id_list = record.get("subject_id_list")
-
-        try:
-            spc = Specimen.objects.get(internal_id=specimen_id)
-            for sbj in spc.subjects.all().iterator():
-                if sbj.internal_id not in subject_id_list:
-                    spc.subjects.remove(sbj)
-
-        except ObjectDoesNotExist:
-            pass
+    # # removing relation of spc <-> sbj when needed as this is the many-to-many relationship
+    # # adding relation between specimen and subject could be done per library records
+    # # but removal will need all records to consider before the removing
+    # # this `spc_sbj_df` will convert mapping between `sample_id` to all related `subject_id` as list
+    # spc_sbj_df = df.loc[:, df.columns.isin(['sample_id', 'subject_id'])] \
+    #     .groupby('sample_id')['subject_id'] \
+    #     .apply(list) \
+    #     .reset_index(name='subject_id_list')
+    #
+    # for record in spc_sbj_df.to_dict('records'):
+    #     specimen_id = record.get("sample_id")
+    #     subject_id_list = record.get("subject_id_list")
+    #
+    #     try:
+    #         spc = Specimen.objects.get(internal_id=specimen_id)
+    #         for sbj in spc.subjects.all().iterator():
+    #             if sbj.internal_id not in subject_id_list:
+    #                 spc.subjects.remove(sbj)
+    #
+    #     except ObjectDoesNotExist:
+    #         pass
+    #
+    # ... added below...
+    #
+    # # specimen <-> subject (addition only)
+    # try:
+    #     specimen.subjects.get(id=subject.id)
+    # except ObjectDoesNotExist:
+    #     specimen.subjects.add(subject)
 
     # this the where records are updated, inserted, linked based on library_id
     for record in df.to_dict('records'):
@@ -103,6 +114,7 @@ def persist_lab_metadata(df: pd.DataFrame):
                 defaults={
                     "internal_id": record.get('sample_id'),
                     "source": get_value_from_human_readable_label(Source.choices, record.get('source')),
+                    'subject_id': subject.id
                 }
             )
             if is_spc_created:
@@ -128,18 +140,17 @@ def persist_lab_metadata(df: pd.DataFrame):
             else:
                 library_updated.append(library)
 
-            # 2. linking or updating model to each other based on the record
+            # 2. linking or updating model to each other based on the record (update if it does not match)
 
-            # library <-> specimen (update if it does not match)
+            # library <-> specimen
             if library.specimen is None or library.specimen.id != specimen.id:
                 library.specimen = specimen
                 library.save()
 
-            # specimen <-> subject (addition only)
-            try:
-                specimen.subjects.get(id=subject.id)
-            except ObjectDoesNotExist:
-                specimen.subjects.add(subject)
+            # specimen <-> subject
+            if specimen.subject is None or specimen.subject.id != subject.id:
+                specimen.subject = subject
+                specimen.save()
 
         except Exception as e:
             if any(record.values()):  # silent off iff blank row

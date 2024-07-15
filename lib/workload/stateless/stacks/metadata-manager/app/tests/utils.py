@@ -23,5 +23,5 @@ def insert_mock_1():
     library.specimen = specimen
     library.save()
 
-    specimen.subjects.add(subject)
+    specimen.subject = subject
     specimen.save()

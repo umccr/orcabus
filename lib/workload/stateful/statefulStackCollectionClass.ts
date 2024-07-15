@@ -24,8 +24,10 @@ import {
   PostgresManagerStack,
   PostgresManagerStackProps,
 } from './stacks/postgres-manager/deploy/stack';
+import { DataBucketStack, DataBucketStackProps } from './stacks/data/stack';
 
 export interface StatefulStackCollectionProps {
+  dataBucketStackProps: DataBucketStackProps;
   sharedStackProps: SharedStackProps;
   postgresManagerStackProps: PostgresManagerStackProps;
   tokenServiceStackProps: TokenServiceStackProps;
@@ -39,6 +41,7 @@ export interface StatefulStackCollectionProps {
 export class StatefulStackCollection {
   // You could add more stack here and initiate it at the constructor. See example below for reference
 
+  readonly dataBucketStack: Stack;
   readonly sharedStack: Stack;
   readonly postgresManagerStack: Stack;
   readonly tokenServiceStack: Stack;
@@ -53,6 +56,14 @@ export class StatefulStackCollection {
     env: Environment,
     statefulConfiguration: StatefulStackCollectionProps
   ) {
+    // Currently this only needs to be deployed if bucketName exist as props
+    if (statefulConfiguration.dataBucketStackProps.bucketName) {
+      this.dataBucketStack = new DataBucketStack(scope, 'DataBucketStack', {
+        ...this.createTemplateProps(env, 'DataBucketStack'),
+        ...statefulConfiguration.dataBucketStackProps,
+      });
+    }
+
     this.sharedStack = new SharedStack(scope, 'SharedStack', {
       ...this.createTemplateProps(env, 'SharedStack'),
       ...statefulConfiguration.sharedStackProps,
