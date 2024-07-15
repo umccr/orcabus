@@ -72,6 +72,15 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
     }
 
     /// Filter records by all fields in the filter variable.
+    ///
+    /// This creates a query which is similar to:
+    ///
+    /// ```sql
+    /// select * from s3_object
+    /// where event_type = filter.event_type and
+    ///     bucket = filter.bucket and
+    ///     ...;
+    /// ```
     pub fn filter_all(mut self, filter: S3ObjectsFilterAll) -> Self {
         let condition = Condition::all()
             .add_option(filter.event_type.map(|v| S3ObjectColumn::EventType.eq(v)))
@@ -178,12 +187,17 @@ where
     }
 
     /// Paginate the query for the given page and page_size.
+    ///
+    /// This produces a query similar to:
+    ///
+    /// ```sql
+    /// select * from s3_object
+    ///     limit page_size
+    ///     offset page * page_size;
+    /// ```
     pub async fn paginate(mut self, page: u64, page_size: u64) -> Result<Self> {
         let offset = page.checked_mul(page_size).ok_or_else(|| OverflowError)?;
-        // Always add one to the limit to see if there is additional pages that can be fetched.
-        let limit = page_size.checked_add(1).ok_or_else(|| OverflowError)?;
-
-        self.select = self.select.offset(offset).limit(limit);
+        self.select = self.select.offset(offset).limit(page_size);
 
         self.trace_query("paginate");
 
@@ -197,7 +211,13 @@ where
     ) -> Result<ListResponse<M>> {
         let page = pagination.page();
         let page_size = pagination.page_size();
-        let query = self.paginate(page, page_size).await?;
+        let mut query = self.paginate(page, page_size).await?;
+
+        // Always add one to the limit to see if there is additional pages that can be fetched.
+        QuerySelect::query(&mut query.select).reset_limit();
+        query.select = query
+            .select
+            .limit(page_size.checked_add(1).ok_or_else(|| OverflowError)?);
 
         let mut results = query.all().await?;
 
@@ -221,6 +241,7 @@ where
     }
 
     fn trace_query(&self, message: &str) {
+        println!("{}", self.select.as_query().to_string(PostgresQueryBuilder));
         trace!(
             "{message}: {}",
             self.select.as_query().to_string(PostgresQueryBuilder)
@@ -255,13 +276,86 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_current_s3_objects(pool: PgPool) {
-        assert_current_state(pool, 10, 4, 3, &[2, 8]).await;
+    async fn test_current_s3_objects_10(pool: PgPool) {
+        let client = Client::from_pool(pool);
+
+        let entries = initialize_database_ratios_reorder(&client, 10, 4, 3)
+            .await
+            .s3_objects;
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client).current_state();
+        let result = builder.all().await.unwrap();
+
+        assert_eq!(result, vec![entries[2].clone(), entries[8].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_current_s3_objects_extra_entries(pool: PgPool) {
-        assert_current_state(pool, 20, 8, 5, &[6, 14]).await;
+    async fn test_current_s3_objects_30(pool: PgPool) {
+        let client = Client::from_pool(pool);
+
+        let entries = initialize_database_ratios_reorder(&client, 30, 8, 5)
+            .await
+            .s3_objects;
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client).current_state();
+        let result = builder.all().await.unwrap();
+
+        assert_eq!(
+            result,
+            vec![entries[6].clone(), entries[17].clone(), entries[24].clone()]
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_current_s3_objects_with_paginate_10(pool: PgPool) {
+        let client = Client::from_pool(pool);
+
+        let entries = initialize_database_ratios_reorder(&client, 10, 4, 3)
+            .await
+            .s3_objects;
+
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client)
+            .current_state()
+            .paginate(0, 1)
+            .await
+            .unwrap();
+        let result = builder.all().await.unwrap();
+        assert_eq!(result, vec![entries[2].clone()]);
+
+        // Order of paginate call shouldn't matter.
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client)
+            .paginate(1, 1)
+            .await
+            .unwrap()
+            .current_state();
+        let result = builder.all().await.unwrap();
+        assert_eq!(result, vec![entries[8].clone()]);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_current_s3_objects_with_filter(pool: PgPool) {
+        let client = Client::from_pool(pool);
+
+        let entries = initialize_database_ratios_reorder(&client, 30, 8, 5)
+            .await
+            .s3_objects;
+
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client)
+            .current_state()
+            .filter_all(S3ObjectsFilterAll {
+                size: Some(14),
+                ..Default::default()
+            });
+        let result = builder.all().await.unwrap();
+        assert_eq!(result, vec![entries[6].clone()]);
+
+        // Order of filter call shouldn't matter.
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client)
+            .filter_all(S3ObjectsFilterAll {
+                size: Some(4),
+                ..Default::default()
+            })
+            .current_state();
+        let result = builder.all().await.unwrap();
+        assert_eq!(result, vec![entries[24].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -488,29 +582,6 @@ mod tests {
 
         assert_eq!(builder.clone().count().await.unwrap(), 10);
         assert_eq!(builder.to_list_count().await.unwrap(), ListCount::new(10));
-    }
-
-    async fn assert_current_state(
-        pool: PgPool,
-        n: usize,
-        bucket_ratio: usize,
-        key_ratio: usize,
-        indices: &[usize],
-    ) {
-        let client = Client::from_pool(pool);
-
-        let entries = initialize_database_ratios_reorder(&client, n, bucket_ratio, key_ratio)
-            .await
-            .s3_objects;
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client).current_state();
-        let result = builder.all().await.unwrap();
-
-        let expected: Vec<_> = entries
-            .into_iter()
-            .enumerate()
-            .filter_map(|(i, entry)| indices.contains(&i).then_some(entry))
-            .collect();
-        assert_eq!(result, expected);
     }
 
     async fn paginate_all<T, M>(
