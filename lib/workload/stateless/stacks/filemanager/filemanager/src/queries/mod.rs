@@ -43,7 +43,26 @@ pub(crate) mod tests {
     /// Initialize the database state for testing and shuffle entries to simulate
     /// out of order events.
     pub(crate) async fn initialize_database_reorder(client: &Client, n: usize) -> Entries {
-        let mut data = initialize_database_with_shuffle(client, n, true).await;
+        initialize_database_ratios_reorder(client, n, 2, 1).await
+    }
+
+    /// Initialize database state for testing.
+    pub(crate) async fn initialize_database(client: &Client, n: usize) -> Entries {
+        initialize_database_with_shuffle(client, n, false, 2, 1)
+            .await
+            .into()
+    }
+
+    /// Initialize database state for testing with custom bucket and key ratios of Created/Deleted
+    /// events and out of order events.
+    pub(crate) async fn initialize_database_ratios_reorder(
+        client: &Client,
+        n: usize,
+        bucket_ratio: usize,
+        key_ratio: usize,
+    ) -> Entries {
+        let mut data =
+            initialize_database_with_shuffle(client, n, true, bucket_ratio, key_ratio).await;
 
         // Return the correct ordering for test purposes
         data.sort_by(|(_, a), (_, b)| a.sequencer.cmp(&b.sequencer));
@@ -51,21 +70,18 @@ pub(crate) mod tests {
         data.into()
     }
 
-    /// Initialize database state for testing.
-    pub(crate) async fn initialize_database(client: &Client, n: usize) -> Entries {
-        initialize_database_with_shuffle(client, n, false)
-            .await
-            .into()
-    }
-
     async fn initialize_database_with_shuffle(
         client: &Client,
         n: usize,
         shuffle: bool,
+        bucket_ratio: usize,
+        key_ratio: usize,
     ) -> Vec<(Object, S3Object)> {
         let mut output = vec![];
 
-        let mut entries: Vec<_> = (0..n).map(generate_entry).collect();
+        let mut entries: Vec<_> = (0..n)
+            .map(|index| generate_entry(index, bucket_ratio, key_ratio))
+            .collect();
 
         if shuffle {
             entries.shuffle(&mut thread_rng());
@@ -92,7 +108,11 @@ pub(crate) mod tests {
         output
     }
 
-    pub(crate) fn generate_entry(index: usize) -> (ActiveObject, ActiveS3Object) {
+    pub(crate) fn generate_entry(
+        index: usize,
+        bucket_ratio: usize,
+        key_ratio: usize,
+    ) -> (ActiveObject, ActiveS3Object) {
         let object_id = UuidGenerator::generate();
         let event = event_type(index);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
@@ -113,10 +133,9 @@ pub(crate) mod tests {
                 object_id: Set(object_id),
                 public_id: Set(UuidGenerator::generate()),
                 event_type: Set(event.clone()),
-                // Half as many buckets as keys.
-                bucket: Set((index / 2).to_string()),
-                key: Set(index.to_string()),
-                version_id: Set(index.to_string()),
+                bucket: Set((index / bucket_ratio).to_string()),
+                key: Set((index / key_ratio).to_string()),
+                version_id: Set((index / key_ratio).to_string()),
                 date: date(),
                 size: Set(Some(index as i64)),
                 sha256: Set(Some(index.to_string())),

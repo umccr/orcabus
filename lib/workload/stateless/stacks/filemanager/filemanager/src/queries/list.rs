@@ -1,13 +1,6 @@
 //! Query builder involving list operations on the database.
 //!
 
-use sea_orm::prelude::Expr;
-use sea_orm::sea_query::extension::postgres::PgExpr;
-use sea_orm::{
-    ColumnTrait, Condition, EntityTrait, FromQueryResult, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, Select,
-};
-
 use crate::database::entities::object::Entity as ObjectEntity;
 use crate::database::entities::s3_object::Entity as S3ObjectEntity;
 use crate::database::entities::s3_object::{Column as S3ObjectColumn, Column as ObjectColumn};
@@ -17,6 +10,15 @@ use crate::error::{Error, Result};
 use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
 use crate::routes::list::{ListCount, ListResponse};
 use crate::routes::pagination::Pagination;
+use sea_orm::prelude::Expr;
+use sea_orm::sea_query::extension::postgres::PgExpr;
+use sea_orm::sea_query::{Alias, Asterisk, PostgresQueryBuilder, Query};
+use sea_orm::Order::{Asc, Desc};
+use sea_orm::{
+    ColumnTrait, Condition, EntityTrait, FromQueryResult, PaginatorTrait, QueryFilter, QueryOrder,
+    QuerySelect, QueryTrait, Select,
+};
+use tracing::trace;
 
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
@@ -102,6 +104,55 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
             );
 
         self.select = self.select.filter(condition);
+
+        self.trace_query("filter_all");
+
+        self
+    }
+
+    /// Update this query to find objects that represent the current state of S3 objects. That is,
+    /// this gets all non-deleted objects. This means that only `Created` events will be returned,
+    /// and these will be the most up to date at this point, without any 'Deleted' events coming
+    /// after them.
+    ///
+    /// This creates a query which is roughly equivalent to the following:
+    ///
+    /// ```sql
+    /// select * from (
+    ///     select distinct on (bucket, key, version_id) * from s3_object
+    ///     order by bucket, key, version_id, sequencer desc
+    /// ) as s3_object
+    /// where event_type = 'Created';
+    /// ```
+    ///
+    /// This finds all distinct objects within a (bucket, key, version_id) grouping such that they
+    /// are most recent and only `Created` events.
+    pub fn current_state(mut self) -> Self {
+        let subquery = Query::select()
+            .column(Asterisk)
+            .distinct_on([
+                S3ObjectColumn::Bucket,
+                S3ObjectColumn::Key,
+                S3ObjectColumn::VersionId,
+            ])
+            .from(S3ObjectEntity)
+            .order_by_columns([
+                (S3ObjectColumn::Bucket, Asc),
+                (S3ObjectColumn::Key, Asc),
+                (S3ObjectColumn::VersionId, Asc),
+                (S3ObjectColumn::Sequencer, Desc),
+            ])
+            .take();
+
+        // Clear the current from state (which should be `from s3_object`), and
+        // Update it to the distinct_on subquery.
+        QuerySelect::query(&mut self.select)
+            .from_clear()
+            .from_subquery(subquery, Alias::new("s3_object"))
+            .and_where(S3ObjectColumn::EventType.eq("Created"));
+
+        self.trace_query("current_state");
+
         self
     }
 }
@@ -133,6 +184,9 @@ where
         let limit = page_size.checked_add(1).ok_or_else(|| OverflowError)?;
 
         self.select = self.select.offset(offset).limit(limit);
+
+        self.trace_query("paginate");
+
         Ok(self)
     }
 
@@ -165,6 +219,13 @@ where
     pub async fn to_list_count(self) -> Result<ListCount> {
         Ok(ListCount::new(self.count().await?))
     }
+
+    fn trace_query(&self, message: &str) {
+        trace!(
+            "{message}: {}",
+            self.select.as_query().to_string(PostgresQueryBuilder)
+        );
+    }
 }
 
 #[cfg(test)]
@@ -176,7 +237,9 @@ mod tests {
     use crate::database::entities::object::Model as ObjectModel;
     use crate::database::entities::s3_object::Model as S3ObjectModel;
     use crate::database::entities::sea_orm_active_enums::EventType;
-    use crate::queries::tests::{initialize_database, initialize_database_reorder};
+    use crate::queries::tests::{
+        initialize_database, initialize_database_ratios_reorder, initialize_database_reorder,
+    };
 
     use super::*;
 
@@ -189,6 +252,16 @@ mod tests {
         let result = builder.all().await.unwrap();
 
         assert_eq!(result, entries);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_current_s3_objects(pool: PgPool) {
+        assert_current_state(pool, 10, 4, 3, &[2, 8]).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_current_s3_objects_extra_entries(pool: PgPool) {
+        assert_current_state(pool, 20, 8, 5, &[6, 14]).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -415,6 +488,29 @@ mod tests {
 
         assert_eq!(builder.clone().count().await.unwrap(), 10);
         assert_eq!(builder.to_list_count().await.unwrap(), ListCount::new(10));
+    }
+
+    async fn assert_current_state(
+        pool: PgPool,
+        n: usize,
+        bucket_ratio: usize,
+        key_ratio: usize,
+        indices: &[usize],
+    ) {
+        let client = Client::from_pool(pool);
+
+        let entries = initialize_database_ratios_reorder(&client, n, bucket_ratio, key_ratio)
+            .await
+            .s3_objects;
+        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client).current_state();
+        let result = builder.all().await.unwrap();
+
+        let expected: Vec<_> = entries
+            .into_iter()
+            .enumerate()
+            .filter_map(|(i, entry)| indices.contains(&i).then_some(entry))
+            .collect();
+        assert_eq!(result, expected);
     }
 
     async fn paginate_all<T, M>(
