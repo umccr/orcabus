@@ -241,7 +241,6 @@ where
     }
 
     fn trace_query(&self, message: &str) {
-        println!("{}", self.select.as_query().to_string(PostgresQueryBuilder));
         trace!(
             "{message}: {}",
             self.select.as_query().to_string(PostgresQueryBuilder)

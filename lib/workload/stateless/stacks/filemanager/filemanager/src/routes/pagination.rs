@@ -2,10 +2,10 @@
 //!
 
 use serde::{Deserialize, Deserializer};
-use utoipa::{IntoParams, ToSchema};
+use utoipa::IntoParams;
 
 /// Pagination query parameters for list operations.
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
 #[serde(default)]
 #[into_params(parameter_in = Query)]
 pub struct Pagination {
@@ -87,6 +87,22 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_objects_api_paginate_large(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await.objects;
+
+        let result: ListResponse<Object> =
+            response_from(state.clone(), "/objects?page=0&page_size=20").await;
+        assert!(result.next_page().is_none());
+        assert_eq!(result.results(), entries);
+
+        let result: ListResponse<Object> =
+            response_from(state, "/objects?page=20&page_size=1").await;
+        assert!(result.next_page().is_none());
+        assert!(result.results().is_empty());
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_objects_api_zero_page_size(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = initialize_database(state.client(), 10).await.objects;
@@ -107,6 +123,24 @@ mod tests {
             response_from(state, "/s3_objects?page=1&page_size=2").await;
         assert_eq!(result.next_page(), Some(2));
         assert_eq!(result.results(), &entries[2..4]);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_objects_api_paginate_large(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database_reorder(state.client(), 10)
+            .await
+            .s3_objects;
+
+        let result: ListResponse<S3Object> =
+            response_from(state.clone(), "/s3_objects?page=0&page_size=20").await;
+        assert!(result.next_page().is_none());
+        assert_eq!(result.results(), entries);
+
+        let result: ListResponse<S3Object> =
+            response_from(state, "/s3_objects?page=20&page_size=1").await;
+        assert!(result.next_page().is_none());
+        assert!(result.results().is_empty());
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
