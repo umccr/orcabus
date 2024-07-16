@@ -97,10 +97,15 @@ pub async fn list_objects(
         (status = OK, description = "Get the count of all objects", body = ListCount),
         ErrorStatusCode,
     ),
+    params(ObjectsFilterAll),
     context_path = "/api/v1",
 )]
-pub async fn count_objects(state: State<AppState>) -> Result<Json<ListCount>> {
+pub async fn count_objects(
+    state: State<AppState>,
+    QsQuery(filter_all): QsQuery<ObjectsFilterAll>,
+) -> Result<Json<ListCount>> {
     let response = ListQueryBuilder::<ObjectEntity>::new(&state.client)
+        .filter_all(filter_all)
         .to_list_count()
         .await?;
 
@@ -116,6 +121,10 @@ pub struct ListS3ObjectsParams {
     /// This ensures that only `Created` events which represent current
     /// objects in storage are returned, and any historical `Deleted`
     /// or `Created`events are omitted.
+    ///
+    /// For example, consider that there are three events for a given bucket, key and version_id
+    /// in the following order: `Created` -> `Deleted` -> `Created`. Then setting
+    /// `?current_state=true` would return only the last `Created` event.
     #[param(nullable, default = false)]
     current_state: bool,
 }
@@ -155,14 +164,22 @@ pub async fn list_s3_objects(
         (status = OK, description = "Get the count of all s3 objects", body = ListCount),
         ErrorStatusCode,
     ),
+    params(ListS3ObjectsParams, S3ObjectsFilterAll),
     context_path = "/api/v1",
 )]
-pub async fn count_s3_objects(state: State<AppState>) -> Result<Json<ListCount>> {
-    let response = ListQueryBuilder::<S3ObjectEntity>::new(&state.client)
-        .to_list_count()
-        .await?;
+pub async fn count_s3_objects(
+    state: State<AppState>,
+    Query(list): Query<ListS3ObjectsParams>,
+    QsQuery(filter_all): QsQuery<S3ObjectsFilterAll>,
+) -> Result<Json<ListCount>> {
+    let mut response =
+        ListQueryBuilder::<S3ObjectEntity>::new(&state.client).filter_all(filter_all);
 
-    Ok(Json(response))
+    if list.current_state {
+        response = response.current_state();
+    }
+
+    Ok(Json(response.to_list_count().await?))
 }
 
 #[cfg(test)]
@@ -327,12 +344,43 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn count_objects_api_filter(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        initialize_database(state.client(), 10).await;
+
+        let result: ListCount = response_from(
+            state,
+            "/objects/count?attributes[nested_id][attribute_id]=0",
+        )
+        .await;
+        assert_eq!(result.n_records, 1);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
         initialize_database(state.client(), 10).await;
 
         let result: ListCount = response_from(state, "/s3_objects/count").await;
         assert_eq!(result.n_records, 10);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn count_s3_objects_api_filter(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        initialize_database(state.client(), 10).await;
+
+        let result: ListCount = response_from(state, "/s3_objects/count?bucket=0").await;
+        assert_eq!(result.n_records, 2);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn count_s3_objects_api_current_state(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        initialize_database_ratios_reorder(state.client(), 10, 4, 3).await;
+
+        let result: ListCount = response_from(state, "/s3_objects/count?current_state=true").await;
+        assert_eq!(result.n_records, 2);
     }
 
     pub(crate) async fn response_from<T: DeserializeOwned>(state: AppState, uri: &str) -> T {
