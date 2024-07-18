@@ -3,6 +3,7 @@
 
 pub mod get;
 pub mod list;
+pub mod update;
 
 #[cfg(test)]
 pub(crate) mod tests {

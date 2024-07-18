@@ -20,6 +20,7 @@ use crate::routes::ingest::ingest_from_sqs;
 use crate::routes::list::*;
 use crate::routes::openapi::swagger_ui;
 
+pub mod attributes;
 pub mod filtering;
 pub mod get;
 pub mod ingest;
@@ -140,6 +141,7 @@ impl From<Error> for ErrorStatusCode {
             Error::OverflowError | Error::ConversionError(_) => {
                 Self::BadRequest(err.to_string().into())
             }
+            Error::APIError(err) => err,
             _ => Self::InternalServerError("unexpected error".to_string().into()),
         }
     }

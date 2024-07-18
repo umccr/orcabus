@@ -1,9 +1,10 @@
 //! Query builder involving list operations on the database.
 //!
 
+use crate::database::entities::object::Column as ObjectColumn;
 use crate::database::entities::object::Entity as ObjectEntity;
+use crate::database::entities::s3_object::Column as S3ObjectColumn;
 use crate::database::entities::s3_object::Entity as S3ObjectEntity;
-use crate::database::entities::s3_object::{Column as S3ObjectColumn, Column as ObjectColumn};
 use crate::database::Client;
 use crate::error::Error::OverflowError;
 use crate::error::{Error, Result};
@@ -22,12 +23,12 @@ use tracing::trace;
 
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
-pub struct ListQueryBuilder<'a, T>
+pub struct ListQueryBuilder<'a, E>
 where
-    T: EntityTrait,
+    E: EntityTrait,
 {
     client: &'a Client,
-    select: Select<T>,
+    select: Select<E>,
 }
 
 impl<'a> ListQueryBuilder<'a, ObjectEntity> {
@@ -35,12 +36,12 @@ impl<'a> ListQueryBuilder<'a, ObjectEntity> {
     pub fn new(client: &'a Client) -> Self {
         Self {
             client,
-            select: Self::build_objects(),
+            select: Self::for_objects(),
         }
     }
 
-    /// Build a select query for finding values from objects.
-    pub fn build_objects() -> Select<ObjectEntity> {
+    /// Define a select query for finding values from objects.
+    pub fn for_objects() -> Select<ObjectEntity> {
         ObjectEntity::find()
     }
 
@@ -62,12 +63,12 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
     pub fn new(client: &'a Client) -> Self {
         Self {
             client,
-            select: Self::build_s3_objects(),
+            select: Self::for_s3_objects(),
         }
     }
 
-    /// Build a select query for finding values from s3 objects.
-    pub fn build_s3_objects() -> Select<S3ObjectEntity> {
+    /// Define a select query for finding values from s3 objects.
+    pub fn for_s3_objects() -> Select<S3ObjectEntity> {
         S3ObjectEntity::find().order_by_asc(S3ObjectColumn::Sequencer)
     }
 
@@ -166,9 +167,9 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
     }
 }
 
-impl<'a, T, M> ListQueryBuilder<'a, T>
+impl<'a, E, M> ListQueryBuilder<'a, E>
 where
-    T: EntityTrait<Model = M>,
+    E: EntityTrait<Model = M>,
     M: FromQueryResult + Send + Sync,
 {
     /// Execute the prepared query, fetching all values.

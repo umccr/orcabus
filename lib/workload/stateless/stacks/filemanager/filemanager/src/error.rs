@@ -4,6 +4,7 @@
 use sea_orm::{sqlx_error_to_query_err, DbErr};
 use std::{io, result};
 
+use crate::routes::ErrorStatusCode;
 use sqlx::migrate::MigrateError;
 use thiserror::Error;
 
@@ -32,6 +33,8 @@ pub enum Error {
     OverflowError,
     #[error("Numerical conversion failed: {0}")]
     ConversionError(String),
+    #[error("API error")]
+    APIError(ErrorStatusCode),
 }
 
 impl From<sqlx::Error> for Error {
