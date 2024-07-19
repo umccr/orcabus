@@ -6,10 +6,12 @@ edition.workspace = true
 authors.workspace = true
 
 [dependencies]
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["fs", "rt-multi-thread", "macros"] }
 tracing = "0.1"
 axum = "0.7"
 dotenvy = "0.15"
 http = "1"
+clap = { version = "4", features = ["derive"] }
+sea-orm = { version = "0.12", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
 
 filemanager = { path = "../filemanager" }

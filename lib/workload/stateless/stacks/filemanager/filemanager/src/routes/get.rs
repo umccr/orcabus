@@ -65,14 +65,17 @@ mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
-    use crate::queries::tests::initialize_database;
+    use crate::queries::EntriesBuilder;
     use crate::routes::list::tests::response_from;
     use crate::routes::AppState;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.objects;
+        let entries = EntriesBuilder::default()
+            .build(state.client())
+            .await
+            .objects;
 
         let first = entries.first().unwrap();
         let result: Object = response_from(state, &format!("/objects/{}", first.object_id)).await;
@@ -82,7 +85,10 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_s3_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .build(state.client())
+            .await
+            .s3_objects;
 
         let first = entries.first().unwrap();
         let result: S3Object =

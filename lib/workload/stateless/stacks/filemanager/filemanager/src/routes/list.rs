@@ -196,9 +196,7 @@ pub(crate) mod tests {
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::database::entities::sea_orm_active_enums::EventType;
-    use crate::queries::tests::{
-        initialize_database, initialize_database_ratios_reorder, initialize_database_reorder,
-    };
+    use crate::queries::EntriesBuilder;
     use crate::routes::api_router;
 
     use super::*;
@@ -206,7 +204,10 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.objects;
+        let entries = EntriesBuilder::default()
+            .build(state.client())
+            .await
+            .objects;
 
         let result: ListResponse<Object> = response_from(state, "/objects").await;
         assert!(result.next_page.is_none());
@@ -216,7 +217,10 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_objects_api_filter_attributes(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.objects;
+        let entries = EntriesBuilder::default()
+            .build(state.client())
+            .await
+            .objects;
 
         let result: ListResponse<Object> =
             response_from(state.clone(), "/objects?attributes[attribute_id]=1").await;
@@ -237,7 +241,9 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database_reorder(state.client(), 10)
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
             .await
             .s3_objects;
 
@@ -249,7 +255,11 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_current_s3_objects_paginate(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database_ratios_reorder(state.client(), 10, 4, 3)
+        let entries = EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(state.client())
             .await
             .s3_objects;
 
@@ -262,7 +272,11 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_current_s3_objects_filter(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database_ratios_reorder(state.client(), 30, 8, 5)
+        let entries = EntriesBuilder::default()
+            .with_n(30)
+            .with_bucket_divisor(8)
+            .with_key_divisor(5)
+            .build(state.client())
             .await
             .s3_objects;
 
@@ -278,7 +292,11 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_filter_event_type(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
+            .await
+            .s3_objects;
 
         let result: ListResponse<S3Object> =
             response_from(state, "/s3_objects?event_type=Deleted").await;
@@ -295,7 +313,11 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_multiple_filters(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
+            .await
+            .s3_objects;
 
         let result: ListResponse<S3Object> =
             response_from(state, "/s3_objects?bucket=1&key=2").await;
@@ -305,7 +327,11 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_filter_attributes(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
+            .await
+            .s3_objects;
 
         let result: ListResponse<S3Object> =
             response_from(state.clone(), "/s3_objects?attributes[attribute_id]=1").await;
@@ -337,7 +363,10 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        initialize_database(state.client(), 10).await;
+        EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
+            .await;
 
         let result: ListCount = response_from(state, "/objects/count").await;
         assert_eq!(result.n_records, 10);
@@ -346,7 +375,10 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_objects_api_filter(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        initialize_database(state.client(), 10).await;
+        EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
+            .await;
 
         let result: ListCount = response_from(
             state,
@@ -359,7 +391,10 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        initialize_database(state.client(), 10).await;
+        EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
+            .await;
 
         let result: ListCount = response_from(state, "/s3_objects/count").await;
         assert_eq!(result.n_records, 10);
@@ -368,7 +403,10 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_objects_api_filter(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        initialize_database(state.client(), 10).await;
+        EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
+            .await;
 
         let result: ListCount = response_from(state, "/s3_objects/count?bucket=0").await;
         assert_eq!(result.n_records, 2);
@@ -377,7 +415,12 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_objects_api_current_state(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        initialize_database_ratios_reorder(state.client(), 10, 4, 3).await;
+        EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(state.client())
+            .await;
 
         let result: ListCount = response_from(state, "/s3_objects/count?current_state=true").await;
         assert_eq!(result.n_records, 2);

@@ -65,7 +65,7 @@ psql:
 
 ## Local API server.
 api: build
-	cargo run -p filemanager-api-server
+	cargo run -p filemanager-api-server $(ARGS)
 
 ## Help text
 help:

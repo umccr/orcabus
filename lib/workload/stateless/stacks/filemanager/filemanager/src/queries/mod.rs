@@ -1,86 +1,57 @@
 //! This module handles all logic related to querying the file manager through APIs/events.
 //!
 
+use std::ops::Add;
+
+use chrono::{DateTime, Days};
+use rand::seq::SliceRandom;
+use rand::thread_rng;
+use sea_orm::Set;
+use sea_orm::{ActiveModelTrait, TryIntoModel};
+use serde_json::json;
+use strum::EnumCount;
+
+use crate::database::entities::object::ActiveModel as ActiveObject;
+use crate::database::entities::object::Model as Object;
+use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
+use crate::database::entities::s3_object::Model as S3Object;
+use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
+use crate::database::Client;
+use crate::uuid::UuidGenerator;
+
 pub mod get;
 pub mod list;
 
-#[cfg(test)]
-pub(crate) mod tests {
-    use std::ops::Add;
+/// Container for generating database entries.
+#[derive(Debug)]
+pub struct Entries {
+    pub objects: Vec<Object>,
+    pub s3_objects: Vec<S3Object>,
+}
 
-    use chrono::{DateTime, Days};
-    use rand::seq::SliceRandom;
-    use rand::thread_rng;
-    use sea_orm::Set;
-    use sea_orm::{ActiveModelTrait, TryIntoModel};
-    use serde_json::json;
-    use strum::EnumCount;
-
-    use crate::database::entities::object::ActiveModel as ActiveObject;
-    use crate::database::entities::object::Model as Object;
-    use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
-    use crate::database::entities::s3_object::Model as S3Object;
-    use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
-    use crate::database::Client;
-    use crate::uuid::UuidGenerator;
-
-    /// Container for generated database entries
-    pub(crate) struct Entries {
-        pub(crate) objects: Vec<Object>,
-        pub(crate) s3_objects: Vec<S3Object>,
-    }
-
-    impl From<Vec<(Object, S3Object)>> for Entries {
-        fn from(objects: Vec<(Object, S3Object)>) -> Self {
-            let (objects, s3_objects) = objects.into_iter().unzip();
-            Self {
-                objects,
-                s3_objects,
-            }
+impl From<Vec<(Object, S3Object)>> for Entries {
+    fn from(objects: Vec<(Object, S3Object)>) -> Self {
+        let (objects, s3_objects) = objects.into_iter().unzip();
+        Self {
+            objects,
+            s3_objects,
         }
     }
+}
 
-    /// Initialize the database state for testing and shuffle entries to simulate
-    /// out of order events.
-    pub(crate) async fn initialize_database_reorder(client: &Client, n: usize) -> Entries {
-        initialize_database_ratios_reorder(client, n, 2, 1).await
-    }
-
-    /// Initialize database state for testing.
-    pub(crate) async fn initialize_database(client: &Client, n: usize) -> Entries {
-        initialize_database_with_shuffle(client, n, false, 2, 1)
-            .await
-            .into()
-    }
-
-    /// Initialize database state for testing with custom bucket and key ratios of Created/Deleted
-    /// events and out of order events.
-    pub(crate) async fn initialize_database_ratios_reorder(
-        client: &Client,
-        n: usize,
-        bucket_ratio: usize,
-        key_ratio: usize,
-    ) -> Entries {
-        let mut data =
-            initialize_database_with_shuffle(client, n, true, bucket_ratio, key_ratio).await;
-
-        // Return the correct ordering for test purposes
-        data.sort_by(|(_, a), (_, b)| a.sequencer.cmp(&b.sequencer));
-
-        data.into()
-    }
-
-    async fn initialize_database_with_shuffle(
+impl Entries {
+    /// Create an entries tuple from the arguments.
+    pub async fn initialize_database(
         client: &Client,
         n: usize,
         shuffle: bool,
-        bucket_ratio: usize,
-        key_ratio: usize,
+        bucket_divisor: usize,
+        key_divisor: usize,
     ) -> Vec<(Object, S3Object)> {
         let mut output = vec![];
 
         let mut entries: Vec<_> = (0..n)
-            .map(|index| generate_entry(index, bucket_ratio, key_ratio))
+            .map(|index| Self::generate_entry(index, bucket_divisor, key_divisor))
             .collect();
 
         if shuffle {
@@ -108,13 +79,14 @@ pub(crate) mod tests {
         output
     }
 
-    pub(crate) fn generate_entry(
+    /// Generate a single record entry using the index.
+    pub fn generate_entry(
         index: usize,
-        bucket_ratio: usize,
-        key_ratio: usize,
+        bucket_divisor: usize,
+        key_divisor: usize,
     ) -> (ActiveObject, ActiveS3Object) {
         let object_id = UuidGenerator::generate();
-        let event = event_type(index);
+        let event = Self::event_type(index);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
         let attributes = Some(json!({
             "attribute_id": format!("{}", index),
@@ -133,15 +105,15 @@ pub(crate) mod tests {
                 object_id: Set(object_id),
                 public_id: Set(UuidGenerator::generate()),
                 event_type: Set(event.clone()),
-                bucket: Set((index / bucket_ratio).to_string()),
-                key: Set((index / key_ratio).to_string()),
-                version_id: Set((index / key_ratio).to_string()),
+                bucket: Set((index / bucket_divisor).to_string()),
+                key: Set((index / key_divisor).to_string()),
+                version_id: Set((index / key_divisor).to_string()),
                 date: date(),
                 size: Set(Some(index as i64)),
                 sha256: Set(Some(index.to_string())),
                 last_modified_date: date(),
                 e_tag: Set(Some(index.to_string())),
-                storage_class: Set(Some(storage_class(index))),
+                storage_class: Set(Some(Self::storage_class(index))),
                 sequencer: Set(Some(index.to_string())),
                 is_delete_marker: Set(false),
                 number_duplicate_events: Set(0),
@@ -161,11 +133,74 @@ pub(crate) mod tests {
         )
     }
 
-    pub(crate) fn event_type(index: usize) -> EventType {
+    fn event_type(index: usize) -> EventType {
         EventType::from_repr((index % (EventType::COUNT - 1)) as u8).unwrap()
     }
 
-    pub(crate) fn storage_class(index: usize) -> StorageClass {
+    fn storage_class(index: usize) -> StorageClass {
         StorageClass::from_repr((index % StorageClass::COUNT) as u8).unwrap()
+    }
+}
+
+/// Generate entries into the filemanager database.
+#[derive(Debug)]
+pub struct EntriesBuilder {
+    n: usize,
+    bucket_divisor: usize,
+    key_divisor: usize,
+    shuffle: bool,
+}
+
+impl EntriesBuilder {
+    /// Set the number of entries.
+    pub fn with_n(mut self, n: usize) -> Self {
+        self.n = n;
+        self
+    }
+
+    /// Set the bucket ratio.
+    pub fn with_bucket_divisor(mut self, bucket_divisor: usize) -> Self {
+        self.bucket_divisor = bucket_divisor;
+        self
+    }
+
+    /// Set the key ratio.
+    pub fn with_key_divisor(mut self, key_divisor: usize) -> Self {
+        self.key_divisor = key_divisor;
+        self
+    }
+
+    /// Set whether to shuffle.
+    pub fn with_shuffle(mut self, shuffle: bool) -> Self {
+        self.shuffle = shuffle;
+        self
+    }
+
+    /// Build the entries and initialize the database.
+    pub async fn build(self, client: &Client) -> Entries {
+        let mut entries = Entries::initialize_database(
+            client,
+            self.n,
+            self.shuffle,
+            self.bucket_divisor,
+            self.key_divisor,
+        )
+        .await;
+
+        // Return the correct ordering for test purposes
+        entries.sort_by(|(_, a), (_, b)| a.sequencer.cmp(&b.sequencer));
+
+        entries.into()
+    }
+}
+
+impl Default for EntriesBuilder {
+    fn default() -> Self {
+        Self {
+            n: 10,
+            bucket_divisor: 2,
+            key_divisor: 1,
+            shuffle: false,
+        }
     }
 }
