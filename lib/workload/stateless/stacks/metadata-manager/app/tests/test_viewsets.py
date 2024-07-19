@@ -60,3 +60,54 @@ class LabViewSetTestCase(TestCase):
                 0,
                 "No results are expected for unrecognized query parameter",
             )
+
+    def test_library_full_model_api(self):
+        """
+        python manage.py test app.tests.test_viewsets.LabViewSetTestCase.test_library_full_model_api
+        """
+        path = 'library/full'
+
+        logger.info(f"check API path for '{path}'")
+        response = self.client.get(f"/{path}/")
+        self.assertEqual(response.status_code, 200,
+                         "Ok status response is expected")
+
+        result_response = response.data["results"]
+        self.assertGreater(len(result_response), 0, "A result is expected")
+
+        logger.debug("Check if unique data has a single entry")
+        response = self.client.get(f"/{path}/?internal_id={LIBRARY_1['internal_id']}")
+        results_response = response.data["results"]
+        self.assertEqual(
+            len(results_response), 1, "Single result is expected for unique data"
+        )
+
+        logger.debug("check if specimen and library are linked")
+        self.assertEqual(result_response[0]['specimen']['internal_id'], SPECIMEN_1["internal_id"], )
+        self.assertEqual(result_response[0]['specimen']['subject']['internal_id'], SUBJECT_1["internal_id"], )
+
+    def test_subject_full_model_api(self):
+        """
+        python manage.py test app.tests.test_viewsets.LabViewSetTestCase.test_subject_full_model_api
+        """
+        path = 'subject/full'
+
+        logger.info(f"check API path for '{path}'")
+        response = self.client.get(f"/{path}/")
+        self.assertEqual(response.status_code, 200,
+                         "Ok status response is expected")
+
+        result_response = response.data["results"]
+        self.assertGreater(len(result_response), 0, "A result is expected")
+
+        logger.debug("Check if unique data has a single entry")
+        response = self.client.get(f"/{path}/?internal_id={SUBJECT_1['internal_id']}")
+        results_response = response.data["results"]
+        self.assertEqual(
+            len(results_response), 1, "Single result is expected for unique data"
+        )
+
+        logger.debug("check if specimen and library are linked")
+        self.assertEqual(result_response[0]['specimen_set'][0]['internal_id'], SPECIMEN_1["internal_id"], )
+        self.assertEqual(result_response[0]['specimen_set'][0]['library_set'][0]['internal_id'],
+                         LIBRARY_1["internal_id"], )
