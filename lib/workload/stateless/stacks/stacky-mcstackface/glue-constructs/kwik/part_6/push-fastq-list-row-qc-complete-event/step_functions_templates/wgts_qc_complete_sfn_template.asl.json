@@ -23,9 +23,9 @@
         "fastq_list_row_id.$": "$.Item.fastq_list_row_id"
       },
       "ResultPath": "$.get_fastq_list_row_id_from_portal_run_id",
-      "Next": "Get Library Hash from FastqListRow Id"
+      "Next": "Get Library Id from FastqListRow Id"
     },
-    "Get Library Hash from FastqListRow Id": {
+    "Get Library Id from FastqListRow Id": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
@@ -35,11 +35,11 @@
           "id_type": "${__fastq_list_row_partition__}"
         }
       },
-      "ResultPath": "$.get_library_hash_step",
       "ResultSelector": {
-        "library_id_hash.$": "$.Item.library_db_id",
+        "library_id.$": "$.Item.library_id",
         "instrument_run_id.$": "$.Item.instrument_run_id"
       },
+      "ResultPath": "$.get_library_id_step",
       "Next": "GetLibraryInfo"
     },
     "GetLibraryInfo": {
@@ -48,12 +48,12 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.get_library_hash_step.library_id_hash",
+          "id.$": "$.get_library_id_step.library_id",
           "id_type": "${__library_partition__}"
         }
       },
       "ResultSelector": {
-        "sample_type.$": "$.Item.type",
+        "sample_type.$": "$.Item.sample_type",
         "internal_id.$": "$.Item.internal_id"
       },
       "ResultPath": "$.get_library_info_step",
@@ -137,7 +137,7 @@
         }
       ],
       "ResultSelector": {
-        "event_data.$": "$.Payload.event_data"
+        "event_data.$": "$.Payload.event_output_dict"
       },
       "ResultPath": "$.get_event_data_step",
       "Next": "Push FastqListRowQc Complete Event"

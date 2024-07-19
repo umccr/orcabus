@@ -632,6 +632,88 @@ def handler(event, context):
 #                                 "library_name": "L2400257_GTGACGTT_TCCCAGAT",
 #                                 "library_prep_kit_name": "NebRNA"
 #                             }
+#                         ],
+#                         "tso500l_settings": {
+#                             "adapter_read_1": "CTGTCTCTTATACACATCT",
+#                             "adapter_read_2": "CTGTCTCTTATACACATCT",
+#                             "adapter_behaviour": "trim",
+#                             "minimum_trimmed_read_length": 35,
+#                             "mask_short_reads": 35,
+#                             "override_cycles": "U7N1Y143;I10;I10;U7N1Y143"
+#                         },
+#                         "tso500l_data": [
+#                             {
+#                                 "sample_id": "L2400159",
+#                                 "sample_type": "DNA",
+#                                 "lane": 1,
+#                                 "index": "GAGAATGGTT",
+#                                 "index2": "TTGCTGCCGA",
+#                                 "i7_index_id": "UDP0017",
+#                                 "i5_index_id": "UDP0017"
+#                             },
+#                             {
+#                                 "sample_id": "L2400160",
+#                                 "sample_type": "DNA",
+#                                 "lane": 1,
+#                                 "index": "AGAGGCAACC",
+#                                 "index2": "CCATCATTAG",
+#                                 "i7_index_id": "UDP0018",
+#                                 "i5_index_id": "UDP0018"
+#                             },
+#                             {
+#                                 "sample_id": "L2400161",
+#                                 "sample_type": "DNA",
+#                                 "lane": 1,
+#                                 "index": "CCATCATTAG",
+#                                 "index2": "AGAGGCAACC",
+#                                 "i7_index_id": "UDP0019",
+#                                 "i5_index_id": "UDP0019"
+#                             },
+#                             {
+#                                 "sample_id": "L2400162",
+#                                 "sample_type": "DNA",
+#                                 "lane": 1,
+#                                 "index": "GATAGGCCGA",
+#                                 "index2": "GCCATGTGCG",
+#                                 "i7_index_id": "UDP0020",
+#                                 "i5_index_id": "UDP0020"
+#                             },
+#                             {
+#                                 "sample_id": "L2400163",
+#                                 "sample_type": "DNA",
+#                                 "lane": 1,
+#                                 "index": "ATGGTTGACT",
+#                                 "index2": "AGGACAGGCC",
+#                                 "i7_index_id": "UDP0021",
+#                                 "i5_index_id": "UDP0021"
+#                             },
+#                             {
+#                                 "sample_id": "L2400164",
+#                                 "sample_type": "DNA",
+#                                 "lane": 1,
+#                                 "index": "TATTGCGCTC",
+#                                 "index2": "CCTAACACAG",
+#                                 "i7_index_id": "UDP0022",
+#                                 "i5_index_id": "UDP0022"
+#                             },
+#                             {
+#                                 "sample_id": "L2400165",
+#                                 "sample_type": "DNA",
+#                                 "lane": 4,
+#                                 "index": "ACGCCTTGTT",
+#                                 "index2": "ACGTTCCTTA",
+#                                 "i7_index_id": "UDP0023",
+#                                 "i5_index_id": "UDP0023"
+#                             },
+#                             {
+#                                 "sample_id": "L2400166",
+#                                 "sample_type": "DNA",
+#                                 "lane": 1,
+#                                 "index": "TTCTACATAC",
+#                                 "index2": "TTACAGTTAG",
+#                                 "i7_index_id": "UDP0024",
+#                                 "i5_index_id": "UDP0024"
+#                             }
 #                         ]
 #                     }
 #                 }

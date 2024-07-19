@@ -36,12 +36,16 @@ def handler(event, context) -> Dict:
         duplication_rate_avg = sum(qc_iter['duplication_rate'] for qc_iter in qc_metrics_list) / len(qc_metrics_list)
         return {
             "all_fastq_list_row_ids_qc_complete": True,
-            "genome_coverage": genome_coverage_sum,
-            "duplication_rate": duplication_rate_avg
+            "library_qc_metrics": {
+                "genome_coverage": genome_coverage_sum,
+                "duplication_rate": duplication_rate_avg
+            }
         }
     elif sample_type == 'WTS':
         exon_fold_coverage_sum = sum(qc_iter['exon_fold_coverage'] for qc_iter in qc_metrics_list)
         return {
             "all_fastq_list_row_ids_qc_complete": True,
-            "exon_fold_coverage": exon_fold_coverage_sum
+            "library_qc_metrics": {
+                "exon_fold_coverage": exon_fold_coverage_sum
+            }
         }

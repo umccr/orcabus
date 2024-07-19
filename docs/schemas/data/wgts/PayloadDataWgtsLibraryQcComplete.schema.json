@@ -4,7 +4,7 @@
   "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataWgtsLibraryQcComplete",
   "title": "PayloadDataWgtsLibraryQcComplete",
   "required": [
-    "libraryInternalId",
+    "libraryId",
     "fastqListRowIds"
   ],
   "properties": {
@@ -17,14 +17,19 @@
         "type": "string"
       }
     },
-    "duplicationRate": {
-      "type": "number"
-    },
-    "genomeCoverage": {
-      "type": "number"
-    },
-    "exonFoldCoverage": {
-      "type": "number"
+    "qcMetrics": {
+      "type": "object",
+      "properties": {
+        "duplicationRate": {
+          "type": "number"
+        },
+        "genomeCoverage": {
+          "type": "number"
+        },
+        "exonFoldCoverage": {
+          "type": "number"
+        }
+      }
     }
   }
 }

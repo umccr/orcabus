@@ -5,7 +5,7 @@
   "title": "PayloadDataWgtsFastqListRowQcComplete",
   "required": [
     "fastqListRowId",
-    "libraryInternalId",
+    "libraryId",
     "instrumentRunId",
     "sampleType",
     "qcMetrics"
@@ -14,7 +14,7 @@
     "fastqListRowId": {
       "type": "string"
     },
-    "libraryInternalId": {
+    "libraryId": {
       "type": "string"
     },
     "instrumentRunId": {

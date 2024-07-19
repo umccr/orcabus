@@ -25,6 +25,10 @@ import {
   PostgresManagerStackProps,
 } from './stacks/postgres-manager/deploy/stack';
 import { DataBucketStack, DataBucketStackProps } from './stacks/data/stack';
+import {
+  WgtsQcIcav2PipelineTable,
+  WgtsQcIcav2PipelineTableStackProps,
+} from './stacks/wgtsqc-pipeline-dynamo-db/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -34,6 +38,7 @@ export interface StatefulStackCollectionProps {
   icaEventPipeStackProps: IcaEventPipeStackProps;
   bclconvertInteropQcIcav2PipelineTableStackProps: BclconvertInteropQcIcav2PipelineTableStackProps;
   cttsov2Icav2PipelineTableStackProps: Cttsov2Icav2PipelineTableStackProps;
+  wgtsQcIcav2PipelineTableStackProps: WgtsQcIcav2PipelineTableStackProps;
   BclConvertTableStackProps: BclConvertTableStackProps;
   stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
 }
@@ -48,6 +53,7 @@ export class StatefulStackCollection {
   readonly icaEventPipeStack: Stack;
   readonly bclconvertInteropQcIcav2PipelineTableStack: Stack;
   readonly cttsov2Icav2PipelineTableStack: Stack;
+  readonly wgtsQcIcav2PipelineTableStack: Stack;
   readonly BclConvertTableStack: Stack;
   readonly stackyStatefulTablesStack: Stack;
 
@@ -102,6 +108,16 @@ export class StatefulStackCollection {
         ...statefulConfiguration.cttsov2Icav2PipelineTableStackProps,
       }
     );
+
+    this.wgtsQcIcav2PipelineTableStack = new WgtsQcIcav2PipelineTable(
+      scope,
+      'WgtsQcIcav2PipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'WgtsQcIcav2PipelineTableStack'),
+        ...statefulConfiguration.wgtsQcIcav2PipelineTableStackProps,
+      }
+    );
+
     this.BclConvertTableStack = new BclConvertTable(scope, 'BclConvertTableStack', {
       ...this.createTemplateProps(env, 'BclConvertTableStack'),
       ...statefulConfiguration.BclConvertTableStackProps,

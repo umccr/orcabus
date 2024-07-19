@@ -20,7 +20,7 @@ fastqListRow
 
 Plus
 
-annotationVersion if the sampleType is 'WTS'
+gencodeAnnotationVersion if the sampleType is 'WTS'
 
 Mapping is as follows
 
@@ -31,12 +31,12 @@ sampleType = sample_type (one of WTS or WGS)
 fastqListRowId = fastq_list_row_id
 fastqListRow = fastq_list_row
 
-If the sampleType is WTS, then the annotationVersion is 'v39'
+If the sampleType is WTS, then the gencodeAnnotationVersion is 'v39'
 """
 
 # GLOBALS #
 DEFAULT_DRAGEN_REFERENCE_VERSION = "v9-r3"
-DEFAULT_DRAGEN_ANNOTATION_VERSION = "v39"
+DEFAULT_GENCODE_ANNOTATION_VERSION = "v39"
 
 
 def handler(event, context):
@@ -63,6 +63,8 @@ def handler(event, context):
     }
 
     if sample_type.lower() == 'wts':
-        draft_event['annotationVersion'] = DEFAULT_DRAGEN_ANNOTATION_VERSION
+        draft_event['gencodeAnnotationVersion'] = DEFAULT_GENCODE_ANNOTATION_VERSION
 
-    return draft_event
+    return {
+        "event_output_dict": draft_event
+    }

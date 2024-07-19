@@ -26,7 +26,7 @@ export class DynamodbPartitionedPipelineConstruct extends Construct {
         type: dynamodb.AttributeType.STRING,
       },
       tableName: props.tableName,
-      removalPolicy: props.removalPolicy,
+      removalPolicy: props.removalPolicy || RemovalPolicy.RETAIN_ON_UPDATE_OR_DELETE,
     });
 
     // Set outputs

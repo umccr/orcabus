@@ -3,10 +3,12 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as cdk from 'aws-cdk-lib';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { showerGlueHandlerConstruct } from './clag';
 import { BclconvertToBsshFastqCopyEventHandlerConstruct } from './elmer';
 import { BsshFastqCopyToBclconvertInteropQcConstruct } from './gorilla';
 import { Cttsov2GlueHandlerConstruct } from './jb-weld';
+import { WgtsQcGlueHandlerConstruct } from './kwik';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -21,12 +23,15 @@ export interface GlueConstructProps {
   inputMakerTableObj: dynamodb.ITableV2;
   workflowManagerTableObj: dynamodb.ITableV2;
   cttsov2GlueTableObj: dynamodb.ITableV2;
+  wgtsQcGlueTableObj: dynamodb.ITableV2;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
   bsshOutputFastqCopyOutputUriSsmParameterObj: ssm.IStringParameter;
   analysisOutputUriSsmParameterObj: ssm.IStringParameter;
   analysisCacheUriSsmParameterObj: ssm.IStringParameter;
   analysisLogsUriSsmParameterObj: ssm.IStringParameter;
+  /* Secrests */
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class GlueConstruct extends Construct {
@@ -44,8 +49,8 @@ export class GlueConstruct extends Construct {
     });
 
     /*
-    Part B: Copy the fastq list rows by connecting the bclconvert manager completion with the bsshfastqcopy manager
-    */
+        Part B: Copy the fastq list rows by connecting the bclconvert manager completion with the bsshfastqcopy manager
+        */
     const elmer = new BclconvertToBsshFastqCopyEventHandlerConstruct(this, 'elmer', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
@@ -89,11 +94,24 @@ export class GlueConstruct extends Construct {
     /*
         Part E: Plumber-up the WGTS QC Execution Service to the shower services
         */
-    // TODO
+    const kwik = new WgtsQcGlueHandlerConstruct(this, 'kwik', {
+      /* Event Bus */
+      eventBusObj: props.eventBusObj,
+      /* Tables */
+      inputMakerTableObj: props.inputMakerTableObj,
+      wgtsQcGlueTableObj: props.wgtsQcGlueTableObj,
+      /* SSM Parameters */
+      icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    });
 
     /*
-        Part F: Plumber-up the Tumor-Normal Execution Service to the shower services
-        */
+            Part F: Plumber-up the Tumor-Normal Execution Service to the shower services
+            */
     // TODO
   }
 }
@@ -106,12 +124,15 @@ export interface GlueStackConfig {
   inputMakerTableName: string;
   workflowManagerTableName: string;
   cttsov2GlueTableName: string;
+  wgtsQcGlueTableName: string;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterName: string;
   bsshOutputFastqCopyUriSsmParameterName: string;
   analysisCacheUriSsmParameterName: string;
   analysisOutputUriSsmParameterName: string;
   analysisLogsUriSsmParameterName: string;
+  /* Secrets */
+  icav2AccessTokenSecretName: string;
 }
 
 export type GlueStackProps = GlueStackConfig & cdk.StackProps;
@@ -152,6 +173,11 @@ export class GlueStack extends cdk.Stack {
       'cttsov2GlueTableObj',
       props.cttsov2GlueTableName
     );
+    const wgtsQcGlueTableObj = dynamodb.Table.fromTableName(
+      this,
+      'wgtsQcGlueTableObj',
+      props.wgtsQcGlueTableName
+    );
 
     /*
         Get the SSM Parameters
@@ -185,19 +211,34 @@ export class GlueStack extends cdk.Stack {
     );
 
     /*
-        Call the construct
+        Secrets
         */
+    const icav2AccessTokenSecretObj = secretsManager.Secret.fromSecretNameV2(
+      this,
+      'icav2AccessTokenSecretObj',
+      props.icav2AccessTokenSecretName
+    );
+
+    /*
+    Call the construct
+    */
     new GlueConstruct(this, 'stacky_glue', {
+      /* Event stuff */
       eventBusObj: eventBusObj,
-      cttsov2GlueTableObj: cttsov2GlueTableObj,
+      /* Tables */
       workflowManagerTableObj: workflowManagerTableObj,
       inputMakerTableObj: inputMakerTableObj,
       instrumentRunTableObj: instrumentRunTableObj,
+      wgtsQcGlueTableObj: wgtsQcGlueTableObj,
+      cttsov2GlueTableObj: cttsov2GlueTableObj,
+      /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: icav2ProjectIdSsmParameterObj,
       bsshOutputFastqCopyOutputUriSsmParameterObj: bsshOutputFastqCopyUriSsmParameterObj,
       analysisOutputUriSsmParameterObj: analysisOutputUriSsmParameterObj,
       analysisCacheUriSsmParameterObj: analysisCacheUriSsmParameterObj,
       analysisLogsUriSsmParameterObj: analysisLogsUriSsmParameterObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: icav2AccessTokenSecretObj,
     });
   }
 }

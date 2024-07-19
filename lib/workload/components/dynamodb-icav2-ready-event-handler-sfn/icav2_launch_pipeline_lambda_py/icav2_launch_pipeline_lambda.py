@@ -149,7 +149,6 @@ from wrapica.project_pipelines import (
 from wrapica.libica_models import Analysis
 from wrapica.utils import recursively_build_open_api_body_from_libica_item
 
-
 # Globals
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
 
@@ -291,9 +290,11 @@ def handler(event, context):
     }
 
 
+# CWL Test
+
 # if __name__ == "__main__":
 #     import os
-#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-trial"
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
 #     print(
 #         json.dumps(
 #             handler(
@@ -313,6 +314,183 @@ def handler(event, context):
 #                     "analysis_output_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240512abcd1234/out/",
 #                     "input_json": "{\"bclconvert_report_directory\":{\"class\":\"Directory\",\"location\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Reports/\"},\"interop_directory\":{\"class\":\"Directory\",\"location\":\"icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/InterOp/\"},\"run_id\":\"231116_A01052_0172_BHVLM5DSX7\"}"
 #                 },
+#                 context=None
+#             ),
+#             indent=2
+#         )
+#     )
+
+
+# # # Nextflow test
+# if __name__ == "__main__":
+#     import os
+#
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#     print(
+#         json.dumps(
+#             handler(
+#                 event={
+#                     "workflow_type": "nextflow",
+#                     "user_tags": {},
+#                     "technical_tags": {
+#                         "portal_run_id": "20240714f428b64f",
+#                         "step_functions_execution_arn": "arn:aws:states:ap-southeast-2:843407916570:execution:cttsov2Sfn-wfm-ready-event-handler:4e8f5a00-3a9d-e73d-77a5-1dedb119ac9d_bfd26923-adcc-5372-923a-ab74aa062c92",
+#                         "analysis_output_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/cttsov2/20240714f428b64f/"
+#                     },
+#                     "user_reference": "umccr--automated--cttsov2--2-6-0--20240714f428b64f",
+#                     "project_id": "ea19a3f5-ec7c-4940-a474-c31cd91dbad4",
+#                     "pipeline_id": "c2dfdbaa-2074-44c7-8078-d33e13607061",
+#                     "ica_logs_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/logs/cttsov2/20240714f428b64f/",
+#                     "analysis_output_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/cttsov2/20240714f428b64f/",
+#                     "input_json": "{\"StartsFromFastq\":true,\"sample_sheet\":\"icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/cache/cttsov2/20240714f428b64f/SampleSheet.csv\",\"run_folder\":\"icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/cache/cttsov2/20240714f428b64f/\",\"sample_pair_ids\":\"L2400166\"}"
+#                 },
+#                 context=None
+#             ),
+#             indent=2
+#         )
+#     )
+#
+#     # {
+#     #   "analysis_id": "12c25a8e-3afb-4fcf-b667-4321bf7c389a",
+#     #   "analysis_status": "REQUESTED",
+#     #   "analysis_return_payload": {
+#     #     "id": "12c25a8e-3afb-4fcf-b667-4321bf7c389a",
+#     #     "timeCreated": "2024-07-12T06:35:59Z",
+#     #     "timeModified": "2024-07-12T06:36:02Z",
+#     #     "owner": {
+#     #       "id": "73636fd8-692b-375c-9081-d416cd6a4357"
+#     #     },
+#     #     "tenant": {
+#     #       "id": "1555b441-c3be-40b0-a8f0-fb9dc7500545",
+#     #       "name": "umccr-prod"
+#     #     },
+#     #     "reference": "umccr--automated--cttsov2--2-5-0--202407121f5d45b0-TSO500 ctDNA v_2_5_0_24-52b3db6f-e8d9-4070-8960-89e52e73faba",
+#     #     "userReference": "umccr--automated--cttsov2--2-5-0--202407121f5d45b0",
+#     #     "pipeline": {
+#     #       "id": "cb4bf1cf-b796-488c-8d88-e75fcb9336e1",
+#     #       "timeCreated": "2023-11-09T23:49:26Z",
+#     #       "timeModified": "2024-05-28T20:57:49Z",
+#     #       "owner": {
+#     #         "id": "ee171059-4283-3acb-b0b0-34d5b356be3f"
+#     #       },
+#     #       "tenant": {
+#     #         "id": "25a4d4b2-ea16-4075-b09b-65ca3fee6d31",
+#     #         "name": "ilmn-tso500"
+#     #       },
+#     #       "code": "TSO500 ctDNA v_2_5_0_24",
+#     #       "description": "This is a TruSight Oncology 500 ctDNA pipeline using TSO500 ctDNA v_2_5_0_24.",
+#     #       "language": "NEXTFLOW",
+#     #       "pipelineTags": {
+#     #         "technicalTags": []
+#     #       },
+#     #       "analysisStorage": {
+#     #         "id": "3fab13dd-46e7-4b54-bb34-b80a01a99379",
+#     #         "name": "Large",
+#     #         "description": "7.2TB"
+#     #       },
+#     #       "urn": "urn:ilmn:ica:pipeline:cb4bf1cf-b796-488c-8d88-e75fcb9336e1#TSO500_ctDNA_v_2_5_0_24",
+#     #       "null": "RELEASED",
+#     #       "languageVersion": {
+#     #         "id": "b1585d18-f88c-4ca0-8d47-34f6c01eb6f3",
+#     #         "name": "22.04.3",
+#     #         "language": "NEXTFLOW"
+#     #       },
+#     #       "proprietary": true
+#     #     },
+#     #     "status": "REQUESTED",
+#     #     "tags": {
+#     #       "technicalTags": [
+#     #         "portal_run_id=202407121f5d45b0",
+#     #         "step_functions_execution_arn=arn:aws:states:ap-southeast-2:843407916570:execution:cttsov2Sfn-wfm-ready-event-handler:025ab108-907d-5a2d-1a89-dab51b32b633_8afebeb1-9355-83b5-e117-ef467881ad6c",
+#     #         "analysis_output_uri=icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/cttsov2/202407121f5d45b0/"
+#     #       ],
+#     #       "userTags": [],
+#     #       "referenceTags": []
+#     #     },
+#     #     "analysisStorage": {
+#     #       "id": "3fab13dd-46e7-4b54-bb34-b80a01a99379",
+#     #       "name": "Large",
+#     #       "description": "7.2TB"
+#     #     },
+#     #     "analysisPriority": "MEDIUM"
+#     #   },
+#     #   "analysis_launch_payload": {
+#     #     "userReference": "umccr--automated--cttsov2--2-5-0--202407121f5d45b0",
+#     #     "pipelineId": "cb4bf1cf-b796-488c-8d88-e75fcb9336e1",
+#     #     "tags": {
+#     #       "technicalTags": [
+#     #         "portal_run_id=202407121f5d45b0",
+#     #         "step_functions_execution_arn=arn:aws:states:ap-southeast-2:843407916570:execution:cttsov2Sfn-wfm-ready-event-handler:025ab108-907d-5a2d-1a89-dab51b32b633_8afebeb1-9355-83b5-e117-ef467881ad6c",
+#     #         "analysis_output_uri=icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/cttsov2/202407121f5d45b0/"
+#     #       ],
+#     #       "userTags": [],
+#     #       "referenceTags": []
+#     #     },
+#     #     "analysisInput": {
+#     #       "inputs": [
+#     #         {
+#     #           "parameterCode": "sample_sheet",
+#     #           "dataIds": [
+#     #             "fil.53983ba4b38042212ccc08dc9b5404a7"
+#     #           ]
+#     #         },
+#     #         {
+#     #           "parameterCode": "run_folder",
+#     #           "dataIds": [
+#     #             "fol.ea5598ebd25645de2ccb08dc9b5404a7"
+#     #           ]
+#     #         }
+#     #       ],
+#     #       "parameters": [
+#     #         {
+#     #           "code": "StartsFromFastq",
+#     #           "value": "True"
+#     #         },
+#     #         {
+#     #           "code": "sample_pair_ids",
+#     #           "multiValue": [
+#     #             "L2400159"
+#     #           ]
+#     #         }
+#     #       ]
+#     #     },
+#     #     "activationCodeDetailId": "103094d2-e932-4e34-8dd4-06ee1fb8be68",
+#     #     "analysisStorageId": "3fab13dd-46e7-4b54-bb34-b80a01a99379",
+#     #     "analysisOutput": [
+#     #       {
+#     #         "sourcePath": "out/",
+#     #         "targetProjectId": "ea19a3f5-ec7c-4940-a474-c31cd91dbad4",
+#     #         "targetPath": "/analysis/cttsov2/202407121f5d45b0/",
+#     #         "type": "FOLDER"
+#     #       }
+#     #     ]
+#     #   }
+#     # }
+
+
+# # WGTS CWL Test
+#
+# if __name__ == "__main__":
+#     import os
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#     print(
+#         json.dumps(
+#             handler(
+#                 event={
+#                     "workflow_type": "cwl",
+#                     "user_tags": {},
+#                     "technical_tags": {
+#                       "portal_run_id": "20240719dd1ffb82",
+#                       "step_functions_execution_arn": "arn:aws:states:ap-southeast-2:843407916570:execution:wgtsQcSfn-wfm-ready-event-handler:04ee188b-fd14-6a39-c1d2-bfd1bce3f7f3_a23eb48b-9447-8aaa-3d70-8549fec90ad9",
+#                       "analysis_output_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/wgtsQc/20240719dd1ffb82/"
+#                     },
+#                     "user_reference": "umccr--automated--wgtsqc--4-2-4--20240719dd1ffb82",
+#                     "project_id": "ea19a3f5-ec7c-4940-a474-c31cd91dbad4",
+#                     "pipeline_id": "71f094dc-0cf8-4fcf-890c-9f3edf00ee20",
+#                     "ica_logs_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/logs/wgtsQc/20240719dd1ffb82/",
+#                     "analysis_output_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/wgtsQc/20240719dd1ffb82/",
+#                     "input_json": "{\"reference_tar\":{\"class\":\"File\",\"location\":\"icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-hash-tables/v9-r3/hg38-alt_masked-cnv-hla-rna/\"},\"enable_rna\":true,\"output_directory\":\"L2400251\",\"enable_rrna_filter\":true,\"annotation_file\":{\"class\":\"File\",\"location\":\"icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/gencode/hg38/v39/gencode.v39.annotation.gtf\"},\"enable_duplicate_marking\":false,\"output_file_prefix\":\"L2400251\",\"fastq_list_rows\":[{\"rgid\":\"GCCCAGTG.CCGCAATT.4\",\"rgsm\":\"L2400251\",\"rglb\":\"L2400251\",\"lane\":4,\"read_1\":{\"class\":\"File\",\"location\":\"icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/2024071110689063/Samples/Lane_4/L2400251/L2400251_S23_L004_R1_001.fastq.gz\"},\"read_2\":{\"class\":\"File\",\"location\":\"icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/240229_A00130_0288_BH5HM2DSXC/2024071110689063/Samples/Lane_4/L2400251/L2400251_S23_L004_R2_001.fastq.gz\"}}],\"enable_rna_quantification\":true,\"enable_map_align_output\":true,\"enable_sort\":true}"
+#                   },
 #                 context=None
 #             ),
 #             indent=2

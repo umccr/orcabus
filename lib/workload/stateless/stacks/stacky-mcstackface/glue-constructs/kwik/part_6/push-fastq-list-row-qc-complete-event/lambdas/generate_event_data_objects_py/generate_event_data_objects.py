@@ -13,7 +13,7 @@ library_internal_id
 fastqListRowId
 sampleType
 qcMetrics
-libraryInternalId
+libraryId
 
 # Then if sampleType is equal to WGS
 duplicationRate
@@ -49,7 +49,7 @@ def handler(event, context) -> Dict[str, Dict[str, str]]:
     event_output_dict = {
         "fastqListRowId": fastq_list_row_id,
         "sampleType": sample_type,
-        "libraryInternalId": library_internal_id
+        "libraryId": library_internal_id
     }
 
     # Update dict per sample type

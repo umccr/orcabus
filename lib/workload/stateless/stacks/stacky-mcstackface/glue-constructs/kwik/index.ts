@@ -9,6 +9,7 @@ import { WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct } from './part
 import { WgtsQcInputMakerConstruct } from './part_5/wgts-qc-draft-to-ready';
 import { FastqListRowQcCompleteConstruct } from './part_6/push-fastq-list-row-qc-complete-event';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
+import { WgtsQcLibraryQcCompleteConstruct } from './part_7/library-qc-complete-event';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting wgts qc analyses
@@ -178,5 +179,13 @@ export class WgtsQcGlueHandlerConstruct extends Construct {
     * Once all fastq list rows have been processed for a given library, we fire off a library state change event
     * This will contain the qc information such as coverage + duplicate rate (for wgs) or exon coverage (for wts)
     */
+    const FastqListRowQcCompleteToLibraryQcComplete = new WgtsQcLibraryQcCompleteConstruct(
+      this,
+      'wgts_qc_complete_to_fastq_list_row_qc_complete',
+      {
+        eventBusObj: props.eventBusObj,
+        tableObj: props.wgtsQcGlueTableObj,
+      }
+    );
   }
 }

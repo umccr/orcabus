@@ -14,7 +14,7 @@ EVENT_BUS_NAME="OrcaBusMain"
 DETAIL_TYPE="WorkflowRunStateChange"
 SOURCE="orcabus.cttsov2inputeventglue"
 WORKFLOW_NAME="cttsov2"
-WORKFLOW_VERSION="2.5.0"
+WORKFLOW_VERSION="2.6.0"
 
 #############
 # GLOCALS

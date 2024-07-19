@@ -29,10 +29,6 @@ import typing
 import boto3
 import logging
 
-# IDE imports only
-if typing.TYPE_CHECKING:
-    from mypy_boto3_secretsmanager.client import SecretsManagerClient
-
 # ICA imports
 from wrapica.enums import DataType
 from wrapica.libica_models import ProjectData
@@ -40,6 +36,12 @@ from wrapica.project_data import (
     convert_icav2_uri_to_data_obj, convert_project_data_obj_to_icav2_uri,
     list_project_data_non_recursively
 )
+
+
+# IDE imports only
+if typing.TYPE_CHECKING:
+    from mypy_boto3_secretsmanager.client import SecretsManagerClient
+
 
 # Globals
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"

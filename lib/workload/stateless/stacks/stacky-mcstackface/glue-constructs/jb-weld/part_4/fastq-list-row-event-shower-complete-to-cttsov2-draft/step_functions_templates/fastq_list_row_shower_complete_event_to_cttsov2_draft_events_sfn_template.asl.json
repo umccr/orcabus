@@ -13,10 +13,10 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
-        "TableName": "stacky-cttsov2-workflow-glue-table",
+        "TableName": "${__table_name__}",
         "Key": {
           "id.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId",
-          "id_type": "instrument_run"
+          "id_type": "${__instrument_run_partition_name__}"
         }
       },
       "ResultSelector": {
@@ -29,7 +29,7 @@
       "Type": "Map",
       "ItemsPath": "$.get_libraries_step.library_list",
       "ItemSelector": {
-        "library_id_hash.$": "$$.Map.Item.Value",
+        "library_id.$": "$$.Map.Item.Value",
         "instrument_run_id.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId"
       },
       "ItemProcessor": {
@@ -48,10 +48,10 @@
                     "Type": "Task",
                     "Resource": "arn:aws:states:::dynamodb:getItem",
                     "Parameters": {
-                      "TableName": "stacky-cttsov2-workflow-glue-table",
+                      "TableName": "${__table_name__}",
                       "Key": {
-                        "id.$": "$.library_id_hash",
-                        "id_type": "library"
+                        "id.$": "$.library_id",
+                        "id_type": "${__library_partition_name__}"
                       }
                     },
                     "ResultPath": "$.get_fastq_list_row_ids_step",
@@ -83,10 +83,10 @@
                                   "Type": "Task",
                                   "Resource": "arn:aws:states:::dynamodb:getItem",
                                   "Parameters": {
-                                    "TableName": "stacky-cttsov2-workflow-glue-table",
+                                    "TableName": "${__table_name__}",
                                     "Key": {
                                       "id.$": "$.fastq_list_row_id",
-                                      "id_type": "fastq_list_row"
+                                      "id_type": "${__fastq_list_row_partition_name__}"
                                     }
                                   },
                                   "End": true,
@@ -104,10 +104,10 @@
                                   "Type": "Task",
                                   "Resource": "arn:aws:states:::dynamodb:getItem",
                                   "Parameters": {
-                                    "TableName": "stacky-cttsov2-workflow-glue-table",
+                                    "TableName": "${__table_name__}",
                                     "Key": {
                                       "id.$": "$.fastq_list_row_id",
-                                      "id_type": "bclconvert_data"
+                                      "id_type": "${__bclconvert_data_row_partition_name__}"
                                     }
                                   },
                                   "End": true,
@@ -138,7 +138,7 @@
                     "Type": "Task",
                     "Resource": "arn:aws:states:::lambda:invoke",
                     "Parameters": {
-                      "FunctionName": "arn:aws:lambda:ap-southeast-2:843407916570:function:OrcaBusBeta-StackyMcStack-stackygluejbweldfastqlis-09BnJPPlxKbk:1",
+                      "FunctionName": "${__generate_samplesheet_lambda_function_arn__}",
                       "Payload": {
                         "instrument_run_id.$": "$.instrument_run_id",
                         "bclconvert_data_rows.$": "$.get_fastq_list_row_values_step.bclconvert_data_rows"
@@ -172,7 +172,7 @@
                     "Type": "Task",
                     "Resource": "arn:aws:states:::states:startExecution.sync:2",
                     "Parameters": {
-                      "StateMachineArn": "arn:aws:states:ap-southeast-2:843407916570:stateMachine:cttsov2FastqListRowShowerCompleteToWorkflowDraftRun-preamble-sfn",
+                      "StateMachineArn": "${__sfn_preamble_state_machine_arn__}",
                       "Input": {}
                     },
                     "ResultPath": "$.get_sfn_preamble_outputs_step",
@@ -204,13 +204,13 @@
                   "Detail": {
                     "portalRunId.$": "$.get_draft_inputs.portal_run_id",
                     "timestamp.$": "$$.State.EnteredTime",
-                    "status": "draft",
-                    "workflowName": "cttsov2",
-                    "workflowVersion": "2.5.0",
+                    "status": "${__output_status__}",
+                    "workflowName": "${__workflow_name__}",
+                    "workflowVersion": "${__workflow_version__}",
                     "workflowRunName.$": "$.get_draft_inputs.workflow_run_name",
                     "payload": {
                       "refId": null,
-                      "version": "0.1.0",
+                      "version": "${__payload_version__}",
                       "data": {
                         "inputs": {
                           "sampleId.$": "$.get_draft_inputs.sample_id",
@@ -221,9 +221,9 @@
                       }
                     }
                   },
-                  "DetailType": "WorkflowDraftRunStateChange",
-                  "EventBusName": "OrcaBusMain",
-                  "Source": "orcabus.cttsov2inputeventglue"
+                  "DetailType": "${__detail_type__}",
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "${__event_source__}"
                 }
               ]
             },

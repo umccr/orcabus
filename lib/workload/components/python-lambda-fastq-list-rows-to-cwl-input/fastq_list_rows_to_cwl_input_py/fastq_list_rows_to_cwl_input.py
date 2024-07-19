@@ -149,20 +149,20 @@ def handler(event, context):
 #                 {
 #                     "fastq_list_rows": [
 #                         {
-#                             "RGID": "GAATTCGT.TTATGAGT.1",
-#                             "RGSM": "L2400102",
-#                             "RGLB": "L2400102",
-#                             "Lane": 1,
-#                             "Read1FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400102/L2400102_S1_L001_R1_001.fastq.gz",
-#                             "Read2FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400102/L2400102_S1_L001_R2_001.fastq.gz"
+#                             "rgid": "GAATTCGT.TTATGAGT.1",
+#                             "rgsm": "L2400102",
+#                             "rglb": "L2400102",
+#                             "lane": 1,
+#                             "read1FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400102/L2400102_S1_L001_R1_001.fastq.gz",
+#                             "read2FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400102/L2400102_S1_L001_R2_001.fastq.gz"
 #                         },
 #                         {
-#                             "RGID": "GAGAATGGTT.TTGCTGCCGA.1",
-#                             "RGSM": "L2400159",
-#                             "RGLB": "L2400159",
-#                             "Lane": 1,
-#                             "Read1FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400159/L2400159_S2_L001_R1_001.fastq.gz",
-#                             "Read2FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400159/L2400159_S2_L001_R2_001.fastq.gz"
+#                             "rgid": "GAGAATGGTT.TTGCTGCCGA.1",
+#                             "rgsm": "L2400159",
+#                             "rglb": "L2400159",
+#                             "lane": 1,
+#                             "read1FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400159/L2400159_S2_L001_R1_001.fastq.gz",
+#                             "read2FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400159/L2400159_S2_L001_R2_001.fastq.gz"
 #                         },
 #                     ]
 #                 },

@@ -62,7 +62,7 @@
                 "UpdateExpression": "ADD library_set :library_set, fastq_list_row_id_set :fastq_list_row_id_set",
                 "ExpressionAttributeValues": {
                   ":library_set": {
-                    "SS.$": "States.Array(States.Hash($.input_payload_data.library.id, 'SHA-1'))"
+                    "SS.$": "States.Array($.input_payload_data.library.internalId)"
                   },
                   ":fastq_list_row_id_set": {
                     "SS.$": "$.bclconvert_and_fastq_list_row_id_inputs[*].fastq_list_row_id"
@@ -83,7 +83,7 @@
                 "TableName": "${__table_name__}",
                 "Item": {
                   "id": {
-                    "S.$": "States.Hash($.input_payload_data.library.id, 'SHA-1')"
+                    "S.$": "$.input_payload_data.library.internalId"
                   },
                   "id_type": {
                     "S": "${__library_partition_name__}"
@@ -93,6 +93,9 @@
                   },
                   "internal_id": {
                     "S.$": "$.input_payload_data.library.internalId"
+                  },
+                  "sample_type": {
+                    "S.$": "$.input_payload_data.library.type"
                   },
                   "fastq_list_row_id_set": {
                     "SS.$": "$.bclconvert_and_fastq_list_row_id_inputs[*].fastq_list_row_id"
@@ -111,7 +114,7 @@
               "ItemsPath": "$.bclconvert_and_fastq_list_row_id_inputs",
               "ItemSelector": {
                 "fastq_list_row_id.$": "$$.Map.Item.Value.fastq_list_row_id",
-                "library_id_hash.$": "States.Hash($.input_payload_data.library.id, 'SHA-1')",
+                "library_id.$": "$.input_payload_data.library.internalId",
                 "instrument_run_id.$": "$.input_payload_data.instrumentRunId"
               },
               "ItemProcessor": {
@@ -132,8 +135,8 @@
                         "id_type": {
                           "S": "${__fastq_list_row_partition_name__}"
                         },
-                        "library_db_id": {
-                          "S.$": "$.library_id_hash"
+                        "library_id": {
+                          "S.$": "$.library_id"
                         },
                         "instrument_run_id": {
                           "S.$": "$.instrument_run_id"

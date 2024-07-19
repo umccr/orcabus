@@ -21,12 +21,6 @@
           },
           "id_type": {
             "S": "${__instrument_run_partition_name__}"
-          },
-          "fastq_list_row_id_set": {
-            "SS": []
-          },
-          "library_set": {
-            "SS": []
           }
         }
       },

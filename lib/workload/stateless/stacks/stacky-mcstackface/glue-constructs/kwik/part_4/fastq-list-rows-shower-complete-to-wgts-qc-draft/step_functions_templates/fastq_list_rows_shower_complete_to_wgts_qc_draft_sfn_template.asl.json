@@ -29,7 +29,7 @@
       "Type": "Map",
       "ItemsPath": "$.get_libraries_step.library_list",
       "ItemSelector": {
-        "library_id_hash.$": "$$.Map.Item.Value",
+        "library_id.$": "$$.Map.Item.Value",
         "instrument_run_id.$": "$.fastq_list_row_shower_complete_event_data.instrumentRunId"
       },
       "ItemProcessor": {
@@ -44,7 +44,7 @@
             "Parameters": {
               "TableName": "${__table_name__}",
               "Key": {
-                "id.$": "$.library_id_hash",
+                "id.$": "$.library_id",
                 "id_type": "${__library_partition_name__}"
               }
             },
@@ -52,7 +52,7 @@
             "ResultPath": "$.get_fastq_list_row_ids_step",
             "ResultSelector": {
               "internal_id.$": "$.Item.internal_id.S",
-              "sample_type.$": "$.Item.type.S",
+              "sample_type.$": "$.Item.sample_type.S",
               "fastq_list_row_id_list.$": "$.Item.fastq_list_row_id_set.SS"
             }
           },
@@ -68,19 +68,6 @@
                   "Type": "Parallel",
                   "Next": "Link portal run id and fastq list row ids",
                   "Branches": [
-                    {
-                      "StartAt": "PutRecommendationPreferences",
-                      "States": {
-                        "PutRecommendationPreferences": {
-                          "Type": "Task",
-                          "Parameters": {
-                            "ResourceType": "MyData"
-                          },
-                          "Resource": "arn:aws:states:::aws-sdk:computeoptimizer:putRecommendationPreferences",
-                          "End": true
-                        }
-                      }
-                    },
                     {
                       "StartAt": "Get Fastq List Row Data",
                       "States": {
@@ -127,7 +114,7 @@
                           ],
                           "ResultPath": "$.generate_event_data_step",
                           "ResultSelector": {
-                            "event_data.$": "$.Payload.event_data"
+                            "event_data.$": "$.Payload.event_output_dict"
                           },
                           "End": true
                         }
@@ -174,7 +161,7 @@
                             "TableName": "${__table_name__}",
                             "Key": {
                               "id.$": "$.fastq_list_row_id",
-                              "id_type.$": "${__fastq_list_row_partition_name__}"
+                              "id_type": "${__fastq_list_row_partition_name__}"
                             },
                             "UpdateExpression": "SET portal_run_id = :portal_run_id",
                             "ExpressionAttributeValues": {
@@ -197,12 +184,10 @@
                           "Parameters": {
                             "TableName": "${__table_name__}",
                             "Item": {
-                              "Key": {
-                                "id.$": "$.get_per_workflow_run_inputs_step.portal_run_id",
-                                "id_type.$": "${__portal_run_partition_name__}",
-                                "fastq_list_row_id": {
-                                  "S.$": "$.fastq_list_row_id"
-                                }
+                              "id.$": "$.get_per_workflow_run_inputs_step.portal_run_id",
+                              "id_type": "${__portal_run_partition_name__}",
+                              "fastq_list_row_id": {
+                                "S.$": "$.fastq_list_row_id"
                               }
                             }
                           },
@@ -226,17 +211,17 @@
                     "Entries": [
                       {
                         "Detail": {
-                          "portalRunId": "$.get_per_workflow_run_inputs_step.portal_run_id",
+                          "portalRunId.$": "$.get_per_workflow_run_inputs_step.portal_run_id",
                           "timestamp.$": "$$.State.EnteredTime",
                           "status": "${__output_status__}",
                           "workflowName": "${__workflow_name__}",
                           "workflowVersion": "${__workflow_version__}",
-                          "workflowRunName": "$.get_per_workflow_run_inputs_step.workflow_run_name",
+                          "workflowRunName.$": "$.get_per_workflow_run_inputs_step.workflow_run_name",
                           "payload": {
                             "refId": null,
                             "version": "${__payload_version__}",
                             "data": {
-                              "inputs": "$.get_per_workflow_run_inputs_step.event_data"
+                              "inputs.$": "$.get_per_workflow_run_inputs_step.event_data"
                             }
                           }
                         },

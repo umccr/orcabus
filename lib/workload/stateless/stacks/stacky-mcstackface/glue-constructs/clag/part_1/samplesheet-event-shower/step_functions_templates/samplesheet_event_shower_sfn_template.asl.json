@@ -175,10 +175,10 @@
       "Type": "Map",
       "ItemsPath": "$.generate_event_objects_step.subject_event_data_list",
       "ItemSelector": {
-        "subject_hash.$": "States.Hash($$.Map.Item.Value.id, 'SHA-1')",
+        "subject_id.$": "$$.Map.Item.Value.event_data.subject.internalId",
         "subject_metadata_db_id.$": "$$.Map.Item.Value.id",
         "subject_event_data.$": "$$.Map.Item.Value.event_data",
-        "instrument_run_id.$": "$.inputs.payload.data.instrumentRunId"
+        "instrument_run_id.$": "$$.Map.Item.Value.event_data.instrumentRunId"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
@@ -192,7 +192,7 @@
             "Parameters": {
               "TableName": "${__table_name__}",
               "Key": {
-                "id.$": "$.subject_hash",
+                "id.$": "$.subject_id",
                 "id_type": "${__subject_table_partition_name__}"
               }
             },
@@ -223,7 +223,7 @@
               "TableName": "${__table_name__}",
               "Item": {
                 "id": {
-                  "S.$": "$.subject_hash"
+                  "S.$": "$.subject_id"
                 },
                 "id_type": {
                   "S": "${__subject_table_partition_name__}"
@@ -232,14 +232,10 @@
                   "N.$": "States.Format('{}', $.subject_metadata_db_id)"
                 },
                 "internal_id": {
-                  "S.$": "$.subject_event_data.internalId"
+                  "S.$": "$.subject_id"
                 },
-                "instrument_run_id_list": {
-                  "L": [
-                    {
-                      "S.$": "$.instrument_run_id"
-                    }
-                  ]
+                "instrument_run_id_set": {
+                  "SS.$": "States.Array($.instrument_run_id)"
                 }
               }
             },
@@ -252,17 +248,13 @@
             "Parameters": {
               "TableName": "${__table_name__}",
               "Key": {
-                "id.$": "$.subject_hash",
+                "id.$": "$.subject_id",
                 "id_type": "${__subject_table_partition_name__}"
               },
-              "UpdateExpression": "SET instrument_run_id_list = list_append(instrument_run_id_list, :instrument_run_id)",
+              "UpdateExpression": "ADD instrument_run_id_set :instrument_run_id_set",
               "ExpressionAttributeValues": {
-                ":instrument_run_id": {
-                  "L": [
-                    {
-                      "S.$": "$.instrument_run_id"
-                    }
-                  ]
+                ":instrument_run_id_set": {
+                  "SS.$": "States.Array($.instrument_run_id)"
                 }
               }
             },
@@ -306,10 +298,10 @@
       "Type": "Map",
       "ItemsPath": "$.generate_event_objects_step.library_event_data_list",
       "ItemSelector": {
-        "library_hash.$": "States.Hash($$.Map.Item.Value.id, 'SHA-1')",
+        "library_id.$": "$$.Map.Item.Value.event_data.library.internalId",
         "library_metadata_db_id.$": "$$.Map.Item.Value.id",
         "library_event_data.$": "$$.Map.Item.Value.event_data",
-        "instrument_run_id.$": "$.inputs.payload.data.instrumentRunId"
+        "instrument_run_id.$": "$$.Map.Item.Value.event_data.instrumentRunId"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
@@ -323,7 +315,7 @@
             "Parameters": {
               "TableName": "${__table_name__}",
               "Key": {
-                "id.$": "$.library_hash",
+                "id.$": "$.library_id",
                 "id_type": "${__library_table_partition_name__}"
               }
             },
@@ -353,17 +345,13 @@
             "Parameters": {
               "TableName": "${__table_name__}",
               "Key": {
-                "id.$": "$.library_hash",
+                "id.$": "$.library_id",
                 "id_type": "${__library_table_partition_name__}"
               },
-              "UpdateExpression": "SET instrument_run_id_list = list_append(instrument_run_id_list, :instrument_run_id)",
+              "UpdateExpression": "ADD instrument_run_id_set :instrument_run_id_set",
               "ExpressionAttributeValues": {
-                ":instrument_run_id": {
-                  "L": [
-                    {
-                      "S.$": "$.instrument_run_id"
-                    }
-                  ]
+                ":instrument_run_id_set": {
+                  "SS.$": "States.Array($.instrument_run_id)"
                 }
               }
             },
@@ -377,7 +365,7 @@
               "TableName": "${__table_name__}",
               "Item": {
                 "id": {
-                  "S.$": "$.library_hash"
+                  "S.$": "$.library_id"
                 },
                 "id_type": {
                   "S": "${__library_table_partition_name__}"
@@ -388,12 +376,8 @@
                 "internal_id": {
                   "S.$": "$.library_event_data.library.internalId"
                 },
-                "instrument_run_id_list": {
-                  "L": [
-                    {
-                      "S.$": "$.instrument_run_id"
-                    }
-                  ]
+                "instrument_run_id_set": {
+                  "SS.$": "States.Array($.instrument_run_id)"
                 }
               }
             },

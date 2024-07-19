@@ -80,7 +80,7 @@ def handler(event, context):
     # Filter fastq list rows by RGSM (match sample_id)
     fastq_list_rows = list(
         filter(
-            lambda fastq_list_row_iter: fastq_list_row_iter.get("RGSM") == sample_id,
+            lambda fastq_list_row_iter: fastq_list_row_iter.get("rgsm") == sample_id,
             fastq_list_rows
         )
     )
@@ -92,8 +92,8 @@ def handler(event, context):
             lambda row_iter_1, row_iter_2: row_iter_1 + row_iter_2,
             map(
                 lambda fastq_list_row_iter: [
-                    fastq_list_row_iter.get("Read1FileUri"),
-                    fastq_list_row_iter.get("Read2FileUri")
+                    fastq_list_row_iter.get("read1FileUri"),
+                    fastq_list_row_iter.get("read2FileUri")
                 ],
                 fastq_list_rows
             )
@@ -119,12 +119,12 @@ def handler(event, context):
 #                     "sample_id": "L2400163",
 #                     "fastq_list_rows": [
 #                       {
-#                         "RGID": "ATGGTTGACT.AGGACAGGCC.1",
-#                         "RGSM": "L2400163",
-#                         "RGLB": "L2400163",
-#                         "Lane": 1,
-#                         "Read1FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
-#                         "Read2FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
+#                         "rgid": "ATGGTTGACT.AGGACAGGCC.1",
+#                         "rgsm": "L2400163",
+#                         "rglb": "L2400163",
+#                         "lane": 1,
+#                         "read1FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
+#                         "read2FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
 #                       }
 #                     ]
 #                 },
@@ -135,9 +135,9 @@ def handler(event, context):
 #     )
 #
 #     # {
-#     #     "dest_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_cttso_fastq_cache/20241231abcd1234/L12345678_run_cache/L2301346_rerun/",
+#     #     "dest_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_cache/cttsov2/2_1_1/202405316db95e97/L2400163/",
 #     #     "source_uris": [
-#     #         "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Samples/Lane_2/L2301346_rerun/L2301346_rerun_S7_L002_R1_001.fastq.gz",
-#     #         "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307abcd7890/Samples/Lane_2/L2301346_rerun/L2301346_rerun_S7_L002_R2_001.fastq.gz"
+#     #         "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
+#     #         "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
 #     #     ]
 #     # }

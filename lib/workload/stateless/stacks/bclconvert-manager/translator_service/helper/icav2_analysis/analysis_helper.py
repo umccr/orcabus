@@ -27,7 +27,7 @@ from wrapica.project_data import (
     get_file_by_file_name_from_project_data_list, get_project_data_obj_by_id,
 )
 from wrapica.project_analysis import (
-    get_analysis_output_object_from_analysis_code
+    get_analysis_output_object_from_analysis_output_code
 )
 from wrapica.enums import DataType
 
@@ -44,7 +44,7 @@ def get_bclconvert_outputs_from_analysis_id(
     analysis_id: str
 ) -> Tuple[str, List[ProjectData]]:
 
-    bclconvert_output_folder_id = get_analysis_output_object_from_analysis_code(
+    bclconvert_output_folder_id = get_analysis_output_object_from_analysis_output_code(
         project_id,
         analysis_id,
         "Output"

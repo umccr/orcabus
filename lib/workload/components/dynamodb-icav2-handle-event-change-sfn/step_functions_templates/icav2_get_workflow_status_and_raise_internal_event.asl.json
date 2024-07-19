@@ -159,10 +159,10 @@
         "workflow_name": "${__workflow_type__}",
         "workflow_version": "${__workflow_version__}",
         "workflow_run_name.$": "$.Item.workflow_run_name.S",
-        "payload_version.$": "${__service_version__}",
+        "payload_version": "${__service_version__}",
         "payload_inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
         "payload_engine_parameters.$": "States.StringToJson($.Item.engine_parameters.S)",
-        "payload_outputs.$": "States.StringToJson($.Item.analysis_outputs.S)"
+        "payload_outputs.$": "States.StringToJson($.Item.analysis_output.S)"
       },
       "ResultPath": "$.get_event_data_step",
       "Next": "status is SUCCEEDED (1)"
@@ -211,12 +211,12 @@
               "portalRunId.$": "$.get_event_data_step.portal_run_id",
               "timestamp.$": "$.get_event_data_step.timestamp",
               "status.$": "$.get_event_data_step.status",
-              "workflowName": "$.get_event_data_step.workflow_name",
-              "workflowVersion": "$.get_event_data_step.workflow_version",
+              "workflowName.$": "$.get_event_data_step.workflow_name",
+              "workflowVersion.$": "$.get_event_data_step.workflow_version",
               "workflowRunName.$": "$.get_event_data_step.workflow_run_name",
               "payload": {
                 "version": "${__service_version__}",
-                "data": "$.set_data_event_outputs"
+                "data.$": "$.set_data_event_outputs"
               }
             }
           }

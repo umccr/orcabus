@@ -54,7 +54,7 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
     payloadVersion: '0.1.0',
     /* Workflow settings */
     workflowName: 'cttsov2',
-    workflowVersion: '2.5.0',
+    workflowVersion: '2.6.0',
   };
 
   constructor(

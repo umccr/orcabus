@@ -13,7 +13,8 @@
         }
       },
       "ResultSelector": {
-        "payload.$": "States.StringToJson($.Item.launch_event_payload.S)"
+        "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "engineParameters.$": "States.StringToJson($.Item.engine_parameters.S)"
       },
       "ResultPath": "$.get_input_parameters_from_event_step",
       "Next": "Configure Inputs"
@@ -30,7 +31,7 @@
               "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
                 "Payload": {
-                  "fastq_list_rows.$": "$.get_input_parameters_from_event_step.payload.data.fastqListRows"
+                  "fastq_list_rows.$": "States.Array($.get_input_parameters_from_event_step.inputs.fastqListRow)"
                 },
                 "FunctionName": "${__convert_fastq_list_rows_to_cwl_input_objects_lambda_function_arn__}"
               },
@@ -49,7 +50,7 @@
               ],
               "ResultPath": "$.convert_fastq_list_rows_to_cwl_input_objects_step",
               "ResultSelector": {
-                "fastq_list_rows.$": "States.Array($.Payload.fastq_list_row)"
+                "fastq_list_rows.$": "$.Payload.fastq_list_rows"
               },
               "End": true
             }
@@ -62,7 +63,7 @@
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.get_input_parameters_from_event_step.payload.data.referenceVersion",
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.referenceVersion",
                   "IsPresent": false,
                   "Comment": "Get Default Version",
                   "Next": "Set Reference Version as Default"
@@ -72,31 +73,39 @@
             },
             "Reference Version Set": {
               "Type": "Pass",
-              "Next": "Get the Reference Version uri",
+              "Next": "Get the Reference Version Uri Map",
               "ResultPath": "$.get_reference_version_step",
               "Parameters": {
-                "reference_version.$": "$.get_input_parameters_from_event_step.payload.data.referenceVersion"
+                "reference_version.$": "$.get_input_parameters_from_event_step.inputs.referenceVersion"
               }
             },
             "Set Reference Version as Default": {
               "Type": "Pass",
               "Parameters": {
-                "reference_version": "default"
+                "reference_version": "${__default_reference_version__}"
               },
               "ResultPath": "$.get_reference_version_step",
-              "Next": "Get the Reference Version uri"
+              "Next": "Get the Reference Version Uri Map"
             },
-            "Get the Reference Version uri": {
+            "Get the Reference Version Uri Map": {
               "Type": "Task",
               "Parameters": {
-                "Name": "${__reference_version_uri__}"
+                "Name": "${__reference_version_uri_ssm_parameter_name__}"
               },
               "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
-              "End": true,
-              "ResultPath": "$.get_reference_version_uri_step",
               "ResultSelector": {
-                "reference_uri": "States.StringToJson($.Parameter.Value)[$.get_reference_version_step.reference_version]"
-              }
+                "reference_uri_map.$": "States.StringToJson($.Parameter.Value)"
+              },
+              "ResultPath": "$.get_reference_version_uri_map_step",
+              "Next": "Get the Reference Version Uri"
+            },
+            "Get the Reference Version Uri": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_uri.$": "States.ArrayGetItem($.get_reference_version_uri_map_step.reference_uri_map[?(@.name==$.get_reference_version_step.reference_version)].uri, 0)"
+              },
+              "ResultPath": "$.get_reference_version_uri_step",
+              "End": true
             }
           }
         },
@@ -107,7 +116,7 @@
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.get_input_parameters_from_event_step.payload.data.gencodeAnnotationVersion",
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.gencodeAnnotationVersion",
                   "IsPresent": false,
                   "Comment": "Get Default Version",
                   "Next": "Set Annotation Version as Default"
@@ -117,31 +126,39 @@
             },
             "Annotation Version Set": {
               "Type": "Pass",
-              "Next": "Get the Annotation Version Uri",
               "Parameters": {
-                "annotation_version.$": "$.get_input_parameters_from_event_step.payload.data.gencodeAnnotationVersion"
+                "annotation_version.$": "$.get_input_parameters_from_event_step.inputs.gencodeAnnotationVersion"
               },
-              "ResultPath": "$.get_annotation_version_step"
+              "ResultPath": "$.get_annotation_version_step",
+              "Next": "Get the Annotation Version Uri Map"
             },
             "Set Annotation Version as Default": {
               "Type": "Pass",
-              "Next": "Get the Annotation Version Uri",
               "Parameters": {
-                "annotation_version": "default"
+                "annotation_version": "${__default_annotation_version__}"
               },
-              "ResultPath": "$.get_annotation_version_step"
+              "ResultPath": "$.get_annotation_version_step",
+              "Next": "Get the Annotation Version Uri Map"
             },
-            "Get the Annotation Version Uri": {
+            "Get the Annotation Version Uri Map": {
               "Type": "Task",
               "Parameters": {
-                "Name": "${__annotation_version_uri__}"
+                "Name": "${__annotation_version_uri_ssm_parameter_name__}"
               },
               "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
-              "End": true,
-              "ResultPath": "$.get_annotation_version_uri_step",
               "ResultSelector": {
-                "annotation_uri": "States.StringToJson($.Parameter.Value)[$.get_annotation_version_step.annotation_version]"
-              }
+                "annotation_uri_map.$": "States.StringToJson($.Parameter.Value)"
+              },
+              "ResultPath": "$.get_annotation_version_uri_map_step",
+              "Next": "Get the Annotation Version Uri"
+            },
+            "Get the Annotation Version Uri": {
+              "Type": "Pass",
+              "Parameters": {
+                "annotation_uri.$": "States.ArrayGetItem($.get_annotation_version_uri_map_step.annotation_uri_map[?(@.name==$.get_annotation_version_step.annotation_version)].uri, 0)"
+              },
+              "ResultPath": "$.get_annotation_version_uri_step",
+              "End": true
             }
           }
         }
@@ -163,8 +180,8 @@
           "enable_rna": false,
           "enable_sort": true,
           "fastq_list_rows.$": "$.configure_inputs_step.fastq_list_rows_cwl",
-          "output_directory.$": "$.get_input_parameters_from_event_step.payload.data.outputDirectoryName",
-          "output_file_prefix.$": "$.get_input_parameters_from_event_step.payload.data.outputFilePrefix",
+          "output_directory.$": "$.get_input_parameters_from_event_step.inputs.outputDirectoryName",
+          "output_file_prefix.$": "$.get_input_parameters_from_event_step.inputs.outputFilePrefix",
           "reference_tar": {
             "class": "File",
             "location.$": "$.configure_inputs_step.reference_uri"
@@ -177,7 +194,7 @@
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.get_input_parameters_from_event_step.payload.data.sampleType",
+          "Variable": "$.get_input_parameters_from_event_step.inputs.sampleType",
           "StringEquals": "WTS",
           "Next": "Set WTS Input JSON Extension"
         }
@@ -205,7 +222,7 @@
       "Type": "Pass",
       "Next": "Update Database Entry",
       "Parameters": {
-        "input_json.$": "States.JsonMerge($.set_input_json_step.input_json, $.set_rna_json_step.input_json)"
+        "input_json.$": "States.JsonMerge($.set_input_json_step.input_json, $.set_rna_json_step.input_json, false)"
       },
       "ResultPath": "$.set_input_json_step"
     },

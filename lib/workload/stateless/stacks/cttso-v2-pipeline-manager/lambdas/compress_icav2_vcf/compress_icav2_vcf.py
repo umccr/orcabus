@@ -9,17 +9,16 @@ Then generate an index file for the compressed vcf
 Rather than download + upload, we can stream a vcf through bzip2
 """
 from pathlib import Path
-from os import environ
 import boto3
-import bgzip
 import subprocess
 from tempfile import TemporaryDirectory
 import logging
 import typing
+from os import environ
 
 from wrapica.project_data import (
     write_icav2_file_contents, read_icav2_file_contents,
-    convert_icav2_uri_to_data_obj, delete_project_data
+    convert_icav2_uri_to_project_data_obj, delete_project_data
 )
 
 if typing.TYPE_CHECKING:
@@ -84,14 +83,26 @@ def write_icav2_vcf_file_to_compressed_output(icav2_uri: str, output_path: Path)
     :return:
     """
     # Download decompressed file
-    project_data_obj = convert_icav2_uri_to_data_obj(icav2_uri)
+    project_data_obj = convert_icav2_uri_to_project_data_obj(icav2_uri)
 
-    # Write to compressed output file
-    with open(output_path, 'wb') as f:
-        with bgzip.BGZipWriter(f) as f_bgzip:
-            f_bgzip.write(
-                read_icav2_file_contents(project_data_obj.project_id, project_data_obj.data.id)
-            )
+    # Write to output file
+    read_icav2_file_contents(project_data_obj.project_id, project_data_obj.data.id, output_path.with_suffix(''))
+
+    # Bgzip the file
+    bgzip_proc = subprocess.run(
+        [
+            "bgzip", output_path.with_suffix('')
+        ],
+        capture_output=True
+    )
+
+    if bgzip_proc.returncode != 0:
+        logger.error(f"Error bgzipping file: {bgzip_proc.stderr.decode()}")
+        raise ChildProcessError
+
+    # Check the output path is a file
+    if not output_path.is_file():
+        raise FileNotFoundError(f"File not found: {output_path}")
 
 
 def generate_index_file_for_compressed_vcf(output_path: Path):
@@ -117,28 +128,31 @@ def compress_icav2_vcf_and_upload(icav2_uri):
     :param icav2_uri:
     :return:
     """
-
-    project_data_obj = convert_icav2_uri_to_data_obj(icav2_uri)
+    project_data_obj = convert_icav2_uri_to_project_data_obj(icav2_uri)
 
     with TemporaryDirectory() as temp_dir:
+        # Initialise parameters
         vcf_icav2_file_path = Path(project_data_obj.data.details.path)
         temp_vcf_output_path = Path(temp_dir) / vcf_icav2_file_path.name
-        temp_vcf_compressed_output_path = temp_vcf_output_path.with_suffix(".gz")
-        write_icav2_vcf_file_to_compressed_output(icav2_uri, temp_vcf_output_path)
-        generate_index_file_for_compressed_vcf(temp_vcf_output_path)
+        temp_vcf_compressed_output_path = temp_vcf_output_path.with_suffix(".gz").with_stem(temp_vcf_output_path.name)
+        temp_vcf_compressed_output_index_path = temp_vcf_output_path.with_suffix(".tbi").with_stem(temp_vcf_compressed_output_path.name)
+
+        # Download index and tabix
+        write_icav2_vcf_file_to_compressed_output(icav2_uri, temp_vcf_compressed_output_path)
+        generate_index_file_for_compressed_vcf(temp_vcf_compressed_output_path)
 
         # Upload compressed and index file
         write_icav2_file_contents(
             project_id=project_data_obj.project_id,
-            data_path=vcf_icav2_file_path,
+            data_path=vcf_icav2_file_path.parent / temp_vcf_compressed_output_path.name,
             file_stream_or_path=temp_vcf_compressed_output_path
         )
 
         # Upload index
         write_icav2_file_contents(
             project_id=project_data_obj.project_id,
-            data_path=vcf_icav2_file_path.with_suffix(".gz.tbi"),
-            file_stream_or_path=temp_vcf_output_path.with_suffix(".gz.tbi")
+            data_path=vcf_icav2_file_path.parent / temp_vcf_compressed_output_index_path.name,
+            file_stream_or_path=temp_vcf_compressed_output_index_path
         )
 
         # Delete uncompressed vcf from icav2
@@ -162,3 +176,22 @@ def handler(event, context):
 
     # Compress icav2 vcf then upload compressed back to icav2
     compress_icav2_vcf_and_upload(vcf_icav2_uri)
+
+
+# if __name__ == "__main__":
+#     import json
+#     from os import environ
+#     from datetime import datetime
+#     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#     print("Starting at %s" % datetime.now().isoformat())
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "vcf_icav2_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/cttsov2/20240718ff7a0cbc/Results/L2400161/L2400161.hard-filtered.gvcf"
+#                 },
+#                 None
+#             )
+#         )
+#     )
+#     print("Ended at %s" % datetime.now().isoformat())

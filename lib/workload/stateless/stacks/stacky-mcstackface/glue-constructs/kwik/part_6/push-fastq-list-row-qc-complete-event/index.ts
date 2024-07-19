@@ -21,7 +21,7 @@ Output Event Source: `orcabus.wgtsqcinputeventglue`
 Output Event DetailType: `FastqListRowStateChange`
 Output Event status: `QcComplete`
 
-* Subscribe to workflow run state change events, map the fastq list row id from the portal run id in the data base
+* Subscribe to workflow run state change events, map the fastq list row id from the portal run id in the database
 * We output the fastq list row id to the event bus with the status `QcComplete`
 */
 

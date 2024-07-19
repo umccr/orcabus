@@ -156,18 +156,6 @@
         }
       },
       "ResultPath": "$.update_entry_post_fastq",
-      "Next": "Set Sample Pair IDs as Dict"
-    },
-    "Set Sample Pair IDs as Dict": {
-      "Type": "Pass",
-      "Parameters": {
-        "sample_pair_ids_dict": [
-          {
-            "sample_pair_id.$": "$.get_ready_event_step.inputs.sampleId"
-          }
-        ]
-      },
-      "ResultPath": "$.set_sample_pair_ids",
       "Next": "Set Input JSON Payload"
     },
     "Set Input JSON Payload": {
@@ -176,7 +164,7 @@
         "input_json": {
           "run_folder.$": "$.get_ready_event_step.engine_parameters.cacheUri",
           "sample_sheet.$": "$.copy_files_to_cache_directory_step.samplesheet_file_uri",
-          "sample_pair_ids.$": "$.set_sample_pair_ids.sample_pair_ids_dict[*].sample_pair_id",
+          "sample_pair_ids.$": "$.get_ready_event_step.inputs.sampleId",
           "StartsFromFastq": true
         }
       },

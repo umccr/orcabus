@@ -88,6 +88,9 @@
                   "ready_event_data_engine_parameters": {
                     "S.$": "States.JsonToString($.workflow_inputs.payload.data.engineParameters)"
                   },
+                  "engine_parameters": {
+                    "S.$": "States.JsonToString($.workflow_inputs.payload.data.engineParameters)"
+                  },
                   "state_machine_execution_arn": {
                     "S.$": "$$.Execution.Id"
                   },
@@ -119,7 +122,7 @@
                     "S.$": "States.JsonToString($.add_technical_tags_step.technical_tags)"
                   },
                   "user_tags": {
-                    "S.$": "{}"
+                    "S": "{}"
                   }
                 }
               },
@@ -273,18 +276,16 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id": {
-                    "S.$": "$.workflow_inputs.payload.refId"
-                  },
+                  "id.$": "$.workflow_inputs.payload.refId",
                   "id_type": "db_uuid"
                 },
-                "UpdateExpression": "SET analysis_pipeline_id = :analysis_pipeline_id, engine_parameters =: engine_parameters",
+                "UpdateExpression": "SET analysis_pipeline_id = :analysis_pipeline_id, engine_parameters = :engine_parameters",
                 "ExpressionAttributeValues": {
                   ":analysis_pipeline_id": {
                     "S.$": "$.pipeline_id_var.pipeline_id"
                   },
                   ":engine_parameters": {
-                    "S.$": "States.JsonToString(States.JsonMerge($.workflow_inputs.payload.data.engineParameters, {\"pipelineId\":\"$.pipeline_id_var.pipeline_id\"}))"
+                    "S.$": "States.JsonToString(States.JsonMerge($.workflow_inputs.payload.data.engineParameters, States.StringToJson(States.Format('\\{\"{}\":\"{}\"\\}', 'pipelineId', $.pipeline_id_var.pipeline_id)), false))"
                   }
                 }
               },
@@ -313,7 +314,7 @@
         }
       },
       "ResultSelector": {
-        "engine_parameters.$": "States.StringToJson($.Item.engineParameters.S)",
+        "engine_parameters.$": "States.StringToJson($.Item.engine_parameters.S)",
         "input_json.$": "$.Item.input_json.S",
         "pipeline_id.$": "$.Item.analysis_pipeline_id.S",
         "user_tags.$": "States.StringToJson($.Item.user_tags.S)"

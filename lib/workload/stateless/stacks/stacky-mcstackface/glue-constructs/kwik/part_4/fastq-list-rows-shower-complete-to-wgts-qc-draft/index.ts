@@ -7,6 +7,8 @@ import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../../../../components/sfn-workflowdraftrunstatechange-common-preamble';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cdk from 'aws-cdk-lib';
 
 /*
 Part 4
@@ -102,7 +104,7 @@ export class WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct extends Co
           path.join(
             __dirname,
             'step_functions_templates',
-            'fastq_list_row_shower_complete_event_to_wgts_qc_draft_events_sfn_template.asl.json'
+            'fastq_list_rows_shower_complete_to_wgts_qc_draft_sfn_template.asl.json'
           )
         ),
         definitionSubstitutions: {
@@ -141,6 +143,9 @@ export class WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct extends Co
           /* Lambdas */
           __generate_wgts_draft_event_data_lambda_function_arn__:
             generateEventDataLambdaObj.currentVersion.functionArn,
+
+          /* Nested sfn */
+          __sfn_preamble_state_machine_arn__: sfn_preamble.stateMachineArn,
         },
       }
     );
@@ -157,7 +162,19 @@ export class WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct extends Co
     // Allow the sfn to submit events to the event bus
     props.eventBusObj.grantPutEventsTo(inputMakerSfn.role);
 
-    //
+    /* Allow step function to call nested state machine */
+    // Because we run a nested state machine, we need to add the permissions to the state machine role
+    // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
+    inputMakerSfn.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
+        ],
+        actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
+      })
+    );
+    // Allow the state machine to be able to invoke the preamble sfn
+    sfn_preamble.grantStartExecution(inputMakerSfn.role);
 
     /*
     Part 4: Subscribe to the event bus for this event type

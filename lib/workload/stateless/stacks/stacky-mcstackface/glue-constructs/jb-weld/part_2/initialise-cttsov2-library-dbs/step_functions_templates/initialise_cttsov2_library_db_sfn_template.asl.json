@@ -63,7 +63,7 @@
                 "UpdateExpression": "ADD library_set :library_set, fastq_list_row_id_set :fastq_list_row_id_set",
                 "ExpressionAttributeValues": {
                   ":library_set": {
-                    "SS.$": "States.Array(States.Hash($.input_payload_data.library.id, 'SHA-1'))"
+                    "SS.$": "States.Array($.input_payload_data.library.internalId)"
                   },
                   ":fastq_list_row_id_set": {
                     "SS.$": "$.bclconvert_and_fastq_list_row_id_inputs[*].fastq_list_row_id"
@@ -84,7 +84,7 @@
                 "TableName": "${__table_name__}",
                 "Item": {
                   "id": {
-                    "S.$": "States.Hash($.input_payload_data.library.id, 'SHA-1')"
+                    "S.$": "$.input_payload_data.library.internalId"
                   },
                   "id_type": {
                     "S": "${__library_partition_name__}"
