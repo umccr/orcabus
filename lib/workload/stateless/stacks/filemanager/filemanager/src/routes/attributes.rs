@@ -61,8 +61,13 @@ impl AttributeBody {
         Self(inner)
     }
 
-    /// Get the inner JSON value.
-    pub fn into_inner(self) -> Value {
+    /// Get the inner map.
+    pub fn into_inner(self) -> Map<String, Value> {
+        self.0
+    }
+    
+    /// Get the inner JSON object.
+    pub fn into_object(self) -> Value {
         Value::Object(self.0)
     }
 }

@@ -7,8 +7,9 @@ use crate::database::Client;
 use crate::error::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
-use sea_orm::sea_query::PostgresQueryBuilder;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryTrait, UpdateMany};
+use sea_orm::sea_query::{Func, PostgresQueryBuilder, SimpleExpr};
+use sea_orm::{ColumnTrait, EntityTrait, Iden, QueryFilter, QueryTrait, UpdateMany};
+use serde_json::json;
 use tracing::trace;
 use uuid::Uuid;
 
@@ -51,9 +52,25 @@ impl<'a> UpdateQueryBuilder<'a, ObjectEntity> {
 
     /// Update the attributes on an object replacing any existing keys in the attributes.
     pub fn update_attributes_replace(mut self, attributes: AttributeBody) -> Self {
+        // Right-hand side replaces left hand side, so the new attributes go to
+        // the right for replacement.
         self.update = self.update.col_expr(
             ObjectColumn::Attributes,
-            Expr::col(ObjectColumn::Attributes).concat(attributes.into_inner()),
+            Expr::col(ObjectColumn::Attributes).concat(attributes.into_object()),
+        );
+
+        self.trace_query("update_attributes_replace");
+
+        self
+    }
+
+    /// Update the attributes on an object replacing any existing keys in the attributes.
+    pub fn update_attributes_insert(mut self, attributes: AttributeBody) -> Self {
+        // Right-hand side replaces left hand side, so the old attributes go to
+        // the right for insert.
+        self.update = self.update.col_expr(
+            ObjectColumn::Attributes,
+            Expr::expr(attributes.into_object()).concat(Expr::col(ObjectColumn::Attributes))
         );
 
         self.trace_query("update_attributes_replace");
