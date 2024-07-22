@@ -8,7 +8,7 @@ use crate::error::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{Func, PostgresQueryBuilder, SimpleExpr};
-use sea_orm::{ColumnTrait, EntityTrait, Iden, QueryFilter, QueryTrait, UpdateMany};
+use sea_orm::{ColumnTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, Iden, QueryFilter, QueryTrait, TransactionTrait, UpdateMany};
 use serde_json::json;
 use tracing::trace;
 use uuid::Uuid;
@@ -19,19 +19,19 @@ use crate::routes::attributes::AttributeBody;
 
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
-pub struct UpdateQueryBuilder<'a, E>
+pub struct UpdateQueryBuilder<'a, C, E>
 where
     E: EntityTrait,
 {
-    client: &'a Client,
+    connection: &'a C,
     update: UpdateMany<E>,
 }
 
-impl<'a> UpdateQueryBuilder<'a, ObjectEntity> {
+impl<'a, C> UpdateQueryBuilder<'a, C, ObjectEntity> where C: ConnectionTrait {
     /// Create a new query builder.
-    pub fn new(client: &'a Client) -> Self {
+    pub fn new(connection: &'a C) -> Self {
         Self {
-            client,
+            connection,
             update: Self::for_objects(),
         }
     }
@@ -52,7 +52,7 @@ impl<'a> UpdateQueryBuilder<'a, ObjectEntity> {
 
     /// Update the attributes on an object replacing any existing keys in the attributes.
     pub fn update_attributes_replace(mut self, attributes: AttributeBody) -> Self {
-        // Right-hand side replaces left hand side, so the new attributes go to
+        // Right-hand side replaces left-hand side, so the new attributes goes to
         // the right for replacement.
         self.update = self.update.col_expr(
             ObjectColumn::Attributes,
@@ -66,28 +66,29 @@ impl<'a> UpdateQueryBuilder<'a, ObjectEntity> {
 
     /// Update the attributes on an object replacing any existing keys in the attributes.
     pub fn update_attributes_insert(mut self, attributes: AttributeBody) -> Self {
-        // Right-hand side replaces left hand side, so the old attributes go to
+        // Right-hand side replaces left-hand side, so the old attributes goes to
         // the right for insert.
         self.update = self.update.col_expr(
             ObjectColumn::Attributes,
             Expr::expr(attributes.into_object()).concat(Expr::col(ObjectColumn::Attributes))
         );
 
-        self.trace_query("update_attributes_replace");
+        self.trace_query("update_attributes_insert");
 
         self
     }
 }
 
-impl<'a, E, M> UpdateQueryBuilder<'a, E>
+impl<'a, C, E, M> UpdateQueryBuilder<'a, C, E>
 where
+    C: ConnectionTrait,
     E: EntityTrait<Model = M>,
 {
     /// Execute the prepared query, returning all values.
     pub async fn all(self) -> Result<Vec<M>> {
         Ok(self
             .update
-            .exec_with_returning(self.client.connection_ref())
+            .exec_with_returning(self.connection)
             .await?)
     }
 
@@ -95,7 +96,7 @@ where
     pub async fn one(self) -> Result<Option<M>> {
         Ok(self
             .update
-            .exec_with_returning(self.client.connection_ref())
+            .exec_with_returning(self.connection)
             .await?
             .into_iter()
             .nth(0))
@@ -124,19 +125,63 @@ mod tests {
     async fn test_update_attributes_replace(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = initialize_database(&client, 10).await.objects;
-
-        let builder = UpdateQueryBuilder::<ObjectEntity>::new(&client)
+        
+        let builder = UpdateQueryBuilder::<_, ObjectEntity>::new(client.database_ref())
             .for_id(entries[0].object_id)
             .update_attributes_replace(AttributeBody::new(Map::from_iter(vec![(
                 "attribute_id".to_string(),
                 json!({ "nested_id": "attribute_id" }),
             )])));
         let result = builder.one().await.unwrap();
-
+        
         let mut expected = entries[0].clone();
-        expected.attributes = Some(
-            json!({"nested_id": {"attribute_id": "0"}, "attribute_id": {"nested_id": "attribute_id"}}),
-        );
+        expected.attributes.as_mut().unwrap()["attribute_id"] = json!({"nested_id": "attribute_id"});
+
+        // A conflicting key should replace.
+        assert_eq!(result.unwrap(), expected);
+        
+        let builder = UpdateQueryBuilder::<_, ObjectEntity>::new(client.database_ref())
+          .for_id(entries[0].object_id)
+          .update_attributes_replace(AttributeBody::new(Map::from_iter(vec![(
+              "another_id".to_string(),
+              json!("0"),
+          )])));
+        let result = builder.one().await.unwrap();
+
+        expected.attributes.as_mut().unwrap()["another_id"] = json!("0");
+
+        // A non-conflicting key should also insert.
+        assert_eq!(result.unwrap(), expected);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_update_attributes_insert(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = initialize_database(&client, 10).await.objects;
+
+        let builder = UpdateQueryBuilder::<_, ObjectEntity>::new(client.database_ref())
+          .for_id(entries[0].object_id)
+          .update_attributes_insert(AttributeBody::new(Map::from_iter(vec![(
+              "attribute_id".to_string(),
+              json!({ "nested_id": "attribute_id" }),
+          )])));
+        let result = builder.one().await.unwrap();
+
+        // No Update expected as this key already exists.
+        let expected = entries[0].clone();
+        assert_eq!(result.unwrap(), expected);
+
+        let builder = UpdateQueryBuilder::<_, ObjectEntity>::new(client.database_ref())
+          .for_id(entries[0].object_id)
+          .update_attributes_insert(AttributeBody::new(Map::from_iter(vec![(
+              "another_id".to_string(),
+              json!("0"),
+          )])));
+        let result = builder.one().await.unwrap();
+
+        // Inserting without a conflict should proceed as normal.
+        let mut expected = entries[0].clone();
+        expected.attributes.as_mut().unwrap()["another_id"] = json!("0");
 
         assert_eq!(result.unwrap(), expected);
     }
