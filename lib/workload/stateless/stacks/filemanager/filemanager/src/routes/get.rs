@@ -66,7 +66,7 @@ mod tests {
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::queries::tests::initialize_database;
-    use crate::routes::list::tests::response_from;
+    use crate::routes::list::tests::response_from_get;
     use crate::routes::AppState;
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -75,7 +75,8 @@ mod tests {
         let entries = initialize_database(state.client(), 10).await.objects;
 
         let first = entries.first().unwrap();
-        let result: Object = response_from(state, &format!("/objects/{}", first.object_id)).await;
+        let result: Object =
+            response_from_get(state, &format!("/objects/{}", first.object_id)).await;
         assert_eq!(&result, first);
     }
 
@@ -86,7 +87,7 @@ mod tests {
 
         let first = entries.first().unwrap();
         let result: S3Object =
-            response_from(state, &format!("/s3_objects/{}", first.s3_object_id)).await;
+            response_from_get(state, &format!("/s3_objects/{}", first.s3_object_id)).await;
         assert_eq!(&result, first);
     }
 }

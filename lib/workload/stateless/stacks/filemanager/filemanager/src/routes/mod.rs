@@ -3,7 +3,7 @@
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use sea_orm::DbErr;
 use serde::Serialize;
@@ -15,6 +15,7 @@ use utoipa::{IntoResponses, ToSchema};
 use crate::database::Client;
 use crate::env::Config;
 use crate::error::Error;
+use crate::routes::attributes::update_object_attributes;
 use crate::routes::get::*;
 use crate::routes::ingest::ingest_from_sqs;
 use crate::routes::list::*;
@@ -75,6 +76,7 @@ pub fn api_router(state: AppState) -> Router {
         .route("/s3_objects/:id", get(get_s3_object_by_id))
         .route("/s3_objects/count", get(count_s3_objects))
         .route("/ingest_from_sqs", post(ingest_from_sqs))
+        .route("/objects/:id", patch(update_object_attributes))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }

@@ -18,7 +18,7 @@ use uuid::Uuid;
 pub enum MergeStrategy {
     /// Insert the attributes and return a 400 error if any of the keys already exist.
     /// This does not update any keys if an error is returned, even if some of those
-    /// keys do not conflict with the attributes. 
+    /// keys do not conflict with the attributes.
     #[default]
     Insert,
     /// Insert the attributes only for keys that do not already exist without returning
@@ -37,7 +37,9 @@ pub enum MergeStrategy {
 ///
 /// ```json
 /// {
-///     "attribute_id": "id"
+///     "attributes": {
+///         "attribute_id": "id"
+///     }
 /// }
 /// ```
 ///
@@ -46,33 +48,39 @@ pub enum MergeStrategy {
 /// return an error:
 ///
 /// ```json
-/// ["1", "2", "3"]
+/// {
+///     "attributes": ["1", "2", "3"]
+/// }
 /// ```
 ///
 /// And this is a valid request:
 ///
 /// ```json
 /// {
-///     "some_array": ["1", "2", "3"]
+///     "attributes": {
+///         "some_array": ["1", "2", "3"]
+///     }
 /// }
 /// ```
-#[derive(Debug, Deserialize, Default)]
-pub struct AttributeBody(Map<String, Value>);
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct AttributeBody {
+    attributes: Map<String, Value>,
+}
 
 impl AttributeBody {
     /// Create a new attribute body.
-    pub fn new(inner: Map<String, Value>) -> Self {
-        Self(inner)
+    pub fn new(attributes: Map<String, Value>) -> Self {
+        Self { attributes }
     }
 
     /// Get the inner map.
     pub fn into_inner(self) -> Map<String, Value> {
-        self.0
+        self.attributes
     }
-    
+
     /// Get the inner JSON object.
     pub fn into_object(self) -> Value {
-        Value::Object(self.0)
+        Value::Object(self.attributes)
     }
 }
 
@@ -106,11 +114,51 @@ pub async fn update_object_attributes(
 ) -> Result<Json<FileObject>> {
     match update_attributes.merge_strategy {
         MergeStrategy::Insert => {
-            unimplemented!()
+            let txn = state.client().connection_ref().begin().await?;
+
+            let model = UpdateQueryBuilder::new(&txn)
+                .update_attributes_insert(request.clone())
+                .one()
+                .await?
+                .ok_or_else(|| {
+                    APIError(BadRequest(ErrorResponse {
+                        message: format!("object with id {} not found", id),
+                    }))
+                })?;
+
+            let merged = model.clone().attributes.unwrap_or_default();
+
+            let default = Default::default();
+            let merged = merged.as_object().unwrap_or(&default);
+
+            // Find whether this update had conflicting keys.
+            let conflict = request
+                .into_inner()
+                .into_iter()
+                .map(|(key, value)| {
+                    // If the new merged value does not equal the requested update attributes
+                    // then this means that the same key was present in the existing attributes.
+                    merged
+                        .get(&key)
+                        .map(|merged_value| merged_value != &value)
+                        .unwrap_or_default()
+                })
+                .find(|value| *value)
+                .unwrap_or_default();
+
+            if conflict {
+                txn.rollback().await?;
+                Err(APIError(BadRequest(ErrorResponse {
+                    message: "insert request contains keys which already exist in the object"
+                        .to_string(),
+                })))
+            } else {
+                txn.commit().await?;
+                Ok(Json(model))
+            }
         }
         MergeStrategy::InsertNonExistent => {
-            let query = 
-              UpdateQueryBuilder::new(state.client.connection_ref())
+            let query = UpdateQueryBuilder::new(state.client.connection_ref())
                 .update_attributes_insert(request);
 
             Ok(Json(query.one().await?.ok_or_else(|| {
@@ -120,9 +168,8 @@ pub async fn update_object_attributes(
             })?))
         }
         MergeStrategy::Replace => {
-            let query = 
-              UpdateQueryBuilder::new(state.client.connection_ref())
-              .update_attributes_replace(request);
+            let query = UpdateQueryBuilder::new(state.client.connection_ref())
+                .update_attributes_replace(request);
 
             Ok(Json(query.one().await?.ok_or_else(|| {
                 APIError(BadRequest(ErrorResponse {
@@ -130,5 +177,145 @@ pub async fn update_object_attributes(
                 }))
             })?))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::body::Body;
+    use axum::http::{Method, StatusCode};
+    use serde_json::json;
+    use sqlx::PgPool;
+
+    use super::*;
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::entities::object::{
+        ActiveModel as ObjectActiveModel, Entity as ObjectEntity,
+    };
+    use crate::database::entities::s3_object::Entity as S3ObjectEntity;
+    use crate::queries::get::GetQueryBuilder;
+    use crate::queries::tests::initialize_database;
+    use crate::routes::list::tests::response_from;
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_object_attributes_api_insert(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await.objects;
+
+        let mut first = entries[0].clone();
+        let body = json!({
+            "attributes": {
+                // An existing attribute should cause a conflict.
+                "attribute_id": {
+                    "nested_id": "attribute_id"
+                },
+                "another_id": "attribute_id"
+            }
+        })
+        .to_string();
+
+        let (status_code, _) = response_from::<Value>(
+            state.clone(),
+            &format!("/objects/{}", first.object_id),
+            Method::PATCH,
+            Body::new(body),
+        )
+        .await;
+        assert_eq!(status_code, StatusCode::BAD_REQUEST);
+
+        // The state of the database should not have changed because a rollback is performed.
+        let current_object = GetQueryBuilder::new(state.client())
+            .get_object(first.object_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(current_object, first);
+
+        let body = json!({
+            "attributes": {
+                // A completely new attribute should successfully update.
+                "another_id": "attribute_id"
+            }
+        })
+        .to_string();
+        let (_, result) = response_from::<FileObject>(
+            state.clone(),
+            &format!("/objects/{}", first.object_id),
+            Method::PATCH,
+            Body::new(body),
+        )
+        .await;
+
+        first.attributes.as_mut().unwrap()["another_id"] = json!("attribute_id");
+        assert_eq!(result, first);
+
+        // The state of the database should have the new attributes now.
+        let current_object = GetQueryBuilder::new(state.client())
+            .get_object(first.object_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(current_object, first);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_object_attributes_api_insert_non_existent(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await.objects;
+
+        let mut first = entries[0].clone();
+        let body = json!({
+            "attributes": {
+                // An existing attribute should not overwrite.
+                "attribute_id": {
+                    "nested_id": "attribute_id"
+                },
+                // A new attribute should update normally.
+                "another_id": "attribute_id"
+            }
+        })
+        .to_string();
+
+        let (_, result) = response_from::<FileObject>(
+            state,
+            &format!(
+                "/objects/{}?merge_strategy=InsertNonExistent",
+                first.object_id
+            ),
+            Method::PATCH,
+            Body::new(body),
+        )
+        .await;
+
+        first.attributes.as_mut().unwrap()["another_id"] = json!("attribute_id");
+        assert_eq!(result, first);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_object_attributes_api_replace(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let entries = initialize_database(state.client(), 10).await.objects;
+
+        let mut first = entries[0].clone();
+        let body = json!({
+            "attributes": {
+                // An existing attribute should overwrite.
+                "attribute_id": {
+                    "nested_id": "attribute_id"
+                }
+            }
+        })
+        .to_string();
+
+        let (_, result) = response_from::<FileObject>(
+            state,
+            &format!("/objects/{}?merge_strategy=Replace", first.object_id),
+            Method::PATCH,
+            Body::new(body),
+        )
+        .await;
+        first.attributes.as_mut().unwrap()["attribute_id"] = json!({"nested_id": "attribute_id"});
+
+        assert_eq!(result, first);
     }
 }

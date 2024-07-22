@@ -186,7 +186,8 @@ pub async fn count_s3_objects(
 pub(crate) mod tests {
     use axum::body::to_bytes;
     use axum::body::Body;
-    use axum::http::Request;
+    use axum::http::header::CONTENT_TYPE;
+    use axum::http::{Method, Request, StatusCode};
     use serde::de::DeserializeOwned;
     use serde_json::from_slice;
     use sqlx::PgPool;
@@ -208,7 +209,7 @@ pub(crate) mod tests {
         let state = AppState::from_pool(pool);
         let entries = initialize_database(state.client(), 10).await.objects;
 
-        let result: ListResponse<Object> = response_from(state, "/objects").await;
+        let result: ListResponse<Object> = response_from_get(state, "/objects").await;
         assert!(result.next_page.is_none());
         assert_eq!(result.results, entries);
     }
@@ -219,10 +220,10 @@ pub(crate) mod tests {
         let entries = initialize_database(state.client(), 10).await.objects;
 
         let result: ListResponse<Object> =
-            response_from(state.clone(), "/objects?attributes[attribute_id]=1").await;
+            response_from_get(state.clone(), "/objects?attributes[attribute_id]=1").await;
         assert_eq!(result.results, vec![entries[1].clone()]);
 
-        let result: ListResponse<Object> = response_from(
+        let result: ListResponse<Object> = response_from_get(
             state.clone(),
             "/objects?attributes[nested_id][attribute_id]=2",
         )
@@ -230,7 +231,7 @@ pub(crate) mod tests {
         assert_eq!(result.results, vec![entries[2].clone()]);
 
         let result: ListResponse<Object> =
-            response_from(state.clone(), "/objects?attributes[non_existent_id]=1").await;
+            response_from_get(state.clone(), "/objects?attributes[non_existent_id]=1").await;
         assert!(result.results.is_empty());
     }
 
@@ -241,7 +242,7 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<S3Object> = response_from(state, "/s3_objects").await;
+        let result: ListResponse<S3Object> = response_from_get(state, "/s3_objects").await;
         assert!(result.next_page.is_none());
         assert_eq!(result.results, entries);
     }
@@ -254,7 +255,7 @@ pub(crate) mod tests {
             .s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from(state, "/s3_objects?current_state=true&page_size=1&page=0").await;
+            response_from_get(state, "/s3_objects?current_state=true&page_size=1&page=0").await;
         assert_eq!(result.next_page, Some(1));
         assert_eq!(result.results, vec![entries[2].clone()]);
     }
@@ -266,7 +267,7 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<S3Object> = response_from(
+        let result: ListResponse<S3Object> = response_from_get(
             state,
             "/s3_objects?current_state=true&size=4&page_size=1&page=0",
         )
@@ -281,7 +282,7 @@ pub(crate) mod tests {
         let entries = initialize_database(state.client(), 10).await.s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from(state, "/s3_objects?event_type=Deleted").await;
+            response_from_get(state, "/s3_objects?event_type=Deleted").await;
         assert_eq!(result.results().len(), 5);
         assert_eq!(
             result.results,
@@ -298,7 +299,7 @@ pub(crate) mod tests {
         let entries = initialize_database(state.client(), 10).await.s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from(state, "/s3_objects?bucket=1&key=2").await;
+            response_from_get(state, "/s3_objects?bucket=1&key=2").await;
         assert_eq!(result.results, vec![entries[2].clone()]);
     }
 
@@ -308,10 +309,10 @@ pub(crate) mod tests {
         let entries = initialize_database(state.client(), 10).await.s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from(state.clone(), "/s3_objects?attributes[attribute_id]=1").await;
+            response_from_get(state.clone(), "/s3_objects?attributes[attribute_id]=1").await;
         assert_eq!(result.results, vec![entries[1].clone()]);
 
-        let result: ListResponse<S3Object> = response_from(
+        let result: ListResponse<S3Object> = response_from_get(
             state.clone(),
             "/s3_objects?attributes[nested_id][attribute_id]=4",
         )
@@ -319,10 +320,10 @@ pub(crate) mod tests {
         assert_eq!(result.results, vec![entries[4].clone()]);
 
         let result: ListResponse<S3Object> =
-            response_from(state.clone(), "/s3_objects?attributes[non_existent_id]=1").await;
+            response_from_get(state.clone(), "/s3_objects?attributes[non_existent_id]=1").await;
         assert!(result.results.is_empty());
 
-        let result: ListResponse<S3Object> = response_from(
+        let result: ListResponse<S3Object> = response_from_get(
             state.clone(),
             "/s3_objects?attributes[attribute_id]=1&key=2",
         )
@@ -330,7 +331,7 @@ pub(crate) mod tests {
         assert!(result.results.is_empty());
 
         let result: ListResponse<S3Object> =
-            response_from(state, "/s3_objects?attributes[attribute_id]=1&key=1").await;
+            response_from_get(state, "/s3_objects?attributes[attribute_id]=1&key=1").await;
         assert_eq!(result.results, vec![entries[1].clone()]);
     }
 
@@ -339,7 +340,7 @@ pub(crate) mod tests {
         let state = AppState::from_pool(pool);
         initialize_database(state.client(), 10).await;
 
-        let result: ListCount = response_from(state, "/objects/count").await;
+        let result: ListCount = response_from_get(state, "/objects/count").await;
         assert_eq!(result.n_records, 10);
     }
 
@@ -348,7 +349,7 @@ pub(crate) mod tests {
         let state = AppState::from_pool(pool);
         initialize_database(state.client(), 10).await;
 
-        let result: ListCount = response_from(
+        let result: ListCount = response_from_get(
             state,
             "/objects/count?attributes[nested_id][attribute_id]=0",
         )
@@ -361,7 +362,7 @@ pub(crate) mod tests {
         let state = AppState::from_pool(pool);
         initialize_database(state.client(), 10).await;
 
-        let result: ListCount = response_from(state, "/s3_objects/count").await;
+        let result: ListCount = response_from_get(state, "/s3_objects/count").await;
         assert_eq!(result.n_records, 10);
     }
 
@@ -370,7 +371,7 @@ pub(crate) mod tests {
         let state = AppState::from_pool(pool);
         initialize_database(state.client(), 10).await;
 
-        let result: ListCount = response_from(state, "/s3_objects/count?bucket=0").await;
+        let result: ListCount = response_from_get(state, "/s3_objects/count?bucket=0").await;
         assert_eq!(result.n_records, 2);
     }
 
@@ -379,21 +380,42 @@ pub(crate) mod tests {
         let state = AppState::from_pool(pool);
         initialize_database_ratios_reorder(state.client(), 10, 4, 3).await;
 
-        let result: ListCount = response_from(state, "/s3_objects/count?current_state=true").await;
+        let result: ListCount =
+            response_from_get(state, "/s3_objects/count?current_state=true").await;
         assert_eq!(result.n_records, 2);
     }
 
-    pub(crate) async fn response_from<T: DeserializeOwned>(state: AppState, uri: &str) -> T {
+    pub(crate) async fn response_from<T: DeserializeOwned>(
+        state: AppState,
+        uri: &str,
+        method: Method,
+        body: Body,
+    ) -> (StatusCode, T) {
         let app = api_router(state);
         let response = app
-            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .method(method)
+                    .uri(uri)
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(body)
+                    .unwrap(),
+            )
             .await
             .unwrap();
+        let status = response.status();
 
         let bytes = to_bytes(response.into_body(), usize::MAX)
             .await
             .unwrap()
             .to_vec();
-        from_slice::<T>(bytes.as_slice()).unwrap()
+
+        (status, from_slice::<T>(bytes.as_slice()).unwrap())
+    }
+
+    pub(crate) async fn response_from_get<T: DeserializeOwned>(state: AppState, uri: &str) -> T {
+        response_from(state, uri, Method::GET, Body::empty())
+            .await
+            .1
     }
 }
