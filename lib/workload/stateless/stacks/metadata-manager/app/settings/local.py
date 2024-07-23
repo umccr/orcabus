@@ -19,20 +19,27 @@ DATABASES = {"default": db_conn_cfg}
 
 INSTALLED_APPS += (
     "django_extensions",
-    "drf_yasg",
+    "drf_spectacular",
 )
 
 ROOT_URLCONF = "app.urls.local"
 
 RUNSERVER_PLUS_PRINT_SQL_TRUNCATE = sys.maxsize
 
-# --- drf_yasg swagger and redoc settings
+REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS'] = 'drf_spectacular.openapi.AutoSchema'
 
-SWAGGER_SETTINGS = {
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}
-    },
-    "USE_SESSION_AUTH": False,
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Metadata Manager API',
+    'DESCRIPTION': 'The Metadata Manager API for UMCCR.',
+    'VERSION': '0.0.0',
+    'SERVE_INCLUDE_SCHEMA': True,
+    'SECURITY': [
+        {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
+    ]
 }
 
 REDOC_SETTINGS = {

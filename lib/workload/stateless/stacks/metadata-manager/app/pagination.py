@@ -31,3 +31,34 @@ class StandardResultsSetPagination(PageNumberPagination):
                 "results": data,
             }
         )
+
+    def get_paginated_response_schema(self, schema):
+        return {
+            "type": "object",
+        'required': ['links','pagination', 'results'],
+
+            "properties": {
+                "links": {
+                    "type": "object",
+                    "properties": {
+                        "next": {"type": "string", "format": "uri", "nullable": True,
+                                 'example': 'http://api.example.org/accounts/?{page_query_param}=4'.format(
+                                     page_query_param=self.page_query_param)},
+                        "previous": {"type": "string", "format": "uri", "nullable": True,
+                                     'example': 'http://api.example.org/accounts/?{page_query_param}=2'.format(
+                                         page_query_param=self.page_query_param)},
+                    },
+                },
+                "pagination": {
+                    "type": "object",
+                    "properties": {
+                        PaginationConstant.COUNT: {"type": "integer"},
+                        PaginationConstant.PAGE: {"type": "integer"},
+                        PaginationConstant.ROWS_PER_PAGE: {"type": "integer"},
+                    },
+                },
+                "results": schema
+            },
+        }
+
+
