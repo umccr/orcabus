@@ -1,6 +1,8 @@
 //! This module handles API routing.
 //!
 
+use std::sync::Arc;
+
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, patch, post};
@@ -8,14 +10,14 @@ use axum::{Json, Router};
 use sea_orm::DbErr;
 use serde::Serialize;
 use sqlx::PgPool;
-use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 use utoipa::{IntoResponses, ToSchema};
 
 use crate::database::Client;
 use crate::env::Config;
 use crate::error::Error;
-use crate::routes::attributes::update_object_attributes;
+use crate::error::Error::InvalidQuery;
+use crate::routes::attributes::{update_object_attributes, update_object_collection_attributes};
 use crate::routes::get::*;
 use crate::routes::ingest::ingest_from_sqs;
 use crate::routes::list::*;
@@ -77,6 +79,7 @@ pub fn api_router(state: AppState) -> Router {
         .route("/s3_objects/count", get(count_s3_objects))
         .route("/ingest_from_sqs", post(ingest_from_sqs))
         .route("/objects/:id", patch(update_object_attributes))
+        .route("/objects", patch(update_object_collection_attributes))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }
@@ -143,7 +146,9 @@ impl From<Error> for ErrorStatusCode {
             Error::OverflowError | Error::ConversionError(_) => {
                 Self::BadRequest(err.to_string().into())
             }
+            InvalidQuery(_) => Self::BadRequest(err.to_string().into()),
             Error::APIError(err) => err,
+            Error::QueryError(_) => Self::InternalServerError(err.to_string().into()),
             _ => Self::InternalServerError("unexpected error".to_string().into()),
         }
     }

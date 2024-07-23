@@ -35,6 +35,10 @@ pub enum Error {
     ConversionError(String),
     #[error("API error")]
     APIError(ErrorStatusCode),
+    #[error("Query error: {0}")]
+    QueryError(String),
+    #[error("Invalid input: {0}")]
+    InvalidQuery(String),
 }
 
 impl From<sqlx::Error> for Error {
