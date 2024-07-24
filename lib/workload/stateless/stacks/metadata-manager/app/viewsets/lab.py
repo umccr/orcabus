@@ -1,5 +1,4 @@
-from drf_yasg import openapi
-from drf_yasg.utils import swagger_auto_schema, swagger_serializer_method
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import filters
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.decorators import action
@@ -22,14 +21,16 @@ class SubjectViewSet(ReadOnlyModelViewSet):
     def get_queryset(self):
         return Subject.objects.get_by_keyword(**self.request.query_params)
 
+    @extend_schema(responses={200: SubjectFullSerializer(many=True)},
+                   parameters=[
+                       OpenApiParameter(name='library_internal_id',
+                                        description='Filter the subjects that contain this particular internal_id in '
+                                                    'the Library model.',
+                                        required=False,
+                                        type=str),
+                   ],
+                   )
     @action(detail=False, methods=['get'], url_path='full')
-    @swagger_auto_schema(responses={200: SubjectFullSerializer(many=False)}, manual_parameters=[
-        openapi.Parameter(
-            'library_internal_id',
-            openapi.IN_QUERY,
-            description="Filter the subjects that contain this particular internal_id in the Library model.",
-            type=openapi.TYPE_STRING,
-        ), ])
     def get_full_model_set(self, request):
         query_params = self.request.query_params.copy()
         qs = Subject.objects.prefetch_related("specimen_set__library_set").all().order_by("-id")
@@ -48,8 +49,8 @@ class SubjectViewSet(ReadOnlyModelViewSet):
 
         return self.get_paginated_response(serializer.data)
 
+    @extend_schema(responses={200: SubjectFullSerializer(many=True)})
     @action(detail=True, methods=['get'], url_path='full')
-    @swagger_auto_schema(responses={200: SubjectFullSerializer(many=True)})
     def get_full_model_detail(self, request, pk=None):
         subject = Subject.objects.get(id=pk)
         serializer = SubjectFullSerializer(subject)
@@ -80,8 +81,8 @@ class LibraryViewSet(ReadOnlyModelViewSet):
     def get_queryset(self):
         return Library.objects.get_by_keyword(**self.request.query_params)
 
+    @extend_schema(responses={200: LibraryFullSerializer(many=True)})
     @action(detail=False, methods=['get'], url_path='full')
-    @swagger_auto_schema(responses={200: LibraryFullSerializer(many=True)})
     def get_full_model_set(self, request):
         qs = Library.objects.select_related("specimen__subject").all().order_by("-id")
 
@@ -93,8 +94,8 @@ class LibraryViewSet(ReadOnlyModelViewSet):
 
         return self.get_paginated_response(serializer.data)
 
+    @extend_schema(responses={200: LibraryFullSerializer(many=False)})
     @action(detail=True, methods=['get'], url_path='full')
-    @swagger_auto_schema(responses={200: LibraryFullSerializer(many=False)})
     def get_full_model_detail(self, request, pk=None):
         lib = Library.objects.get(id=pk)
         serializer = LibraryFullSerializer(lib)

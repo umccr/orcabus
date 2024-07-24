@@ -57,7 +57,7 @@ s3-dump-upload:
 s3-dump-download:
 	@aws s3 cp s3://orcabus-test-data-843407916570-ap-southeast-2/metadata-manager/mm_dump.sql.gz data/mm_dump.sql.gz
 
-db-load-data:
+db-load-data: down up
 	@gunzip -c data/mm_dump.sql.gz | docker exec -i orcabus_db psql -U orcabus -d orcabus >/dev/null
 
 s3-load: | s3-dump-download down up db-load-data
