@@ -39,7 +39,14 @@ SPECTACULAR_SETTINGS = {
             "scheme": "bearer",
             "bearerFormat": "JWT",
         }
-    ]
+    ],
+    'CONTACT': {
+        'name': 'UMCCR',
+        'email': 'services@umccr.org'
+    },
+    "LICENSE": {
+        "name": "MIT License",
+    },
 }
 
 REDOC_SETTINGS = {

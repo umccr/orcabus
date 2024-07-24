@@ -35,8 +35,7 @@ class StandardResultsSetPagination(PageNumberPagination):
     def get_paginated_response_schema(self, schema):
         return {
             "type": "object",
-        'required': ['links','pagination', 'results'],
-
+            'required': ['links', 'pagination', 'results'],
             "properties": {
                 "links": {
                     "type": "object",
@@ -60,5 +59,3 @@ class StandardResultsSetPagination(PageNumberPagination):
                 "results": schema
             },
         }
-
-
