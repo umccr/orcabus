@@ -1,8 +1,6 @@
 # The slim version of requirements.txt is where the dependency is just enough to run basic django API
 # any complex functionalities (e.g. sync from gsheet) will require to install dependency from the full verison
 
-setuptools==71.1.0
-
 aws-xray-sdk # intentionally leave out version, the daily release of this dep is ok
 djangorestframework==3.15.2
 Django==5.0.7
