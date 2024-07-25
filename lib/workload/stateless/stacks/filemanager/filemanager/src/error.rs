@@ -4,16 +4,16 @@
 use sea_orm::{sqlx_error_to_query_err, DbErr};
 use std::{io, result};
 
-use crate::routes::ErrorStatusCode;
 use sqlx::migrate::MigrateError;
 use thiserror::Error;
+use uuid::Uuid;
 
 pub type Result<T> = result::Result<T, Error>;
 
 /// Error types for the filemanager.
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Database error: `{0}`")]
+    #[error("database error: `{0}`")]
     DatabaseError(DbErr),
     #[error("SQL migrate error: `{0}`")]
     MigrateError(String),
@@ -21,7 +21,7 @@ pub enum Error {
     SQSError(String),
     #[error("deserialization error: `{0}`")]
     DeserializeError(String),
-    #[error("Loading environment variables: `{0}`")]
+    #[error("loading environment variables: `{0}`")]
     LoadingEnvironment(String),
     #[error("credential generator error: `{0}`")]
     CredentialGeneratorError(String),
@@ -29,16 +29,16 @@ pub enum Error {
     S3InventoryError(String),
     #[error("{0}")]
     IoError(#[from] io::Error),
-    #[error("Numerical operation overflowed")]
+    #[error("numerical operation overflowed")]
     OverflowError,
-    #[error("Numerical conversion failed: {0}")]
+    #[error("numerical conversion failed: `{0}`")]
     ConversionError(String),
-    #[error("API error")]
-    APIError(ErrorStatusCode),
-    #[error("Query error: {0}")]
+    #[error("query error: `{0}`")]
     QueryError(String),
-    #[error("Invalid input: {0}")]
+    #[error("invalid input: `{0}`")]
     InvalidQuery(String),
+    #[error("expected some value for id: `{0}`")]
+    ExpectedSomeValue(Uuid),
 }
 
 impl From<sqlx::Error> for Error {

@@ -8,7 +8,8 @@ use std::sync::Arc;
 use filemanager::database::Client;
 use filemanager::handlers::aws::{create_database_pool, update_credentials};
 use filemanager::handlers::init_tracing;
-use filemanager::routes::{router, AppState, ErrorResponse, ErrorStatusCode};
+use filemanager::routes::error::{ErrorResponse, ErrorStatusCode};
+use filemanager::routes::{router, AppState};
 use lambda_http::run;
 use tracing::debug;
 

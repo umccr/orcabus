@@ -1,6 +1,6 @@
 [package]
 name = "filemanager"
-description = "Orcabus filemanager"
+description = "The orcabus filemanager ingests cloud storage event records and allows querying them."
 version = "0.1.0"
 authors.workspace = true
 license.workspace = true

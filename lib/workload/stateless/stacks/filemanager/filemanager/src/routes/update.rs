@@ -1,57 +1,47 @@
 use axum::extract::{Path, State};
-use axum::Json;
-use json_patch::Patch;
+use axum::routing::patch;
+use axum::{Json, Router};
 use sea_orm::TransactionTrait;
 use serde::Deserialize;
 use serde_qs::axum::QsQuery;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::database::entities::object::Model as FileObject;
 use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::database::entities::{object, s3_object};
-use crate::error::Error::APIError;
+use crate::error::Error::ExpectedSomeValue;
 use crate::error::Result;
 use crate::queries::update::UpdateQueryBuilder;
+use crate::routes::error::ErrorStatusCode;
 use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
-use crate::routes::ErrorStatusCode::BadRequest;
-use crate::routes::{AppState, ErrorResponse, ErrorStatusCode};
+use crate::routes::AppState;
 
-/// The attributes to update for the request. This gets merged into the existing attributes
-/// according to the `MergeStrategy`. The body of the request must be a valid JSON
-/// Object type in order to perform merging. That is, the outer type of the JSON input
-/// must be an Object with at least one key, e.g.
+/// The attributes to update for the request. This updates attributes according to JSON patch.
+/// See [JSON patch](https://jsonpatch.com/) and [RFC6902](https://datatracker.ietf.org/doc/html/rfc6902/).
 ///
-/// ```json
-/// {
-///     "attributes": {
-///         "attribute_id": "id"
-///     }
-/// }
-/// ```
-///
-/// This means that other JSON types in the outer JSON body are not supported. It's not possible
-/// to merge outer array types, however arrays inside an Object type are supported. E.g. this will
-/// return an error:
-///
-/// ```json
-/// {
-///     "attributes": ["1", "2", "3"]
-/// }
-/// ```
-///
-/// And this is a valid request:
-///
-/// ```json
-/// {
-///     "attributes": {
-///         "some_array": ["1", "2", "3"]
-///     }
-/// }
-/// ```
-#[derive(Debug, Deserialize, Default, Clone)]
+/// In order to apply the patch, the outer type of the JSON input must have one key called "attributes".
+/// Then any JSON patch operation can be used to update the attributes, e.g. "add" or "replace". The
+/// "test" operation can be used to confirm whether a key is a specific value before updating. If the
+/// check fails,  a `BAD_REQUEST` is returned and no records are updated.
+#[derive(Debug, Deserialize, Default, Clone, ToSchema)]
+#[schema(
+    example = json!({
+        "attributes": [
+            { "op": "test", "path": "/attribute_id", "value": "1" },
+            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" }
+        ]
+    })
+)]
 pub struct PatchBody {
+    /// The JSON patch for a record's attributes.
     attributes: Patch,
 }
+
+/// The JSON patch for attributes.
+#[derive(Debug, Deserialize, Default, Clone, ToSchema)]
+#[schema(value_type = Value)]
+pub struct Patch(json_patch::Patch);
 
 impl PatchBody {
     /// Create a new attribute body.
@@ -60,30 +50,31 @@ impl PatchBody {
     }
 
     /// Get the inner map.
-    pub fn into_inner(self) -> Patch {
-        self.attributes
+    pub fn into_inner(self) -> json_patch::Patch {
+        self.attributes.0
     }
 
     /// Get the inner map as a reference
-    pub fn get_ref(&self) -> &Patch {
-        &self.attributes
+    pub fn get_ref(&self) -> &json_patch::Patch {
+        &self.attributes.0
     }
 }
 
-/// Update the object attributes using a patch request.
+/// Update the object attributes using a JSON patch request.
 #[utoipa::path(
     patch,
     path = "/objects/{id}",
     responses(
         (
             status = OK,
-            description = "Update a single object's attributes returning the object",
+            description = "The updated object",
             body = FileObject
         ),
         ErrorStatusCode,
     ),
     request_body = PatchBody,
     context_path = "/api/v1",
+    tag = "update",
 )]
 pub async fn update_object_attributes(
     state: State<AppState>,
@@ -98,26 +89,22 @@ pub async fn update_object_attributes(
         .await?
         .one()
         .await?
-        .ok_or_else(|| {
-            APIError(BadRequest(ErrorResponse {
-                message: format!("object with id {} not found", id),
-            }))
-        })?;
+        .ok_or_else(|| ExpectedSomeValue(id))?;
 
     txn.commit().await?;
 
     Ok(Json(results))
 }
 
-/// Update the attributes for a collection of objects using a patch request. This
-/// updates all attributes matching filter params with a set of the same attributes.
+/// Update the attributes for a collection of objects using a JSON patch request.
+/// This updates all attributes matching the filter params with the same JSON patch.
 #[utoipa::path(
     patch,
     path = "/objects",
     responses(
         (
             status = OK,
-            description = "Update attributes for a collection of objects returning the updated attributes",
+            description = "The updated objects",
             body = Vec<FileObject>
         ),
         ErrorStatusCode,
@@ -125,6 +112,7 @@ pub async fn update_object_attributes(
     params(ObjectsFilterAll),
     request_body = PatchBody,
     context_path = "/api/v1",
+    tag = "update",
 )]
 pub async fn update_object_collection_attributes(
     state: State<AppState>,
@@ -145,20 +133,21 @@ pub async fn update_object_collection_attributes(
     Ok(Json(results))
 }
 
-/// Update the s3_object attributes using a patch request.
+/// Update the s3_object attributes using a JSON patch request.
 #[utoipa::path(
     patch,
     path = "/s3_objects/{id}",
     responses(
         (
             status = OK,
-            description = "Update a single s3_object's attributes and return the updated object",
+            description = "The updated s3_object",
             body = FileS3Object
         ),
         ErrorStatusCode,
     ),
     request_body = PatchBody,
     context_path = "/api/v1",
+    tag = "update",
 )]
 pub async fn update_s3_object_attributes(
     state: State<AppState>,
@@ -173,33 +162,30 @@ pub async fn update_s3_object_attributes(
         .await?
         .one()
         .await?
-        .ok_or_else(|| {
-            APIError(BadRequest(ErrorResponse {
-                message: format!("object with id {} not found", id),
-            }))
-        })?;
+        .ok_or_else(|| ExpectedSomeValue(id))?;
 
     txn.commit().await?;
 
     Ok(Json(results))
 }
 
-/// Update the attributes for a collection of objects using a patch request. This
-/// updates all attributes matching filter params with a set of the same attributes.
+/// Update the attributes for a collection of s3_objects using a JSON patch request.
+/// This updates all attributes matching the filter params with the same JSON patch.
 #[utoipa::path(
     patch,
     path = "/s3_objects",
     responses(
         (
-        status = OK,
-        description = "Update attributes for a collection of s3_object and return the updated objects",
-        body = Vec<FileS3Object>
+            status = OK,
+            description = "The updated s3_objects",
+            body = Vec<FileS3Object>
         ),
         ErrorStatusCode,
     ),
     params(ObjectsFilterAll),
     request_body = PatchBody,
     context_path = "/api/v1",
+    tag = "update",
 )]
 pub async fn update_s3_object_collection_attributes(
     state: State<AppState>,
@@ -218,6 +204,15 @@ pub async fn update_s3_object_collection_attributes(
     txn.commit().await?;
 
     Ok(Json(results))
+}
+
+/// The router for updating objects.
+pub fn update_router() -> Router<AppState> {
+    Router::new()
+        .route("/objects/:id", patch(update_object_attributes))
+        .route("/objects", patch(update_object_collection_attributes))
+        .route("/s3_objects/:id", patch(update_s3_object_attributes))
+        .route("/s3_objects", patch(update_s3_object_collection_attributes))
 }
 
 #[cfg(test)]
@@ -280,7 +275,7 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_attribute_api_err(pool: PgPool) {
+    async fn update_attribute_api_not_found(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let mut entries = initialize_database(state.client(), 10).await;
 
@@ -312,8 +307,8 @@ mod tests {
         )
         .await;
 
-        assert_eq!(object_status_code, StatusCode::BAD_REQUEST);
-        assert_eq!(s3_object_status_code, StatusCode::BAD_REQUEST);
+        assert_eq!(object_status_code, StatusCode::NOT_FOUND);
+        assert_eq!(s3_object_status_code, StatusCode::NOT_FOUND);
 
         // Nothing is expected to change.
         change_attribute_entries(&mut entries, 0, json!({"attribute_id": "1"})).await;

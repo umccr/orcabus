@@ -19,8 +19,8 @@ use crate::database::entities::{object, s3_object};
 use crate::error::Error::{InvalidQuery, QueryError};
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
-use crate::routes::attributes::PatchBody;
 use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
+use crate::routes::update::PatchBody;
 
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
@@ -146,7 +146,21 @@ where
         Ok(self.all().await?.into_iter().nth(0))
     }
 
-    /// Update the attributes on an object using the attribute patch.
+    /// Update the attributes on an object using the attribute patch. This first queries the
+    /// required records to update using a previously specified select query in functions like
+    /// `Self::for_id` and `Self::filter_all`. It then applies a JSON patch to the attributes of
+    /// the records and updates them. The update statement generated is similar to:
+    ///
+    /// ```sql
+    /// with update_with (id, attributes) as (select * from (values
+    ///     (<uuid>, <current_attributes>),
+    ///     ...
+    /// ) AS values)
+    /// update <object|s3_object> set attributes = (
+    ///     select attributes from update_with where object_id = id
+    /// ) where object_id in (select id from update_with)
+    /// returning <updated_objects>
+    /// ```
     pub async fn update_attributes(
         mut self,
         patch_body: PatchBody,
