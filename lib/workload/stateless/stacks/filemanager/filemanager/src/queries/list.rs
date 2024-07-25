@@ -84,7 +84,16 @@ impl<'a> ListQueryBuilder<'a, s3_object::Entity> {
     ///     ...;
     /// ```
     pub fn filter_all(mut self, filter: S3ObjectsFilterAll) -> Self {
-        let condition = Condition::all()
+        self.select = self.select.filter(Self::filter_condition(filter));
+
+        self.trace_query("filter_all");
+
+        self
+    }
+
+    /// Create a condition to filter a query.
+    pub fn filter_condition(filter: S3ObjectsFilterAll) -> Condition {
+        Condition::all()
             .add_option(
                 filter
                     .event_type
@@ -120,13 +129,7 @@ impl<'a> ListQueryBuilder<'a, s3_object::Entity> {
                 filter
                     .attributes
                     .map(|v| Expr::col(s3_object::Column::Attributes).contains(v)),
-            );
-
-        self.select = self.select.filter(condition);
-
-        self.trace_query("filter_all");
-
-        self
+            )
     }
 
     /// Update this query to find objects that represent the current state of S3 objects. That is,

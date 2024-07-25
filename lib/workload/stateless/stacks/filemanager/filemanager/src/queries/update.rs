@@ -1,22 +1,26 @@
 //! Query builder to handle updating record columns.
 //!
 
-use sea_orm::prelude::Expr;
-use sea_orm::sea_query::extension::postgres::PgExpr;
-use sea_orm::sea_query::{Func, FunctionCall, PostgresQueryBuilder};
+use json_patch::patch;
+use sea_orm::prelude::{Expr, Json};
+use sea_orm::sea_query::{
+    Alias, Asterisk, CommonTableExpression, PostgresQueryBuilder, Query, SelectStatement,
+    SimpleExpr, WithClause, WithQuery,
+};
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, ModelTrait, QueryFilter, QueryTrait, UpdateMany,
+    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iterable, ModelTrait, QueryFilter,
+    QueryTrait, Select, StatementBuilder, Value,
 };
 use serde_json::json;
 use tracing::trace;
 use uuid::Uuid;
 
-use crate::database::entities::object;
+use crate::database::entities::{object, s3_object};
 use crate::error::Error::{InvalidQuery, QueryError};
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
-use crate::routes::attributes::{AttributeBody, MergeStrategy};
-use crate::routes::filtering::ObjectsFilterAll;
+use crate::routes::attributes::PatchBody;
+use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
 
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
@@ -25,7 +29,9 @@ where
     E: EntityTrait,
 {
     connection: &'a C,
-    update: UpdateMany<E>,
+    select_to_update: Select<E>,
+    // With query will eventually end up as the update
+    update: WithQuery,
 }
 
 impl<'a, C> UpdateQueryBuilder<'a, C, object::Entity>
@@ -36,38 +42,81 @@ where
     pub fn new(connection: &'a C) -> Self {
         Self {
             connection,
-            update: Self::build_for_objects(),
+            select_to_update: object::Entity::find(),
+            update: WithQuery::new(),
         }
-    }
-
-    /// Define an update query for finding values from objects.
-    pub fn build_for_objects() -> UpdateMany<object::Entity> {
-        object::Entity::update_many()
     }
 
     /// Update the attributes on an object replacing any existing keys in the attributes.
     pub fn for_id(mut self, id: Uuid) -> Self {
-        self.update = self.update.filter(object::Column::ObjectId.eq(id));
+        self.select_to_update = self
+            .select_to_update
+            .filter(object::Column::ObjectId.eq(id));
 
         self
     }
 
     /// Filter records by all fields in the filter variable.
     pub fn filter_all(mut self, filter: ObjectsFilterAll) -> Self {
-        self.update = self
-            .update
-            .filter(ListQueryBuilder::filter_condition(filter));
+        self.select_to_update = self
+            .select_to_update
+            .filter(ListQueryBuilder::<object::Entity>::filter_condition(filter));
+
+        self.trace_query("filter_all");
+
         self
     }
 
-    /// Execute the prepared query according to the merge strategy.
-    pub async fn for_objects(
-        self,
-        attributes: AttributeBody,
-        merge_strategy: MergeStrategy,
-    ) -> Result<Vec<object::Model>> {
-        self.for_merge_strategy(attributes, merge_strategy, object::Column::Attributes)
+    /// Update the attributes on an object using the attribute patch.
+    pub async fn update_object_attributes(self, patch: PatchBody) -> Result<Self> {
+        self.update_attributes(patch, object::Column::ObjectId, object::Column::Attributes)
             .await
+    }
+}
+
+impl<'a, C> UpdateQueryBuilder<'a, C, s3_object::Entity>
+where
+    C: ConnectionTrait,
+{
+    /// Create a new query builder.
+    pub fn new(connection: &'a C) -> Self {
+        Self {
+            connection,
+            select_to_update: s3_object::Entity::find(),
+            update: WithQuery::new(),
+        }
+    }
+
+    /// Update the attributes on an object replacing any existing keys in the attributes.
+    pub fn for_id(mut self, id: Uuid) -> Self {
+        self.select_to_update = self
+            .select_to_update
+            .filter(s3_object::Column::S3ObjectId.eq(id));
+
+        self
+    }
+
+    /// Filter records by all fields in the filter variable.
+    pub fn filter_all(mut self, filter: S3ObjectsFilterAll) -> Self {
+        self.select_to_update =
+            self.select_to_update
+                .filter(ListQueryBuilder::<s3_object::Entity>::filter_condition(
+                    filter,
+                ));
+
+        self.trace_query("filter_all");
+
+        self
+    }
+
+    /// Update the attributes on an s3_object using the attribute patch.
+    pub async fn update_s3_object_attributes(self, patch: PatchBody) -> Result<Self> {
+        self.update_attributes(
+            patch,
+            s3_object::Column::S3ObjectId,
+            s3_object::Column::Attributes,
+        )
+        .await
     }
 }
 
@@ -75,466 +124,577 @@ impl<'a, C, E, M> UpdateQueryBuilder<'a, C, E>
 where
     C: ConnectionTrait,
     E: EntityTrait<Model = M>,
-    M: ModelTrait,
+    M: ModelTrait + FromQueryResult,
 {
     /// Execute the prepared query, returning all values.
     pub async fn all(self) -> Result<Vec<M>> {
-        Ok(self.update.exec_with_returning(self.connection).await?)
+        // If there is nothing to update, just return an empty list.
+        if self.update == WithQuery::new() {
+            return Ok(vec![]);
+        }
+
+        let builder = self.connection.get_database_backend();
+        let statement = StatementBuilder::build(&self.update, &builder);
+
+        Ok(E::Model::find_by_statement(statement)
+            .all(self.connection)
+            .await?)
     }
 
     /// Execute the prepared query, returning one value.
     pub async fn one(self) -> Result<Option<M>> {
-        Ok(self
-            .update
-            .exec_with_returning(self.connection)
-            .await?
+        Ok(self.all().await?.into_iter().nth(0))
+    }
+
+    /// Update the attributes on an object using the attribute patch.
+    pub async fn update_attributes(
+        mut self,
+        patch_body: PatchBody,
+        id_col: <M::Entity as EntityTrait>::Column,
+        attribute_col: <M::Entity as EntityTrait>::Column,
+    ) -> Result<Self> {
+        let to_update = self.select_to_update.clone().all(self.connection).await?;
+
+        // Return early if there is nothing to update.
+        if to_update.is_empty() {
+            return Ok(self);
+        }
+
+        let values = to_update
             .into_iter()
-            .nth(0))
-    }
+            .map(|model| {
+                let id = if let Value::Uuid(Some(uuid)) = model.get(id_col) {
+                    uuid
+                } else {
+                    return Err(QueryError("expected uuid id column".to_string()));
+                };
 
-    /// Update the attributes on an object replacing any existing keys in the attributes.
-    /// This function should receive the attribute column to operate on, e.g. `Object::Attributes`.
-    pub fn update_attributes_replace(
-        mut self,
-        attributes: AttributeBody,
-        c: <M::Entity as EntityTrait>::Column,
-    ) -> Self {
-        // Right-hand side replaces left-hand side, so the new attributes goes to
-        // the right for replacement.
-        self.update = self.update.col_expr(
-            c,
-            Expr::expr(Self::coalesce_attributes(c)).concat(attributes.into_object()),
-        );
+                let mut current = if let Value::Json(json) = model.get(attribute_col) {
+                    let mut json = json.unwrap_or_else(|| Box::new(json!({})));
+                    if let &Json::Null = json.as_ref() {
+                        json = Box::new(json!({}));
+                    }
+                    json
+                } else {
+                    return Err(QueryError("expected JSON attribute column".to_string()));
+                };
 
-        self.trace_query("update_attributes_replace");
+                // Patch it based on JSON patch.
+                patch(&mut current, &patch_body.get_ref().0).map_err(|err| {
+                    InvalidQuery(format!(
+                        "JSON patch {} operation for {} path failed: {}",
+                        err.operation, err.path, err.kind
+                    ))
+                })?;
 
-        self
-    }
+                Ok((Value::Uuid(Some(id)), Value::Json(Some(current))))
+            })
+            .collect::<Result<Vec<_>>>()?;
 
-    /// Update the attributes on an object replacing any existing keys in the attributes.
-    /// This function should receive the attribute column to operate on, e.g. `Object::Attributes`.
-    pub fn update_attributes_insert(
-        mut self,
-        attributes: AttributeBody,
-        c: <M::Entity as EntityTrait>::Column,
-    ) -> Self {
-        // Right-hand side replaces left-hand side, so the old attributes goes to
-        // the right for insert.
-        self.update = self.update.col_expr(
-            c,
-            Expr::expr(attributes.into_object()).concat(Self::coalesce_attributes(c)),
-        );
+        let cte_id = Alias::new("id");
+        let cte_attributes = Alias::new("attributes");
+        let cte_name = Alias::new("update_with");
 
-        self.trace_query("update_attributes_insert");
+        // select * from (values ((<id_to_update>, <attributes_to_update>), ...)
+        let update_values = SelectStatement::new()
+            .column(Asterisk)
+            .from_values(values, Alias::new("values"))
+            .to_owned();
 
-        self
-    }
+        // with update_with(id, attributes) as (<update_values>)
+        let cte = CommonTableExpression::new()
+            .query(update_values)
+            .columns([cte_id.clone(), cte_attributes.clone()])
+            .table_name(cte_name.clone())
+            .to_owned();
+        let with_clause = WithClause::new().cte(cte).to_owned();
 
-    /// Whenever updating attributes, this function should be called to coalesce
-    /// a possible null attribute value so that the update with new attributes
-    /// succeeds. This function should receive the attribute column to operate on,
-    /// e.g. `Object::Attributes`.
-    fn coalesce_attributes(c: <M::Entity as EntityTrait>::Column) -> FunctionCall {
-        Func::coalesce([Expr::col(c).into(), Expr::val(json!({})).into()])
-    }
+        // select attributes from update_with where object_id = id
+        let select_update = SelectStatement::new()
+            .column(cte_attributes)
+            .from(cte_name.clone())
+            .and_where(Expr::col(id_col).eq(Expr::col(cte_id.clone())))
+            .to_owned();
+        // select id in update_with
+        let select_in = SelectStatement::new()
+            .column(cte_id)
+            .from(cte_name)
+            .to_owned();
 
-    /// Execute the prepared query as an insert, returning an error if
-    /// any attribute keys already exist. This function should receive the
-    /// attribute column to operate on, e.g. `Object::Attributes`.
-    pub async fn for_insert(
-        self,
-        attributes: AttributeBody,
-        c: <M::Entity as EntityTrait>::Column,
-    ) -> Result<Vec<M>> {
-        let inserted = self
-            .update_attributes_insert(attributes.clone(), c)
-            .all()
-            .await?;
+        // <with_clause>
+        // update object set attributes = <select_update> where object_id in <select_in>
+        // returning ...
+        let returning =
+            Query::returning().exprs(E::Column::iter().map(|c| c.select_as(Expr::col(c))));
+        let update = E::update_many()
+            .into_query()
+            .value(
+                attribute_col,
+                SimpleExpr::SubQuery(None, Box::new(select_update.into_sub_query_statement())),
+            )
+            .and_where(id_col.in_subquery(select_in))
+            .returning(returning)
+            .to_owned();
 
-        for model in &inserted {
-            let column = model.get(c);
-            let merged = column
-                .as_ref_json()
-                .ok_or_else(|| QueryError("expected JSON attributes column".to_string()))?;
-            let default = Default::default();
-            let merged = merged.as_object().unwrap_or(&default);
+        self.update = update.with(with_clause);
 
-            let conflict = attributes
-                .get_ref()
-                .into_iter()
-                .map(|(key, value)| {
-                    // If the new merged value does not equal the requested update attributes
-                    // then this means that the same key was present in the existing attributes.
-                    merged
-                        .get(key)
-                        .map(|merged_value| merged_value != value)
-                        .unwrap_or_default()
-                })
-                .find(|value| *value)
-                .unwrap_or_default();
+        self.trace_query("update_attributes");
 
-            if conflict {
-                return Err(InvalidQuery(
-                    "a key already exists using insert merge strategy".to_string(),
-                ));
-            }
-        }
-
-        Ok(inserted)
-    }
-
-    /// Execute the prepared query as an insert, where non-existent keys are merged
-    /// and any existing keys are ignored. This function should receive the
-    /// attribute column to operate on, e.g. `Object::Attributes`.
-    pub async fn for_insert_non_existent(
-        self,
-        attributes: AttributeBody,
-        c: <M::Entity as EntityTrait>::Column,
-    ) -> Result<Vec<M>> {
-        self.update_attributes_insert(attributes.clone(), c)
-            .all()
-            .await
-    }
-
-    /// Execute the prepared query as a replace, where all keys are merged and
-    /// existing keys are replaced. This function should receive the
-    /// attribute column to operate on, e.g. `Object::Attributes`.
-    pub async fn for_replace(
-        self,
-        attributes: AttributeBody,
-        c: <M::Entity as EntityTrait>::Column,
-    ) -> Result<Vec<M>> {
-        self.update_attributes_replace(attributes.clone(), c)
-            .all()
-            .await
-    }
-
-    /// Execute the prepared query according to the merge strategy. This
-    /// function should receive the attribute column to operate on,
-    /// e.g. `Object::Attributes`.
-    pub async fn for_merge_strategy(
-        self,
-        attributes: AttributeBody,
-        merge_strategy: MergeStrategy,
-        c: <M::Entity as EntityTrait>::Column,
-    ) -> Result<Vec<M>> {
-        match merge_strategy {
-            MergeStrategy::Insert => self.for_insert(attributes, c).await,
-            MergeStrategy::InsertNonExistent => self.for_insert_non_existent(attributes, c).await,
-            MergeStrategy::Replace => self.for_replace(attributes, c).await,
-        }
+        Ok(self)
     }
 
     fn trace_query(&self, message: &str) {
         trace!(
             "{message}: {}",
-            self.update.as_query().to_string(PostgresQueryBuilder)
+            self.select_to_update
+                .as_query()
+                .to_string(PostgresQueryBuilder)
         );
+        trace!("{message}: {}", self.update.to_string(PostgresQueryBuilder));
     }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::*;
-    use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::object::Model;
-    use crate::database::Client;
-    use crate::queries::tests::initialize_database;
-    use crate::queries::update::tests::TestStrategy::{
-        Insert, InsertNonExist, InsertNonExistNotNull, InsertNotNull, Replace, ReplaceNotNull,
-    };
-    use serde_json::Value;
-    use serde_json::{json, Map};
+
+    use std::ops::{Index, Range};
+
+    use sea_orm::{ActiveModelTrait, IntoActiveModel};
+    use sea_orm::{DatabaseConnection, Set};
+    use serde_json::json;
+    use serde_json::{from_value, Value};
     use sqlx::PgPool;
-    use std::future::Future;
 
-    /// Create parameterized tests for updating attributes.
-    #[derive(Debug)]
-    enum TestStrategy {
-        Replace,
-        ReplaceNotNull,
-        InsertNonExist,
-        InsertNonExistNotNull,
-        Insert,
-        InsertNotNull,
-    }
+    use crate::database::aws::migration::tests::MIGRATOR;
 
-    impl TestStrategy {
-        async fn assert<F, Fut>(&self, pool: PgPool, model_func: F)
-        where
-            F: Fn(Client, Vec<Model>, Vec<(String, Value)>) -> Fut,
-            Fut: Future<Output = Result<Vec<Model>>>,
-        {
-            let client = Client::from_pool(pool);
-            let entries = initialize_database(&client, 10).await.objects;
+    use crate::database::Client;
+    use crate::queries::tests::{initialize_database, Entries};
 
-            let input = vec![(
-                "attribute_id".to_string(),
-                json!({ "nested_id": "attribute_id" }),
-            )];
-
-            let result = model_func(client.clone(), entries.clone(), input).await;
-
-            let mut expected = entries[0].clone();
-            match self {
-                Replace | ReplaceNotNull => {
-                    expected.attributes.as_mut().unwrap()["attribute_id"] =
-                        json!({"nested_id": "attribute_id"});
-                }
-                _ => {}
-            }
-
-            match self {
-                Insert | InsertNotNull => assert!(result.is_err()),
-                _ => assert_eq!(result.unwrap()[0], expected),
-            }
-
-            match self {
-                Replace | InsertNonExist | Insert => {
-                    null_attributes(&client, &entries[0]).await;
-                    expected = entries[0].clone();
-                    expected.attributes = Some(json!({"another_id": "0"}));
-                }
-                ReplaceNotNull | InsertNonExistNotNull | InsertNotNull => {
-                    expected.attributes.as_mut().unwrap()["another_id"] = json!("0");
-                }
-            }
-
-            let input = vec![("another_id".to_string(), json!("0"))];
-            let result = model_func(client.clone(), entries.clone(), input).await;
-
-            // A non-conflicting key should also insert.
-            assert_eq!(result.unwrap()[0], expected);
-
-            assert_correct_records(&client, entries, &[expected.object_id]).await;
-            clear_tables(&client).await;
-        }
-    }
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_update_attributes_replace(pool: PgPool) {
-        ReplaceNotNull
-            .assert(pool.clone(), |client, entries, input| async move {
-                test_update_replace(&client, &entries, input).await
-            })
-            .await;
-        ReplaceNotNull
-            .assert(pool.clone(), |client, entries, input| async move {
-                test_merge_strategy_replace(&client, &entries, input).await
-            })
-            .await;
-        Replace
-            .assert(pool.clone(), |client, entries, input| async move {
-                test_update_replace(&client, &entries, input).await
-            })
-            .await;
-        Replace
-            .assert(pool, |client, entries, input| async move {
-                test_merge_strategy_replace(&client, &entries, input).await
-            })
-            .await;
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_update_attributes_insert(pool: PgPool) {
-        InsertNonExistNotNull
-            .assert(pool.clone(), |client, entries, input| async move {
-                test_update_insert(&client, &entries, input).await
-            })
-            .await;
-        InsertNonExistNotNull
-            .assert(pool.clone(), |client, entries, input| async move {
-                test_merge_strategy_insert_non_existent(&client, &entries, input).await
-            })
-            .await;
-        InsertNonExist
-            .assert(pool.clone(), |client, entries, input| async move {
-                test_update_insert(&client, &entries, input).await
-            })
-            .await;
-        InsertNonExist
-            .assert(pool.clone(), |client, entries, input| async move {
-                test_merge_strategy_insert_non_existent(&client, &entries, input).await
-            })
-            .await;
-        InsertNotNull
-            .assert(pool.clone(), |client, entries, input| async move {
-                test_merge_strategy_insert(&client, &entries, input).await
-            })
-            .await;
-        Insert
-            .assert(pool, |client, entries, input| async move {
-                test_merge_strategy_insert(&client, &entries, input).await
-            })
-            .await;
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_update_attributes_filter(pool: PgPool) {
+    async fn update_attributes_replace(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await.objects;
+        let mut entries = initialize_database(&client, 10).await;
 
-        let input = vec![(
-            "attribute_id".to_string(),
-            json!({ "nested_id": "attribute_id" }),
-        )];
-        let result = filter_all_objects_replace(
-            &client,
-            ObjectsFilterAll {
-                attributes: Some(json!({
-                    "attribute_id": "1"
-                })),
-            },
-            input.clone(),
+        change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
+        change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;
+
+        let patch = json!([
+            { "op": "test", "path": "/attribute_id", "value": "1" },
+            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+        ]);
+
+        let results = test_update_with_attribute_id(&client, patch).await;
+
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"})).await;
+        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "attribute_id"})).await;
+
+        assert_contains(&results.0, &results.1, &entries, 0..2);
+        assert_correct_records(&client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_add(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = initialize_database(&client, 10).await;
+
+        change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
+        change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;
+
+        let patch = json!([
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]);
+
+        let results = test_update_with_attribute_id(&client, patch).await;
+
+        change_attribute_entries(
+            &mut entries,
+            0,
+            json!({"attribute_id": "1", "another_attribute": "1"}),
+        )
+        .await;
+        change_attribute_entries(
+            &mut entries,
+            1,
+            json!({"attribute_id": "1", "another_attribute": "1"}),
         )
         .await;
 
-        let mut expected = entries[1].clone();
-        expected.attributes.as_mut().unwrap()["attribute_id"] =
-            json!({"nested_id": "attribute_id"});
+        assert_contains(&results.0, &results.1, &entries, 0..2);
+        assert_correct_records(&client, entries).await;
+    }
 
-        assert_eq!(result, vec![expected]);
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_add_from_null_json(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = initialize_database(&client, 10).await;
 
-        let result = filter_all_objects_replace(
+        change_attributes(&client, &entries, 0, Some(Value::Null)).await;
+        change_attributes(&client, &entries, 1, Some(Value::Null)).await;
+
+        let patch = json!([
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]);
+
+        let results = test_update_attributes(&client, patch, Some(Value::Null)).await;
+
+        change_attribute_entries(&mut entries, 0, json!({"another_attribute": "1"})).await;
+        change_attribute_entries(&mut entries, 1, json!({"another_attribute": "1"})).await;
+
+        assert_contains(&results.0, &results.1, &entries, 0..2);
+        assert_correct_records(&client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_add_from_not_set(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = initialize_database(&client, 10).await;
+
+        null_attributes(&client, &entries, 0).await;
+
+        let patch = json!([
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]);
+
+        let results = test_update_attributes_for_id(
             &client,
-            ObjectsFilterAll {
-                attributes: Some(json!({
-                    "non_existent_id": "1"
-                })),
-            },
-            input,
+            patch,
+            entries.objects[0].object_id,
+            entries.s3_objects[0].s3_object_id,
         )
         .await;
-        assert!(result.is_empty());
+
+        change_attribute_entries(&mut entries, 0, json!({"another_attribute": "1"})).await;
+
+        assert_contains(&results.0, &results.1, &entries, 0..1);
+        assert_correct_records(&client, entries).await;
     }
 
-    async fn clear_tables(client: &Client) {
-        client
-            .connection_ref()
-            .execute_unprepared("truncate table s3_object, object")
-            .await
-            .unwrap();
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_remove(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = initialize_database(&client, 10).await;
+
+        change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
+        change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;
+
+        let patch = json!([
+            { "op": "remove", "path": "/attribute_id" },
+        ]);
+
+        let results = test_update_with_attribute_id(&client, patch).await;
+
+        change_attribute_entries(&mut entries, 0, json!({})).await;
+        change_attribute_entries(&mut entries, 1, json!({})).await;
+
+        assert_contains(&results.0, &results.1, &entries, 0..2);
+        assert_correct_records(&client, entries).await;
     }
 
-    async fn filter_all_objects_replace(
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_no_op(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = initialize_database(&client, 10).await;
+
+        change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "2"}))).await;
+        change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "2"}))).await;
+
+        let patch = json!([
+            { "op": "remove", "path": "/attribute_id" },
+        ]);
+
+        let results = test_update_with_attribute_id(&client, patch).await;
+
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "2"})).await;
+        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "2"})).await;
+
+        assert!(results.0.is_empty());
+        assert!(results.1.is_empty());
+        assert_correct_records(&client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_failed_test(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = initialize_database(&client, 10).await;
+
+        change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
+        change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;
+
+        let patch = json!([
+            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+            { "op": "test", "path": "/attribute_id", "value": "2" },
+        ]);
+
+        let objects = test_object_builder_result(
+            &client,
+            patch.clone(),
+            Some(json!({
+                "attribute_id": "1"
+            })),
+        )
+        .await;
+        let s3_objects = test_s3_object_builder_result(
+            &client,
+            patch,
+            Some(json!({
+                "attribute_id": "1"
+            })),
+        )
+        .await;
+
+        assert!(matches!(objects, Err(InvalidQuery(_))));
+        assert!(matches!(s3_objects, Err(InvalidQuery(_))));
+
+        // Nothing should be updated here.
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "1"})).await;
+        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "1"})).await;
+        assert_correct_records(&client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_for_id(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = initialize_database(&client, 10).await;
+
+        change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
+
+        let patch = json!([
+            { "op": "test", "path": "/attribute_id", "value": "1" },
+            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+        ]);
+
+        let result = test_update_attributes_for_id(
+            &client,
+            patch,
+            entries.objects[0].object_id,
+            entries.s3_objects[0].s3_object_id,
+        )
+        .await;
+
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"})).await;
+
+        assert_contains(&result.0, &result.1, &entries, 0..1);
+        assert_correct_records(&client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_replace_different_attribute_ids(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = initialize_database(&client, 10).await;
+
+        change_object_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
+        change_object_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;
+        change_object_attributes(&client, &entries, 2, Some(json!({"attribute_id": "1"}))).await;
+
+        change_s3_object_attributes(&client, &entries, 0, Some(json!({"attribute_id": "2"}))).await;
+        change_s3_object_attributes(&client, &entries, 1, Some(json!({"attribute_id": "2"}))).await;
+        change_s3_object_attributes(&client, &entries, 2, Some(json!({"attribute_id": "2"}))).await;
+
+        let patch = json!([
+            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+        ]);
+
+        let results_objects = test_update_attributes(
+            &client,
+            patch.clone(),
+            Some(json!({
+                "attribute_id": "1"
+            })),
+        )
+        .await;
+        let results_s3_objects = test_update_attributes(
+            &client,
+            patch.clone(),
+            Some(json!({
+                "attribute_id": "2"
+            })),
+        )
+        .await;
+
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"})).await;
+        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "attribute_id"})).await;
+        change_attribute_entries(&mut entries, 2, json!({"attribute_id": "attribute_id"})).await;
+
+        assert_model_contains(&results_objects.0, &entries.objects, 0..3);
+        assert_model_contains(&results_s3_objects.1, &entries.s3_objects, 0..3);
+        assert_correct_records(&client, entries).await;
+    }
+
+    async fn test_object_builder_result(
         client: &Client,
-        filter: ObjectsFilterAll,
-        input: Vec<(String, Value)>,
-    ) -> Vec<Model> {
-        UpdateQueryBuilder::new(client.connection_ref())
-            .filter_all(filter)
-            .update_attributes_replace(
-                AttributeBody::new(Map::from_iter(input)),
-                object::Column::Attributes,
-            )
-            .all()
-            .await
-            .unwrap()
-    }
-
-    async fn test_update_replace(
-        client: &Client,
-        entries: &[Model],
-        input: Vec<(String, Value)>,
-    ) -> Result<Vec<Model>> {
-        Ok(vec![UpdateQueryBuilder::new(client.connection_ref())
-            .for_id(entries[0].object_id)
-            .update_attributes_replace(
-                AttributeBody::new(Map::from_iter(input)),
-                object::Column::Attributes,
-            )
-            .one()
-            .await
-            .unwrap()
-            .unwrap()])
-    }
-
-    async fn test_merge_strategy_replace(
-        client: &Client,
-        entries: &[Model],
-        input: Vec<(String, Value)>,
-    ) -> Result<Vec<Model>> {
-        UpdateQueryBuilder::new(client.connection_ref())
-            .for_id(entries[0].object_id)
-            .for_objects(
-                AttributeBody::new(Map::from_iter(input)),
-                MergeStrategy::Replace,
-            )
+        patch: Value,
+        attributes: Option<Value>,
+    ) -> Result<UpdateQueryBuilder<DatabaseConnection, object::Entity>> {
+        UpdateQueryBuilder::<_, object::Entity>::new(client.connection_ref())
+            .filter_all(ObjectsFilterAll { attributes })
+            .update_object_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
     }
 
-    async fn test_merge_strategy_insert(
+    async fn test_s3_object_builder_result(
         client: &Client,
-        entries: &[Model],
-        input: Vec<(String, Value)>,
-    ) -> Result<Vec<Model>> {
-        UpdateQueryBuilder::new(client.connection_ref())
-            .for_id(entries[0].object_id)
-            .for_objects(
-                AttributeBody::new(Map::from_iter(input)),
-                MergeStrategy::Insert,
-            )
+        patch: Value,
+        attributes: Option<Value>,
+    ) -> Result<UpdateQueryBuilder<DatabaseConnection, s3_object::Entity>> {
+        UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+            .filter_all(S3ObjectsFilterAll {
+                attributes,
+                ..Default::default()
+            })
+            .update_s3_object_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
     }
 
-    async fn test_merge_strategy_insert_non_existent(
+    async fn test_update_attributes(
         client: &Client,
-        entries: &[Model],
-        input: Vec<(String, Value)>,
-    ) -> Result<Vec<Model>> {
-        UpdateQueryBuilder::new(client.connection_ref())
-            .for_id(entries[0].object_id)
-            .for_objects(
-                AttributeBody::new(Map::from_iter(input)),
-                MergeStrategy::InsertNonExistent,
-            )
-            .await
+        patch: Value,
+        attributes: Option<Value>,
+    ) -> (Vec<object::Model>, Vec<s3_object::Model>) {
+        (
+            test_object_builder_result(client, patch.clone(), attributes.clone())
+                .await
+                .unwrap()
+                .all()
+                .await
+                .unwrap(),
+            test_s3_object_builder_result(client, patch, attributes)
+                .await
+                .unwrap()
+                .all()
+                .await
+                .unwrap(),
+        )
     }
 
-    async fn test_update_insert(
+    async fn test_update_attributes_for_id(
         client: &Client,
-        entries: &[Model],
-        input: Vec<(String, Value)>,
-    ) -> Result<Vec<Model>> {
-        Ok(vec![UpdateQueryBuilder::new(client.connection_ref())
-            .for_id(entries[0].object_id)
-            .update_attributes_insert(
-                AttributeBody::new(Map::from_iter(input)),
-                object::Column::Attributes,
-            )
-            .one()
-            .await
-            .unwrap()
-            .unwrap()])
+        patch: Value,
+        object_id: Uuid,
+        s3_object_id: Uuid,
+    ) -> (Vec<object::Model>, Vec<s3_object::Model>) {
+        (
+            UpdateQueryBuilder::<_, object::Entity>::new(client.connection_ref())
+                .for_id(object_id)
+                .update_object_attributes(PatchBody::new(from_value(patch.clone()).unwrap()))
+                .await
+                .unwrap()
+                .all()
+                .await
+                .unwrap(),
+            UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+                .for_id(s3_object_id)
+                .update_s3_object_attributes(PatchBody::new(from_value(patch).unwrap()))
+                .await
+                .unwrap()
+                .all()
+                .await
+                .unwrap(),
+        )
+    }
+
+    async fn test_update_with_attribute_id(
+        client: &Client,
+        patch: Value,
+    ) -> (Vec<object::Model>, Vec<s3_object::Model>) {
+        test_update_attributes(
+            client,
+            patch,
+            Some(json!({
+                "attribute_id": "1"
+            })),
+        )
+        .await
     }
 
     /// Make attributes null for an entry.
-    pub(crate) async fn null_attributes(client: &Client, entry: &Model) {
-        change_attributes(client, entry, "null").await;
+    pub(crate) async fn null_attributes(client: &Client, entries: &Entries, entry: usize) {
+        change_attributes(client, entries, entry, None).await;
     }
 
-    /// Make attributes null for an entry.
-    pub(crate) async fn change_attributes(client: &Client, entry: &Model, value: &str) {
-        UpdateQueryBuilder::new(client.connection_ref())
-            .for_id(entry.object_id)
-            .update
-            .col_expr(object::Column::Attributes, Expr::cust(value))
-            .exec(client.connection_ref())
-            .await
-            .unwrap();
+    /// Change attributes in the database.
+    pub(crate) async fn change_attributes(
+        client: &Client,
+        entries: &Entries,
+        entry: usize,
+        value: Option<Value>,
+    ) {
+        change_object_attributes(client, entries, entry, value.clone()).await;
+        change_s3_object_attributes(client, entries, entry, value).await;
+    }
+
+    async fn change_s3_object_attributes(
+        client: &Client,
+        entries: &Entries,
+        entry: usize,
+        value: Option<Value>,
+    ) {
+        let mut model: s3_object::ActiveModel =
+            entries.s3_objects[entry].clone().into_active_model();
+        model.attributes = Set(value);
+        model.update(client.connection_ref()).await.unwrap();
+    }
+
+    async fn change_object_attributes(
+        client: &Client,
+        entries: &Entries,
+        entry: usize,
+        value: Option<Value>,
+    ) {
+        let mut model: object::ActiveModel = entries.objects[entry].clone().into_active_model();
+        model.attributes = Set(value);
+        model.update(client.connection_ref()).await.unwrap();
+    }
+
+    /// Change attributes in the database.
+    pub(crate) async fn change_attribute_entries(
+        entries: &mut Entries,
+        entry: usize,
+        value: Value,
+    ) {
+        entries.s3_objects[entry].attributes = Some(value.clone());
+        entries.objects[entry].attributes = Some(value);
+    }
+
+    pub(crate) fn assert_model_contains<M>(objects: &[M], contains: &[M], range: Range<usize>)
+    where
+        M: Eq + PartialEq,
+    {
+        let contains_objects = contains.index(range.clone());
+        assert_eq!(objects.len(), contains_objects.len());
+
+        contains_objects
+            .iter()
+            .for_each(|value| assert!(objects.contains(value)));
+    }
+
+    /// Assert that the result contains the values.
+    pub(crate) fn assert_contains(
+        objects: &[object::Model],
+        s3_objects: &[s3_object::Model],
+        contains: &Entries,
+        range: Range<usize>,
+    ) {
+        assert_model_contains(objects, &contains.objects, range.clone());
+        assert_model_contains(s3_objects, &contains.s3_objects, range.clone());
     }
 
     /// Assert that no existing records are updated.
-    pub(crate) async fn assert_correct_records(
-        client: &Client,
-        entries: Vec<Model>,
-        affected: &[Uuid],
-    ) {
+    pub(crate) async fn assert_correct_records(client: &Client, mut entries: Entries) {
         let mut objects = ListQueryBuilder::<object::Entity>::new(client)
             .all()
             .await
             .unwrap();
-        objects.retain(|object| !affected.contains(&object.object_id));
-        assert_eq!(objects, entries[affected.len()..]);
+        let s3_objects = ListQueryBuilder::<s3_object::Entity>::new(client)
+            .all()
+            .await
+            .unwrap();
+
+        objects.sort_by_key(|value| value.object_id);
+        entries.objects.sort_by_key(|value| value.object_id);
+
+        assert_eq!(objects, entries.objects);
+        assert_eq!(s3_objects, entries.s3_objects);
     }
 }

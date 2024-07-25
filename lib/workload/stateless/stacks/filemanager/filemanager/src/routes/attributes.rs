@@ -1,36 +1,20 @@
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::Json;
+use json_patch::Patch;
 use sea_orm::TransactionTrait;
 use serde::Deserialize;
-use serde_json::{Map, Value};
 use serde_qs::axum::QsQuery;
-use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::database::entities::object::Model as FileObject;
+use crate::database::entities::s3_object::Model as FileS3Object;
+use crate::database::entities::{object, s3_object};
 use crate::error::Error::APIError;
 use crate::error::Result;
 use crate::queries::update::UpdateQueryBuilder;
-use crate::routes::filtering::ObjectsFilterAll;
+use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
 use crate::routes::ErrorStatusCode::BadRequest;
 use crate::routes::{AppState, ErrorResponse, ErrorStatusCode};
-
-/// The type of merge strategy to use when updating attributes.
-#[derive(Debug, Default, Deserialize, ToSchema)]
-pub enum MergeStrategy {
-    /// Insert the attributes and return a 400 error if any of the keys already exist.
-    /// This does not update any keys if an error is returned, even if some of those
-    /// keys do not conflict with the attributes.
-    #[default]
-    Insert,
-    /// Insert the attributes only for keys that do not already exist without returning
-    /// an error. Does not update the keys that do exist. This results in a partial update
-    /// where only the non-conflicting keys are inserted.
-    InsertNonExistent,
-    /// Insert the attributes if the keys do not exist or replace the existing attributes
-    /// under the same key if they do exist.
-    Replace,
-}
 
 /// The attributes to update for the request. This gets merged into the existing attributes
 /// according to the `MergeStrategy`. The body of the request must be a valid JSON
@@ -65,40 +49,25 @@ pub enum MergeStrategy {
 /// }
 /// ```
 #[derive(Debug, Deserialize, Default, Clone)]
-pub struct AttributeBody {
-    attributes: Map<String, Value>,
+pub struct PatchBody {
+    attributes: Patch,
 }
 
-impl AttributeBody {
+impl PatchBody {
     /// Create a new attribute body.
-    pub fn new(attributes: Map<String, Value>) -> Self {
+    pub fn new(attributes: Patch) -> Self {
         Self { attributes }
     }
 
     /// Get the inner map.
-    pub fn into_inner(self) -> Map<String, Value> {
+    pub fn into_inner(self) -> Patch {
         self.attributes
     }
 
     /// Get the inner map as a reference
-    pub fn get_ref(&self) -> &Map<String, Value> {
+    pub fn get_ref(&self) -> &Patch {
         &self.attributes
     }
-
-    /// Get the inner JSON object.
-    pub fn into_object(self) -> Value {
-        Value::Object(self.attributes)
-    }
-}
-
-/// Params for an update to attributes.
-#[derive(Debug, Deserialize, Default, IntoParams)]
-#[serde(default)]
-#[into_params(parameter_in = Query)]
-pub struct UpdateAttributesParams {
-    /// The type of merge strategy to use when updating attributes.
-    #[param(nullable)]
-    merge_strategy: MergeStrategy,
 }
 
 /// Update the object attributes using a patch request.
@@ -113,25 +82,22 @@ pub struct UpdateAttributesParams {
         ),
         ErrorStatusCode,
     ),
-    params(UpdateAttributesParams),
-    request_body = AttributeBody,
+    request_body = PatchBody,
     context_path = "/api/v1",
 )]
 pub async fn update_object_attributes(
     state: State<AppState>,
     Path(id): Path<Uuid>,
-    Query(update_attributes): Query<UpdateAttributesParams>,
-    Json(request): Json<AttributeBody>,
+    Json(patch): Json<PatchBody>,
 ) -> Result<Json<FileObject>> {
-    // Dropped transaction will automatically rollback.
     let txn = state.client().connection_ref().begin().await?;
 
-    let results = UpdateQueryBuilder::new(&txn)
+    let results = UpdateQueryBuilder::<_, object::Entity>::new(&txn)
         .for_id(id)
-        .for_objects(request, update_attributes.merge_strategy)
+        .update_object_attributes(patch)
         .await?
-        .into_iter()
-        .next()
+        .one()
+        .await?
         .ok_or_else(|| {
             APIError(BadRequest(ErrorResponse {
                 message: format!("object with id {} not found", id),
@@ -156,22 +122,97 @@ pub async fn update_object_attributes(
         ),
         ErrorStatusCode,
     ),
-    params(UpdateAttributesParams, ObjectsFilterAll),
-    request_body = AttributeBody,
+    params(ObjectsFilterAll),
+    request_body = PatchBody,
     context_path = "/api/v1",
 )]
 pub async fn update_object_collection_attributes(
     state: State<AppState>,
-    Query(update_attributes): Query<UpdateAttributesParams>,
     QsQuery(filter_all): QsQuery<ObjectsFilterAll>,
-    Json(request): Json<AttributeBody>,
+    Json(patch): Json<PatchBody>,
 ) -> Result<Json<Vec<FileObject>>> {
-    // Dropped transaction will automatically rollback.
     let txn = state.client().connection_ref().begin().await?;
 
-    let results = UpdateQueryBuilder::new(&txn)
+    let results = UpdateQueryBuilder::<_, object::Entity>::new(&txn)
         .filter_all(filter_all)
-        .for_objects(request, update_attributes.merge_strategy)
+        .update_object_attributes(patch)
+        .await?
+        .all()
+        .await?;
+
+    txn.commit().await?;
+
+    Ok(Json(results))
+}
+
+/// Update the s3_object attributes using a patch request.
+#[utoipa::path(
+    patch,
+    path = "/s3_objects/{id}",
+    responses(
+        (
+            status = OK,
+            description = "Update a single s3_object's attributes and return the updated object",
+            body = FileS3Object
+        ),
+        ErrorStatusCode,
+    ),
+    request_body = PatchBody,
+    context_path = "/api/v1",
+)]
+pub async fn update_s3_object_attributes(
+    state: State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(patch): Json<PatchBody>,
+) -> Result<Json<FileS3Object>> {
+    let txn = state.client().connection_ref().begin().await?;
+
+    let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
+        .for_id(id)
+        .update_s3_object_attributes(patch)
+        .await?
+        .one()
+        .await?
+        .ok_or_else(|| {
+            APIError(BadRequest(ErrorResponse {
+                message: format!("object with id {} not found", id),
+            }))
+        })?;
+
+    txn.commit().await?;
+
+    Ok(Json(results))
+}
+
+/// Update the attributes for a collection of objects using a patch request. This
+/// updates all attributes matching filter params with a set of the same attributes.
+#[utoipa::path(
+    patch,
+    path = "/s3_objects",
+    responses(
+        (
+        status = OK,
+        description = "Update attributes for a collection of s3_object and return the updated objects",
+        body = Vec<FileS3Object>
+        ),
+        ErrorStatusCode,
+    ),
+    params(ObjectsFilterAll),
+    request_body = PatchBody,
+    context_path = "/api/v1",
+)]
+pub async fn update_s3_object_collection_attributes(
+    state: State<AppState>,
+    QsQuery(filter_all): QsQuery<S3ObjectsFilterAll>,
+    Json(patch): Json<PatchBody>,
+) -> Result<Json<Vec<FileS3Object>>> {
+    let txn = state.client().connection_ref().begin().await?;
+
+    let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
+        .filter_all(filter_all)
+        .update_s3_object_attributes(patch)
+        .await?
+        .all()
         .await?;
 
     txn.commit().await?;
@@ -182,204 +223,195 @@ pub async fn update_object_collection_attributes(
 #[cfg(test)]
 mod tests {
     use axum::body::Body;
-    use axum::http::Method;
+    use axum::http::{Method, StatusCode};
     use serde_json::json;
     use sqlx::PgPool;
 
-    use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
+
     use crate::queries::tests::initialize_database;
-    use crate::queries::update::tests::assert_correct_records;
+    use crate::queries::update::tests::{
+        assert_correct_records, assert_model_contains, change_attribute_entries, change_attributes,
+    };
     use crate::routes::list::tests::response_from;
+    use crate::uuid::UuidGenerator;
+    use serde_json::Value;
+
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_object_attributes_api_insert(_pool: PgPool) {
-        // let state = AppState::from_pool(pool);
-        // let entries = initialize_database(state.client(), 10).await.objects;
-        //
-        // let mut first = entries[0].clone();
-        // let body = json!({
-        //     "attributes": {
-        //         // An existing attribute should cause a conflict.
-        //         "attribute_id": {
-        //             "nested_id": "attribute_id"
-        //         },
-        //         "another_id": "attribute_id"
-        //     }
-        // })
-        // .to_string();
-        //
-        // let (status_code, _) = response_from::<Value>(
-        //     state.clone(),
-        //     &format!("/objects/{}", first.object_id),
-        //     Method::PATCH,
-        //     Body::new(body),
-        // )
-        // .await;
-        // assert_eq!(status_code, StatusCode::BAD_REQUEST);
-        //
-        // change_attributes(state.client(), &entries[1], &json!({
-        //     "attribute_id": "1"
-        // }).to_string()).await;
-        //
-        // let body = json!({
-        //     "attributes": {
-        //         // An existing attribute should cause a conflict.
-        //         "nested_id": {
-        //             "attribute_id": "attribute_id"
-        //         },
-        //         "another_id": "attribute_id"
-        //     }
-        // })
-        //     .to_string();
-        // let (status_code, _) = response_from::<Value>(
-        //     state.clone(),
-        //     "/objects?attributes[attribute_id]=1",
-        //     Method::PATCH,
-        //     Body::new(body),
-        // )
-        //     .await;
-        // assert_eq!(status_code, StatusCode::BAD_REQUEST);
-        //
-        // // Even if some of the attributes could update, the whole changeset should be rolled backed.
-        // assert_correct_records(state.client(), entries, &[]).await;
-        //
-        // let body = json!({
-        //     "attributes": {
-        //         // A completely new attribute should successfully update.
-        //         "another_id": "attribute_id"
-        //     }
-        // })
-        // .to_string();
-        // let (_, result) = response_from::<FileObject>(
-        //     state.clone(),
-        //     &format!("/objects/{}", first.object_id),
-        //     Method::PATCH,
-        //     Body::new(body.clone()),
-        // )
-        // .await;
-        //
-        // first.attributes.as_mut().unwrap()["another_id"] = json!("attribute_id");
-        // assert_eq!(result, first);
-        //
-        // change_attributes(state.client(), &entries[1], &json!({
-        //     "attribute_id": "1"
-        // }).to_string()).await;
-        //
-        // let (status_code, _) = response_from::<Value>(
-        //     state.clone(),
-        //     "/objects?attributes[attribute_id]=1",
-        //     Method::PATCH,
-        //     Body::new(body),
-        // )
-        //     .await;
-        // assert_eq!(status_code, StatusCode::BAD_REQUEST);
-        //
-        // // The state of the database should have the new attributes now.
-        // let current_object = GetQueryBuilder::new(state.client())
-        //     .get_object(first.object_id)
-        //     .await
-        //     .unwrap()
-        //     .unwrap();
-        // assert_eq!(current_object, first);
-        //
-        // assert_correct_records(state.client(), entries, first.object_id).await;
+    async fn update_attribute_api_replace(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let mut entries = initialize_database(state.client(), 10).await;
+
+        change_attributes(
+            state.client(),
+            &entries,
+            0,
+            Some(json!({"attribute_id": "1"})),
+        )
+        .await;
+
+        let patch = json!({"attributes": [
+            { "op": "test", "path": "/attribute_id", "value": "1" },
+            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+        ]});
+
+        let (_, object) = response_from::<FileObject>(
+            state.clone(),
+            &format!("/objects/{}", entries.objects[0].object_id),
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+        let (_, s3_object) = response_from::<FileS3Object>(
+            state.clone(),
+            &format!("/s3_objects/{}", entries.s3_objects[0].s3_object_id),
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"})).await;
+
+        assert_model_contains(&[object], &entries.objects, 0..1);
+        assert_model_contains(&[s3_object], &entries.s3_objects, 0..1);
+        assert_correct_records(state.client(), entries).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_object_attributes_api_insert_non_existent(pool: PgPool) {
+    async fn update_attribute_api_err(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.objects;
+        let mut entries = initialize_database(state.client(), 10).await;
 
-        let mut first = entries[0].clone();
-        let mut second = entries[1].clone();
-
-        let body = json!({
-            "attributes": {
-                // An existing attribute should not overwrite.
-                "attribute_id": {
-                    "nested_id": "attribute_id"
-                },
-                // A new attribute should update normally.
-                "another_id": "attribute_id"
-            }
-        })
-        .to_string();
-
-        first.attributes.as_mut().unwrap()["another_id"] = json!("attribute_id");
-        second.attributes.as_mut().unwrap()["another_id"] = json!("attribute_id");
-
-        let (_, result) = response_from::<FileObject>(
-            state.clone(),
-            &format!(
-                "/objects/{}?merge_strategy=InsertNonExistent",
-                first.object_id
-            ),
-            Method::PATCH,
-            Body::new(body.clone()),
-        )
-        .await;
-        assert_eq!(result, first);
-        let (_, result) = response_from::<Vec<FileObject>>(
-            state.clone(),
-            "/objects?merge_strategy=InsertNonExistent&attributes[attribute_id]=1",
-            Method::PATCH,
-            Body::new(body),
-        )
-        .await;
-        assert_eq!(result, vec![second.clone()]);
-
-        assert_correct_records(
+        change_attributes(
             state.client(),
-            entries,
-            &[first.object_id, second.object_id],
+            &entries,
+            0,
+            Some(json!({"attribute_id": "1"})),
         )
         .await;
+
+        let patch = json!({"attributes": [
+            { "op": "test", "path": "/attribute_id", "value": "1" },
+            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+        ]});
+
+        let (object_status_code, _) = response_from::<Value>(
+            state.clone(),
+            &format!("/objects/{}", UuidGenerator::generate()),
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+        let (s3_object_status_code, _) = response_from::<Value>(
+            state.clone(),
+            &format!("/s3_objects/{}", UuidGenerator::generate()),
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        assert_eq!(object_status_code, StatusCode::BAD_REQUEST);
+        assert_eq!(s3_object_status_code, StatusCode::BAD_REQUEST);
+
+        // Nothing is expected to change.
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "1"})).await;
+        assert_correct_records(state.client(), entries).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_object_attributes_api_replace(pool: PgPool) {
+    async fn update_collection_attributes_api_replace(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.objects;
+        let mut entries = initialize_database(state.client(), 10).await;
 
-        let mut first = entries[0].clone();
-        let mut second = entries[1].clone();
-
-        let body = json!({
-            "attributes": {
-                // An existing attribute should overwrite.
-                "attribute_id": {
-                    "nested_id": "attribute_id"
-                }
-            }
-        })
-        .to_string();
-
-        first.attributes.as_mut().unwrap()["attribute_id"] = json!({"nested_id": "attribute_id"});
-        second.attributes.as_mut().unwrap()["attribute_id"] = json!({"nested_id": "attribute_id"});
-
-        let (_, result) = response_from::<FileObject>(
-            state.clone(),
-            &format!("/objects/{}?merge_strategy=Replace", first.object_id),
-            Method::PATCH,
-            Body::new(body.clone()),
-        )
-        .await;
-        assert_eq!(result, first);
-        let (_, result) = response_from::<Vec<FileObject>>(
-            state.clone(),
-            "/objects?merge_strategy=Replace&attributes[attribute_id]=1",
-            Method::PATCH,
-            Body::new(body),
-        )
-        .await;
-        assert_eq!(result, vec![second.clone()]);
-
-        assert_correct_records(
+        change_attributes(
             state.client(),
-            entries,
-            &[first.object_id, second.object_id],
+            &entries,
+            0,
+            Some(json!({"attribute_id": "1"})),
         )
         .await;
+        change_attributes(
+            state.client(),
+            &entries,
+            1,
+            Some(json!({"attribute_id": "1"})),
+        )
+        .await;
+
+        let patch = json!({"attributes": [
+            { "op": "test", "path": "/attribute_id", "value": "1" },
+            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+        ]});
+
+        let (_, objects) = response_from::<Vec<FileObject>>(
+            state.clone(),
+            "/objects?attributes[attribute_id]=1",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+            state.clone(),
+            "/s3_objects?attributes[attribute_id]=1",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"})).await;
+        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "attribute_id"})).await;
+
+        assert_model_contains(&objects, &entries.objects, 0..2);
+        assert_model_contains(&s3_objects, &entries.s3_objects, 0..2);
+        assert_correct_records(state.client(), entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_collection_attributes_api_no_op(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let mut entries = initialize_database(state.client(), 10).await;
+
+        change_attributes(
+            state.client(),
+            &entries,
+            0,
+            Some(json!({"attribute_id": "2"})),
+        )
+        .await;
+        change_attributes(
+            state.client(),
+            &entries,
+            1,
+            Some(json!({"attribute_id": "2"})),
+        )
+        .await;
+
+        let patch = json!({"attributes": [
+            { "op": "remove", "path": "/attribute_id" },
+        ]});
+
+        let (_, objects) = response_from::<Vec<FileObject>>(
+            state.clone(),
+            "/objects?attributes[attribute_id]=1",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+            state.clone(),
+            "/s3_objects?attributes[attribute_id]=1",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        assert!(objects.is_empty());
+        assert!(s3_objects.is_empty());
+
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "2"})).await;
+        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "2"})).await;
+        assert_correct_records(state.client(), entries).await;
     }
 }

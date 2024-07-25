@@ -17,7 +17,10 @@ use crate::database::Client;
 use crate::env::Config;
 use crate::error::Error;
 use crate::error::Error::InvalidQuery;
-use crate::routes::attributes::{update_object_attributes, update_object_collection_attributes};
+use crate::routes::attributes::{
+    update_object_attributes, update_object_collection_attributes, update_s3_object_attributes,
+    update_s3_object_collection_attributes,
+};
 use crate::routes::get::*;
 use crate::routes::ingest::ingest_from_sqs;
 use crate::routes::list::*;
@@ -80,6 +83,8 @@ pub fn api_router(state: AppState) -> Router {
         .route("/ingest_from_sqs", post(ingest_from_sqs))
         .route("/objects/:id", patch(update_object_attributes))
         .route("/objects", patch(update_object_collection_attributes))
+        .route("/s3_objects/:id", patch(update_s3_object_attributes))
+        .route("/s3_objects", patch(update_s3_object_collection_attributes))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }

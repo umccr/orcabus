@@ -11,7 +11,6 @@ use crate::database::entities::object::Model as FileObject;
 use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::database::entities::sea_orm_active_enums::EventType;
 use crate::database::entities::sea_orm_active_enums::StorageClass;
-use crate::routes::attributes::*;
 use crate::routes::get::*;
 use crate::routes::ingest::*;
 use crate::routes::list::*;
@@ -52,7 +51,6 @@ pub struct Json(pub Value);
             Json,
             ListResponseObject,
             ListResponseS3Object,
-            MergeStrategy,
         )
     ),
     modifiers(&SecurityAddon),
