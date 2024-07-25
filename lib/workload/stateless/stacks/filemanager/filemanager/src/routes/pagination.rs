@@ -70,7 +70,7 @@ mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
-    use crate::queries::tests::{initialize_database, initialize_database_reorder};
+    use crate::queries::EntriesBuilder;
     use crate::routes::list::tests::response_from_get;
     use crate::routes::list::ListResponse;
     use crate::routes::AppState;
@@ -78,7 +78,10 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_objects_api_paginate(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.objects;
+        let entries = EntriesBuilder::default()
+            .build(state.client())
+            .await
+            .objects;
 
         let result: ListResponse<Object> =
             response_from_get(state, "/objects?page=2&page_size=2").await;
@@ -89,7 +92,10 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_objects_api_paginate_large(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.objects;
+        let entries = EntriesBuilder::default()
+            .build(state.client())
+            .await
+            .objects;
 
         let result: ListResponse<Object> =
             response_from_get(state.clone(), "/objects?page=0&page_size=20").await;
@@ -105,7 +111,10 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_objects_api_zero_page_size(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.objects;
+        let entries = EntriesBuilder::default()
+            .build(state.client())
+            .await
+            .objects;
 
         let result: ListResponse<Object> =
             response_from_get(state, "/s3_objects?page_size=0").await;
@@ -116,7 +125,9 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api_paginate(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database_reorder(state.client(), 10)
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
             .await
             .s3_objects;
 
@@ -129,7 +140,9 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api_paginate_large(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database_reorder(state.client(), 10)
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
             .await
             .s3_objects;
 
@@ -147,7 +160,9 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api_zero_page_size(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database_reorder(state.client(), 10)
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.client())
             .await
             .s3_objects;
 

@@ -224,20 +224,19 @@ mod tests {
 
     use crate::database::aws::migration::tests::MIGRATOR;
 
-    use crate::queries::tests::initialize_database;
+    use super::*;
     use crate::queries::update::tests::{
         assert_correct_records, assert_model_contains, change_attribute_entries, change_attributes,
     };
+    use crate::queries::EntriesBuilder;
     use crate::routes::list::tests::response_from;
     use crate::uuid::UuidGenerator;
     use serde_json::Value;
 
-    use super::*;
-
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attribute_api_replace(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let mut entries = initialize_database(state.client(), 10).await;
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
 
         change_attributes(
             state.client(),
@@ -277,7 +276,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attribute_api_not_found(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let mut entries = initialize_database(state.client(), 10).await;
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
 
         change_attributes(
             state.client(),
@@ -318,7 +317,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_collection_attributes_api_replace(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let mut entries = initialize_database(state.client(), 10).await;
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
 
         change_attributes(
             state.client(),
@@ -366,7 +365,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_collection_attributes_api_no_op(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let mut entries = initialize_database(state.client(), 10).await;
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
 
         change_attributes(
             state.client(),

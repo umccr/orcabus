@@ -92,6 +92,16 @@ To use the local API server, run:
 make api
 ```
 
+The local database server instance can generate mock data and import existing `.sql` dumps using command line options.
+To pass in command line options use `make`, or run the server directly with cargo when `DATABASE_URL` is set:
+
+```sh
+# Pass in command line options using make.
+make api ARGS="--help"
+# Or run directly using cargo, which requires`DATABASE_URL` to be set.
+cargo run -p filemanager-api-server -- --help
+```
+
 ### Compilation and migrations
 
 Locally, database schemas are updated by passing migration scripts to the special `/docker-entrypoint-initdb.d/` directory

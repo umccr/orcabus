@@ -78,7 +78,7 @@ mod tests {
     use sqlx::PgPool;
 
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::queries::tests::initialize_database;
+    use crate::queries::EntriesBuilder;
     use crate::routes::list::tests::{response_from, response_from_get};
     use crate::routes::AppState;
     use crate::uuid::UuidGenerator;
@@ -89,7 +89,10 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.objects;
+        let entries = EntriesBuilder::default()
+            .build(state.client())
+            .await
+            .objects;
 
         let first = entries.first().unwrap();
         let result: FileObject =
@@ -100,7 +103,10 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_s3_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
-        let entries = initialize_database(state.client(), 10).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .build(state.client())
+            .await
+            .s3_objects;
 
         let first = entries.first().unwrap();
         let result: FileS3Object =

@@ -48,16 +48,15 @@ impl<'a> GetQueryBuilder<'a> {
 mod tests {
     use sqlx::PgPool;
 
+    use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::Client;
-    use crate::queries::tests::initialize_database;
-
-    use super::*;
+    use crate::queries::EntriesBuilder;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_get_object(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await.objects;
+        let entries = EntriesBuilder::default().build(&client).await.objects;
 
         let first = entries.first().unwrap();
         let builder = GetQueryBuilder::new(&client);
@@ -69,7 +68,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_s3_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await.s3_objects;
+        let entries = EntriesBuilder::default().build(&client).await.s3_objects;
 
         let first = entries.first().unwrap();
         let builder = GetQueryBuilder::new(&client);

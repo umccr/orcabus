@@ -266,18 +266,15 @@ mod tests {
     use serde_json::json;
     use sqlx::PgPool;
 
+    use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::EventType;
-    use crate::queries::tests::{
-        initialize_database, initialize_database_ratios_reorder, initialize_database_reorder,
-    };
-
-    use super::*;
+    use crate::queries::EntriesBuilder;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await.objects;
+        let entries = EntriesBuilder::default().build(&client).await.objects;
 
         let builder = ListQueryBuilder::<object::Entity>::new(&client);
         let result = builder.all().await.unwrap();
@@ -289,7 +286,11 @@ mod tests {
     async fn test_current_s3_objects_10(pool: PgPool) {
         let client = Client::from_pool(pool);
 
-        let entries = initialize_database_ratios_reorder(&client, 10, 4, 3)
+        let entries = EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(&client)
             .await
             .s3_objects;
         let builder = ListQueryBuilder::<s3_object::Entity>::new(&client).current_state();
@@ -302,7 +303,12 @@ mod tests {
     async fn test_current_s3_objects_30(pool: PgPool) {
         let client = Client::from_pool(pool);
 
-        let entries = initialize_database_ratios_reorder(&client, 30, 8, 5)
+        let entries = EntriesBuilder::default()
+            .with_n(30)
+            .with_bucket_divisor(8)
+            .with_key_divisor(5)
+            .with_shuffle(true)
+            .build(&client)
             .await
             .s3_objects;
         let builder = ListQueryBuilder::<s3_object::Entity>::new(&client).current_state();
@@ -318,7 +324,11 @@ mod tests {
     async fn test_current_s3_objects_with_paginate_10(pool: PgPool) {
         let client = Client::from_pool(pool);
 
-        let entries = initialize_database_ratios_reorder(&client, 10, 4, 3)
+        let entries = EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(&client)
             .await
             .s3_objects;
 
@@ -344,7 +354,12 @@ mod tests {
     async fn test_current_s3_objects_with_filter(pool: PgPool) {
         let client = Client::from_pool(pool);
 
-        let entries = initialize_database_ratios_reorder(&client, 30, 8, 5)
+        let entries = EntriesBuilder::default()
+            .with_n(30)
+            .with_bucket_divisor(8)
+            .with_key_divisor(5)
+            .with_shuffle(true)
+            .build(&client)
             .await
             .s3_objects;
 
@@ -371,7 +386,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_objects_filter_attributes(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await.objects;
+        let entries = EntriesBuilder::default().build(&client).await.objects;
 
         let result = filter_all_objects_from(
             &client,
@@ -412,7 +427,7 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_paginate_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database(&client, 10).await.objects;
+        let entries = EntriesBuilder::default().build(&client).await.objects;
 
         let builder = ListQueryBuilder::<object::Entity>::new(&client);
 
@@ -433,7 +448,11 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_s3_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database_reorder(&client, 10).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await
+            .s3_objects;
 
         let builder = ListQueryBuilder::<s3_object::Entity>::new(&client);
         let result = builder.all().await.unwrap();
@@ -444,7 +463,11 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_s3_objects_filter_event_type(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database_reorder(&client, 10).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await
+            .s3_objects;
 
         let result = filter_all_s3_objects_from(
             &client,
@@ -467,7 +490,11 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_s3_objects_multiple_filters(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database_reorder(&client, 10).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await
+            .s3_objects;
 
         let result = filter_all_s3_objects_from(
             &client,
@@ -484,7 +511,11 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_s3_objects_filter_attributes(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database_reorder(&client, 10).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await
+            .s3_objects;
 
         let result = filter_all_s3_objects_from(
             &client,
@@ -554,7 +585,11 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_paginate_s3_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = initialize_database_reorder(&client, 10).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await
+            .s3_objects;
 
         let builder = ListQueryBuilder::<s3_object::Entity>::new(&client);
 
@@ -575,7 +610,10 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_count_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
-        initialize_database(&client, 10).await;
+        EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await;
 
         let builder = ListQueryBuilder::<object::Entity>::new(&client);
 
@@ -586,7 +624,10 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_count_s3_objects(pool: PgPool) {
         let client = Client::from_pool(pool);
-        initialize_database(&client, 10).await;
+        EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await;
 
         let builder = ListQueryBuilder::<s3_object::Entity>::new(&client);
 

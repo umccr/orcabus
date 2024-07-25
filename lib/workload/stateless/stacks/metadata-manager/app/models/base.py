@@ -43,6 +43,7 @@ class BaseManager(models.Manager):
         )
 
     def get_model_fields_query(self, qs: QuerySet, **kwargs) -> QuerySet:
+
         def exclude_params(params):
             for param in params:
                 kwargs.pop(param) if param in kwargs.keys() else None

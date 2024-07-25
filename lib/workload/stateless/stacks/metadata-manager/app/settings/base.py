@@ -122,6 +122,7 @@ LOGGING = {
             "level": "INFO",
             "handlers": ["console"],
         },
+
     },
 }
 

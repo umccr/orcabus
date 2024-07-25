@@ -273,6 +273,7 @@ pub(crate) mod tests {
 
     use std::ops::{Index, Range};
 
+    use crate::queries::{Entries, EntriesBuilder};
     use sea_orm::{ActiveModelTrait, IntoActiveModel};
     use sea_orm::{DatabaseConnection, Set};
     use serde_json::json;
@@ -282,14 +283,13 @@ pub(crate) mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
 
     use crate::database::Client;
-    use crate::queries::tests::{initialize_database, Entries};
 
     use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_replace(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = initialize_database(&client, 10).await;
+        let mut entries = EntriesBuilder::default().build(&client).await;
 
         change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
         change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;
@@ -311,7 +311,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_add(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = initialize_database(&client, 10).await;
+        let mut entries = EntriesBuilder::default().build(&client).await;
 
         change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
         change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;
@@ -342,7 +342,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_add_from_null_json(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = initialize_database(&client, 10).await;
+        let mut entries = EntriesBuilder::default().build(&client).await;
 
         change_attributes(&client, &entries, 0, Some(Value::Null)).await;
         change_attributes(&client, &entries, 1, Some(Value::Null)).await;
@@ -363,7 +363,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_add_from_not_set(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = initialize_database(&client, 10).await;
+        let mut entries = EntriesBuilder::default().build(&client).await;
 
         null_attributes(&client, &entries, 0).await;
 
@@ -388,7 +388,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_remove(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = initialize_database(&client, 10).await;
+        let mut entries = EntriesBuilder::default().build(&client).await;
 
         change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
         change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;
@@ -409,7 +409,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_no_op(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = initialize_database(&client, 10).await;
+        let mut entries = EntriesBuilder::default().build(&client).await;
 
         change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "2"}))).await;
         change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "2"}))).await;
@@ -431,7 +431,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_failed_test(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = initialize_database(&client, 10).await;
+        let mut entries = EntriesBuilder::default().build(&client).await;
 
         change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
         change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;
@@ -470,7 +470,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_for_id(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = initialize_database(&client, 10).await;
+        let mut entries = EntriesBuilder::default().build(&client).await;
 
         change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
 
@@ -496,7 +496,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_replace_different_attribute_ids(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = initialize_database(&client, 10).await;
+        let mut entries = EntriesBuilder::default().build(&client).await;
 
         change_object_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
         change_object_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;

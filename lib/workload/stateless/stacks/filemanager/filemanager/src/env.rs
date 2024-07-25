@@ -18,8 +18,6 @@ pub struct Config {
     pub(crate) sqs_url: Option<String>,
     #[serde(default, rename = "filemanager_paired_ingest_mode")]
     pub(crate) paired_ingest_mode: bool,
-    #[serde(default, rename = "filemanager_api_server_addr")]
-    pub(crate) api_server_addr: Option<String>,
 }
 
 impl Config {
@@ -76,11 +74,6 @@ impl Config {
         self.paired_ingest_mode
     }
 
-    /// Get the api server address.
-    pub fn api_server_addr(&self) -> Option<&str> {
-        self.api_server_addr.as_deref()
-    }
-
     /// Get the value from an optional, or else try and get a different value, unwrapping into a Result.
     pub fn value_or_else<T>(value: Option<T>, or_else: Option<T>) -> Result<T> {
         value
@@ -127,7 +120,6 @@ mod tests {
                 pguser: Some("user".to_string()),
                 sqs_url: Some("url".to_string()),
                 paired_ingest_mode: true,
-                api_server_addr: Some("127.0.0.1:8080".to_string()),
             }
         )
     }
