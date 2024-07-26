@@ -6,13 +6,12 @@ use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{Alias, Asterisk, PostgresQueryBuilder, Query};
 use sea_orm::Order::{Asc, Desc};
 use sea_orm::{
-    ColumnTrait, Condition, EntityTrait, FromQueryResult, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, QueryTrait, Select,
+    ColumnTrait, Condition, ConnectionTrait, EntityTrait, FromQueryResult, PaginatorTrait,
+    QueryFilter, QueryOrder, QuerySelect, QueryTrait, Select,
 };
 use tracing::trace;
 
 use crate::database::entities::{object, s3_object};
-use crate::database::Client;
 use crate::error::Error::OverflowError;
 use crate::error::{Error, Result};
 use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
@@ -21,19 +20,22 @@ use crate::routes::pagination::Pagination;
 
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
-pub struct ListQueryBuilder<'a, E>
+pub struct ListQueryBuilder<'a, C, E>
 where
     E: EntityTrait,
 {
-    client: &'a Client,
+    connection: &'a C,
     select: Select<E>,
 }
 
-impl<'a> ListQueryBuilder<'a, object::Entity> {
+impl<'a, C> ListQueryBuilder<'a, C, object::Entity>
+where
+    C: ConnectionTrait,
+{
     /// Create a new query builder.
-    pub fn new(client: &'a Client) -> Self {
+    pub fn new(connection: &'a C) -> Self {
         Self {
-            client,
+            connection,
             select: Self::for_objects(),
         }
     }
@@ -59,11 +61,14 @@ impl<'a> ListQueryBuilder<'a, object::Entity> {
     }
 }
 
-impl<'a> ListQueryBuilder<'a, s3_object::Entity> {
+impl<'a, C> ListQueryBuilder<'a, C, s3_object::Entity>
+where
+    C: ConnectionTrait,
+{
     /// Create a new query builder.
-    pub fn new(client: &'a Client) -> Self {
+    pub fn new(connection: &'a C) -> Self {
         Self {
-            client,
+            connection,
             select: Self::for_s3_objects(),
         }
     }
@@ -179,24 +184,51 @@ impl<'a> ListQueryBuilder<'a, s3_object::Entity> {
     }
 }
 
-impl<'a, E, M> ListQueryBuilder<'a, E>
+impl<'a, C, E> From<(&'a C, Select<E>)> for ListQueryBuilder<'a, C, E>
 where
+    C: ConnectionTrait,
+    E: EntityTrait,
+{
+    fn from((connection, select): (&'a C, Select<E>)) -> Self {
+        Self { connection, select }
+    }
+}
+
+impl<'a, C, E> ListQueryBuilder<'a, C, E>
+where
+    C: ConnectionTrait,
+    E: EntityTrait,
+{
+    /// Get the inner connection and select statement.
+    pub fn into_inner(self) -> (&'a C, Select<E>) {
+        (self.connection, self.select)
+    }
+
+    /// Get a copy of this query builder
+    pub fn cloned(&self) -> Self {
+        (self.connection, self.select.clone()).into()
+    }
+}
+
+impl<'a, C, E, M> ListQueryBuilder<'a, C, E>
+where
+    C: ConnectionTrait,
     E: EntityTrait<Model = M>,
     M: FromQueryResult + Send + Sync,
 {
     /// Execute the prepared query, fetching all values.
     pub async fn all(self) -> Result<Vec<M>> {
-        Ok(self.select.all(self.client.connection_ref()).await?)
+        Ok(self.select.all(self.connection).await?)
     }
 
     /// Execute the prepared query, fetching one value.
     pub async fn one(self) -> Result<Option<M>> {
-        Ok(self.select.one(self.client.connection_ref()).await?)
+        Ok(self.select.one(self.connection).await?)
     }
 
     /// Execute the prepared query, counting all values.
     pub async fn count(self) -> Result<u64> {
-        Ok(self.select.count(self.client.connection_ref()).await?)
+        Ok(self.select.count(self.connection).await?)
     }
 
     /// Paginate the query for the given page and page_size.
@@ -253,7 +285,8 @@ where
         Ok(ListCount::new(self.count().await?))
     }
 
-    fn trace_query(&self, message: &str) {
+    /// Trace the current query.
+    pub fn trace_query(&self, message: &str) {
         trace!(
             "{message}: {}",
             self.select.as_query().to_string(PostgresQueryBuilder)
@@ -269,6 +302,7 @@ mod tests {
     use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::EventType;
+    use crate::database::Client;
     use crate::queries::EntriesBuilder;
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -276,7 +310,7 @@ mod tests {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default().build(&client).await.objects;
 
-        let builder = ListQueryBuilder::<object::Entity>::new(&client);
+        let builder = ListQueryBuilder::<_, object::Entity>::new(client.connection_ref());
         let result = builder.all().await.unwrap();
 
         assert_eq!(result, entries);
@@ -293,7 +327,8 @@ mod tests {
             .build(&client)
             .await
             .s3_objects;
-        let builder = ListQueryBuilder::<s3_object::Entity>::new(&client).current_state();
+        let builder =
+            ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref()).current_state();
         let result = builder.all().await.unwrap();
 
         assert_eq!(result, vec![entries[2].clone(), entries[8].clone()]);
@@ -311,7 +346,8 @@ mod tests {
             .build(&client)
             .await
             .s3_objects;
-        let builder = ListQueryBuilder::<s3_object::Entity>::new(&client).current_state();
+        let builder =
+            ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref()).current_state();
         let result = builder.all().await.unwrap();
 
         assert_eq!(
@@ -332,7 +368,7 @@ mod tests {
             .await
             .s3_objects;
 
-        let builder = ListQueryBuilder::<s3_object::Entity>::new(&client)
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .current_state()
             .paginate(0, 1)
             .await
@@ -341,7 +377,7 @@ mod tests {
         assert_eq!(result, vec![entries[2].clone()]);
 
         // Order of paginate call shouldn't matter.
-        let builder = ListQueryBuilder::<s3_object::Entity>::new(&client)
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .paginate(1, 1)
             .await
             .unwrap()
@@ -363,7 +399,7 @@ mod tests {
             .await
             .s3_objects;
 
-        let builder = ListQueryBuilder::<s3_object::Entity>::new(&client)
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .current_state()
             .filter_all(S3ObjectsFilterAll {
                 size: Some(14),
@@ -373,7 +409,7 @@ mod tests {
         assert_eq!(result, vec![entries[6].clone()]);
 
         // Order of filter call shouldn't matter.
-        let builder = ListQueryBuilder::<s3_object::Entity>::new(&client)
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .filter_all(S3ObjectsFilterAll {
                 size: Some(4),
                 ..Default::default()
@@ -429,7 +465,7 @@ mod tests {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default().build(&client).await.objects;
 
-        let builder = ListQueryBuilder::<object::Entity>::new(&client);
+        let builder = ListQueryBuilder::<_, object::Entity>::new(client.connection_ref());
 
         let result = paginate_all(builder.clone(), 3, 3).await;
         assert_eq!(result, entries[9..]);
@@ -454,7 +490,7 @@ mod tests {
             .await
             .s3_objects;
 
-        let builder = ListQueryBuilder::<s3_object::Entity>::new(&client);
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref());
         let result = builder.all().await.unwrap();
 
         assert_eq!(result, entries);
@@ -591,7 +627,7 @@ mod tests {
             .await
             .s3_objects;
 
-        let builder = ListQueryBuilder::<s3_object::Entity>::new(&client);
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref());
 
         let result = paginate_all(builder.clone(), 3, 3).await;
         assert_eq!(result, entries[9..]);
@@ -615,7 +651,7 @@ mod tests {
             .build(&client)
             .await;
 
-        let builder = ListQueryBuilder::<object::Entity>::new(&client);
+        let builder = ListQueryBuilder::<_, object::Entity>::new(client.connection_ref());
 
         assert_eq!(builder.clone().count().await.unwrap(), 10);
         assert_eq!(builder.to_list_count().await.unwrap(), ListCount::new(10));
@@ -629,19 +665,20 @@ mod tests {
             .build(&client)
             .await;
 
-        let builder = ListQueryBuilder::<s3_object::Entity>::new(&client);
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref());
 
         assert_eq!(builder.clone().count().await.unwrap(), 10);
         assert_eq!(builder.to_list_count().await.unwrap(), ListCount::new(10));
     }
 
-    async fn paginate_all<T, M>(
-        builder: ListQueryBuilder<'_, T>,
+    async fn paginate_all<C, T, M>(
+        builder: ListQueryBuilder<'_, C, T>,
         page: u64,
         page_size: u64,
     ) -> Vec<M>
     where
         T: EntityTrait<Model = M>,
+        C: ConnectionTrait,
         M: FromQueryResult + Send + Sync,
     {
         builder
@@ -657,7 +694,7 @@ mod tests {
         client: &Client,
         filter: ObjectsFilterAll,
     ) -> Vec<object::Model> {
-        ListQueryBuilder::<object::Entity>::new(client)
+        ListQueryBuilder::<_, object::Entity>::new(client.connection_ref())
             .filter_all(filter)
             .all()
             .await
@@ -668,7 +705,7 @@ mod tests {
         client: &Client,
         filter: S3ObjectsFilterAll,
     ) -> Vec<s3_object::Model> {
-        ListQueryBuilder::<s3_object::Entity>::new(client)
+        ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .filter_all(filter)
             .all()
             .await

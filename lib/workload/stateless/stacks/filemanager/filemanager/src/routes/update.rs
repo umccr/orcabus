@@ -1,4 +1,4 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::routing::patch;
 use axum::{Json, Router};
 use sea_orm::TransactionTrait;
@@ -15,6 +15,7 @@ use crate::error::Result;
 use crate::queries::update::UpdateQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
 use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
+use crate::routes::list::ListS3ObjectsParams;
 use crate::routes::AppState;
 
 /// The attributes to update for the request. This updates attributes according to JSON patch.
@@ -182,20 +183,26 @@ pub async fn update_s3_object_attributes(
         ),
         ErrorStatusCode,
     ),
-    params(ObjectsFilterAll),
+    params(ListS3ObjectsParams, ObjectsFilterAll),
     request_body = PatchBody,
     context_path = "/api/v1",
     tag = "update",
 )]
 pub async fn update_s3_object_collection_attributes(
     state: State<AppState>,
+    Query(list): Query<ListS3ObjectsParams>,
     QsQuery(filter_all): QsQuery<S3ObjectsFilterAll>,
     Json(patch): Json<PatchBody>,
 ) -> Result<Json<Vec<FileS3Object>>> {
     let txn = state.client().connection_ref().begin().await?;
 
-    let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
-        .filter_all(filter_all)
+    let mut results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn).filter_all(filter_all);
+
+    if list.current_state() {
+        results = results.current_state();
+    }
+
+    let results = results
         .update_s3_object_attributes(patch)
         .await?
         .all()
@@ -359,6 +366,49 @@ mod tests {
 
         assert_model_contains(&objects, &entries.objects, 0..2);
         assert_model_contains(&s3_objects, &entries.s3_objects, 0..2);
+        assert_correct_records(state.client(), entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_s3_attributes_current_state(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
+
+        change_attributes(
+            state.client(),
+            &entries,
+            0,
+            Some(json!({"attribute_id": "1"})),
+        )
+        .await;
+        change_attributes(
+            state.client(),
+            &entries,
+            1,
+            Some(json!({"attribute_id": "1"})),
+        )
+        .await;
+
+        let patch = json!({"attributes": [
+            { "op": "test", "path": "/attribute_id", "value": "1" },
+            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+        ]});
+
+        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+            state.clone(),
+            "/s3_objects?current_state=true&attributes[attribute_id]=1",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        // Only the created event should be updated.
+        entries.s3_objects[0].attributes = Some(json!({"attribute_id": "attribute_id"}));
+        entries.s3_objects[1].attributes = Some(json!({"attribute_id": "1"}));
+        entries.objects[0].attributes = Some(json!({"attribute_id": "1"}));
+        entries.objects[1].attributes = Some(json!({"attribute_id": "1"}));
+
+        assert_model_contains(&s3_objects, &entries.s3_objects, 0..1);
         assert_correct_records(state.client(), entries).await;
     }
 

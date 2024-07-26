@@ -9,7 +9,7 @@ use sea_orm::sea_query::{
 };
 use sea_orm::{
     ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iterable, ModelTrait, QueryFilter,
-    QueryTrait, Select, StatementBuilder, Value,
+    QueryTrait, StatementBuilder, Value,
 };
 use serde_json::json;
 use tracing::trace;
@@ -29,7 +29,7 @@ where
     E: EntityTrait,
 {
     connection: &'a C,
-    select_to_update: Select<E>,
+    select_to_update: ListQueryBuilder<'a, C, E>,
     // With query will eventually end up as the update
     update: WithQuery,
 }
@@ -42,25 +42,24 @@ where
     pub fn new(connection: &'a C) -> Self {
         Self {
             connection,
-            select_to_update: object::Entity::find(),
+            select_to_update: ListQueryBuilder::<_, object::Entity>::new(connection),
             update: WithQuery::new(),
         }
     }
 
     /// Update the attributes on an object replacing any existing keys in the attributes.
     pub fn for_id(mut self, id: Uuid) -> Self {
-        self.select_to_update = self
-            .select_to_update
-            .filter(object::Column::ObjectId.eq(id));
+        let (connection, mut select) = self.select_to_update.into_inner();
 
+        select = select.filter(object::Column::ObjectId.eq(id));
+
+        self.select_to_update = (connection, select).into();
         self
     }
 
     /// Filter records by all fields in the filter variable.
     pub fn filter_all(mut self, filter: ObjectsFilterAll) -> Self {
-        self.select_to_update = self
-            .select_to_update
-            .filter(ListQueryBuilder::<object::Entity>::filter_condition(filter));
+        self.select_to_update = self.select_to_update.filter_all(filter);
 
         self.trace_query("filter_all");
 
@@ -82,30 +81,33 @@ where
     pub fn new(connection: &'a C) -> Self {
         Self {
             connection,
-            select_to_update: s3_object::Entity::find(),
+            select_to_update: ListQueryBuilder::<_, s3_object::Entity>::new(connection),
             update: WithQuery::new(),
         }
     }
 
     /// Update the attributes on an object replacing any existing keys in the attributes.
     pub fn for_id(mut self, id: Uuid) -> Self {
-        self.select_to_update = self
-            .select_to_update
-            .filter(s3_object::Column::S3ObjectId.eq(id));
+        let (connection, mut select) = self.select_to_update.into_inner();
 
+        select = select.filter(s3_object::Column::S3ObjectId.eq(id));
+
+        self.select_to_update = (connection, select).into();
         self
     }
 
     /// Filter records by all fields in the filter variable.
     pub fn filter_all(mut self, filter: S3ObjectsFilterAll) -> Self {
-        self.select_to_update =
-            self.select_to_update
-                .filter(ListQueryBuilder::<s3_object::Entity>::filter_condition(
-                    filter,
-                ));
+        self.select_to_update = self.select_to_update.filter_all(filter);
 
         self.trace_query("filter_all");
 
+        self
+    }
+
+    /// Update the current state according to `ListQueryBuilder::current_state`.
+    pub fn current_state(mut self) -> Self {
+        self.select_to_update = self.select_to_update.current_state();
         self
     }
 
@@ -120,11 +122,38 @@ where
     }
 }
 
+impl<'a, C, E> From<(&'a C, ListQueryBuilder<'a, C, E>, WithQuery)> for UpdateQueryBuilder<'a, C, E>
+where
+    C: ConnectionTrait,
+    E: EntityTrait,
+{
+    fn from(
+        (connection, select_to_update, update): (&'a C, ListQueryBuilder<'a, C, E>, WithQuery),
+    ) -> Self {
+        Self {
+            connection,
+            select_to_update,
+            update,
+        }
+    }
+}
+
+impl<'a, C, E> UpdateQueryBuilder<'a, C, E>
+where
+    C: ConnectionTrait,
+    E: EntityTrait,
+{
+    /// Get the inner connection, with query and list query builder.
+    pub fn into_inner(self) -> (&'a C, ListQueryBuilder<'a, C, E>, WithQuery) {
+        (self.connection, self.select_to_update, self.update)
+    }
+}
+
 impl<'a, C, E, M> UpdateQueryBuilder<'a, C, E>
 where
     C: ConnectionTrait,
     E: EntityTrait<Model = M>,
-    M: ModelTrait + FromQueryResult,
+    M: ModelTrait + FromQueryResult + Send + Sync,
 {
     /// Execute the prepared query, returning all values.
     pub async fn all(self) -> Result<Vec<M>> {
@@ -162,16 +191,19 @@ where
     /// returning <updated_objects>
     /// ```
     pub async fn update_attributes(
-        mut self,
+        self,
         patch_body: PatchBody,
         id_col: <M::Entity as EntityTrait>::Column,
         attribute_col: <M::Entity as EntityTrait>::Column,
     ) -> Result<Self> {
-        let to_update = self.select_to_update.clone().all(self.connection).await?;
+        let (conn, select_to_update, mut with_query) = self.into_inner();
+        let select = select_to_update.cloned();
+
+        let to_update = select.all().await?;
 
         // Return early if there is nothing to update.
         if to_update.is_empty() {
-            return Ok(self);
+            return Ok((conn, select_to_update, with_query).into());
         }
 
         let values = to_update
@@ -250,20 +282,17 @@ where
             .returning(returning)
             .to_owned();
 
-        self.update = update.with(with_clause);
+        with_query = update.with(with_clause);
 
-        self.trace_query("update_attributes");
+        let self_return: Self = (conn, select_to_update, with_query).into();
 
-        Ok(self)
+        self_return.trace_query("update_attributes");
+
+        Ok(self_return)
     }
 
     fn trace_query(&self, message: &str) {
-        trace!(
-            "{message}: {}",
-            self.select_to_update
-                .as_query()
-                .to_string(PostgresQueryBuilder)
-        );
+        self.select_to_update.trace_query(message);
         trace!("{message}: {}", self.update.to_string(PostgresQueryBuilder));
     }
 }
@@ -336,6 +365,44 @@ pub(crate) mod tests {
         .await;
 
         assert_contains(&results.0, &results.1, &entries, 0..2);
+        assert_correct_records(&client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_s3_attributes_current_state(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(&client).await;
+
+        change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
+        change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "1"}))).await;
+
+        let patch = json!([
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]);
+
+        let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+            .current_state()
+            .filter_all(S3ObjectsFilterAll {
+                attributes: Some(json!({
+                "attribute_id": "1"
+                })),
+                ..Default::default()
+            })
+            .update_s3_object_attributes(PatchBody::new(from_value(patch).unwrap()))
+            .await
+            .unwrap()
+            .all()
+            .await
+            .unwrap();
+
+        // Only the created event should be updated.
+        entries.s3_objects[0].attributes =
+            Some(json!({"attribute_id": "1", "another_attribute": "1"}));
+        entries.s3_objects[1].attributes = Some(json!({"attribute_id": "1"}));
+        entries.objects[0].attributes = Some(json!({"attribute_id": "1"}));
+        entries.objects[1].attributes = Some(json!({"attribute_id": "1"}));
+
+        assert_model_contains(&results, &entries.s3_objects, 0..1);
         assert_correct_records(&client, entries).await;
     }
 
@@ -696,11 +763,11 @@ pub(crate) mod tests {
 
     /// Assert that no existing records are updated.
     pub(crate) async fn assert_correct_records(client: &Client, mut entries: Entries) {
-        let mut objects = ListQueryBuilder::<object::Entity>::new(client)
+        let mut objects = ListQueryBuilder::<_, object::Entity>::new(client.connection_ref())
             .all()
             .await
             .unwrap();
-        let s3_objects = ListQueryBuilder::<s3_object::Entity>::new(client)
+        let s3_objects = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .all()
             .await
             .unwrap();

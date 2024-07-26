@@ -82,7 +82,7 @@ pub async fn list_objects(
     Query(pagination): Query<Pagination>,
     QsQuery(filter_all): QsQuery<ObjectsFilterAll>,
 ) -> Result<Json<ListResponse<FileObject>>> {
-    let response = ListQueryBuilder::<object::Entity>::new(&state.client)
+    let response = ListQueryBuilder::<_, object::Entity>::new(state.client.connection_ref())
         .filter_all(filter_all)
         .paginate_to_list_response(pagination)
         .await?;
@@ -106,7 +106,7 @@ pub async fn count_objects(
     state: State<AppState>,
     QsQuery(filter_all): QsQuery<ObjectsFilterAll>,
 ) -> Result<Json<ListCount>> {
-    let response = ListQueryBuilder::<object::Entity>::new(&state.client)
+    let response = ListQueryBuilder::<_, object::Entity>::new(state.client.connection_ref())
         .filter_all(filter_all)
         .to_list_count()
         .await?;
@@ -131,6 +131,18 @@ pub struct ListS3ObjectsParams {
     current_state: bool,
 }
 
+impl ListS3ObjectsParams {
+    /// Create the current state struct.
+    pub fn new(current_state: bool) -> Self {
+        Self { current_state }
+    }
+
+    /// Get the current state.
+    pub fn current_state(&self) -> bool {
+        self.current_state
+    }
+}
+
 /// List all s3_objects according to the parameters.
 #[utoipa::path(
     get,
@@ -149,8 +161,8 @@ pub async fn list_s3_objects(
     Query(list): Query<ListS3ObjectsParams>,
     QsQuery(filter_all): QsQuery<S3ObjectsFilterAll>,
 ) -> Result<Json<ListResponse<FileS3Object>>> {
-    let mut response =
-        ListQueryBuilder::<s3_object::Entity>::new(&state.client).filter_all(filter_all);
+    let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
+        .filter_all(filter_all);
 
     if list.current_state {
         response = response.current_state();
@@ -176,8 +188,8 @@ pub async fn count_s3_objects(
     Query(list): Query<ListS3ObjectsParams>,
     QsQuery(filter_all): QsQuery<S3ObjectsFilterAll>,
 ) -> Result<Json<ListCount>> {
-    let mut response =
-        ListQueryBuilder::<s3_object::Entity>::new(&state.client).filter_all(filter_all);
+    let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
+        .filter_all(filter_all);
 
     if list.current_state {
         response = response.current_state();
