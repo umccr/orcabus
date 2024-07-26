@@ -22,7 +22,7 @@ pub enum Error {
     #[error("deserialization error: `{0}`")]
     DeserializeError(String),
     #[error("loading environment variables: `{0}`")]
-    LoadingEnvironment(String),
+    ConfigError(String),
     #[error("credential generator error: `{0}`")]
     CredentialGeneratorError(String),
     #[error("S3 inventory error: `{0}`")]
@@ -67,6 +67,6 @@ impl From<serde_json::Error> for Error {
 
 impl From<envy::Error> for Error {
     fn from(error: envy::Error) -> Self {
-        Self::LoadingEnvironment(error.to_string())
+        Self::ConfigError(error.to_string())
     }
 }

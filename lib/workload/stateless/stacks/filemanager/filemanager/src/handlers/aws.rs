@@ -5,7 +5,6 @@ use std::collections::HashSet;
 
 use aws_lambda_events::sqs::SqsEvent;
 use itertools::Itertools;
-use lambda_runtime::Error;
 use mockall_double::double;
 use sea_orm::DatabaseConnection;
 use tracing::{debug, trace};
@@ -18,7 +17,8 @@ use crate::database::aws::credentials::IamGeneratorBuilder;
 use crate::database::aws::query::Query;
 use crate::database::{Client, Ingest};
 use crate::env::Config as EnvConfig;
-use crate::error;
+use crate::error::Error::ConfigError;
+use crate::error::Result;
 use crate::events::aws::collecter::CollecterBuilder;
 use crate::events::aws::inventory::{DiffMessages, Inventory, Manifest};
 use crate::events::aws::message::EventType::Created;
@@ -34,7 +34,7 @@ pub async fn receive_and_ingest<'a>(
     sqs_url: Option<impl Into<String>>,
     database_client: &'a Client,
     env_config: &'a EnvConfig,
-) -> Result<usize, error::Error> {
+) -> Result<usize> {
     let (events, n_records) = CollecterBuilder::default()
         .with_s3_client(s3_client)
         .with_sqs_client(sqs_client)
@@ -55,10 +55,10 @@ pub async fn ingest_event(
     s3_client: S3Client,
     database_client: Client,
     env_config: &EnvConfig,
-) -> Result<Client, Error> {
+) -> Result<Client> {
     trace!("received event: {:?}", event);
 
-    let events: FlatS3EventMessages = event
+    let events = event
         .records
         .into_iter()
         .filter_map(|event| {
@@ -67,7 +67,7 @@ pub async fn ingest_event(
                 Ok(body.unwrap_or_default())
             })
         })
-        .collect::<Result<Vec<FlatS3EventMessages>, Error>>()?
+        .collect::<Result<Vec<_>>>()?
         .into();
 
     trace!("flattened events: {:?}", events);
@@ -95,9 +95,9 @@ pub async fn ingest_s3_inventory(
     key: Option<String>,
     manifest: Option<Manifest>,
     env_config: &EnvConfig,
-) -> Result<Client, Error> {
+) -> Result<Client> {
     if env_config.paired_ingest_mode() {
-        return Err(Error::from(
+        return Err(ConfigError(
             "paired ingest mode is not supported for S3 inventory".to_string(),
         ));
     }
@@ -109,7 +109,7 @@ pub async fn ingest_s3_inventory(
     } else if let (Some(bucket), Some(key)) = (bucket, key) {
         inventory.parse_manifest_key(key, bucket).await?
     } else {
-        return Err(Error::from(
+        return Err(ConfigError(
             "either a manifest or bucket and key option needs to be specified".to_string(),
         ));
     };
@@ -173,7 +173,7 @@ pub async fn ingest_s3_inventory(
 }
 
 /// Create a postgres database pool using an IAM credential generator.
-pub async fn create_database_pool(env_config: &EnvConfig) -> Result<DatabaseConnection, Error> {
+pub async fn create_database_pool(env_config: &EnvConfig) -> Result<DatabaseConnection> {
     let client = Client::from_generator(
         Some(IamGeneratorBuilder::default().build(env_config).await?),
         env_config,
@@ -188,7 +188,7 @@ pub async fn create_database_pool(env_config: &EnvConfig) -> Result<DatabaseConn
 pub async fn update_credentials(
     connection: &DatabaseConnection,
     env_config: &EnvConfig,
-) -> Result<(), Error> {
+) -> Result<()> {
     connection
         .get_postgres_connection_pool()
         .set_connect_options(

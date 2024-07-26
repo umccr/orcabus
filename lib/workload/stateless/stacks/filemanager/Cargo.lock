@@ -2138,7 +2138,6 @@ dependencies = [
  "hex",
  "itertools 0.13.0",
  "json-patch",
- "lambda_runtime",
  "lazy_static",
  "md5",
  "miette",
@@ -2947,9 +2946,9 @@ dependencies = [
 
 [[package]]
 name = "lambda_http"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56eed1f61ea0efe7e89e1f018d95016959169b4194498a0283e950037bab6bb9"
+checksum = "67fe279be7f89f5f72c97c3a96f45c43db8edab1007320ecc6a5741273b4d6db"
 dependencies = [
  "aws_lambda_events",
  "base64 0.22.1",
@@ -2974,9 +2973,9 @@ dependencies = [
 
 [[package]]
 name = "lambda_runtime"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7a3eecde134218c7388f13079ab133552a251c319683a99495c048d30363927"
+checksum = "ed49669d6430292aead991e19bf13153135a884f916e68f32997c951af637ebe"
 dependencies = [
  "async-stream",
  "base64 0.22.1",
@@ -3290,14 +3289,13 @@ dependencies = [
 
 [[package]]
 name = "mockall"
-version = "0.12.1"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43766c2b5203b10de348ffe19f7e54564b64f3d6018ff7648d1e2d6d3a0f0a48"
+checksum = "d4c28b3fb6d753d28c20e826cd46ee611fda1cf3cde03a443a974043247c065a"
 dependencies = [
  "cfg-if",
  "downcast",
  "fragile",
- "lazy_static",
  "mockall_derive",
  "predicates",
  "predicates-tree",
@@ -3305,9 +3303,9 @@ dependencies = [
 
 [[package]]
 name = "mockall_derive"
-version = "0.12.1"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af7cbce79ec385a1d4f54baa90a76401eb15d9cab93685f62e7e9f942aa00ae2"
+checksum = "341014e7f530314e9a1fdbc7400b244efea7122662c96bfa248c31da5bfb2020"
 dependencies = [
  "cfg-if",
  "proc-macro2",

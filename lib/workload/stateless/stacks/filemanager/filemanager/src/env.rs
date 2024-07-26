@@ -1,7 +1,7 @@
 //! Handles loading environment variables as config options for filemanager.
 //!
 
-use crate::error::Error::LoadingEnvironment;
+use crate::error::Error::ConfigError;
 use crate::error::Result;
 use envy::from_env;
 use serde::Deserialize;
@@ -31,9 +31,7 @@ impl Config {
             && config.pgport.is_none()
             && config.pguser.is_none()
         {
-            return Err(LoadingEnvironment(
-                "no database configuration found".to_string(),
-            ));
+            return Err(ConfigError("no database configuration found".to_string()));
         }
 
         Ok(config)
@@ -83,7 +81,7 @@ impl Config {
 
     /// Convert an optional value to a missing environment variable error.
     pub fn value_into_err<T>(value: Option<T>) -> Result<T> {
-        value.ok_or_else(|| LoadingEnvironment("missing environment variable".to_string()))
+        value.ok_or_else(|| ConfigError("missing environment variable".to_string()))
     }
 }
 
