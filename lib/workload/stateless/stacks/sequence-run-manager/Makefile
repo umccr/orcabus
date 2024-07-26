@@ -1,6 +1,9 @@
 .EXPORT_ALL_VARIABLES:
 DJANGO_SETTINGS_MODULE = sequence_run_manager.settings.local
 
+DB_HOSTNAME ?= localhost
+DB_PORT ?= 5432
+
 .PHONY: test suite
 
 install:
@@ -27,7 +30,7 @@ load: migrate
 	@python manage.py generate_mock_data
 
 start: migrate
-	@python manage.py runserver_plus
+	@python manage.py runserver_plus 0.0.0.0:8000
 
 openapi:
 	@python manage.py generateschema > orcabus.sequencerunmanager.openapi.yaml

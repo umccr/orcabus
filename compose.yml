@@ -4,7 +4,8 @@ include:
 
 services:
 
-  metadata:
+  # PORT 8100 ~ metadata-manager
+  metadata-manager:
     environment:
       - DB_HOSTNAME=db
       - DB_PORT=5432
@@ -16,3 +17,32 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - db
+
+  # PORT 8200 ~ workflow-manager
+  workflow-manager:
+    environment:
+      - DB_HOSTNAME=db
+      - DB_PORT=5432
+      - PYTHONUNBUFFERED=1
+    ports:
+      - '8200:8000'
+    build:
+      context: ./lib/workload/stateless/stacks/workflow-manager
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+
+  # PORT 8300 ~ sequence-run-manager
+  sequence-run-manager:
+    environment:
+      - DB_HOSTNAME=db
+      - DB_PORT=5432
+      - PYTHONUNBUFFERED=1
+    ports:
+      - '8300:8000'
+    build:
+      context: ./lib/workload/stateless/stacks/sequence-run-manager
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+

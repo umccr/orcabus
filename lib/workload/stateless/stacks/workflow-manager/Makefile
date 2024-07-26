@@ -25,7 +25,7 @@ migrate:
 	@python manage.py migrate
 
 start: migrate
-	@python manage.py runserver_plus
+	@python manage.py runserver_plus 0.0.0.0:8000
 
 openapi:
 	@python manage.py generateschema > orcabus.hlo.openapi.yaml

@@ -20,14 +20,15 @@ baseline:
 	@detect-secrets scan --exclude-files '^(yarn.lock|.yarn/|.local/|openapi/)' > .secrets.baseline
 
 start-all-service:
-	# Running just the  database server
+	# Running the database server
 	docker compose up --wait -d db
 
 	# Insert all dump data in before running servers
 	@(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) s3-load)
-	
+	# @(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) load)
+
 	# Running the rest of the µ-service server
-	docker compose up
+	docker compose up --wait -d
 
 stop-all-service:
 	docker compose down

@@ -8,9 +8,13 @@ from environ import Env
 
 from .base import *  # noqa
 
-db_conn_cfg = Env.db_url_config(
-    # pragma: allowlist nextline secret
-    os.getenv("DB_URL", "postgresql://orcabus:orcabus@localhost:5432/orcabus")
-)
-
-DATABASES = {"default": db_conn_cfg}
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'workflow_manager',
+        'USER': 'orcabus',
+        'PASSWORD': 'orcabus',  # pragma: allowlist-secret
+        'HOST': os.getenv('DB_HOSTNAME', 'localhost'),
+        'PORT': os.getenv('DB_PORT', 5432),
+    }
+}
