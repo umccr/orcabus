@@ -39,7 +39,7 @@ export interface WgtsQcInputMakerConstructProps {
 
 export class WgtsQcInputMakerConstruct extends Construct {
   public readonly wgtsQcInputMakerEventMap = {
-    prefix: 'wgtsQcInputMaker',
+    prefix: 'kwik-wgtsqc',
     tablePartition: 'wgts_qc',
     triggerSource: 'orcabus.wgtsqcinputeventglue',
     triggerStatus: 'draft',

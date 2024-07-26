@@ -193,7 +193,10 @@ export class WgtsQcIcav2PipelineManagerStack extends cdk.Stack {
     });
 
     // Allow the state machine to read/write to dynamodb table
-    this.dynamodbTableObj.grantReadWriteData(configureOutputsSfn.role);
+    this.dynamodbTableObj.grantReadWriteData(configureOutputsSfn);
+
+    // Allow the state machine to invoke the lambda
+    setOutputJsonLambdaObj.currentVersion.grantInvoke(configureOutputsSfn);
 
     /* Add ICAv2 WfmworkflowRunStateChange wrapper around launch state machine */
     // This state machine handles the event target configurations */

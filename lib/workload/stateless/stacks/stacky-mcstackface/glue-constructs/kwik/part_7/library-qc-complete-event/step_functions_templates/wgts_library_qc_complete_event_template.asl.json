@@ -38,9 +38,9 @@
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Get QC Metrics Json",
+        "StartAt": "Get Fastq List Row Item",
         "States": {
-          "Get QC Metrics Json": {
+          "Get Fastq List Row Item": {
             "Type": "Task",
             "Resource": "arn:aws:states:::dynamodb:getItem",
             "Parameters": {
@@ -51,15 +51,43 @@
               }
             },
             "ResultSelector": {
-              "qc_metrics_json.$": "States.StringToJson($.Item.qc_metrics_json.S)"
+              "fastq_list_row_item.$": "$.Item"
             },
-            "ResultPath": "$.get_qc_metrics_json_step",
-            "End": true
+            "ResultPath": "$.get_fastq_list_row_item_step",
+            "Next": "Has Qc Metrics"
+          },
+          "Has Qc Metrics": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Variable": "$.get_fastq_list_row_item_step.fastq_list_row_item.qc_metrics_json",
+                "IsPresent": true,
+                "Next": "Get QC Metrics Json",
+                "Comment": "Has qc_metrics_json column"
+              }
+            ],
+            "Default": "Set QC Metrics To Null"
+          },
+          "Get QC Metrics Json": {
+            "Type": "Pass",
+            "End": true,
+            "Parameters": {
+              "qc_metrics_json_str.$": "$.get_fastq_list_row_item_step.fastq_list_row_item.qc_metrics_json.S"
+            },
+            "ResultPath": "$.get_qc_metrics_json_step"
+          },
+          "Set QC Metrics To Null": {
+            "Type": "Pass",
+            "End": true,
+            "Parameters": {
+              "qc_metrics_json_str": null
+            },
+            "ResultPath": "$.get_qc_metrics_json_step"
           }
         }
       },
       "ResultSelector": {
-        "qc_metrics_list.$": "$.[*].get_qc_metrics_json_step.qc_metrics_json"
+        "qc_metrics_list.$": "$.[*].get_qc_metrics_json_step.qc_metrics_json_str"
       },
       "ResultPath": "$.get_qc_metrics_for_fastq_list_row_in_library_step",
       "Next": "Collate RGID Metrics"
@@ -70,7 +98,7 @@
       "Parameters": {
         "FunctionName": "${__sum_coverages_for_rgids_lambda_function_arn__}",
         "Payload": {
-          "sample_type.$": "$.sample_type",
+          "sample_type.$": "$.get_library_info_from_library_step.sample_type",
           "qc_metrics_list.$": "$.get_qc_metrics_for_fastq_list_row_in_library_step.qc_metrics_list"
         }
       },
@@ -121,6 +149,7 @@
           }
         }
       },
+      "ResultPath": null,
       "Next": "Wait 1 Second"
     },
     "Wait 1 Second": {

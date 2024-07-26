@@ -15,7 +15,7 @@ from wrapica.libica_models import ProjectData
 
 from wrapica.project_data import (
     find_project_data_bulk,
-    convert_icav2_uri_to_data_obj,
+    convert_icav2_uri_to_project_data_obj,
     convert_project_data_obj_to_icav2_uri
 )
 
@@ -82,7 +82,7 @@ def handler(event, context):
 
     icav2_uri = event.get("icav2_uri")
 
-    data_obj: ProjectData = convert_icav2_uri_to_data_obj(icav2_uri)
+    data_obj: ProjectData = convert_icav2_uri_to_project_data_obj(icav2_uri)
 
     all_project_data: List[ProjectData] = find_project_data_bulk(
         project_id=data_obj.project_id,

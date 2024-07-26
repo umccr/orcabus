@@ -25,6 +25,7 @@ def handler(event, context) -> Dict:
 
     if not all_fastq_list_row_ids_complete:
         return {
+            "library_qc_metrics": None,
             "all_fastq_list_row_ids_qc_complete": False
         }
 
@@ -32,13 +33,13 @@ def handler(event, context) -> Dict:
     qc_metrics_list: List[Dict] = [json.loads(qc_metrics) for qc_metrics in qc_metrics_list]
 
     if sample_type == 'WGS':
-        genome_coverage_sum = sum(qc_iter['genome_coverage'] for qc_iter in qc_metrics_list)
-        duplication_rate_avg = sum(qc_iter['duplication_rate'] for qc_iter in qc_metrics_list) / len(qc_metrics_list)
+        genome_coverage_sum = round(sum(qc_iter['genome_coverage'] for qc_iter in qc_metrics_list), 2)
+        duplication_rate_avg = round(sum(qc_iter['duplication_rate'] for qc_iter in qc_metrics_list) / len(qc_metrics_list), 2)
         return {
             "all_fastq_list_row_ids_qc_complete": True,
             "library_qc_metrics": {
-                "genome_coverage": genome_coverage_sum,
-                "duplication_rate": duplication_rate_avg
+                "genomeCoverage": genome_coverage_sum,
+                "duplicationRate": duplication_rate_avg
             }
         }
     elif sample_type == 'WTS':
@@ -46,6 +47,6 @@ def handler(event, context) -> Dict:
         return {
             "all_fastq_list_row_ids_qc_complete": True,
             "library_qc_metrics": {
-                "exon_fold_coverage": exon_fold_coverage_sum
+                "exonFoldCoverage": exon_fold_coverage_sum
             }
         }

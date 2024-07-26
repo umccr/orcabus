@@ -41,6 +41,14 @@ import {
   WgtsQcIcav2PipelineManagerStack,
   WgtsQcIcav2PipelineManagerStackProps,
 } from './stacks/wgts-alignment-qc-pipeline-manager/deploy';
+import {
+  TnIcav2PipelineManagerStack,
+  TnIcav2PipelineManagerStackProps,
+} from './stacks/tumor-normal-pipeline-manager/deploy';
+import {
+  WtsIcav2PipelineManagerStack,
+  WtsIcav2PipelineManagerStackProps,
+} from './stacks/transcriptome-pipeline-manager/deploy';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -51,6 +59,8 @@ export interface StatelessStackCollectionProps {
   bclconvertInteropQcIcav2PipelineManagerStackProps: BclconvertInteropQcIcav2PipelineManagerStackProps;
   cttsov2Icav2PipelineManagerStackProps: Cttsov2Icav2PipelineManagerStackProps;
   wgtsQcIcav2PipelineManagerStackProps: WgtsQcIcav2PipelineManagerStackProps;
+  tnIcav2PipelineManagerStackProps: TnIcav2PipelineManagerStackProps;
+  wtsIcav2PipelineManagerStackProps: WtsIcav2PipelineManagerStackProps;
   eventSchemaStackProps: SchemaStackProps;
   dataSchemaStackProps: SchemaStackProps;
   bclConvertManagerStackProps: BclConvertManagerStackProps;
@@ -68,6 +78,8 @@ export class StatelessStackCollection {
   readonly bclconvertInteropQcIcav2PipelineManagerStack: Stack;
   readonly cttsov2Icav2PipelineManagerStack: Stack;
   readonly wgtsQcIcav2PipelineManagerStack: Stack;
+  readonly tnIcav2PipelineManagerStack: Stack;
+  readonly wtsIcav2PipelineManagerStack: Stack;
   readonly eventSchemaStack: Stack;
   readonly dataSchemaStack: Stack;
   readonly bclConvertManagerStack: Stack;
@@ -147,6 +159,24 @@ export class StatelessStackCollection {
       {
         ...this.createTemplateProps(env, 'WgtsQcIcav2PipelineManagerStack'),
         ...statelessConfiguration.wgtsQcIcav2PipelineManagerStackProps,
+      }
+    );
+
+    this.tnIcav2PipelineManagerStack = new TnIcav2PipelineManagerStack(
+      scope,
+      'TnIcav2PipelineManagerStack',
+      {
+        ...this.createTemplateProps(env, 'TnIcav2PipelineManagerStack'),
+        ...statelessConfiguration.tnIcav2PipelineManagerStackProps,
+      }
+    );
+
+    this.wtsIcav2PipelineManagerStack = new WtsIcav2PipelineManagerStack(
+      scope,
+      'WtsIcav2PipelineManagerStack',
+      {
+        ...this.createTemplateProps(env, 'WtsIcav2PipelineManagerStack'),
+        ...statelessConfiguration.wtsIcav2PipelineManagerStackProps,
       }
     );
 

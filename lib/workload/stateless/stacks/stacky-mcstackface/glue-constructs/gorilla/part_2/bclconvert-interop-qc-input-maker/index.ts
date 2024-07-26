@@ -31,7 +31,7 @@ export interface bclconvertInteropQcDraftToReadyMakerConstructProps {
 
 export class BclconvertInteropQcDraftToReadyMakerConstruct extends Construct {
   public readonly bclconvertInteropQcDraftToReadyMakerEventMap = {
-    prefix: 'bclconvertInteropQc',
+    prefix: 'gorilla-interop-qc',
     tablePartition: 'bclconvert_interop_qc',
     triggerSource: 'orcabus.bclconvertinteropqcinputeventglue',
     triggerStatus: 'draft',

@@ -34,7 +34,7 @@ import json
 from wrapica.enums import DataType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
-    convert_icav2_uri_to_data_obj,
+    convert_icav2_uri_to_project_data_obj,
     list_project_data_non_recursively, read_icav2_file_contents_to_string,
     convert_project_data_obj_to_icav2_uri
 )
@@ -55,7 +55,7 @@ def handler(events, context):
     analysis_output_uri = events.get("analysis_output_uri")
 
     # Get analysis uri as an object
-    analysis_project_data_obj = convert_icav2_uri_to_data_obj(analysis_output_uri)
+    analysis_project_data_obj = convert_icav2_uri_to_project_data_obj(analysis_output_uri)
 
     # Top level list
     analysis_output_list = list_project_data_non_recursively(

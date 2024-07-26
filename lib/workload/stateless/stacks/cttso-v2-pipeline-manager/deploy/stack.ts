@@ -159,10 +159,10 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       this,
       'set_output_json_lambda_python_function',
       {
-        entry: path.join(__dirname, '../lambdas/set_output_json_py'),
+        entry: path.join(__dirname, '../lambdas/set_outputs_json_py'),
         runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
-        index: 'set_output_json.py',
+        index: 'set_outputs_json.py',
         handler: 'handler',
         memorySize: 1024,
         layers: [lambda_layer_obj.lambdaLayerVersionObj],

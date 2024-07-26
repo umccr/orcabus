@@ -37,12 +37,12 @@ def sanitise_uri_value(input_value: str) -> str:
     :param input_value:
     :return:
     """
-    return input_value.replace('.', '_')
+    return input_value.replace('.', '-')
 
 
-def camel_case_to_snake_case(came_case_input: str) -> str:
+def camel_case_to_snake_hyphen_case(came_case_input: str) -> str:
     """
-    Convert camel case to snake case
+    Convert camel case to snake-hyphen case
     :param came_case_input:
     :return:
     """
@@ -52,7 +52,7 @@ def camel_case_to_snake_case(came_case_input: str) -> str:
             if i.isupper() else i
             for i in came_case_input
         ]
-    ).lstrip('_')
+    ).lstrip('_').replace("_", "-")
 
 
 def replace_values_recursively(
@@ -66,6 +66,9 @@ def replace_values_recursively(
     Recursively replace the portal run id placeholder __portal_run_id__ with a portal run id value
     :param data_dict:
     :param portal_run_id:
+    :param workflow_name:
+    :param workflow_version:
+    :param event_data_inputs:
     :return:
     """
 
@@ -92,7 +95,7 @@ def replace_values_recursively(
             value = value.replace('__portal_run_id__', portal_run_id)
 
             # Replace workflow name
-            value = value.replace('__workflow_name__', workflow_name)
+            value = value.replace('__workflow_name__', sanitise_uri_value(workflow_name))
 
             # Replace workflow version
             value = value.replace('__workflow_version__', sanitise_uri_value(workflow_version))
@@ -104,9 +107,9 @@ def replace_values_recursively(
                     continue
 
                 if key.endswith("Uri"):
-                    value = value.replace(f'__{camel_case_to_snake_case(input_key)}__', sanitise_uri_value(input_value))
+                    value = value.replace(f'__{camel_case_to_snake_hyphen_case(input_key)}__', sanitise_uri_value(input_value))
                 else:
-                    value = value.replace(f'__{camel_case_to_snake_case(input_key)}__', input_value)
+                    value = value.replace(f'__{camel_case_to_snake_hyphen_case(input_key)}__', input_value)
 
             # Re-assign dict key
             data_dict[key] = value

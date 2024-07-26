@@ -47,10 +47,34 @@
           "type": "string"
         },
         "specimen": {
-          "type": "integer"
+          "type": "object",
+          "required": [
+            "id",
+            "internalId"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "internalId": {
+              "type": "string"
+            }
+          }
         },
         "subject": {
-          "type": "integer"
+          "type": "object",
+          "required": [
+            "id",
+            "internalId"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "internalId": {
+              "type": "string"
+            }
+          }
         }
       }
     },

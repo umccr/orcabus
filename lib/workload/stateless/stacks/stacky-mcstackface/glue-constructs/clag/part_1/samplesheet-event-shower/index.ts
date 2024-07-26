@@ -17,7 +17,7 @@ export interface NewSamplesheetEventShowerConstructProps {
 export class NewSamplesheetEventShowerConstruct extends Construct {
   public readonly newSamplesheetEventShowerMap = {
     // General
-    prefix: 'newSamplesheetEventShower',
+    prefix: 'clag-new-ss-event-shower',
     // Tables
     tablePartition: {
       samplesheetByInstrumentRun: 'samplesheet_by_instrument_run',

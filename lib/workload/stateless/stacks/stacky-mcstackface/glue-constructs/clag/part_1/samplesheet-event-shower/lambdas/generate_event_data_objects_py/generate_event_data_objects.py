@@ -75,43 +75,37 @@ def get_library_bclconvert_rows(library_obj: Dict, bclconvert_data: List[Dict]) 
 def generate_library_event_data_object_from_library_specimen_and_subject(
         library_obj: Dict,
         instrument_run_id: str,
-        subject_id: int,
+        specimen_obj: Dict,
+        subject_obj: Dict,
         bclconvert_rows: List[Dict]
 ) -> Dict:
     """
     Generate library event data object from library specimen and subject
     :param library_obj:
     :param instrument_run_id:
-    :param subject_id:
+    :param specimen_obj:
+    :param subject_obj:
     :param bclconvert_rows:
     :return:
     """
 
-    # Filter out missing metadata
-    library_metadata_dict = dict(
-        filter(
-            lambda kv: kv[1] is not None,
-            library_obj.items()
-        )
-    )
-
-    # Add in subject id
-    library_metadata_dict.update(
-        {
-            "subject": subject_id
-        }
-    )
-
     library_event_obj = {
-      "id": library_obj.get("id"),
-      "internalId": library_obj.get("internal_id"),
-      "phenotype": library_obj.get("phenotype", None),
-      "workflow": library_obj.get("workflow", None),
-      "quality": library_obj.get("quality", None),
-      "type": library_obj.get("type", None),
-      "assay": library_obj.get("assay", None),
-      "coverage": library_obj.get("coverage", None),
-      "specimen": library_obj.get("specimen", None),
+        "id": library_obj.get("id"),
+        "internalId": library_obj.get("internal_id"),
+        "phenotype": library_obj.get("phenotype", None),
+        "workflow": library_obj.get("workflow", None),
+        "quality": library_obj.get("quality", None),
+        "type": library_obj.get("type", None),
+        "assay": library_obj.get("assay", None),
+        "coverage": library_obj.get("coverage", None),
+        "specimen": {
+            "id": specimen_obj.get("id"),
+            "internalId": specimen_obj.get("internal_id")
+        },
+        "subject": {
+            "id": subject_obj.get("id"),
+            "internalId": subject_obj.get("internal_id")
+        }
     }
 
     # Trim library event object to non-null values
@@ -205,7 +199,8 @@ def handler(event, context):
             generate_library_event_data_object_from_library_specimen_and_subject(
                 library_obj,
                 instrument_run_id,
-                subject_obj.get("id"),
+                specimen_obj,
+                subject_obj,
                 bclconvert_rows
             )
         )
@@ -226,7 +221,6 @@ def handler(event, context):
         "subject_event_data_list": subject_event_data_list,
         "library_event_data_list": library_event_data_list
     }
-
 
 # if __name__ == "__main__":
 #     import json

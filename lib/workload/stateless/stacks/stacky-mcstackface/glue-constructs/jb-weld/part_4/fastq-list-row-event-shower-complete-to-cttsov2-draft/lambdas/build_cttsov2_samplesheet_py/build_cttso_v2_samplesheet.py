@@ -34,7 +34,7 @@ V1_BCLCONVERT_SETTINGS = {
     "adapter_read_2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
     "minimum_trimmed_read_length": 35,
     "mask_short_reads": 35,
-    "override_cycles": "U7N1Y143;I8;I8;U7N1Y143"
+    "override_cycles": "U7N1Y143;I8N2;I8N2;U7N1Y143"
 }
 
 V2_BCLCONVERT_SETTINGS = {
@@ -52,7 +52,7 @@ V1_TSO500L_SETTINGS = {
     "adapter_read_2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
     "minimum_trimmed_read_length": 35,
     "mask_short_reads": 35,
-    "override_cycles": "U7N1Y143;I8;I8;U7N1Y143"
+    "override_cycles": "U7N1Y143;I8N2;I8N2;U7N1Y143"
 }
 
 V2_TSO500L_SETTINGS = {
@@ -405,6 +405,7 @@ def handler(event, context):
         }
     }
 
+# V2 SampleSheet
 # if __name__ == "__main__":
 #     import json
 #     print(
@@ -472,6 +473,81 @@ def handler(event, context):
 #     #                 "index2": "AGAGGCAACC",
 #     #                 "i7_index_id": "UDP0019",
 #     #                 "i5_index_id": "UDP0019"
+#     #             }
+#     #         ]
+#     #     }
+#     # }
+
+
+# V1 SampleSheet
+# if __name__ == "__main__":
+#     import json
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "instrument_run_id": "240424_A01052_0193_BH7JMMDRX5",
+#                     "bclconvert_data_rows": [
+#                       {
+#                         "sample_id": "L2401146",
+#                         "lane": 4,
+#                         "index": "ATGCGGCT",
+#                         "index2": "TAGCCGCG"
+#                       }
+#                     ]
+#                 },
+#                 None
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # {
+#     #     "samplesheet": {
+#     #         "header": {
+#     #             "file_format_version": 2,
+#     #             "run_name": "240424_A01052_0193_BH7JMMDRX5",
+#     #             "instrument_type": "NovaSeq"
+#     #         },
+#     #         "reads": {
+#     #             "read_1_cycles": 151,
+#     #             "read_2_cycles": 151,
+#     #             "index_1_cycles": 10,
+#     #             "index_2_cycles": 10
+#     #         },
+#     #         "bclconvert_settings": {
+#     #             "adapter_behavior": "trim",
+#     #             "adapter_read_1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA",
+#     #             "adapter_read_2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
+#     #             "minimum_trimmed_read_length": 35,
+#     #             "mask_short_reads": 35,
+#     #             "override_cycles": "U7N1Y143;I8N2;I8N2;U7N1Y143"
+#     #         },
+#     #         "bclconvert_data": [
+#     #             {
+#     #                 "sample_id": "L2401146",
+#     #                 "index": "ATGCGGCT",
+#     #                 "index2": "TAGCCGCG",
+#     #                 "lane": 4
+#     #             }
+#     #         ],
+#     #         "tso500l_settings": {
+#     #             "adapter_behavior": "trim",
+#     #             "adapter_read_1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA",
+#     #             "adapter_read_2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
+#     #             "minimum_trimmed_read_length": 35,
+#     #             "mask_short_reads": 35,
+#     #             "override_cycles": "U7N1Y143;I8N2;I8N2;U7N1Y143"
+#     #         },
+#     #         "tso500l_data": [
+#     #             {
+#     #                 "sample_id": "L2401146",
+#     #                 "sample_type": "DNA",
+#     #                 "lane": 4,
+#     #                 "index": "ATGCGGCT",
+#     #                 "index2": "TAGCCGCG",
+#     #                 "i7_index_id": "UP14",
+#     #                 "i5_index_id": "UP14"
 #     #             }
 #     #         ]
 #     #     }

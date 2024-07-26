@@ -24,7 +24,7 @@ export interface WgtsQcInitialiseLibraryAndFastqListRowConstructProps {
 
 export class WgtsQcInitialiseLibraryAndFastqListRowConstruct extends Construct {
   public readonly WgtsQcInitialiseLibraryAndFastqListRowMap = {
-    prefix: 'wgtsQcInitialiseLibraryAndFastqListRow',
+    prefix: 'kwik-make-library-and-fqlr-row',
     tablePartition: {
       instrument: 'instrument_run',
       library: 'library',

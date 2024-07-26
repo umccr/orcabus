@@ -7,7 +7,7 @@ Generate the data outputs of the qc complete event
 fastq_list_row_id
 sample_type
 qc_metrics
-library_internal_id
+library_id
 
 # So outputs are
 fastqListRowId
@@ -43,13 +43,13 @@ def handler(event, context) -> Dict[str, Dict[str, str]]:
     fastq_list_row_id = event['fastq_list_row_id']
     sample_type = event['sample_type']
     qc_metrics = event['qc_metrics']
-    library_internal_id = event['library_internal_id']
+    library_id = event['library_id']
 
     # Initialise output dict
     event_output_dict = {
         "fastqListRowId": fastq_list_row_id,
         "sampleType": sample_type,
-        "libraryId": library_internal_id
+        "libraryId": library_id
     }
 
     # Update dict per sample type

@@ -30,7 +30,7 @@ export interface WgtsQcLibraryQcCompleteConstructProps {
 
 export class WgtsQcLibraryQcCompleteConstruct extends Construct {
   public readonly WgtsQcLibraryQcCompleteMap = {
-    prefix: 'wgtsQcLibraryQcComplete',
+    prefix: 'kwik-library-qc-complete',
     tablePartitions: {
       library: 'library',
       fastq_list_row: 'fastq_list_row',
@@ -97,6 +97,8 @@ export class WgtsQcLibraryQcCompleteConstruct extends Construct {
     props.tableObj.grantReadWriteData(inputMakerSfn.role);
     // invoke the lambda function
     sumCoveragesLambdaObj.grantInvoke(inputMakerSfn.role);
+    // Push events to the event bus
+    props.eventBusObj.grantPutEventsTo(inputMakerSfn.role);
 
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn

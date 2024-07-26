@@ -253,7 +253,7 @@
             "Skip Get Parameter": {
               "Type": "Pass",
               "Parameters": {
-                "pipeline_id": "$.workflow_inputs.payload.data.engineParameters.pipelineId"
+                "pipeline_id.$": "$.workflow_inputs.payload.data.engineParameters.pipelineId"
               },
               "ResultPath": "$.pipeline_id_var",
               "Next": "DynamoDB UpdatePipelineId and Engine Parameters"
@@ -392,7 +392,7 @@
                   },
                   "id_type": "db_uuid"
                 },
-                "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload",
+                "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload, engine_parameters = :engine_parameters",
                 "ExpressionAttributeValues": {
                   ":analysis_id": {
                     "S.$": "$.launch_nextflow_object_step.analysis_id"
@@ -405,6 +405,9 @@
                   },
                   ":analysis_launch_payload": {
                     "S.$": "States.JsonToString($.launch_nextflow_object_step.analysis_launch_payload)"
+                  },
+                  ":engine_parameters": {
+                    "S.$": "States.JsonToString(States.JsonMerge($.get_input_parameters_from_event.engine_parameters, States.StringToJson(States.Format('\\{\"{}\":\"{}\"\\}', 'analysisId', $.launch_nextflow_object_step.analysis_id)), false))"
                   }
                 }
               },
@@ -481,13 +484,11 @@
         "payload": {
           "version": "${__service_version__}",
           "data": {
-            "projectId.$": "$.Item.project_id.S",
-            "analysisId.$": "$.Item.analysis_id.S",
-            "analysisOutput": ""
+            "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+            "engineParameters.$": "States.StringToJson($.Item.engine_parameters.S)"
           }
         }
-      },
-      "ResultPath": "$.database_event_data"
+      }
     },
     "Push event to orcabus": {
       "Type": "Task",
@@ -495,7 +496,7 @@
       "Parameters": {
         "Entries": [
           {
-            "Detail.$": "$.database_event_data",
+            "Detail.$": "$",
             "DetailType": "${__detail_type__}",
             "EventBusName": "${__eventbus_name__}",
             "Source": "${__event_source__}",

@@ -22,7 +22,7 @@ export interface Cttsov2PopulateFastqListRowRunDbRowConstructProps {
 
 export class Cttsov2PopulateFastqListRowConstruct extends Construct {
   public readonly Cttsov2PopulateFastqListRowRunDbRowMap = {
-    prefix: 'cttsov2PopulateFastqListRow',
+    prefix: 'jbweld-populate-fqlr-row',
     tablePartition: 'fastq_list_row',
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'newFastqListRow',

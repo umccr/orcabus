@@ -36,7 +36,7 @@ export interface bclconvertInteropQcDraftMakerConstructProps {
 
 export class BclconvertInteropQcDraftMakerConstruct extends Construct {
   public readonly bclconvertInteropQcDraftMakerEventMap = {
-    prefix: 'bsshFastqCompleteToBclconvertInteropQcDraft',
+    prefix: 'gorilla-bssh-fq-to-interop-qc',
     portalRunPartitionName: 'portal_run',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',

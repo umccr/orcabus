@@ -1,0 +1,399 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "payload_data.$": "$.payload.data"
+      },
+      "Next": "Get Library Item"
+    },
+    "Get Library Item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.payload_data.libraryId",
+          "id_type": "${__library_partition_name__}"
+        }
+      },
+      "ResultPath": "$.get_library_item_step",
+      "Next": "Library Item In DataBase"
+    },
+    "Library Item In DataBase": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_library_item_step.Item",
+          "IsPresent": true,
+          "Comment": "Library Item In DataBase",
+          "Next": "Add QC Complete"
+        }
+      ],
+      "Default": "Not a TN library"
+    },
+    "Add QC Complete": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.payload_data.libraryId",
+          "id_type": "${__library_partition_name__}"
+        },
+        "UpdateExpression": "SET qc_metrics_json = :qc_metrics_json",
+        "ExpressionAttributeValues": {
+          ":qc_metrics_json": {
+            "S.$": "States.JsonToString($.payload_data.qcMetrics)"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "Wait"
+    },
+    "Wait": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "Get Libraries From Subject"
+    },
+    "Get Libraries From Subject": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.get_library_item_step.Item.subject_id.S",
+          "id_type": "${__subject_partition_name__}"
+        }
+      },
+      "ResultSelector": {
+        "library_set.$": "$.Item.library_set.SS"
+      },
+      "ResultPath": "$.get_subject_library_set_step",
+      "Next": "Collect All Libraries in Subject"
+    },
+    "Collect All Libraries in Subject": {
+      "Type": "Map",
+      "ItemsPath": "$.get_subject_library_set_step.library_set",
+      "ItemSelector": {
+        "library_id.$": "$$.Map.Item.Value"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Get Library Map",
+        "States": {
+          "Get Library Map": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "$.library_id",
+                "id_type": "${__library_partition_name__}"
+              }
+            },
+            "ResultPath": "$.get_library_map_step",
+            "Next": "Library QC Complete"
+          },
+          "Library QC Complete": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Variable": "$.get_library_map_step.Item.qc_metrics_json",
+                "IsPresent": true,
+                "Comment": "Library Has QC Metrics",
+                "Next": "Set Output"
+              }
+            ],
+            "Default": "Set Output as Null"
+          },
+          "Set Output": {
+            "Type": "Pass",
+            "Parameters": {
+              "output": {
+                "library": {
+                  "id.$": "$.library_id",
+                  "phenotype.$": "$.get_library_map_step.Item.phenotype.S",
+                  "workflow.$": "$.get_library_map_step.Item.workflow.S",
+                  "type.$": "$.get_library_map_step.Item.type.S",
+                  "assay.$": "$.get_library_map_step.Item.assay.S",
+                  "subject_id.$": "$.get_library_map_step.Item.subject_id.S",
+                  "fastq_list_row_id_set.$": "$.get_library_map_step.Item.fastq_list_row_id_set.SS"
+                }
+              }
+            },
+            "End": true
+          },
+          "Set Output as Null": {
+            "Type": "Pass",
+            "Parameters": {
+              "output": {
+                "library": null
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "ResultSelector": {
+        "complementary_library_obj_list.$": "$.[*].output.library"
+      },
+      "ResultPath": "$.get_complementary_libraries_step",
+      "Next": "Find Complement Library Pair"
+    },
+    "Find Complement Library Pair": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__get_complement_library_pair_lambda_function_arn__}",
+        "Payload": {
+          "library_obj": {
+            "id.$": "$.payload_data.libraryId",
+            "phenotype.$": "$.get_library_item_step.Item.phenotype.S",
+            "workflow.$": "$.get_library_item_step.Item.workflow.S",
+            "type.$": "$.get_library_item_step.Item.type.S",
+            "assay.$": "$.get_library_item_step.Item.assay.S",
+            "subject_id.$": "$.get_library_item_step.Item.subject_id.S",
+            "fastq_list_row_id_set.$": "$.get_library_item_step.Item.fastq_list_row_id_set.SS"
+          },
+          "complementary_library_obj_list.$": "$.get_complementary_libraries_step.complementary_library_obj_list"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "successful_pairing.$": "$.Payload.successful_pairing",
+        "tumor_library.$": "$.Payload.tumor_library",
+        "normal_library.$": "$.Payload.normal_library"
+      },
+      "ResultPath": "$.get_tn_pair_step",
+      "Next": "Successful Pairing"
+    },
+    "Successful Pairing": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_tn_pair_step.successful_pairing",
+          "BooleanEquals": true,
+          "Next": "Collect Parameters",
+          "Comment": "Found Matching Pair"
+        }
+      ],
+      "Default": "No Pair Found"
+    },
+    "Collect Parameters": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Get Fastq List Row Ids",
+          "States": {
+            "Get Fastq List Row Ids": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Get Tumor Fastq List Row Ids",
+                  "States": {
+                    "Get Tumor Fastq List Row Ids": {
+                      "Type": "Map",
+                      "ItemsPath": "$.get_tn_pair_step.tumor_library.fastq_list_row_id_set",
+                      "ItemSelector": {
+                        "fastq_list_row_id.$": "$$.Map.Item.Value"
+                      },
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Get Tumor Fastq List Row Item",
+                        "States": {
+                          "Get Tumor Fastq List Row Item": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:getItem",
+                            "Parameters": {
+                              "TableName": "${__table_name__}",
+                              "Key": {
+                                "id.$": "$.fastq_list_row_id",
+                                "id_type": "${__fastq_list_row_partition_name__}"
+                              }
+                            },
+                            "ResultSelector": {
+                              "fastq_list_row_obj.$": "States.StringToJson($.Item.fastq_list_row_json.S)"
+                            },
+                            "ResultPath": "$.get_tumor_fastq_list_row_obj",
+                            "End": true
+                          }
+                        }
+                      },
+                      "ResultSelector": {
+                        "tumor_fastq_list_rows.$": "$.[*].get_tumor_fastq_list_row_obj.fastq_list_row_obj"
+                      },
+                      "ResultPath": "$.get_tumor_fastq_list_rows",
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Get Normal Fastq List Row Ids",
+                  "States": {
+                    "Get Normal Fastq List Row Ids": {
+                      "Type": "Map",
+                      "ItemsPath": "$.get_tn_pair_step.normal_library.fastq_list_row_id_set",
+                      "ItemSelector": {
+                        "fastq_list_row_id.$": "$$.Map.Item.Value"
+                      },
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Get Normal Fastq List Row Item",
+                        "States": {
+                          "Get Normal Fastq List Row Item": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:getItem",
+                            "Parameters": {
+                              "TableName": "${__table_name__}",
+                              "Key": {
+                                "id.$": "$.fastq_list_row_id",
+                                "id_type": "${__fastq_list_row_partition_name__}"
+                              }
+                            },
+                            "ResultSelector": {
+                              "fastq_list_row_obj.$": "States.StringToJson($.Item.fastq_list_row_json.S)"
+                            },
+                            "ResultPath": "$.get_normal_fastq_list_row_obj",
+                            "End": true
+                          }
+                        }
+                      },
+                      "ResultSelector": {
+                        "fastq_list_rows.$": "$.[*].get_normal_fastq_list_row_obj.fastq_list_row_obj"
+                      },
+                      "ResultPath": "$.get_normal_fastq_list_rows",
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "ResultSelector": {
+                "tumor_fastq_list_rows.$": "$.[0].get_tumor_fastq_list_rows.tumor_fastq_list_rows",
+                "fastq_list_rows.$": "$.[1].get_normal_fastq_list_rows.fastq_list_rows"
+              },
+              "ResultPath": "$.get_fastq_list_rows",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Portal Run Id and Workflow Run Name",
+          "States": {
+            "Get Portal Run Id and Workflow Run Name": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "${__sfn_preamble_state_machine_arn__}",
+                "Input": {}
+              },
+              "End": true,
+              "ResultSelector": {
+                "portal_run_id.$": "$.Output.portal_run_id",
+                "workflow_run_name.$": "$.Output.workflow_run_name"
+              },
+              "ResultPath": "$.get_portal_and_run_name_step"
+            }
+          }
+        }
+      ],
+      "Next": "Generate Draft Event Payload",
+      "ResultSelector": {
+        "tumor_fastq_list_rows.$": "$.[0].get_fastq_list_rows.tumor_fastq_list_rows",
+        "fastq_list_rows.$": "$.[0].get_fastq_list_rows.fastq_list_rows",
+        "portal_run_id.$": "$.[1].get_portal_and_run_name_step.portal_run_id",
+        "workflow_run_name.$": "$.[1].get_portal_and_run_name_step.workflow_run_name"
+      },
+      "ResultPath": "$.get_parameters_step"
+    },
+    "Generate Draft Event Payload": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_draft_event_payload_lambda_function_arn__}",
+        "Payload": {
+          "tumor_library_id.$": "$.get_tn_pair_step.tumor_library.id",
+          "normal_library_id.$": "$.get_tn_pair_step.normal_library.id",
+          "tumor_fastq_list_rows.$": "$.get_parameters_step.tumor_fastq_list_rows",
+          "fastq_list_rows.$": "$.get_parameters_step.fastq_list_rows"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.generate_draft_event_payload_data_step",
+      "Next": "Push TN Draft Event",
+      "ResultSelector": {
+        "input_event_data.$": "$.Payload.input_event_data"
+      }
+    },
+    "Push TN Draft Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "portalRunId.$": "$.get_parameters_step.portal_run_id",
+              "timestamp.$": "$$.State.EnteredTime",
+              "status": "${__output_status__}",
+              "workflowName": "${__workflow_name__}",
+              "workflowVersion": "${__workflow_version__}",
+              "workflowRunName.$": "$.get_parameters_step.workflow_run_name",
+              "payload": {
+                "refId": null,
+                "version": "${__payload_version__}",
+                "data": {
+                  "inputs.$": "$.generate_draft_event_payload_data_step.input_event_data"
+                }
+              }
+            },
+            "DetailType": "${__detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}"
+          }
+        ]
+      },
+      "ResultPath": null,
+      "End": true
+    },
+    "No Pair Found": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Not a TN library": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}

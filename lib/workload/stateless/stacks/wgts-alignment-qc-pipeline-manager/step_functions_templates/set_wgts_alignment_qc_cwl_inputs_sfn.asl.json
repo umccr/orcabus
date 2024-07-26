@@ -63,7 +63,7 @@
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.get_input_parameters_from_event_step.inputs.referenceVersion",
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.dragenReferenceVersion",
                   "IsPresent": false,
                   "Comment": "Get Default Version",
                   "Next": "Set Reference Version as Default"
@@ -76,7 +76,7 @@
               "Next": "Get the Reference Version Uri Map",
               "ResultPath": "$.get_reference_version_step",
               "Parameters": {
-                "reference_version.$": "$.get_input_parameters_from_event_step.inputs.referenceVersion"
+                "reference_version.$": "$.get_input_parameters_from_event_step.inputs.dragenReferenceVersion"
               }
             },
             "Set Reference Version as Default": {
@@ -180,8 +180,8 @@
           "enable_rna": false,
           "enable_sort": true,
           "fastq_list_rows.$": "$.configure_inputs_step.fastq_list_rows_cwl",
-          "output_directory.$": "$.get_input_parameters_from_event_step.inputs.outputDirectoryName",
-          "output_file_prefix.$": "$.get_input_parameters_from_event_step.inputs.outputFilePrefix",
+          "output_directory.$": "States.Format('{}_dragen_alignment', $.get_input_parameters_from_event_step.inputs.outputPrefix)",
+          "output_file_prefix.$": "$.get_input_parameters_from_event_step.inputs.outputPrefix",
           "reference_tar": {
             "class": "File",
             "location.$": "$.configure_inputs_step.reference_uri"

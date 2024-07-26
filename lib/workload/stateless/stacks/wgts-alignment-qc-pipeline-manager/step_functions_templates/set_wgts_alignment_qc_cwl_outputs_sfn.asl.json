@@ -44,8 +44,8 @@
       "TimeoutSeconds": 60,
       "ResultSelector": {
         "output_json": {
-          "alignmentOutputUri.$": "$.Payload.alignment_output_uri",
-          "bamFileUri.$": "$.Payload.bam_file_uri",
+          "dragenAlignmentOutputUri.$": "$.Payload.alignment_output_uri",
+          "dragenAlignmentBamUri.$": "$.Payload.bam_file_uri",
           "multiqcHtmlReportUri.$": "$.Payload.multiqc_html_report",
           "multiqcOutputUri.$": "$.Payload.multiqc_output_uri"
         }

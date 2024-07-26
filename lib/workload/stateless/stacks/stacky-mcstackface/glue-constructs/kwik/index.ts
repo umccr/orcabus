@@ -2,13 +2,13 @@ import { Construct } from 'constructs';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { WgtsQcInitialiseInstrumentRunDbRowConstruct } from './part_1/initialise-wgts-instrument-run-db';
 import { WgtsQcInitialiseLibraryAndFastqListRowConstruct } from './part_2/initialise-wgts-library-dbs';
 import { WgtsQcPopulateFastqListRowConstruct } from './part_3/populate-fastq-list-row-dbs';
 import { WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct } from './part_4/fastq-list-rows-shower-complete-to-wgts-qc-draft';
 import { WgtsQcInputMakerConstruct } from './part_5/wgts-qc-draft-to-ready';
 import { FastqListRowQcCompleteConstruct } from './part_6/push-fastq-list-row-qc-complete-event';
-import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { WgtsQcLibraryQcCompleteConstruct } from './part_7/library-qc-complete-event';
 
 /*

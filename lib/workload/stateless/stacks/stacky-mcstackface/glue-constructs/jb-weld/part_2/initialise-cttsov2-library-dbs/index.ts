@@ -22,7 +22,7 @@ export interface Cttsov2InitialiseLibraryAndFastqListRowConstructProps {
 
 export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct {
   public readonly Cttsov2InitialiseLibraryAndFastqListRowMap = {
-    prefix: 'cttsov2InitialiseLibraryAndFastqListRow',
+    prefix: 'jbweld-make-library-and-fqlr-row',
     tablePartition: {
       instrument: 'instrument_run',
       library: 'library',

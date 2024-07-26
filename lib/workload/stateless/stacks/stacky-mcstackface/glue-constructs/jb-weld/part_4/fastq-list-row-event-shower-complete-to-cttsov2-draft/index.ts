@@ -33,7 +33,7 @@ export interface Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowConstru
 export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends Construct {
   public readonly Cttsov2FastqListRowShowerCompleteToWorkflowDraftRunDbRowMap = {
     /* General settings */
-    prefix: 'cttsov2FastqListRowShowerCompleteToWorkflowDraftRun',
+    prefix: 'jbweld-fqlr-shower-to-cttsov2',
     /* Table Partition Settings */
     cttsov2GlueTablePartition: {
       instrumentRun: 'instrument_run',

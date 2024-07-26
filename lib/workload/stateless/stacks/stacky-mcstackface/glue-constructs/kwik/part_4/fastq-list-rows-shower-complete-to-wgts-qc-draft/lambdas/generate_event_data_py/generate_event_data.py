@@ -11,9 +11,8 @@ Generate a wgts draft event
 
 This will have the following properties:
 
-outputFilePrefix
-outputDirectoryName
-referenceVersion
+outputPrefix
+dragenReferenceVersion
 sampleType
 fastqListRowId
 fastqListRow
@@ -24,9 +23,8 @@ gencodeAnnotationVersion if the sampleType is 'WTS'
 
 Mapping is as follows
 
-outputFilePrefix = library_id
-outputDirectoryName = library_id
-referenceVersion = 'v9-r3'  # The default version
+outputPrefix = library_id
+dragenReferenceVersion = 'v9-r3'  # The default version
 sampleType = sample_type (one of WTS or WGS)
 fastqListRowId = fastq_list_row_id
 fastqListRow = fastq_list_row
@@ -54,9 +52,8 @@ def handler(event, context):
 
     # Generate the draft event
     draft_event = {
-        'outputFilePrefix': library_id,
-        'outputDirectoryName': library_id,
-        'referenceVersion': DEFAULT_DRAGEN_REFERENCE_VERSION,
+        'outputPrefix': library_id,
+        'dragenReferenceVersion': DEFAULT_DRAGEN_REFERENCE_VERSION,
         'sampleType': sample_type,
         'fastqListRowId': fastq_list_row_id,
         'fastqListRow': fastq_list_row

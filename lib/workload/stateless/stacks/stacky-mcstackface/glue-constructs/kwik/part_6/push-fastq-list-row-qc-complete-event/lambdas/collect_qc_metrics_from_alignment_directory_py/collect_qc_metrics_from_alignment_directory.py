@@ -41,7 +41,7 @@ from wrapica.libica_models import (
 )
 from wrapica.project_data import (
     list_project_data_non_recursively,
-    read_icav2_file_contents_to_string, convert_icav2_uri_to_data_obj
+    read_icav2_file_contents_to_string, convert_icav2_uri_to_project_data_obj
 )
 
 # Globals
@@ -193,12 +193,12 @@ def handler(event, context):
     set_icav2_env_vars()
 
     # Get analysis output
-    analysis_output_uri = event['analysis_output_uri']
+    alignment_output_uri = event['alignment_output_uri']
     sample_type = event['sample_type']
 
     # Get analysis output uri from the event
     # Get analysis output folder as a ProjectData object
-    analysis_project_data_obj: ProjectData = convert_icav2_uri_to_data_obj(analysis_output_uri)
+    analysis_project_data_obj: ProjectData = convert_icav2_uri_to_project_data_obj(alignment_output_uri)
 
     all_output_files: List[ProjectData] = list_project_data_non_recursively(
         project_id=analysis_project_data_obj.project_id,
@@ -244,8 +244,8 @@ def handler(event, context):
         )
 
         return {
-            "mean_coverage": mean_coverage,
-            "pct_duplicate_marked_reads": pct_duplicate_marked_reads
+            "genome_coverage": mean_coverage,
+            "duplication_rate": pct_duplicate_marked_reads
         }
     else:
 
@@ -268,5 +268,22 @@ def handler(event, context):
         )
 
         return {
-            "fold_coverage_of_all_exons": fold_coverage_of_all_exons
+            "exon_fold_coverage": fold_coverage_of_all_exons
         }
+
+
+# if __name__ == "__main__":
+#     import json
+#     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "alignment_output_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/wgtsQc/20240719a08aae4b/L2400240_dragen/",
+#                     "sample_type": "WGS"
+#                 },
+#                 None
+#             ),
+#             indent=4
+#         )
+#     )

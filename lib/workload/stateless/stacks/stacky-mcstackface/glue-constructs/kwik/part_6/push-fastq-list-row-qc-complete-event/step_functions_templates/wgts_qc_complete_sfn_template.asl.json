@@ -20,7 +20,7 @@
         }
       },
       "ResultSelector": {
-        "fastq_list_row_id.$": "$.Item.fastq_list_row_id"
+        "fastq_list_row_id.$": "$.Item.fastq_list_row_id.S"
       },
       "ResultPath": "$.get_fastq_list_row_id_from_portal_run_id",
       "Next": "Get Library Id from FastqListRow Id"
@@ -53,8 +53,8 @@
         }
       },
       "ResultSelector": {
-        "sample_type.$": "$.Item.sample_type",
-        "internal_id.$": "$.Item.internal_id"
+        "sample_type.$": "$.Item.sample_type.S",
+        "library_id.$": "$.Item.id.S"
       },
       "ResultPath": "$.get_library_info_step",
       "Next": "Collect QC Metrics from alignment directory"
@@ -66,7 +66,7 @@
         "FunctionName": "${__collect_qc_metrics_lambda_function_arn__}",
         "Payload": {
           "sample_type.$": "$.get_library_info_step.sample_type",
-          "analysis_output_uri.$": "$.inputs.payload.data.engineParameters.outputUri"
+          "alignment_output_uri.$": "$.inputs.payload.data.outputs.dragenAlignmentOutputUri"
         }
       },
       "Retry": [
@@ -82,11 +82,11 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "Dump QC Metrics to Fastq List Row DB",
       "ResultSelector": {
         "qc_metrics.$": "$.Payload"
       },
-      "ResultPath": "$.get_qc_metrics_step"
+      "ResultPath": "$.get_qc_metrics_step",
+      "Next": "Dump QC Metrics to Fastq List Row DB"
     },
     "Dump QC Metrics to Fastq List Row DB": {
       "Type": "Task",
@@ -104,6 +104,7 @@
           }
         }
       },
+      "ResultPath": null,
       "Next": "Wait 1 Second"
     },
     "Wait 1 Second": {
@@ -120,7 +121,7 @@
           "fastq_list_row_id.$": "$.get_fastq_list_row_id_from_portal_run_id.fastq_list_row_id",
           "sample_type.$": "$.get_library_info_step.sample_type",
           "qc_metrics.$": "$.get_qc_metrics_step.qc_metrics",
-          "library_internal_id.$": "$.get_library_info_step.internal_id"
+          "library_id.$": "$.get_library_info_step.library_id"
         }
       },
       "Retry": [

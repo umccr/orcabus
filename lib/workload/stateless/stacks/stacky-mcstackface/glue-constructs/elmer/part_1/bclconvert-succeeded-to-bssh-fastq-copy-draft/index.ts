@@ -35,7 +35,7 @@ export interface bsshFastqCopyManagerDraftMakerConstructProps {
 
 export class BsshFastqCopyManagerDraftMakerConstruct extends Construct {
   public readonly bsshFastqCopyManagerDraftMakerEventMap = {
-    prefix: 'bclConvertToBsshFastqCopyDraft',
+    prefix: 'elmer-bclconv-2-bssh-fq-copy-draft',
     portalRunPartitionName: 'portal_run',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',

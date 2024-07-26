@@ -26,7 +26,7 @@ export interface NewFastqListRowsEventShowerConstructProps {
 export class NewFastqListRowsEventShowerConstruct extends Construct {
   public readonly newFastqListRowsEventShowerMap = {
     // General
-    prefix: 'newFastqListRowsEventShower',
+    prefix: 'clag-new-fqlr-event-shower',
     // Tables
     tablePartition: 'fastqlistrows_by_instrument_run',
     // Set Event Triggers

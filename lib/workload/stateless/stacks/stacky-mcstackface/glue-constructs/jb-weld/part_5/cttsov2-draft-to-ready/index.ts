@@ -41,7 +41,7 @@ export interface Cttsov2InputMakerConstructProps {
 
 export class Cttsov2InputMakerConstruct extends Construct {
   public readonly cttsov2InputMakerEventMap = {
-    prefix: 'cttsov2InputMaker',
+    prefix: 'jbweld-cttso-v2',
     tablePartition: 'cttso_v2',
     triggerSource: 'orcabus.cttsov2inputeventglue',
     triggerStatus: 'draft',

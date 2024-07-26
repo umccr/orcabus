@@ -8,6 +8,7 @@ import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import { Duration } from 'aws-cdk-lib';
 
 /*
 Part 6
@@ -33,7 +34,7 @@ export interface FastqListRowQcCompleteConstructProps {
 
 export class FastqListRowQcCompleteConstruct extends Construct {
   public readonly WgtsQcCompleteMap = {
-    prefix: 'wgtsQcComplete',
+    prefix: 'kwik-fqlr-qc-complete',
     tablePartition: 'fastq_list_row',
     portalRunPartitionName: 'portal_run',
     triggerSource: 'orcabus.workflowmanager',
@@ -65,6 +66,7 @@ export class FastqListRowQcCompleteConstruct extends Construct {
         environment: {
           ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2JwtSecretsObj.secretName,
         },
+        timeout: Duration.seconds(30),
       }
     );
 
@@ -100,7 +102,8 @@ export class FastqListRowQcCompleteConstruct extends Construct {
         /* Lambdas */
         __generate_event_output_objects_lambda_function_arn__:
           generateEventDataLambdaObj.currentVersion.functionArn,
-        __collect_metrics_lambda_function_arn__: collectMetricsLambdaObj.currentVersion.functionArn,
+        __collect_qc_metrics_lambda_function_arn__:
+          collectMetricsLambdaObj.currentVersion.functionArn,
 
         /* Tables */
         __table_name__: props.tableObj.tableName,

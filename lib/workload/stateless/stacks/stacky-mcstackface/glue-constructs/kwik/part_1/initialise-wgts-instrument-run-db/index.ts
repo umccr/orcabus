@@ -22,7 +22,7 @@ export interface WgtsQcInitialiseInstrumentRunDbRowConstructProps {
 
 export class WgtsQcInitialiseInstrumentRunDbRowConstruct extends Construct {
   public readonly WgtsQcInitialiseInstrumentRunDbRowMap = {
-    prefix: 'wgtsQcInitialiseInstrumentRunDbRow',
+    prefix: 'kwik-make-instrument-run-row',
     tablePartition: 'instrument_run',
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'SamplesheetRegisteredEventShowerStarting',

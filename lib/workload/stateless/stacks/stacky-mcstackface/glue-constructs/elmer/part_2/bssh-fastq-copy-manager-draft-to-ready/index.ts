@@ -28,7 +28,7 @@ export interface bsshFastqCopyManagerDraftToReadyMakerConstructProps {
 
 export class BsshFastqCopyManagerDraftToReadyMakerConstruct extends Construct {
   public readonly bsshFastqCopyManagerDraftToReadyMakerEventMap = {
-    prefix: 'bsshFastqCopyMaker',
+    prefix: 'elmer-bssh-fastq-copy',
     tablePartition: 'bssh_fastq_copy',
     triggerSource: 'orcabus.bsshfastqcopyinputeventglue',
     triggerStatus: 'draft',

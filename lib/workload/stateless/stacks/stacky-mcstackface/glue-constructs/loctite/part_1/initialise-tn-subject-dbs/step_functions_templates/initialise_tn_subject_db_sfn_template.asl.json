@@ -1,0 +1,57 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "payload_data.$": "$.payload.data"
+      },
+      "Next": "Get Subject Item"
+    },
+    "Get Subject Item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.payload_data.subject.internalId",
+          "id_type": "${__subject_partition_name__}"
+        }
+      },
+      "ResultPath": "$.get_subject_item_step",
+      "Next": "Subject in Database"
+    },
+    "Subject in Database": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_subject_item_step.Item",
+          "IsPresent": false,
+          "Comment": "Subject Not In Database",
+          "Next": "Initialise Subject"
+        }
+      ],
+      "Default": "Pass"
+    },
+    "Pass": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Initialise Subject": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.payload_data.subject.internalId",
+          "id_type": "${__subject_partition_name__}",
+          "metadata_db_id": {
+            "N.$": "States.Format('{}', $.payload_data.subject.id)"
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

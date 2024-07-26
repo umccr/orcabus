@@ -9,6 +9,8 @@ import { BclconvertToBsshFastqCopyEventHandlerConstruct } from './elmer';
 import { BsshFastqCopyToBclconvertInteropQcConstruct } from './gorilla';
 import { Cttsov2GlueHandlerConstruct } from './jb-weld';
 import { WgtsQcGlueHandlerConstruct } from './kwik';
+import { TnGlueHandlerConstruct } from './loctite';
+import { WtsGlueHandlerConstruct } from './mod-podge';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -24,6 +26,8 @@ export interface GlueConstructProps {
   workflowManagerTableObj: dynamodb.ITableV2;
   cttsov2GlueTableObj: dynamodb.ITableV2;
   wgtsQcGlueTableObj: dynamodb.ITableV2;
+  tnGlueTableObj: dynamodb.ITableV2;
+  wtsGlueTableObj: dynamodb.ITableV2;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
   bsshOutputFastqCopyOutputUriSsmParameterObj: ssm.IStringParameter;
@@ -110,9 +114,40 @@ export class GlueConstruct extends Construct {
     });
 
     /*
-            Part F: Plumber-up the Tumor-Normal Execution Service to the shower services
-            */
-    // TODO
+    Part F: Plumber-up the Tumor-Normal Execution Service to the shower services
+    */
+    const loctite = new TnGlueHandlerConstruct(this, 'loctite', {
+      /* Event Bus */
+      eventBusObj: props.eventBusObj,
+      /* Tables */
+      inputMakerTableObj: props.inputMakerTableObj,
+      tnGlueTableObj: props.tnGlueTableObj,
+      /* SSM Parameters */
+      icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    });
+
+    /*
+    Part G: Plumber-up the WTS Execution Service to the shower services
+    */
+    const modPodge = new WtsGlueHandlerConstruct(this, 'modPodge', {
+      /* Event Bus */
+      eventBusObj: props.eventBusObj,
+      /* Tables */
+      inputMakerTableObj: props.inputMakerTableObj,
+      wtsGlueTableObj: props.wtsGlueTableObj,
+      /* SSM Parameters */
+      icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    });
   }
 }
 
@@ -125,6 +160,8 @@ export interface GlueStackConfig {
   workflowManagerTableName: string;
   cttsov2GlueTableName: string;
   wgtsQcGlueTableName: string;
+  tnGlueTableName: string;
+  wtsGlueTableName: string;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterName: string;
   bsshOutputFastqCopyUriSsmParameterName: string;
@@ -177,6 +214,16 @@ export class GlueStack extends cdk.Stack {
       this,
       'wgtsQcGlueTableObj',
       props.wgtsQcGlueTableName
+    );
+    const tnGlueTableObj = dynamodb.Table.fromTableName(
+      this,
+      'tnGlueTableObj',
+      props.tnGlueTableName
+    );
+    const wtsGlueTableObj = dynamodb.Table.fromTableName(
+      this,
+      'wtsGlueTableObj',
+      props.wtsGlueTableName
     );
 
     /*
@@ -231,6 +278,8 @@ export class GlueStack extends cdk.Stack {
       instrumentRunTableObj: instrumentRunTableObj,
       wgtsQcGlueTableObj: wgtsQcGlueTableObj,
       cttsov2GlueTableObj: cttsov2GlueTableObj,
+      tnGlueTableObj: tnGlueTableObj,
+      wtsGlueTableObj: wtsGlueTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: icav2ProjectIdSsmParameterObj,
       bsshOutputFastqCopyOutputUriSsmParameterObj: bsshOutputFastqCopyUriSsmParameterObj,

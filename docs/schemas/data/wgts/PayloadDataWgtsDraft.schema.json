@@ -4,59 +4,62 @@
   "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataWgtsDraft",
   "title": "PayloadDataWgtsDraft",
   "required": [
-    "outputFilePrefix",
-    "outputDirectoryName",
-    "referenceVersion",
-    "sampleType",
-    "fastqListRowId",
-    "fastqListRow"
+    "inputs"
   ],
   "properties": {
-    "outputFilePrefix": {
-      "type": "string"
-    },
-    "outputDirectoryName": {
-      "type": "string"
-    },
-    "referenceVersion": {
-      "type": "string"
-    },
-    "sampleType": {
-      "type": "string"
-    },
-    "gencodeAnnotationVersion": {
-      "type": "string"
-    },
-    "fastqListRowId": {
-      "type": "string"
-    },
-    "fastqListRow":  {
+    "inputs": {
       "type": "object",
       "required": [
-        "rgid",
-        "rgsm",
-        "rglb",
-        "lane",
-        "read1FileUri"
+        "outputPrefix",
+        "sampleType",
+        "fastqListRowId",
+        "fastqListRow"
       ],
       "properties": {
-        "rgid": {
+        "outputPrefix": {
           "type": "string"
         },
-        "rgsm": {
+        "dragenReferenceVersion": {
           "type": "string"
         },
-        "rglb": {
+        "sampleType": {
           "type": "string"
         },
-        "lane": {
-          "type": "integer"
-        },
-        "read1FileUri": {
+        "gencodeAnnotationVersion": {
           "type": "string"
         },
-        "read2FileUri": {
+        "fastqListRowId": {
           "type": "string"
+        },
+        "fastqListRow": {
+          "type": "object",
+          "required": [
+            "rgid",
+            "rgsm",
+            "rglb",
+            "lane",
+            "read1FileUri"
+          ],
+          "properties": {
+            "rgid": {
+              "type": "string"
+            },
+            "rgsm": {
+              "type": "string"
+            },
+            "rglb": {
+              "type": "string"
+            },
+            "lane": {
+              "type": "integer"
+            },
+            "read1FileUri": {
+              "type": "string"
+            },
+            "read2FileUri": {
+              "type": "string"
+            }
+          }
         }
       }
     }

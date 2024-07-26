@@ -22,7 +22,7 @@ export interface WgtsQcPopulateFastqListRowRunDbRowConstructProps {
 
 export class WgtsQcPopulateFastqListRowConstruct extends Construct {
   public readonly WgtsQcPopulateFastqListRowRunDbRowMap = {
-    prefix: 'wgtsQcPopulateFastqListRow',
+    prefix: 'kwik-populate-fqlr-row',
     tablePartition: 'fastq_list_row',
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'newFastqListRow',

@@ -33,7 +33,7 @@ export interface WgtsQcFastqListRowShowerCompleteToWorkflowDraftRunDbRowConstruc
 export class WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct extends Construct {
   public readonly WgtsQcFastqListRowShowerCompleteToWorkflowDraftRunDbRowMap = {
     /* General settings */
-    prefix: 'wgtsQcFastqListRowShowerCompleteToWorkflowDraftRun',
+    prefix: 'kwik-fqlr-shower-to-wgts-qc',
     /* Table Partition Settings */
     wgtsGlueTablePartition: {
       instrumentRun: 'instrument_run',

@@ -23,7 +23,7 @@ export interface Cttsov2InitialiseInstrumentRunDbRowConstructProps {
 
 export class Cttsov2InitialiseInstrumentRunDbRowConstruct extends Construct {
   public readonly Cttsov2InitialiseInstrumentRunDbRowMap = {
-    prefix: 'cttsov2InitialiseInstrumentRunDbRow',
+    prefix: 'jbweld-make-instrument-run-row',
     tablePartition: 'instrument_run',
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'SamplesheetRegisteredEventShowerStarting',

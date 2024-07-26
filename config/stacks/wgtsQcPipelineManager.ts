@@ -14,8 +14,8 @@ import {
   wgtsQcIcav2EventSource,
   wgtsQcIcav2EventDetailType,
   wgtsQcStateMachinePrefix,
-  wgtsQcIcav2AnnotationUriMappingSSMParameterPath,
-  wgtsQcIcav2ReferenceUriMappingSSMParameterPath,
+  icav2GencodeAnnotationUriMappingSSMParameterPath,
+  dragenIcav2ReferenceUriMappingSSMParameterPath,
   wgtsQcDefaultReferenceVersion,
   wgtsQcDefaultAnnotationVersion,
 } from '../constants';
@@ -54,9 +54,9 @@ export const getWgtsQcIcav2PipelineManagerStackProps = (
     /* Names for statemachines */
     stateMachinePrefix: wgtsQcStateMachinePrefix,
     /* SSM Workflow Parameters */
-    annotationUriSsmPath: wgtsQcIcav2AnnotationUriMappingSSMParameterPath,
+    annotationUriSsmPath: icav2GencodeAnnotationUriMappingSSMParameterPath,
     defaultReferenceVersion: wgtsQcDefaultReferenceVersion,
-    referenceUriSsmPath: wgtsQcIcav2ReferenceUriMappingSSMParameterPath,
+    referenceUriSsmPath: dragenIcav2ReferenceUriMappingSSMParameterPath,
     defaultAnnotationVersion: wgtsQcDefaultAnnotationVersion,
   };
 };
