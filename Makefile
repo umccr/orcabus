@@ -25,7 +25,8 @@ start-all-service:
 
 	# Insert all dump data in before running servers
 	@(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) s3-load)
-	# @(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) load)
+	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) s3-load)
+	@(cd lib/workload/stateless/stacks/workflow-manager && $(MAKE) s3-load)
 
 	# Running the rest of the µ-service server
 	docker compose up --wait -d
