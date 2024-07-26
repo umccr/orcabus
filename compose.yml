@@ -1,0 +1,18 @@
+include:
+  - path:
+      - ./shared/mock-db.yml
+
+services:
+
+  metadata:
+    environment:
+      - DB_HOSTNAME=db
+      - DB_PORT=5432
+      - PYTHONUNBUFFERED=1
+    ports:
+      - '8100:8000'
+    build:
+      context: ./lib/workload/stateless/stacks/metadata-manager
+      dockerfile: Dockerfile
+    depends_on:
+      - db

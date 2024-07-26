@@ -145,7 +145,7 @@ make s3-load
 
 ### Start
 
-To start the application run the start command. This will run the server at `http://localhost:8000/`
+To start the application run the start command. This will run the server at `http://localhost:800/`
 
 ```bash
 make start
@@ -155,6 +155,12 @@ To insert some mock data to be inserted, run the following command while the ser
 
 ```bash
 make insert-data
+```
+
+If you want a shortcut the combination of starting the server with loaded s3 data, you could use the following command.
+
+```bash
+make loaded-start
 ```
 
 ### Stop
