@@ -1,74 +1,81 @@
 //! Query builder involving list operations on the database.
 //!
 
-use crate::database::entities::object::Entity as ObjectEntity;
-use crate::database::entities::s3_object::Entity as S3ObjectEntity;
-use crate::database::entities::s3_object::{Column as S3ObjectColumn, Column as ObjectColumn};
-use crate::database::Client;
-use crate::error::Error::OverflowError;
-use crate::error::{Error, Result};
-use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
-use crate::routes::list::{ListCount, ListResponse};
-use crate::routes::pagination::Pagination;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{Alias, Asterisk, PostgresQueryBuilder, Query};
 use sea_orm::Order::{Asc, Desc};
 use sea_orm::{
-    ColumnTrait, Condition, EntityTrait, FromQueryResult, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, QueryTrait, Select,
+    ColumnTrait, Condition, ConnectionTrait, EntityTrait, FromQueryResult, PaginatorTrait,
+    QueryFilter, QueryOrder, QuerySelect, QueryTrait, Select,
 };
 use tracing::trace;
 
+use crate::database::entities::{object, s3_object};
+use crate::error::Error::OverflowError;
+use crate::error::{Error, Result};
+use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
+use crate::routes::list::{ListCount, ListResponse};
+use crate::routes::pagination::Pagination;
+
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
-pub struct ListQueryBuilder<'a, T>
+pub struct ListQueryBuilder<'a, C, E>
 where
-    T: EntityTrait,
+    E: EntityTrait,
 {
-    client: &'a Client,
-    select: Select<T>,
+    connection: &'a C,
+    select: Select<E>,
 }
 
-impl<'a> ListQueryBuilder<'a, ObjectEntity> {
+impl<'a, C> ListQueryBuilder<'a, C, object::Entity>
+where
+    C: ConnectionTrait,
+{
     /// Create a new query builder.
-    pub fn new(client: &'a Client) -> Self {
+    pub fn new(connection: &'a C) -> Self {
         Self {
-            client,
-            select: Self::build_objects(),
+            connection,
+            select: Self::for_objects(),
         }
     }
 
-    /// Build a select query for finding values from objects.
-    pub fn build_objects() -> Select<ObjectEntity> {
-        ObjectEntity::find()
+    /// Define a select query for finding values from objects.
+    pub fn for_objects() -> Select<object::Entity> {
+        object::Entity::find()
+    }
+
+    /// Create a condition to filter a query.
+    pub fn filter_condition(filter: ObjectsFilterAll) -> Condition {
+        Condition::all().add_option(
+            filter
+                .attributes
+                .map(|v| Expr::col(object::Column::Attributes).contains(v)),
+        )
     }
 
     /// Filter records by all fields in the filter variable.
     pub fn filter_all(mut self, filter: ObjectsFilterAll) -> Self {
-        let condition = Condition::all().add_option(
-            filter
-                .attributes
-                .map(|v| Expr::col(ObjectColumn::Attributes).contains(v)),
-        );
-
-        self.select = self.select.filter(condition);
+        self.select = self.select.filter(Self::filter_condition(filter));
         self
     }
 }
 
-impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
+impl<'a, C> ListQueryBuilder<'a, C, s3_object::Entity>
+where
+    C: ConnectionTrait,
+{
     /// Create a new query builder.
-    pub fn new(client: &'a Client) -> Self {
+    pub fn new(connection: &'a C) -> Self {
         Self {
-            client,
-            select: Self::build_s3_objects(),
+            connection,
+            select: Self::for_s3_objects(),
         }
     }
 
-    /// Build a select query for finding values from s3 objects.
-    pub fn build_s3_objects() -> Select<S3ObjectEntity> {
-        S3ObjectEntity::find().order_by_asc(S3ObjectColumn::Sequencer)
+    /// Define a select query for finding values from s3 objects.
+    pub fn for_s3_objects() -> Select<s3_object::Entity> {
+        s3_object::Entity::find().order_by_asc(s3_object::Column::Sequencer)
     }
 
     /// Filter records by all fields in the filter variable.
@@ -82,41 +89,52 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
     ///     ...;
     /// ```
     pub fn filter_all(mut self, filter: S3ObjectsFilterAll) -> Self {
-        let condition = Condition::all()
-            .add_option(filter.event_type.map(|v| S3ObjectColumn::EventType.eq(v)))
-            .add_option(filter.bucket.map(|v| S3ObjectColumn::Bucket.eq(v)))
-            .add_option(filter.key.map(|v| S3ObjectColumn::Key.eq(v)))
-            .add_option(filter.version_id.map(|v| S3ObjectColumn::VersionId.eq(v)))
-            .add_option(filter.date.map(|v| S3ObjectColumn::Date.eq(v)))
-            .add_option(filter.size.map(|v| S3ObjectColumn::Size.eq(v)))
-            .add_option(filter.sha256.map(|v| S3ObjectColumn::Sha256.eq(v)))
-            .add_option(
-                filter
-                    .last_modified_date
-                    .map(|v| S3ObjectColumn::LastModifiedDate.eq(v)),
-            )
-            .add_option(filter.e_tag.map(|v| S3ObjectColumn::ETag.eq(v)))
-            .add_option(
-                filter
-                    .storage_class
-                    .map(|v| S3ObjectColumn::StorageClass.eq(v)),
-            )
-            .add_option(
-                filter
-                    .is_delete_marker
-                    .map(|v| S3ObjectColumn::IsDeleteMarker.eq(v)),
-            )
-            .add_option(
-                filter
-                    .attributes
-                    .map(|v| Expr::col(S3ObjectColumn::Attributes).contains(v)),
-            );
-
-        self.select = self.select.filter(condition);
+        self.select = self.select.filter(Self::filter_condition(filter));
 
         self.trace_query("filter_all");
 
         self
+    }
+
+    /// Create a condition to filter a query.
+    pub fn filter_condition(filter: S3ObjectsFilterAll) -> Condition {
+        Condition::all()
+            .add_option(
+                filter
+                    .event_type
+                    .map(|v| s3_object::Column::EventType.eq(v)),
+            )
+            .add_option(filter.bucket.map(|v| s3_object::Column::Bucket.eq(v)))
+            .add_option(filter.key.map(|v| s3_object::Column::Key.eq(v)))
+            .add_option(
+                filter
+                    .version_id
+                    .map(|v| s3_object::Column::VersionId.eq(v)),
+            )
+            .add_option(filter.date.map(|v| s3_object::Column::Date.eq(v)))
+            .add_option(filter.size.map(|v| s3_object::Column::Size.eq(v)))
+            .add_option(filter.sha256.map(|v| s3_object::Column::Sha256.eq(v)))
+            .add_option(
+                filter
+                    .last_modified_date
+                    .map(|v| s3_object::Column::LastModifiedDate.eq(v)),
+            )
+            .add_option(filter.e_tag.map(|v| s3_object::Column::ETag.eq(v)))
+            .add_option(
+                filter
+                    .storage_class
+                    .map(|v| s3_object::Column::StorageClass.eq(v)),
+            )
+            .add_option(
+                filter
+                    .is_delete_marker
+                    .map(|v| s3_object::Column::IsDeleteMarker.eq(v)),
+            )
+            .add_option(
+                filter
+                    .attributes
+                    .map(|v| Expr::col(s3_object::Column::Attributes).contains(v)),
+            )
     }
 
     /// Update this query to find objects that represent the current state of S3 objects. That is,
@@ -140,16 +158,16 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
         let subquery = Query::select()
             .column(Asterisk)
             .distinct_on([
-                S3ObjectColumn::Bucket,
-                S3ObjectColumn::Key,
-                S3ObjectColumn::VersionId,
+                s3_object::Column::Bucket,
+                s3_object::Column::Key,
+                s3_object::Column::VersionId,
             ])
-            .from(S3ObjectEntity)
+            .from(s3_object::Entity)
             .order_by_columns([
-                (S3ObjectColumn::Bucket, Asc),
-                (S3ObjectColumn::Key, Asc),
-                (S3ObjectColumn::VersionId, Asc),
-                (S3ObjectColumn::Sequencer, Desc),
+                (s3_object::Column::Bucket, Asc),
+                (s3_object::Column::Key, Asc),
+                (s3_object::Column::VersionId, Asc),
+                (s3_object::Column::Sequencer, Desc),
             ])
             .take();
 
@@ -158,7 +176,7 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
         QuerySelect::query(&mut self.select)
             .from_clear()
             .from_subquery(subquery, Alias::new("s3_object"))
-            .and_where(S3ObjectColumn::EventType.eq("Created"));
+            .and_where(s3_object::Column::EventType.eq("Created"));
 
         self.trace_query("current_state");
 
@@ -166,24 +184,51 @@ impl<'a> ListQueryBuilder<'a, S3ObjectEntity> {
     }
 }
 
-impl<'a, T, M> ListQueryBuilder<'a, T>
+impl<'a, C, E> From<(&'a C, Select<E>)> for ListQueryBuilder<'a, C, E>
 where
-    T: EntityTrait<Model = M>,
+    C: ConnectionTrait,
+    E: EntityTrait,
+{
+    fn from((connection, select): (&'a C, Select<E>)) -> Self {
+        Self { connection, select }
+    }
+}
+
+impl<'a, C, E> ListQueryBuilder<'a, C, E>
+where
+    C: ConnectionTrait,
+    E: EntityTrait,
+{
+    /// Get the inner connection and select statement.
+    pub fn into_inner(self) -> (&'a C, Select<E>) {
+        (self.connection, self.select)
+    }
+
+    /// Get a copy of this query builder
+    pub fn cloned(&self) -> Self {
+        (self.connection, self.select.clone()).into()
+    }
+}
+
+impl<'a, C, E, M> ListQueryBuilder<'a, C, E>
+where
+    C: ConnectionTrait,
+    E: EntityTrait<Model = M>,
     M: FromQueryResult + Send + Sync,
 {
     /// Execute the prepared query, fetching all values.
     pub async fn all(self) -> Result<Vec<M>> {
-        Ok(self.select.all(self.client.connection_ref()).await?)
+        Ok(self.select.all(self.connection).await?)
     }
 
     /// Execute the prepared query, fetching one value.
     pub async fn one(self) -> Result<Option<M>> {
-        Ok(self.select.one(self.client.connection_ref()).await?)
+        Ok(self.select.one(self.connection).await?)
     }
 
     /// Execute the prepared query, counting all values.
     pub async fn count(self) -> Result<u64> {
-        Ok(self.select.count(self.client.connection_ref()).await?)
+        Ok(self.select.count(self.connection).await?)
     }
 
     /// Paginate the query for the given page and page_size.
@@ -240,7 +285,8 @@ where
         Ok(ListCount::new(self.count().await?))
     }
 
-    fn trace_query(&self, message: &str) {
+    /// Trace the current query.
+    pub fn trace_query(&self, message: &str) {
         trace!(
             "{message}: {}",
             self.select.as_query().to_string(PostgresQueryBuilder)
@@ -255,9 +301,8 @@ mod tests {
 
     use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::object::Model as ObjectModel;
-    use crate::database::entities::s3_object::Model as S3ObjectModel;
     use crate::database::entities::sea_orm_active_enums::EventType;
+    use crate::database::Client;
     use crate::queries::EntriesBuilder;
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -265,7 +310,7 @@ mod tests {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default().build(&client).await.objects;
 
-        let builder = ListQueryBuilder::<ObjectEntity>::new(&client);
+        let builder = ListQueryBuilder::<_, object::Entity>::new(client.connection_ref());
         let result = builder.all().await.unwrap();
 
         assert_eq!(result, entries);
@@ -282,7 +327,8 @@ mod tests {
             .build(&client)
             .await
             .s3_objects;
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client).current_state();
+        let builder =
+            ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref()).current_state();
         let result = builder.all().await.unwrap();
 
         assert_eq!(result, vec![entries[2].clone(), entries[8].clone()]);
@@ -300,7 +346,8 @@ mod tests {
             .build(&client)
             .await
             .s3_objects;
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client).current_state();
+        let builder =
+            ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref()).current_state();
         let result = builder.all().await.unwrap();
 
         assert_eq!(
@@ -321,7 +368,7 @@ mod tests {
             .await
             .s3_objects;
 
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client)
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .current_state()
             .paginate(0, 1)
             .await
@@ -330,7 +377,7 @@ mod tests {
         assert_eq!(result, vec![entries[2].clone()]);
 
         // Order of paginate call shouldn't matter.
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client)
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .paginate(1, 1)
             .await
             .unwrap()
@@ -352,7 +399,7 @@ mod tests {
             .await
             .s3_objects;
 
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client)
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .current_state()
             .filter_all(S3ObjectsFilterAll {
                 size: Some(14),
@@ -362,7 +409,7 @@ mod tests {
         assert_eq!(result, vec![entries[6].clone()]);
 
         // Order of filter call shouldn't matter.
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client)
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .filter_all(S3ObjectsFilterAll {
                 size: Some(4),
                 ..Default::default()
@@ -418,7 +465,7 @@ mod tests {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default().build(&client).await.objects;
 
-        let builder = ListQueryBuilder::<ObjectEntity>::new(&client);
+        let builder = ListQueryBuilder::<_, object::Entity>::new(client.connection_ref());
 
         let result = paginate_all(builder.clone(), 3, 3).await;
         assert_eq!(result, entries[9..]);
@@ -443,7 +490,7 @@ mod tests {
             .await
             .s3_objects;
 
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref());
         let result = builder.all().await.unwrap();
 
         assert_eq!(result, entries);
@@ -580,7 +627,7 @@ mod tests {
             .await
             .s3_objects;
 
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref());
 
         let result = paginate_all(builder.clone(), 3, 3).await;
         assert_eq!(result, entries[9..]);
@@ -604,7 +651,7 @@ mod tests {
             .build(&client)
             .await;
 
-        let builder = ListQueryBuilder::<ObjectEntity>::new(&client);
+        let builder = ListQueryBuilder::<_, object::Entity>::new(client.connection_ref());
 
         assert_eq!(builder.clone().count().await.unwrap(), 10);
         assert_eq!(builder.to_list_count().await.unwrap(), ListCount::new(10));
@@ -618,19 +665,20 @@ mod tests {
             .build(&client)
             .await;
 
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(&client);
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref());
 
         assert_eq!(builder.clone().count().await.unwrap(), 10);
         assert_eq!(builder.to_list_count().await.unwrap(), ListCount::new(10));
     }
 
-    async fn paginate_all<T, M>(
-        builder: ListQueryBuilder<'_, T>,
+    async fn paginate_all<C, T, M>(
+        builder: ListQueryBuilder<'_, C, T>,
         page: u64,
         page_size: u64,
     ) -> Vec<M>
     where
         T: EntityTrait<Model = M>,
+        C: ConnectionTrait,
         M: FromQueryResult + Send + Sync,
     {
         builder
@@ -645,18 +693,22 @@ mod tests {
     async fn filter_all_objects_from(
         client: &Client,
         filter: ObjectsFilterAll,
-    ) -> Vec<ObjectModel> {
-        let builder = ListQueryBuilder::<ObjectEntity>::new(client);
-
-        builder.clone().filter_all(filter).all().await.unwrap()
+    ) -> Vec<object::Model> {
+        ListQueryBuilder::<_, object::Entity>::new(client.connection_ref())
+            .filter_all(filter)
+            .all()
+            .await
+            .unwrap()
     }
 
     async fn filter_all_s3_objects_from(
         client: &Client,
         filter: S3ObjectsFilterAll,
-    ) -> Vec<S3ObjectModel> {
-        let builder = ListQueryBuilder::<S3ObjectEntity>::new(client);
-
-        builder.clone().filter_all(filter).all().await.unwrap()
+    ) -> Vec<s3_object::Model> {
+        ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+            .filter_all(filter)
+            .all()
+            .await
+            .unwrap()
     }
 }

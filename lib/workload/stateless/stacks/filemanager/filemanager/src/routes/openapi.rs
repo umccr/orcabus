@@ -11,10 +11,11 @@ use crate::database::entities::object::Model as FileObject;
 use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::database::entities::sea_orm_active_enums::EventType;
 use crate::database::entities::sea_orm_active_enums::StorageClass;
+use crate::routes::error::ErrorResponse;
 use crate::routes::get::*;
 use crate::routes::ingest::*;
 use crate::routes::list::*;
-use crate::routes::ErrorResponse;
+use crate::routes::update::*;
 
 /// A newtype equivalent to a `DateTime` with a time zone.
 #[derive(ToSchema)]
@@ -37,6 +38,10 @@ pub struct Json(pub Value);
         get_s3_object_by_id,
         count_s3_objects,
         ingest_from_sqs,
+        update_object_attributes,
+        update_object_collection_attributes,
+        update_s3_object_attributes,
+        update_s3_object_collection_attributes,
     ),
     components(
         schemas(
@@ -51,6 +56,8 @@ pub struct Json(pub Value);
             Json,
             ListResponseObject,
             ListResponseS3Object,
+            PatchBody,
+            Patch
         )
     ),
     modifiers(&SecurityAddon),

@@ -6,13 +6,14 @@ use std::{io, result};
 
 use sqlx::migrate::MigrateError;
 use thiserror::Error;
+use uuid::Uuid;
 
 pub type Result<T> = result::Result<T, Error>;
 
 /// Error types for the filemanager.
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Database error: `{0}`")]
+    #[error("database error: `{0}`")]
     DatabaseError(DbErr),
     #[error("SQL migrate error: `{0}`")]
     MigrateError(String),
@@ -20,18 +21,24 @@ pub enum Error {
     SQSError(String),
     #[error("deserialization error: `{0}`")]
     DeserializeError(String),
-    #[error("Loading environment variables: `{0}`")]
-    LoadingEnvironment(String),
+    #[error("loading environment variables: `{0}`")]
+    ConfigError(String),
     #[error("credential generator error: `{0}`")]
     CredentialGeneratorError(String),
     #[error("S3 inventory error: `{0}`")]
     S3InventoryError(String),
     #[error("{0}")]
     IoError(#[from] io::Error),
-    #[error("Numerical operation overflowed")]
+    #[error("numerical operation overflowed")]
     OverflowError,
-    #[error("Numerical conversion failed: {0}")]
+    #[error("numerical conversion failed: `{0}`")]
     ConversionError(String),
+    #[error("query error: `{0}`")]
+    QueryError(String),
+    #[error("invalid input: `{0}`")]
+    InvalidQuery(String),
+    #[error("expected some value for id: `{0}`")]
+    ExpectedSomeValue(Uuid),
 }
 
 impl From<sqlx::Error> for Error {
@@ -60,6 +67,6 @@ impl From<serde_json::Error> for Error {
 
 impl From<envy::Error> for Error {
     fn from(error: envy::Error) -> Self {
-        Self::LoadingEnvironment(error.to_string())
+        Self::ConfigError(error.to_string())
     }
 }

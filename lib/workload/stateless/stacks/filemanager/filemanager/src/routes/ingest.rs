@@ -7,9 +7,11 @@ use crate::clients::aws::s3::Client as S3Client;
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::error::Result;
 use crate::handlers::aws::receive_and_ingest;
-use crate::routes::{AppState, ErrorStatusCode};
+use crate::routes::error::ErrorStatusCode;
+use crate::routes::AppState;
 use axum::extract::State;
-use axum::Json;
+use axum::routing::post;
+use axum::{Json, Router};
 use mockall_double::double;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -25,15 +27,16 @@ pub struct IngestCount {
     n_records: usize,
 }
 
-/// The ingest from sqs handler.
+/// Ingest events from the configured SQS queue.
 #[utoipa::path(
     post,
     path = "/ingest_from_sqs",
     responses(
-        (status = NO_CONTENT, description = "Ingest objects into the database from the SQS queue", body = IngestCount),
+        (status = OK, description = "A successful ingestion with the number of ingested records", body = IngestCount),
         ErrorStatusCode,
     ),
     context_path = "/api/v1",
+    tag = "ingest",
 )]
 pub async fn ingest_from_sqs(state: State<AppState>) -> Result<Json<IngestCount>> {
     let n_records = receive_and_ingest(
@@ -48,9 +51,13 @@ pub async fn ingest_from_sqs(state: State<AppState>) -> Result<Json<IngestCount>
     Ok(Json(IngestCount { n_records }))
 }
 
+/// The router for ingesting events.
+pub fn ingest_router() -> Router<AppState> {
+    Router::new().route("/ingest_from_sqs", post(ingest_from_sqs))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
     use axum::body::Body;
     use axum::http::{Method, Request};
     use sqlx::PgPool;
@@ -60,6 +67,9 @@ mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::handlers::aws::tests::test_receive_and_ingest_with;
     use crate::routes::{api_router, AppState};
+
+    use super::*;
+
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_from_sqs_api(pool: PgPool) {
         let mut state = AppState::from_pool(pool);

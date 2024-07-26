@@ -1,11 +1,10 @@
 //! This module contains event handlers for filemanager functionality.
 //!
 
-use lambda_runtime::tracing::subscriber::EnvFilter;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::Layer;
+use tracing_subscriber::{EnvFilter, Layer};
 
 pub mod aws;
 

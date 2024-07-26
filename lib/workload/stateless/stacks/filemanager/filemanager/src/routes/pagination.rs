@@ -71,7 +71,7 @@ mod tests {
     use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::queries::EntriesBuilder;
-    use crate::routes::list::tests::response_from;
+    use crate::routes::list::tests::response_from_get;
     use crate::routes::list::ListResponse;
     use crate::routes::AppState;
 
@@ -84,7 +84,7 @@ mod tests {
             .objects;
 
         let result: ListResponse<Object> =
-            response_from(state, "/objects?page=2&page_size=2").await;
+            response_from_get(state, "/objects?page=2&page_size=2").await;
         assert_eq!(result.next_page(), Some(3));
         assert_eq!(result.results(), &entries[4..6]);
     }
@@ -98,12 +98,12 @@ mod tests {
             .objects;
 
         let result: ListResponse<Object> =
-            response_from(state.clone(), "/objects?page=0&page_size=20").await;
+            response_from_get(state.clone(), "/objects?page=0&page_size=20").await;
         assert!(result.next_page().is_none());
         assert_eq!(result.results(), entries);
 
         let result: ListResponse<Object> =
-            response_from(state, "/objects?page=20&page_size=1").await;
+            response_from_get(state, "/objects?page=20&page_size=1").await;
         assert!(result.next_page().is_none());
         assert!(result.results().is_empty());
     }
@@ -116,7 +116,8 @@ mod tests {
             .await
             .objects;
 
-        let result: ListResponse<Object> = response_from(state, "/s3_objects?page_size=0").await;
+        let result: ListResponse<Object> =
+            response_from_get(state, "/s3_objects?page_size=0").await;
         assert_eq!(result.next_page(), None);
         assert_eq!(result.results(), entries);
     }
@@ -131,7 +132,7 @@ mod tests {
             .s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from(state, "/s3_objects?page=1&page_size=2").await;
+            response_from_get(state, "/s3_objects?page=1&page_size=2").await;
         assert_eq!(result.next_page(), Some(2));
         assert_eq!(result.results(), &entries[2..4]);
     }
@@ -146,12 +147,12 @@ mod tests {
             .s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from(state.clone(), "/s3_objects?page=0&page_size=20").await;
+            response_from_get(state.clone(), "/s3_objects?page=0&page_size=20").await;
         assert!(result.next_page().is_none());
         assert_eq!(result.results(), entries);
 
         let result: ListResponse<S3Object> =
-            response_from(state, "/s3_objects?page=20&page_size=1").await;
+            response_from_get(state, "/s3_objects?page=20&page_size=1").await;
         assert!(result.next_page().is_none());
         assert!(result.results().is_empty());
     }
@@ -165,7 +166,8 @@ mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<S3Object> = response_from(state, "/s3_objects?page_size=0").await;
+        let result: ListResponse<S3Object> =
+            response_from_get(state, "/s3_objects?page_size=0").await;
         assert_eq!(result.next_page(), None);
         assert_eq!(result.results(), entries);
     }

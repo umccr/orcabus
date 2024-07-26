@@ -4,10 +4,7 @@
 use sea_orm::{EntityTrait, Select};
 use uuid::Uuid;
 
-use crate::database::entities::object::Entity as ObjectEntity;
-use crate::database::entities::object::Model as Object;
-use crate::database::entities::s3_object::Entity as S3ObjectEntity;
-use crate::database::entities::s3_object::Model as S3Object;
+use crate::database::entities::{object, s3_object};
 use crate::database::Client;
 use crate::error::Result;
 
@@ -23,24 +20,24 @@ impl<'a> GetQueryBuilder<'a> {
     }
 
     /// Build a select query for finding an object by id.
-    pub fn build_object_by_id(id: Uuid) -> Select<ObjectEntity> {
-        ObjectEntity::find_by_id(id)
+    pub fn build_object_by_id(id: Uuid) -> Select<object::Entity> {
+        object::Entity::find_by_id(id)
     }
 
     /// Build a select query for finding an s3 object by id.
-    pub fn build_s3_object_by_id(id: Uuid) -> Select<S3ObjectEntity> {
-        S3ObjectEntity::find_by_id(id)
+    pub fn build_s3_object_by_id(id: Uuid) -> Select<s3_object::Entity> {
+        s3_object::Entity::find_by_id(id)
     }
 
     /// Get a specific object by id.
-    pub async fn get_object(&self, id: Uuid) -> Result<Option<Object>> {
+    pub async fn get_object(&self, id: Uuid) -> Result<Option<object::Model>> {
         Ok(Self::build_object_by_id(id)
             .one(self.client.connection_ref())
             .await?)
     }
 
     /// Get a specific s3 object by id.
-    pub async fn get_s3_object_by_id(&self, id: Uuid) -> Result<Option<S3Object>> {
+    pub async fn get_s3_object_by_id(&self, id: Uuid) -> Result<Option<s3_object::Model>> {
         Ok(Self::build_s3_object_by_id(id)
             .one(self.client.connection_ref())
             .await?)

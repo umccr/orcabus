@@ -21,6 +21,7 @@ use crate::uuid::UuidGenerator;
 
 pub mod get;
 pub mod list;
+pub mod update;
 
 /// Container for generating database entries.
 #[derive(Debug)]
