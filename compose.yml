@@ -1,0 +1,65 @@
+include:
+  - path:
+      - ./shared/mock-db.yml
+
+services:
+
+  # PORT 8100 ~ metadata-manager
+  metadata-manager:
+    environment:
+      - DB_HOSTNAME=db
+      - DB_PORT=5432
+      - PYTHONUNBUFFERED=1
+    ports:
+      - '8100:8000'
+    build:
+      context: ./lib/workload/stateless/stacks/metadata-manager
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    healthcheck:
+      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/"
+      start_period: 30s
+      interval: 10s
+      timeout: 2s
+      retries: 5
+
+  # PORT 8200 ~ workflow-manager
+  workflow-manager:
+    environment:
+      - DB_HOSTNAME=db
+      - DB_PORT=5432
+      - PYTHONUNBUFFERED=1
+    ports:
+      - '8200:8000'
+    build:
+      context: ./lib/workload/stateless/stacks/workflow-manager
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    healthcheck:
+      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/wfm/v1"
+      start_period: 30s
+      interval: 10s
+      timeout: 2s
+      retries: 5
+
+  # PORT 8300 ~ sequence-run-manager
+  sequence-run-manager:
+    environment:
+      - DB_HOSTNAME=db
+      - DB_PORT=5432
+      - PYTHONUNBUFFERED=1
+    ports:
+      - '8300:8000'
+    build:
+      context: ./lib/workload/stateless/stacks/sequence-run-manager
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    healthcheck:
+      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/srm/v1"
+      start_period: 30s
+      interval: 10s
+      timeout: 2s
+      retries: 5

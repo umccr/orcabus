@@ -12,8 +12,10 @@ services:
       - POSTGRES_PASSWORD=orcabus
     ports:
       - '5432:5432'
+    volumes:
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready', '-d', 'orcabus']
+      test: ['CMD-SHELL', 'pg_isready -d orcabus -U orcabus']
       interval: 10s
       timeout: 60s
       retries: 5

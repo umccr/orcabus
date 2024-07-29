@@ -157,6 +157,12 @@ To insert some mock data to be inserted, run the following command while the ser
 make insert-data
 ```
 
+If you want a shortcut the combination of starting the server with loaded s3 data, you could use the following command.
+
+```bash
+make loaded-start
+```
+
 ### Stop
 
 To stop the running server, simply use the `make stop` command
