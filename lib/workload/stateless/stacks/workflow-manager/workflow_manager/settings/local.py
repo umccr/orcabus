@@ -34,7 +34,7 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'UMCCR OrcaBus sequence_run_manager API',
     'DESCRIPTION': 'UMCCR OrcaBus sequence_run_manager API',
     'VERSION': API_VERSION,
-    'SERVE_INCLUDE_SCHEMA': True,
+    'SERVE_INCLUDE_SCHEMA': False,
     'SECURITY': [
         {
             "type": "http",
@@ -48,5 +48,9 @@ SPECTACULAR_SETTINGS = {
     },
     "LICENSE": {
         "name": "MIT License",
+    },
+    "EXTERNAL_DOCS": {
+        "description": "Terms of service",
+        "url": "https://umccr.org/",
     },
 }
