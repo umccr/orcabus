@@ -4,6 +4,8 @@ include:
 
 services:
 
+
+
   # PORT 8100 ~ metadata-manager
   metadata-manager:
     environment:
@@ -17,6 +19,12 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - db
+    healthcheck:
+      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/"
+      start_period: 30s
+      interval: 10s
+      timeout: 2s
+      retries: 5
 
   # PORT 8200 ~ workflow-manager
   workflow-manager:
@@ -31,6 +39,12 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - db
+    healthcheck:
+      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/wfm/v1"
+      start_period: 30s
+      interval: 10s
+      timeout: 2s
+      retries: 5
 
   # PORT 8300 ~ sequence-run-manager
   sequence-run-manager:
@@ -45,4 +59,9 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - db
-
+    healthcheck:
+      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/srm/v1"
+      start_period: 30s
+      interval: 10s
+      timeout: 2s
+      retries: 5
