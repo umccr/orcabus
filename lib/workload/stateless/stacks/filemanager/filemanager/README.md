@@ -19,6 +19,7 @@ contain thin wrappers around clients, and any logic should be elsewhere to ensur
 * [handlers]: High level code that can be used by other crates to perform filemanager actions.
 * [queries]: [SeaORM][sea-orm] database queries which can be used by the API and other functionality.
 * [routes]: [Axum][axum] routes and logic used by the filemanager API. OpenAPI documentation is generated using [utoipa].
+* [rules]: The filemanager JSON rules which allows matching incoming events and applying attributes.
 * [env]: Environment variable handling and config.
 * [error]: Error code associated with filemanager.
 * [uuid]: UUID generation code.
@@ -31,6 +32,7 @@ Generally code that belongs to a particular cloud service should be put in its o
 [handlers]: src/handlers
 [queries]: src/queries
 [routes]: src/routes
+[routes]: src/rules
 [error]: src/error.rs
 [error]: src/uuid.rs
 [mockall]: https://github.com/asomers/mockall

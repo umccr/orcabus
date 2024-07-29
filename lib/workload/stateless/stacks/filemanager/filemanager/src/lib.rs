@@ -10,4 +10,5 @@ pub mod events;
 pub mod handlers;
 pub mod queries;
 pub mod routes;
+pub mod rules;
 pub mod uuid;

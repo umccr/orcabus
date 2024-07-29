@@ -49,6 +49,8 @@ url = "2"
 bytes = "1.6"
 envy = "0.4"
 rand = "0.8"
+regex = "1"
+serde_regex = "1"
 
 # Inventory
 csv = "1"
