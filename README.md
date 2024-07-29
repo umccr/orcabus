@@ -108,6 +108,29 @@ To develop your microservice application, please read:
 - [event schema guide](docs/schemas/README.md)
 - [shared resource guide](./lib/workload/stateful/stacks/shared/README.md)
 
+### Running API Locally
+
+You can run all microservice APIs locally at once using Docker Compose provided in the root of this project. To run with pre-loaded data in the API, use the following command, which will execute the script to inject data into the database:
+
+```sh
+make start-all-service
+```
+
+To stop the services, use:
+
+```sh
+make stop-all-service
+```
+
+The APIs will run on `localhost` with the following port assignments:
+
+| Microservice         | Local Endpoint          |
+|----------------------|-------------------------|
+| File Manager         | <http://localhost:8000> |
+| Metadata Manager     | <http://localhost:8100> |
+| Workflow Manager     | <http://localhost:8200> |
+| Sequence Run Manager | <http://localhost:8300> |
+
 ### Typography
 
 When possible, please use either `OrcaBus` (camel case) or `orcabus` (all lower case).
