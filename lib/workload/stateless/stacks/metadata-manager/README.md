@@ -145,7 +145,7 @@ make s3-load
 
 ### Start
 
-To start the application run the start command. This will run the server at `http://localhost:800/`
+To start the application run the start command. This will run the server at `http://localhost:8000/`
 
 ```bash
 make start

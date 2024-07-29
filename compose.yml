@@ -4,8 +4,6 @@ include:
 
 services:
 
-
-
   # PORT 8100 ~ metadata-manager
   metadata-manager:
     environment:
