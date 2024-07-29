@@ -29,7 +29,7 @@ start-all-service:
 	@(cd lib/workload/stateless/stacks/workflow-manager && $(MAKE) s3-load)
 
 	# Running the rest of the µ-service server
-	docker compose up --wait -d
+	docker compose up --wait -d --build
 
 stop-all-service:
 	docker compose down

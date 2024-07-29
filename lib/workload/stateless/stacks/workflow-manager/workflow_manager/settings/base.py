@@ -6,6 +6,8 @@ from pathlib import Path
 import aws_xray_sdk
 from corsheaders.defaults import default_headers
 
+API_VERSION = "v1"
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

@@ -36,8 +36,8 @@ REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS'] = 'drf_spectacular.openapi.AutoSchema'
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Metadata Manager API',
     'DESCRIPTION': 'The Metadata Manager API for UMCCR.',
-    'VERSION': '0.0.0',
-    'SERVE_INCLUDE_SCHEMA': True,
+    'VERSION': '0.0.1',
+    'SERVE_INCLUDE_SCHEMA': False,
     'SECURITY': [
         {
             "type": "http",
@@ -51,6 +51,10 @@ SPECTACULAR_SETTINGS = {
     },
     "LICENSE": {
         "name": "MIT License",
+    },
+    "EXTERNAL_DOCS": {
+        "description": "Terms of service",
+        "url": "https://umccr.org/",
     },
 }
 

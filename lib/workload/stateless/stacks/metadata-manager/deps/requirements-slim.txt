@@ -7,7 +7,6 @@ Django==5.0.7
 django-cors-headers==4.3.1
 django-environ==0.11.2
 django-simple-history==3.5.0
-django_extensions==3.2.3
 drf-spectacular==0.27.2
 
 # See psycopg[binary] or psycopg[c] impl https://www.psycopg.org/psycopg3/docs/basic/install.html

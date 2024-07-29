@@ -2,9 +2,10 @@ from django.urls import path, include
 
 from sequence_run_manager.routers import OptionalSlashDefaultRouter
 from sequence_run_manager.viewsets.sequence import SequenceViewSet
+from sequence_run_manager.settings.base import API_VERSION
 
 api_namespace = "srm"
-api_version = "v1"
+api_version = API_VERSION
 api_base = f"{api_namespace}/{api_version}/"
 
 router = OptionalSlashDefaultRouter()
