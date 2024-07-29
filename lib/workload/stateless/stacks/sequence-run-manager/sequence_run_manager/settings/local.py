@@ -9,7 +9,6 @@ import sys
 from environ import Env
 
 from .base import *  # noqa
-# from sequence_run_manager.urls.base import api_version
 db_conn_cfg = Env.db_url_config(
     # pragma: allowlist nextline secret
     os.getenv("DB_URL", "postgresql://orcabus:orcabus@localhost:5432/orcabus")

@@ -19,22 +19,34 @@ DATABASES = {"default": db_conn_cfg}
 
 INSTALLED_APPS += (
     "django_extensions",
-    "drf_yasg",
+    "drf_spectacular",
 )
 
 ROOT_URLCONF = "workflow_manager.urls.local"
 
 RUNSERVER_PLUS_PRINT_SQL_TRUNCATE = sys.maxsize
 
-# --- drf_yasg swagger and redoc settings
+# --- drf-spectacular settings
 
-SWAGGER_SETTINGS = {
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}
+REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS'] = 'drf_spectacular.openapi.AutoSchema'
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'UMCCR OrcaBus sequence_run_manager API',
+    'DESCRIPTION': 'UMCCR OrcaBus sequence_run_manager API',
+    'VERSION': API_VERSION,
+    'SERVE_INCLUDE_SCHEMA': True,
+    'SECURITY': [
+        {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
+    ],
+    'CONTACT': {
+        'name': 'UMCCR',
+        'email': 'services@umccr.org'
     },
-    "USE_SESSION_AUTH": False,
-}
-
-REDOC_SETTINGS = {
-    "LAZY_RENDERING": False,
+    "LICENSE": {
+        "name": "MIT License",
+    },
 }

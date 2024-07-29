@@ -1,1 +1,2 @@
 -r requirements-test.txt
+django_extensions==3.2.3
