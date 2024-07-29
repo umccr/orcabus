@@ -31,7 +31,7 @@ REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS'] = 'drf_spectacular.openapi.AutoSchema'
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Metadata Manager API',
     'DESCRIPTION': 'The Metadata Manager API for UMCCR.',
-    'VERSION': '0.0.0',
+    'VERSION': '0.0.1',
     'SERVE_INCLUDE_SCHEMA': True,
     'SECURITY': [
         {
