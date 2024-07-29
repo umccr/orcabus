@@ -78,9 +78,9 @@ WORKFLOW_RUN_NAME_PREFIX="umccr--automated--tumor-normal--4-2-4--"
 PORTAL_RUN_ID="$(date +%Y%m%d)$(xxd -l 4 -c 4 -p < /dev/random)"
 
 # Outputs
-ANALYSIS_OUTPUT_URI_PREFIX="icav2://cohort-hmf-pdac-dev/cram_test_run/out/"
-CACHE_URI_PREFIX="icav2://cohort-hmf-pdac-dev/cram_test_run/cache/"
-ICA_LOGS_URI_PREFIX="icav2://cohort-hmf-pdac-dev/cram_test_run/logs/"
+ANALYSIS_OUTPUT_URI_PREFIX="icav2://development/tumor_normal_test_tmpdirmin/out/"
+CACHE_URI_PREFIX="icav2://development/tumor_normal_test_tmpdirmin/cache/"
+ICA_LOGS_URI_PREFIX="icav2://development/tumor_normal_test_tmpdirmin/logs/"
 
 ###############
 # GENERATE DATA

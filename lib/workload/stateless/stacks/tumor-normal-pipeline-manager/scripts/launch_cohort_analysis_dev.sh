@@ -21,8 +21,8 @@ WORKFLOW_VERSION="4.2.4"
 #############
 
 # Inputs
-NORMAL_CRAM_URI="icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021R/cram/CORE01050021R.cram"
-TUMOR_CRAM_URI="icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/cram/CORE01050021T.cram"
+NORMAL_CRAM_URI="icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/CORE01050021R.cram"
+TUMOR_CRAM_URI="icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/CORE01050021T.cram"
 CRAM_REFERENCE_URI="icav2://reference-data/genomes/GRCh37/Homo_sapiens.GRCh37.GATK.illumina.fasta"
 PIPELINE_ID="3d97bc9f-8716-4fa0-81ce-62ed332e0cdd"  # Custom pipeline id with the cram options
 
@@ -55,6 +55,7 @@ data_json="$( \
     '
       {
         "inputs": {
+          "enableMapAlignOutput": false,
           "enableDuplicateMarking": true,
           "enableCnvSomatic": true,
           "enableHrdSomatic": true,

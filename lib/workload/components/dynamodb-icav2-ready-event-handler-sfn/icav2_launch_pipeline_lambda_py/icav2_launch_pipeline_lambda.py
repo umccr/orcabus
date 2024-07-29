@@ -496,3 +496,33 @@ def handler(event, context):
 #             indent=2
 #         )
 #     )
+
+# # CRAM CWL Test
+#
+# if __name__ == "__main__":
+#     import os
+#
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#     print(
+#         json.dumps(
+#             handler(
+#                 event={
+#                     "workflow_type": "cwl",
+#                     "user_tags": {},
+#                     "technical_tags": {
+#                         "portal_run_id": "20240728cae96835",
+#                         "step_functions_execution_arn": "arn:aws:states:ap-southeast-2:843407916570:execution:tnSfn-wfm-ready-event-handler:2eb4406d-4073-9245-a2f8-c4556a70c0c3_0aeda72a-244e-d6df-2292-3aadb06a4a81",
+#                         "analysis_output_uri": "icav2://cohort-hmf-pdac-dev/cram_test_run/out/20240728cae96835/"
+#                     },
+#                     "user_reference": "umccr--automated--tumor-normal--4-2-4--20240728cae96835",
+#                     "project_id": "41474e59-91ba-4eec-ad1a-b198562220e4",
+#                     "pipeline_id": "3d97bc9f-8716-4fa0-81ce-62ed332e0cdd",
+#                     "ica_logs_uri": "icav2://cohort-hmf-pdac-dev/cram_test_run/logs/20240728cae96835/",
+#                     "analysis_output_uri": "icav2://cohort-hmf-pdac-dev/cram_test_run/out/20240728cae96835/",
+#                     "input_json": "{\"reference_tar\":{\"class\":\"File\",\"location\":\"icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-hash-tables/v9-r3/hg38-alt_masked-cnv-hla-rna/hg38-alt_masked.cnv.hla.rna-9-r3.0-1.tar.gz\"},\"enable_sv_somatic\":true,\"output_directory_somatic\":\"CORE01050021T_dragen_somatic\",\"enable_map_align_output_germline\":false,\"cram_reference\":{\"class\":\"File\",\"secondaryFiles\":[{\"class\":\"File\",\"location\":\"icav2://reference-data/genomes/GRCh37/Homo_sapiens.GRCh37.GATK.illumina.fasta.fai\"}],\"location\":\"icav2://reference-data/genomes/GRCh37/Homo_sapiens.GRCh37.GATK.illumina.fasta\"},\"cnv_use_somatic_vc_baf\":true,\"output_file_prefix_germline\":\"CORE01050021R\",\"output_directory_germline\":\"CORE01050021R_dragen_germline\",\"enable_cnv_somatic\":true,\"cram_input\":{\"class\":\"File\",\"secondaryFiles\":[{\"class\":\"File\",\"location\":\"icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/CORE01050021R.cram.crai\"}],\"location\":\"icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/CORE01050021R.cram\"},\"enable_duplicate_marking\":true,\"enable_hrd_somatic\":true,\"output_file_prefix_somatic\":\"CORE01050021T\",\"tumor_cram_input\":{\"class\":\"File\",\"secondaryFiles\":[{\"class\":\"File\",\"location\":\"icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/CORE01050021T.cram.crai\"}],\"location\":\"icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/CORE01050021T.cram\"},\"enable_map_align_output_somatic\":true}"
+#                 },
+#                 context=None
+#             ),
+#             indent=2
+#         )
+#     )

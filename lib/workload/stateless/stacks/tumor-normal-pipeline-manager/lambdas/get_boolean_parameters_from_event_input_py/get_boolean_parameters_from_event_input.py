@@ -19,6 +19,8 @@ def handler(event, context) -> Dict[str, Dict]:
 
     # Get the boolean parameters from the event input
     cwl_parameter_dict: Dict = {
+        "enable_map_align_output_somatic": event_data_input.get('enableMapAlignOutput', True),
+        "enable_map_align_output_germline": False,
         "enable_duplicate_marking": event_data_input.get('enableDuplicateMarking', True),
         "enable_cnv_somatic": event_data_input.get('enableCnvSomatic', None),
         "enable_hrd_somatic": event_data_input.get('enableHrdSomatic', None),
@@ -33,10 +35,6 @@ def handler(event, context) -> Dict[str, Dict]:
             cwl_parameter_dict.items()
         )
     )
-
-    # Set map align output booleans
-    cwl_parameter_dict['enable_map_align_output_somatic'] = True
-    cwl_parameter_dict['enable_map_align_output_germline'] = False
 
     # Return the boolean parameters
     return {

@@ -133,12 +133,15 @@ def get_files_from_somatic_directory(dragen_somatic_project_data_obj: ProjectDat
 
     # Find the dragen germline bam as the only bam in the directory that doesn't have the somatic prefix
     # Derived instead from the germline prefix
-    dragen_germline_bam = next(
-        filter(
-            lambda project_data_iter: project_data_iter.data.details.name.endswith("_normal.bam"),
-            somatic_files_list
+    try:
+        dragen_germline_bam = next(
+            filter(
+                lambda project_data_iter: project_data_iter.data.details.name.endswith("_normal.bam"),
+                somatic_files_list
+            )
         )
-    )
+    except StopIteration:
+        dragen_germline_bam = None
 
     # Collect the snv vcf
     dragen_somatic_snv_vcf = next(
@@ -163,12 +166,15 @@ def get_files_from_somatic_directory(dragen_somatic_project_data_obj: ProjectDat
         )
     )
 
-    dragen_somatic_bam = next(
-        filter(
-            lambda project_data_iter: project_data_iter.data.details.name == f"{dragen_somatic_output_prefix}_tumor.bam",
-            somatic_files_list
+    try:
+        dragen_somatic_bam = next(
+            filter(
+                lambda project_data_iter: project_data_iter.data.details.name == f"{dragen_somatic_output_prefix}_tumor.bam",
+                somatic_files_list
+            )
         )
-    )
+    except StopIteration:
+        dragen_somatic_bam = None
 
     return {
         "dragen_germline_bam": dragen_germline_bam,
