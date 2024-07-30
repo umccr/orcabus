@@ -111,7 +111,7 @@ jobs:
     # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
     # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
     # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
-    runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+    runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}-ubuntu-7.0-large
     if: ${{ !github.event.pull_request.draft }}
     steps:
       - name: Checkout code
