@@ -281,7 +281,13 @@ def handler(event, context):
     # Every value in the file outputs dict is a project data object, convert each value to a uri
     outputs_as_uri = dict(
         map(
-            lambda key_val: (key_val[0], convert_project_data_obj_to_icav2_uri(key_val[1])),
+            lambda key_val: (
+                key_val[0], (
+                    convert_project_data_obj_to_icav2_uri(key_val[1])
+                    if key_val[1] is not None
+                    else None
+                )
+            ),
             file_outputs_dict.items()
         )
     )
@@ -330,6 +336,36 @@ def handler(event, context):
 #                     "somatic_output_prefix": "CORE01050021T",
 #                     "germline_output_prefix": "CORE01050021R",
 #                     "analysis_output_uri": "icav2://cohort-hmf-pdac-dev/cram_test_run/out/20240729868b9d5d/"
+#                 },
+#                 None
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # {
+#     #     "dragen_germline_snv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/L2400191.vcf.gz",
+#     #     "dragen_germline_snv_vcf_hard_filtered": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/L2400191.hard-filtered.vcf.gz",
+#     #     "dragen_germline_bam": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400191_normal.bam",
+#     #     "dragen_somatic_snv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.vcf.gz",
+#     #     "dragen_somatic_snv_vcf_hard_filtered": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.hard-filtered.vcf.gz",
+#     #     "dragen_somatic_sv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.sv.vcf.gz",
+#     #     "dragen_somatic_bam": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195_tumor.bam",
+#     #     "multiqc_html_report": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195__L2400191_dragen_somatic_and_germline_multiqc/L2400195__L2400191_dragen_somatic_and_germline_multiqc.html"
+#     # }
+
+
+# if __name__ == "__main__":
+#     from os import environ
+#     import json
+#     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#     print(
+#         json.dumps(
+#             handler(
+#                  {
+#                   "somatic_output_prefix": "CORE01050021T",
+#                   "germline_output_prefix": "CORE01050021R",
+#                   "analysis_output_uri": "icav2://cohort-hmf-pdac-dev/cram_test_run/out/20240730c3d70ade/"
 #                 },
 #                 None
 #             ),
