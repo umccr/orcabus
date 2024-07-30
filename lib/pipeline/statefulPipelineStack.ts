@@ -43,6 +43,13 @@ export class StatefulPipelineStack extends cdk.Stack {
         },
       },
       partialBuildSpec: codebuild.BuildSpec.fromObject({
+        phases: {
+          install: {
+            'runtime-versions': {
+              python: '3.12',
+            },
+          },
+        },
         reports: {
           'orcabus-infrastructureStatefulReports': {
             files: ['target/report/*.xml'],

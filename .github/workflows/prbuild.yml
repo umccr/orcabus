@@ -29,12 +29,12 @@ permissions: read-all
 #  https://github.com/actions-rust-lang/setup-rust-toolchain
 
 env:
-  # This is the default python version for the runner
+  # This default the python version for the runner (some of our dependency rely on this versions)
   #
   # From this troubleshooting guide, pyenv is used under the Amazon Linux 2023
   # https://docs.aws.amazon.com/amplify/latest/userguide/troubleshooting-AL2023.html#python-runtime
   #
-  # And from pyenv docs setting this PYENV_VERSION as env-var would set the python version
+  # And from pyenv docs setting this PYENV_VERSION as env-var would set the python version globally
   PYENV_VERSION: '3.12'
 
 jobs:
@@ -49,31 +49,31 @@ jobs:
           pip3 -V
           make --version
 
-      # # TODO see whether we can leverage https://github.com/pre-commit/action
-      # - name: Install system-wide tools dependencies
-      #   run: |
-      #     pip3 install pre-commit detect-secrets black ggshield
+      # TODO see whether we can leverage https://github.com/pre-commit/action
+      - name: Install system-wide tools dependencies
+        run: |
+          pip3 install pre-commit detect-secrets black ggshield
 
-      # - name: Checkout code
-      #   uses: actions/checkout@v4
-      #   with:
-      #     fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # - name: TruffleHog OSS
-      #   uses: trufflesecurity/trufflehog@v3.34.0
-      #   with:
-      #     path: ./
-      #     base: ${{ github.event.repository.default_branch }}
-      #     head: HEAD
-      #     extra_args: --debug --only-verified
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@v3.34.0
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
 
-      # - name: Install dependencies
-      #   run: |
-      #     make install
+      - name: Install dependencies
+        run: |
+          make install
 
-      # - name: Lint and code formatting
-      #   run: |
-      #     make check
+      - name: Lint and code formatting
+        run: |
+          make check
 
   test-stateless-app-suite:
     # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
@@ -89,20 +89,20 @@ jobs:
           pip3 -V
           make --version
 
-      # - name: Checkout code
-      #   uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # - name: Rust installation
-      #   uses: actions-rust-lang/setup-rust-toolchain@v1
-      #   with:
-      #     components: rustfmt
+      - name: Rust installation
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
 
-      # - name: Install dependencies
-      #   run: |
-      #     yarn install --immutable
-      #     pip3 install cargo-lambda
+      - name: Install dependencies
+        run: |
+          yarn install --immutable
+          pip3 install cargo-lambda
 
-      # - run: make test-stateless-app-suite
+      - run: make test-stateless-app-suite
 
   test-all-stateful-tests:
     # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
@@ -118,17 +118,17 @@ jobs:
           pip3 -V
           make --version
 
-      # - name: Checkout code
-      #   uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # - name: Install dependencies
-      #   run: |
-      #     yarn install --immutable
+      - name: Install dependencies
+        run: |
+          yarn install --immutable
 
-      # - run: make test-stateful-iac
+      - run: make test-stateful-iac
 
-      # # stateful app suite test is a small test so would run this together with the IaC for now
-      # - run: make test-stateful-app-suite
+      # stateful app suite test is a small test so would run this together with the IaC for now
+      - run: make test-stateful-app-suite
 
   test-stateless-iac:
     # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
@@ -144,17 +144,17 @@ jobs:
           pip3 -V
           make --version
 
-      # - name: Checkout code
-      #   uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # - name: Rust installation
-      #   uses: actions-rust-lang/setup-rust-toolchain@v1
-      #   with:
-      #     components: rustfmt
+      - name: Rust installation
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
 
-      # - name: Install dependencies
-      #   run: |
-      #     yarn install --immutable
-      #     pip3 install cargo-lambda
+      - name: Install dependencies
+        run: |
+          yarn install --immutable
+          pip3 install cargo-lambda
 
-      # - run: make test-stateless-iac
+      - run: make test-stateless-iac
