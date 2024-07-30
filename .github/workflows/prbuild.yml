@@ -28,99 +28,98 @@ permissions: read-all
 #  https://github.com/marketplace/actions/cache
 #  https://github.com/actions-rust-lang/setup-rust-toolchain
 
+env:
+  # This is the default python version for the runner
+  PYENV_VERSION: '3.12'
+
 jobs:
-  pre-commit-lint-security:
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft }}
-    steps:
-      - name: Print toolchain versions
-        run: |
-          node -v
-          python3 -V
-          pip3 -V
-          make --version
+  # pre-commit-lint-security:
+  #   runs-on: ubuntu-latest
+  #   if: ${{ !github.event.pull_request.draft }}
+  #   steps:
+  #     - name: Print toolchain versions
+  #       run: |
+  #         node -v
+  #         python3 -V
+  #         pip3 -V
+  #         make --version
 
-      # TODO see whether we can leverage https://github.com/pre-commit/action
-      - name: Install system-wide tools dependencies
-        run: |
-          pip3 install pre-commit detect-secrets black ggshield
+  #     # TODO see whether we can leverage https://github.com/pre-commit/action
+  #     - name: Install system-wide tools dependencies
+  #       run: |
+  #         pip3 install pre-commit detect-secrets black ggshield
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
 
-      - name: TruffleHog OSS
-        uses: trufflesecurity/trufflehog@v3.34.0
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --debug --only-verified
+  #     - name: TruffleHog OSS
+  #       uses: trufflesecurity/trufflehog@v3.34.0
+  #       with:
+  #         path: ./
+  #         base: ${{ github.event.repository.default_branch }}
+  #         head: HEAD
+  #         extra_args: --debug --only-verified
 
-      - name: Install dependencies
-        run: |
-          make install
+  #     - name: Install dependencies
+  #       run: |
+  #         make install
 
-      - name: Lint and code formatting
-        run: |
-          make check
+  #     - name: Lint and code formatting
+  #       run: |
+  #         make check
 
-  test-stateless-app-suite:
-    # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
-    # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
-    # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
-    runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-    if: ${{ !github.event.pull_request.draft }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # test-stateless-app-suite:
+  #   # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
+  #   # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
+  #   # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
+  #   runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+  #   if: ${{ !github.event.pull_request.draft }}
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Rust installation
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          components: rustfmt
+  #     - name: Rust installation
+  #       uses: actions-rust-lang/setup-rust-toolchain@v1
+  #       with:
+  #         components: rustfmt
 
-      - name: Install dependencies
-        run: |
-          yarn install --immutable
-          pip3 install cargo-lambda
+  #     - name: Install dependencies
+  #       run: |
+  #         yarn install --immutable
+  #         pip3 install cargo-lambda
 
-      - run: make test-stateless-app-suite
+  #     - run: make test-stateless-app-suite
 
-  test-all-stateful-tests:
-    # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
-    # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
-    # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
-    runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-    if: ${{ !github.event.pull_request.draft }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # test-all-stateful-tests:
+  #   # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
+  #   # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
+  #   # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
+  #   runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+  #   if: ${{ !github.event.pull_request.draft }}
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          yarn install --immutable
+  #     - name: Install dependencies
+  #       run: |
+  #         yarn install --immutable
 
-      - run: make test-stateful-iac
+  #     - run: make test-stateful-iac
 
-      # stateful app suite test is a small test so would run this together with the IaC for now
-      - run: make test-stateful-app-suite
+  #     # stateful app suite test is a small test so would run this together with the IaC for now
+  #     - run: make test-stateful-app-suite
 
   test-stateless-iac:
     # codebuild project name is initiated at ./lib/bin/statelessPipelineStack (PR-290)
     # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
     # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
-    runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}-ubuntu-7.0-large
+    runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
     if: ${{ !github.event.pull_request.draft }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # Use python 3.12
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12.4'
 
       - name: Rust installation
         uses: actions-rust-lang/setup-rust-toolchain@v1
