@@ -96,7 +96,7 @@ export class WgtsQcLibraryQcCompleteConstruct extends Construct {
     // access the dynamodb table
     props.tableObj.grantReadWriteData(inputMakerSfn.role);
     // invoke the lambda function
-    sumCoveragesLambdaObj.grantInvoke(inputMakerSfn.role);
+    sumCoveragesLambdaObj.currentVersion.grantInvoke(inputMakerSfn.role);
     // Push events to the event bus
     props.eventBusObj.grantPutEventsTo(inputMakerSfn.role);
 
