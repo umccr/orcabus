@@ -27,6 +27,7 @@ start-all-service:
 	@(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) s3-load)
 	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) s3-load)
 	@(cd lib/workload/stateless/stacks/workflow-manager && $(MAKE) s3-load)
+	@(cd lib/workload/stateless/stacks/filemanager && $(MAKE) s3-load)
 
 	# Running the rest of the µ-service server
 	docker compose up --wait -d --build

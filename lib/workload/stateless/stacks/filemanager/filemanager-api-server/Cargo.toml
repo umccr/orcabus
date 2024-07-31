@@ -11,7 +11,7 @@ tracing = "0.1"
 axum = "0.7"
 dotenvy = "0.15"
 http = "1"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 sea-orm = { version = "0.12", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
 
-filemanager = { path = "../filemanager" }
+filemanager = { path = "../filemanager", features = ["migrate"] }

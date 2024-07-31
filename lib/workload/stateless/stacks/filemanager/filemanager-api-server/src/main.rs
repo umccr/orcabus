@@ -1,6 +1,7 @@
 use axum::serve;
 use clap::{Parser, Subcommand};
-use filemanager::database::Client;
+use filemanager::database::aws::migration::Migration;
+use filemanager::database::{Client, Migrate};
 use filemanager::env::Config;
 use filemanager::error::Error::IoError;
 use filemanager::error::Result;
@@ -23,12 +24,15 @@ use tracing::{debug, info};
 #[command(version, about, long_about = None)]
 struct Args {
     /// The address to run the server at.
-    #[arg(short, long, default_value = "localhost:8080")]
+    #[arg(short, long, default_value = "0.0.0.0:8000", env)]
     api_server_addr: String,
     /// Load an .sql dump into the filemanager database. This executes an unprepared
     /// .sql script from the file specified.
-    #[arg(short, long)]
+    #[arg(short, long, env)]
     load_sql_file: Option<PathBuf>,
+    /// Apply migrations before starting the server.
+    #[arg(short, long, default_value_t = false, env)]
+    migrate: bool,
     /// Mock testing data for the API to use. Records are generated incrementally
     /// with integers as buckets and keys.
     #[command(subcommand)]
@@ -42,18 +46,18 @@ pub enum MockData {
     /// postgres database to avoid duplicate key errors.
     Mock {
         /// The number of records to generate.
-        #[arg(short, long, default_value_t = 1000)]
+        #[arg(short, long, default_value_t = 1000, env)]
         n_records: usize,
         /// The ratio of buckets to use when generating records. A higher number here means
         /// that less buckets will be generated.
-        #[arg(short, long, default_value_t = 100)]
+        #[arg(short, long, default_value_t = 100, env)]
         bucket_divisor: usize,
         /// The ratio of keys to use when generating records. A higher number here means
         /// that less keys will be generated.
-        #[arg(short, long, default_value_t = 10)]
+        #[arg(short, long, default_value_t = 10, env)]
         key_divisor: usize,
         /// Whether to shuffle the generated records to simulate out of order events.
-        #[arg(short, long, default_value_t = true)]
+        #[arg(short, long, default_value_t = true, env)]
         shuffle: bool,
     },
 }
@@ -69,7 +73,7 @@ async fn main() -> Result<()> {
     debug!(?config, "running with config");
 
     let client = Client::from_config(&config).await?;
-    let state = AppState::new(client, config.clone());
+    let state = AppState::new(client.clone(), config.clone());
 
     if let Some(load) = args.load_sql_file {
         info!(
@@ -103,6 +107,10 @@ async fn main() -> Result<()> {
             .with_shuffle(shuffle)
             .build(state.client())
             .await;
+    }
+
+    if args.migrate {
+        Migration::new(client).migrate().await?;
     }
 
     let app = router(state);
