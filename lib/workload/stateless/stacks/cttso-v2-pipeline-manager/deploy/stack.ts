@@ -188,20 +188,20 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
     });
 
     // Compress vcf
-    const architechture = lambda.Architecture.X86_64; // FIXME - before deploying to prod, change this to ARM_64
+    const architecture = lambda.Architecture.ARM_64;
     const compress_vcf_lambda_function = new DockerImageFunction(this, 'compress_vcf_lambda', {
       description: 'Compress Vcfs',
       code: DockerImageCode.fromImageAsset(path.join(__dirname, '../lambdas/compress_icav2_vcf'), {
         file: 'Dockerfile',
         buildArgs: {
-          platform: architechture.dockerPlatform,
+          platform: architecture.dockerPlatform,
         },
       }),
       // GVCF test took about two minutes
       timeout: Duration.seconds(900), // Maximum length of lambda duration is 15 minutes
       retryAttempts: 0, // Never perform a retry if it fails
       memorySize: 2048, // Don't want pandas to kill the lambda
-      architecture: architechture,
+      architecture: architecture,
       environment: {
         ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
       },
