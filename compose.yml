@@ -63,3 +63,26 @@ services:
       interval: 10s
       timeout: 2s
       retries: 5
+
+  # PORT 8400 ~ filemanager
+  filemanager:
+    environment:
+      # Container database address for running server inside a docker container.
+      - DATABASE_URL=postgresql://orcabus:orcabus@db:5432/filemanager
+      - RUST_LOG=debug
+    ports:
+      - '8400:8000'
+    build:
+      context: ./lib/workload/stateless/stacks/filemanager
+      dockerfile: Dockerfile
+      args:
+        # The build itself needs access to the database.
+        DATABASE_URL: postgresql://orcabus:orcabus@host.docker.internal:5432/filemanager # pragma: allowlist secret
+    depends_on:
+      - db
+    healthcheck:
+      test: "curl http://localhost:8000/api/v1/s3_objects/count"
+      start_period: 30s
+      interval: 10s
+      timeout: 2s
+      retries: 5

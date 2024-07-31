@@ -3,3 +3,4 @@ target/
 /volume/
 .build
 target-cdk-bundling*
+/data/

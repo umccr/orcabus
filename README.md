@@ -116,6 +116,10 @@ You can run all microservice APIs locally at once using Docker Compose provided 
 make start-all-service
 ```
 
+This command loads SQL data dumps from S3 in the dev account, and assumes that the shell is logged in to AWS. The SQL
+dumps generally contain all records from the dev database, except for filemanager, which has 100000 of the most recent
+records (due to it's size).
+
 To stop the services, use:
 
 ```sh

@@ -9,3 +9,18 @@ services:
       - PGPORT=4321
     ports:
       - "${FILEMANAGER_DATABASE_HOST}:${FILEMANAGER_DATABASE_PORT}:4321"
+  api:
+    build:
+      context: .
+      args:
+        # The build itself needs access to the database.
+        DATABASE_URL: postgresql://filemanager:filemanager@host.docker.internal:4321/filemanager # pragma: allowlist secret
+    environment:
+      # Container database address for running server inside a docker container.
+      - DATABASE_URL=postgresql://filemanager:filemanager@postgres:4321/filemanager
+      - RUST_LOG=debug
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    restart: always
