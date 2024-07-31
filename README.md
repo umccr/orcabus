@@ -130,10 +130,10 @@ The APIs will run on `localhost` with the following port assignments:
 
 | Microservice         | Local Endpoint          |
 |----------------------|-------------------------|
-| File Manager         | <http://localhost:8000> |
 | Metadata Manager     | <http://localhost:8100> |
 | Workflow Manager     | <http://localhost:8200> |
 | Sequence Run Manager | <http://localhost:8300> |
+| File Manager         | <http://localhost:8400> |
 
 ### Typography
 
