@@ -15,10 +15,15 @@ cache_uri / SampleSheet.csv
 
 """
 from wrapica.enums import DataType
+from wrapica.libica_exceptions import ApiException
 from wrapica.project_data import (
-    convert_icav2_uri_to_data_obj, list_project_data_non_recursively, delete_project_data
+    convert_icav2_uri_to_project_data_obj, list_project_data_non_recursively, delete_project_data
 )
 from cttso_v2_pipeline_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
@@ -46,7 +51,11 @@ def handler(event, context):
         raise ValueError("No cache_uri provided")
 
     # Part 1 - check that in the cache uri, only the sample_id directory exists along with the file SampleSheet.csv
-    cache_obj = convert_icav2_uri_to_data_obj(cache_uri)
+    try:
+        cache_obj = convert_icav2_uri_to_project_data_obj(cache_uri)
+    except NotADirectoryError as e:
+        logger.info("Cache directory has already been deleted")
+        return None
 
     cache_folder_list = list_project_data_non_recursively(
         project_id=cache_obj.project_id,
@@ -74,8 +83,8 @@ def handler(event, context):
         not_fastq_file_obj = next(
             filter(
                 lambda project_data_obj_iter: (
-                    ( not project_data_obj_iter.data.details.name.endswith(".fastq.gz") ) or
-                    ( not DataType[project_data_obj_iter.data.details.data_type] == DataType.FILE )
+                        (not project_data_obj_iter.data.details.name.endswith(".fastq.gz")) or
+                        (not DataType[project_data_obj_iter.data.details.data_type] == DataType.FILE)
                 ),
                 sample_folder_list
             )

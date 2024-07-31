@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
@@ -19,7 +17,7 @@ export class LambdaB64GzTranslatorConstruct extends Construct {
     this.lambdaObj = new PythonFunction(this, 'b64_gzip_translator_obj', {
       functionName: `${props.functionNamePrefix}-b64gz-translator`,
       entry: path.join(__dirname, 'b64gz_translator_py'),
-      runtime: lambda.Runtime.PYTHON_3_11,
+      runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
       index: 'b64gz_translator.py',
       handler: 'handler',

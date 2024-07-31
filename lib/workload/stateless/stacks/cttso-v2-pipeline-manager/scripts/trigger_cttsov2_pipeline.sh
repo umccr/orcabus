@@ -12,17 +12,17 @@ Trigger the cttso v2 pipeline
 
 EVENT_BUS_NAME="OrcaBusMain"
 DETAIL_TYPE="WorkflowRunStateChange"
-SOURCE="orcabus.cttsov2inputeventglue"
+SOURCE="manual"
 WORKFLOW_NAME="cttsov2"
-WORKFLOW_VERSION="2.5.0"
+WORKFLOW_VERSION="2.6.0"
 
 #############
 # GLOCALS
 #############
 
 # Inputs
-SAMPLE_ID="L2400160"
-INSTRUMENT_RUN_ID="240229_A00130_0288_BH5HM2DSXC"
+SAMPLE_ID="L2401145"
+INSTRUMENT_RUN_ID="HMF22DSXC"
 SAMPLESHEET_JSON="$(
   jq --null-input --raw-output \
     '
@@ -39,41 +39,36 @@ SAMPLESHEET_JSON="$(
           "index_2_cycles": 10
         },
         "bclconvert_settings": {
-          "adapter_read_1": "CTGTCTCTTATACACATCT",
-          "adapter_read_2": "CTGTCTCTTATACACATCT",
-          "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
+          "adapter_read_1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA",
+          "adapter_read_2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
+          "override_cycles": "U7N1Y143;I8N2;I8N2;U7N1Y143",
           "mask_short_reads": 35,
           "adapter_behavior": "trim",
           "minimum_trimmed_read_length": 35
         },
         "bclconvert_data": [
           {
-            "lane": 1,
-            "sample_id": "L2400160",
-            "index": "AGAGGCAACC",
-            "index2": "CCATCATTAG",
-            "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
-            "adapter_read_1": "CTGTCTCTTATACACATCT",
-            "adapter_read_2": "CTGTCTCTTATACACATCT"
+            "lane": 4,
+            "sample_id": "L2401145",
+            "index": "ACTGCTTA",
+            "index2": "AGAGGCGC"
           }
         ],
         "tso500l_settings": {
-          "adapter_read_1": "CTGTCTCTTATACACATCT",
-          "adapter_read_2": "CTGTCTCTTATACACATCT",
-          "override_cycles": "U7N1Y143;I10;I10;U7N1Y143",
+          "adapter_read_1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA",
+          "adapter_read_2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
+          "override_cycles": "U7N1Y143;I8N2;I8N2;U7N1Y143",
           "mask_short_reads": 35,
           "adapter_behavior": "trim",
           "minimum_trimmed_read_length": 35
         },
         "tso500l_data": [
           {
-            "sample_id": "L2400160",
+            "sample_id": "L2401145",
             "sample_type": "DNA",
-            "lane": 1,
-            "index": "AGAGGCAACC",
-            "index2": "CCATCATTAG",
-            "i7_index_id": "UDP0018",
-            "i5_index_id": "UDP0018"
+            "lane": 4,
+            "index": "ACTGCTTA",
+            "index2": "AGAGGCGC"
           }
         ]
       }
@@ -84,27 +79,27 @@ FASTQ_LIST_ROWS="$( \
     '
       [
         {
-          "RGID": "AGAGGCAACC.CCATCATTAG.1",
-          "RGSM": "L2400160",
-          "RGLB": "L2400160",
-          "Lane": 1,
-          "Read1FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405315b17f6c9/Samples/Lane_1/L2400160/L2400160_S3_L001_R1_001.fastq.gz",
-          "Read2FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405315b17f6c9/Samples/Lane_1/L2400160/L2400160_S3_L001_R2_001.fastq.gz"
+          "rgid": "ACTGCTTA.AGAGGCGC.4",
+          "rgsm": "L2401145",
+          "rglb": "L2401145",
+          "lane": 4,
+          "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ctdna_v1_test_data/inputs/SBJ00596/L2401145_S6_L004_R1_001.fastq.gz",
+          "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ctdna_v1_test_data/inputs/SBJ00596/L2401145_S6_L004_R2_001.fastq.gz"
         }
       ]
     '
 )"
 
 # RUNTIME
-PROJECT_NAME="trial"
-PROJECT_ID="7595e8f2-32d3-4c76-a324-c6a85dae87b5"
-WORKFLOW_RUN_NAME_PREFIX="umccr__automated__cttsov2__2_5_0__"
+PROJECT_NAME="development"
+PROJECT_ID="ea19a3f5-ec7c-4940-a474-c31cd91dbad4"
+WORKFLOW_RUN_NAME_PREFIX="umccr__semi_automated__cttsov2__2_6_0__"
 PORTAL_RUN_ID="$(date +%Y%m%d)$(xxd -l 4 -c 4 -p < /dev/random)"
-CACHE_URI_PREFIX="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_cache/cttsov2/2_5_0/"
+CACHE_URI_PREFIX="icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ctdna_v1_test_data/cache/SBJ00596/"
 
 # Outputs
-ANALYSIS_OUTPUT_URI_PREFIX="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_data/cttsov2/2_5_0/"
-ICA_LOGS_URI_PREFIX="icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_logs/cttsov2/2_5_0/"
+ANALYSIS_OUTPUT_URI_PREFIX="icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ctdna_v1_test_data/out/SBJ00596/"
+ICA_LOGS_URI_PREFIX="icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ctdna_v1_test_data/logs/SBJ00596/"
 
 
 ###############
@@ -124,18 +119,18 @@ data_json="$( \
     --arg ica_logs_uri_prefix "${ICA_LOGS_URI_PREFIX}" \
     '
       {
-        "userTags": {
-          "project_name": $project_name,
-          "instrument_run_id": $instrument_run_id
+        "inputs": {
+          "sampleId": $sample_id,
+          "samplesheet": $samplesheet,
+          "fastqListRows": $fastq_list_rows,
+          "instrumentRunId": $instrument_run_id
         },
-        "sampleId": $sample_id,
-        "samplesheet": $samplesheet,
-        "fastqListRows": $fastq_list_rows,
-        "cacheUri": "\($cache_uri_prefix)\($portal_run_id)/",
-        "analysisOutputUri": "\($analysis_output_uri_prefix)\($portal_run_id)/",
-        "icaLogsUri": "\($ica_logs_uri_prefix)\($portal_run_id)/",
-        "instrumentRunId": $instrument_run_id,
-        "projectId": $project_id
+        "engineParameters": {
+          "projectId": $project_id,
+          "cacheUri": "\($cache_uri_prefix)\($portal_run_id)/",
+          "outputUri": "\($analysis_output_uri_prefix)\($portal_run_id)/",
+          "logsUri": "\($ica_logs_uri_prefix)\($portal_run_id)/"
+        }
       }
     ' \
 )"

@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/instrumentrunmanager-stacky/PayloadDataFastqListRowEventShowerStarting.schema.json",
+  "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataFastqListRowEventShowerStarting",
+  "title": "PayloadDataFastqListRowEventShowerStarting",
+  "required": [
+    "instrumentRunId"
+  ],
+  "properties": {
+    "instrumentRunId": {
+      "type": "string"
+    }
+  }
+}

@@ -120,7 +120,7 @@ Example:
 
 ```
 orcabus.filemanager@FileStateChange
-orcabus.metadatamanager@LibraryStateChange
+orcabus.metadatamanager@InstrumentRunStateChange
 orcabus.workflowmanager@WorkflowRunStateChange
 orcabus.sequencerunmanager@SequenceRunStateChange
 orcabus.bclconvertmanager@WorkflowRunStateChange

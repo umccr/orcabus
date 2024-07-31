@@ -48,7 +48,8 @@
       "Parameters": {
         "technical_tags": {
           "portal_run_id.$": "$.workflow_inputs.portalRunId",
-          "step_functions_execution_arn.$": "$$.Execution.Id"
+          "step_functions_execution_arn.$": "$$.Execution.Id",
+          "analysis_output_uri.$": "$.workflow_inputs.payload.data.engineParameters.outputUri"
         }
       },
       "ResultPath": "$.add_technical_tags_step",
@@ -75,8 +76,20 @@
                   "workflow_run_name": {
                     "S.$": "$.workflow_inputs.workflowRunName"
                   },
-                  "launch_event_payload": {
+                  "workflow_version": {
+                    "S.$": "$.workflow_inputs.workflowVersion"
+                  },
+                  "ready_event_payload": {
                     "S.$": "States.JsonToString($.workflow_inputs.payload)"
+                  },
+                  "ready_event_data_inputs": {
+                    "S.$": "States.JsonToString($.workflow_inputs.payload.data.inputs)"
+                  },
+                  "ready_event_data_engine_parameters": {
+                    "S.$": "States.JsonToString($.workflow_inputs.payload.data.engineParameters)"
+                  },
+                  "engine_parameters": {
+                    "S.$": "States.JsonToString($.workflow_inputs.payload.data.engineParameters)"
                   },
                   "state_machine_execution_arn": {
                     "S.$": "$$.Execution.Id"
@@ -88,7 +101,7 @@
                     "S": ""
                   },
                   "project_id": {
-                    "S.$": "$.workflow_inputs.payload.data.projectId"
+                    "S.$": "$.workflow_inputs.payload.data.engineParameters.projectId"
                   },
                   "analysis_return_payload": {
                     "S": ""
@@ -97,16 +110,19 @@
                     "S": ""
                   },
                   "analysis_output_uri": {
-                    "S.$": "$.workflow_inputs.payload.data.analysisOutputUri"
+                    "S.$": "$.workflow_inputs.payload.data.engineParameters.outputUri"
                   },
                   "ica_logs_uri": {
-                    "S.$": "$.workflow_inputs.payload.data.icaLogsUri"
+                    "S.$": "$.workflow_inputs.payload.data.engineParameters.logsUri"
                   },
                   "analysis_output": {
-                    "S": ""
+                    "S": "{}"
                   },
                   "analysis_technical_tags": {
                     "S.$": "States.JsonToString($.add_technical_tags_step.technical_tags)"
+                  },
+                  "user_tags": {
+                    "S": "{}"
                   }
                 }
               },
@@ -204,9 +220,9 @@
       "Type": "Parallel",
       "Branches": [
         {
-          "StartAt": "Set Input Json Sfn",
+          "StartAt": "Set Input Json Sfn (and User Tags)",
           "States": {
-            "Set Input Json Sfn": {
+            "Set Input Json Sfn (and User Tags)": {
               "Type": "Task",
               "Resource": "arn:aws:states:::states:startExecution.sync:2",
               "Parameters": {
@@ -227,7 +243,7 @@
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.workflow_inputs.payload.data.pipelineId",
+                  "Variable": "$.workflow_inputs.payload.data.engineParameters.pipelineId",
                   "IsPresent": true,
                   "Next": "Skip Get Parameter"
                 }
@@ -237,10 +253,10 @@
             "Skip Get Parameter": {
               "Type": "Pass",
               "Parameters": {
-                "pipeline_id": "$.workflow_inputs.payload.data.pipelineId"
+                "pipeline_id.$": "$.workflow_inputs.payload.data.engineParameters.pipelineId"
               },
               "ResultPath": "$.pipeline_id_var",
-              "Next": "DynamoDB UpdatePipelineId"
+              "Next": "DynamoDB UpdatePipelineId and Engine Parameters"
             },
             "GetPipelineIdSsmParameter": {
               "Type": "Task",
@@ -252,23 +268,24 @@
                 "pipeline_id.$": "$.Parameter.Value"
               },
               "ResultPath": "$.pipeline_id_var",
-              "Next": "DynamoDB UpdatePipelineId"
+              "Next": "DynamoDB UpdatePipelineId and Engine Parameters"
             },
-            "DynamoDB UpdatePipelineId": {
+            "DynamoDB UpdatePipelineId and Engine Parameters": {
               "Type": "Task",
               "Resource": "arn:aws:states:::dynamodb:updateItem",
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id": {
-                    "S.$": "$.workflow_inputs.payload.refId"
-                  },
+                  "id.$": "$.workflow_inputs.payload.refId",
                   "id_type": "db_uuid"
                 },
-                "UpdateExpression": "SET analysis_pipeline_id = :analysis_pipeline_id",
+                "UpdateExpression": "SET analysis_pipeline_id = :analysis_pipeline_id, engine_parameters = :engine_parameters",
                 "ExpressionAttributeValues": {
                   ":analysis_pipeline_id": {
                     "S.$": "$.pipeline_id_var.pipeline_id"
+                  },
+                  ":engine_parameters": {
+                    "S.$": "States.JsonToString(States.JsonMerge($.workflow_inputs.payload.data.engineParameters, States.StringToJson(States.Format('\\{\"{}\":\"{}\"\\}', 'pipelineId', $.pipeline_id_var.pipeline_id)), false))"
                   }
                 }
               },
@@ -297,9 +314,10 @@
         }
       },
       "ResultSelector": {
-        "payload.$": "States.StringToJson($.Item.launch_event_payload.S)",
+        "engine_parameters.$": "States.StringToJson($.Item.engine_parameters.S)",
         "input_json.$": "$.Item.input_json.S",
-        "pipeline_id.$": "$.Item.analysis_pipeline_id.S"
+        "pipeline_id.$": "$.Item.analysis_pipeline_id.S",
+        "user_tags.$": "States.StringToJson($.Item.user_tags.S)"
       },
       "ResultPath": "$.get_input_parameters_from_event",
       "Next": "Get Parameters for Launch Payload"
@@ -307,12 +325,12 @@
     "Get Parameters for Launch Payload": {
       "Type": "Pass",
       "Parameters": {
-        "project_id.$": "$.get_input_parameters_from_event.payload.data.projectId",
+        "project_id.$": "$.get_input_parameters_from_event.engine_parameters.projectId",
         "pipeline_id.$": "$.get_input_parameters_from_event.pipeline_id",
         "input_json.$": "$.get_input_parameters_from_event.input_json",
-        "analysis_output_uri.$": "$.get_input_parameters_from_event.payload.data.analysisOutputUri",
-        "ica_logs_uri.$": "$.get_input_parameters_from_event.payload.data.icaLogsUri",
-        "user_tags.$": "$.get_input_parameters_from_event.payload.data.userTags"
+        "analysis_output_uri.$": "$.get_input_parameters_from_event.engine_parameters.outputUri",
+        "ica_logs_uri.$": "$.get_input_parameters_from_event.engine_parameters.logsUri",
+        "user_tags.$": "$.get_input_parameters_from_event.user_tags"
       },
       "ResultPath": "$.get_parameters_from_payload",
       "Next": "Launch ICAv2 Pipeline Lambda Function"
@@ -355,9 +373,9 @@
         "analysis_launch_payload.$": "$.Payload.analysis_launch_payload"
       },
       "ResultPath": "$.launch_nextflow_object_step",
-      "Next": "Parallel"
+      "Next": "Update DataBase Post Launch"
     },
-    "Parallel": {
+    "Update DataBase Post Launch": {
       "Type": "Parallel",
       "Branches": [
         {
@@ -374,7 +392,7 @@
                   },
                   "id_type": "db_uuid"
                 },
-                "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload",
+                "UpdateExpression": "SET analysis_id = :analysis_id, analysis_status = :analysis_status, analysis_return_payload = :analysis_return_payload, analysis_launch_payload = :analysis_launch_payload, engine_parameters = :engine_parameters",
                 "ExpressionAttributeValues": {
                   ":analysis_id": {
                     "S.$": "$.launch_nextflow_object_step.analysis_id"
@@ -387,6 +405,9 @@
                   },
                   ":analysis_launch_payload": {
                     "S.$": "States.JsonToString($.launch_nextflow_object_step.analysis_launch_payload)"
+                  },
+                  ":engine_parameters": {
+                    "S.$": "States.JsonToString(States.JsonMerge($.get_input_parameters_from_event.engine_parameters, States.StringToJson(States.Format('\\{\"{}\":\"{}\"\\}', 'analysisId', $.launch_nextflow_object_step.analysis_id)), false))"
                   }
                 }
               },
@@ -463,13 +484,11 @@
         "payload": {
           "version": "${__service_version__}",
           "data": {
-            "projectId.$": "$.Item.project_id.S",
-            "analysisId.$": "$.Item.analysis_id.S",
-            "analysisOutput": ""
+            "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+            "engineParameters.$": "States.StringToJson($.Item.engine_parameters.S)"
           }
         }
-      },
-      "ResultPath": "$.database_event_data"
+      }
     },
     "Push event to orcabus": {
       "Type": "Task",
@@ -477,7 +496,7 @@
       "Parameters": {
         "Entries": [
           {
-            "Detail.$": "$.database_event_data",
+            "Detail.$": "$",
             "DetailType": "${__detail_type__}",
             "EventBusName": "${__eventbus_name__}",
             "Source": "${__event_source__}",

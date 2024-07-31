@@ -1,0 +1,84 @@
+{
+  "Comment": "Get CWL Outputs from WGTS Alignment QC",
+  "StartAt": "Get DB Attributes",
+  "States": {
+    "Get DB Attributes": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "Next": "Set outputs from analysis uri",
+      "ResultPath": "$.get_db_attributes_step",
+      "ResultSelector": {
+        "ready_event_data_inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "engine_parameters.$": "States.StringToJson($.Item.engine_parameters.S)"
+      }
+    },
+    "Set outputs from analysis uri": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__set_outputs_json_lambda_function_arn__}",
+        "Payload": {
+          "analysis_output_uri.$": "$.get_db_attributes_step.engine_parameters.outputUri"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "TimeoutSeconds": 60,
+      "ResultSelector": {
+        "output_json": {
+          "dragenAlignmentOutputUri.$": "$.Payload.alignment_output_uri",
+          "dragenAlignmentBamUri.$": "$.Payload.bam_file_uri",
+          "multiqcHtmlReportUri.$": "$.Payload.multiqc_html_report",
+          "multiqcOutputUri.$": "$.Payload.multiqc_output_uri"
+        }
+      },
+      "ResultPath": "$.analysis_outputs_step",
+      "Next": "Update Database entry"
+    },
+    "Update Database entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": {
+            "S.$": "$.db_uuid"
+          },
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET analysis_output = :output_json",
+        "ExpressionAttributeValues": {
+          ":output_json": {
+            "S.$": "States.JsonToString($.analysis_outputs_step.output_json)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Wait 1 Second (Post database-updates)"
+    },
+    "Wait 1 Second (Post database-updates)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Wait for databases to sync before continuing",
+      "End": true
+    }
+  }
+}

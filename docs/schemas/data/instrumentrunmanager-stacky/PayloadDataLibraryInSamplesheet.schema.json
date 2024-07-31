@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/instrumentrunmanager-stacky/PayloadDataLibraryInSamplesheetEvent.schema.json",
+  "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataLibraryInSamplesheet",
+  "title": "PayloadDataLibraryInSamplesheet",
+  "required": [
+    "instrumentRunId",
+    "library",
+    "bclconvertDataRows"
+  ],
+  "properties": {
+    "instrumentRunId": {
+      "type": "string"
+    },
+    "library": {
+      "type": "object",
+      "required": [
+        "id",
+        "internalId"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "internalId": {
+          "type": "string"
+        },
+        "phenotype": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "workflow": {
+          "type": "string"
+        },
+        "quality": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "type": "string"
+        },
+        "assay": {
+          "type": "string"
+        },
+        "specimen": {
+          "type": "object",
+          "required": [
+            "id",
+            "internalId"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "internalId": {
+              "type": "string"
+            }
+          }
+        },
+        "subject": {
+          "type": "object",
+          "required": [
+            "id",
+            "internalId"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "internalId": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "bclconvertDataRows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "sampleId",
+          "lane",
+          "index"
+        ],
+        "properties": {
+          "sampleId": {
+            "type": "string"
+          },
+          "lane": {
+            "type": "integer"
+          },
+          "index": {
+            "type": "string"
+          },
+          "index2": {
+            "type": "string"
+          },
+          "overrideCycles": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

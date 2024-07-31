@@ -28,6 +28,15 @@ permissions: read-all
 #  https://github.com/marketplace/actions/cache
 #  https://github.com/actions-rust-lang/setup-rust-toolchain
 
+env:
+  # This default the python version for the runner (some of our dependency rely on this versions)
+  #
+  # From this troubleshooting guide, pyenv is used under the Amazon Linux 2023
+  # https://docs.aws.amazon.com/amplify/latest/userguide/troubleshooting-AL2023.html#python-runtime
+  #
+  # And from pyenv docs setting this PYENV_VERSION as env-var would set the python version globally
+  PYENV_VERSION: '3.12'
+
 jobs:
   pre-commit-lint-security:
     runs-on: ubuntu-latest
@@ -73,6 +82,13 @@ jobs:
     runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
     if: ${{ !github.event.pull_request.draft }}
     steps:
+      - name: Print toolchain versions
+        run: |
+          node -v
+          python -V
+          pip3 -V
+          make --version
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -95,6 +111,13 @@ jobs:
     runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
     if: ${{ !github.event.pull_request.draft }}
     steps:
+      - name: Print toolchain versions
+        run: |
+          node -v
+          python -V
+          pip3 -V
+          make --version
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -114,6 +137,13 @@ jobs:
     runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
     if: ${{ !github.event.pull_request.draft }}
     steps:
+      - name: Print toolchain versions
+        run: |
+          node -v
+          python -V
+          pip3 -V
+          make --version
+
       - name: Checkout code
         uses: actions/checkout@v4
 

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/instrumentrunmanager-stacky/PayloadDataSubjectInSamplesheetEvent.schema.json",
+  "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataSubjectInSamplesheet",
+  "title": "PayloadDataSubjectInSamplesheet",
+  "required": [
+    "instrumentRunId",
+    "subject"
+  ],
+  "properties": {
+    "instrumentRunId": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "object",
+      "required": [
+        "id",
+        "internalId"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "internalId": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

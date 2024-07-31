@@ -73,7 +73,7 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
       this,
       'icav2_cwl_launch_python_function',
       {
-        runtime: lambda.Runtime.PYTHON_3_11,
+        runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
         entry: path.join(__dirname, 'icav2_launch_pipeline_lambda_py'),
         index: 'icav2_launch_pipeline_lambda.py',

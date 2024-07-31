@@ -1,0 +1,185 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "Decompress fastq list rows",
+      "Parameters": {
+        "inputs.$": "$"
+      }
+    },
+    "Decompress fastq list rows": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__decompress_fastq_list_rows_lambda_function_arn__}",
+        "Payload": {
+          "decompress": true,
+          "input.$": "$.inputs.payload.data.outputs.fastqListRowsB64gz"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.decompress_fastq_list_rows_step",
+      "ResultSelector": {
+        "fastq_list_rows.$": "$.Payload.decompressed_dict"
+      },
+      "Next": "Add fastq list rows to instrument run id (Instrument DB)"
+    },
+    "Add fastq list rows to instrument run id (Instrument DB)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.inputs.payload.data.outputs.instrumentRunId",
+          "id_type": "${__table_partition_name__}",
+          "fastq_list_rows": {
+            "S.$": "States.JsonToString($.decompress_fastq_list_rows_step.fastq_list_rows)"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "Wait For DB Update"
+    },
+    "Wait For DB Update": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "Generate Event Maps"
+    },
+    "Generate Event Maps": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_event_maps_lambda_function_arn__}",
+        "Payload": {
+          "fastq_list_rows.$": "$.decompress_fastq_list_rows_step.fastq_list_rows",
+          "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "FastqListRow Event Shower Starting",
+      "ResultSelector": {
+        "start_fastq_list_row_shower_event_data.$": "$.Payload.start_fastq_list_row_shower_event_data",
+        "complete_fastq_list_row_shower_event_data.$": "$.Payload.complete_fastq_list_row_shower_event_data",
+        "fastq_list_rows_event_data_list.$": "$.Payload.fastq_list_rows_event_data_list"
+      },
+      "ResultPath": "$.generate_event_maps_step"
+    },
+    "FastqListRow Event Shower Starting": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "timestamp.$": "$$.Execution.StartTime",
+              "status": "${__fastq_list_row_transfer_starting_status__}",
+              "payload": {
+                "version": "${__fastq_list_row_transfer_starting_payload_version__}",
+                "data.$": "$.generate_event_maps_step.start_fastq_list_row_shower_event_data"
+              }
+            },
+            "DetailType": "${__fastq_list_row_transfer_starting_detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}"
+          }
+        ]
+      },
+      "ResultPath": null,
+      "Next": "For each fastq list row pair"
+    },
+    "For each fastq list row pair": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Generate FastqListRow Added Event",
+        "States": {
+          "Generate FastqListRow Added Event": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents",
+            "Parameters": {
+              "Entries": [
+                {
+                  "Detail": {
+                    "timestamp.$": "$$.Execution.StartTime",
+                    "status": "${__fastq_pair_added_status__}",
+                    "payload": {
+                      "version": "${__fastq_pair_added_payload_version__}",
+                      "data.$": "$.fastq_list_row_event_data"
+                    }
+                  },
+                  "DetailType": "${__fastq_pair_added_detail_type__}",
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "${__event_source__}"
+                }
+              ]
+            },
+            "End": true,
+            "ResultPath": null
+          }
+        }
+      },
+      "Next": "Wait 5 Seconds",
+      "ItemsPath": "$.generate_event_maps_step.fastq_list_rows_event_data_list",
+      "ResultPath": null,
+      "ItemSelector": {
+        "fastq_list_row_event_data.$": "$$.Map.Item.Value"
+      }
+    },
+    "Wait 5 Seconds": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "FastqListRow Event Shower Complete"
+    },
+    "FastqListRow Event Shower Complete": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "timestamp.$": "$$.Execution.StartTime",
+              "status": "${__fastq_list_row_transfer_complete_status__}",
+              "payload": {
+                "version": "${__fastq_list_row_transfer_complete_payload_version__}",
+                "data.$": "$.generate_event_maps_step.complete_fastq_list_row_shower_event_data"
+              }
+            },
+            "DetailType": "${__fastq_list_row_transfer_complete_detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}"
+          }
+        ]
+      },
+      "End": true,
+      "ResultPath": null
+    }
+  }
+}

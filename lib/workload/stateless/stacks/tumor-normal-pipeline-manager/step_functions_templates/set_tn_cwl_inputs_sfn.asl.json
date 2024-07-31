@@ -1,0 +1,414 @@
+{
+  "Comment": "Launch Icav2 Pipeline and log in db",
+  "StartAt": "Get DataBase Entry",
+  "States": {
+    "Get DataBase Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "ResultSelector": {
+        "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "engineParameters.$": "States.StringToJson($.Item.engine_parameters.S)"
+      },
+      "ResultPath": "$.get_input_parameters_from_event_step",
+      "Next": "Configure Inputs"
+    },
+    "Configure Inputs": {
+      "Type": "Parallel",
+      "Next": "Set Input JSON",
+      "Branches": [
+        {
+          "StartAt": "Get Data Inputs",
+          "States": {
+            "Get Data Inputs": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "And": [
+                    {
+                      "Variable": "$.get_input_parameters_from_event_step.inputs.tumorFastqListRows",
+                      "IsPresent": true
+                    },
+                    {
+                      "Variable": "$.get_input_parameters_from_event_step.inputs.fastqListRows",
+                      "IsPresent": true
+                    }
+                  ],
+                  "Comment": "Fastq List Row Inputs",
+                  "Next": "Convert Fastq List Rows To CWL Input Objects (Tumor and Normal)"
+                },
+                {
+                  "And": [
+                    {
+                      "Variable": "$.get_input_parameters_from_event_step.inputs.tumorBamInput",
+                      "IsPresent": true
+                    },
+                    {
+                      "Variable": "$.get_input_parameters_from_event_step.inputs.bamInput",
+                      "IsPresent": true
+                    }
+                  ],
+                  "Comment": "Bam Inputs",
+                  "Next": "Convert Bam Inputs to CWL Input Objects"
+                },
+                {
+                  "And": [
+                    {
+                      "Variable": "$.get_input_parameters_from_event_step.inputs.tumorCramInput",
+                      "IsPresent": true
+                    },
+                    {
+                      "Variable": "$.get_input_parameters_from_event_step.inputs.cramInput",
+                      "IsPresent": true
+                    }
+                  ],
+                  "Comment": "Cram Inputs",
+                  "Next": "Convert Cram Inputs to CWL Input Objects"
+                }
+              ],
+              "Default": "Fail"
+            },
+            "Fail": {
+              "Type": "Fail",
+              "Comment": "Not one of fastqListRows, bamInput or cramInput were defined"
+            },
+            "Convert Fastq List Rows To CWL Input Objects (Tumor and Normal)": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Convert Fastq List Rows to CWL Input Objects (Tumor)",
+                  "States": {
+                    "Convert Fastq List Rows to CWL Input Objects (Tumor)": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__convert_fastq_list_rows_lambda_function_arn__}",
+                        "Payload": {
+                          "fastq_list_rows.$": "$.get_input_parameters_from_event_step.inputs.tumorFastqListRows"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "End": true,
+                      "ResultSelector": {
+                        "fastq_list_rows.$": "$.Payload.fastq_list_rows"
+                      },
+                      "ResultPath": "$.convert_tumor_fastq_list_rows_to_cwl_input_objects_step"
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Convert Fastq List Rows to CWL Input Objects (Normal)",
+                  "States": {
+                    "Convert Fastq List Rows to CWL Input Objects (Normal)": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "Payload": {
+                          "fastq_list_rows.$": "$.get_input_parameters_from_event_step.inputs.fastqListRows"
+                        },
+                        "FunctionName": "${__convert_fastq_list_rows_lambda_function_arn__}"
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultPath": "$.convert_fastq_list_rows_to_cwl_input_objects_step",
+                      "ResultSelector": {
+                        "fastq_list_rows.$": "$.Payload.fastq_list_rows"
+                      },
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "End": true,
+              "ResultSelector": {
+                "cwl_data_inputs": {
+                  "tumor_fastq_list_rows.$": "$.[0].convert_tumor_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows",
+                  "fastq_list_rows.$": "$.[1].convert_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows"
+                }
+              }
+            },
+            "Convert Bam Inputs to CWL Input Objects": {
+              "Type": "Pass",
+              "Parameters": {
+                "cwl_data_inputs": {
+                  "bam_input": {
+                    "class": "File",
+                    "location.$": "$.get_input_parameters_from_event_step.inputs.bamInput",
+                    "secondaryFiles": [
+                      {
+                        "class": "File",
+                        "location.$": "States.Format('{}.bai', $.get_input_parameters_from_event_step.inputs.bamInput)"
+                      }
+                    ]
+                  },
+                  "tumor_bam_input": {
+                    "class": "File",
+                    "location.$": "$.get_input_parameters_from_event_step.inputs.tumorBamInput",
+                    "secondaryFiles": [
+                      {
+                        "class": "File",
+                        "location.$": "States.Format('{}.bai', $.get_input_parameters_from_event_step.inputs.tumorBamInput)"
+                      }
+                    ]
+                  }
+                }
+              },
+              "End": true
+            },
+            "Convert Cram Inputs to CWL Input Objects": {
+              "Type": "Pass",
+              "Parameters": {
+                "cwl_data_inputs": {
+                  "cram_input": {
+                    "class": "File",
+                    "location.$": "$.get_input_parameters_from_event_step.inputs.cramInput",
+                    "secondaryFiles": [
+                      {
+                        "class": "File",
+                        "location.$": "States.Format('{}.crai', $.get_input_parameters_from_event_step.inputs.cramInput)"
+                      }
+                    ]
+                  },
+                  "tumor_cram_input": {
+                    "class": "File",
+                    "location.$": "$.get_input_parameters_from_event_step.inputs.tumorCramInput",
+                    "secondaryFiles": [
+                      {
+                        "class": "File",
+                        "location.$": "States.Format('{}.crai', $.get_input_parameters_from_event_step.inputs.tumorCramInput)"
+                      }
+                    ]
+                  }
+                }
+              },
+              "ResultPath": "$.cram_cwl_data_inputs",
+              "Next": "Cram Reference Defined"
+            },
+            "Cram Reference Defined": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.cramReference",
+                  "IsPresent": true,
+                  "Comment": "Has Cram Reference",
+                  "Next": "Set Cram Reference"
+                }
+              ],
+              "Default": "No Action Required"
+            },
+            "No Action Required": {
+              "Type": "Pass",
+              "Parameters": {
+                "cwl_data_inputs.$": "$.cram_cwl_data_inputs.cwl_data_inputs"
+              },
+              "End": true
+            },
+            "Set Cram Reference": {
+              "Type": "Pass",
+              "Parameters": {
+                "cram_reference": {
+                  "class": "File",
+                  "location.$": "$.get_input_parameters_from_event_step.inputs.cramReference",
+                  "secondaryFiles": [
+                    {
+                      "class": "File",
+                      "location.$": "States.Format('{}.fai', $.get_input_parameters_from_event_step.inputs.cramReference)"
+                    }
+                  ]
+                }
+              },
+              "ResultPath": "$.get_cram_reference_step",
+              "Next": "Merge Inputs"
+            },
+            "Merge Inputs": {
+              "Type": "Pass",
+              "Parameters": {
+                "cwl_data_inputs.$": "States.JsonMerge($.cram_cwl_data_inputs.cwl_data_inputs, $.get_cram_reference_step, false)"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Is Reference Version Set",
+          "States": {
+            "Is Reference Version Set": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.dragenReferenceVersion",
+                  "IsPresent": false,
+                  "Comment": "Get Default Version",
+                  "Next": "Set Reference Version as Default"
+                }
+              ],
+              "Default": "Reference Version Set"
+            },
+            "Reference Version Set": {
+              "Type": "Pass",
+              "Next": "Get the Reference Version Uri Map",
+              "ResultPath": "$.get_reference_version_step",
+              "Parameters": {
+                "reference_version.$": "$.get_input_parameters_from_event_step.inputs.dragenReferenceVersion"
+              }
+            },
+            "Set Reference Version as Default": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_version": "${__default_reference_version__}"
+              },
+              "ResultPath": "$.get_reference_version_step",
+              "Next": "Get the Reference Version Uri Map"
+            },
+            "Get the Reference Version Uri Map": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__reference_version_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "reference_uri_map.$": "States.StringToJson($.Parameter.Value)"
+              },
+              "ResultPath": "$.get_reference_version_uri_map_step",
+              "Next": "Get the Reference Version Uri"
+            },
+            "Get the Reference Version Uri": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_uri.$": "States.ArrayGetItem($.get_reference_version_uri_map_step.reference_uri_map[?(@.name==$.get_reference_version_step.reference_version)].uri, 0)"
+              },
+              "ResultPath": "$.get_reference_version_uri_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Boolean Parameters from Event Data",
+          "States": {
+            "Get Boolean Parameters from Event Data": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__get_boolean_parameters_lambda_function_arn__}",
+                "Payload": {
+                  "event_data_input.$": "$.get_input_parameters_from_event_step.inputs"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true,
+              "ResultPath": "$.get_boolean_parameters_step",
+              "ResultSelector": {
+                "boolean_parameters.$": "$.Payload.boolean_parameters"
+              }
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.configure_inputs_step",
+      "ResultSelector": {
+        "cwl_data_inputs.$": "$.[0].cwl_data_inputs",
+        "reference_uri.$": "$.[1].get_reference_version_uri_step.reference_uri",
+        "boolean_parameters.$": "$.[2].get_boolean_parameters_step.boolean_parameters"
+      }
+    },
+    "Set Input JSON": {
+      "Type": "Pass",
+      "Next": "Merge Data Inputs",
+      "Parameters": {
+        "input_json": {
+          "output_directory_germline.$": "States.Format('{}_dragen_germline', $.get_input_parameters_from_event_step.inputs.outputPrefixGermline)",
+          "output_directory_somatic.$": "States.Format('{}_dragen_somatic', $.get_input_parameters_from_event_step.inputs.outputPrefixSomatic)",
+          "output_file_prefix_germline.$": "$.get_input_parameters_from_event_step.inputs.outputPrefixGermline",
+          "output_file_prefix_somatic.$": "$.get_input_parameters_from_event_step.inputs.outputPrefixSomatic",
+          "reference_tar": {
+            "class": "File",
+            "location.$": "$.configure_inputs_step.reference_uri"
+          }
+        }
+      },
+      "ResultPath": "$.set_input_json_step"
+    },
+    "Merge Data Inputs": {
+      "Type": "Pass",
+      "Next": "Merge Boolean Enable Parameters",
+      "Parameters": {
+        "input_json.$": "States.JsonMerge($.set_input_json_step.input_json, $.configure_inputs_step.cwl_data_inputs, false)"
+      },
+      "ResultPath": "$.merge_data_inputs_step"
+    },
+    "Merge Boolean Enable Parameters": {
+      "Type": "Pass",
+      "Parameters": {
+        "input_json.$": "States.JsonMerge($.merge_data_inputs_step.input_json, $.configure_inputs_step.boolean_parameters, false)"
+      },
+      "ResultPath": "$.merge_boolean_enable_parameters_step",
+      "Next": "Update Database Entry"
+    },
+    "Update Database Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET input_json = :input_json",
+        "ExpressionAttributeValues": {
+          ":input_json": {
+            "S.$": "States.JsonToString($.merge_boolean_enable_parameters_step.input_json)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Wait 1 Second (Pre-execution)"
+    },
+    "Wait 1 Second (Pre-execution)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Wait for databases to sync before continuing",
+      "End": true
+    }
+  }
+}

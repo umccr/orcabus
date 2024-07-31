@@ -1,0 +1,61 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Get Event Data",
+  "States": {
+    "Get Event Data": {
+      "Type": "Pass",
+      "Next": "DynamoDB GetItem",
+      "Parameters": {
+        "fastq_list_row_id.$": "$.payload.data.id",
+        "fastq_list_row_event_data.$": "$.payload.data.fastqListRow",
+        "instrument_run_id.$": "$.payload.data.instrumentRunId"
+      }
+    },
+    "DynamoDB GetItem": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.fastq_list_row_id",
+          "id_type": "${__fastq_list_row_partition_name__}"
+        }
+      },
+      "Next": "Check if Fastq List Row is in the DB",
+      "ResultPath": "$.get_fastq_list_row_from_db"
+    },
+    "Check if Fastq List Row is in the DB": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_fastq_list_row_from_db.Item",
+          "IsPresent": true,
+          "Next": "Update Fastq List Row"
+        }
+      ],
+      "Default": "Pass"
+    },
+    "Pass": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Update Fastq List Row": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.fastq_list_row_id",
+          "id_type": "${__fastq_list_row_partition_name__}"
+        },
+        "UpdateExpression": "SET fastq_list_row_json = :fastq_list_row_json",
+        "ExpressionAttributeValues": {
+          ":fastq_list_row_json": {
+            "S.$": "States.JsonToString($.fastq_list_row_event_data)"
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

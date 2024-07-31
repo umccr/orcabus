@@ -26,8 +26,6 @@ Instead we just take the output uri and find the directories as expected
 # Standard imports
 from os import environ
 import typing
-from pathlib import Path
-from urllib.parse import urlparse, urlunparse
 import boto3
 
 # IDE imports only
@@ -38,7 +36,7 @@ if typing.TYPE_CHECKING:
 from wrapica.enums import DataType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
-    convert_icav2_uri_to_data_obj, convert_project_data_obj_to_icav2_uri,
+    convert_icav2_uri_to_project_data_obj, convert_project_data_obj_to_icav2_uri,
     list_project_data_non_recursively
 )
 
@@ -80,7 +78,7 @@ def handler(events, context):
     analysis_uri = events.get("analysis_output_uri")
 
     # Convert analysis uri to project folder object
-    analysis_project_data_obj = convert_icav2_uri_to_data_obj(analysis_uri)
+    analysis_project_data_obj = convert_icav2_uri_to_project_data_obj(analysis_uri)
 
     # Analysis list
     analysis_top_level_data_list = list_project_data_non_recursively(

@@ -1,0 +1,60 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "Step Functions StartExecution",
+      "Parameters": {
+        "inputs.$": "$"
+      }
+    },
+    "Step Functions StartExecution": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__sfn_preamble_state_machine_arn__}",
+        "Input": {}
+      },
+      "Next": "Push Draft Event",
+      "ResultPath": "$.get_sfn_preamble_outputs_step",
+      "ResultSelector": {
+        "portal_run_id.$": "$.Output.portal_run_id",
+        "workflow_run_name.$": "$.Output.workflow_run_name"
+      }
+    },
+    "Push Draft Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}",
+            "DetailType": "${__detail_type__}",
+            "Detail": {
+              "portalRunId.$": "$.get_sfn_preamble_outputs_step.portal_run_id",
+              "timestamp.$": "$$.State.EnteredTime",
+              "status": "draft",
+              "workflowName": "${__workflow_name__}",
+              "workflowVersion": "${__workflow_version__}",
+              "workflowRunName.$": "$.get_sfn_preamble_outputs_step.workflow_run_name",
+              "payload": {
+                "version": "${__payload_version__}",
+                "data": {
+                  "inputs": {
+                    "bclconvertReportDirectory.$": "States.Format('{}Reports/', $.inputs.payload.data.outputs.outputUri)",
+                    "interopDirectory.$": "States.Format('{}InterOp/', $.inputs.payload.data.outputs.outputUri)",
+                    "instrumentRunId.$": "$.inputs.payload.data.outputs.instrumentRunId"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "End": true,
+      "ResultPath": null
+    }
+  }
+}

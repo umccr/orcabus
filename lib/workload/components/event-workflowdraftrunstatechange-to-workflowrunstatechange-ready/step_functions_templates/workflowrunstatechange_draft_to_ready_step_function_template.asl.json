@@ -1,0 +1,197 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "move inputs",
+  "States": {
+    "move inputs": {
+      "Type": "Pass",
+      "Next": "Get portal run id from payload",
+      "Parameters": {
+        "input_event_detail.$": "$"
+      }
+    },
+    "Get portal run id from payload": {
+      "Type": "Pass",
+      "Next": "Get portal run Id in database (local)",
+      "Parameters": {
+        "portal_run_id.$": "$.input_event_detail.portalRunId"
+      },
+      "ResultPath": "$.get_portal_run_id_step"
+    },
+    "Get portal run Id in database (local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.get_portal_run_id_step.portal_run_id",
+          "id_type": "${__workflow_type_partition_name__}"
+        }
+      },
+      "ResultPath": "$.get_portal_run_id_in_db_step",
+      "Next": "is portal run id in database"
+    },
+    "is portal run id in database": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_portal_run_id_in_db_step.Item",
+          "IsPresent": true,
+          "Next": "Get Item from DataBase (local)"
+        }
+      ],
+      "Default": "Get Workflow Run Engine Parameters"
+    },
+    "Get Workflow Run Engine Parameters": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__engine_parameters_maker_state_machine_arn__}",
+        "Input": {
+          "portal_run_id.$": "$.input_event_detail.portalRunId",
+          "workflow_name.$": "$.input_event_detail.workflowName",
+          "workflow_version.$": "$.input_event_detail.workflowVersion",
+          "event_data_inputs.$": "$.input_event_detail.payload.data.inputs",
+          "ssm_parameters_list": [
+            {
+              "engine_parameter_key": "outputUri",
+              "ssm_name": "${__output_uri_ssm_parameter_name__}"
+            },
+            {
+              "engine_parameter_key": "logsUri",
+              "ssm_name": "${__logs_uri_ssm_parameter_name__}"
+            },
+            {
+              "engine_parameter_key": "cacheUri",
+              "ssm_name": "${__cache_uri_ssm_parameter_name__}"
+            },
+            {
+              "engine_parameter_key": "projectId",
+              "ssm_name": "${__project_id_ssm_parameter_name__}"
+            }
+          ]
+        }
+      },
+      "Next": "Update workflow table database",
+      "ResultPath": "$.set_workflow_run_engine_parameters",
+      "ResultSelector": {
+        "engine_parameters.$": "$.Output.engine_parameters"
+      }
+    },
+    "Update workflow table database": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Initialise Event Data Item with Inputs Engine Parameters",
+          "States": {
+            "Initialise Event Data Item with Inputs Engine Parameters": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.get_portal_run_id_step.portal_run_id",
+                  "id_type": "${__workflow_type_partition_name__}"
+                },
+                "UpdateExpression": "SET event_data_inputs = :event_data_inputs, workflow_run_name = :workflow_run_name, portal_run_id = :portal_run_id, event_data_engine_parameters = :event_data_engine_parameters",
+                "ExpressionAttributeValues": {
+                  ":portal_run_id": {
+                    "S.$": "$.input_event_detail.portalRunId"
+                  },
+                  ":workflow_run_name": {
+                    "S.$": "$.input_event_detail.workflowRunName"
+                  },
+                  ":event_data_inputs": {
+                    "S.$": "States.JsonToString($.input_event_detail.payload.data.inputs)"
+                  },
+                  ":event_data_engine_parameters": {
+                    "S.$": "States.JsonToString($.set_workflow_run_engine_parameters.engine_parameters)"
+                  }
+                }
+              },
+              "ResultPath": null,
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Update portal_run table",
+          "States": {
+            "Update portal_run table": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.input_event_detail.portalRunId",
+                  "id_type": "${__portal_run_partition_name__}"
+                },
+                "UpdateExpression": "SET analysis_status = :analysis_status",
+                "ExpressionAttributeValues": {
+                  ":analysis_status": {
+                    "S": "ready"
+                  }
+                }
+              },
+              "ResultPath": null,
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": null,
+      "Next": "Wait 1 Second (post event detail output update)"
+    },
+    "Wait 1 Second (post event detail output update)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "Get Item from DataBase (local)"
+    },
+    "Get Item from DataBase (local)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.get_portal_run_id_step.portal_run_id",
+          "id_type": "${__workflow_type_partition_name__}"
+        }
+      },
+      "Next": "EventBridge PutEvents",
+      "ResultSelector": {
+        "inputs.$": "States.StringToJson($.Item.event_data_inputs.S)",
+        "engine_parameters.$": "States.StringToJson($.Item.event_data_engine_parameters.S)"
+      },
+      "ResultPath": "$.get_event_data_output_step"
+    },
+    "EventBridge PutEvents": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Source": "${__event_output_source__}",
+            "EventBusName": "${__event_bus_name__}",
+            "DetailType": "${__detail_type__}",
+            "Detail": {
+              "portalRunId.$": "$.input_event_detail.portalRunId",
+              "timestamp.$": "$$.State.EnteredTime",
+              "status": "ready",
+              "workflowName.$": "$.input_event_detail.workflowName",
+              "workflowVersion.$": "$.input_event_detail.workflowVersion",
+              "workflowRunName.$": "$.input_event_detail.workflowRunName",
+              "payload": {
+                "refId": null,
+                "version": "${__payload_version__}",
+                "data": {
+                  "inputs.$": "$.get_event_data_output_step.inputs",
+                  "engineParameters.$": "$.get_event_data_output_step.engine_parameters"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}

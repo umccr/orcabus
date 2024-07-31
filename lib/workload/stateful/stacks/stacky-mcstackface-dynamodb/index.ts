@@ -8,6 +8,10 @@ export interface StackyStatefulTablesConfig {
   dynamodbInstrumentRunManagerTableName: string;
   dynamodbWorkflowManagerTableName: string;
   dynamodbInputGlueTableName: string;
+  dynamodbCttsov2WorkflowGlueTableName: string;
+  dynamodbWgtsQcGlueTableName: string;
+  dynamodbTnGlueTableName: string;
+  dynamodbWtsGlueTableName: string;
   removalPolicy?: RemovalPolicy;
 }
 
@@ -17,6 +21,10 @@ export class StackyStatefulTablesStack extends Stack {
   public readonly instrumentRunManagerTable: dynamodb.ITableV2;
   public readonly workflowManagerTable: dynamodb.ITableV2;
   public readonly inputGlueTable: dynamodb.ITableV2;
+  public readonly cttsov2WorkflowGlueTable: dynamodb.ITableV2;
+  public readonly wgtsQcGlueTable: dynamodb.ITableV2;
+  public readonly tnGlueTable: dynamodb.ITableV2;
+  public readonly wtsGlueTable: dynamodb.ITableV2;
   constructor(scope: Construct, id: string, props: StackProps & StackyStatefulTablesStackProps) {
     super(scope, id, props);
 
@@ -49,6 +57,42 @@ export class StackyStatefulTablesStack extends Stack {
     */
     this.inputGlueTable = new DynamodbPartitionedPipelineConstruct(this, 'inputGlueTable', {
       tableName: props.dynamodbInputGlueTableName,
+      removalPolicy: props.removalPolicy,
+    }).tableObj;
+
+    /*
+    Initialise dynamodb table for the cttsov2 glue service
+    */
+    this.cttsov2WorkflowGlueTable = new DynamodbPartitionedPipelineConstruct(
+      this,
+      'cttsov2WorkflowGlueTable',
+      {
+        tableName: props.dynamodbCttsov2WorkflowGlueTableName,
+        removalPolicy: props.removalPolicy,
+      }
+    ).tableObj;
+
+    /*
+    Initialise dynamodb table for the wgtsqc glue service
+    */
+    this.wgtsQcGlueTable = new DynamodbPartitionedPipelineConstruct(this, 'wgtsQcGlueTable', {
+      tableName: props.dynamodbWgtsQcGlueTableName,
+      removalPolicy: props.removalPolicy,
+    }).tableObj;
+
+    /*
+    Initialise dynamodb table for the tn glue service
+    */
+    this.tnGlueTable = new DynamodbPartitionedPipelineConstruct(this, 'tnGlueTable', {
+      tableName: props.dynamodbTnGlueTableName,
+      removalPolicy: props.removalPolicy,
+    }).tableObj;
+
+    /*
+    Initialise dynamodb table for the wts glue service
+    */
+    this.wtsGlueTable = new DynamodbPartitionedPipelineConstruct(this, 'wtsGlueTable', {
+      tableName: props.dynamodbWtsGlueTableName,
       removalPolicy: props.removalPolicy,
     }).tableObj;
   }

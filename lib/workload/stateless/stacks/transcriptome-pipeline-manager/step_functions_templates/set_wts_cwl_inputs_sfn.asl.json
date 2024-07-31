@@ -1,0 +1,480 @@
+{
+  "Comment": "Launch Icav2 Pipeline and log in db",
+  "StartAt": "Get DataBase Entry",
+  "States": {
+    "Get DataBase Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "ResultSelector": {
+        "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "engineParameters.$": "States.StringToJson($.Item.engine_parameters.S)"
+      },
+      "ResultPath": "$.get_input_parameters_from_event_step",
+      "Next": "Configure Inputs"
+    },
+    "Configure Inputs": {
+      "Type": "Parallel",
+      "Next": "Set Input JSON",
+      "Branches": [
+        {
+          "StartAt": "Convert Fastq List Rows to CWL Input Objects (Tumor)",
+          "States": {
+            "Convert Fastq List Rows to CWL Input Objects (Tumor)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__convert_fastq_list_rows_lambda_function_arn__}",
+                "Payload": {
+                  "fastq_list_rows.$": "$.get_input_parameters_from_event_step.inputs.tumorFastqListRows"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultSelector": {
+                "fastq_list_rows.$": "$.Payload.fastq_list_rows"
+              },
+              "ResultPath": "$.convert_tumor_fastq_list_rows_to_cwl_input_objects_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Is Dragen Reference Version Set",
+          "States": {
+            "Is Dragen Reference Version Set": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.dragenReferenceVersion",
+                  "IsPresent": false,
+                  "Comment": "Get Default Version",
+                  "Next": "Set Dragen Reference Version as Default"
+                }
+              ],
+              "Default": "Dragen Reference Version Set"
+            },
+            "Dragen Reference Version Set": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_version.$": "$.get_input_parameters_from_event_step.inputs.dragenReferenceVersion"
+              },
+              "ResultPath": "$.get_reference_version_step",
+              "Next": "Get the Dragen Reference Version Uri Map"
+            },
+            "Set Dragen Reference Version as Default": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_version": "${__default_reference_version__}"
+              },
+              "ResultPath": "$.get_reference_version_step",
+              "Next": "Get the Dragen Reference Version Uri Map"
+            },
+            "Get the Dragen Reference Version Uri Map": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__reference_version_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "reference_uri_map.$": "States.StringToJson($.Parameter.Value)"
+              },
+              "ResultPath": "$.get_reference_version_uri_map_step",
+              "Next": "Get the Dragen Reference Version Uri"
+            },
+            "Get the Dragen Reference Version Uri": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_uri": {
+                  "class": "File",
+                  "location.$": "States.ArrayGetItem($.get_reference_version_uri_map_step.reference_uri_map[?(@.name==$.get_reference_version_step.reference_version)].uri, 0)"
+                }
+              },
+              "ResultPath": "$.get_reference_version_uri_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Is Reference Fasta Version Set",
+          "States": {
+            "Is Reference Fasta Version Set": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.fastaReferenceVersion",
+                  "IsPresent": false,
+                  "Comment": "Get Default Version",
+                  "Next": "Set the Reference Fasta Version as Default"
+                }
+              ],
+              "Default": "Reference Fasta Version Set"
+            },
+            "Reference Fasta Version Set": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_version.$": "$.get_input_parameters_from_event_step.inputs.fastaReferenceVersion"
+              },
+              "ResultPath": "$.get_reference_fasta_version_step",
+              "Next": "Get the Reference Fasta Version Uri Map"
+            },
+            "Set the Reference Fasta Version as Default": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_version": "${__default_reference_fasta_version__}"
+              },
+              "ResultPath": "$.get_reference_fasta_version_step",
+              "Next": "Get the Reference Fasta Version Uri Map"
+            },
+            "Get the Reference Fasta Version Uri Map": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__reference_fasta_version_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "reference_uri_map.$": "States.StringToJson($.Parameter.Value)"
+              },
+              "ResultPath": "$.get_reference_fasta_version_uri_map_step",
+              "Next": "Get the Reference Fasta Uri As Cwl Input"
+            },
+            "Get the Reference Fasta Uri As Cwl Input": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_uri": {
+                  "class": "File",
+                  "location.$": "States.ArrayGetItem($.get_reference_fasta_version_uri_map_step.reference_uri_map[?(@.name==$.get_reference_fasta_version_step.reference_version)].uri, 0)",
+                  "secondaryFiles": [
+                    {
+                      "class": "File",
+                      "location.$": "States.Format('{}.fai', States.ArrayGetItem($.get_reference_fasta_version_uri_map_step.reference_uri_map[?(@.name==$.get_reference_fasta_version_step.reference_version)].uri, 0))"
+                    }
+                  ]
+                }
+              },
+              "ResultPath": "$.get_reference_fasta_version_uri_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Is Annotation Version Set",
+          "States": {
+            "Is Annotation Version Set": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.annotationVersion",
+                  "IsPresent": false,
+                  "Comment": "Get Default Version",
+                  "Next": "Set Annotation Version as Default"
+                }
+              ],
+              "Default": "Annotation Version Set"
+            },
+            "Annotation Version Set": {
+              "Type": "Pass",
+              "Parameters": {
+                "annotation_version.$": "$.get_input_parameters_from_event_step.inputs.annotationVersion"
+              },
+              "ResultPath": "$.get_annotation_version_step",
+              "Next": "Get the Annotation Version Uri Map"
+            },
+            "Set Annotation Version as Default": {
+              "Type": "Pass",
+              "Parameters": {
+                "annotation_version": "${__default_annotation_version__}"
+              },
+              "ResultPath": "$.get_annotation_version_step",
+              "Next": "Get the Annotation Version Uri Map"
+            },
+            "Get the Annotation Version Uri Map": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__annotation_version_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "annotation_uri_map.$": "States.StringToJson($.Parameter.Value)"
+              },
+              "ResultPath": "$.get_annotation_version_uri_map_step",
+              "Next": "Get the Annotation Version Uri As CWL"
+            },
+            "Get the Annotation Version Uri As CWL": {
+              "Type": "Pass",
+              "Parameters": {
+                "annotation_uri_as_cwl": {
+                  "class": "File",
+                  "location.$": "States.ArrayGetItem($.get_annotation_version_uri_map_step.annotation_uri_map[?(@.name==$.get_annotation_version_step.annotation_version)].uri, 0)"
+                }
+              },
+              "ResultPath": "$.get_annotation_version_uri_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Is Arriba Version Set",
+          "States": {
+            "Is Arriba Version Set": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.arribaVersion",
+                  "IsPresent": false,
+                  "Comment": "Get Default Version",
+                  "Next": "Set Arriba Version as Default"
+                }
+              ],
+              "Default": "Arriba Version Set"
+            },
+            "Arriba Version Set": {
+              "Type": "Pass",
+              "Parameters": {
+                "arriba_version.$": "$.get_input_parameters_from_event_step.inputs.arribaVersion"
+              },
+              "ResultPath": "$.get_arriba_version_step",
+              "Next": "Get Arriba Version Uri Map"
+            },
+            "Set Arriba Version as Default": {
+              "Type": "Pass",
+              "Parameters": {
+                "arriba_version": "${__default_arriba_version__}"
+              },
+              "ResultPath": "$.get_arriba_version_step",
+              "Next": "Get Arriba Version Uri Map"
+            },
+            "Get Arriba Version Uri Map": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__arriba_version_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "arriba_uri_map.$": "States.StringToJson($.Parameter.Value)"
+              },
+              "ResultPath": "$.get_arriba_version_uri_map_step",
+              "Next": "Get Arriba DataSet Uris As CWL Inputs"
+            },
+            "Get Arriba DataSet Uris As CWL Inputs": {
+              "Type": "Pass",
+              "Parameters": {
+                "blacklist_uri_as_cwl": {
+                  "class": "File",
+                  "location.$": "States.ArrayGetItem($.get_arriba_version_uri_map_step.arriba_uri_map[?(@.name==$.get_arriba_version_step.arriba_version)].blacklist_uri, 0)"
+                },
+                "cytobands_uri_as_cwl": {
+                  "class": "File",
+                  "location.$": "States.ArrayGetItem($.get_arriba_version_uri_map_step.arriba_uri_map[?(@.name==$.get_arriba_version_step.arriba_version)].cytobands_uri, 0)"
+                },
+                "protein_domains_uri_as_cwl": {
+                  "class": "File",
+                  "location.$": "States.ArrayGetItem($.get_arriba_version_uri_map_step.arriba_uri_map[?(@.name==$.get_arriba_version_step.arriba_version)].protein_domains_uri, 0)"
+                }
+              },
+              "ResultPath": "$.get_arriba_version_uri_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Is QC Reference Samples Version Set",
+          "States": {
+            "Is QC Reference Samples Version Set": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.qcReferenceSamplesVersion",
+                  "IsPresent": false,
+                  "Comment": "Get Default Version",
+                  "Next": "Set QC Version as Default"
+                }
+              ],
+              "Default": "QC Reference Samples Version Set"
+            },
+            "QC Reference Samples Version Set": {
+              "Type": "Pass",
+              "Parameters": {
+                "qc_reference_samples_version.$": "$.get_input_parameters_from_event_step.inputs.qcReferenceSamplesVersion"
+              },
+              "ResultPath": "$.get_qc_reference_samples_version_step",
+              "Next": "Get QC Reference Samples Version"
+            },
+            "Set QC Version as Default": {
+              "Type": "Pass",
+              "Parameters": {
+                "qc_reference_samples_version": "${__default_qc_reference_samples_version__}"
+              },
+              "ResultPath": "$.get_qc_reference_samples_version_step",
+              "Next": "Get QC Reference Samples Version"
+            },
+            "Get QC Reference Samples Version": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__qc_reference_samples_version_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "qc_reference_samples_uri_map.$": "States.StringToJson($.Parameter.Value)"
+              },
+              "ResultPath": "$.get_qc_reference_samples_version_uri_map_step",
+              "Next": "Get QC Reference Samples Version URI"
+            },
+            "Get QC Reference Samples Version URI": {
+              "Type": "Pass",
+              "Parameters": {
+                "qc_reference_samples_list.$": "States.ArrayGetItem($.get_qc_reference_samples_version_uri_map_step.qc_reference_samples_uri_map[?(@.name==$.get_qc_reference_samples_version_step.qc_reference_samples_version)].qc_reference_samples_json, 0)",
+                "cl_config_sample_names_replace.$": "States.ArrayGetItem($.get_qc_reference_samples_version_uri_map_step.qc_reference_samples_uri_map[?(@.name==$.get_qc_reference_samples_version_step.qc_reference_samples_version)].cl_config_sample_names_replace, 0)"
+              },
+              "ResultPath": "$.get_qc_reference_samples_version_uri_step",
+              "Next": "Convert QC Reference Sample List to CWL Directory Inputs"
+            },
+            "Convert QC Reference Sample List to CWL Directory Inputs": {
+              "Type": "Map",
+              "ItemsPath": "$.get_qc_reference_samples_version_uri_step.qc_reference_samples_list",
+              "ItemSelector": {
+                "qc_reference_uri.$": "$$.Map.Item.Value"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Convert QC Reference Sample to CWL Input Object",
+                "States": {
+                  "Convert QC Reference Sample to CWL Input Object": {
+                    "Type": "Pass",
+                    "End": true,
+                    "Parameters": {
+                      "class": "Directory",
+                      "location.$": "$.qc_reference_uri"
+                    }
+                  }
+                }
+              },
+              "ResultPath": "$.qc_reference_samples_as_cwl_inputs",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Boolean Parameters from Event Data",
+          "States": {
+            "Get Boolean Parameters from Event Data": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__get_boolean_parameters_lambda_function_arn__}",
+                "Payload": {
+                  "event_data_input.$": "$.get_input_parameters_from_event_step.inputs"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true,
+              "ResultPath": "$.get_boolean_parameters_step",
+              "ResultSelector": {
+                "boolean_parameters.$": "$.Payload.boolean_parameters"
+              }
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.configure_inputs_step",
+      "ResultSelector": {
+        "tumor_fastq_list_rows_cwl.$": "$.[0].convert_tumor_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows",
+        "reference_tar_uri.$": "$.[1].get_reference_version_uri_step.reference_uri",
+        "reference_fasta_uri.$": "$.[2].get_reference_fasta_version_uri_step.reference_uri",
+        "annotation_uri.$": "$.[3].get_annotation_version_uri_step.annotation_uri_as_cwl",
+        "blacklist_uri.$": "$.[4].get_arriba_version_uri_step.blacklist_uri_as_cwl",
+        "protein_domains_uri.$": "$.[4].get_arriba_version_uri_step.protein_domains_uri_as_cwl",
+        "cytobands_uri.$": "$.[4].get_arriba_version_uri_step.cytobands_uri_as_cwl",
+        "qc_reference_samples_list.$": "$.[5].qc_reference_samples_as_cwl_inputs",
+        "cl_config_sample_names_replace": {
+          "sample_names_replace.$": "$.[5].get_qc_reference_samples_version_uri_step.cl_config_sample_names_replace"
+        },
+        "boolean_parameters.$": "$.[6].get_boolean_parameters_step.boolean_parameters"
+      }
+    },
+    "Set Input JSON": {
+      "Type": "Pass",
+      "Next": "Merge Boolean Enable Parameters",
+      "Parameters": {
+        "input_json": {
+          "annotation_file.$": "$.configure_inputs_step.annotation_uri",
+          "blacklist.$": "$.configure_inputs_step.blacklist_uri",
+          "cl_config.$": "States.JsonToString($.configure_inputs_step.cl_config_sample_names_replace)",
+          "cytobands.$": "$.configure_inputs_step.cytobands_uri",
+          "fastq_list_rows.$": "$.configure_inputs_step.tumor_fastq_list_rows_cwl",
+          "output_file_prefix.$": "$.get_input_parameters_from_event_step.inputs.outputPrefix",
+          "output_directory.$": "States.Format('{}_dragen_transcriptome', $.get_input_parameters_from_event_step.inputs.outputPrefix)",
+          "protein_domains.$": "$.configure_inputs_step.protein_domains_uri",
+          "qc_reference_samples.$": "$.configure_inputs_step.qc_reference_samples_list",
+          "reference_fasta.$": "$.configure_inputs_step.reference_fasta_uri",
+          "reference_tar.$": "$.configure_inputs_step.reference_tar_uri"
+        }
+      },
+      "ResultPath": "$.set_input_json_step"
+    },
+    "Merge Boolean Enable Parameters": {
+      "Type": "Pass",
+      "Parameters": {
+        "input_json.$": "States.JsonMerge($.set_input_json_step.input_json, $.configure_inputs_step.boolean_parameters, false)"
+      },
+      "ResultPath": "$.merge_boolean_enable_parameters_step",
+      "Next": "Update Database Entry"
+    },
+    "Update Database Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET input_json = :input_json",
+        "ExpressionAttributeValues": {
+          ":input_json": {
+            "S.$": "States.JsonToString($.merge_boolean_enable_parameters_step.input_json)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Wait 1 Second (Pre-execution)"
+    },
+    "Wait 1 Second (Pre-execution)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Wait for databases to sync before continuing",
+      "End": true
+    }
+  }
+}

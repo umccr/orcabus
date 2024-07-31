@@ -3,11 +3,12 @@
 """
 Read runinfo xml
 """
-from io import StringIO
 # Standard imports
+from io import StringIO
 from typing import Dict
-import xmltodict
 from v2_samplesheet_maker.functions.run_info_reader import run_info_xml_reader
+
+# Wrapica imports
 from wrapica.project_data import read_icav2_file_contents_to_string
 
 

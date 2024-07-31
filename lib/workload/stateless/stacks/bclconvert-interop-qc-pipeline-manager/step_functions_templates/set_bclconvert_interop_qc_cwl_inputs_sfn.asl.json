@@ -13,7 +13,8 @@
         }
       },
       "ResultSelector": {
-        "payload.$": "States.StringToJson($.Item.launch_event_payload.S)"
+        "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "engine_parameters.$": "States.StringToJson($.Item.engine_parameters.S)"
       },
       "ResultPath": "$.get_input_parameters_from_event",
       "Next": "Set Input Json from Event Payload"
@@ -24,13 +25,13 @@
         "input_json": {
           "bclconvert_report_directory": {
             "class": "Directory",
-            "location.$": "$.get_input_parameters_from_event.payload.data.bclconvertReportDirectory"
+            "location.$": "$.get_ready_event_step.inputs.bclconvertReportDirectory"
           },
           "interop_directory": {
             "class": "Directory",
-            "location.$": "$.get_input_parameters_from_event.payload.data.interopDirectory"
+            "location.$": "$.get_ready_event_step.inputs.interopDirectory"
           },
-          "instrument_run_id.$": "$.get_input_parameters_from_event.payload.data.instrumentRunId"
+          "instrument_run_id.$": "$.get_ready_event_step.inputs.instrumentRunId"
         }
       },
       "ResultPath": "$.set_input_json",

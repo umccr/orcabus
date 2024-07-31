@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/wgts/PayloadDataWgtsFastqListRowQcComplete.schema.json",
+  "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataWgtsFastqListRowQcComplete",
+  "title": "PayloadDataWgtsFastqListRowQcComplete",
+  "required": [
+    "fastqListRowId",
+    "libraryId",
+    "instrumentRunId",
+    "sampleType",
+    "qcMetrics"
+  ],
+  "properties": {
+    "fastqListRowId": {
+      "type": "string"
+    },
+    "libraryId": {
+      "type": "string"
+    },
+    "instrumentRunId": {
+      "type": "string"
+    },
+    "sampleType": {
+      "type": "string"
+    },
+    "qcMetrics": {
+      "type": "object",
+      "properties": {
+        "duplicationRate": {
+          "type": "number"
+        },
+        "genomeCoverage": {
+          "type": "number"
+        },
+        "exonFoldCoverage": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

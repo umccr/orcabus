@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/data/tumor_normal/PayloadDataTnDraft.schema.json",
+  "definitions": {
+    "fastqListRow": {
+      "type": "object",
+      "required": [
+        "rgid",
+        "rgsm",
+        "rglb",
+        "lane",
+        "read1FileUri"
+      ],
+      "properties": {
+        "rgid": {
+          "type": "string"
+        },
+        "rgsm": {
+          "type": "string"
+        },
+        "rglb": {
+          "type": "string"
+        },
+        "lane": {
+          "type": "integer"
+        },
+        "read1FileUri": {
+          "type": "string"
+        },
+        "read2FileUri": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "description": "Data schema for orcabus.instrumentrunmanagerstacky@PayloadDataTnDraft",
+  "title": "PayloadDataTnDraft",
+  "required": [
+    "inputs"
+  ],
+  "properties": {
+    "inputs": {
+      "type": "object",
+      "required": [
+        "outputPrefixSomatic",
+        "outputPrefixGermline",
+        "tumorFastqListRows",
+        "fastqListRows",
+        "dragenReferenceVersion"
+      ],
+      "properties": {
+        "outputPrefixSomatic": {
+          "type": "string"
+        },
+        "outputPrefixGermline": {
+          "type": "string"
+        },
+        "dragenReferenceVersion": {
+          "type": "string"
+        },
+        "enableDuplicateMarking": {
+          "type": "boolean"
+        },
+        "enableCnvSomatic": {
+          "type": "boolean"
+        },
+        "enableHrdSomatic": {
+          "type": "boolean"
+        },
+        "enableSvSomatic": {
+          "type": "boolean"
+        },
+        "cnvUseSomaticVcBaf": {
+          "type": "boolean"
+        },
+        "tumorFastqListRows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/fastqListRow"
+          }
+        },
+        "fastqListRows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/fastqListRow"
+          }
+        }
+      }
+    }
+  }
+}

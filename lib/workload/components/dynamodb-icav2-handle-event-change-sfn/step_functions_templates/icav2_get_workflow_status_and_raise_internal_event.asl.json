@@ -108,7 +108,8 @@
                 {
                   "Variable": "$.event_detail.payload.status",
                   "StringEquals": "SUCCEEDED",
-                  "Next": "Get Outputs JSON"
+                  "Next": "Get Outputs JSON",
+                  "Comment": "Status is succeeded"
                 }
               ],
               "Default": "Pass"
@@ -152,23 +153,50 @@
         }
       },
       "ResultSelector": {
-        "portalRunId.$": "$.Item.portal_run_id.S",
+        "portal_run_id.$": "$.Item.portal_run_id.S",
         "timestamp.$": "$$.State.EnteredTime",
         "status.$": "$.Item.analysis_status.S",
-        "workflowName": "${__workflow_type__}",
-        "workflowVersion": "${__workflow_version__}",
-        "workflowRunName.$": "$.Item.workflow_run_name.S",
-        "payload": {
-          "version": "${__service_version__}",
-          "data": {
-            "projectId.$": "$.Item.project_id.S",
-            "analysisId.$": "$.Item.analysis_id.S",
-            "analysisOutput.$": "$.Item.analysis_output.S"
-          }
-        }
+        "workflow_name": "${__workflow_type__}",
+        "workflow_version": "${__workflow_version__}",
+        "workflow_run_name.$": "$.Item.workflow_run_name.S",
+        "payload_version": "${__service_version__}",
+        "payload_inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "payload_engine_parameters.$": "States.StringToJson($.Item.engine_parameters.S)",
+        "payload_outputs.$": "States.StringToJson($.Item.analysis_output.S)"
       },
-      "ResultPath": "$.get_updated_analysis_id_in_db_step",
-      "Next": "Push Event to Orcabus"
+      "ResultPath": "$.get_event_data_step",
+      "Next": "status is SUCCEEDED (1)"
+    },
+    "status is SUCCEEDED (1)": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.event_detail.payload.status",
+          "StringEquals": "SUCCEEDED",
+          "Next": "Set data with output",
+          "Comment": "Status is Succeeded"
+        }
+      ],
+      "Default": "Set Data without Output"
+    },
+    "Set Data without Output": {
+      "Type": "Pass",
+      "Next": "Push Event to Orcabus",
+      "Parameters": {
+        "inputs.$": "$.get_event_data_step.payload_inputs",
+        "engineParameters.$": "$.get_event_data_step.payload_engine_parameters"
+      },
+      "ResultPath": "$.set_data_event_outputs"
+    },
+    "Set data with output": {
+      "Type": "Pass",
+      "Next": "Push Event to Orcabus",
+      "Parameters": {
+        "inputs.$": "$.get_event_data_step.payload_inputs",
+        "engineParameters.$": "$.get_event_data_step.payload_engine_parameters",
+        "outputs.$": "$.get_event_data_step.payload_outputs"
+      },
+      "ResultPath": "$.set_data_event_outputs"
     },
     "Push Event to Orcabus": {
       "Type": "Task",
@@ -176,10 +204,21 @@
       "Parameters": {
         "Entries": [
           {
-            "Detail.$": "$.get_updated_analysis_id_in_db_step",
-            "DetailType": "WorkflowRunStateChange",
             "EventBusName": "${__eventbus_name__}",
-            "Source": "${__eventsource__}"
+            "Source": "${__eventsource__}",
+            "DetailType": "WorkflowRunStateChange",
+            "Detail": {
+              "portalRunId.$": "$.get_event_data_step.portal_run_id",
+              "timestamp.$": "$.get_event_data_step.timestamp",
+              "status.$": "$.get_event_data_step.status",
+              "workflowName.$": "$.get_event_data_step.workflow_name",
+              "workflowVersion.$": "$.get_event_data_step.workflow_version",
+              "workflowRunName.$": "$.get_event_data_step.workflow_run_name",
+              "payload": {
+                "version": "${__service_version__}",
+                "data.$": "$.set_data_event_outputs"
+              }
+            }
           }
         ]
       },

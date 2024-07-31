@@ -25,6 +25,18 @@ import {
   PostgresManagerStackProps,
 } from './stacks/postgres-manager/deploy/stack';
 import { DataBucketStack, DataBucketStackProps } from './stacks/data/stack';
+import {
+  WgtsQcIcav2PipelineTable,
+  WgtsQcIcav2PipelineTableStackProps,
+} from './stacks/wgtsqc-pipeline-dynamo-db/deploy/stack';
+import {
+  TnIcav2PipelineTable,
+  TnIcav2PipelineTableStackProps,
+} from './stacks/tumor-normal-pipeline-dynamo-db/deploy/stack';
+import {
+  WtsIcav2PipelineTable,
+  WtsIcav2PipelineTableStackProps,
+} from './stacks/wts-dynamo-db/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -34,6 +46,9 @@ export interface StatefulStackCollectionProps {
   icaEventPipeStackProps: IcaEventPipeStackProps;
   bclconvertInteropQcIcav2PipelineTableStackProps: BclconvertInteropQcIcav2PipelineTableStackProps;
   cttsov2Icav2PipelineTableStackProps: Cttsov2Icav2PipelineTableStackProps;
+  wgtsQcIcav2PipelineTableStackProps: WgtsQcIcav2PipelineTableStackProps;
+  tnIcav2PipelineTableStackProps: TnIcav2PipelineTableStackProps;
+  wtsIcav2PipelineTableStackProps: WtsIcav2PipelineTableStackProps;
   BclConvertTableStackProps: BclConvertTableStackProps;
   stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
 }
@@ -48,6 +63,9 @@ export class StatefulStackCollection {
   readonly icaEventPipeStack: Stack;
   readonly bclconvertInteropQcIcav2PipelineTableStack: Stack;
   readonly cttsov2Icav2PipelineTableStack: Stack;
+  readonly wgtsQcIcav2PipelineTableStack: Stack;
+  readonly tnIcav2PipelineTableStack: Stack;
+  readonly wtsIcav2PipelineTableStack: Stack;
   readonly BclConvertTableStack: Stack;
   readonly stackyStatefulTablesStack: Stack;
 
@@ -102,6 +120,30 @@ export class StatefulStackCollection {
         ...statefulConfiguration.cttsov2Icav2PipelineTableStackProps,
       }
     );
+
+    this.wgtsQcIcav2PipelineTableStack = new WgtsQcIcav2PipelineTable(
+      scope,
+      'WgtsQcIcav2PipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'WgtsQcIcav2PipelineTableStack'),
+        ...statefulConfiguration.wgtsQcIcav2PipelineTableStackProps,
+      }
+    );
+
+    this.tnIcav2PipelineTableStack = new TnIcav2PipelineTable(scope, 'TnIcav2PipelineTableStack', {
+      ...this.createTemplateProps(env, 'TnIcav2PipelineTableStack'),
+      ...statefulConfiguration.tnIcav2PipelineTableStackProps,
+    });
+
+    this.wtsIcav2PipelineTableStack = new WtsIcav2PipelineTable(
+      scope,
+      'WtsIcav2PipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'WtsIcav2PipelineTableStack'),
+        ...statefulConfiguration.wtsIcav2PipelineTableStackProps,
+      }
+    );
+
     this.BclConvertTableStack = new BclConvertTable(scope, 'BclConvertTableStack', {
       ...this.createTemplateProps(env, 'BclConvertTableStack'),
       ...statefulConfiguration.BclConvertTableStackProps,

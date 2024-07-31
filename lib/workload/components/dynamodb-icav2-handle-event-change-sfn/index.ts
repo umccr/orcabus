@@ -127,7 +127,7 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
       Convert a workflow name to lowercase and remove any spacing
 
       This has to be in align with Python impl:
-      lib/workload/components/event-workflowrunstatechange-internal-to-inputmaker-sfn/lambdas/generate_workflow_run_name_py/generate_workflow_run_name.py
+      lib/workload/components/event-workflowdraftrunstatechange-to-workflowrunstatechange-ready/lambdas/generate_workflow_run_name_py/generate_workflow_run_name.py
     */
     let _name = name.toLowerCase().replace(new RegExp(' ', 'g'), '');
     _name = _name.replace(new RegExp('\\.', 'g'), '-');

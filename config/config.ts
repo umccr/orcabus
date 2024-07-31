@@ -27,6 +27,18 @@ import {
 } from './stacks/bclconvertInteropQcIcav2PipelineManager';
 import { getGlueStackProps, getStatefulGlueStackProps } from './stacks/stackyMcStackFace';
 import { getDataBucketStackProps } from './stacks/dataBucket';
+import {
+  getWgtsQcIcav2PipelineManagerStackProps,
+  getWgtsQcIcav2PipelineTableStackProps,
+} from './stacks/wgtsQcPipelineManager';
+import {
+  getTnIcav2PipelineManagerStackProps,
+  getTnIcav2PipelineTableStackProps,
+} from './stacks/tumorNormalPipelineManager';
+import {
+  getWtsIcav2PipelineManagerStackProps,
+  getWtsIcav2PipelineTableStackProps,
+} from './stacks/wtsPipelineManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -55,6 +67,9 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       bclconvertInteropQcIcav2PipelineTableStackProps:
         getBclconvertInteropQcIcav2PipelineTableStackProps(),
       cttsov2Icav2PipelineTableStackProps: getCttsov2Icav2PipelineTableStackProps(),
+      wgtsQcIcav2PipelineTableStackProps: getWgtsQcIcav2PipelineTableStackProps(),
+      tnIcav2PipelineTableStackProps: getTnIcav2PipelineTableStackProps(),
+      wtsIcav2PipelineTableStackProps: getWtsIcav2PipelineTableStackProps(),
       BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
       stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
     },
@@ -67,11 +82,14 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       bclconvertInteropQcIcav2PipelineManagerStackProps:
         getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),
       cttsov2Icav2PipelineManagerStackProps: getCttsov2Icav2PipelineManagerStackProps(stage),
+      wgtsQcIcav2PipelineManagerStackProps: getWgtsQcIcav2PipelineManagerStackProps(stage),
+      tnIcav2PipelineManagerStackProps: getTnIcav2PipelineManagerStackProps(stage),
+      wtsIcav2PipelineManagerStackProps: getWtsIcav2PipelineManagerStackProps(stage),
       eventSchemaStackProps: getEventSchemaStackProps(),
       dataSchemaStackProps: getDataSchemaStackProps(),
       bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
       workflowManagerStackProps: getWorkflowManagerStackProps(stage),
-      stackyMcStackFaceProps: getGlueStackProps(),
+      stackyMcStackFaceProps: getGlueStackProps(stage),
     },
   };
 
