@@ -266,7 +266,7 @@ External resources required by the wgtsqc Stack
 */
 
 // FIXME deploy to stg/prod
-export const wgtsQcIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wgts_qc_4.2.4_pipeline_id'; // 71f094dc-0cf8-4fcf-890c-9f3edf00ee20
+export const wgtsQcIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wgts_qc_4.2.4_pipeline_id'; // dcfc2b5f-82e5-4ce5-a201-853964a92953
 
 export const wgtsQcIcav2PipelineWorkflowType = 'wgtsQc';
 export const wgtsQcIcav2PipelineWorkflowTypeVersion = '4.2.4';
@@ -300,7 +300,7 @@ TN Stateless stack
 */
 
 // FIXME deploy to stg/prod
-export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // fe6df931-4a30-4fa7-8d05-31e00367d216
+export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 93df0f3f-dd08-4468-92ab-4d90e606d346
 export const tnIcav2PipelineWorkflowType = 'tumor_normal';
 export const tnIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const tnIcav2ServiceVersion = '2024.07.01';
@@ -317,41 +317,45 @@ Resources required by the WTS Stateful Stack
 */
 
 // FIXME deploy to stg/prod
-// '[
-//     {
-//         "name": "2.4.0",
-//         "blacklist_uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/arriba/2-4-0/blacklist_hg38_GRCh38_v2.4.0.tsv.gz",
-//         "cytobands_uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/arriba/2-4-0/cytobands_hg38_GRCh38_v2.4.0.tsv",
-//         "protein_domains_uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/arriba/2-4-0/protein_domains_hg38_GRCh38_v2.4.0.gff3"
-//     }
-//  ]'
+// '
+//    [
+//        {
+//            "name": "2.4.0",
+//            "blacklist_uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/arriba/2-4-0/blacklist_hg38_GRCh38_v2.4.0.tsv.gz",
+//            "cytobands_uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/arriba/2-4-0/cytobands_hg38_GRCh38_v2.4.0.tsv",
+//            "protein_domains_uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/arriba/2-4-0/protein_domains_hg38_GRCh38_v2.4.0.gff3"
+//        }
+//    ]
+//  '
 export const icav2ArribaUriMappingSSMParameterPath = '/icav2/umccr-prod/arriba_mapping';
 
 // FIXME deploy to stg/prod
-// '[
-//    {
-//        "name": "2023-07-21--4.2.4",
-//        "qc_reference_samples_json":  [
-//          "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01563/"
-//          "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01147/",
-//          "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01620/",
-//          "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01286/",
-//          "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01673/"
-//        ],
-//        "cl_config_sample_names_replace": {
-//            "PRJ220412": "Ref_1_Good",
-//            "MDX210318": "Ref_2_Good",
-//            "PRJ220466": "Ref_3_Good",
-//            "PRJ211234": "Ref_4_Bad",
-//            "PRJ220790": "Ref_5_Bad",
-//            "L2200121_dragen_qualimap": "Ref_1_Good",
-//            "L2101521_dragen_qualimap": "Ref_2_Good",
-//            "L2200188_dragen_qualimap": "Ref_3_Good",
-//            "L2101763_dragen_qualimap": "Ref_4_Bad",
-//            "L2200311_dragen_qualimap": "Ref_5_Bad"
+// '
+//    [
+//        {
+//            "name": "2023-07-21--4.2.4",
+//            "qc_reference_samples_json":  [
+//              "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01563/"
+//              "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01147/",
+//              "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01620/",
+//              "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01286/",
+//              "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01673/"
+//            ],
+//            "cl_config_sample_names_replace": {
+//                "PRJ220412": "Ref_1_Good",
+//                "MDX210318": "Ref_2_Good",
+//                "PRJ220466": "Ref_3_Good",
+//                "PRJ211234": "Ref_4_Bad",
+//                "PRJ220790": "Ref_5_Bad",
+//                "L2200121_dragen_qualimap": "Ref_1_Good",
+//                "L2101521_dragen_qualimap": "Ref_2_Good",
+//                "L2200188_dragen_qualimap": "Ref_3_Good",
+//                "L2101763_dragen_qualimap": "Ref_4_Bad",
+//                "L2200311_dragen_qualimap": "Ref_5_Bad"
+//            }
 //        }
-//    }
-//  ]'
+//    ]
+//  '
 export const icav2WtsQcReferenceSamplesUriMappingSSMParameterPath =
   '/icav2/umccr-prod/wts_qc_reference_samples';
 
@@ -376,7 +380,7 @@ WTS Stateless stack
 */
 
 // FIXME deploy to stg/prod
-export const wtsIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wts_4.2.4_pipeline_id'; // d1e84505-3082-4e0b-b246-cc952c8b1b73
+export const wtsIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wts_4.2.4_pipeline_id'; // 54bf7b44-e783-4935-8db3-b5533afc92f4
 export const wtsIcav2PipelineWorkflowType = 'wts';
 export const wtsIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const wtsIcav2ServiceVersion = '2024.07.01';
