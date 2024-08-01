@@ -2,7 +2,12 @@ import { Construct } from 'constructs';
 import { Duration, Stack, StackProps } from 'aws-cdk-lib';
 import { TableV2 } from 'aws-cdk-lib/aws-dynamodb';
 import { EventBus, Rule, IEventBus } from 'aws-cdk-lib/aws-events';
-import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
+import {
+  Runtime,
+  Architecture,
+  DockerImageFunction,
+  DockerImageCode,
+} from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { Vpc, VpcLookupOptions, SecurityGroup, IVpc, ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
@@ -23,18 +28,20 @@ export interface BclConvertManagerStackProps {
 
 export class BclConvertManagerStack extends Stack {
   private readonly lambdaRuntimePythonVersion = Runtime.PYTHON_3_12;
-  private readonly baseLayer: PythonLayerVersion;
+  //private readonly baseLayer: PythonLayerVersion;
   private readonly vpc: IVpc;
   private readonly lambdaSG: ISecurityGroup;
 
   constructor(scope: Construct, id: string, props: StackProps & BclConvertManagerStackProps) {
     super(scope, id, props);
 
-    this.baseLayer = new PythonLayerVersion(this, 'BaseLayer', {
-      entry: path.join(__dirname, '../deps'),
-      compatibleRuntimes: [this.lambdaRuntimePythonVersion],
-      compatibleArchitectures: [Architecture.ARM_64],
-    });
+    // This layer is no longer needed unless we move back to a PythonFunction instead of
+    // Docker image function
+    // this.baseLayer = new PythonLayerVersion(this, 'BaseLayer', {
+    //   entry: path.join(__dirname, '../deps'),
+    //   compatibleRuntimes: [this.lambdaRuntimePythonVersion],
+    //   compatibleArchitectures: [Architecture.ARM_64],
+    // });
 
     this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
     this.lambdaSG = new SecurityGroup(this, 'IcaEventTranslatorLambdaSG', {
@@ -42,7 +49,7 @@ export class BclConvertManagerStack extends Stack {
       securityGroupName: props.lambdaSecurityGroupName,
       allowAllOutbound: true,
       description:
-        'Security group that allows teh Ica Event Translator (BclConvertManager) function to egress out.',
+        'Security group that allows the Ica Event Translator (BclConvertManager) function to egress out.',
     });
 
     // Create the ICAv2 Event Translator service
@@ -63,24 +70,39 @@ export class BclConvertManagerStack extends Stack {
       props.icav2JwtSecretsManagerPath
     );
 
-    const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
-      entry: path.join(__dirname, '../translator_service'),
-      layers: [this.baseLayer],
-      runtime: this.lambdaRuntimePythonVersion,
+    // Deprecated as this exceeds over the maximum decompressed file size
+    // Use the DockerImageFunction for now instead
+    // const EventTranslatorFunction = new PythonFunction(this, 'EventTranslator', {
+    //   entry: path.join(__dirname, '../translator_service'),
+    //   layers: [this.baseLayer],
+    //   runtime: this.lambdaRuntimePythonVersion,
+    //   environment: {
+    //     TABLE_NAME: props.icav2EventTranslatorDynamodbTableName,
+    //     EVENT_BUS_NAME: props.eventBusName,
+    //     ICAV2_BASE_URL: 'https://ica.illumina.com/ica/rest',
+    //     ICAV2_ACCESS_TOKEN_SECRET_ID: icav2JwtSecretsManagerObj.secretName,
+    //   },
+    //   vpc: this.vpc,
+    //   vpcSubnets: { subnets: this.vpc.privateSubnets },
+    //   securityGroups: [this.lambdaSG],
+    //   architecture: Architecture.ARM_64,
+    //   timeout: Duration.seconds(120),
+    //   memorySize: 1024,
+    //   index: 'icav2_event_translator.py',
+    //   handler: 'handler',
+    // });
+    const EventTranslatorFunction = new DockerImageFunction(this, 'EventTranslator', {
+      code: DockerImageCode.fromImageAsset(path.join(__dirname, '../'), {
+        file: 'Dockerfile',
+      }),
+      timeout: Duration.seconds(120),
+      memorySize: 1024,
       environment: {
         TABLE_NAME: props.icav2EventTranslatorDynamodbTableName,
         EVENT_BUS_NAME: props.eventBusName,
         ICAV2_BASE_URL: 'https://ica.illumina.com/ica/rest',
         ICAV2_ACCESS_TOKEN_SECRET_ID: icav2JwtSecretsManagerObj.secretName,
       },
-      vpc: this.vpc,
-      vpcSubnets: { subnets: this.vpc.privateSubnets },
-      securityGroups: [this.lambdaSG],
-      architecture: Architecture.ARM_64,
-      timeout: Duration.seconds(120),
-      memorySize: 1024,
-      index: 'icav2_event_translator.py',
-      handler: 'handler',
     });
 
     dynamoDBTable.grantReadWriteData(EventTranslatorFunction);
