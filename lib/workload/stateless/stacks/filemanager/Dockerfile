@@ -25,14 +25,12 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook
 
 COPY . .
-# This must be release so that swagger_ui can work.
-# See https://github.com/juhaku/utoipa/issues/527.
-RUN cargo build --release --bin filemanager-api-server
+RUN cargo build --bin filemanager-api-server
 
 FROM debian:bookworm-slim AS runtime
 
 # curl is used for healthcheck.
 RUN apt -y update && apt -y install curl
 
-COPY --from=builder /app/target/release/filemanager-api-server /usr/local/bin
+COPY --from=builder /app/target/debug/filemanager-api-server /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/filemanager-api-server"]
