@@ -77,6 +77,7 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
         code: DockerImageCode.fromImageAsset(path.join(__dirname, '../'), {
           file: 'lambdas/query_bclconvert_outputs_handler_py/Dockerfile',
         }),
+        architecture: lambda.Architecture.ARM_64,
       }
     );
 

@@ -20,4 +20,4 @@ RUN ( \
       python3 -m pip install . \
     )
 
-CMD ["query_bclconvert_outputs_handler.lambda_handler"]
+CMD ["query_bclconvert_outputs_handler.handler"]

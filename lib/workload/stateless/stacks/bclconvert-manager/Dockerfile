@@ -20,4 +20,4 @@ RUN ( \
       python3 -m pip install -r requirements.txt \
     )
 
-CMD ["icav2_event_translator.lambda_handler"]
+CMD ["icav2_event_translator.handler"]

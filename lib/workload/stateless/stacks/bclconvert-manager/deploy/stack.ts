@@ -103,6 +103,7 @@ export class BclConvertManagerStack extends Stack {
         ICAV2_BASE_URL: 'https://ica.illumina.com/ica/rest',
         ICAV2_ACCESS_TOKEN_SECRET_ID: icav2JwtSecretsManagerObj.secretName,
       },
+      architecture: Architecture.ARM_64,
     });
 
     dynamoDBTable.grantReadWriteData(EventTranslatorFunction);
