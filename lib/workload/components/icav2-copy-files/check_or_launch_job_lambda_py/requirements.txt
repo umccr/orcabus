@@ -1,2 +1,2 @@
-wrapica==2.27.0
+wrapica==2.27.1
 boto3>=1.34

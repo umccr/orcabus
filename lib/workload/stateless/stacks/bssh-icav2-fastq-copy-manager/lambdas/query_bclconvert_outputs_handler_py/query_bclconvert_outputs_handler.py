@@ -29,16 +29,16 @@ from pathlib import Path
 from typing import Dict
 from urllib.parse import urlparse
 import pandas as pd
-from wrapica.enums import DataType
 import logging
 
 # Wrapica imports
+from wrapica.enums import DataType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
     get_project_data_obj_by_id,
     read_icav2_file_contents_to_string,
     get_project_data_folder_id_from_project_id_and_path,
-    convert_project_id_and_data_path_to_icav2_uri
+    convert_project_id_and_data_path_to_uri
 )
 
 # Local imports
@@ -179,7 +179,7 @@ def handler(event, context):
     # Generate the manifest output for all files in the output directory
     # to link to the standard output path from the run id
     logger.info("Generating the run manifest file")
-    run_root_uri = convert_project_id_and_data_path_to_icav2_uri(
+    run_root_uri = convert_project_id_and_data_path_to_uri(
         project_id,
         bcl_convert_output_path,
         DataType.FOLDER
@@ -237,13 +237,13 @@ def handler(event, context):
     interops_as_uri = dict(
         map(
             lambda interop_iter: (
-                convert_project_id_and_data_path_to_icav2_uri(
+                convert_project_id_and_data_path_to_uri(
                     project_id,
                     Path(interop_iter.data.details.path),
                     data_type=DataType.FILE
                 ),
                 [
-                    convert_project_id_and_data_path_to_icav2_uri(
+                    convert_project_id_and_data_path_to_uri(
                         dest_project_id,
                         (
                                 dest_folder_path /
@@ -275,7 +275,7 @@ def handler(event, context):
         )
     except StopIteration:
         # Add 'IndexMetricsOut.bin' from reports directory to the interop files
-        index_metrics_uri = convert_project_id_and_data_path_to_icav2_uri(
+        index_metrics_uri = convert_project_id_and_data_path_to_uri(
             project_id,
             Path(bcl_convert_output_obj.data.details.path) / "Reports" / "IndexMetricsOut.bin",
             data_type=DataType.FILE
@@ -283,12 +283,14 @@ def handler(event, context):
 
         # Append InterOp directory to list of outputs for IndexMetricsOut.bin
         run_manifest[index_metrics_uri].append(
-            convert_project_id_and_data_path_to_icav2_uri(
+            convert_project_id_and_data_path_to_uri(
                 dest_project_id,
                 dest_folder_path / "InterOp",
                 data_type=DataType.FOLDER
             )
         )
+
+    logger.info("Outputting the manifest and fastq list rows")
 
     return {
         "manifest_b64gz": compress_dict(run_manifest),
@@ -302,8 +304,8 @@ def handler(event, context):
 #             handler(
 #                 {
 #                     "project_id": "a7c67a80-c8f2-4348-adec-3a5a073d1d55",
-#                     "analysis_id": "2800e302-4a12-4bf0-9028-f74e4a83479f",
-#                     "output_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary_data/240424_A01052_0193_BH7JMMDRX5/202406066dd81cc9/"
+#                     "analysis_id": "47936e52-21fd-457b-a1dc-97139d571441",
+#                     "output_uri": "icav2://development/primary_data/240424_A01052_0193_BH7JMMDRX5/202406066dd81cc9/"
 #                 },
 #                 None
 #             ),
@@ -312,6 +314,6 @@ def handler(event, context):
 #     )
 #
 #     # {
-#     #     "manifest_b64gz": "H4sIAH+KVmYC/+2dX2/bNhTFv0qQ58kSr0T96VviJouBBGmjFh0wDAQt0Y4wWdIkOYs77LuPdhu2RdrELhiPou9D4hPkwZc/H55LXcvwP8dFxu/gletOwZ9NKQmdPKbgBElMHZ5nmRP7JCMg4iwHcItyUTm84uWqE50LgQeQsBPPI77HPIhjdnpBL67gdfrbmMVBkFDCgkyQBJzTrBzX1Z1o+6O7gAGLHAiiTEyzxJnybOoE3ix3OPEzh8pfs4j4wg+nbr3sm2XvXtbzzj1r27rtRmU9P3519LsqPKIJFfEMHB9y3wmyKHS4D4GThTymORdxNKWbwlnTFgverp6u2wVP/p9CnPPQCzxCPj358R+/HA2I1Tnv+r/G9aIpRS9G/X2PyJ5D9oG3VVHN0WDP0boRTd32nXuS86YXLbsSfVtk3Sjr7vbL7aGQ4aF7LRbLsi/k7rxnac97hLftLp1Usxp36JY2e7vkZdGvcIfuji7l696Z3grRI7btsU2qXEbaRd00spWycb2sMNt24XezrDYJd78oEdlux5DxKisFRt3uAGfrawVWFh0m3U8e4d4V0nl4jvuZXvF5v14v+9G0qBDdduje1Q17X/1Z1X9X7JS3WZ0LtN4O/NrN4+i2xza767XEJuuwy27N79OFROde8koweSUpn9kjHijBUsIupWI3hMmH0aYbj+Yf98v1R1XayBmQs27OoacES31T/SyrtJEzIGftnEEJllJjOQ8/N0IlWBobmxuhlZwBOe8lNwjmhm7ONFGCpWAqZ1nl0P38RbA0MDY3iJWcCXLeS24A5oY+zu+rXPSiXRSVyL/5g6Weeb7+plqbmQMyf5Hc9pVgaWhsbvtWcgbkrIvzw2VLEinBUrIZmIJBhv6qTCtBA4LWnhyBEiyNjE3owErOgJy1BwdVgqWJsQFNB885VEIGtGcs6NBKQwMaej+GBjS0ZtDgx0pI0L6hybEuc7Cgnxt4mMXbhoHH0+YGNLd20IkSEnRgbIokVqcIYIrsz9yA5tYOmighQYOxKULsBA0IWhdo/8eDU98gR/uDH5w+DRoQtHbQjwYgRhp66AMQ+aOENDQ1tRcGnp2gAUFrT47HIz0joyO0MqIBI1oz5+9Nlww09ICnS08nB2By7MfRgI7WB/q5MZ5ZCWLDGG8r5oDMXyRQHo9OjWyRiZ2gAUHrAv1ww1hClJCgN7eOBQY5+qsyrQQNCFp7dDx+M8DIjB66oyEgSkjQiaHRsS7TStCAoLWDVtNJYCl4xjoa7AQNCFo76EQJCZoY6+jETtCAoHWDpp4SEjSY6mjq2XmOBjxH78fRgI7WDpooIUH7xkYHsRM0IGjtoEEJCTow1tFgJ2hA0NpB+0pI0NRYR/t2ggYErfsc/Z0b8kycRwfDP959EdLRobHREQweNFVCgo6MBU3tjA7A6NhPdABGh3bQkRIStLHvGdLITtCAoPfTDAGboXbQoRISdGxsdIR2ggYErfuWsJAqIY93pl6wrMu0EjQgaO03OT7+2LKRd5NGdoIGBK0P9HOfsjDL2DZ8ymIr5oDMXyRQYiVkoMTGJndsJ2iwB3S7rDp32nW3jDcdON2t07R1zvw4loVQd1LJLXPduCdlMa8Wour/z+8gfijmZZd6yjuR8bIsqrn9iz1r27o9gGUumkIukZdvbnl3EC/suG5bkfUinxzCnj2774Vs7/n6C5ftX+1106+9fFXnorR/tZMFnx/Ai5ouF+vibpaV/Wt9c/5rW+QHEUstz/qiPoDX9O3nJZ6u1idTixd6GD3m/MPF1WFs0gfjgud7B7BMm+P27iAuUG/EvOhkYzmMvjKR5/p7M5b573/PZmjGApoAAA==",  #  pragma: allowlist secret
-#     #     "fastq_list_rows_b64gz": "H4sIAH+KVmYC/9Wb7WvcRhDG/xVzn2OdtC96ybfNhmwKzpdoC4FShGpfwoEdUqcU2tL/vTO6y8aNnltz92kWbN8gGfthfszsPKvVL/9s3oefXm9eXm2CczH6EKsYXQyOgmbz4opuj+/49o0ydd3U6nDt5tWP127mzzu61vDt3XzXvNnf735+3POv7W/nP9XL7bazg931H9W1Vnf62tx27fWslbm+befe3s27vvvNbvf3D5+nL4/7h/nxry39faWGydF/0fVUq76fXr21b9+p1+MHv1U13beqv5vb2tRNsx3nhy/3u69b1jI122/yUjCNzXRD0fS+meij+jh//eP36tPfm6NoJVu0+r/of19cPaXH/EKIzC94+vLBIYJ2WBM8XBNL0A4pmEZVCEEoOkeQAIbgnfO+8t5F+oouIIJtvSZ4uCaWYFunYBp1IQSh6BzBJ9iewEQEG0CwkU3wezCNphSCSHS+i0bmxq0zMM1AfRTXIFgHW9nrYKtSMI22FIJIdLaLLmtgcD5SDdLHghMS1ICglk1Qp2Aa21IIItE5gjR9ctX5yOtgpBbKECFBAwga2QRNCqaxK4UgEp0lGIkbdU/n2UsQvZOTTAsItrIJtimYxr4Ugkj0M1300Dg9m0KqwUqt6Q12Te9w7UhPiaH3bRUZbAqmceBEKLn0sqKz9Lht0ihD/ZMaKVtCRA/U3tDKptemgExxXQo+qDo7hUai5sLSPePiIRC/DvDrZPPrUkCZaErhB1Vn1z8faMGLgX08fXpUf0qvPeDxmlR+JC8FlAlVBr8TqrP1x8VH3MgDOq5ED/n1gF8vm1+fAsqELoUfVP2cB2TzXtHaR90z4vobAL9BNr8hBZQJUwo/qDpbfzx10o+K1j6aXuD6R99rfqYWzc/UKaBM2EL4YdXnuQd9gXvQYvjpk4O4losvK/o896AvcA8C6a3n8BLwQdXnuQd9gXsQyG89h5fAD6o+zz3oC9yDOH5oDpfP74Tq89yDvsA9COS3nsNL4AdVn+ce9AXuQSC/9RxeAj+o+jz3oC9wD/L4gTm8AH5YdX7+DFx1PHgeAdIgUxnw9Ag4iPapgzBiGKYnaDYFlI3laaiRyzCv+pkaPCx9/CTXcQD4DeAUzNCI5jc0KaBMdIXww6rP8xDmAg8hkN96Gi+BH1SdPYkW+RgMeXguQo4hvx7w62Xz61NAmehL4QdV5+svsvuL7CGWc9mAnzLAAxrR/ZPkpYAyMZTB74Tq/AyzVJ2v0lYo4qcAPyWbX9oUVtOo6lL4QdX5s9iR34Vwywk0z5uhiB/wgGaQzW9IAWWiKYUfVJ0/x8sV6Kl/Rr8cJkT8LPCAthbNz9YpoEyoQvhh1Xn/4P1xD3Sx87D+LFj/rOz1zzYpoEzoUvhB1dk97OXktednSMtudoD8wPpnZa9/VqWAMmFK4QdVZ/0Dv8hC7Gh+4TcivIP8NOCnZfPTKaBM2FL4QdV5/8f2PbqKjcTyDBfxM4Cfkc3ve0CZaEvhB1U/8x4SNU5qm46LjwBCfhbws7L52RRQJrpS+EHVWf/Ab614nl+WR0kn1r8W8Gtl82tTQJnoS+EHVef3X8Ly7KGKyyCK/Z/tAL9ONr8uBZSJUvZfsOof+f36H1n1Xz7MQAAA"  #  pragma: allowlist secret
+#     #     "manifest_b64gz": "H4sIABfArGYC/+2db2/aSBDGv0qU12dsj//3XUKSC6egNrhVK51Oq429AeuM7bMNl9zpvvsttNm2StoEytJlNFIknigRnvn54dn1YMS/x0XGl/DKtnmUhRGPHSuLb8HyPT+2eC4yy+MBdyIvd/MgsItyXlm84uV9JzobfAcgYSeO43oOcyCO2ellcDmGs/TDkHk85BlnWRxxT1inWTmsq6Vo+6Olz4BFlgd+kCVhaPHMcyw/z6Ryb1wriF3hQRT5fh7Y9aJvFr19VU87+7xt67YblPX0+NXR78edJ6tuikaURSWsXCytjGczYQWOl0QRREHoymdsrE4+x0zwrrfAbtpiztt7lvOer8r3wZflu04AzHETT5Yf/TYen00+BDY48u+hE4Z5HrtZlnys4fiPX44OCNl73lZFNSVom0C7kG3/NaznTSl6MejveiL3QnKj6rYmq70M2EQ0ddt39pmYL8q+kGa7Y2nP+26QdcufAvChosNjeJLzphctG4u+LTIiuDnBUZVL/13WTSOXCzasFxUZ8QeMOLzPSkF23Jrj7WoJZmXR9QRvY3iTRbVeiO/mJZHbiFzKV5u+dCYE+W5zetcLXhb9PcXe1gTf1g17V/1Z1X9X7JS3WZ0LwrjlZuaTC18v+sFNURHBrS9K3hZyK0NXJtuBbNePg1lPa/GWq8nafrSkbIrx41ams694JZhrX8kjy15BCZa67EoqNnGZfBisd9yD6T8/Be+3isWIGwi3JtyhowRLPcPdLYvFiBsIty7coARLA9NxH36YhEqwNDY9TEKUuIFwa8IdJEqwFAx3tywWY3a7lN26cH8WLPVNx+2ixA2Ee5/ZDZTdO8f9rspFL9q5xJd/9QtLHWND5auiMaMHQq8z0z0lWBqavoR6KHED4d4x7odteBIpwVJ3PZkF8+z9RbUoeQPx1hUnvhIsjUxPbx8lbiDcutIkUIKlienhHRw87lAJGd6O6bxDlPYGsvde7Q1kbz28wYuVkLw9s+NkVS1K3kC8d877uaGVkTbHMLRS5kmUkFb3TY+WBLXVgay+d6sDWV0Xb1cJyRtMjxYXJ28g3jvm7X17QuuZ52/v4Ce03+cNxFtTnviOEpJ3YHh++87B+/vREMvkOAlw2hvI3rrs/XhoaLK/Q5RxAhQnenA/NTM0194HPDP8fpwAxcle/Q3k753zfm5QaGSsYBgUvgg9EHqdKfN4RmvyKprg5A3Ee8e8H+52S1wlJO/1fW++ef7+olqUvIF468qTx+9BmJzfh+5v8F0lJO/E7DxZVYuSNxBvXbzV/BNYCo7p/gacvIF46+KdKCF5u6b7O8HJG4i3Jt6Bo4TkDYb7O3Bw7r+B9t979TeQv3XxdpWQvD3T88TFyRuIty7eoITk7Zvub8DJG4i3Lt6eEpJ3YLq/PZy8gXhr2n8/cVOhwfNv//D3g5+F9Hdoep74OP0N5G9d/g6UkP6OTPd3gDNPgPJEF+9ICcnb9PcvgwgnbyDee81voPzWxTtUQvKOTc+TECdvIN6a7mcLAyXk/tvw651VtSh5A/HWdb/m4894m3x/bISTNxDvnfN+7qMlRtocw0dLXoQeCL3OlImVkCkTm57qMU7egI53u6g6+6brZow3HVjdzGraOme+k8gf1x5V8gX0urFPymJazUXVP/H91g8Hlb2Lsm5W//VDHT4cU29Hp7wTGS/lWZui6em8besWTzd3vZAJnq++ihlNU6+bXj53Oa5zUeI5U/OmaFdtvZnxDtML6vpTJ6f3q7g9/H7eXPzaFjma0zOs21ZkvchHiBYmVHE3mvOpQBcH4HjO4Xdz8f5yjCoOrjFtfVqe9UVdoWkpXcxXFU4WeFqaiGnRyROF6jydLzFd5Y3kBcTdXrv5738WyW3/3JoAAA==",  #  pragma: allowlist secret
+#     #     "fastq_list_rows_b64gz": "H4sIABfArGYC/9Wbb2vjRhDGv0rw67Ms7T9Z925vj25bkjfRFgqlCBO7PUPumiZpoS397p2RfXvp6fEG+5UGkniQAn6YHzM7z2r10z+L2/jd+8Xbq0X0PqUQU5WST9FT0CzeXNHt/oZvXytT102tDteu33197XrzaUfXGr6922ybb/b3ux8e9/xvT/rtavWwf9jd7z/tltvdn8u7zd2H3dLWumtb1VrXuOXmYfn02x/PH3abp+elWj087j9uHv8atpvnzYq+xigzePouq4a66fTw7tv2+5ub97c/2pWq6b6rndtu183dXbfqNx8f7ndPK5Y0NKvPKnMw9M1wTdFw2wz0Uf1CX/l79evfi6N2JUK7+r/2f99cvWTJNGNMTDMG+gnRI562m/I8XJs7T9vlYOiVLJ5Qe4kn4YwxeB9CFYJP9JN8RDxdPeV5uDZ3nq7OwdBrWTyh9hLPFxBfoEU8G8CzEcHzSzD0RhhPpL3cbxNT5CYbmW2kjovrE6yfTsT66VQOht4K44m0F/vtuHZGHxLVJ32McCFPDXhqETx1DobeCeOJtJd40kTLFRkSr5+Jmi0jhTwN4GlE8DQ5GPpWGE+kvcgzEUXqsz6wWyGWJ+chB3g6ETxdDoZ+LYwn0v5Kvz202MAmlOqzUlOWnZ2yPFw7slRzY/l52elsDoa+43yo2bMsai+y5AZLAxF1Wmq5bEERS1CXnRPB0uWAvHgtDCYUX5xsEzH0ceyzaXQpiGYLaLYiaLY5oIQ0wmhC8cV1M0RaKFPkXQT6DKg2lZ56zuO1mdMklTmghChRNE+IL9YmFyZRJM/puUoDpLkGNNciaK5zQAnRwmhC8a95Tt46qGjNpD6bcG12gGYngmaXA0qIEUYTii/WJk+y9KeiNZNmILhu0u+Upqkl0DR1DighVhZNLP48f6Iv8Cd6bjT1yRlfzx5mUft5/kRf4E/my3I64guCCcWf50/0Bf5kvjSnI74gmlD8ef5EX+BP5koTjfhiaJ4Qf54/0Rf4k/nSnI74gmhC8ef5E32BP5kvzemIL4gmFH+eP9EX+JPZ0gQjvhyaWHx5po1ckTzMHnHSOFQZ8DwMeBT30qOYuRHNjwZtDigp40NfM3uiZfGv1OdhyeTn1p4DQLMDp4O6RgLNrskBJaSVRROLP8+lmAtcynxpTgd9QTSh+OLpvcTHg3yquEA5hjTXgOZaBM11Digha2E0ofhybSZ2m4ldyngGHtBUBnhOI6HTksocUEI6UTRPiC9PQmNFhipv2SKaCtBUImjmPWw19KoWRhOKL597T/xOih9P7QXetEU0gec0nQiaXQ4oIY0wmlB8+ZQ0V2egTpvCeBwT0bTAc9paAk1b54ASomTRxOLLDiWE417tuJkAa9OCddOKWDdtkwNKiBZGE4ov7ryPp9wDPxUb9+AjpAnWTSti3bQqB5QQI4wmFF90KPx6EZGkKYjfTAke0tSAphZBU+eAEmKF0YTiy36TNw+Sr9iqjE+sEU0DaBoRNL8ElBAnjCYU/8q7YtRiqcF6LkzCCWlaQNOKoGlzQAlphdGE4osOhd8lCjwFjQ/HTqybDtB0Imi6HFBC1sJoQvHlvaA4Pj+p0jjcYr9pW0CzFUGzzQElRNheEBb/Nc2f/wMHcuL20kIAAA=="   #  pragma: allowlist secret
 #     # }

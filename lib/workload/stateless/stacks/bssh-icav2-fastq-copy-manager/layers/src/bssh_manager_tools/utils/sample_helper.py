@@ -6,9 +6,9 @@ import pandas as pd
 from pathlib import Path
 
 # Wrapica imports
-from wrapica.enums import DataType
+from wrapica.enums import DataType, UriType
 from wrapica.project_data import (
-    convert_project_id_and_data_path_to_icav2_uri
+    convert_project_id_and_data_path_to_uri
 )
 
 
@@ -250,19 +250,21 @@ def get_fastq_list_paths_from_bssh_output_and_fastq_list_csv(
 
     # Update the fastqs to contain the full path
     fastq_list_pd["Read1FileUriSrc"] = fastq_list_pd.apply(
-        lambda row: convert_project_id_and_data_path_to_icav2_uri(
-            project_id,
-            run_output_path / row["sample_prefix"] / row["Read1File"],
-            DataType.FILE
+        lambda row: convert_project_id_and_data_path_to_uri(
+            project_id=project_id,
+            data_path=run_output_path / row["sample_prefix"] / row["Read1File"],
+            data_type=DataType.FILE,
+            uri_type=UriType.ICAV2
         ),
         axis="columns"
     )
 
     fastq_list_pd["Read2FileUriSrc"] = fastq_list_pd.apply(
-        lambda row: convert_project_id_and_data_path_to_icav2_uri(
-            project_id,
-            run_output_path / row["sample_prefix"] / row["Read2File"],
-            DataType.FILE
+        lambda row: convert_project_id_and_data_path_to_uri(
+            project_id=project_id,
+            data_path=run_output_path / row["sample_prefix"] / row["Read2File"],
+            data_type=DataType.FILE,
+            uri_type=UriType.ICAV2
         ),
         axis="columns"
     )

@@ -33,10 +33,10 @@ if typing.TYPE_CHECKING:
     from mypy_boto3_secretsmanager.client import SecretsManagerClient
 
 # ICA imports
-from wrapica.enums import DataType
+from wrapica.enums import DataType, UriType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
-    convert_icav2_uri_to_project_data_obj, convert_project_data_obj_to_icav2_uri,
+    convert_uri_to_project_data_obj, convert_project_data_obj_to_uri,
     list_project_data_non_recursively
 )
 
@@ -78,7 +78,7 @@ def handler(events, context):
     analysis_uri = events.get("analysis_output_uri")
 
     # Convert analysis uri to project folder object
-    analysis_project_data_obj = convert_icav2_uri_to_project_data_obj(analysis_uri)
+    analysis_project_data_obj = convert_uri_to_project_data_obj(analysis_uri)
 
     # Analysis list
     analysis_top_level_data_list = list_project_data_non_recursively(
@@ -128,9 +128,9 @@ def handler(events, context):
     )
 
     return {
-        "interop_output_dir": convert_project_data_obj_to_icav2_uri(interop_data_obj),
-        "multiqc_html_report": convert_project_data_obj_to_icav2_uri(multiqc_html_data_obj),
-        "multiqc_output_dir": convert_project_data_obj_to_icav2_uri(multiqc_data_obj)
+        "interop_output_dir": convert_project_data_obj_to_uri(interop_data_obj, uri_type=UriType.S3),
+        "multiqc_html_report": convert_project_data_obj_to_uri(multiqc_html_data_obj, uri_type=UriType.S3),
+        "multiqc_output_dir": convert_project_data_obj_to_uri(multiqc_data_obj, uri_type=UriType.S3)
     }
 
 

@@ -29,11 +29,11 @@ import logging
 from typing import Dict, List
 
 # ICA imports
-from wrapica.enums import DataType
+from wrapica.enums import DataType, UriType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
-    convert_icav2_uri_to_project_data_obj,
-    list_project_data_non_recursively, convert_project_data_obj_to_icav2_uri
+    convert_uri_to_project_data_obj,
+    list_project_data_non_recursively, convert_project_data_obj_to_uri
 )
 
 # IDE imports only
@@ -231,7 +231,7 @@ def handler(event, context):
     germline_output_prefix = event["germline_output_prefix"]
 
     # Get the analysis output uri as a project data object
-    analysis_output_obj = convert_icav2_uri_to_project_data_obj(analysis_output_uri)
+    analysis_output_obj = convert_uri_to_project_data_obj(analysis_output_uri)
 
     # FInd the dragen germline output
     top_dir_list: List[ProjectData] = list_project_data_non_recursively(
@@ -283,7 +283,7 @@ def handler(event, context):
         map(
             lambda key_val: (
                 key_val[0], (
-                    convert_project_data_obj_to_icav2_uri(key_val[1])
+                    convert_project_data_obj_to_uri(key_val[1], uri_type=UriType.S3)
                     if key_val[1] is not None
                     else None
                 )

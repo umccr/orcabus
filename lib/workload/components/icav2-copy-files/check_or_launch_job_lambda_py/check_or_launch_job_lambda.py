@@ -36,7 +36,7 @@ import typing
 
 # Wrapica imports
 from wrapica.job import get_job
-from wrapica.project_data import convert_icav2_uri_to_project_data_obj, project_data_copy_batch_handler
+from wrapica.project_data import convert_uri_to_project_data_obj, project_data_copy_batch_handler
 
 if typing.TYPE_CHECKING:
     from mypy_boto3_ssm import SSMClient
@@ -112,7 +112,7 @@ def submit_copy_job(dest_uri: str, source_uris: List[str]) -> str:
     # Rerun copy batch process
     source_data_ids = list(
         map(
-            lambda source_uri_iter: convert_icav2_uri_to_project_data_obj(
+            lambda source_uri_iter: convert_uri_to_project_data_obj(
                 source_uri_iter
             ).data.id,
             source_uris

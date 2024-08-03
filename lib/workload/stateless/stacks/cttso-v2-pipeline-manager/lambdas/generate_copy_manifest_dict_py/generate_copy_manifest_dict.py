@@ -33,8 +33,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 # Wrapica imports
-from wrapica.enums import DataType
-from wrapica.project_data import convert_project_id_and_data_path_to_icav2_uri
+from wrapica.enums import DataType, UriType
+from wrapica.project_data import convert_project_id_and_data_path_to_uri
 
 
 def handler(event, context):
@@ -71,10 +71,11 @@ def handler(event, context):
         raise ValueError("Fastq list rows are required")
 
     # Generate the manifest list
-    fastq_cache_path = convert_project_id_and_data_path_to_icav2_uri(
+    fastq_cache_path = convert_project_id_and_data_path_to_uri(
         project_id=project_id,
         data_path=Path(cache_path) / sample_id,
-        data_type=DataType.FOLDER
+        data_type=DataType.FOLDER,
+        uri_type=UriType.ICAV2
     )
 
     # Filter fastq list rows by RGSM (match sample_id)

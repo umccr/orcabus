@@ -15,9 +15,8 @@ cache_uri / SampleSheet.csv
 
 """
 from wrapica.enums import DataType
-from wrapica.libica_exceptions import ApiException
 from wrapica.project_data import (
-    convert_icav2_uri_to_project_data_obj, list_project_data_non_recursively, delete_project_data
+    convert_uri_to_project_data_obj, list_project_data_non_recursively, delete_project_data
 )
 from cttso_v2_pipeline_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
 import logging
@@ -52,7 +51,7 @@ def handler(event, context):
 
     # Part 1 - check that in the cache uri, only the sample_id directory exists along with the file SampleSheet.csv
     try:
-        cache_obj = convert_icav2_uri_to_project_data_obj(cache_uri)
+        cache_obj = convert_uri_to_project_data_obj(cache_uri)
     except NotADirectoryError as e:
         logger.info("Cache directory has already been deleted")
         return None
