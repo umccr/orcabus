@@ -202,6 +202,8 @@ export const cttsov2StateMachinePrefix = 'cttsov2Sfn';
 /*
 External resources required by the ctTSO v2 Stack
 */
+
+// Deployed under dev/stg/prod
 export const cttsov2Icav2PipelineIdSSMParameterPath =
   '/icav2/umccr-prod/tso500_ctdna_2.6_pipeline_id';
 
@@ -225,36 +227,36 @@ export const wgtsQcDynamoDbTableSSMArn = path.join(
 External resources required by all dragen stacks on ICAv2
 */
 
-// FIXME deploy to stg/prod
+// Deployed under dev/stg/prod
 // '
 //   [
 //     {
 //       "name": "v9-r3",
-//       "uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-hash-tables/v9-r3/hg38-alt_masked-cnv-hla-rna/hg38-alt_masked.cnv.hla.rna-9-r3.0-1.tar.gz"
+//       "uri": "icav2://reference-data/dragen-hash-tables/v9-r3/hg38-alt_masked-cnv-hla-rna/hg38-alt_masked.cnv.hla.rna-9-r3.0-1.tar.gz"
 //     }
 //   ]
 // '
 export const dragenIcav2ReferenceUriMappingSSMParameterPath =
   '/icav2/umccr-prod/dragen_reference_mapping';
 
-// FIXME deploy to stg/prod
+// Deployed under dev/stg/prod
 // '
 //   [
 //     {
 //       "name": "v39",
-//       "uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/gencode/hg38/v39/gencode.v39.annotation.gtf"
+//       "uri": "icav2://reference-data/gencode/hg38/v39/gencode.v39.annotation.gtf"
 //     }
 //   ]
 // '
 export const icav2GencodeAnnotationUriMappingSSMParameterPath =
   '/icav2/umccr-prod/wts_qc_annotation_mapping';
 
-// FIXME deploy to stg/prod
+// Deployed under dev/stg/prod
 // '
 //   [
 //     {
 //       "name": "hg38",
-//       "uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/genomes/hg38/hg38.fa"
+//       "uri": "icav2://reference-data/genomes/hg38/hg38.fa"
 //     }
 //   ]
 // '
@@ -265,8 +267,8 @@ export const icav2FastaReferenceUriMappingSSMParameterPath =
 External resources required by the wgtsqc Stack
 */
 
-// FIXME deploy to stg/prod
-export const wgtsQcIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wgts_qc_4.2.4_pipeline_id'; // 71f094dc-0cf8-4fcf-890c-9f3edf00ee20
+// Deployed under dev/stg/prod
+export const wgtsQcIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wgts_qc_4.2.4_pipeline_id'; // 413b3c60-a3f5-42eb-a9df-8a77768a8328
 
 export const wgtsQcIcav2PipelineWorkflowType = 'wgtsQc';
 export const wgtsQcIcav2PipelineWorkflowTypeVersion = '4.2.4';
@@ -299,8 +301,8 @@ export const tnDynamoDbTableSSMArn = path.join(tnIcav2PipelineManagerSSMRoot, 'd
 TN Stateless stack
 */
 
-// FIXME deploy to stg/prod
-export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // fe6df931-4a30-4fa7-8d05-31e00367d216
+// Deployed under dev/stg/prod
+export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // fc82a668-4a60-4acf-a528-38f5ee3ffdf5
 export const tnIcav2PipelineWorkflowType = 'tumor_normal';
 export const tnIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const tnIcav2ServiceVersion = '2024.07.01';
@@ -316,27 +318,27 @@ export const tnDefaultReferenceVersion = 'v9-r3';
 Resources required by the WTS Stateful Stack
 */
 
-// FIXME deploy to stg/prod
+// Deployed under dev/stg/prod
 // '[
 //     {
 //         "name": "2.4.0",
-//         "blacklist_uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/arriba/2-4-0/blacklist_hg38_GRCh38_v2.4.0.tsv.gz",
-//         "cytobands_uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/arriba/2-4-0/cytobands_hg38_GRCh38_v2.4.0.tsv",
-//         "protein_domains_uri": "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/arriba/2-4-0/protein_domains_hg38_GRCh38_v2.4.0.gff3"
+//         "blacklist_uri": "icav2://reference-data/arriba/2-4-0/blacklist_hg38_GRCh38_v2.4.0.tsv.gz",
+//         "cytobands_uri": "icav2://reference-data/arriba/2-4-0/cytobands_hg38_GRCh38_v2.4.0.tsv",
+//         "protein_domains_uri": "icav2://reference-data/arriba/2-4-0/protein_domains_hg38_GRCh38_v2.4.0.gff3"
 //     }
 //  ]'
 export const icav2ArribaUriMappingSSMParameterPath = '/icav2/umccr-prod/arriba_mapping';
 
-// FIXME deploy to stg/prod
+// Deployed under dev/stg/prod
 // '[
 //    {
 //        "name": "2023-07-21--4.2.4",
 //        "qc_reference_samples_json":  [
-//          "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01563/"
-//          "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01147/",
-//          "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01620/",
-//          "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01286/",
-//          "icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01673/"
+//          "icav2://reference-data/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01563/",
+//          "icav2://reference-data/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01147/",
+//          "icav2://reference-data/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01620/",
+//          "icav2://reference-data/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01286/",
+//          "icav2://reference-data/dragen-wts-multiqc/2023-07-21--4-2-4/SBJ01673/"
 //        ],
 //        "cl_config_sample_names_replace": {
 //            "PRJ220412": "Ref_1_Good",
@@ -375,8 +377,8 @@ export const wtsDynamoDbTableSSMArn = path.join(
 WTS Stateless stack
 */
 
-// FIXME deploy to stg/prod
-export const wtsIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wts_4.2.4_pipeline_id'; // d1e84505-3082-4e0b-b246-cc952c8b1b73
+// Deployed under dev/stg/prod
+export const wtsIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wts_4.2.4_pipeline_id'; // 66c89437-ec33-4138-8a92-9c018ee533af
 export const wtsIcav2PipelineWorkflowType = 'wts';
 export const wtsIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const wtsIcav2ServiceVersion = '2024.07.01';
