@@ -9,6 +9,7 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
 import { ICAv2CopyBatchUtilityConstruct } from '../../../../components/icav2-copy-files-batch';
+import { DockerImageCode, DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
 
 export interface BsshIcav2FastqCopyManagerConfig {
   /* Required external properties */
@@ -40,31 +41,43 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
       props.icav2TokenSecretId
     );
 
-    // Get the lambda layer object
-    const lambda_layer_obj = new PythonLambdaLayerConstruct(this, 'icav2_fastq_copy_lambda_layer', {
-      layerName: 'ICAv2FastqCopyManagerLayer',
-      layerDescription: 'layer to enable the fastq copy manager tools layer',
-      layerDirectory: path.join(__dirname, '../layers'),
-    }).lambdaLayerVersionObj;
+    // // Get the lambda layer object
+    // const lambda_layer_obj = new PythonLambdaLayerConstruct(this, 'icav2_fastq_copy_lambda_layer', {
+    //   layerName: 'ICAv2FastqCopyManagerLayer',
+    //   layerDescription: 'layer to enable the fastq copy manager tools layer',
+    //   layerDirectory: path.join(__dirname, '../layers'),
+    // }).lambdaLayerVersionObj;
 
     // Get Fastq List Rows lambda
-    const bclconvert_success_event_lambda = new PythonFunction(
+    // const bclconvert_success_event_lambda = new PythonFunction(
+    //   this,
+    //   'bclconvert_success_event_lambda_python_function',
+    //   {
+    //     functionName: `${this.bsshIcav2Map.prefix}-bclconvert-success-event-handler`,
+    //     entry: path.join(__dirname, '../lambdas/query_bclconvert_outputs_handler_py'),
+    //     runtime: lambda.Runtime.PYTHON_3_12,
+    //     architecture: lambda.Architecture.ARM_64,
+    //     index: 'query_bclconvert_outputs_handler.py',
+    //     handler: 'handler',
+    //     memorySize: 1024,
+    //     layers: [lambda_layer_obj],
+    //     timeout: Duration.seconds(60),
+    //     environment: {
+    //       ICAV2_BASE_URL: 'https://ica.illumina.com/ica/rest',
+    //       ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_jwt_secret_obj.secretName,
+    //     },
+    //   }
+    // );
+
+    const bclconvert_success_event_lambda = new DockerImageFunction(
       this,
       'bclconvert_success_event_lambda_python_function',
       {
         functionName: `${this.bsshIcav2Map.prefix}-bclconvert-success-event-handler`,
-        entry: path.join(__dirname, '../lambdas/query_bclconvert_outputs_handler_py'),
-        runtime: lambda.Runtime.PYTHON_3_12,
+        code: DockerImageCode.fromImageAsset(path.join(__dirname, '../'), {
+          file: 'lambdas/query_bclconvert_outputs_handler_py/Dockerfile',
+        }),
         architecture: lambda.Architecture.ARM_64,
-        index: 'query_bclconvert_outputs_handler.py',
-        handler: 'handler',
-        memorySize: 1024,
-        layers: [lambda_layer_obj],
-        timeout: Duration.seconds(60),
-        environment: {
-          ICAV2_BASE_URL: 'https://ica.illumina.com/ica/rest',
-          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_jwt_secret_obj.secretName,
-        },
       }
     );
 
