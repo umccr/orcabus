@@ -1,8 +1,14 @@
 -r requirements.txt
-pytest==8.2.0
-factory_boy==3.3.0
-pytz==2024.1
-mockito==1.5.0
-# Intentionally leave out the boto3 version here. They bump like daily and latest is always fine.
+
+# Intentionally leave out the boto3 version here. They bump like daily and latest is always fine for test scope.
 boto3
-coverage==7.5.1
+
+##
+# FIXME You should pin exact version for following packages. Remove this comment after done so.
+##
+
+pytest
+factory_boy
+pytz
+mockito
+coverage

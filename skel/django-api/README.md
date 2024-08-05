@@ -1,5 +1,8 @@
 # Hello Manager Service
 
+> FIXME: The following is just an example README as template. You should update it to adapt your service.
+---
+
 ```
 Namespace: orcabus.hlo
 ```
@@ -120,21 +123,8 @@ Or visit in browser:
 
 ### API Doc
 
-#### Swagger
-
-- http://localhost:8000/swagger
-- http://localhost:8000/swagger.json
-- http://localhost:8000/swagger.yaml
-
-#### Redoc
-
-- http://localhost:8000/redoc/
-
-#### OpenAPI v3
-
-```
-python manage.py generateschema > orcabus.hlo.openapi.yaml
-```
+- http://localhost:8000/swagger-ui/
+- http://localhost:8000/schema/openapi.json
 
 ## Testing
 
