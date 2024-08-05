@@ -133,10 +133,18 @@ export class SequenceRunManagerStack extends Stack {
   }
 
   private createProcSqsHandler() {
+    /**
+     * For `reservedConcurrentExecutions 1` setting, we are practising Singleton Lambda pattern here.
+     * See https://umccr.slack.com/archives/C03ABJTSN7J/p1721685789381979 for context.
+     * SRM processing is low volume event with time delay friendly (so to speak upto some minutes).
+     * We also make SQS to complimenting delayed queue. See https://github.com/umccr/infrastructure/pull/469
+     */
     const procSqsFn = this.createPythonFunction('ProcHandler', {
       index: 'sequence_run_manager_proc/lambdas/bssh_event.py',
       handler: 'sqs_handler',
       timeout: Duration.minutes(2),
+      memorySize: 512,
+      reservedConcurrentExecutions: 1,
     });
 
     this.mainBus.grantPutEventsTo(procSqsFn);
