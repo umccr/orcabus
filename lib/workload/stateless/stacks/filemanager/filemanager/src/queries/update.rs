@@ -19,7 +19,7 @@ use crate::database::entities::{object, s3_object};
 use crate::error::Error::{InvalidQuery, QueryError};
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
-use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
+use crate::routes::filter::{ObjectsFilter, S3ObjectsFilter};
 use crate::routes::update::PatchBody;
 
 /// A query builder for list operations.
@@ -58,7 +58,7 @@ where
     }
 
     /// Filter records by all fields in the filter variable.
-    pub fn filter_all(mut self, filter: ObjectsFilterAll) -> Self {
+    pub fn filter_all(mut self, filter: ObjectsFilter) -> Self {
         self.select_to_update = self.select_to_update.filter_all(filter);
 
         self.trace_query("filter_all");
@@ -97,7 +97,7 @@ where
     }
 
     /// Filter records by all fields in the filter variable.
-    pub fn filter_all(mut self, filter: S3ObjectsFilterAll) -> Self {
+    pub fn filter_all(mut self, filter: S3ObjectsFilter) -> Self {
         self.select_to_update = self.select_to_update.filter_all(filter);
 
         self.trace_query("filter_all");
@@ -382,7 +382,7 @@ pub(crate) mod tests {
 
         let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .current_state()
-            .filter_all(S3ObjectsFilterAll {
+            .filter_all(S3ObjectsFilter {
                 attributes: Some(json!({
                 "attribute_id": "1"
                 })),
@@ -609,7 +609,7 @@ pub(crate) mod tests {
         attributes: Option<Value>,
     ) -> Result<UpdateQueryBuilder<DatabaseConnection, object::Entity>> {
         UpdateQueryBuilder::<_, object::Entity>::new(client.connection_ref())
-            .filter_all(ObjectsFilterAll { attributes })
+            .filter_all(ObjectsFilter { attributes })
             .update_object_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
     }
@@ -620,7 +620,7 @@ pub(crate) mod tests {
         attributes: Option<Value>,
     ) -> Result<UpdateQueryBuilder<DatabaseConnection, s3_object::Entity>> {
         UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
-            .filter_all(S3ObjectsFilterAll {
+            .filter_all(S3ObjectsFilter {
                 attributes,
                 ..Default::default()
             })

@@ -7,7 +7,7 @@ use crate::database::entities::{object, s3_object};
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
-use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
+use crate::routes::filter::{ObjectsFilter, S3ObjectsFilter};
 use crate::routes::pagination::Pagination;
 use crate::routes::AppState;
 use axum::extract::{Query, State};
@@ -73,14 +73,14 @@ impl<M> ListResponse<M> {
         (status = OK, description = "The collection of objects", body = Vec<FileObject>),
         ErrorStatusCode,
     ),
-    params(Pagination, ObjectsFilterAll),
+    params(Pagination, ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
 pub async fn list_objects(
     state: State<AppState>,
     Query(pagination): Query<Pagination>,
-    QsQuery(filter_all): QsQuery<ObjectsFilterAll>,
+    QsQuery(filter_all): QsQuery<ObjectsFilter>,
 ) -> Result<Json<ListResponse<FileObject>>> {
     let response = ListQueryBuilder::<_, object::Entity>::new(state.client.connection_ref())
         .filter_all(filter_all)
@@ -98,13 +98,13 @@ pub async fn list_objects(
         (status = OK, description = "The count of objects", body = ListCount),
         ErrorStatusCode,
     ),
-    params(ObjectsFilterAll),
+    params(ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
 pub async fn count_objects(
     state: State<AppState>,
-    QsQuery(filter_all): QsQuery<ObjectsFilterAll>,
+    QsQuery(filter_all): QsQuery<ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
     let response = ListQueryBuilder::<_, object::Entity>::new(state.client.connection_ref())
         .filter_all(filter_all)
@@ -151,7 +151,7 @@ impl ListS3ObjectsParams {
         (status = OK, description = "The collection of s3_objects", body = Vec<FileS3Object>),
         ErrorStatusCode,
     ),
-    params(Pagination, ListS3ObjectsParams, S3ObjectsFilterAll),
+    params(Pagination, ListS3ObjectsParams, S3ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
@@ -159,7 +159,7 @@ pub async fn list_s3_objects(
     state: State<AppState>,
     Query(pagination): Query<Pagination>,
     Query(list): Query<ListS3ObjectsParams>,
-    QsQuery(filter_all): QsQuery<S3ObjectsFilterAll>,
+    QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListResponse<FileS3Object>>> {
     let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
         .filter_all(filter_all);
@@ -179,14 +179,14 @@ pub async fn list_s3_objects(
         (status = OK, description = "The count of s3 objects", body = ListCount),
         ErrorStatusCode,
     ),
-    params(ListS3ObjectsParams, S3ObjectsFilterAll),
+    params(ListS3ObjectsParams, S3ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
 pub async fn count_s3_objects(
     state: State<AppState>,
     Query(list): Query<ListS3ObjectsParams>,
-    QsQuery(filter_all): QsQuery<S3ObjectsFilterAll>,
+    QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
     let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
         .filter_all(filter_all);

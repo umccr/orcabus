@@ -14,7 +14,7 @@ use crate::error::Error::ExpectedSomeValue;
 use crate::error::Result;
 use crate::queries::update::UpdateQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
-use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
+use crate::routes::filter::{ObjectsFilter, S3ObjectsFilter};
 use crate::routes::list::ListS3ObjectsParams;
 use crate::routes::AppState;
 
@@ -110,14 +110,14 @@ pub async fn update_object_attributes(
         ),
         ErrorStatusCode,
     ),
-    params(ObjectsFilterAll),
+    params(ObjectsFilter),
     request_body = PatchBody,
     context_path = "/api/v1",
     tag = "update",
 )]
 pub async fn update_object_collection_attributes(
     state: State<AppState>,
-    QsQuery(filter_all): QsQuery<ObjectsFilterAll>,
+    QsQuery(filter_all): QsQuery<ObjectsFilter>,
     Json(patch): Json<PatchBody>,
 ) -> Result<Json<Vec<FileObject>>> {
     let txn = state.client().connection_ref().begin().await?;
@@ -183,7 +183,7 @@ pub async fn update_s3_object_attributes(
         ),
         ErrorStatusCode,
     ),
-    params(ListS3ObjectsParams, ObjectsFilterAll),
+    params(ListS3ObjectsParams, ObjectsFilter),
     request_body = PatchBody,
     context_path = "/api/v1",
     tag = "update",
@@ -191,7 +191,7 @@ pub async fn update_s3_object_attributes(
 pub async fn update_s3_object_collection_attributes(
     state: State<AppState>,
     Query(list): Query<ListS3ObjectsParams>,
-    QsQuery(filter_all): QsQuery<S3ObjectsFilterAll>,
+    QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
     Json(patch): Json<PatchBody>,
 ) -> Result<Json<Vec<FileS3Object>>> {
     let txn = state.client().connection_ref().begin().await?;

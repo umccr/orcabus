@@ -3,7 +3,7 @@
 
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
-use sea_orm::sea_query::{Alias, Asterisk, PostgresQueryBuilder, Query};
+use sea_orm::sea_query::{Alias, Asterisk, PostgresQueryBuilder, Query, SimpleExpr};
 use sea_orm::Order::{Asc, Desc};
 use sea_orm::{
     ColumnTrait, Condition, ConnectionTrait, EntityTrait, FromQueryResult, PaginatorTrait,
@@ -14,7 +14,8 @@ use tracing::trace;
 use crate::database::entities::{object, s3_object};
 use crate::error::Error::OverflowError;
 use crate::error::{Error, Result};
-use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
+use crate::routes::filter::wildcard::WildcardEither;
+use crate::routes::filter::{ObjectsFilter, S3ObjectsFilter};
 use crate::routes::list::{ListCount, ListResponse};
 use crate::routes::pagination::Pagination;
 
@@ -46,7 +47,7 @@ where
     }
 
     /// Create a condition to filter a query.
-    pub fn filter_condition(filter: ObjectsFilterAll) -> Condition {
+    pub fn filter_condition(filter: ObjectsFilter) -> Condition {
         Condition::all().add_option(
             filter
                 .attributes
@@ -55,7 +56,7 @@ where
     }
 
     /// Filter records by all fields in the filter variable.
-    pub fn filter_all(mut self, filter: ObjectsFilterAll) -> Self {
+    pub fn filter_all(mut self, filter: ObjectsFilter) -> Self {
         self.select = self.select.filter(Self::filter_condition(filter));
         self
     }
@@ -88,7 +89,7 @@ where
     ///     bucket = filter.bucket and
     ///     ...;
     /// ```
-    pub fn filter_all(mut self, filter: S3ObjectsFilterAll) -> Self {
+    pub fn filter_all(mut self, filter: S3ObjectsFilter) -> Self {
         self.select = self.select.filter(Self::filter_condition(filter));
 
         self.trace_query("filter_all");
@@ -96,34 +97,66 @@ where
         self
     }
 
+    /// Create an operation based on the wildcard. This either results in a `like` or `=` comparison.
+    pub fn filter_operation<T>(col: s3_object::Column, wildcard: WildcardEither<T>) -> SimpleExpr
+    where
+        T: Into<SimpleExpr>,
+    {
+        match wildcard {
+            WildcardEither::Or(value) => Expr::col(col).eq(value),
+            WildcardEither::Wildcard(wildcard) => {
+                if wildcard.contains_wildcard() {
+                    Expr::col(col).like(wildcard.into_inner())
+                } else {
+                    Expr::col(col).eq(wildcard.into_inner())
+                }
+            }
+        }
+    }
+
     /// Create a condition to filter a query.
-    pub fn filter_condition(filter: S3ObjectsFilterAll) -> Condition {
+    pub fn filter_condition(filter: S3ObjectsFilter) -> Condition {
         Condition::all()
             .add_option(
                 filter
                     .event_type
-                    .map(|v| s3_object::Column::EventType.eq(v)),
+                    .map(|v| Self::filter_operation(s3_object::Column::EventType, v)),
             )
-            .add_option(filter.bucket.map(|v| s3_object::Column::Bucket.eq(v)))
-            .add_option(filter.key.map(|v| s3_object::Column::Key.eq(v)))
+            .add_option(filter.bucket.map(|v| {
+                Self::filter_operation(
+                    s3_object::Column::Bucket,
+                    WildcardEither::Wildcard::<String>(v),
+                )
+            }))
+            .add_option(filter.key.map(|v| {
+                Self::filter_operation(
+                    s3_object::Column::Key,
+                    WildcardEither::Wildcard::<String>(v),
+                )
+            }))
+            .add_option(filter.version_id.map(|v| {
+                Self::filter_operation(
+                    s3_object::Column::VersionId,
+                    WildcardEither::Wildcard::<String>(v),
+                )
+            }))
             .add_option(
                 filter
-                    .version_id
-                    .map(|v| s3_object::Column::VersionId.eq(v)),
+                    .date
+                    .map(|v| Self::filter_operation(s3_object::Column::Date, v)),
             )
-            .add_option(filter.date.map(|v| s3_object::Column::Date.eq(v)))
             .add_option(filter.size.map(|v| s3_object::Column::Size.eq(v)))
             .add_option(filter.sha256.map(|v| s3_object::Column::Sha256.eq(v)))
             .add_option(
                 filter
                     .last_modified_date
-                    .map(|v| s3_object::Column::LastModifiedDate.eq(v)),
+                    .map(|v| Self::filter_operation(s3_object::Column::LastModifiedDate, v)),
             )
             .add_option(filter.e_tag.map(|v| s3_object::Column::ETag.eq(v)))
             .add_option(
                 filter
                     .storage_class
-                    .map(|v| s3_object::Column::StorageClass.eq(v)),
+                    .map(|v| Self::filter_operation(s3_object::Column::StorageClass, v)),
             )
             .add_option(
                 filter
@@ -304,6 +337,7 @@ mod tests {
     use crate::database::entities::sea_orm_active_enums::EventType;
     use crate::database::Client;
     use crate::queries::EntriesBuilder;
+    use crate::routes::filter::wildcard::Wildcard;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_objects(pool: PgPool) {
@@ -401,7 +435,7 @@ mod tests {
 
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .current_state()
-            .filter_all(S3ObjectsFilterAll {
+            .filter_all(S3ObjectsFilter {
                 size: Some(14),
                 ..Default::default()
             });
@@ -410,7 +444,7 @@ mod tests {
 
         // Order of filter call shouldn't matter.
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
-            .filter_all(S3ObjectsFilterAll {
+            .filter_all(S3ObjectsFilter {
                 size: Some(4),
                 ..Default::default()
             })
@@ -426,7 +460,7 @@ mod tests {
 
         let result = filter_all_objects_from(
             &client,
-            ObjectsFilterAll {
+            ObjectsFilter {
                 attributes: Some(json!({
                     "attribute_id": "1"
                 })),
@@ -437,7 +471,7 @@ mod tests {
 
         let result = filter_all_objects_from(
             &client,
-            ObjectsFilterAll {
+            ObjectsFilter {
                 attributes: Some(json!({
                     "nested_id": {
                         "attribute_id": "1"
@@ -450,7 +484,7 @@ mod tests {
 
         let result = filter_all_objects_from(
             &client,
-            ObjectsFilterAll {
+            ObjectsFilter {
                 attributes: Some(json!({
                     "non_existent_id": "1"
                 })),
@@ -507,8 +541,8 @@ mod tests {
 
         let result = filter_all_s3_objects_from(
             &client,
-            S3ObjectsFilterAll {
-                event_type: Some(EventType::Created),
+            S3ObjectsFilter {
+                event_type: Some(WildcardEither::Or(EventType::Created)),
                 ..Default::default()
             },
         )
@@ -534,9 +568,9 @@ mod tests {
 
         let result = filter_all_s3_objects_from(
             &client,
-            S3ObjectsFilterAll {
-                bucket: Some("0".to_string()),
-                key: Some("1".to_string()),
+            S3ObjectsFilter {
+                bucket: Some(Wildcard::new("0".to_string())),
+                key: Some(Wildcard::new("1".to_string())),
                 ..Default::default()
             },
         )
@@ -555,7 +589,7 @@ mod tests {
 
         let result = filter_all_s3_objects_from(
             &client,
-            S3ObjectsFilterAll {
+            S3ObjectsFilter {
                 attributes: Some(json!({
                     "attribute_id": "1"
                 })),
@@ -567,7 +601,7 @@ mod tests {
 
         let result = filter_all_s3_objects_from(
             &client,
-            S3ObjectsFilterAll {
+            S3ObjectsFilter {
                 attributes: Some(json!({
                     "nested_id": {
                         "attribute_id": "2"
@@ -581,7 +615,7 @@ mod tests {
 
         let result = filter_all_s3_objects_from(
             &client,
-            S3ObjectsFilterAll {
+            S3ObjectsFilter {
                 attributes: Some(json!({
                     "non_existent_id": "1"
                 })),
@@ -593,11 +627,11 @@ mod tests {
 
         let result = filter_all_s3_objects_from(
             &client,
-            S3ObjectsFilterAll {
+            S3ObjectsFilter {
                 attributes: Some(json!({
                     "attribute_id": "1"
                 })),
-                key: Some("2".to_string()),
+                key: Some(Wildcard::new("2".to_string())),
                 ..Default::default()
             },
         )
@@ -606,11 +640,11 @@ mod tests {
 
         let result = filter_all_s3_objects_from(
             &client,
-            S3ObjectsFilterAll {
+            S3ObjectsFilter {
                 attributes: Some(json!({
                     "attribute_id": "3"
                 })),
-                key: Some("3".to_string()),
+                key: Some(Wildcard::new("3".to_string())),
                 ..Default::default()
             },
         )
@@ -690,10 +724,7 @@ mod tests {
             .unwrap()
     }
 
-    async fn filter_all_objects_from(
-        client: &Client,
-        filter: ObjectsFilterAll,
-    ) -> Vec<object::Model> {
+    async fn filter_all_objects_from(client: &Client, filter: ObjectsFilter) -> Vec<object::Model> {
         ListQueryBuilder::<_, object::Entity>::new(client.connection_ref())
             .filter_all(filter)
             .all()
@@ -703,7 +734,7 @@ mod tests {
 
     async fn filter_all_s3_objects_from(
         client: &Client,
-        filter: S3ObjectsFilterAll,
+        filter: S3ObjectsFilter,
     ) -> Vec<s3_object::Model> {
         ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .filter_all(filter)
