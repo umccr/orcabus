@@ -11,7 +11,9 @@ from urllib.parse import urlparse, urlunparse
 
 # Wrapica imports
 from wrapica.libica_models import ProjectData
-from wrapica.project_data import convert_project_data_obj_to_icav2_uri
+from wrapica.project_data import convert_project_data_obj_to_uri
+from wrapica.storage_configuration import convert_icav2_uri_to_s3_uri
+from wrapica.enums import UriType
 
 
 def get_destination_uri_path(
@@ -35,7 +37,7 @@ def get_destination_uri_path(
     # Get the output path (which is the parent directory)
     dest_uri_path = str(
         urlunparse((
-            "icav2",
+            UriType.ICAV2.value,
             output_project_id,
             str(output_folder_path.joinpath(relative_file_path).absolute().parent) + "/",
             None, None, None
@@ -66,14 +68,14 @@ def get_dest_uri_from_src_uri(
     # Get the output path (which is the parent directory)
     dest_uri_path = str(
         urlunparse((
-            "icav2",
+            UriType.ICAV2.value,
             dest_project_id,
             str(dest_folder_path.joinpath(relative_file_path).absolute().parent) + "/",
             None, None, None
         ))
     )
 
-    return dest_uri_path
+    return convert_icav2_uri_to_s3_uri(dest_uri_path)
 
 
 def generate_run_manifest(
@@ -100,7 +102,9 @@ def generate_run_manifest(
     for file_obj_iter in project_data_list:
 
         # Get the source file uri
-        source_file_uri = convert_project_data_obj_to_icav2_uri(file_obj_iter)
+        # The source file uri is the path to the file in the input project
+        # The source file will not be on byob storage.
+        source_file_uri = convert_project_data_obj_to_uri(file_obj_iter, uri_type=UriType.ICAV2)
         
         # Get the output path (which is the parent directory)
         dest_uri_path = get_destination_uri_path(
@@ -109,6 +113,9 @@ def generate_run_manifest(
             output_folder_path=output_folder_path,
             file_path=file_obj_iter.data.details.path
         )
+
+        # However we convert the dest uri path to an s3 path
+        dest_uri_path = convert_icav2_uri_to_s3_uri(dest_uri_path)
 
         # Add the source file uri to the run manifest dictionary
         run_manifest_dict[source_file_uri] = [

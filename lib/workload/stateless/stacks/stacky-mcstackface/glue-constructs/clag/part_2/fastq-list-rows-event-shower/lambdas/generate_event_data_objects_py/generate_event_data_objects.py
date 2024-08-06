@@ -47,7 +47,7 @@ def generate_fastq_list_row_event(fastq_list_row: Dict, instrument_run_id: str) 
     fastq_list_row_id = '.'.join(
         [
             new_fastq_list_row_dict["rgid"],
-            instrument_run_id,new_fastq_list_row_dict["rgsm"],
+            instrument_run_id, new_fastq_list_row_dict["rgsm"],
         ]
     )
 

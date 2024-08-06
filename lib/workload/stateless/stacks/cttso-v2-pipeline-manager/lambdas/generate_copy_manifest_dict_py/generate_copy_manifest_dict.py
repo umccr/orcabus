@@ -36,7 +36,7 @@ from os import environ
 import typing
 
 # Wrapica imports
-from wrapica.enums import DataType
+from wrapica.enums import DataType, UriType
 from wrapica.project_data import (
     convert_uri_to_project_data_obj,
     convert_project_id_and_data_path_to_uri
@@ -125,7 +125,8 @@ def handler(event, context):
     fastq_cache_path = convert_project_id_and_data_path_to_uri(
         project_id=project_id,
         data_path=Path(cache_path) / sample_id,
-        data_type=DataType.FOLDER
+        data_type=DataType.FOLDER,
+        uri_type=UriType.ICAV2
     )
 
     # Filter fastq list rows by RGSM (match sample_id)

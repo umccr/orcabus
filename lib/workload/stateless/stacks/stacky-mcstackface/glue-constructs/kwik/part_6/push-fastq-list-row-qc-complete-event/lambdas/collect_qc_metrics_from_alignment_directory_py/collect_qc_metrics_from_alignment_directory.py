@@ -41,7 +41,7 @@ from wrapica.libica_models import (
 )
 from wrapica.project_data import (
     list_project_data_non_recursively,
-    read_icav2_file_contents_to_string, convert_icav2_uri_to_project_data_obj
+    read_icav2_file_contents_to_string, convert_uri_to_project_data_obj
 )
 
 # Globals
@@ -198,7 +198,7 @@ def handler(event, context):
 
     # Get analysis output uri from the event
     # Get analysis output folder as a ProjectData object
-    analysis_project_data_obj: ProjectData = convert_icav2_uri_to_project_data_obj(alignment_output_uri)
+    analysis_project_data_obj: ProjectData = convert_uri_to_project_data_obj(alignment_output_uri)
 
     all_output_files: List[ProjectData] = list_project_data_non_recursively(
         project_id=analysis_project_data_obj.project_id,

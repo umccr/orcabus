@@ -29,10 +29,10 @@ from pathlib import Path
 from typing import Dict
 from urllib.parse import urlparse
 import pandas as pd
-from wrapica.enums import DataType
 import logging
 
 # Wrapica imports
+from wrapica.enums import DataType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
     get_project_data_obj_by_id,
@@ -298,6 +298,8 @@ def handler(event, context):
                 data_type=DataType.FOLDER
             )
         )
+
+    logger.info("Outputting the manifest and fastq list rows")
 
     return {
         "manifest_b64gz": compress_dict(run_manifest),

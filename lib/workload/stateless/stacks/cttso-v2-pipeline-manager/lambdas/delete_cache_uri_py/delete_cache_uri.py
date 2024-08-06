@@ -23,7 +23,7 @@ import typing
 # Wrapica imports
 from wrapica.enums import DataType
 from wrapica.project_data import (
-    convert_icav2_uri_to_project_data_obj, list_project_data_non_recursively, delete_project_data
+    convert_uri_to_project_data_obj, list_project_data_non_recursively, delete_project_data
 )
 import logging
 if typing.TYPE_CHECKING:
@@ -89,7 +89,7 @@ def handler(event, context):
 
     # Part 1 - check that in the cache uri, only the sample_id directory exists along with the file SampleSheet.csv
     try:
-        cache_obj = convert_icav2_uri_to_project_data_obj(cache_uri)
+        cache_obj = convert_uri_to_project_data_obj(cache_uri)
     except NotADirectoryError as e:
         logger.info("Cache directory has already been deleted")
         return None

@@ -23,7 +23,7 @@ aws_requests_auth = "^0.4.3"
 xmltodict = "^0.13.0"
 pandas = "^2.2.0"
 v2_samplesheet_maker = "^4.2.4"
-wrapica = "2.27.0"
+wrapica = "2.27.1"
 
 [tool.poetry.group.dev]
 optional = true

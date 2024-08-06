@@ -120,7 +120,7 @@ def handler(event, context):
         )
 
         # Get the uri for the samplesheet file
-        samplesheet_file_uri = convert_project_data_obj_to_icav2_uri(
+        samplesheet_file_uri = convert_project_data_obj_to_uri(
             get_project_data_obj_by_id(project_id, samplesheet_file_id)
         )
 
