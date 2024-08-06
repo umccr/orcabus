@@ -145,15 +145,17 @@ export class TnGlueHandlerConstruct extends Construct {
     * We output the fastq list row id to the event bus with the status `QcComplete`
     */
     const tnInputMaker = new TnInputMakerConstruct(this, 'fastq_list_row_qc_complete', {
-      // Event bus
+      /* Event bus */
       eventBusObj: props.eventBusObj,
-      // SSM Param objects
+      /* Tables */
+      inputMakerTableObj: props.inputMakerTableObj,
+      /* SSM Param objects */
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
       outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
       cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
       logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-      // Tables
-      inputMakerTableObj: props.inputMakerTableObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
     });
   }
 }

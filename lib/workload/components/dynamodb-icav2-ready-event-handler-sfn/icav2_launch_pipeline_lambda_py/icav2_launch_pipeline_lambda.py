@@ -6,7 +6,7 @@ The launch CWL pipeline expects the following as inputs
 {
     "workflow_type": "cwl",
     "user_tags": {
-        "projectname": "trial"
+        "projectName": "trial"
     },
     "technical_tags": {
         "portal_run_id": "20240512abcd1234",
@@ -131,6 +131,7 @@ The lambda then returns the following
 }
 """
 import json
+from copy import copy
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from os import environ
@@ -183,6 +184,11 @@ def set_icav2_env_vars():
     )
 
 
+def camel_case_to_snake_case(camel_case_str: str) -> str:
+    # Convert fastqListRowId to fastq_list_row_id
+    return ''.join(['_' + i.lower() if i.isupper() else i for i in camel_case_str]).lstrip('_')
+
+
 def handler(event, context):
     # Set icav2 environment variables
     logger.info("Setting ICAv2 Env Vars")
@@ -203,6 +209,31 @@ def handler(event, context):
 
     # Get user tags
     user_tags = event.get("user_tags", {})
+
+    # Convert all user tag keys from camel case to snake case
+    user_tags = dict(
+        map(
+            lambda kv: (camel_case_to_snake_case(kv[0]), kv[1]),
+            user_tags.items()
+        )
+    )
+
+    # Ensure if any user tags values are a list, these are flattened such that the key is
+    # numerated with a '.iterable' extension
+    # I.e
+    # {
+    #  "fastq_list_row_ids": ['index1.index2.lane1', 'index1.index2.lane2']
+    # }
+    # Becomes
+    # {
+    #  "fastq_list_row_ids.0": 'index1.index2.lane1',
+    #  "fastq_list_row_ids.1": 'index1.index2.lane2'
+    # }
+    for key, value in copy(user_tags).items():
+        if isinstance(value, list):
+            for iter_, value_iter in enumerate(value):
+                user_tags[f"{key}.{iter_}"] = value_iter
+            del user_tags[key]
 
     # Get the pipeline id
     pipeline_id = event.get("pipeline_id")
@@ -498,7 +529,7 @@ def handler(event, context):
 #     )
 
 # # CRAM CWL Test
-#
+
 # if __name__ == "__main__":
 #     import os
 #
@@ -520,6 +551,41 @@ def handler(event, context):
 #                     "ica_logs_uri": "icav2://cohort-hmf-pdac-dev/cram_test_run/logs/20240728cae96835/",
 #                     "analysis_output_uri": "icav2://cohort-hmf-pdac-dev/cram_test_run/out/20240728cae96835/",
 #                     "input_json": "{\"reference_tar\":{\"class\":\"File\",\"location\":\"icav2://92bc8608-9393-44b4-bf16-fb0c5a12269a/dragen-hash-tables/v9-r3/hg38-alt_masked-cnv-hla-rna/hg38-alt_masked.cnv.hla.rna-9-r3.0-1.tar.gz\"},\"enable_sv_somatic\":true,\"output_directory_somatic\":\"CORE01050021T_dragen_somatic\",\"enable_map_align_output_germline\":false,\"cram_reference\":{\"class\":\"File\",\"secondaryFiles\":[{\"class\":\"File\",\"location\":\"icav2://reference-data/genomes/GRCh37/Homo_sapiens.GRCh37.GATK.illumina.fasta.fai\"}],\"location\":\"icav2://reference-data/genomes/GRCh37/Homo_sapiens.GRCh37.GATK.illumina.fasta\"},\"cnv_use_somatic_vc_baf\":true,\"output_file_prefix_germline\":\"CORE01050021R\",\"output_directory_germline\":\"CORE01050021R_dragen_germline\",\"enable_cnv_somatic\":true,\"cram_input\":{\"class\":\"File\",\"secondaryFiles\":[{\"class\":\"File\",\"location\":\"icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/CORE01050021R.cram.crai\"}],\"location\":\"icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/CORE01050021R.cram\"},\"enable_duplicate_marking\":true,\"enable_hrd_somatic\":true,\"output_file_prefix_somatic\":\"CORE01050021T\",\"tumor_cram_input\":{\"class\":\"File\",\"secondaryFiles\":[{\"class\":\"File\",\"location\":\"icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/CORE01050021T.cram.crai\"}],\"location\":\"icav2://cohort-hmf-pdac-dev/cram_test_data/CORE01050021T/CORE01050021T.cram\"},\"enable_map_align_output_somatic\":true}"
+#                 },
+#                 context=None
+#             ),
+#             indent=2
+#         )
+#     )
+
+
+# S3 Test
+# if __name__ == "__main__":
+#     import os
+#
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#     print(
+#         json.dumps(
+#             handler(
+#                 event={
+#                     "workflow_type": "cwl",
+#                     "user_tags": {
+#                         "libraryId": "L2400256",
+#                         "sampleType": "WTS",
+#                         "fastqListRowId": "AACACCTG.CGCATGGG.4.240229_A00130_0288_BH5HM2DSXC.L2400256",
+#                         "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
+#                     },
+#                     "technical_tags": {
+#                         "portal_run_id": "2024080660be6d5f",
+#                         "step_functions_execution_arn": "arn:aws:states:ap-southeast-2:843407916570:execution:wgtsQcSfn-wfm-ready-event-handler:67d082ab-4c6c-4403-b719-7e755da2f723",
+#                         "analysis_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wgtsQc/2024080660be6d5f/"
+#                     },
+#                     "user_reference": "umccr--automated--wgtsqc--4-2-4--2024080660be6d5f",
+#                     "project_id": "ea19a3f5-ec7c-4940-a474-c31cd91dbad4",
+#                     "pipeline_id": "413b3c60-a3f5-42eb-a9df-8a77768a8328",
+#                     "ica_logs_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/logs/wgtsQc/2024080660be6d5f/",
+#                     "analysis_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wgtsQc/2024080660be6d5f/",
+#                     "input_json": "{\"reference_tar\":{\"class\":\"File\",\"location\":\"icav2://reference-data/dragen-hash-tables/v9-r3/hg38-alt_masked-cnv-hla-rna/hg38-alt_masked.cnv.hla.rna-9-r3.0-1.tar.gz\"},\"enable_rna\":true,\"output_directory\":\"L2400256_dragen_alignment\",\"enable_rrna_filter\":true,\"annotation_file\":{\"class\":\"File\",\"location\":\"icav2://reference-data/gencode/hg38/v39/gencode.v39.annotation.gtf\"},\"enable_duplicate_marking\":false,\"output_file_prefix\":\"L2400256\",\"fastq_list_rows\":[{\"rgid\":\"AACACCTG.CGCATGGG.4\",\"rgsm\":\"L2400256\",\"rglb\":\"L2400256\",\"lane\":4,\"read_1\":{\"class\":\"File\",\"location\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202408055ee629cc/Samples/Lane_4/L2400256/L2400256_S28_L004_R1_001.fastq.gz\"},\"read_2\":{\"class\":\"File\",\"location\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202408055ee629cc/Samples/Lane_4/L2400256/L2400256_S28_L004_R2_001.fastq.gz\"}}],\"enable_rna_quantification\":true,\"enable_map_align_output\":true,\"enable_sort\":true}"
 #                 },
 #                 context=None
 #             ),

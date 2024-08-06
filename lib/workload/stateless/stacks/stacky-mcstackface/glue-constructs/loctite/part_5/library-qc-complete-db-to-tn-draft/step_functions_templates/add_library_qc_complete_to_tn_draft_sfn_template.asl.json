@@ -231,6 +231,7 @@
                               }
                             },
                             "ResultSelector": {
+                              "fastq_list_row_id.$": "$.Item.id.S",
                               "fastq_list_row_obj.$": "States.StringToJson($.Item.fastq_list_row_json.S)"
                             },
                             "ResultPath": "$.get_tumor_fastq_list_row_obj",
@@ -239,6 +240,7 @@
                         }
                       },
                       "ResultSelector": {
+                        "tumor_fastq_list_row_ids.$": "$.[*].get_tumor_fastq_list_row_obj.fastq_list_row_id",
                         "tumor_fastq_list_rows.$": "$.[*].get_tumor_fastq_list_row_obj.fastq_list_row_obj"
                       },
                       "ResultPath": "$.get_tumor_fastq_list_rows",
@@ -272,6 +274,7 @@
                               }
                             },
                             "ResultSelector": {
+                              "fastq_list_row_id.$": "$.Item.id.S",
                               "fastq_list_row_obj.$": "States.StringToJson($.Item.fastq_list_row_json.S)"
                             },
                             "ResultPath": "$.get_normal_fastq_list_row_obj",
@@ -280,6 +283,7 @@
                         }
                       },
                       "ResultSelector": {
+                        "fastq_list_row_ids.$": "$.[*].get_normal_fastq_list_row_obj.fastq_list_row_id",
                         "fastq_list_rows.$": "$.[*].get_normal_fastq_list_row_obj.fastq_list_row_obj"
                       },
                       "ResultPath": "$.get_normal_fastq_list_rows",
@@ -290,7 +294,9 @@
               ],
               "ResultSelector": {
                 "tumor_fastq_list_rows.$": "$.[0].get_tumor_fastq_list_rows.tumor_fastq_list_rows",
-                "fastq_list_rows.$": "$.[1].get_normal_fastq_list_rows.fastq_list_rows"
+                "tumor_fastq_list_row_ids.$": "$.[0].get_tumor_fastq_list_rows.tumor_fastq_list_row_ids",
+                "fastq_list_rows.$": "$.[1].get_normal_fastq_list_rows.fastq_list_rows",
+                "fastq_list_row_ids.$": "$.[1].get_normal_fastq_list_rows.fastq_list_row_ids"
               },
               "ResultPath": "$.get_fastq_list_rows",
               "End": true
@@ -320,7 +326,9 @@
       "Next": "Generate Draft Event Payload",
       "ResultSelector": {
         "tumor_fastq_list_rows.$": "$.[0].get_fastq_list_rows.tumor_fastq_list_rows",
+        "tumor_fastq_list_row_ids.$": "$.[0].get_fastq_list_rows.tumor_fastq_list_row_ids",
         "fastq_list_rows.$": "$.[0].get_fastq_list_rows.fastq_list_rows",
+        "fastq_list_row_ids.$": "$.[0].get_fastq_list_rows.fastq_list_row_ids",
         "portal_run_id.$": "$.[1].get_portal_and_run_name_step.portal_run_id",
         "workflow_run_name.$": "$.[1].get_portal_and_run_name_step.workflow_run_name"
       },
@@ -335,7 +343,9 @@
           "tumor_library_id.$": "$.get_tn_pair_step.tumor_library.id",
           "normal_library_id.$": "$.get_tn_pair_step.normal_library.id",
           "tumor_fastq_list_rows.$": "$.get_parameters_step.tumor_fastq_list_rows",
-          "fastq_list_rows.$": "$.get_parameters_step.fastq_list_rows"
+          "tumor_fastq_list_row_ids.$": "$.get_parameters_step.tumor_fastq_list_row_ids",
+          "fastq_list_rows.$": "$.get_parameters_step.fastq_list_rows",
+          "fastq_list_row_ids.$": "$.get_parameters_step.fastq_list_row_ids"
         }
       },
       "Retry": [
@@ -354,7 +364,8 @@
       "ResultPath": "$.generate_draft_event_payload_data_step",
       "Next": "Push TN Draft Event",
       "ResultSelector": {
-        "input_event_data.$": "$.Payload.input_event_data"
+        "input_event_data.$": "$.Payload.input_event_data",
+        "event_tags.$": "$.Payload.event_tags"
       }
     },
     "Push TN Draft Event": {
@@ -374,7 +385,8 @@
                 "refId": null,
                 "version": "${__payload_version__}",
                 "data": {
-                  "inputs.$": "$.generate_draft_event_payload_data_step.input_event_data"
+                  "inputs.$": "$.generate_draft_event_payload_data_step.input_event_data",
+                  "tags.$": "$.generate_draft_event_payload_data_step.event_tags"
                 }
               }
             },

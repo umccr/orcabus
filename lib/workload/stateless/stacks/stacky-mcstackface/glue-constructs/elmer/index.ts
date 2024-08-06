@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { BsshFastqCopyManagerDraftMakerConstruct } from './part_1/bclconvert-succeeded-to-bssh-fastq-copy-draft';
 import { BsshFastqCopyManagerDraftToReadyMakerConstruct } from './part_2/bssh-fastq-copy-manager-draft-to-ready';
 
@@ -14,7 +15,7 @@ export interface BclconvertToBsshFastqCopyEventHandlerConstructProps {
   eventBusObj: events.IEventBus;
   inputMakerTableObj: dynamodb.ITableV2;
   bsshOutputFastqCopyUriSsmParameterObj: ssm.IStringParameter;
-  icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class BclconvertToBsshFastqCopyEventHandlerConstruct extends Construct {
@@ -67,6 +68,7 @@ export class BclconvertToBsshFastqCopyEventHandlerConstruct extends Construct {
         eventBusObj: props.eventBusObj,
         outputUriSsmParameterObj: props.bsshOutputFastqCopyUriSsmParameterObj,
         tableObj: props.inputMakerTableObj,
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
       }
     );
   }

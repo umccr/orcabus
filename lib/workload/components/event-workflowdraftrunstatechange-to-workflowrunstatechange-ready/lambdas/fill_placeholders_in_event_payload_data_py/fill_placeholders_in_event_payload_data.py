@@ -28,6 +28,19 @@ The output of this function will be a dictionary with the updated event data out
 """
 from copy import deepcopy
 from typing import Dict
+from wrapica.storage_configuration import convert_icav2_uri_to_s3_uri
+from os import environ
+import boto3
+import typing
+
+
+if typing.TYPE_CHECKING:
+    from mypy_boto3_ssm import SSMClient
+    from mypy_boto3_secretsmanager import SecretsManagerClient
+
+
+# Globals
+ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
 
 
 def sanitise_uri_value(input_value: str) -> str:
@@ -53,6 +66,21 @@ def camel_case_to_snake_hyphen_case(came_case_input: str) -> str:
             for i in came_case_input
         ]
     ).lstrip('_').replace("_", "-")
+
+
+def camel_case_to_snake_case(came_case_input: str) -> str:
+    """
+    Convert camel case to snake case
+    :param came_case_input:
+    :return:
+    """
+    return ''.join(
+        [
+            '_' + i.lower()
+            if i.isupper() else i
+            for i in came_case_input
+        ]
+    ).lstrip('_')
 
 
 def replace_values_recursively(
@@ -107,9 +135,9 @@ def replace_values_recursively(
                     continue
 
                 if key.endswith("Uri"):
-                    value = value.replace(f'__{camel_case_to_snake_hyphen_case(input_key)}__', sanitise_uri_value(input_value))
+                    value = value.replace(f'__{camel_case_to_snake_case(input_key)}__', sanitise_uri_value(input_value))
                 else:
-                    value = value.replace(f'__{camel_case_to_snake_hyphen_case(input_key)}__', input_value)
+                    value = value.replace(f'__{camel_case_to_snake_case(input_key)}__', input_value)
 
             # Re-assign dict key
             data_dict[key] = value
@@ -119,7 +147,53 @@ def replace_values_recursively(
     return data_dict
 
 
+# AWS things
+def get_ssm_client() -> 'SSMClient':
+    """
+    Return SSM client
+    """
+    return boto3.client("ssm")
+
+
+def get_secrets_manager_client() -> 'SecretsManagerClient':
+    """
+    Return Secrets Manager client
+    """
+    return boto3.client("secretsmanager")
+
+
+def get_ssm_parameter_value(parameter_path) -> str:
+    """
+    Get the ssm parameter value from the parameter path
+    :param parameter_path:
+    :return:
+    """
+    return get_ssm_client().get_parameter(Name=parameter_path)["Parameter"]["Value"]
+
+
+def get_secret(secret_arn: str) -> str:
+    """
+    Return secret value
+    """
+    return get_secrets_manager_client().get_secret_value(SecretId=secret_arn)["SecretString"]
+
+
+# Set the icav2 environment variables
+def set_icav2_env_vars():
+    """
+    Set the icav2 environment variables
+    :return:
+    """
+    environ["ICAV2_BASE_URL"] = ICAV2_BASE_URL
+    environ["ICAV2_ACCESS_TOKEN"] = get_secret(
+        environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
+    )
+
+
 def handler(event, context):
+    # Set env vars
+    set_icav2_env_vars()
+
     # Get the portal run id from the event
     portal_run_id: str = event.get('portal_run_id', None)
     workflow_name: str = event.get('workflow_name', None)
@@ -152,43 +226,52 @@ def handler(event, context):
         )
     )
 
+    # Convert icav2 URIs to S3 URIs
+    engine_parameters_updated = dict(
+        map(
+            lambda kv: (kv[0], convert_icav2_uri_to_s3_uri(kv[1]) if kv[1].startswith("icav2://") else kv[1]),
+            engine_parameters_updated.items()
+        )
+    )
+
     return {
         "engine_parameters_updated": engine_parameters_updated
     }
+
 
 #########################
 # PRIMARY ANALYSIS TEST
 #########################
 
-# if __name__ == '__main__':
-#     import json
-#
-#     print(
-#         json.dumps(
-#             handler(
-#                 {
-#                     "portal_run_id": "20240530abcd1234",
-#                     "workflow_name": "bsshFastqCopy",
-#                     "workflow_version": "4.2.4",
-#                     "event_data_inputs": {
-#                         "instrumentRunId": "240229_7001234_1234_AHJLJLDS",
-#                     },
-#                     "engine_parameters": {
-#                         "outputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/__instrument_run_id__/__portal_run_id__/",
-#                         "logsUri": "",
-#                         "cacheUri": ""
-#                     }
-#                 },
-#                 None
-#             ),
-#             indent=2
-#         )
-#     )
-#     # {
-#     #   "engine_parameters_updated": {
-#     #     "outputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_7001234_1234_AHJLJLDS/20240530abcd1234/"
-#     #   }
-#     # }
+if __name__ == '__main__':
+    import json
+
+    print(
+        json.dumps(
+            handler(
+                {
+                    "portal_run_id": "20240530abcd1234",
+                    "workflow_name": "bsshFastqCopy",
+                    "workflow_version": "4.2.4",
+                    "event_data_inputs": {
+                        "instrumentRunId": "240229_7001234_1234_AHJLJLDS",
+                    },
+                    "engine_parameters": {
+                        "outputUri": "icav2://development/primary_data/__instrument_run_id__/__portal_run_id__/",
+                        "logsUri": "",
+                        "cacheUri": ""
+                    }
+                },
+                None
+            ),
+            indent=2
+        )
+    )
+    # {
+    #   "engine_parameters_updated": {
+    #     "outputUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/primary_data/240229_7001234_1234_AHJLJLDS/20240530abcd1234/"
+    #   }
+    # }
 
 # #########################
 # # SECONDARY ANALYSIS TEST
@@ -219,7 +302,7 @@ def handler(event, context):
 #
 #     # {
 #     #   "engine_parameters_updated": {
-#     #     "analysisOutputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_data/cttsov2/2_1_1/20240530abcd1234/",
-#     #     "icaLogsUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_logs/cttsov2/2_1_1/20240530abcd1234/"
+#     #     "outputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_data/cttsov2/2-1-1/20240530abcd1234/",
+#     #     "logsUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_logs/cttsov2/2-1-1/20240530abcd1234/"
 #     #   }
 #     # }

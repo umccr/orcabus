@@ -8,6 +8,7 @@ Given an icav2 uri, find all the vcf files in the directory and return a list of
 import typing
 import boto3
 from typing import List
+from os import environ
 
 # Wrapica imports
 from wrapica.enums import DataType

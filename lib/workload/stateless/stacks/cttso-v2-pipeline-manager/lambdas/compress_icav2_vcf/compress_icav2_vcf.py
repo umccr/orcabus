@@ -31,7 +31,6 @@ logging.basicConfig(level=logging.INFO)
 
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
 
-
 # AWS things
 def get_ssm_client() -> 'SSMClient':
     """

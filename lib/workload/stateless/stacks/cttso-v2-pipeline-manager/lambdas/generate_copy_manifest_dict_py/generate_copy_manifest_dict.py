@@ -30,11 +30,54 @@ Return a icav2 copy files dict
 # Standard imports
 from functools import reduce
 from pathlib import Path
-from urllib.parse import urlparse
+import logging
+import boto3
+from os import environ
+import typing
 
 # Wrapica imports
 from wrapica.enums import DataType
-from wrapica.project_data import convert_project_id_and_data_path_to_icav2_uri
+from wrapica.project_data import (
+    convert_uri_to_project_data_obj,
+    convert_project_id_and_data_path_to_uri
+)
+
+
+if typing.TYPE_CHECKING:
+    from mypy_boto3_secretsmanager import SecretsManagerClient
+
+# Globals
+ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
+
+# Set loggers
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+
+def get_secrets_manager_client() -> 'SecretsManagerClient':
+    """
+    Return Secrets Manager client
+    """
+    return boto3.client("secretsmanager")
+
+
+def get_secret(secret_id: str) -> str:
+    """
+    Return secret value
+    """
+    return get_secrets_manager_client().get_secret_value(SecretId=secret_id)["SecretString"]
+
+
+# Functions
+def set_icav2_env_vars():
+    """
+    Set the icav2 environment variables
+    :return:
+    """
+    environ["ICAV2_BASE_URL"] = ICAV2_BASE_URL
+    environ["ICAV2_ACCESS_TOKEN"] = get_secret(
+        environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
+    )
 
 
 def handler(event, context):
@@ -49,6 +92,8 @@ def handler(event, context):
     Returns:
 
     """
+    # Set env vars
+    set_icav2_env_vars()
 
     # Get the cache path
     cache_uri = event.get("cache_uri", None)
@@ -56,9 +101,12 @@ def handler(event, context):
     if cache_uri is None:
         raise ValueError("Cache uri is required")
 
+    # Convert cache uri to project data object
+    cache_project_data_obj = convert_uri_to_project_data_obj(cache_uri)
+
     # Split cache uri into project id and cache path
-    project_id = urlparse(cache_uri).netloc
-    cache_path = Path(urlparse(cache_uri).path)
+    project_id = cache_project_data_obj.project_id
+    cache_path = Path(cache_project_data_obj.data.details.path)
 
     # Get the sample id
     sample_id = event.get("sample_id", None)
@@ -71,7 +119,7 @@ def handler(event, context):
         raise ValueError("Fastq list rows are required")
 
     # Generate the manifest list
-    fastq_cache_path = convert_project_id_and_data_path_to_icav2_uri(
+    fastq_cache_path = convert_project_id_and_data_path_to_uri(
         project_id=project_id,
         data_path=Path(cache_path) / sample_id,
         data_type=DataType.FOLDER
@@ -107,6 +155,7 @@ def handler(event, context):
     }
 
 
+# Standard copy job
 # if __name__ == "__main__":
 #
 #     import json
@@ -126,6 +175,47 @@ def handler(event, context):
 #                         "read1FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
 #                         "read2FileUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
 #                       }
+#                     ]
+#                 },
+#                 context=None
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # {
+#     #     "dest_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_cache/cttsov2/2_1_1/202405316db95e97/L2400163/",
+#     #     "source_uris": [
+#     #         "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
+#     #         "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary_data/240229_A00130_0288_BH5HM2DSXC/202405302b817f5e/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
+#     #     ]
+#     # }
+
+
+# # S3 Paths
+# if __name__ == "__main__":
+#     import json
+#     from os import environ
+#
+#     environ["ICAV2_ACCESS_TOKEN_SECRET_ID"] = "ICAv2JWTKey-umccr-prod-service-dev"
+#
+#
+#     # Test the handler
+#     print(
+#         json.dumps(
+#             handler(
+#                 event={
+#                     "sample_id": "L2400166",
+#                     "cache_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/cache/cttsov2/2024080632a96689/",
+#                     "fastq_list_rows": [
+#                         {
+#                             "rgid": "TTCTACATAC.TTACAGTTAG.1",
+#                             "rgsm": "L2400166",
+#                             "rglb": "L2400166",
+#                             "lane": 1,
+#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202408055ee629cc/Samples/Lane_1/L2400166/L2400166_S8_L001_R1_001.fastq.gz",
+#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202408055ee629cc/Samples/Lane_1/L2400166/L2400166_S8_L001_R2_001.fastq.gz"
+#                         }
 #                     ]
 #                 },
 #                 context=None

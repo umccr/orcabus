@@ -34,7 +34,9 @@ def handler(event, context) -> Dict:
     normal_library_id = event['normal_library_id']
 
     tumor_fastq_list_rows: Dict = event['tumor_fastq_list_rows']
+    tumor_fastq_list_row_ids: Dict = event['tumor_fastq_list_row_ids']
     fastq_list_rows: Dict = event['fastq_list_rows']
+    fastq_list_row_ids: Dict = event['fastq_list_row_ids']
 
     return {
         "input_event_data": {
@@ -48,5 +50,11 @@ def handler(event, context) -> Dict:
             "tumorFastqListRows": tumor_fastq_list_rows,
             "fastqListRows": fastq_list_rows,
             "dragenReferenceVersion": DEFAULT_DRAGEN_REFERENCE_VERSION
+        },
+        "event_tags": {
+            "tumorLibraryId": tumor_library_id,
+            "normalLibrary_id": normal_library_id,
+            "tumorFastqListRowIds": tumor_fastq_list_row_ids,
+            "normalFastqListRowIds": fastq_list_row_ids
         }
     }

@@ -1,14 +1,11 @@
 import * as cdk from 'aws-cdk-lib';
-import { Duration } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
-import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
@@ -55,8 +52,10 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     super(scope, id);
 
     // Add icav2 secrets permissions to lambdas
-    props.icav2AccessTokenSecretObj.grantRead(
-      <iam.IRole>props.uploadSamplesheetToCacheDirLambdaObj.currentVersion.role
+    [props.uploadSamplesheetToCacheDirLambdaObj, props.generateCopyManifestDictLambdaObj].forEach(
+      (lambda_obj) => {
+        props.icav2AccessTokenSecretObj.grantRead(lambda_obj.currentVersion);
+      }
     );
 
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above

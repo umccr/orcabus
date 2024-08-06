@@ -5,7 +5,6 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
 import { Cttsov2Icav2PipelineManagerConstruct } from './constructs/cttsov2-icav2-manager';
-import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda-layer';
 import path from 'path';
 import { ICAv2CopyFilesConstruct } from '../../../../components/icav2-copy-files';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
@@ -68,13 +67,6 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       }
     );
 
-    // Get lambda layer object
-    const lambda_layer_obj = new PythonLambdaLayerConstruct(this, 'lambda_layer', {
-      layerName: 'cttso-v2-launch-state-machine-layer',
-      layerDescription: 'CTTSO v2 Launch State Machine Lambda Layer',
-      layerDirectory: path.join(__dirname, '../layers/'),
-    });
-
     // Set ssm parameter object list
     const pipeline_id_ssm_obj_list = ssm.StringParameter.fromStringParameterName(
       this,
@@ -96,7 +88,6 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         3. Copy fastqs into a particular directory setup type
         */
 
-    // generate_copy_manifest_dict_py lambda
     const generate_copy_manifest_dict_lambda_obj = new PythonFunction(
       this,
       'generate_copy_manifest_dict_lambda_python_function',
@@ -107,8 +98,10 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         index: 'generate_copy_manifest_dict.py',
         handler: 'handler',
         memorySize: 1024,
-        layers: [lambda_layer_obj.lambdaLayerVersionObj],
         timeout: Duration.seconds(60),
+        environment: {
+          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
+        },
       }
     );
 
@@ -123,7 +116,6 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         index: 'upload_samplesheet_to_cache_dir.py',
         handler: 'handler',
         memorySize: 1024,
-        layers: [lambda_layer_obj.lambdaLayerVersionObj],
         timeout: Duration.seconds(60),
         environment: {
           ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
@@ -146,7 +138,6 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         index: 'delete_cache_uri.py',
         handler: 'handler',
         memorySize: 1024,
-        layers: [lambda_layer_obj.lambdaLayerVersionObj],
         timeout: Duration.seconds(60),
         environment: {
           ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
@@ -165,7 +156,6 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         index: 'set_outputs_json.py',
         handler: 'handler',
         memorySize: 1024,
-        layers: [lambda_layer_obj.lambdaLayerVersionObj],
         timeout: Duration.seconds(60),
         environment: {
           ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,

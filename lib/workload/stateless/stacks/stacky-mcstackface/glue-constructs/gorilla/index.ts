@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { BsshFastqCopyManagerDraftMakerConstruct } from '../elmer/part_1/bclconvert-succeeded-to-bssh-fastq-copy-draft';
 import { BclconvertInteropQcDraftMakerConstruct } from './part_1/bclconvert-interop-qc-draft-event-maker';
 import { BclconvertInteropQcDraftToReadyMakerConstruct } from './part_2/bclconvert-interop-qc-input-maker';
@@ -20,6 +21,7 @@ export interface BsshFastqCopyToBclconvertInteropQcConstructProps {
   analysisLogsUriSsmParameterObj: ssm.IStringParameter;
   analysisOutputUriSsmParameterObj: ssm.IStringParameter;
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class BsshFastqCopyToBclconvertInteropQcConstruct extends Construct {
@@ -65,6 +67,7 @@ export class BsshFastqCopyToBclconvertInteropQcConstruct extends Construct {
         eventBusObj: props.eventBusObj,
         tableObj: props.inputMakerTableObj,
         icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
       }
     );
   }

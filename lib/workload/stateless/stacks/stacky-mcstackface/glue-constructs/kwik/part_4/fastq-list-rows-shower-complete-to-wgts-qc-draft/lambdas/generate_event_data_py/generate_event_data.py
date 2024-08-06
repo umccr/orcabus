@@ -49,6 +49,7 @@ def handler(event, context):
     sample_type = event['sample_type']
     fastq_list_row = event['fastq_list_row']
     fastq_list_row_id = event['fastq_list_row_id']
+    instrument_run_id = event['instrument_run_id']
 
     # Generate the draft event
     draft_event = {
@@ -59,9 +60,17 @@ def handler(event, context):
         'fastqListRow': fastq_list_row
     }
 
+    event_tags = {
+        "libraryId": library_id,
+        "sampleType": sample_type,
+        "fastqListRowId": fastq_list_row_id,
+        "instrumentRunId": instrument_run_id
+    }
+
     if sample_type.lower() == 'wts':
         draft_event['gencodeAnnotationVersion'] = DEFAULT_GENCODE_ANNOTATION_VERSION
 
     return {
+        "event_tags": event_tags,
         "event_output_dict": draft_event
     }

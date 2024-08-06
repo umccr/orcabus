@@ -14,7 +14,7 @@ homepage = "https://github.com/umccr/orcabus"
 repository = "https://github.com/umccr/orcabus"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.12, <3.13"
 boto3 = "^1.28"
 botocore = "^1.31"
 aws_requests_auth = "^0.4.3"

@@ -41,7 +41,6 @@
           "BackoffRate": 2
         }
       ],
-      "TimeoutSeconds": 60,
       "ResultSelector": {
         "fastq_list_rows_b64gz.$": "$.Payload.fastq_list_rows_b64gz",
         "manifest_b64gz.$": "$.Payload.manifest_b64gz"
@@ -79,13 +78,16 @@
             "refId": null,
             "version": "${__payload_version__}",
             "data": {
-              "inputs": "$.workflow_inputs.payload.data.inputs",
-              "engineParameters": "$.workflow_inputs.payload.data.engineParameters",
+              "inputs.$": "$.workflow_inputs.payload.data.inputs",
+              "engineParameters.$": "$.workflow_inputs.payload.data.engineParameters",
               "outputs": {
                 "outputUri.$": "$.workflow_inputs.payload.data.engineParameters.outputUri",
                 "instrumentRunId.$": "$.workflow_inputs.payload.data.inputs.instrumentRunId",
                 "fastqListRowsB64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz"
               }
+            },
+            "tags": {
+              "instrumentRunId.$": "$.workflow_inputs.payload.data.inputs.instrumentRunId"
             }
           }
         }

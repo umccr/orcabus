@@ -46,6 +46,9 @@
                     "instrumentRunId.$": "$.inputs.payload.data.instrumentRunId",
                     "bsshProjectId.$": "$.inputs.payload.data.projectId",
                     "bsshAnalysisId.$": "$.inputs.payload.data.analysisId"
+                  },
+                  "tags": {
+                    "instrumentRunId.$": "$.inputs.payload.data.instrumentRunId"
                   }
                 }
               }

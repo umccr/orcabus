@@ -4,6 +4,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import path from 'path';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/event-workflowdraftrunstatechange-to-workflowrunstatechange-ready';
 
 /*
@@ -37,6 +38,8 @@ export interface Cttsov2InputMakerConstructProps {
   outputUriSsmParameterObj: ssm.IStringParameter;
   logsUriSsmParameterObj: ssm.IStringParameter;
   cacheUriSsmParameterObj: ssm.IStringParameter;
+  /* Secrets Objects */
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class Cttsov2InputMakerConstruct extends Construct {
@@ -95,6 +98,11 @@ export class Cttsov2InputMakerConstruct extends Construct {
         outputUriSsmParameterObj: props.outputUriSsmParameterObj,
         logsUriSsmParameterObj: props.logsUriSsmParameterObj,
         cacheUriSsmParameterObj: props.cacheUriSsmParameterObj,
+
+        /*
+        Secrets
+        */
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
       }
     );
   }

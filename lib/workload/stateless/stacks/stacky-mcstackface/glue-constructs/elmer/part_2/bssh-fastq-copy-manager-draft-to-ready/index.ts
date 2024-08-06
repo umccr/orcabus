@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/event-workflowdraftrunstatechange-to-workflowrunstatechange-ready';
 
 /*
@@ -24,6 +25,7 @@ export interface bsshFastqCopyManagerDraftToReadyMakerConstructProps {
   tableObj: dynamodb.ITableV2;
   outputUriSsmParameterObj: ssm.IStringParameter;
   eventBusObj: events.IEventBus;
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class BsshFastqCopyManagerDraftToReadyMakerConstruct extends Construct {
@@ -85,6 +87,11 @@ export class BsshFastqCopyManagerDraftToReadyMakerConstruct extends Construct {
         Set the output uri
         */
         outputUriSsmParameterObj: props.outputUriSsmParameterObj,
+
+        /*
+        ICAv2 Secret Construct
+        */
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
       }
     );
   }

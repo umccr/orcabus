@@ -128,15 +128,17 @@ export class WgtsQcGlueHandlerConstruct extends Construct {
       this,
       'fastq_list_rows_to_wgts_qc_input_maker',
       {
-        // Event bus
+        /* Event bus */
         eventBusObj: props.eventBusObj,
-        // SSM Param objects
+        /* Tables */
+        inputMakerTableObj: props.inputMakerTableObj,
+        /* SSM Param objects */
         icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
         outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
         cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
         logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-        // Tables
-        inputMakerTableObj: props.inputMakerTableObj,
+        /* Secrets */
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
       }
     );
 

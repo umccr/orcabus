@@ -14,16 +14,53 @@ and the file
 cache_uri / SampleSheet.csv
 
 """
+
+# Standard imports
+import boto3
+from os import environ
+import typing
+
+# Wrapica imports
 from wrapica.enums import DataType
-from wrapica.libica_exceptions import ApiException
 from wrapica.project_data import (
     convert_icav2_uri_to_project_data_obj, list_project_data_non_recursively, delete_project_data
 )
-from cttso_v2_pipeline_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
 import logging
+if typing.TYPE_CHECKING:
+    from mypy_boto3_secretsmanager import SecretsManagerClient
 
-logger = logging.getLogger(__name__)
+# Globals
+ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
+
+# Set loggers
+logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+
+def get_secrets_manager_client() -> 'SecretsManagerClient':
+    """
+    Return Secrets Manager client
+    """
+    return boto3.client("secretsmanager")
+
+
+def get_secret(secret_id: str) -> str:
+    """
+    Return secret value
+    """
+    return get_secrets_manager_client().get_secret_value(SecretId=secret_id)["SecretString"]
+
+
+# Functions
+def set_icav2_env_vars():
+    """
+    Set the icav2 environment variables
+    :return:
+    """
+    environ["ICAV2_BASE_URL"] = ICAV2_BASE_URL
+    environ["ICAV2_ACCESS_TOKEN"] = get_secret(
+        environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
+    )
 
 
 def handler(event, context):
