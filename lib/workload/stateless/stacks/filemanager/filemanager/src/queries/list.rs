@@ -7,7 +7,7 @@ use sea_orm::sea_query::{Alias, Asterisk, PostgresQueryBuilder, Query, SimpleExp
 use sea_orm::Order::{Asc, Desc};
 use sea_orm::{
     ColumnTrait, Condition, ConnectionTrait, EntityTrait, FromQueryResult, PaginatorTrait,
-    QueryFilter, QueryOrder, QuerySelect, QueryTrait, Select,
+    QueryFilter, QueryOrder, QuerySelect, QueryTrait, Select, Value,
 };
 use tracing::trace;
 
@@ -89,24 +89,36 @@ where
     ///     bucket = filter.bucket and
     ///     ...;
     /// ```
-    pub fn filter_all(mut self, filter: S3ObjectsFilter) -> Self {
-        self.select = self.select.filter(Self::filter_condition(filter));
+    pub fn filter_all(mut self, filter: S3ObjectsFilter, case_sensitive: bool) -> Self {
+        self.select = self
+            .select
+            .filter(Self::filter_condition(filter, case_sensitive));
 
         self.trace_query("filter_all");
 
         self
     }
 
-    /// Create an operation based on the wildcard. This either results in a `like` or `=` comparison.
-    pub fn filter_operation<T>(col: s3_object::Column, wildcard: WildcardEither<T>) -> SimpleExpr
+    /// Create an operation based on the wildcard. This either results in a `like`/`ilike` or `=` comparison.
+    pub fn filter_operation<T>(
+        col: s3_object::Column,
+        wildcard: WildcardEither<T>,
+        case_sensitive: bool,
+    ) -> SimpleExpr
     where
-        T: Into<SimpleExpr>,
+        T: Into<Value>,
     {
         match wildcard {
-            WildcardEither::Or(value) => Expr::col(col).eq(value),
+            WildcardEither::Or(value) => col.eq(value),
             WildcardEither::Wildcard(wildcard) => {
-                if wildcard.contains_wildcard() {
-                    Expr::col(col).like(wildcard.into_inner())
+                if wildcard.contains_wildcard() && case_sensitive {
+                    Expr::col(col)
+                        .cast_as(Alias::new("text"))
+                        .like(wildcard.into_inner())
+                } else if wildcard.contains_wildcard() && !case_sensitive {
+                    Expr::col(col)
+                        .cast_as(Alias::new("text"))
+                        .ilike(wildcard.into_inner())
                 } else {
                     Expr::col(col).eq(wildcard.into_inner())
                 }
@@ -115,49 +127,48 @@ where
     }
 
     /// Create a condition to filter a query.
-    pub fn filter_condition(filter: S3ObjectsFilter) -> Condition {
+    pub fn filter_condition(filter: S3ObjectsFilter, case_sensitive: bool) -> Condition {
         Condition::all()
             .add_option(
-                filter
-                    .event_type
-                    .map(|v| Self::filter_operation(s3_object::Column::EventType, v)),
+                filter.event_type.map(|v| {
+                    Self::filter_operation(s3_object::Column::EventType, v, case_sensitive)
+                }),
             )
             .add_option(filter.bucket.map(|v| {
                 Self::filter_operation(
                     s3_object::Column::Bucket,
                     WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
                 )
             }))
             .add_option(filter.key.map(|v| {
                 Self::filter_operation(
                     s3_object::Column::Key,
                     WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
                 )
             }))
             .add_option(filter.version_id.map(|v| {
                 Self::filter_operation(
                     s3_object::Column::VersionId,
                     WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
                 )
             }))
             .add_option(
                 filter
                     .date
-                    .map(|v| Self::filter_operation(s3_object::Column::Date, v)),
+                    .map(|v| Self::filter_operation(s3_object::Column::Date, v, case_sensitive)),
             )
             .add_option(filter.size.map(|v| s3_object::Column::Size.eq(v)))
             .add_option(filter.sha256.map(|v| s3_object::Column::Sha256.eq(v)))
-            .add_option(
-                filter
-                    .last_modified_date
-                    .map(|v| Self::filter_operation(s3_object::Column::LastModifiedDate, v)),
-            )
+            .add_option(filter.last_modified_date.map(|v| {
+                Self::filter_operation(s3_object::Column::LastModifiedDate, v, case_sensitive)
+            }))
             .add_option(filter.e_tag.map(|v| s3_object::Column::ETag.eq(v)))
-            .add_option(
-                filter
-                    .storage_class
-                    .map(|v| Self::filter_operation(s3_object::Column::StorageClass, v)),
-            )
+            .add_option(filter.storage_class.map(|v| {
+                Self::filter_operation(s3_object::Column::StorageClass, v, case_sensitive)
+            }))
             .add_option(
                 filter
                     .is_delete_marker
@@ -328,13 +339,16 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
+    use sea_orm::sea_query::extension::postgres::PgBinOper;
+    use sea_orm::sea_query::types::BinOper;
+    use sea_orm::DatabaseConnection;
     use serde_json::json;
     use sqlx::PgPool;
 
     use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::sea_orm_active_enums::EventType;
+    use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
     use crate::database::Client;
     use crate::queries::EntriesBuilder;
     use crate::routes::filter::wildcard::Wildcard;
@@ -435,19 +449,25 @@ mod tests {
 
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .current_state()
-            .filter_all(S3ObjectsFilter {
-                size: Some(14),
-                ..Default::default()
-            });
+            .filter_all(
+                S3ObjectsFilter {
+                    size: Some(14),
+                    ..Default::default()
+                },
+                true,
+            );
         let result = builder.all().await.unwrap();
         assert_eq!(result, vec![entries[6].clone()]);
 
         // Order of filter call shouldn't matter.
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
-            .filter_all(S3ObjectsFilter {
-                size: Some(4),
-                ..Default::default()
-            })
+            .filter_all(
+                S3ObjectsFilter {
+                    size: Some(4),
+                    ..Default::default()
+                },
+                true,
+            )
             .current_state();
         let result = builder.all().await.unwrap();
         assert_eq!(result, vec![entries[24].clone()]);
@@ -545,16 +565,11 @@ mod tests {
                 event_type: Some(WildcardEither::Or(EventType::Created)),
                 ..Default::default()
             },
+            true,
         )
         .await;
         assert_eq!(result.len(), 5);
-        assert_eq!(
-            result,
-            entries
-                .into_iter()
-                .filter(|entry| entry.event_type == EventType::Created)
-                .collect::<Vec<_>>()
-        );
+        assert_eq!(result, filter_event_type(entries, EventType::Created));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -573,6 +588,7 @@ mod tests {
                 key: Some(Wildcard::new("1".to_string())),
                 ..Default::default()
             },
+            true,
         )
         .await;
         assert_eq!(result, vec![entries[1].clone()]);
@@ -595,6 +611,7 @@ mod tests {
                 })),
                 ..Default::default()
             },
+            true,
         )
         .await;
         assert_eq!(result, vec![entries[1].clone()]);
@@ -609,6 +626,7 @@ mod tests {
                 })),
                 ..Default::default()
             },
+            true,
         )
         .await;
         assert_eq!(result, vec![entries[2].clone()]);
@@ -621,6 +639,7 @@ mod tests {
                 })),
                 ..Default::default()
             },
+            true,
         )
         .await;
         assert!(result.is_empty());
@@ -634,6 +653,7 @@ mod tests {
                 key: Some(Wildcard::new("2".to_string())),
                 ..Default::default()
             },
+            true,
         )
         .await;
         assert!(result.is_empty());
@@ -647,6 +667,7 @@ mod tests {
                 key: Some(Wildcard::new("3".to_string())),
                 ..Default::default()
             },
+            true,
         )
         .await;
         assert_eq!(result, vec![entries[3].clone()]);
@@ -705,6 +726,95 @@ mod tests {
         assert_eq!(builder.to_list_count().await.unwrap(), ListCount::new(10));
     }
 
+    #[test]
+    fn test_filter_operation() {
+        let operation = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
+            s3_object::Column::StorageClass,
+            WildcardEither::Or(StorageClass::Standard),
+            true,
+        );
+        assert!(matches!(
+            operation,
+            SimpleExpr::Binary(_, BinOper::Equal, _)
+        ));
+
+        let operation = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
+            s3_object::Column::StorageClass,
+            WildcardEither::Or(StorageClass::Standard),
+            false,
+        );
+        assert!(matches!(
+            operation,
+            SimpleExpr::Binary(_, BinOper::Equal, _)
+        ));
+
+        let operation = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
+            s3_object::Column::StorageClass,
+            WildcardEither::Wildcard::<StorageClass>(Wildcard::new("Standar%".to_string())),
+            true,
+        );
+        assert!(matches!(operation, SimpleExpr::Binary(_, BinOper::Like, _)));
+
+        let operation = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
+            s3_object::Column::StorageClass,
+            WildcardEither::Wildcard::<StorageClass>(Wildcard::new("Standar%".to_string())),
+            false,
+        );
+        assert!(matches!(
+            operation,
+            SimpleExpr::Binary(_, BinOper::PgOperator(PgBinOper::ILike), _)
+        ));
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_objects_filter_wildcard(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await
+            .s3_objects;
+
+        let result = filter_all_s3_objects_from(
+            &client,
+            S3ObjectsFilter {
+                event_type: Some(WildcardEither::Wildcard(Wildcard::new(
+                    "Cr___ed".to_string(),
+                ))),
+                ..Default::default()
+            },
+            true,
+        )
+        .await;
+        assert_eq!(
+            result,
+            filter_event_type(entries.clone(), EventType::Created)
+        );
+
+        let result = filter_all_s3_objects_from(
+            &client,
+            S3ObjectsFilter {
+                event_type: Some(WildcardEither::Wildcard(Wildcard::new(
+                    "cr___ed".to_string(),
+                ))),
+                ..Default::default()
+            },
+            false,
+        )
+        .await;
+        assert_eq!(result, filter_event_type(entries, EventType::Created));
+    }
+
+    pub(crate) fn filter_event_type(
+        entries: Vec<s3_object::Model>,
+        event_type: EventType,
+    ) -> Vec<s3_object::Model> {
+        entries
+            .into_iter()
+            .filter(|entry| entry.event_type == event_type)
+            .collect::<Vec<_>>()
+    }
+
     async fn paginate_all<C, T, M>(
         builder: ListQueryBuilder<'_, C, T>,
         page: u64,
@@ -735,9 +845,10 @@ mod tests {
     async fn filter_all_s3_objects_from(
         client: &Client,
         filter: S3ObjectsFilter,
+        case_sensitive: bool,
     ) -> Vec<s3_object::Model> {
         ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
-            .filter_all(filter)
+            .filter_all(filter, case_sensitive)
             .all()
             .await
             .unwrap()

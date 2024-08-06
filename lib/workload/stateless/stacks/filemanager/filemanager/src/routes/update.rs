@@ -196,7 +196,8 @@ pub async fn update_s3_object_collection_attributes(
 ) -> Result<Json<Vec<FileS3Object>>> {
     let txn = state.client().connection_ref().begin().await?;
 
-    let mut results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn).filter_all(filter_all);
+    let mut results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
+        .filter_all(filter_all, list.case_sensitive());
 
     if list.current_state() {
         results = results.current_state();
@@ -233,7 +234,8 @@ mod tests {
 
     use super::*;
     use crate::queries::update::tests::{
-        assert_correct_records, assert_model_contains, change_attribute_entries, change_attributes,
+        assert_correct_records, assert_model_contains, assert_wildcard_update,
+        change_attribute_entries, change_attributes, change_many,
     };
     use crate::queries::EntriesBuilder;
     use crate::routes::list::tests::response_from;
@@ -456,6 +458,65 @@ mod tests {
 
         change_attribute_entries(&mut entries, 0, json!({"attribute_id": "2"})).await;
         change_attribute_entries(&mut entries, 1, json!({"attribute_id": "2"})).await;
+        assert_correct_records(state.client(), entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_api_wildcard_like(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
+
+        change_many(
+            state.client(),
+            &entries,
+            &[0, 2, 4, 6, 8],
+            Some(json!({"attribute_id": "1"})),
+        )
+        .await;
+
+        let patch = json!({"attributes": [
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]});
+
+        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+            state.clone(),
+            "/s3_objects?event_type=C__%",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        assert_wildcard_update(&mut entries, &s3_objects);
+        assert_correct_records(state.client(), entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_api_wildcard_ilike(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
+
+        change_many(
+            state.client(),
+            &entries,
+            &[0, 2, 4, 6, 8],
+            Some(json!({"attribute_id": "1"})),
+        )
+        .await;
+
+        let patch = json!({"attributes": [
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]});
+
+        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+            state.clone(),
+            // Percent-encoding should work too.
+            "/s3_objects?case_sensitive=false&event_type=c%25_%25d",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        assert_wildcard_update(&mut entries, &s3_objects);
         assert_correct_records(state.client(), entries).await;
     }
 }

@@ -114,6 +114,11 @@ pub async fn count_objects(
     Ok(Json(response))
 }
 
+/// The default case sensitivity for s3 object filter queries.
+pub fn default_case_sensitivity() -> bool {
+    true
+}
+
 /// Params for a list s3 objects request.
 #[derive(Debug, Deserialize, Default, IntoParams)]
 #[serde(default)]
@@ -129,17 +134,31 @@ pub struct ListS3ObjectsParams {
     /// `?current_state=true` would return only the last `Created` event.
     #[param(nullable, default = false)]
     current_state: bool,
+    /// The case sensitivity when using filter operations with a wildcard.
+    /// Setting this true means that an SQL `like` statement is used, and false
+    /// means `ilike` is used.
+    #[serde(default = "default_case_sensitivity")]
+    #[param(nullable, default = true)]
+    case_sensitive: bool,
 }
 
 impl ListS3ObjectsParams {
     /// Create the current state struct.
-    pub fn new(current_state: bool) -> Self {
-        Self { current_state }
+    pub fn new(current_state: bool, case_sensitive: bool) -> Self {
+        Self {
+            current_state,
+            case_sensitive,
+        }
     }
 
     /// Get the current state.
     pub fn current_state(&self) -> bool {
         self.current_state
+    }
+
+    /// Get the case sensitivity.
+    pub fn case_sensitive(&self) -> bool {
+        self.case_sensitive
     }
 }
 
@@ -162,7 +181,7 @@ pub async fn list_s3_objects(
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListResponse<FileS3Object>>> {
     let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all);
+        .filter_all(filter_all, list.case_sensitive());
 
     if list.current_state {
         response = response.current_state();
@@ -189,7 +208,7 @@ pub async fn count_s3_objects(
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
     let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all);
+        .filter_all(filter_all, list.case_sensitive());
 
     if list.current_state {
         response = response.current_state();
@@ -220,6 +239,7 @@ pub(crate) mod tests {
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::EventType;
+    use crate::queries::list::tests::filter_event_type;
     use crate::queries::EntriesBuilder;
     use crate::routes::api_router;
 
@@ -327,10 +347,7 @@ pub(crate) mod tests {
         assert_eq!(result.results().len(), 5);
         assert_eq!(
             result.results,
-            entries
-                .into_iter()
-                .filter(|entry| entry.event_type == EventType::Deleted)
-                .collect::<Vec<_>>()
+            filter_event_type(entries, EventType::Deleted)
         );
     }
 

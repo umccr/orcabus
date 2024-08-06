@@ -7,6 +7,7 @@ use utoipa::ToSchema;
 /// An enum which deserializes into a concrete type or a wildcard. This is used for better
 /// type support when non-string filter parameters such as `StorageClass` or `EventType`.
 #[derive(Serialize, Deserialize, Debug, ToSchema, Eq, PartialEq)]
+#[serde(untagged)]
 pub enum WildcardEither<T> {
     Or(T),
     Wildcard(Wildcard),
