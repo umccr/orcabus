@@ -30,10 +30,10 @@ import boto3
 import logging
 
 # ICA imports
-from wrapica.enums import DataType
+from wrapica.enums import DataType, UriType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
-    convert_icav2_uri_to_project_data_obj, convert_project_data_obj_to_icav2_uri,
+    convert_uri_to_project_data_obj, convert_project_data_obj_to_uri,
     list_project_data_non_recursively
 )
 
@@ -85,7 +85,7 @@ def handler(events, context):
     analysis_uri = events.get("analysis_output_uri")
 
     # Convert analysis uri to project folder object
-    analysis_project_data_obj = convert_icav2_uri_to_project_data_obj(analysis_uri)
+    analysis_project_data_obj = convert_uri_to_project_data_obj(analysis_uri)
 
     # Analysis list
     analysis_top_level_data_list = list_project_data_non_recursively(
@@ -151,10 +151,10 @@ def handler(events, context):
     )
 
     return {
-        "alignment_output_uri": convert_project_data_obj_to_icav2_uri(alignment_data_obj),
-        "bam_file_uri": convert_project_data_obj_to_icav2_uri(bam_file_obj) if bam_file_obj else None,
-        "multiqc_html_report": convert_project_data_obj_to_icav2_uri(multiqc_html_data_obj),
-        "multiqc_output_uri": convert_project_data_obj_to_icav2_uri(multiqc_data_obj)
+        "alignment_output_uri": convert_project_data_obj_to_uri(alignment_data_obj, UriType.S3),
+        "bam_file_uri": convert_project_data_obj_to_uri(bam_file_obj, UriType.S3) if bam_file_obj else None,
+        "multiqc_html_report": convert_project_data_obj_to_uri(multiqc_html_data_obj, UriType.S3),
+        "multiqc_output_uri": convert_project_data_obj_to_uri(multiqc_data_obj, UriType.S3)
     }
 
 # if __name__ == "__main__":
@@ -176,4 +176,29 @@ def handler(events, context):
 #     #   "interop_output_dir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513a3fb6502/out/interop_summary_files/",
 #     #   "multiqc_html_report": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513a3fb6502/out/multiqc/231116_A01052_0172_BHVLM5DSX7_multiqc_report.html",
 #     #   "multiqc_output_dir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513a3fb6502/out/multiqc/"
+#     # }
+
+
+# S3 Test
+# if __name__ == "__main__":
+#     import json
+#     import os
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "analysis_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wgtsQc/20240806541adbcb/"
+#                 },
+#                 None
+#             ),
+#             indent=2
+#         )
+#     )
+#
+#     # {
+#     #   "alignment_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wgtsQc/20240806541adbcb/L2400254_dragen_alignment/",
+#     #   "bam_file_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wgtsQc/20240806541adbcb/L2400254_dragen_alignment/L2400254.bam",
+#     #   "multiqc_html_report": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wgtsQc/20240806541adbcb/L2400254_dragen_alignment_multiqc/L2400254_dragen_alignment_multiqc.html",
+#     #   "multiqc_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wgtsQc/20240806541adbcb/L2400254_dragen_alignment_multiqc/"
 #     # }

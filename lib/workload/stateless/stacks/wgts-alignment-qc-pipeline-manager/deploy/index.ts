@@ -4,7 +4,6 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import path from 'path';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -172,7 +171,7 @@ export class WgtsQcIcav2PipelineManagerStack extends cdk.Stack {
     );
 
     // Add permissions to lambda
-    this.icav2AccessTokenSecretObj.grantRead(<iam.IRole>setOutputJsonLambdaObj.currentVersion.role);
+    this.icav2AccessTokenSecretObj.grantRead(setOutputJsonLambdaObj.currentVersion);
 
     const configureOutputsSfn = new sfn.StateMachine(this, 'sfn_configure_outputs_json', {
       stateMachineName: `${props.stateMachinePrefix}-configure-outputs-json`,

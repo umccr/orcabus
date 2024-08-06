@@ -102,7 +102,10 @@ def handler(event, context):
         raise ValueError("Cache uri is required")
 
     # Convert cache uri to project data object
-    cache_project_data_obj = convert_uri_to_project_data_obj(cache_uri)
+    cache_project_data_obj = convert_uri_to_project_data_obj(
+        cache_uri,
+        create_data_if_not_found=True
+    )
 
     # Split cache uri into project id and cache path
     project_id = cache_project_data_obj.project_id

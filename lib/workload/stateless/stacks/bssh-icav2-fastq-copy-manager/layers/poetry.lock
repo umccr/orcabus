@@ -1271,13 +1271,13 @@ test = ["websockets"]
 
 [[package]]
 name = "wrapica"
-version = "2.27.1.post20240806143607"
+version = "2.27.1.post20240806222234"
 description = "Secondary level functions for ICAv2 based off libica"
 optional = false
 python-versions = ">=3.12"
 files = [
-    {file = "wrapica-2.27.1.post20240806143607-py3-none-any.whl", hash = "sha256:3df33df49f211a014a959e62e5547c1007e52948ab6f4b003034b187e15aab1a"},
-    {file = "wrapica-2.27.1.post20240806143607.tar.gz", hash = "sha256:0f69e93ed805b15bb4204edfc44d1f3db9c3915bfc3fd1094908e188057cbd8f"},
+    {file = "wrapica-2.27.1.post20240806222234-py3-none-any.whl", hash = "sha256:faeb6bd31e6ef1be55660bf8a24c5c876a3bdabc21a681310c56a0f312e22ebf"},
+    {file = "wrapica-2.27.1.post20240806222234.tar.gz", hash = "sha256:f13ea1fc0cf5975aa5a6d60b7c053447c79c04e5da9218a8d2da00255ff59b44"},
 ]
 
 [package.dependencies]
@@ -1311,4 +1311,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12, <3.13"
-content-hash = "3b51655ca64fc37d86baf4e1f1a8da0e29952e2b1c7cab509b015b17aff86aa7"
+content-hash = "c90e3d2e41930e64b6d18fafb7d9203a07fbbe6f2ae293327a411ba050857599"

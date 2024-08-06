@@ -559,7 +559,7 @@ def handler(event, context):
 #     )
 
 
-# S3 Test
+# S3 CWL Test
 # if __name__ == "__main__":
 #     import os
 #
@@ -586,6 +586,40 @@ def handler(event, context):
 #                     "ica_logs_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/logs/wgtsQc/2024080660be6d5f/",
 #                     "analysis_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wgtsQc/2024080660be6d5f/",
 #                     "input_json": "{\"reference_tar\":{\"class\":\"File\",\"location\":\"icav2://reference-data/dragen-hash-tables/v9-r3/hg38-alt_masked-cnv-hla-rna/hg38-alt_masked.cnv.hla.rna-9-r3.0-1.tar.gz\"},\"enable_rna\":true,\"output_directory\":\"L2400256_dragen_alignment\",\"enable_rrna_filter\":true,\"annotation_file\":{\"class\":\"File\",\"location\":\"icav2://reference-data/gencode/hg38/v39/gencode.v39.annotation.gtf\"},\"enable_duplicate_marking\":false,\"output_file_prefix\":\"L2400256\",\"fastq_list_rows\":[{\"rgid\":\"AACACCTG.CGCATGGG.4\",\"rgsm\":\"L2400256\",\"rglb\":\"L2400256\",\"lane\":4,\"read_1\":{\"class\":\"File\",\"location\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202408055ee629cc/Samples/Lane_4/L2400256/L2400256_S28_L004_R1_001.fastq.gz\"},\"read_2\":{\"class\":\"File\",\"location\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202408055ee629cc/Samples/Lane_4/L2400256/L2400256_S28_L004_R2_001.fastq.gz\"}}],\"enable_rna_quantification\":true,\"enable_map_align_output\":true,\"enable_sort\":true}"
+#                 },
+#                 context=None
+#             ),
+#             indent=2
+#         )
+#     )
+
+# S3 Nextflow test
+# if __name__ == "__main__":
+#     import os
+#
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#     print(
+#         json.dumps(
+#             handler(
+#                 event={
+#                     "workflow_type": "nextflow",
+#                     "user_tags": {
+#                         "libraryId": "L2400165",
+#                         "fastqListRowIds": [
+#                             "ACGCCTTGTT.ACGTTCCTTA.4.240229_A00130_0288_BH5HM2DSXC.L2400165"
+#                         ]
+#                     },
+#                     "technical_tags": {
+#                         "portal_run_id": "20240806fa366a28",
+#                         "step_functions_execution_arn": "arn:aws:states:ap-southeast-2:843407916570:execution:cttsov2Sfn-wfm-ready-event-handler:d684198e-6366-74fb-5297-caf7f137a834_c533665e-c472-57a2-bb37-ee6b68a1d2c1",
+#                         "analysis_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240806fa366a28/"
+#                     },
+#                     "user_reference": "umccr--automated--cttsov2--2-6-0--20240806fa366a28",
+#                     "project_id": "ea19a3f5-ec7c-4940-a474-c31cd91dbad4",
+#                     "pipeline_id": "c2dfdbaa-2074-44c7-8078-d33e13607061",
+#                     "ica_logs_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/logs/cttsov2/20240806fa366a28/",
+#                     "analysis_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240806fa366a28/",
+#                     "input_json": "{\"StartsFromFastq\":true,\"sample_sheet\":\"icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/cache/cttsov2/20240806fa366a28/SampleSheet.csv\",\"run_folder\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/cache/cttsov2/20240806fa366a28/\",\"sample_pair_ids\":\"L2400165\"}"
 #                 },
 #                 context=None
 #             ),
