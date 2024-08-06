@@ -1,0 +1,280 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "move_inputs",
+  "States": {
+    "move_inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      },
+      "Next": "get_sequencerrun_creation_object"
+    },
+    "get_sequencerrun_creation_object": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__pieriandx_case_table_name__}",
+        "Key": {
+          "id.$": "$.workflow_inputs.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "ResultPath": "$.get_sequencerrun_creation_object_step",
+      "ResultSelector": {
+        "db_uuid": "$.Item.id.S",
+        "sequencerrun_creation_obj.$": "States.StringToJson($.Item.sequencerrun_creation_obj.S)",
+        "data_files.$": "States.StringToJson($.Item.data_files.S)",
+        "samplesheet_b64gz.$": "$.Item.samplesheet_b64gz.S",
+        "sequencerrun_s3_path.$": "$.Item.sequencerrun_s3_path.S"
+      },
+      "Next": "upload_data"
+    },
+    "upload_data": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "upload_data_files_to_s3",
+          "States": {
+            "upload_data_files_to_s3": {
+              "Type": "Map",
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "upload_pieriandx_sample_data_to_s3",
+                "States": {
+                  "upload_pieriandx_sample_data_to_s3": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "OutputPath": "$.Payload",
+                    "Parameters": {
+                      "Payload": {
+                        "src_uri.$": "$.src_uri",
+                        "dest_uri.$": "$.dest_uri",
+                        "needs_decompression.$": "$.needs_decompression",
+                        "contents.$": "$.contents"
+                      },
+                      "FunctionName": "${__upload_data_to_s3_lambda__}"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2
+                      }
+                    ],
+                    "End": true
+                  }
+                }
+              },
+              "ItemsPath": "$.get_sequencerrun_creation_object_step.data_files",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "generate_samplesheet_str",
+          "States": {
+            "generate_samplesheet_str": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__generate_samplesheet_lambda__}",
+                "Payload": {
+                  "samplesheet_b64gz.$": "$.get_sequencerrun_creation_object_step.samplesheet_b64gz"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultSelector": {
+                "samplesheet_str.$": "$.Payload.samplesheet_str"
+              },
+              "ResultPath": "$.generate_samplesheet_str_step",
+              "Next": "upload_samplesheet_str_to_s3"
+            },
+            "upload_samplesheet_str_to_s3": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "FunctionName": "${__upload_data_to_s3_lambda__}",
+                "Payload": {
+                  "dest_uri.$": "States.Format('{}/SampleSheet.csv', $.get_sequencerrun_creation_object_step.sequencerrun_s3_path)",
+                  "contents.$": "$.generate_samplesheet_str_step.samplesheet_str"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.upload_data_step",
+      "Next": "generate_sequencerrun_creation_obj"
+    },
+    "generate_sequencerrun_creation_obj": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_sequencerrun_case_lambda__}",
+        "Payload": {
+          "sequencerrun_creation_obj.$": "$.get_sequencerrun_creation_object_step.sequencerrun_creation_obj"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.generate_sequencerrun_creation_object_step",
+      "ResultSelector": {
+        "sequencerrun_id.$": "$.Payload.id"
+      },
+      "Next": "update_database"
+    },
+    "update_database": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "add_sequencer_run_partition_key",
+          "States": {
+            "add_sequencer_run_partition_key": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__pieriandx_case_table_name__}",
+                "Item": {
+                  "id.$": "$.generate_sequencerrun_creation_object_step.sequencerrun_id",
+                  "id_type": "sequencerrun_id",
+                  "db_uuid": {
+                    "S.$": "$.workflow_inputs.db_uuid"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "update_db_uuid_partition_key_with_sequencerrun_id",
+          "States": {
+            "update_db_uuid_partition_key_with_sequencerrun_id": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__pieriandx_case_table_name__}",
+                "Key": {
+                  "id.$": "$.workflow_inputs.db_uuid",
+                  "id_type": "db_uuid"
+                },
+                "UpdateExpression": "SET sequencerrun_id = :sequencerrun_id",
+                "ExpressionAttributeValues": {
+                  ":sequencerrun_id": {
+                    "N.$": "$.generate_sequencerrun_creation_object_step.sequencerrun_id"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "add_vcf_workflow_txt",
+      "ResultPath": "$.update_database_step"
+    },
+    "add_vcf_workflow_txt": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__upload_data_to_s3_lambda__}",
+        "Payload": {
+          "contents": "",
+          "dest_uri.$": "States.Format('{}/VcfWorkflow.txt', $.get_sequencerrun_creation_object_step.sequencerrun_s3_path)"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.add_vcf_workflow_txt_step",
+      "Next": "add_done_txt"
+    },
+    "add_done_txt": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__upload_data_to_s3_lambda__}",
+        "Payload": {
+          "contents": "",
+          "dest_uri.$": "States.Format('{}/done.txt', $.get_sequencerrun_creation_object_step.sequencerrun_s3_path)"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.add_done_txt_step",
+      "Next": "wait_one_second"
+    },
+    "wait_one_second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "End": true
+    }
+  }
+}
