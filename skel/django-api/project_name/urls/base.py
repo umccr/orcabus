@@ -2,9 +2,10 @@ from django.urls import path, include
 
 from {{project_name}}.routers import OptionalSlashDefaultRouter
 from {{project_name}}.viewsets.helloworld import HelloWorldViewSet
+from {{project_name}}.settings.base import API_VERSION
 
 api_namespace = "hlo"
-api_version = "v1"
+api_version = API_VERSION
 api_base = f"{api_namespace}/{api_version}/"
 
 router = OptionalSlashDefaultRouter()

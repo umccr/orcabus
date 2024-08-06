@@ -10,31 +10,51 @@ from environ import Env
 
 from .base import *  # noqa
 
-db_conn_cfg = Env.db_url_config(
-    # pragma: allowlist nextline secret
-    os.getenv("DB_URL", "postgresql://orcabus:orcabus@localhost:5432/orcabus")
-)
-
-DATABASES = {"default": db_conn_cfg}
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'orcabus',  # FIXME perhaps change it to '{{project_name}}'
+        'USER': 'orcabus',
+        'PASSWORD': 'orcabus',  # pragma: allowlist-secret
+        'HOST': os.getenv('DB_HOSTNAME', 'localhost'),
+        'PORT': os.getenv('DB_PORT', 5432),
+    }
+}
 
 INSTALLED_APPS += (
     "django_extensions",
-    "drf_yasg",
+    "drf_spectacular",
 )
 
 ROOT_URLCONF = "{{project_name}}.urls.local"
 
 RUNSERVER_PLUS_PRINT_SQL_TRUNCATE = sys.maxsize
 
-# --- drf_yasg swagger and redoc settings
+# --- drf-spectacular settings
 
-SWAGGER_SETTINGS = {
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}
+REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS'] = 'drf_spectacular.openapi.AutoSchema'
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'UMCCR OrcaBus {{project_name}} API',
+    'DESCRIPTION': 'UMCCR OrcaBus {{project_name}} API',
+    'VERSION': API_VERSION,
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SECURITY': [
+        {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
+    ],
+    'CONTACT': {
+        'name': 'UMCCR',
+        'email': 'services@umccr.org'
     },
-    "USE_SESSION_AUTH": False,
-}
-
-REDOC_SETTINGS = {
-    "LAZY_RENDERING": False,
+    "LICENSE": {
+        "name": "MIT License",
+    },
+    "EXTERNAL_DOCS": {
+        "description": "Terms of service",
+        "url": "https://umccr.org/",
+    },
 }

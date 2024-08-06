@@ -82,7 +82,9 @@ python manage.py runserver_plus
 curl -s http://localhost:8000/hlo/v1/hello | jq
 curl -s http://localhost:8000/hlo/v1/hello/1 | jq
 
-open -a Safari http://localhost:8000
+open -a "Google Chrome" http://localhost:8000/hlo/v1/
+open -a "Google Chrome" http://localhost:8000/swagger-ui/
+open -a "Google Chrome" http://localhost:8000/schema/openapi.json
 
 (CRTL+C to stop the server)
 ```
@@ -124,10 +126,14 @@ python manage.py showmigrations
 
 At this point, you may rename the source code and continue developing the app or simply delete it.
 
-Go back to project root:
+Go back to project root and clean up like so:
+
 ```
+make down
 cd ../../../../../
 rm -rf lib/workload/stateless/stacks/hello-manager
+conda deactivate
+conda env remove -n hello-manager
 ```
 
 ## CDK
