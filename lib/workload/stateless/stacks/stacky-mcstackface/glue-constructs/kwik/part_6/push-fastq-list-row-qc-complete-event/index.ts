@@ -138,6 +138,11 @@ export class FastqListRowQcCompleteConstruct extends Construct {
         detailType: [this.WgtsQcCompleteMap.triggerDetailType],
         detail: {
           status: [{ 'equals-ignore-case': this.WgtsQcCompleteMap.triggerStatus }],
+          workflowName: [
+            {
+              'equals-ignore-case': this.WgtsQcCompleteMap.triggerWorkflowName,
+            },
+          ],
         },
       },
     });

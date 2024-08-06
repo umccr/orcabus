@@ -22,7 +22,7 @@ export interface TnInitialiseSubjectDbRowConstructProps {
 
 export class TnInitialiseSubjectDbRowConstruct extends Construct {
   public readonly TnInitialiseSubjectDbRowMap = {
-    prefix: 'kwik-make-subject-row',
+    prefix: 'loctite-make-subject-row',
     tablePartition: 'subject',
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'SubjectInSamplesheet',
