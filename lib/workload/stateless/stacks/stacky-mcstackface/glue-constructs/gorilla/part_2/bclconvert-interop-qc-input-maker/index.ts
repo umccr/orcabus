@@ -39,7 +39,7 @@ export class BclconvertInteropQcDraftToReadyMakerConstruct extends Construct {
     outputSource: 'orcabus.bclconvertinteropqcinputeventglue',
     outputStatus: 'ready',
     payloadVersion: '2024.05.24',
-    workflowName: 'bclconvertInteropQc',
+    workflowName: 'bclconvert-interop-qc', // FIXME should be same as `bclconvertInteropQcIcav2PipelineWorkflowName` from constants.ts
     workflowVersion: '2024.05.24',
   };
 
