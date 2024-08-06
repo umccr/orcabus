@@ -13,6 +13,29 @@ pub enum WildcardEither<T> {
     Wildcard(Wildcard),
 }
 
+impl<T> WildcardEither<T> {
+    /// Create an or variant.
+    pub fn or(value: T) -> WildcardEither<T> {
+        Self::Or(value)
+    }
+
+    /// Create a wildcard variant.
+    pub fn wildcard(wildcard: String) -> WildcardEither<T> {
+        Self::Wildcard(Wildcard::new(wildcard))
+    }
+
+    /// Map the function to the type if this is an `Or` variant.
+    pub fn map<F, U>(self, f: F) -> WildcardEither<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        match self {
+            Self::Or(or) => WildcardEither::Or(f(or)),
+            Self::Wildcard(wildcard) => WildcardEither::Wildcard(wildcard),
+        }
+    }
+}
+
 /// A wildcard type represents a filter to match arbitrary characters. Use '%' for multiple characters
 /// and '_' for a single character. Use '\' to escape these characters. Wildcards are converted to
 /// postgres `like` or `ilike` queries.

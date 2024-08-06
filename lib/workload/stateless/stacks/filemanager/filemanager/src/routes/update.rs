@@ -15,7 +15,7 @@ use crate::error::Result;
 use crate::queries::update::UpdateQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
 use crate::routes::filter::{ObjectsFilter, S3ObjectsFilter};
-use crate::routes::list::ListS3ObjectsParams;
+use crate::routes::list::{ListObjectsParams, ListS3ObjectsParams};
 use crate::routes::AppState;
 
 /// The attributes to update for the request. This updates attributes according to JSON patch.
@@ -110,20 +110,21 @@ pub async fn update_object_attributes(
         ),
         ErrorStatusCode,
     ),
-    params(ObjectsFilter),
+    params(ListObjectsParams, ObjectsFilter),
     request_body = PatchBody,
     context_path = "/api/v1",
     tag = "update",
 )]
 pub async fn update_object_collection_attributes(
     state: State<AppState>,
+    Query(list): Query<ListObjectsParams>,
     QsQuery(filter_all): QsQuery<ObjectsFilter>,
     Json(patch): Json<PatchBody>,
 ) -> Result<Json<Vec<FileObject>>> {
     let txn = state.client().connection_ref().begin().await?;
 
     let results = UpdateQueryBuilder::<_, object::Entity>::new(&txn)
-        .filter_all(filter_all)
+        .filter_all(filter_all, list.case_sensitive)
         .update_object_attributes(patch)
         .await?
         .all()

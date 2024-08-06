@@ -65,6 +65,19 @@ impl<M> ListResponse<M> {
     }
 }
 
+/// Params for a list objects request.
+#[derive(Debug, Deserialize, Default, IntoParams)]
+#[serde(default)]
+#[into_params(parameter_in = Query)]
+pub struct ListObjectsParams {
+    /// The case sensitivity when using filter operations with a wildcard.
+    /// Setting this true means that an SQL `like` statement is used, and false
+    /// means `ilike` is used.
+    #[serde(default = "default_case_sensitivity")]
+    #[param(nullable, default = true)]
+    pub(crate) case_sensitive: bool,
+}
+
 /// List all objects according to the parameters.
 #[utoipa::path(
     get,
@@ -73,17 +86,18 @@ impl<M> ListResponse<M> {
         (status = OK, description = "The collection of objects", body = Vec<FileObject>),
         ErrorStatusCode,
     ),
-    params(Pagination, ObjectsFilter),
+    params(Pagination, ListObjectsParams, ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
 pub async fn list_objects(
     state: State<AppState>,
     Query(pagination): Query<Pagination>,
+    Query(list): Query<ListObjectsParams>,
     QsQuery(filter_all): QsQuery<ObjectsFilter>,
 ) -> Result<Json<ListResponse<FileObject>>> {
     let response = ListQueryBuilder::<_, object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all)
+        .filter_all(filter_all, list.case_sensitive)
         .paginate_to_list_response(pagination)
         .await?;
 
@@ -98,16 +112,17 @@ pub async fn list_objects(
         (status = OK, description = "The count of objects", body = ListCount),
         ErrorStatusCode,
     ),
-    params(ObjectsFilter),
+    params(ListObjectsParams, ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
 pub async fn count_objects(
     state: State<AppState>,
+    Query(list): Query<ListObjectsParams>,
     QsQuery(filter_all): QsQuery<ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
     let response = ListQueryBuilder::<_, object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all)
+        .filter_all(filter_all, list.case_sensitive)
         .to_list_count()
         .await?;
 

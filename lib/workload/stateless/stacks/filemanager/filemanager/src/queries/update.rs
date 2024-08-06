@@ -58,8 +58,8 @@ where
     }
 
     /// Filter records by all fields in the filter variable.
-    pub fn filter_all(mut self, filter: ObjectsFilter) -> Self {
-        self.select_to_update = self.select_to_update.filter_all(filter);
+    pub fn filter_all(mut self, filter: ObjectsFilter, case_sensitive: bool) -> Self {
+        self.select_to_update = self.select_to_update.filter_all(filter, case_sensitive);
 
         self.trace_query("filter_all");
 
@@ -713,7 +713,7 @@ pub(crate) mod tests {
         attributes: Option<Value>,
     ) -> Result<UpdateQueryBuilder<DatabaseConnection, object::Entity>> {
         UpdateQueryBuilder::<_, object::Entity>::new(client.connection_ref())
-            .filter_all(ObjectsFilter { attributes })
+            .filter_all(ObjectsFilter { attributes }, true)
             .update_object_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
     }
