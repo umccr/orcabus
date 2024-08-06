@@ -129,6 +129,7 @@ At this point, you may rename the source code and continue developing the app or
 Go back to project root and clean up like so:
 
 ```
+make down
 cd ../../../../../
 rm -rf lib/workload/stateless/stacks/hello-manager
 conda deactivate
