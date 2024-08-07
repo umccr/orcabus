@@ -78,6 +78,11 @@ export class BsshIcav2FastqCopyManagerStack extends cdk.Stack {
           file: 'lambdas/query_bclconvert_outputs_handler_py/Dockerfile',
         }),
         architecture: lambda.Architecture.ARM_64,
+        timeout: Duration.seconds(900),
+        environment: {
+          ICAV2_BASE_URL: 'https://ica.illumina.com/ica/rest',
+          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_jwt_secret_obj.secretName,
+        },
       }
     );
 

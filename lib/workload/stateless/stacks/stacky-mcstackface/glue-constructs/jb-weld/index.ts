@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { Cttsov2InitialiseInstrumentRunDbRowConstruct } from './part_1/initialise-cttsov2-instrument-dbs';
 import { Cttsov2InitialiseLibraryAndFastqListRowConstruct } from './part_2/initialise-cttsov2-library-dbs';
 import { Cttsov2PopulateFastqListRowConstruct } from './part_3/populate-fastq-list-row-dbs';
@@ -23,6 +24,8 @@ export interface cttsov2GlueHandlerConstructProps {
   analysisLogsUriSsmParameterObj: ssm.IStringParameter;
   analysisCacheUriSsmParameterObj: ssm.IStringParameter;
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
+  /* Secrets */
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class Cttsov2GlueHandlerConstruct extends Construct {
@@ -123,15 +126,17 @@ export class Cttsov2GlueHandlerConstruct extends Construct {
       this,
       'fastq_list_rows_to_cttso_v2_input_maker',
       {
-        // Event bus
+        /* Event bus */
         eventBusObj: props.eventBusObj,
-        // SSM Param objects
+        /* Tables */
+        inputMakerTableObj: props.inputMakerTableObj,
+        /* SSM Param objects */
         icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
         outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
         cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
         logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-        // Tables
-        inputMakerTableObj: props.inputMakerTableObj,
+        /* Secrets */
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
       }
     );
   }

@@ -15,6 +15,8 @@ import path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import { PythonLambdaUuidConstruct } from '../python-lambda-uuid-generator-function';
 import { PythonLambdaFlattenListOfObjectsConstruct } from '../python-lambda-flatten-list-of-objects';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
+import { Duration } from 'aws-cdk-lib';
 
 export interface WorkflowRunStateChangeInternalInputMakerProps {
   /* Object name prefixes */
@@ -38,6 +40,8 @@ export interface WorkflowRunStateChangeInternalInputMakerProps {
   logsUriSsmParameterObj?: ssm.IStringParameter;
   cacheUriSsmParameterObj?: ssm.IStringParameter;
   icav2ProjectIdSsmParameterObj?: ssm.IStringParameter;
+  /* Secrets */
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct extends Construct {
@@ -63,7 +67,16 @@ export class WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct e
         index: 'fill_placeholders_in_event_payload_data.py',
         runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
+        environment: {
+          ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
+        },
+        timeout: Duration.seconds(60),
       }
+    );
+
+    // Add permissions for the lambda to read from secrets manager
+    props.icav2AccessTokenSecretObj.grantRead(
+      fillPlaceholdersInEventPayloadDataLambdaObj.currentVersion
     );
 
     /* Flatten Object list py */

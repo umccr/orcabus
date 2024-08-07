@@ -18,7 +18,7 @@ from os import environ
 
 from wrapica.project_data import (
     write_icav2_file_contents, read_icav2_file_contents,
-    convert_icav2_uri_to_project_data_obj, delete_project_data
+    convert_uri_to_project_data_obj, delete_project_data
 )
 
 if typing.TYPE_CHECKING:
@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
-
 
 # AWS things
 def get_ssm_client() -> 'SSMClient':
@@ -83,7 +82,7 @@ def write_icav2_vcf_file_to_compressed_output(icav2_uri: str, output_path: Path)
     :return:
     """
     # Download decompressed file
-    project_data_obj = convert_icav2_uri_to_project_data_obj(icav2_uri)
+    project_data_obj = convert_uri_to_project_data_obj(icav2_uri)
 
     # Write to output file
     read_icav2_file_contents(project_data_obj.project_id, project_data_obj.data.id, output_path.with_suffix(''))
@@ -128,7 +127,7 @@ def compress_icav2_vcf_and_upload(icav2_uri):
     :param icav2_uri:
     :return:
     """
-    project_data_obj = convert_icav2_uri_to_project_data_obj(icav2_uri)
+    project_data_obj = convert_uri_to_project_data_obj(icav2_uri)
 
     with TemporaryDirectory() as temp_dir:
         # Initialise parameters

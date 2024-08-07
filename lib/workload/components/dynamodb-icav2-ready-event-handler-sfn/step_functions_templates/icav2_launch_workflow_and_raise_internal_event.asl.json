@@ -121,8 +121,8 @@
                   "analysis_technical_tags": {
                     "S.$": "States.JsonToString($.add_technical_tags_step.technical_tags)"
                   },
-                  "user_tags": {
-                    "S": "{}"
+                  "tags": {
+                    "S.$": "States.JsonToString($.workflow_inputs.payload.data.tags)"
                   }
                 }
               },
@@ -324,7 +324,7 @@
                 "engine_parameters.$": "States.StringToJson($.Item.engine_parameters.S)",
                 "input_json.$": "$.Item.input_json.S",
                 "pipeline_id.$": "$.Item.analysis_pipeline_id.S",
-                "user_tags.$": "States.StringToJson($.Item.user_tags.S)"
+                "tags.$": "States.StringToJson($.Item.tags.S)"
               },
               "ResultPath": "$.get_input_parameters_from_event",
               "Next": "Get Parameters for Launch Payload"
@@ -337,7 +337,7 @@
                 "input_json.$": "$.get_input_parameters_from_event.input_json",
                 "analysis_output_uri.$": "$.get_input_parameters_from_event.engine_parameters.outputUri",
                 "ica_logs_uri.$": "$.get_input_parameters_from_event.engine_parameters.logsUri",
-                "user_tags.$": "$.get_input_parameters_from_event.user_tags"
+                "user_tags.$": "$.get_input_parameters_from_event.tags"
               },
               "ResultPath": "$.get_parameters_from_payload",
               "Next": "Launch ICAv2 Pipeline Lambda Function"
@@ -506,7 +506,8 @@
           "version": "${__service_version__}",
           "data": {
             "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
-            "engineParameters.$": "States.StringToJson($.Item.engine_parameters.S)"
+            "engineParameters.$": "States.StringToJson($.Item.engine_parameters.S)",
+            "tags.$": "States.StringToJson($.Item.tags.S)"
           }
         }
       }

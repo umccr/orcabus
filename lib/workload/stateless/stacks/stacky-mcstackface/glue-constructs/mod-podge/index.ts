@@ -135,15 +135,17 @@ export class WtsGlueHandlerConstruct extends Construct {
         * userReference
     */
     const wtsInputMaker = new WtsInputMakerConstruct(this, 'fastq_list_row_qc_complete', {
-      // Event bus
+      /* Event bus */
       eventBusObj: props.eventBusObj,
-      // SSM Param objects
+      /* Tables */
+      inputMakerTableObj: props.inputMakerTableObj,
+      /* SSM Param objects */
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
       outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
       cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
       logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-      // Tables
-      inputMakerTableObj: props.inputMakerTableObj,
+      /* Secrets Manager */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
     });
   }
 }

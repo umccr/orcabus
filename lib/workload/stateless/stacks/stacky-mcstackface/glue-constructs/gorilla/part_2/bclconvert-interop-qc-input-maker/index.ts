@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/event-workflowdraftrunstatechange-to-workflowrunstatechange-ready';
 
 /*
@@ -26,6 +27,7 @@ export interface bclconvertInteropQcDraftToReadyMakerConstructProps {
   outputUriSsmParameterObj: ssm.IStringParameter;
   logsUriSsmParameterObj: ssm.IStringParameter;
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
   eventBusObj: events.IEventBus;
 }
 
@@ -39,7 +41,7 @@ export class BclconvertInteropQcDraftToReadyMakerConstruct extends Construct {
     outputSource: 'orcabus.bclconvertinteropqcinputeventglue',
     outputStatus: 'ready',
     payloadVersion: '2024.05.24',
-    workflowName: 'bclconvert-interop-qc', // FIXME should be same as `bclconvertInteropQcIcav2PipelineWorkflowName` from constants.ts
+    workflowName: 'bclconvert-interop-qc',
     workflowVersion: '2024.05.24',
   };
 
@@ -90,6 +92,11 @@ export class BclconvertInteropQcDraftToReadyMakerConstruct extends Construct {
         outputUriSsmParameterObj: props.outputUriSsmParameterObj,
         logsUriSsmParameterObj: props.logsUriSsmParameterObj,
         icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+
+        /*
+        Set the secrets
+        */
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
       }
     );
   }

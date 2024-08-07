@@ -33,10 +33,10 @@ if typing.TYPE_CHECKING:
     from mypy_boto3_secretsmanager.client import SecretsManagerClient
 
 # ICA imports
-from wrapica.enums import DataType
+from wrapica.enums import DataType, UriType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
-    convert_icav2_uri_to_project_data_obj, convert_project_data_obj_to_icav2_uri,
+    convert_uri_to_project_data_obj, convert_project_data_obj_to_uri,
     list_project_data_non_recursively
 )
 
@@ -78,7 +78,7 @@ def handler(events, context):
     analysis_uri = events.get("analysis_output_uri")
 
     # Convert analysis uri to project folder object
-    analysis_project_data_obj = convert_icav2_uri_to_project_data_obj(analysis_uri)
+    analysis_project_data_obj = convert_uri_to_project_data_obj(analysis_uri)
 
     # Analysis list
     analysis_top_level_data_list = list_project_data_non_recursively(
@@ -128,21 +128,21 @@ def handler(events, context):
     )
 
     return {
-        "interop_output_dir": convert_project_data_obj_to_icav2_uri(interop_data_obj),
-        "multiqc_html_report": convert_project_data_obj_to_icav2_uri(multiqc_html_data_obj),
-        "multiqc_output_dir": convert_project_data_obj_to_icav2_uri(multiqc_data_obj)
+        "interop_output_dir": convert_project_data_obj_to_uri(interop_data_obj, UriType.S3),
+        "multiqc_html_report": convert_project_data_obj_to_uri(multiqc_html_data_obj, UriType.S3),
+        "multiqc_output_dir": convert_project_data_obj_to_uri(multiqc_data_obj, UriType.S3)
     }
 
 
 # if __name__ == "__main__":
 #     import json
 #     import os
-#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-trial"
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
 #     print(
 #         json.dumps(
 #             handler(
 #                 {
-#                     "analysis_output_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513a3fb6502/out/"
+#                     "analysis_output_uri": "icav2://development/analysis/bclconvert-interop-qc/20240806ce5755fd/"
 #                 },
 #                 None
 #             ),
@@ -150,7 +150,7 @@ def handler(events, context):
 #         )
 #     )
 #     # {
-#     #   "interop_output_dir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513a3fb6502/out/interop_summary_files/",
-#     #   "multiqc_html_report": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513a3fb6502/out/multiqc/231116_A01052_0172_BHVLM5DSX7_multiqc_report.html",
-#     #   "multiqc_output_dir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240513a3fb6502/out/multiqc/"
+#     #   "interop_output_dir": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/bclconvert-interop-qc/20240806ce5755fd/interop_summary_files/",
+#     #   "multiqc_html_report": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/bclconvert-interop-qc/20240806ce5755fd/multiqc/240229_A00130_0288_BH5HM2DSXC_multiqc_report.html",
+#     #   "multiqc_output_dir": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/bclconvert-interop-qc/20240806ce5755fd/multiqc/"
 #     # }

@@ -46,7 +46,7 @@ export class BclconvertInteropQcDraftMakerConstruct extends Construct {
     outputDetailType: 'WorkflowDraftRunStateChange',
     outputStatus: 'draft',
     payloadVersion: '2024.05.24',
-    workflowName: 'bclconvert-interop-qc', // FIXME should be same as `bclconvertInteropQcIcav2PipelineWorkflowName` from constants.ts
+    workflowName: 'bclconvert-interop-qc',
     workflowVersion: '2024.05.24',
   };
 

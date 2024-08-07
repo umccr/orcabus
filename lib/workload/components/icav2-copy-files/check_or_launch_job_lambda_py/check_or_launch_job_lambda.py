@@ -29,14 +29,15 @@ The event input is
 # Standard imports
 from pathlib import Path
 from typing import List
-from urllib.parse import urlparse
 import boto3
 from os import environ
 import typing
 
 # Wrapica imports
 from wrapica.job import get_job
-from wrapica.project_data import convert_icav2_uri_to_project_data_obj, project_data_copy_batch_handler
+from wrapica.project_data import (
+    convert_uri_to_project_data_obj, project_data_copy_batch_handler
+)
 
 if typing.TYPE_CHECKING:
     from mypy_boto3_ssm import SSMClient
@@ -112,19 +113,22 @@ def submit_copy_job(dest_uri: str, source_uris: List[str]) -> str:
     # Rerun copy batch process
     source_data_ids = list(
         map(
-            lambda source_uri_iter: convert_icav2_uri_to_project_data_obj(
+            lambda source_uri_iter: convert_uri_to_project_data_obj(
                 source_uri_iter
             ).data.id,
             source_uris
         )
     )
 
-    dest_uri = urlparse(dest_uri)
+    dest_project_data_obj = convert_uri_to_project_data_obj(
+        dest_uri,
+        create_data_if_not_found=True
+    )
 
     return project_data_copy_batch_handler(
         source_data_ids=source_data_ids,
-        destination_project_id=dest_uri.netloc,
-        destination_folder_path=Path(dest_uri.path)
+        destination_project_id=dest_project_data_obj.project_id,
+        destination_folder_path=Path(dest_project_data_obj.data.details.path)
     ).id
 
 
@@ -266,3 +270,4 @@ def handler(event, context):
 #             )
 #         )
 #     )
+

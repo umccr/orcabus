@@ -53,8 +53,8 @@ export class GlueConstruct extends Construct {
     });
 
     /*
-        Part B: Copy the fastq list rows by connecting the bclconvert manager completion with the bsshfastqcopy manager
-        */
+    Part B: Copy the fastq list rows by connecting the bclconvert manager completion with the bsshfastqcopy manager
+    */
     const elmer = new BclconvertToBsshFastqCopyEventHandlerConstruct(this, 'elmer', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
@@ -62,7 +62,8 @@ export class GlueConstruct extends Construct {
       inputMakerTableObj: props.inputMakerTableObj,
       /* SSM Parameters */
       bsshOutputFastqCopyUriSsmParameterObj: props.bsshOutputFastqCopyOutputUriSsmParameterObj,
-      icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
     });
 
     /*
@@ -77,11 +78,13 @@ export class GlueConstruct extends Construct {
       analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
       analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
     });
 
     /*
-        Part D: Plumber-up the cttso v2 to the shower services
-        */
+    Part D: Plumber-up the cttso v2 to the shower services
+    */
     const jb_weld = new Cttsov2GlueHandlerConstruct(this, 'jb_weld', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
@@ -93,6 +96,8 @@ export class GlueConstruct extends Construct {
       analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
       analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
       analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
     });
 
     /*

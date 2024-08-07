@@ -63,6 +63,7 @@
                       }
                     },
                     "ResultSelector": {
+                      "fastq_list_row_id.$": "$.Item.id",
                       "fastq_list_row_obj.$": "States.StringToJson($.Item.fastq_list_row_json.S)"
                     },
                     "ResultPath": "$.get_tumor_fastq_list_row_obj",
@@ -71,7 +72,8 @@
                 }
               },
               "ResultSelector": {
-                "tumor_fastq_list_rows.$": "$.[*].get_tumor_fastq_list_row_obj.fastq_list_row_obj"
+                "tumor_fastq_list_rows.$": "$.[*].get_tumor_fastq_list_row_obj.fastq_list_row_obj",
+                "tumor_fastq_list_row_ids.$": "$.[*].get_tumor_fastq_list_row_obj.fastq_list_row_id"
               },
               "ResultPath": "$.get_tumor_fastq_list_rows",
               "End": true
@@ -101,6 +103,7 @@
       "Next": "Generate Draft Event Payload",
       "ResultSelector": {
         "tumor_fastq_list_rows.$": "$.[0].get_tumor_fastq_list_rows.tumor_fastq_list_rows",
+        "tumor_fastq_list_row_ids.$": "$.[0].get_tumor_fastq_list_rows.tumor_fastq_list_row_ids",
         "portal_run_id.$": "$.[1].get_portal_and_run_name_step.portal_run_id",
         "workflow_run_name.$": "$.[1].get_portal_and_run_name_step.workflow_run_name"
       },
@@ -113,7 +116,8 @@
         "FunctionName": "${__generate_draft_event_payload_lambda_function_arn__}",
         "Payload": {
           "tumor_library_id.$": "$.payload_data.libraryId",
-          "tumor_fastq_list_rows.$": "$.get_parameters_step.tumor_fastq_list_rows"
+          "tumor_fastq_list_rows.$": "$.get_parameters_step.tumor_fastq_list_rows",
+          "tumor_fastq_list_row_ids.$": "$.get_parameters_step.tumor_fastq_list_row_ids"
         }
       },
       "Retry": [
@@ -152,7 +156,8 @@
                 "refId": null,
                 "version": "${__payload_version__}",
                 "data": {
-                  "inputs.$": "$.generate_draft_event_payload_data_step.input_event_data"
+                  "inputs.$": "$.generate_draft_event_payload_data_step.input_event_data",
+                  "tags.$": "$.generate_draft_event_payload_data_step.event_tags"
                 }
               }
             },

@@ -92,7 +92,7 @@
                   "id.$": "$.get_portal_run_id_step.portal_run_id",
                   "id_type": "${__workflow_type_partition_name__}"
                 },
-                "UpdateExpression": "SET event_data_inputs = :event_data_inputs, workflow_run_name = :workflow_run_name, portal_run_id = :portal_run_id, event_data_engine_parameters = :event_data_engine_parameters",
+                "UpdateExpression": "SET event_data_inputs = :event_data_inputs, workflow_run_name = :workflow_run_name, portal_run_id = :portal_run_id, event_data_engine_parameters = :event_data_engine_parameters, event_data_tags = :event_data_tags",
                 "ExpressionAttributeValues": {
                   ":portal_run_id": {
                     "S.$": "$.input_event_detail.portalRunId"
@@ -105,6 +105,9 @@
                   },
                   ":event_data_engine_parameters": {
                     "S.$": "States.JsonToString($.set_workflow_run_engine_parameters.engine_parameters)"
+                  },
+                  ":event_data_tags": {
+                    "S.$": "States.JsonToString($.input_event_detail.payload.data.tags)"
                   }
                 }
               },
@@ -159,7 +162,8 @@
       "Next": "EventBridge PutEvents",
       "ResultSelector": {
         "inputs.$": "States.StringToJson($.Item.event_data_inputs.S)",
-        "engine_parameters.$": "States.StringToJson($.Item.event_data_engine_parameters.S)"
+        "engine_parameters.$": "States.StringToJson($.Item.event_data_engine_parameters.S)",
+        "tags.$": "States.StringToJson($.Item.event_data_tags.S)"
       },
       "ResultPath": "$.get_event_data_output_step"
     },
@@ -184,7 +188,8 @@
                 "version": "${__payload_version__}",
                 "data": {
                   "inputs.$": "$.get_event_data_output_step.inputs",
-                  "engineParameters.$": "$.get_event_data_output_step.engine_parameters"
+                  "engineParameters.$": "$.get_event_data_output_step.engine_parameters",
+                  "tags.$": "$.input_event_detail.payload.data.tags"
                 }
               }
             }

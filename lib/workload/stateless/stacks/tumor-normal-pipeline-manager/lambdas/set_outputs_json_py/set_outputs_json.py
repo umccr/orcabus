@@ -29,11 +29,12 @@ import logging
 from typing import Dict, List
 
 # ICA imports
-from wrapica.enums import DataType
+from wrapica.enums import DataType, UriType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
-    convert_icav2_uri_to_project_data_obj,
-    list_project_data_non_recursively, convert_project_data_obj_to_icav2_uri
+    convert_uri_to_project_data_obj,
+    list_project_data_non_recursively,
+    convert_project_data_obj_to_uri
 )
 
 # IDE imports only
@@ -231,7 +232,7 @@ def handler(event, context):
     germline_output_prefix = event["germline_output_prefix"]
 
     # Get the analysis output uri as a project data object
-    analysis_output_obj = convert_icav2_uri_to_project_data_obj(analysis_output_uri)
+    analysis_output_obj = convert_uri_to_project_data_obj(analysis_output_uri)
 
     # FInd the dragen germline output
     top_dir_list: List[ProjectData] = list_project_data_non_recursively(
@@ -283,7 +284,7 @@ def handler(event, context):
         map(
             lambda key_val: (
                 key_val[0], (
-                    convert_project_data_obj_to_icav2_uri(key_val[1])
+                    convert_project_data_obj_to_uri(key_val[1], UriType.S3)
                     if key_val[1] is not None
                     else None
                 )
@@ -354,7 +355,7 @@ def handler(event, context):
 #     #     "multiqc_html_report": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195__L2400191_dragen_somatic_and_germline_multiqc/L2400195__L2400191_dragen_somatic_and_germline_multiqc.html"
 #     # }
 
-
+# S3 Output Test
 # if __name__ == "__main__":
 #     from os import environ
 #     import json
@@ -362,10 +363,10 @@ def handler(event, context):
 #     print(
 #         json.dumps(
 #             handler(
-#                  {
-#                   "somatic_output_prefix": "CORE01050021T",
-#                   "germline_output_prefix": "CORE01050021R",
-#                   "analysis_output_uri": "icav2://cohort-hmf-pdac-dev/cram_test_run/out/20240730c3d70ade/"
+#                 {
+#                     "somatic_output_prefix": "L2400195",
+#                     "germline_output_prefix": "L2400191",
+#                     "analysis_output_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/"
 #                 },
 #                 None
 #             ),
@@ -374,12 +375,15 @@ def handler(event, context):
 #     )
 #
 #     # {
-#     #     "dragen_germline_snv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/L2400191.vcf.gz",
-#     #     "dragen_germline_snv_vcf_hard_filtered": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/L2400191.hard-filtered.vcf.gz",
-#     #     "dragen_germline_bam": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400191_normal.bam",
-#     #     "dragen_somatic_snv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.vcf.gz",
-#     #     "dragen_somatic_snv_vcf_hard_filtered": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.hard-filtered.vcf.gz",
-#     #     "dragen_somatic_sv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.sv.vcf.gz",
-#     #     "dragen_somatic_bam": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195_tumor.bam",
-#     #     "multiqc_html_report": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195__L2400191_dragen_somatic_and_germline_multiqc/L2400195__L2400191_dragen_somatic_and_germline_multiqc.html"
+#     #     "dragen_germline_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/",
+#     #     "dragen_somatic_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/",
+#     #     "multiqc_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400195__L2400191_dragen_somatic_and_germline_multiqc/",
+#     #     "dragen_germline_snv_vcf": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/L2400191.vcf.gz",
+#     #     "dragen_germline_snv_vcf_hard_filtered": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/L2400191.hard-filtered.vcf.gz",
+#     #     "dragen_germline_bam": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400191_normal.bam",
+#     #     "dragen_somatic_snv_vcf": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.vcf.gz",
+#     #     "dragen_somatic_snv_vcf_hard_filtered": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.hard-filtered.vcf.gz",
+#     #     "dragen_somatic_sv_vcf": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.sv.vcf.gz",
+#     #     "dragen_somatic_bam": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195_tumor.bam",
+#     #     "multiqc_html_report": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor_normal/202407237e0fd947/L2400195__L2400191_dragen_somatic_and_germline_multiqc/L2400195__L2400191_dragen_somatic_and_germline_multiqc.html"
 #     # }

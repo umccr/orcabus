@@ -6,8 +6,11 @@ Given an icav2 uri, find all the vcf files in the directory and return a list of
 
 # Standard imports
 import typing
+from os import environ
+
 import boto3
 from typing import List
+from os import environ
 
 # Wrapica imports
 from wrapica.enums import DataType
@@ -15,8 +18,8 @@ from wrapica.libica_models import ProjectData
 
 from wrapica.project_data import (
     find_project_data_bulk,
-    convert_icav2_uri_to_project_data_obj,
-    convert_project_data_obj_to_icav2_uri
+    convert_uri_to_project_data_obj,
+    convert_project_data_obj_to_uri
 )
 
 # Globals
@@ -82,7 +85,7 @@ def handler(event, context):
 
     icav2_uri = event.get("icav2_uri")
 
-    data_obj: ProjectData = convert_icav2_uri_to_project_data_obj(icav2_uri)
+    data_obj: ProjectData = convert_uri_to_project_data_obj(icav2_uri)
 
     all_project_data: List[ProjectData] = find_project_data_bulk(
         project_id=data_obj.project_id,
@@ -93,7 +96,7 @@ def handler(event, context):
     return {
         "vcf_icav2_uri_list": list(
             map(
-                lambda project_data_iter: convert_project_data_obj_to_icav2_uri(project_data_iter),
+                lambda project_data_iter: convert_project_data_obj_to_uri(project_data_iter),
                 filter(
                     lambda project_data_iter: (
                         # Is a vcf file

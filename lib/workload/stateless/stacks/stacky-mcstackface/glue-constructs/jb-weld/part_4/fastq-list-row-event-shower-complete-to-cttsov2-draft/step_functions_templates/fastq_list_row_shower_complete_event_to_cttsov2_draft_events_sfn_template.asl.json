@@ -189,6 +189,7 @@
               "sample_id.$": "$[0].get_fastq_list_row_ids_step.internal_id",
               "samplesheet.$": "$[0].generate_samplesheet_step.samplesheet",
               "fastq_list_rows.$": "$[0].get_fastq_list_row_values_step.fastq_list_rows",
+              "fastq_list_row_ids.$": "$[0].get_fastq_list_row_ids_step.fastq_list_row_id_list",
               "portal_run_id.$": "$[1].get_sfn_preamble_outputs_step.portal_run_id",
               "workflow_run_name.$": "$[1].get_sfn_preamble_outputs_step.workflow_run_name"
             },
@@ -217,6 +218,10 @@
                           "instrumentRunId.$": "$.instrument_run_id",
                           "samplesheet.$": "$.get_draft_inputs.samplesheet",
                           "fastqListRows.$": "$.get_draft_inputs.fastq_list_rows"
+                        },
+                        "tags": {
+                          "libraryId.$": "$.get_draft_inputs.sample_id",
+                          "fastqListRowIds.$": "$.get_draft_inputs.fastq_list_row_ids"
                         }
                       }
                     }

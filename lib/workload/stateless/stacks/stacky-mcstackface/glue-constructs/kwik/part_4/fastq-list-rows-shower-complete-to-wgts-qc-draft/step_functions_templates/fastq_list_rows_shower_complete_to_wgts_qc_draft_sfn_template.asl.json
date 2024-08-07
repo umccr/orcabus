@@ -58,6 +58,13 @@
           },
           "For each FastqListRowID": {
             "Type": "Map",
+            "ItemsPath": "$.get_fastq_list_row_ids_step.fastq_list_row_id_list",
+            "ItemSelector": {
+              "fastq_list_row_id.$": "$$.Map.Item.Value",
+              "sample_type.$": "$.get_fastq_list_row_ids_step.sample_type",
+              "library_id.$": "$.get_fastq_list_row_ids_step.internal_id",
+              "instrument_run_id.$": "$.instrument_run_id"
+            },
             "ItemProcessor": {
               "ProcessorConfig": {
                 "Mode": "INLINE"
@@ -96,7 +103,8 @@
                               "library_id.$": "$.library_id",
                               "sample_type.$": "$.sample_type",
                               "fastq_list_row.$": "$.get_fastq_list_row_step.fastq_list_row",
-                              "fastq_list_row_id.$": "$.fastq_list_row_id"
+                              "fastq_list_row_id.$": "$.fastq_list_row_id",
+                              "instrument_run_id.$": "$.instrument_run_id"
                             }
                           },
                           "Retry": [
@@ -114,6 +122,7 @@
                           ],
                           "ResultPath": "$.generate_event_data_step",
                           "ResultSelector": {
+                            "event_tags.$": "$.Payload.event_tags",
                             "event_data.$": "$.Payload.event_output_dict"
                           },
                           "End": true
@@ -143,6 +152,7 @@
                   "ResultPath": "$.get_per_workflow_run_inputs_step",
                   "ResultSelector": {
                     "event_data.$": "$.[0].generate_event_data_step.event_data",
+                    "event_tags.$": "$.[0].generate_event_data_step.event_tags",
                     "portal_run_id.$": "$.[1].get_sfn_preamble_outputs_step.portal_run_id",
                     "workflow_run_name.$": "$.[1].get_sfn_preamble_outputs_step.workflow_run_name"
                   }
@@ -221,7 +231,8 @@
                             "refId": null,
                             "version": "${__payload_version__}",
                             "data": {
-                              "inputs.$": "$.get_per_workflow_run_inputs_step.event_data"
+                              "inputs.$": "$.get_per_workflow_run_inputs_step.event_data",
+                              "tags.$": "$.get_per_workflow_run_inputs_step.event_tags"
                             }
                           }
                         },
@@ -234,12 +245,6 @@
                   "End": true
                 }
               }
-            },
-            "ItemsPath": "$.get_fastq_list_row_ids_step.fastq_list_row_id_list",
-            "ItemSelector": {
-              "fastq_list_row_id.$": "$$.Map.Item.Value",
-              "sample_type.$": "$.get_fastq_list_row_ids_step.sample_type",
-              "library_id.$": "$.get_fastq_list_row_ids_step.internal_id"
             },
             "ResultPath": "$.get_fastq_list_row_values_step",
             "End": true

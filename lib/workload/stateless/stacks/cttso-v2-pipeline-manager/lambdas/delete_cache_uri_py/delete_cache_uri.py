@@ -14,16 +14,53 @@ and the file
 cache_uri / SampleSheet.csv
 
 """
-from wrapica.enums import DataType
-from wrapica.libica_exceptions import ApiException
-from wrapica.project_data import (
-    convert_icav2_uri_to_project_data_obj, list_project_data_non_recursively, delete_project_data
-)
-from cttso_v2_pipeline_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
-import logging
 
-logger = logging.getLogger(__name__)
+# Standard imports
+import boto3
+from os import environ
+import typing
+
+# Wrapica imports
+from wrapica.enums import DataType
+from wrapica.project_data import (
+    convert_uri_to_project_data_obj, list_project_data_non_recursively, delete_project_data
+)
+import logging
+if typing.TYPE_CHECKING:
+    from mypy_boto3_secretsmanager import SecretsManagerClient
+
+# Globals
+ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
+
+# Set loggers
+logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+
+def get_secrets_manager_client() -> 'SecretsManagerClient':
+    """
+    Return Secrets Manager client
+    """
+    return boto3.client("secretsmanager")
+
+
+def get_secret(secret_id: str) -> str:
+    """
+    Return secret value
+    """
+    return get_secrets_manager_client().get_secret_value(SecretId=secret_id)["SecretString"]
+
+
+# Functions
+def set_icav2_env_vars():
+    """
+    Set the icav2 environment variables
+    :return:
+    """
+    environ["ICAV2_BASE_URL"] = ICAV2_BASE_URL
+    environ["ICAV2_ACCESS_TOKEN"] = get_secret(
+        environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
+    )
 
 
 def handler(event, context):
@@ -52,7 +89,7 @@ def handler(event, context):
 
     # Part 1 - check that in the cache uri, only the sample_id directory exists along with the file SampleSheet.csv
     try:
-        cache_obj = convert_icav2_uri_to_project_data_obj(cache_uri)
+        cache_obj = convert_uri_to_project_data_obj(cache_uri)
     except NotADirectoryError as e:
         logger.info("Cache directory has already been deleted")
         return None

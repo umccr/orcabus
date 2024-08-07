@@ -161,6 +161,7 @@
         "workflow_run_name.$": "$.Item.workflow_run_name.S",
         "payload_version": "${__service_version__}",
         "payload_inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "payload_tags.$": "States.StringToJson($.Item.tags.S)",
         "payload_engine_parameters.$": "States.StringToJson($.Item.engine_parameters.S)",
         "payload_outputs.$": "States.StringToJson($.Item.analysis_output.S)"
       },
@@ -184,7 +185,8 @@
       "Next": "Push Event to Orcabus",
       "Parameters": {
         "inputs.$": "$.get_event_data_step.payload_inputs",
-        "engineParameters.$": "$.get_event_data_step.payload_engine_parameters"
+        "engineParameters.$": "$.get_event_data_step.payload_engine_parameters",
+        "tags.$": "$.get_event_data_step.payload_tags"
       },
       "ResultPath": "$.set_data_event_outputs"
     },
@@ -217,7 +219,8 @@
               "payload": {
                 "version": "${__service_version__}",
                 "data.$": "$.set_data_event_outputs"
-              }
+              },
+              "tags.$": "$.get_event_data_step.payload_tags"
             }
           }
         ]

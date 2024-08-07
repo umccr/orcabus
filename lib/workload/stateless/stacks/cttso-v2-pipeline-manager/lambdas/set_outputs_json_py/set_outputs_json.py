@@ -5,19 +5,17 @@ Given an analysis output uri,
 
 This script will generate the expected output json for the analysis.
 
-// FIXME - find an example that's in the right directory context
 {
-    "analysis_output_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0028/out/"
-    "sample_id": "L2301368"
+    "analysis_output_uri": "icav2://development/analysis/cttsov2/20240718ff7a0cbc/",
+    "sample_id": "L2400161"
 }
-
 Yields
 
 {
-    "results_dir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0028/out/Results/"
-    "logs_intermediates_dir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0028/out/Logs_Intermediates/"
-    "nextflow_logs_dir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0028/out/TSO500_Nextflow_Logs/"
-    "sample_passed": true  # Or false?
+  "results_dir": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240718ff7a0cbc/Results/",
+  "logs_intermediates_dir": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240718ff7a0cbc/Logs_Intermediates/",
+  "nextflow_logs_dir": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240718ff7a0cbc/TSO500_Nextflow_Logs/",
+  "sample_passed": true
 }
 
 We don't use the outputs json endpoint since we cannot rely on its consistency
@@ -27,24 +25,55 @@ Instead we just take the output uri (and a sample id) and find the directories a
 """
 # Standard imports
 import json
-
-# ICA imports
+import typing
+import logging
+from os import environ
+import boto3
 
 # Wrapica imports
-from wrapica.enums import DataType
+from wrapica.enums import DataType, UriType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
-    convert_icav2_uri_to_project_data_obj,
+    convert_uri_to_project_data_obj,
     list_project_data_non_recursively, read_icav2_file_contents_to_string,
-    convert_project_data_obj_to_icav2_uri
+    convert_project_data_obj_to_uri
 )
 
-# Local imports
-from cttso_v2_pipeline_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
-
+if typing.TYPE_CHECKING:
+    from mypy_boto3_secretsmanager import SecretsManagerClient
 
 # Globals
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
+
+# Set loggers
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+
+def get_secrets_manager_client() -> 'SecretsManagerClient':
+    """
+    Return Secrets Manager client
+    """
+    return boto3.client("secretsmanager")
+
+
+def get_secret(secret_id: str) -> str:
+    """
+    Return secret value
+    """
+    return get_secrets_manager_client().get_secret_value(SecretId=secret_id)["SecretString"]
+
+
+# Functions
+def set_icav2_env_vars():
+    """
+    Set the icav2 environment variables
+    :return:
+    """
+    environ["ICAV2_BASE_URL"] = ICAV2_BASE_URL
+    environ["ICAV2_ACCESS_TOKEN"] = get_secret(
+        environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
+    )
 
 
 def handler(events, context):
@@ -55,7 +84,7 @@ def handler(events, context):
     analysis_output_uri = events.get("analysis_output_uri")
 
     # Get analysis uri as an object
-    analysis_project_data_obj = convert_icav2_uri_to_project_data_obj(analysis_output_uri)
+    analysis_project_data_obj = convert_uri_to_project_data_obj(analysis_output_uri)
 
     # Top level list
     analysis_output_list = list_project_data_non_recursively(
@@ -132,9 +161,9 @@ def handler(events, context):
     sample_passed = "MetricsOutput" in passing_sample_steps_dict[sample_id]
 
     return {
-        "results_dir": convert_project_data_obj_to_icav2_uri(results_dir_data_obj),
-        "logs_intermediates_dir": convert_project_data_obj_to_icav2_uri(logs_intermediates_dir_data_obj),
-        "nextflow_logs_dir": convert_project_data_obj_to_icav2_uri(nextflow_logs_dir_data_obj),
+        "results_dir": convert_project_data_obj_to_uri(results_dir_data_obj, UriType.S3),
+        "logs_intermediates_dir": convert_project_data_obj_to_uri(logs_intermediates_dir_data_obj, UriType.S3),
+        "nextflow_logs_dir": convert_project_data_obj_to_uri(nextflow_logs_dir_data_obj, UriType.S3),
         "sample_passed": sample_passed
     }
 
@@ -142,13 +171,13 @@ def handler(events, context):
 # if __name__ == "__main__":
 #     import json
 #     import os
-#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-trial"
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
 #     print(
 #         json.dumps(
 #             handler(
 #                 {
-#                     "analysis_output_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0028/out/",
-#                     "sample_id": "L2301368"
+#                     "analysis_output_uri": "icav2://development/analysis/cttsov2/20240718ff7a0cbc/",
+#                     "sample_id": "L2400161"
 #                 },
 #                 None
 #             ),
@@ -156,11 +185,8 @@ def handler(events, context):
 #         )
 #     )
 #     # {
-#     #   "results_dir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0028/out/Results/",
-#     #   "logs_intermediates_dir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0028/out/Logs_Intermediates/",
-#     #   "nextflow_logs_dir": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/interop_qc/20240510abcd0028/out/TSO500_Nextflow_Logs/",
+#     #   "results_dir": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240718ff7a0cbc/Results/",
+#     #   "logs_intermediates_dir": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240718ff7a0cbc/Logs_Intermediates/",
+#     #   "nextflow_logs_dir": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240718ff7a0cbc/TSO500_Nextflow_Logs/",
 #     #   "sample_passed": true
 #     # }
-
-
-

@@ -1,6 +1,7 @@
 import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
 import { WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/event-workflowdraftrunstatechange-to-workflowrunstatechange-ready';
 
@@ -35,6 +36,8 @@ export interface WgtsQcInputMakerConstructProps {
   outputUriSsmParameterObj: ssm.IStringParameter;
   logsUriSsmParameterObj: ssm.IStringParameter;
   cacheUriSsmParameterObj: ssm.IStringParameter;
+  /* Secrets */
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class WgtsQcInputMakerConstruct extends Construct {
@@ -91,6 +94,11 @@ export class WgtsQcInputMakerConstruct extends Construct {
         icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
         outputUriSsmParameterObj: props.outputUriSsmParameterObj,
         logsUriSsmParameterObj: props.logsUriSsmParameterObj,
+
+        /*
+        Secrets
+        */
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
       }
     );
   }

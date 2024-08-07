@@ -21,7 +21,9 @@ Returns the file id of the uploaded samplesheet
 # Standard imports
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from urllib.parse import urlparse
+import typing
+from os import environ
+import boto3
 
 # Samplesheet imports
 from v2_samplesheet_maker.functions.v2_samplesheet_writer import v2_samplesheet_writer
@@ -29,13 +31,43 @@ from v2_samplesheet_maker.functions.v2_samplesheet_writer import v2_samplesheet_
 # Wrapica imports
 from wrapica.project_data import (
     write_icav2_file_contents,
-    convert_project_data_obj_to_icav2_uri,
-    get_project_data_obj_by_id
+    convert_project_data_obj_to_uri,
+    get_project_data_obj_by_id,
+    convert_uri_to_project_data_obj
 )
 
-# V2 Imports
-from cttso_v2_pipeline_manager_tools.utils.aws_ssm_helpers import set_icav2_env_vars
 
+if typing.TYPE_CHECKING:
+    from mypy_boto3_secretsmanager import SecretsManagerClient
+
+# Globals
+ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
+
+
+def get_secrets_manager_client() -> 'SecretsManagerClient':
+    """
+    Return Secrets Manager client
+    """
+    return boto3.client("secretsmanager")
+
+
+def get_secret(secret_id: str) -> str:
+    """
+    Return secret value
+    """
+    return get_secrets_manager_client().get_secret_value(SecretId=secret_id)["SecretString"]
+
+
+# Functions
+def set_icav2_env_vars():
+    """
+    Set the icav2 environment variables
+    :return:
+    """
+    environ["ICAV2_BASE_URL"] = ICAV2_BASE_URL
+    environ["ICAV2_ACCESS_TOKEN"] = get_secret(
+        environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
+    )
 
 def handler(event, context):
     """
@@ -48,13 +80,23 @@ def handler(event, context):
     Returns:
 
     """
+    # Set icav2 env vars
+    set_icav2_env_vars()
 
     # Check inputs are present
     cache_uri = event.get("cache_uri")
-    project_id = urlparse(cache_uri).netloc
-    cache_path = Path(urlparse(cache_uri).path)
 
+    # Get samplesheet json object
     samplesheet = event.get("samplesheet")
+
+    # Convert cache uri to project data object
+    cache_project_data_obj = convert_uri_to_project_data_obj(
+        cache_uri,
+        create_data_if_not_found=True
+    )
+    # Split into project id and cache path
+    project_id = cache_project_data_obj.project_id
+    cache_path = Path(cache_project_data_obj.data.details.path)
 
     # Check cache path
     if not cache_uri:
@@ -62,9 +104,6 @@ def handler(event, context):
     # CHeck samplesheet dict
     if not samplesheet:
         raise ValueError("samplesheet is required")
-
-    # Set icav2 env vars
-    set_icav2_env_vars()
 
     # Samplesheet csv str
 
@@ -81,7 +120,7 @@ def handler(event, context):
         )
 
         # Get the uri for the samplesheet file
-        samplesheet_file_uri = convert_project_data_obj_to_icav2_uri(
+        samplesheet_file_uri = convert_project_data_obj_to_uri(
             get_project_data_obj_by_id(project_id, samplesheet_file_id)
         )
 
