@@ -65,17 +65,29 @@ impl<M> ListResponse<M> {
     }
 }
 
-/// Params for a list objects request.
+/// Params for wildcard requests.
 #[derive(Debug, Deserialize, Default, IntoParams)]
 #[serde(default)]
 #[into_params(parameter_in = Query)]
-pub struct ListObjectsParams {
+pub struct WildcardParams {
     /// The case sensitivity when using filter operations with a wildcard.
     /// Setting this true means that an SQL `like` statement is used, and false
     /// means `ilike` is used.
     #[serde(default = "default_case_sensitivity")]
     #[param(nullable, default = true)]
     pub(crate) case_sensitive: bool,
+}
+
+impl WildcardParams {
+    /// Create new wildcard params.
+    pub fn new(case_sensitive: bool) -> Self {
+        Self { case_sensitive }
+    }
+
+    /// Get the case sensitivity.
+    pub fn case_sensitive(&self) -> bool {
+        self.case_sensitive
+    }
 }
 
 /// List all objects according to the parameters.
@@ -86,18 +98,18 @@ pub struct ListObjectsParams {
         (status = OK, description = "The collection of objects", body = Vec<FileObject>),
         ErrorStatusCode,
     ),
-    params(Pagination, ListObjectsParams, ObjectsFilter),
+    params(Pagination, WildcardParams, ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
 pub async fn list_objects(
     state: State<AppState>,
     Query(pagination): Query<Pagination>,
-    Query(list): Query<ListObjectsParams>,
+    Query(wildcard): Query<WildcardParams>,
     QsQuery(filter_all): QsQuery<ObjectsFilter>,
 ) -> Result<Json<ListResponse<FileObject>>> {
     let response = ListQueryBuilder::<_, object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all, list.case_sensitive)
+        .filter_all(filter_all, wildcard.case_sensitive())
         .paginate_to_list_response(pagination)
         .await?;
 
@@ -112,17 +124,17 @@ pub async fn list_objects(
         (status = OK, description = "The count of objects", body = ListCount),
         ErrorStatusCode,
     ),
-    params(ListObjectsParams, ObjectsFilter),
+    params(WildcardParams, ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
 pub async fn count_objects(
     state: State<AppState>,
-    Query(list): Query<ListObjectsParams>,
+    Query(wildcard): Query<WildcardParams>,
     QsQuery(filter_all): QsQuery<ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
     let response = ListQueryBuilder::<_, object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all, list.case_sensitive)
+        .filter_all(filter_all, wildcard.case_sensitive())
         .to_list_count()
         .await?;
 
@@ -149,31 +161,17 @@ pub struct ListS3ObjectsParams {
     /// `?current_state=true` would return only the last `Created` event.
     #[param(nullable, default = false)]
     current_state: bool,
-    /// The case sensitivity when using filter operations with a wildcard.
-    /// Setting this true means that an SQL `like` statement is used, and false
-    /// means `ilike` is used.
-    #[serde(default = "default_case_sensitivity")]
-    #[param(nullable, default = true)]
-    case_sensitive: bool,
 }
 
 impl ListS3ObjectsParams {
     /// Create the current state struct.
-    pub fn new(current_state: bool, case_sensitive: bool) -> Self {
-        Self {
-            current_state,
-            case_sensitive,
-        }
+    pub fn new(current_state: bool) -> Self {
+        Self { current_state }
     }
 
     /// Get the current state.
     pub fn current_state(&self) -> bool {
         self.current_state
-    }
-
-    /// Get the case sensitivity.
-    pub fn case_sensitive(&self) -> bool {
-        self.case_sensitive
     }
 }
 
@@ -185,18 +183,19 @@ impl ListS3ObjectsParams {
         (status = OK, description = "The collection of s3_objects", body = Vec<FileS3Object>),
         ErrorStatusCode,
     ),
-    params(Pagination, ListS3ObjectsParams, S3ObjectsFilter),
+    params(Pagination, WildcardParams, ListS3ObjectsParams, S3ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
 pub async fn list_s3_objects(
     state: State<AppState>,
     Query(pagination): Query<Pagination>,
+    Query(wildcard): Query<WildcardParams>,
     Query(list): Query<ListS3ObjectsParams>,
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListResponse<FileS3Object>>> {
     let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all, list.case_sensitive());
+        .filter_all(filter_all, wildcard.case_sensitive());
 
     if list.current_state {
         response = response.current_state();
@@ -213,17 +212,18 @@ pub async fn list_s3_objects(
         (status = OK, description = "The count of s3 objects", body = ListCount),
         ErrorStatusCode,
     ),
-    params(ListS3ObjectsParams, S3ObjectsFilter),
+    params(WildcardParams, ListS3ObjectsParams, S3ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
 pub async fn count_s3_objects(
     state: State<AppState>,
+    Query(wildcard): Query<WildcardParams>,
     Query(list): Query<ListS3ObjectsParams>,
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
     let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all, list.case_sensitive());
+        .filter_all(filter_all, wildcard.case_sensitive());
 
     if list.current_state {
         response = response.current_state();
@@ -248,13 +248,15 @@ pub(crate) mod tests {
     use axum::http::header::CONTENT_TYPE;
     use axum::http::{Method, Request, StatusCode};
     use serde::de::DeserializeOwned;
-    use serde_json::from_slice;
+    use serde_json::{from_slice, json};
     use sqlx::PgPool;
     use tower::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::EventType;
     use crate::queries::list::tests::filter_event_type;
+    use crate::queries::update::tests::change_many;
+    use crate::queries::update::tests::{assert_contains, entries_many};
     use crate::queries::EntriesBuilder;
     use crate::routes::api_router;
 
@@ -414,6 +416,51 @@ pub(crate) mod tests {
         let result: ListResponse<FileS3Object> =
             response_from_get(state, "/s3_objects?attributes[attribute_id]=1&key=1").await;
         assert_eq!(result.results, vec![entries[1].clone()]);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_objects_filter_attributes(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
+
+        change_many(
+            state.client(),
+            &entries,
+            &[0, 1],
+            Some(json!({"attribute_id": "attribute_id"})),
+        )
+        .await;
+
+        entries_many(
+            &mut entries,
+            &[0, 1],
+            json!({"attribute_id": "attribute_id"}),
+        );
+
+        let s3_objects: ListResponse<FileS3Object> =
+            response_from_get(state.clone(), "/s3_objects?attributes[attribute_id]=%a%").await;
+        let objects: ListResponse<FileObject> =
+            response_from_get(state.clone(), "/objects?attributes[attribute_id]=%a%").await;
+        assert_contains(&objects.results, &s3_objects.results, &entries, 0..2);
+
+        let s3_objects: ListResponse<FileS3Object> =
+            response_from_get(state.clone(), "/s3_objects?attributes[attribute_id]=%A%").await;
+        let objects: ListResponse<FileObject> =
+            response_from_get(state.clone(), "/objects?attributes[attribute_id]=%A%").await;
+        assert!(s3_objects.results.is_empty());
+        assert!(objects.results.is_empty());
+
+        let s3_objects: ListResponse<FileS3Object> = response_from_get(
+            state.clone(),
+            "/s3_objects?attributes[attribute_id]=%A%&case_sensitive=false",
+        )
+        .await;
+        let objects: ListResponse<FileObject> = response_from_get(
+            state.clone(),
+            "/objects?attributes[attribute_id]=%A%&case_sensitive=false",
+        )
+        .await;
+        assert_contains(&objects.results, &s3_objects.results, &entries, 0..2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]

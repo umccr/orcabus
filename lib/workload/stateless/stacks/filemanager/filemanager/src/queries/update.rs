@@ -340,8 +340,7 @@ pub(crate) mod tests {
             &mut entries,
             &[0, 1],
             json!({"attribute_id": "attribute_id"}),
-        )
-        .await;
+        );
 
         assert_contains(&results.0, &results.1, &entries, 0..2);
         assert_correct_records(&client, entries).await;
@@ -370,8 +369,43 @@ pub(crate) mod tests {
             &mut entries,
             &[0, 1],
             json!({"attribute_id": "1", "another_attribute": "1"}),
+        );
+
+        assert_contains(&results.0, &results.1, &entries, 0..2);
+        assert_correct_records(&client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_add_wildcard(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(&client).await;
+
+        change_many(
+            &client,
+            &entries,
+            &[0, 1],
+            Some(json!({"attribute_id": "attribute_id"})),
         )
         .await;
+
+        let patch = json!([
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]);
+
+        let results = test_update_attributes(
+            &client,
+            patch,
+            Some(json!({
+                "attribute_id": "%a%"
+            })),
+        )
+        .await;
+
+        entries_many(
+            &mut entries,
+            &[0, 1],
+            json!({"attribute_id": "attribute_id", "another_attribute": "1"}),
+        );
 
         assert_contains(&results.0, &results.1, &entries, 0..2);
         assert_correct_records(&client, entries).await;
@@ -510,7 +544,7 @@ pub(crate) mod tests {
 
         let results = test_update_attributes(&client, patch, Some(Value::Null)).await;
 
-        entries_many(&mut entries, &[0, 1], json!({"another_attribute": "1"})).await;
+        entries_many(&mut entries, &[0, 1], json!({"another_attribute": "1"}));
 
         assert_contains(&results.0, &results.1, &entries, 0..2);
         assert_correct_records(&client, entries).await;
@@ -535,7 +569,7 @@ pub(crate) mod tests {
         )
         .await;
 
-        change_attribute_entries(&mut entries, 0, json!({"another_attribute": "1"})).await;
+        change_attribute_entries(&mut entries, 0, json!({"another_attribute": "1"}));
 
         assert_contains(&results.0, &results.1, &entries, 0..1);
         assert_correct_records(&client, entries).await;
@@ -560,7 +594,7 @@ pub(crate) mod tests {
 
         let results = test_update_with_attribute_id(&client, patch).await;
 
-        entries_many(&mut entries, &[0, 1], json!({})).await;
+        entries_many(&mut entries, &[0, 1], json!({}));
 
         assert_contains(&results.0, &results.1, &entries, 0..2);
         assert_correct_records(&client, entries).await;
@@ -585,7 +619,7 @@ pub(crate) mod tests {
 
         let results = test_update_with_attribute_id(&client, patch).await;
 
-        entries_many(&mut entries, &[0, 1], json!({"attribute_id": "2"})).await;
+        entries_many(&mut entries, &[0, 1], json!({"attribute_id": "2"}));
 
         assert!(results.0.is_empty());
         assert!(results.1.is_empty());
@@ -631,7 +665,7 @@ pub(crate) mod tests {
         assert!(matches!(s3_objects, Err(InvalidQuery(_))));
 
         // Nothing should be updated here.
-        entries_many(&mut entries, &[0, 1], json!({"attribute_id": "1"})).await;
+        entries_many(&mut entries, &[0, 1], json!({"attribute_id": "1"}));
         assert_correct_records(&client, entries).await;
     }
 
@@ -655,7 +689,7 @@ pub(crate) mod tests {
         )
         .await;
 
-        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"})).await;
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"}));
 
         assert_contains(&result.0, &result.1, &entries, 0..1);
         assert_correct_records(&client, entries).await;
@@ -699,8 +733,7 @@ pub(crate) mod tests {
             &mut entries,
             &[0, 1, 2],
             json!({"attribute_id": "attribute_id"}),
-        )
-        .await;
+        );
 
         assert_model_contains(&results_objects.0, &entries.objects, 0..3);
         assert_model_contains(&results_s3_objects.1, &entries.s3_objects, 0..3);
@@ -858,19 +891,15 @@ pub(crate) mod tests {
     }
 
     /// Change attributes in the entries.
-    pub(crate) async fn change_attribute_entries(
-        entries: &mut Entries,
-        entry: usize,
-        value: Value,
-    ) {
+    pub(crate) fn change_attribute_entries(entries: &mut Entries, entry: usize, value: Value) {
         entries.s3_objects[entry].attributes = Some(value.clone());
         entries.objects[entry].attributes = Some(value);
     }
 
     /// Change multiple attributes in the entries.
-    pub(crate) async fn entries_many(entries: &mut Entries, indices: &[usize], value: Value) {
+    pub(crate) fn entries_many(entries: &mut Entries, indices: &[usize], value: Value) {
         for i in indices {
-            change_attribute_entries(entries, *i, value.clone()).await;
+            change_attribute_entries(entries, *i, value.clone());
         }
     }
 

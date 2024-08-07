@@ -124,25 +124,13 @@ where
                 )
             }))
             .add_option(filter.bucket.map(|v| {
-                Self::filter_operation(
-                    Expr::col(s3_object::Column::Bucket),
-                    WildcardEither::Wildcard::<String>(v),
-                    case_sensitive,
-                )
+                Self::filter_operation(Expr::col(s3_object::Column::Bucket), v, case_sensitive)
             }))
             .add_option(filter.key.map(|v| {
-                Self::filter_operation(
-                    Expr::col(s3_object::Column::Key),
-                    WildcardEither::Wildcard::<String>(v),
-                    case_sensitive,
-                )
+                Self::filter_operation(Expr::col(s3_object::Column::Key), v, case_sensitive)
             }))
             .add_option(filter.version_id.map(|v| {
-                Self::filter_operation(
-                    Expr::col(s3_object::Column::VersionId),
-                    WildcardEither::Wildcard::<String>(v),
-                    case_sensitive,
-                )
+                Self::filter_operation(Expr::col(s3_object::Column::VersionId), v, case_sensitive)
             }))
             .add_option(filter.date.map(|v| {
                 Self::filter_operation(Expr::col(s3_object::Column::Date), v, case_sensitive)
@@ -456,15 +444,12 @@ where
             "{message}: {}",
             self.select.as_query().to_string(PostgresQueryBuilder)
         );
-        println!(
-            "{message}: {}",
-            self.select.as_query().to_string(PostgresQueryBuilder)
-        );
     }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use sea_orm::prelude::Json;
     use sea_orm::sea_query::extension::postgres::PgBinOper;
     use sea_orm::sea_query::types::BinOper;
     use sea_orm::sea_query::IntoColumnRef;
@@ -476,63 +461,9 @@ pub(crate) mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
     use crate::database::Client;
+    use crate::queries::update::tests::{change_many, entries_many, null_attributes};
     use crate::queries::EntriesBuilder;
     use crate::routes::filter::wildcard::Wildcard;
-
-    #[test]
-    fn apply_json_condition() {
-        let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-            s3_object::Column::Attributes.into_column_ref(),
-            json!({ "attribute_id": "1" }),
-            true,
-        );
-        assert_eq!(conditions.len(), 1);
-
-        let operation = conditions[0].clone();
-        assert!(matches!(
-            conditions[0].clone(),
-            SimpleExpr::Binary(_, BinOper::Equal, _)
-        ));
-        assert_cast_json(&operation);
-
-        let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-            s3_object::Column::Attributes.into_column_ref(),
-            json!({ "attribute_id": "a%" }),
-            true,
-        );
-        assert_eq!(conditions.len(), 1);
-
-        let operation = conditions[0].clone();
-        assert!(matches!(operation, SimpleExpr::Binary(_, BinOper::Like, _)));
-        assert_cast_json(&operation);
-
-        let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-            s3_object::Column::Attributes.into_column_ref(),
-            json!({ "attribute_id": "a%" }),
-            false,
-        );
-        assert_eq!(conditions.len(), 1);
-
-        let operation = conditions[0].clone();
-        assert!(matches!(
-            operation,
-            SimpleExpr::Binary(_, BinOper::PgOperator(PgBinOper::ILike), _)
-        ));
-        assert_cast_json(&operation);
-    }
-
-    fn assert_cast_json(operation: &SimpleExpr) {
-        if let SimpleExpr::Binary(operation, _, _) = operation {
-            if let SimpleExpr::FunctionCall(call) = operation.as_ref() {
-                call.get_args().iter().for_each(assert_cast_json);
-            } else {
-                assert!(matches!(
-                    operation.as_ref(),
-                    SimpleExpr::Binary(_, BinOper::PgOperator(PgBinOper::CastJsonField), _)
-                ));
-            }
-        }
-    }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_objects(pool: PgPool) {
@@ -768,8 +699,8 @@ pub(crate) mod tests {
         let result = filter_all_s3_objects_from(
             &client,
             S3ObjectsFilter {
-                bucket: Some(Wildcard::new("0".to_string())),
-                key: Some(Wildcard::new("1".to_string())),
+                bucket: Some(WildcardEither::Or("0".to_string())),
+                key: Some(WildcardEither::Or("1".to_string())),
                 ..Default::default()
             },
             true,
@@ -834,7 +765,7 @@ pub(crate) mod tests {
                 attributes: Some(json!({
                     "attribute_id": "1"
                 })),
-                key: Some(Wildcard::new("2".to_string())),
+                key: Some(WildcardEither::Or("2".to_string())),
                 ..Default::default()
             },
             true,
@@ -848,7 +779,7 @@ pub(crate) mod tests {
                 attributes: Some(json!({
                     "attribute_id": "3"
                 })),
-                key: Some(Wildcard::new("3".to_string())),
+                key: Some(WildcardEither::Or("3".to_string())),
                 ..Default::default()
             },
             true,
@@ -956,8 +887,8 @@ pub(crate) mod tests {
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(&client)
-            .await
-            .s3_objects;
+            .await;
+        let s3_entries = entries.s3_objects.clone();
 
         let result = filter_all_s3_objects_from(
             &client,
@@ -972,7 +903,7 @@ pub(crate) mod tests {
         .await;
         assert_eq!(
             result,
-            filter_event_type(entries.clone(), EventType::Created)
+            filter_event_type(s3_entries.clone(), EventType::Created)
         );
 
         let result = filter_all_s3_objects_from(
@@ -986,7 +917,166 @@ pub(crate) mod tests {
             false,
         )
         .await;
-        assert_eq!(result, filter_event_type(entries, EventType::Created));
+        assert_eq!(
+            result,
+            filter_event_type(s3_entries.clone(), EventType::Created)
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_objects_wildcard_attributes(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await;
+
+        let test_attributes = json!({
+            "nested_id": {
+                "attribute_id": "1"
+            },
+            "attribute_id": "test"
+        });
+        change_many(&client, &entries, &[0, 1], Some(test_attributes.clone())).await;
+        change_many(
+            &client,
+            &entries,
+            &(2..10).collect::<Vec<_>>(),
+            Some(json!({
+                "nested_id": {
+                    "attribute_id": "test"
+                },
+                "attribute_id": "1"
+            })),
+        )
+        .await;
+
+        // Filter with wildcard attributes.
+        let (objects, s3_objects) = filter_attributes(
+            &client,
+            Some(json!({
+                "attribute_id": "t%"
+            })),
+            true,
+        )
+        .await;
+
+        entries_many(&mut entries, &[0, 1], test_attributes);
+        assert_eq!(objects, entries.objects[0..2].to_vec());
+        assert_eq!(s3_objects, entries.s3_objects[0..2].to_vec());
+
+        let test_attributes = json!({
+            "attribute_id": "attribute_id"
+        });
+        change_many(&client, &entries, &[0, 1], Some(test_attributes.clone())).await;
+        change_many(
+            &client,
+            &entries,
+            &(2..10).collect::<Vec<_>>(),
+            Some(json!({
+                "nested_id": {
+                    "attribute_id": "attribute_id"
+                }
+            })),
+        )
+        .await;
+
+        entries_many(&mut entries, &[0, 1], test_attributes);
+
+        let (objects, s3_objects) = filter_attributes(
+            &client,
+            Some(json!({
+                // This should not trigger a fetch on the nested id.
+                "attribute_id": "%a%"
+            })),
+            true,
+        )
+        .await;
+        assert_eq!(objects, entries.objects[0..2].to_vec());
+        assert_eq!(s3_objects, entries.s3_objects[0..2].to_vec());
+
+        let (objects, s3_objects) = filter_attributes(
+            &client,
+            Some(json!({
+                // Case-insensitive should work
+                "attribute_id": "%A%"
+            })),
+            false,
+        )
+        .await;
+        assert_eq!(objects, entries.objects[0..2].to_vec());
+        assert_eq!(s3_objects, entries.s3_objects[0..2].to_vec());
+
+        null_attributes(&client, &entries, 0).await;
+        null_attributes(&client, &entries, 1).await;
+
+        let (objects, s3_objects) = filter_attributes(
+            &client,
+            Some(json!({
+                // A check is okay on null json as well.
+                "attribute_id": "%1%"
+            })),
+            true,
+        )
+        .await;
+
+        assert!(objects.is_empty());
+        assert!(s3_objects.is_empty());
+    }
+
+    #[test]
+    fn apply_json_condition() {
+        let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
+            s3_object::Column::Attributes.into_column_ref(),
+            json!({ "attribute_id": "1" }),
+            true,
+        );
+        assert_eq!(conditions.len(), 1);
+
+        let operation = conditions[0].clone();
+        assert!(matches!(
+            conditions[0].clone(),
+            SimpleExpr::Binary(_, BinOper::Equal, _)
+        ));
+        assert_cast_json(&operation);
+
+        let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
+            s3_object::Column::Attributes.into_column_ref(),
+            json!({ "attribute_id": "a%" }),
+            true,
+        );
+        assert_eq!(conditions.len(), 1);
+
+        let operation = conditions[0].clone();
+        assert!(matches!(operation, SimpleExpr::Binary(_, BinOper::Like, _)));
+        assert_cast_json(&operation);
+
+        let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
+            s3_object::Column::Attributes.into_column_ref(),
+            json!({ "attribute_id": "a%" }),
+            false,
+        );
+        assert_eq!(conditions.len(), 1);
+
+        let operation = conditions[0].clone();
+        assert!(matches!(
+            operation,
+            SimpleExpr::Binary(_, BinOper::PgOperator(PgBinOper::ILike), _)
+        ));
+        assert_cast_json(&operation);
+    }
+
+    fn assert_cast_json(operation: &SimpleExpr) {
+        if let SimpleExpr::Binary(operation, _, _) = operation {
+            if let SimpleExpr::FunctionCall(call) = operation.as_ref() {
+                call.get_args().iter().for_each(assert_cast_json);
+            } else {
+                assert!(matches!(
+                    operation.as_ref(),
+                    SimpleExpr::Binary(_, BinOper::PgOperator(PgBinOper::CastJsonField), _)
+                ));
+            }
+        }
     }
 
     pub(crate) fn filter_event_type(
@@ -1016,6 +1106,32 @@ pub(crate) mod tests {
             .all()
             .await
             .unwrap()
+    }
+
+    async fn filter_attributes(
+        client: &Client,
+        filter: Option<Json>,
+        case_sensitive: bool,
+    ) -> (Vec<object::Model>, Vec<s3_object::Model>) {
+        (
+            filter_all_objects_from(
+                client,
+                ObjectsFilter {
+                    attributes: filter.clone(),
+                },
+                case_sensitive,
+            )
+            .await,
+            filter_all_s3_objects_from(
+                client,
+                S3ObjectsFilter {
+                    attributes: filter,
+                    ..Default::default()
+                },
+                case_sensitive,
+            )
+            .await,
+        )
     }
 
     async fn filter_all_objects_from(

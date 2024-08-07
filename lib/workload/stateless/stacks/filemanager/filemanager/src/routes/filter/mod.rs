@@ -4,7 +4,7 @@
 pub mod wildcard;
 
 use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
-use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
+use crate::routes::filter::wildcard::WildcardEither;
 use sea_orm::prelude::{DateTimeWithTimeZone, Json};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -21,13 +21,13 @@ pub struct S3ObjectsFilter {
     pub(crate) event_type: Option<WildcardEither<EventType>>,
     #[param(required = false)]
     /// Query by bucket.
-    pub(crate) bucket: Option<Wildcard>,
+    pub(crate) bucket: Option<WildcardEither<String>>,
     #[param(required = false)]
     /// Query by key.
-    pub(crate) key: Option<Wildcard>,
+    pub(crate) key: Option<WildcardEither<String>>,
     #[param(required = false)]
     /// Query by version_id.
-    pub(crate) version_id: Option<Wildcard>,
+    pub(crate) version_id: Option<WildcardEither<String>>,
     #[param(required = false)]
     /// Query by date. Supports wildcards.
     pub(crate) date: Option<WildcardEither<DateTimeWithTimeZone>>,
