@@ -122,19 +122,11 @@ Or visit in browser:
 
 #### Swagger
 
-- http://localhost:8000/swagger
-- http://localhost:8000/swagger.json
-- http://localhost:8000/swagger.yaml
-
-#### Redoc
-
-- http://localhost:8000/redoc/
+- http://localhost:8000/swagger-ui/
 
 #### OpenAPI v3
 
-```
-python manage.py generateschema > orcabus.sequencerunmanager.openapi.yaml
-```
+- http://localhost:8000/schema/openapi.json
 
 ## Testing
 

@@ -35,8 +35,8 @@ RUNSERVER_PLUS_PRINT_SQL_TRUNCATE = sys.maxsize
 REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS'] = 'drf_spectacular.openapi.AutoSchema'
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'UMCCR OrcaBus sequence_run_manager API',
-    'DESCRIPTION': 'UMCCR OrcaBus sequence_run_manager API',
+    'TITLE': 'UMCCR OrcaBus workflow_manager API',
+    'DESCRIPTION': 'UMCCR OrcaBus workflow_manager API',
     'VERSION': API_VERSION,
     'SERVE_INCLUDE_SCHEMA': False,
     'SECURITY': [
