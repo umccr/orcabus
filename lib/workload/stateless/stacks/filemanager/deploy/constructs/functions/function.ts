@@ -116,7 +116,7 @@ export class Function extends Construct {
         },
       },
       memorySize: 128,
-      timeout: Duration.seconds(28),
+      timeout: Duration.seconds(300),
       environment: {
         // No password here, using RDS IAM to generate credentials.
         PGHOST: props.host,

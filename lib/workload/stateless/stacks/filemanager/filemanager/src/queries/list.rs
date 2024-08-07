@@ -124,13 +124,25 @@ where
                 )
             }))
             .add_option(filter.bucket.map(|v| {
-                Self::filter_operation(Expr::col(s3_object::Column::Bucket), v, case_sensitive)
+                Self::filter_operation(
+                    Expr::col(s3_object::Column::Bucket),
+                    WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
+                )
             }))
             .add_option(filter.key.map(|v| {
-                Self::filter_operation(Expr::col(s3_object::Column::Key), v, case_sensitive)
+                Self::filter_operation(
+                    Expr::col(s3_object::Column::Key),
+                    WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
+                )
             }))
             .add_option(filter.version_id.map(|v| {
-                Self::filter_operation(Expr::col(s3_object::Column::VersionId), v, case_sensitive)
+                Self::filter_operation(
+                    Expr::col(s3_object::Column::VersionId),
+                    WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
+                )
             }))
             .add_option(filter.date.map(|v| {
                 Self::filter_operation(Expr::col(s3_object::Column::Date), v, case_sensitive)
@@ -699,8 +711,8 @@ pub(crate) mod tests {
         let result = filter_all_s3_objects_from(
             &client,
             S3ObjectsFilter {
-                bucket: Some(WildcardEither::Or("0".to_string())),
-                key: Some(WildcardEither::Or("1".to_string())),
+                bucket: Some(Wildcard::new("0".to_string())),
+                key: Some(Wildcard::new("1".to_string())),
                 ..Default::default()
             },
             true,
@@ -765,7 +777,7 @@ pub(crate) mod tests {
                 attributes: Some(json!({
                     "attribute_id": "1"
                 })),
-                key: Some(WildcardEither::Or("2".to_string())),
+                key: Some(Wildcard::new("2".to_string())),
                 ..Default::default()
             },
             true,
@@ -779,7 +791,7 @@ pub(crate) mod tests {
                 attributes: Some(json!({
                     "attribute_id": "3"
                 })),
-                key: Some(WildcardEither::Or("3".to_string())),
+                key: Some(Wildcard::new("3".to_string())),
                 ..Default::default()
             },
             true,
@@ -920,6 +932,20 @@ pub(crate) mod tests {
         assert_eq!(
             result,
             filter_event_type(s3_entries.clone(), EventType::Created)
+        );
+
+        let result = filter_all_s3_objects_from(
+            &client,
+            S3ObjectsFilter {
+                bucket: Some(Wildcard::new("0%".to_string())),
+                ..Default::default()
+            },
+            false,
+        )
+        .await;
+        assert_eq!(
+            result,
+            &s3_entries[0..2]
         );
     }
 

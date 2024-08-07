@@ -86,7 +86,7 @@ Alternatively, just `brew install dbeaver-community` to easily browse the databa
 
 ## Local API server
 
-To use the local API server, run:
+For more details on the filemanager API, see the [`API_GUIDE.md`][api-guide]. To use the local API server, run:
 
 ```sh
 make api
@@ -125,7 +125,7 @@ docker system prune -a --volumes
 ## Architecture
 
 The filemanager ingest functionality operates to ensure eventual consistency in the database records. See the 
-[ARCHITECTURE.md][architecture] for more details.
+[`ARCHITECTURE.md`][architecture] for more details.
 
 ## Project Layout
 
@@ -142,6 +142,7 @@ The project is divided into multiple crates that serve different functionality.
 * [database]: Database migration files and queries.
 
 [architecture]: docs/ARCHITECTURE.md
+[api-guide]: docs/API_GUIDE.md
 [filemanager]: filemanager
 [filemanager-api-lambda]: filemanager-api-lambda
 [filemanager-api-server]: filemanager-api-server

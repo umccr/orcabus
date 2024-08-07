@@ -95,7 +95,7 @@ impl WildcardParams {
     get,
     path = "/objects",
     responses(
-        (status = OK, description = "The collection of objects", body = Vec<FileObject>),
+        (status = OK, description = "The collection of objects", body = ListResponseObject),
         ErrorStatusCode,
     ),
     params(Pagination, WildcardParams, ObjectsFilter),
@@ -180,7 +180,7 @@ impl ListS3ObjectsParams {
     get,
     path = "/s3_objects",
     responses(
-        (status = OK, description = "The collection of s3_objects", body = Vec<FileS3Object>),
+        (status = OK, description = "The collection of s3_objects", body = ListResponseS3Object),
         ErrorStatusCode,
     ),
     params(Pagination, WildcardParams, ListS3ObjectsParams, S3ObjectsFilter),

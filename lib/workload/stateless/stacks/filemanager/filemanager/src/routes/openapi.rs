@@ -59,7 +59,7 @@ pub struct Json(pub Value);
             ListResponseObject,
             ListResponseS3Object,
             PatchBody,
-            Patch
+            Patch,
         )
     ),
     modifiers(&SecurityAddon),
