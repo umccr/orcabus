@@ -200,14 +200,12 @@ def handler(event, context):
 
     for read_num in [1, 2]:
         fastq_list_rows_df[f"Read{read_num}FileUriDest"] = fastq_list_rows_df[f"Read{read_num}FileUriSrc"].apply(
-            lambda src_uri: convert_icav2_uri_to_s3_uri(
-                get_dest_uri_from_src_uri(
-                    src_uri,
-                    bcl_convert_output_path,
-                    dest_project_id,
-                    dest_folder_path
-                ) + Path(urlparse(src_uri).path).name
-            )
+            lambda src_uri: get_dest_uri_from_src_uri(
+                src_uri,
+                bcl_convert_output_path,
+                dest_project_id,
+                dest_folder_path
+            ) + Path(urlparse(src_uri).path).name
         )
 
     # Sanitise the manifest file - make sure theres no Path objects in there
@@ -308,6 +306,10 @@ def handler(event, context):
 
 
 # if __name__ == "__main__":
+#     from os import environ
+#     environ['ICAV2_BASE_URL'] = "https://ica.illumina.com/ica/rest"
+#     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#
 #     print(
 #         json.dumps(
 #             handler(
