@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 
 /// An enum which deserializes into a concrete type or a wildcard. This is used for better
 /// type support when non-string filter parameters such as `StorageClass` or `EventType`.
-#[derive(Serialize, Deserialize, Debug, ToSchema, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 #[serde(untagged)]
 pub enum WildcardEither<T> {
     Or(T),
@@ -37,7 +37,7 @@ impl<T> WildcardEither<T> {
 }
 
 /// A wildcard type represents a filter to match arbitrary characters. Use '%' for multiple characters
-/// and '_' for a single character. Use '\' to escape these characters. Wildcards are converted to
+/// and '_' for a single character. Use '\\' to escape these characters. Wildcards are converted to
 /// postgres `like` or `ilike` queries.
 #[derive(Serialize, Deserialize, Debug, Default, ToSchema, Eq, PartialEq)]
 #[serde(default)]

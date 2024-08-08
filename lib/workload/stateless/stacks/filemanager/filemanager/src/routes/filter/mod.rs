@@ -16,19 +16,19 @@ use utoipa::{IntoParams, ToSchema};
 #[serde(default)]
 #[into_params(parameter_in = Query)]
 pub struct S3ObjectsFilter {
-    #[param(required = false)]
-    /// Query by event type.
+    #[param(required = false, value_type = Wildcard)]
+    /// Query by event type. Supports wildcards.
     pub(crate) event_type: Option<WildcardEither<EventType>>,
     #[param(required = false)]
-    /// Query by bucket.
+    /// Query by bucket. Supports wildcards.
     pub(crate) bucket: Option<Wildcard>,
     #[param(required = false)]
-    /// Query by key.
+    /// Query by key. Supports wildcards.
     pub(crate) key: Option<Wildcard>,
     #[param(required = false)]
-    /// Query by version_id.
+    /// Query by version_id. Supports wildcards.
     pub(crate) version_id: Option<Wildcard>,
-    #[param(required = false)]
+    #[param(required = false, value_type = Wildcard)]
     /// Query by date. Supports wildcards.
     pub(crate) date: Option<WildcardEither<DateTimeWithTimeZone>>,
     #[param(required = false)]
@@ -37,14 +37,14 @@ pub struct S3ObjectsFilter {
     #[param(required = false)]
     /// Query by the sha256 checksum.
     pub(crate) sha256: Option<String>,
-    #[param(required = false)]
-    /// Query by the last modified date.
+    #[param(required = false, value_type = Wildcard)]
+    /// Query by the last modified date. Supports wildcards.
     pub(crate) last_modified_date: Option<WildcardEither<DateTimeWithTimeZone>>,
     #[param(required = false)]
     /// Query by the e_tag.
     pub(crate) e_tag: Option<String>,
-    #[param(required = false)]
-    /// Query by the storage class.
+    #[param(required = false, value_type = Wildcard)]
+    /// Query by the storage class. Supports wildcards.
     pub(crate) storage_class: Option<WildcardEither<StorageClass>>,
     #[param(required = false)]
     /// Query by the object delete marker.
@@ -54,7 +54,7 @@ pub struct S3ObjectsFilter {
     /// fields, e.g. `attributes[attribute_id]=...`. This only deserializes
     /// into string fields, and does not support other JSON types. E.g.
     /// `attributes[attribute_id]=1` converts to `{ "attribute_id" = "1" }`
-    /// rather than `{ "attribute_id" = 1 }`.
+    /// rather than `{ "attribute_id" = 1 }`. Supports wildcards.
     pub(crate) attributes: Option<Json>,
 }
 
@@ -70,6 +70,6 @@ pub struct ObjectsFilter {
     /// fields, e.g. `attributes[attribute_id]=...`. This only deserializes
     /// into string fields, and does not support other JSON types. E.g.
     /// `attributes[attribute_id]=1` converts to `{ "attribute_id" = "1" }`
-    /// rather than `{ "attribute_id" = 1 }`.
+    /// rather than `{ "attribute_id" = 1 }`. Supports wildcards.
     pub(crate) attributes: Option<Json>,
 }

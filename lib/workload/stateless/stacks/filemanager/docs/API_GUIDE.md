@@ -25,7 +25,7 @@ The API is designed to have a standard set of REST routes which can be used to q
 For example, to query a single record, use the `s3_object_id` in the path, which returns the JSON record:
 
 ```sh
-curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3_objects/01912c56-c458-797f-9d3f-b803e093b7cf" | jq
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3_objects/0190465f-68fa-76e4-9c36-12bdf1a1571d" | jq
 ```
 
 Multiple records can be reached using the same route, which returns an array of JSON records:
@@ -90,14 +90,14 @@ and `_` to match one character. These queries get converted to postgres `like` q
 on a key prefix:
 
 ```sh
-curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "key=temp_data%" \
-"https://file.dev.umccr.org/api/v1/s3_objects/01912c56-c458-797f-9d3f-b803e093b7cf" | jq
+curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "key=temp\_data%" \
+"https://file.dev.umccr.org/api/v1/s3_objects" | jq
 ```
 
 Case-insensitive wildcard matching, which gets converted to a postgres `ilike` statement, is supported by using `case_sensitive`:
 
 ```sh
-curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "key=temp_data%" \
+curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "key=temp\_data%" \
 "https://file.dev.umccr.org/api/v1/s3_objects?case_sensitive=false" | jq
 ```
 
@@ -118,18 +118,17 @@ Attributes are update using [JSON patch][json-patch].
 For example, update attributes on a single record:
 
 ```sh
-curl --patch -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
- --data "{ "attributes": [ { "op": "add", "path": "/portal_run_id", "value": "202405212aecb782" } ] }" \
-"https://file.dev.umccr.org/api/v1/s3_objects/01912c56-c458-797f-9d3f-b803e093b7cf" | jq
+curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+--data '{ "attributes": [ { "op": "add", "path": "/portal_run_id", "value": "202405212aecb782" } ] }' \
+"https://file.dev.umccr.org/api/v1/s3_objects/0190465f-68fa-76e4-9c36-12bdf1a1571d" | jq
 ```
 
 Or, update attributes for multiple records with the same key prefix:
 
 ```sh
-curl --patch -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
- --data "{ "attributes": [ { "op": "add", "path": "/attribute_id", "value": "attribute_id" } ] }" \
- --data-urlencode "key=temp_data%" \
-"https://file.dev.umccr.org/api/v1/s3_objects" | jq
+curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+--data '{ "attributes": [ { "op": "add", "path": "/portal_run_id", "value": "202405212aecb782" } ] }' \
+"https://file.dev.umccr.org/api/v1/s3_objects?key=%25202405212aecb782%25" | jq
 ```
 
 ## Count objects

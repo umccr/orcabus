@@ -1,3 +1,7 @@
+> [!IMPORTANT]  
+> This document is a discussion on potential designs for filemanager attribute linking. The current implementation
+> isn't exactly like this, although it will probably contain components of the design here.
+
 # FileManager Attribute Linking
 
 The filemanager needs to be able to store data from other microservices on `s3_object` records in order to perform some

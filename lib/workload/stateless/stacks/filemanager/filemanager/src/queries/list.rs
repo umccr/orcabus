@@ -943,10 +943,7 @@ pub(crate) mod tests {
             false,
         )
         .await;
-        assert_eq!(
-            result,
-            &s3_entries[0..2]
-        );
+        assert_eq!(result, &s3_entries[0..2]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]

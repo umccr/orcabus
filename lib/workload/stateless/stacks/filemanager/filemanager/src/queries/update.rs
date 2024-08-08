@@ -4,15 +4,14 @@
 use json_patch::patch;
 use sea_orm::prelude::{Expr, Json};
 use sea_orm::sea_query::{
-    Alias, Asterisk, CommonTableExpression, PostgresQueryBuilder, Query, SelectStatement,
-    SimpleExpr, WithClause, WithQuery,
+    Alias, Asterisk, CommonTableExpression, Query, SelectStatement, SimpleExpr, WithClause,
+    WithQuery,
 };
 use sea_orm::{
     ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iterable, ModelTrait, QueryFilter,
     QueryTrait, StatementBuilder, Value,
 };
 use serde_json::json;
-use tracing::trace;
 use uuid::Uuid;
 
 use crate::database::entities::{object, s3_object};
@@ -293,7 +292,6 @@ where
 
     fn trace_query(&self, message: &str) {
         self.select_to_update.trace_query(message);
-        trace!("{message}: {}", self.update.to_string(PostgresQueryBuilder));
     }
 }
 
