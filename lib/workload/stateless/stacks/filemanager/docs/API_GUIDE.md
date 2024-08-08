@@ -118,10 +118,53 @@ Attributes are update using [JSON patch][json-patch].
 For example, update attributes on a single record:
 
 ```sh
-curl --patch -H "Authorization: Bearer $TOKEN" --data-urlencode "attributes[portal_run_id]=20240521%" \
+curl --patch -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+ --data "{ "attributes": [ { "op": "add", "path": "/portal_run_id", "value": "202405212aecb782" } ] }" \
+"https://file.dev.umccr.org/api/v1/s3_objects/01912c56-c458-797f-9d3f-b803e093b7cf" | jq
+```
+
+Or, update attributes for multiple records with the same key prefix:
+
+```sh
+curl --patch -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+ --data "{ "attributes": [ { "op": "add", "path": "/attribute_id", "value": "attribute_id" } ] }" \
+ --data-urlencode "key=temp_data%" \
 "https://file.dev.umccr.org/api/v1/s3_objects" | jq
 ```
+
+## Count objects
+
+There is an API route which counts the total number of records in the database, which supports
+similar query parameters as the regular list operations.
+
+For example, count the total records:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3_objects/count" | jq
+```
+
+## The `objects` record
+
+There is a similar record kept in the filemanager database called `object`. A similar REST API
+is available for these records under `/api/v1/objects`, however the `object` currently don't server
+a purpose in filemanager. They were initially included to support attribute linking, however they will likely
+be removed because attribute linking can be accomplished using the `attributes` column on `s3_object`.
+
+## Some missing features
+
+There are some missing features in the query API which are planned, namely:
+
+* There is no way to compare values with `>`, `>=`, `<`, `<=`.
+* There is no way to express `and` or `or` conditions in the API.
+
+There are also some feature missing for attribute linking. For example, there is no way
+to capture matching wildcard groups which can later be used in the JSON patch body.
+
+There is also no way to POST an attribute linking rule, which can be used to update S3 records
+as they are received by filemanager. See [ATTRIBUTE_LINKING.md][attribute-linking] for a discussion on some approaches
+for this. The likely solution will involve merging the above wildcard matching logic with attribute rules.
 
 [json-patch]: https://jsonpatch.com/
 [qs]: https://github.com/ljharb/qs
 [s3-events]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventNotifications.html
+[attribute-linking]: ATTRIBUTE_LINKING.md
