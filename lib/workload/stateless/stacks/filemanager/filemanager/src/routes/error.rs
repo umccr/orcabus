@@ -36,7 +36,7 @@ pub enum ErrorStatusCode {
     #[response(
         status = NOT_FOUND,
         description = "the resource or route could not be found",
-        example = json!({"message": "expected some value for id: `00000000-0000-0000-0000-000000000000`"}),
+        example = json!({"message": "expected record for id: `00000000-0000-0000-0000-000000000000`"}),
     )]
     NotFound(ErrorResponse),
     #[response(

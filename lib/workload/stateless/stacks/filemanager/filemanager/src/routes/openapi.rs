@@ -12,6 +12,7 @@ use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::database::entities::sea_orm_active_enums::EventType;
 use crate::database::entities::sea_orm_active_enums::StorageClass;
 use crate::routes::error::ErrorResponse;
+use crate::routes::filter::wildcard::Wildcard;
 use crate::routes::get::*;
 use crate::routes::ingest::*;
 use crate::routes::list::*;
@@ -53,11 +54,12 @@ pub struct Json(pub Value);
             ListCount,
             IngestCount,
             DateTimeWithTimeZone,
+            Wildcard,
             Json,
             ListResponseObject,
             ListResponseS3Object,
             PatchBody,
-            Patch
+            Patch,
         )
     ),
     modifiers(&SecurityAddon),

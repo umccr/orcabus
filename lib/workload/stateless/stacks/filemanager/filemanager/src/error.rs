@@ -37,7 +37,7 @@ pub enum Error {
     QueryError(String),
     #[error("invalid input: `{0}`")]
     InvalidQuery(String),
-    #[error("expected some value for id: `{0}`")]
+    #[error("expected record for id: `{0}`")]
     ExpectedSomeValue(Uuid),
 }
 

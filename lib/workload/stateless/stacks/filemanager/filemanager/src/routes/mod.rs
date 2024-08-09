@@ -17,7 +17,7 @@ use crate::routes::openapi::swagger_ui;
 use crate::routes::update::update_router;
 
 pub mod error;
-pub mod filtering;
+pub mod filter;
 pub mod get;
 pub mod ingest;
 pub mod list;

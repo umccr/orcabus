@@ -14,8 +14,8 @@ use crate::error::Error::ExpectedSomeValue;
 use crate::error::Result;
 use crate::queries::update::UpdateQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
-use crate::routes::filtering::{ObjectsFilterAll, S3ObjectsFilterAll};
-use crate::routes::list::ListS3ObjectsParams;
+use crate::routes::filter::{ObjectsFilter, S3ObjectsFilter};
+use crate::routes::list::{ListS3ObjectsParams, WildcardParams};
 use crate::routes::AppState;
 
 /// The attributes to update for the request. This updates attributes according to JSON patch.
@@ -110,20 +110,21 @@ pub async fn update_object_attributes(
         ),
         ErrorStatusCode,
     ),
-    params(ObjectsFilterAll),
+    params(WildcardParams, ObjectsFilter),
     request_body = PatchBody,
     context_path = "/api/v1",
     tag = "update",
 )]
 pub async fn update_object_collection_attributes(
     state: State<AppState>,
-    QsQuery(filter_all): QsQuery<ObjectsFilterAll>,
+    Query(wildcard): Query<WildcardParams>,
+    QsQuery(filter_all): QsQuery<ObjectsFilter>,
     Json(patch): Json<PatchBody>,
 ) -> Result<Json<Vec<FileObject>>> {
     let txn = state.client().connection_ref().begin().await?;
 
     let results = UpdateQueryBuilder::<_, object::Entity>::new(&txn)
-        .filter_all(filter_all)
+        .filter_all(filter_all, wildcard.case_sensitive())
         .update_object_attributes(patch)
         .await?
         .all()
@@ -183,20 +184,22 @@ pub async fn update_s3_object_attributes(
         ),
         ErrorStatusCode,
     ),
-    params(ListS3ObjectsParams, ObjectsFilterAll),
+    params(WildcardParams, ListS3ObjectsParams, ObjectsFilter),
     request_body = PatchBody,
     context_path = "/api/v1",
     tag = "update",
 )]
 pub async fn update_s3_object_collection_attributes(
     state: State<AppState>,
+    Query(wildcard): Query<WildcardParams>,
     Query(list): Query<ListS3ObjectsParams>,
-    QsQuery(filter_all): QsQuery<S3ObjectsFilterAll>,
+    QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
     Json(patch): Json<PatchBody>,
 ) -> Result<Json<Vec<FileS3Object>>> {
     let txn = state.client().connection_ref().begin().await?;
 
-    let mut results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn).filter_all(filter_all);
+    let mut results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
+        .filter_all(filter_all, wildcard.case_sensitive());
 
     if list.current_state() {
         results = results.current_state();
@@ -224,6 +227,7 @@ pub fn update_router() -> Router<AppState> {
 
 #[cfg(test)]
 mod tests {
+    use crate::queries::update::tests::{assert_contains, entries_many};
     use axum::body::Body;
     use axum::http::{Method, StatusCode};
     use serde_json::json;
@@ -233,7 +237,8 @@ mod tests {
 
     use super::*;
     use crate::queries::update::tests::{
-        assert_correct_records, assert_model_contains, change_attribute_entries, change_attributes,
+        assert_correct_records, assert_model_contains, assert_wildcard_update,
+        change_attribute_entries, change_attributes, change_many,
     };
     use crate::queries::EntriesBuilder;
     use crate::routes::list::tests::response_from;
@@ -273,7 +278,7 @@ mod tests {
         )
         .await;
 
-        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"})).await;
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"}));
 
         assert_model_contains(&[object], &entries.objects, 0..1);
         assert_model_contains(&[s3_object], &entries.s3_objects, 0..1);
@@ -317,7 +322,7 @@ mod tests {
         assert_eq!(s3_object_status_code, StatusCode::NOT_FOUND);
 
         // Nothing is expected to change.
-        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "1"})).await;
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "1"}));
         assert_correct_records(state.client(), entries).await;
     }
 
@@ -361,8 +366,8 @@ mod tests {
         )
         .await;
 
-        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"})).await;
-        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "attribute_id"})).await;
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"}));
+        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "attribute_id"}));
 
         assert_model_contains(&objects, &entries.objects, 0..2);
         assert_model_contains(&s3_objects, &entries.s3_objects, 0..2);
@@ -454,8 +459,169 @@ mod tests {
         assert!(objects.is_empty());
         assert!(s3_objects.is_empty());
 
-        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "2"})).await;
-        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "2"})).await;
+        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "2"}));
+        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "2"}));
+        assert_correct_records(state.client(), entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_wildcard_like(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
+
+        change_many(
+            state.client(),
+            &entries,
+            &[0, 1],
+            Some(json!({"attribute_id": "attribute_id"})),
+        )
+        .await;
+
+        let patch = json!({"attributes": [
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]});
+
+        entries_many(
+            &mut entries,
+            &[0, 1],
+            json!({"attribute_id": "attribute_id", "another_attribute": "1"}),
+        );
+
+        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+            state.clone(),
+            "/s3_objects?attributes[attribute_id]=%a%",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+        let (_, objects) = response_from::<Vec<FileObject>>(
+            state.clone(),
+            "/objects?attributes[attribute_id]=%a%",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        assert_contains(&objects, &s3_objects, &entries, 0..2);
+        assert_correct_records(state.client(), entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_wildcard_ilike(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
+
+        change_many(
+            state.client(),
+            &entries,
+            &[0, 1],
+            Some(json!({"attribute_id": "attribute_id"})),
+        )
+        .await;
+
+        let patch = json!({"attributes": [
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]});
+
+        entries_many(
+            &mut entries,
+            &[0, 1],
+            json!({"attribute_id": "attribute_id", "another_attribute": "1"}),
+        );
+
+        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+            state.clone(),
+            "/s3_objects?attributes[attribute_id]=%A%",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+        let (_, objects) = response_from::<Vec<FileObject>>(
+            state.clone(),
+            "/objects?attributes[attribute_id]=%A%",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        assert!(s3_objects.is_empty());
+        assert!(objects.is_empty());
+
+        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+            state.clone(),
+            "/s3_objects?attributes[attribute_id]=%A%&case_sensitive=false",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+        let (_, objects) = response_from::<Vec<FileObject>>(
+            state.clone(),
+            "/objects?attributes[attribute_id]=%A%&case_sensitive=false",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        assert_contains(&objects, &s3_objects, &entries, 0..2);
+        assert_correct_records(state.client(), entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_api_wildcard_like(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
+
+        change_many(
+            state.client(),
+            &entries,
+            &[0, 2, 4, 6, 8],
+            Some(json!({"attribute_id": "1"})),
+        )
+        .await;
+
+        let patch = json!({"attributes": [
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]});
+
+        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+            state.clone(),
+            "/s3_objects?event_type=C__%",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        assert_wildcard_update(&mut entries, &s3_objects);
+        assert_correct_records(state.client(), entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_attributes_api_wildcard_ilike(pool: PgPool) {
+        let state = AppState::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(state.client()).await;
+
+        change_many(
+            state.client(),
+            &entries,
+            &[0, 2, 4, 6, 8],
+            Some(json!({"attribute_id": "1"})),
+        )
+        .await;
+
+        let patch = json!({"attributes": [
+            { "op": "add", "path": "/another_attribute", "value": "1" },
+        ]});
+
+        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+            state.clone(),
+            // Percent-encoding should work too.
+            "/s3_objects?case_sensitive=false&event_type=c%25_%25d",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        assert_wildcard_update(&mut entries, &s3_objects);
         assert_correct_records(state.client(), entries).await;
     }
 }
