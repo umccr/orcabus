@@ -122,7 +122,7 @@ async fn main() -> Result<()> {
     let docs = Uri::builder()
         .scheme("http")
         .authority(local_addr.to_string())
-        .path_and_query("/swagger_ui")
+        .path_and_query("/swagger-ui")
         .build()
         .map_err(|err| IoError(io::Error::other(err)))?;
 

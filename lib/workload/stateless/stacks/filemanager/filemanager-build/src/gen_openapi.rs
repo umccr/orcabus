@@ -47,12 +47,12 @@ pub async fn generate_openapi() -> Result<()> {
             OpenAPIGeneration("expected file with name when generating entities".to_string())
         })?;
 
-        // Need to add a prefix to avoid a clash with the utoipa `object` known value.
-        let name = "File".to_string() + &AsPascalCase(stem.to_string_lossy()).to_string();
+        let name = &AsPascalCase(stem.to_string_lossy()).to_string();
+        let name = name.trim_end_matches("Object");
 
         GenerateOpenAPI {
             model_ident: &model_ident,
-            name: &name,
+            name,
         }
         .visit_file_mut(&mut tokens);
 

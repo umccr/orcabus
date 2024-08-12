@@ -74,9 +74,9 @@ impl Entries {
         let event = Self::event_type(index);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
         let attributes = Some(json!({
-            "attribute_id": format!("{}", index),
-            "nested_id": {
-                "attribute_id": format!("{}", index)
+            "attributeId": format!("{}", index),
+            "nestedId": {
+                "attributeId": format!("{}", index)
             }
         }));
 

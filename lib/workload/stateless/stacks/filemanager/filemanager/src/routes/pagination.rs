@@ -6,7 +6,7 @@ use utoipa::IntoParams;
 
 /// Pagination query parameters for list operations.
 #[derive(Debug, Deserialize, IntoParams)]
-#[serde(default)]
+#[serde(default, rename_all = "camelCase")]
 #[into_params(parameter_in = Query)]
 pub struct Pagination {
     /// The zero-indexed page to fetch from the list of objects.
@@ -84,7 +84,7 @@ mod tests {
             .s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from_get(state, "/s3_objects?page=1&page_size=2").await;
+            response_from_get(state, "/s3?page=1&pageSize=2").await;
         assert_eq!(result.next_page(), Some(2));
         assert_eq!(result.results(), &entries[2..4]);
     }
@@ -99,12 +99,12 @@ mod tests {
             .s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from_get(state.clone(), "/s3_objects?page=0&page_size=20").await;
+            response_from_get(state.clone(), "/s3?page=0&pageSize=20").await;
         assert!(result.next_page().is_none());
         assert_eq!(result.results(), entries);
 
         let result: ListResponse<S3Object> =
-            response_from_get(state, "/s3_objects?page=20&page_size=1").await;
+            response_from_get(state, "/s3?page=20&pageSize=1").await;
         assert!(result.next_page().is_none());
         assert!(result.results().is_empty());
     }
@@ -118,8 +118,7 @@ mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<S3Object> =
-            response_from_get(state, "/s3_objects?page_size=0").await;
+        let result: ListResponse<S3Object> = response_from_get(state, "/s3?pageSize=0").await;
         assert_eq!(result.next_page(), None);
         assert_eq!(result.results(), entries);
     }

@@ -94,7 +94,7 @@ s3-dump-download-if-not-exists:
 s3-load: s3-dump-download-if-not-exists db-load-data
 
 ## Local API server.
-api: docker-postgres
+start: docker-postgres
 	@cargo run -p filemanager-api-server $(ARGS)
 
 ## Help text

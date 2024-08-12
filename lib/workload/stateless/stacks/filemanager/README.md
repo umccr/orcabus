@@ -89,7 +89,7 @@ Alternatively, just `brew install dbeaver-community` to easily browse the databa
 For more details on the filemanager API, see the [`API_GUIDE.md`][api-guide]. To use the local API server, run:
 
 ```sh
-make api
+make start
 ```
 
 The local database server instance can generate mock data and import existing `.sql` dumps using command line options.
@@ -97,7 +97,7 @@ To pass in command line options use `make`, or run the server directly with carg
 
 ```sh
 # Pass in command line options using make.
-make api ARGS="--help"
+make start ARGS="--help"
 # Or run directly using cargo, which requires`DATABASE_URL` to be set.
 cargo run -p filemanager-api-server -- --help
 ```

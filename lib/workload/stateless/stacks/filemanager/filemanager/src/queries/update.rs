@@ -284,22 +284,18 @@ pub(crate) mod tests {
             &client,
             &entries,
             &[0, 1],
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!([
-            { "op": "test", "path": "/attribute_id", "value": "1" },
-            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+            { "op": "test", "path": "/attributeId", "value": "1" },
+            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
         ]);
 
         let results = test_update_with_attribute_id(&client, patch).await;
 
-        entries_many(
-            &mut entries,
-            &[0, 1],
-            json!({"attribute_id": "attribute_id"}),
-        );
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "attributeId"}));
 
         assert_contains(&results, &entries, 0..2);
         assert_correct_records(&client, entries).await;
@@ -314,12 +310,12 @@ pub(crate) mod tests {
             &client,
             &entries,
             &[0, 1],
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!([
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]);
 
         let results = test_update_with_attribute_id(&client, patch).await;
@@ -327,7 +323,7 @@ pub(crate) mod tests {
         entries_many(
             &mut entries,
             &[0, 1],
-            json!({"attribute_id": "1", "another_attribute": "1"}),
+            json!({"attributeId": "1", "anotherAttribute": "1"}),
         );
 
         assert_contains(&results, &entries, 0..2);
@@ -343,19 +339,19 @@ pub(crate) mod tests {
             &client,
             &entries,
             &[0, 1],
-            Some(json!({"attribute_id": "attribute_id"})),
+            Some(json!({"attributeId": "attributeId"})),
         )
         .await;
 
         let patch = json!([
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]);
 
         let results = test_update_attributes(
             &client,
             patch,
             Some(json!({
-                "attribute_id": "%a%"
+                "attributeId": "%a%"
             })),
         )
         .await;
@@ -363,7 +359,7 @@ pub(crate) mod tests {
         entries_many(
             &mut entries,
             &[0, 1],
-            json!({"attribute_id": "attribute_id", "another_attribute": "1"}),
+            json!({"attributeId": "attributeId", "anotherAttribute": "1"}),
         );
 
         assert_contains(&results, &entries, 0..2);
@@ -379,12 +375,12 @@ pub(crate) mod tests {
             &client,
             &entries,
             &[0, 1],
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!([
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]);
 
         let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
@@ -392,7 +388,7 @@ pub(crate) mod tests {
             .filter_all(
                 S3ObjectsFilter {
                     attributes: Some(json!({
-                    "attribute_id": "1"
+                    "attributeId": "1"
                     })),
                     ..Default::default()
                 },
@@ -407,8 +403,8 @@ pub(crate) mod tests {
 
         // Only the created event should be updated.
         entries.s3_objects[0].attributes =
-            Some(json!({"attribute_id": "1", "another_attribute": "1"}));
-        entries.s3_objects[1].attributes = Some(json!({"attribute_id": "1"}));
+            Some(json!({"attributeId": "1", "anotherAttribute": "1"}));
+        entries.s3_objects[1].attributes = Some(json!({"attributeId": "1"}));
 
         assert_model_contains(&results, &entries.s3_objects, 0..1);
         assert_correct_records(&client, entries).await;
@@ -423,12 +419,12 @@ pub(crate) mod tests {
             &client,
             &entries,
             &[0, 2, 4, 6, 8],
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!([
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]);
 
         let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
@@ -460,12 +456,12 @@ pub(crate) mod tests {
             &client,
             &entries,
             &[0, 2, 4, 6, 8],
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!([
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]);
 
         let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
@@ -496,12 +492,12 @@ pub(crate) mod tests {
         change_many(&client, &entries, &[0, 1], Some(Value::Null)).await;
 
         let patch = json!([
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]);
 
         let results = test_update_attributes(&client, patch, Some(Value::Null)).await;
 
-        entries_many(&mut entries, &[0, 1], json!({"another_attribute": "1"}));
+        entries_many(&mut entries, &[0, 1], json!({"anotherAttribute": "1"}));
 
         assert_contains(&results, &entries, 0..2);
         assert_correct_records(&client, entries).await;
@@ -515,13 +511,13 @@ pub(crate) mod tests {
         null_attributes(&client, &entries, 0).await;
 
         let patch = json!([
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]);
 
         let results =
             test_update_attributes_for_id(&client, patch, entries.s3_objects[0].s3_object_id).await;
 
-        change_attribute_entries(&mut entries, 0, json!({"another_attribute": "1"}));
+        change_attribute_entries(&mut entries, 0, json!({"anotherAttribute": "1"}));
 
         assert_contains(&results, &entries, 0..1);
         assert_correct_records(&client, entries).await;
@@ -536,12 +532,12 @@ pub(crate) mod tests {
             &client,
             &entries,
             &[0, 1],
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!([
-            { "op": "remove", "path": "/attribute_id" },
+            { "op": "remove", "path": "/attributeId" },
         ]);
 
         let results = test_update_with_attribute_id(&client, patch).await;
@@ -561,17 +557,17 @@ pub(crate) mod tests {
             &client,
             &entries,
             &[0, 1],
-            Some(json!({"attribute_id": "2"})),
+            Some(json!({"attributeId": "2"})),
         )
         .await;
 
         let patch = json!([
-            { "op": "remove", "path": "/attribute_id" },
+            { "op": "remove", "path": "/attributeId" },
         ]);
 
         let results = test_update_with_attribute_id(&client, patch).await;
 
-        entries_many(&mut entries, &[0, 1], json!({"attribute_id": "2"}));
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "2"}));
 
         assert!(results.is_empty());
         assert_correct_records(&client, entries).await;
@@ -586,20 +582,20 @@ pub(crate) mod tests {
             &client,
             &entries,
             &[0, 1],
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!([
-            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
-            { "op": "test", "path": "/attribute_id", "value": "2" },
+            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
+            { "op": "test", "path": "/attributeId", "value": "2" },
         ]);
 
         let s3_objects = test_s3_builder_result(
             &client,
             patch,
             Some(json!({
-                "attribute_id": "1"
+                "attributeId": "1"
             })),
         )
         .await;
@@ -607,7 +603,7 @@ pub(crate) mod tests {
         assert!(matches!(s3_objects, Err(InvalidQuery(_))));
 
         // Nothing should be updated here.
-        entries_many(&mut entries, &[0, 1], json!({"attribute_id": "1"}));
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "1"}));
         assert_correct_records(&client, entries).await;
     }
 
@@ -616,17 +612,17 @@ pub(crate) mod tests {
         let client = Client::from_pool(pool);
         let mut entries = EntriesBuilder::default().build(&client).await;
 
-        change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "1"}))).await;
+        change_attributes(&client, &entries, 0, Some(json!({"attributeId": "1"}))).await;
 
         let patch = json!([
-            { "op": "test", "path": "/attribute_id", "value": "1" },
-            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+            { "op": "test", "path": "/attributeId", "value": "1" },
+            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
         ]);
 
         let result =
             test_update_attributes_for_id(&client, patch, entries.s3_objects[0].s3_object_id).await;
 
-        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"}));
+        change_attribute_entries(&mut entries, 0, json!({"attributeId": "attributeId"}));
 
         assert_contains(&result, &entries, 0..1);
         assert_correct_records(&client, entries).await;
@@ -637,19 +633,19 @@ pub(crate) mod tests {
         let client = Client::from_pool(pool);
         let mut entries = EntriesBuilder::default().build(&client).await;
 
-        change_attributes(&client, &entries, 0, Some(json!({"attribute_id": "2"}))).await;
-        change_attributes(&client, &entries, 1, Some(json!({"attribute_id": "2"}))).await;
-        change_attributes(&client, &entries, 2, Some(json!({"attribute_id": "2"}))).await;
+        change_attributes(&client, &entries, 0, Some(json!({"attributeId": "2"}))).await;
+        change_attributes(&client, &entries, 1, Some(json!({"attributeId": "2"}))).await;
+        change_attributes(&client, &entries, 2, Some(json!({"attributeId": "2"}))).await;
 
         let patch = json!([
-            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
         ]);
 
         let results_s3_objects = test_update_attributes(
             &client,
             patch.clone(),
             Some(json!({
-                "attribute_id": "2"
+                "attributeId": "2"
             })),
         )
         .await;
@@ -657,7 +653,7 @@ pub(crate) mod tests {
         entries_many(
             &mut entries,
             &[0, 1, 2],
-            json!({"attribute_id": "attribute_id"}),
+            json!({"attributeId": "attributeId"}),
         );
 
         assert_model_contains(&results_s3_objects, &entries.s3_objects, 0..3);
@@ -714,7 +710,7 @@ pub(crate) mod tests {
             client,
             patch,
             Some(json!({
-                "attribute_id": "1"
+                "attributeId": "1"
             })),
         )
         .await
@@ -724,7 +720,7 @@ pub(crate) mod tests {
         for i in [0, 2, 4, 6, 8] {
             // Only the created event should be updated.
             entries.s3_objects[i].attributes =
-                Some(json!({"attribute_id": "1", "another_attribute": "1"}));
+                Some(json!({"attributeId": "1", "anotherAttribute": "1"}));
             assert_model_contains(&[results[i / 2].clone()], &entries.s3_objects, i..i + 1);
         }
     }

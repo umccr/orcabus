@@ -4,7 +4,7 @@ An instance of the filemanager api which can be launched as a webserver. The def
 is `0.0.0.0:8000`. Set the `FILEMANAGER_API_SERVER_ADDR` environment variable to change this. To run the local server:
 
 ```sh
-make api
+make start
 ```
 
-Then, checkout the OpenAPI docs at: `http://localhost:8000/swagger_ui`.
+Then, checkout the OpenAPI docs at: `http://localhost:8000/swagger-ui`.

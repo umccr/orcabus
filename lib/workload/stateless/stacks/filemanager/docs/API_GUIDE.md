@@ -5,10 +5,10 @@ The filemanager API gives access to S3 object records for all [S3 file events][s
 To start a local API server and view the OpenAPI documentation, run the following:
 
 ```sh
-make api
+make start
 ```
 
-This serves Swagger OpenAPI docs at `http://localhost:8000/swagger_ui` when using default settings.
+This serves Swagger OpenAPI docs at `http://localhost:8000/swagger-ui` when using default settings.
 
 The deployed instance of the filemanager API can be reached using the desired stage at `https://file.<stage>.umccr.org`
 using the orcabus API token. To retrieve the token, run:

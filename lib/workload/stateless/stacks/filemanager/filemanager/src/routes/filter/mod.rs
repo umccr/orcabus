@@ -13,7 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 /// an `and` clause in the SQL statement. Nested query string style syntax is supported on
 /// JSON attributes. Wildcards are supported on some of the fields.
 #[derive(Serialize, Deserialize, Debug, Default, IntoParams, ToSchema)]
-#[serde(default)]
+#[serde(default, rename_all = "camelCase")]
 #[into_params(parameter_in = Query)]
 pub struct S3ObjectsFilter {
     #[param(required = false, value_type = Wildcard)]
