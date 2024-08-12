@@ -40,12 +40,12 @@ where
     pub fn new(connection: &'a C) -> Self {
         Self {
             connection,
-            select: Self::for_s3_objects(),
+            select: Self::for_s3(),
         }
     }
 
     /// Define a select query for finding values from s3 objects.
-    pub fn for_s3_objects() -> Select<s3_object::Entity> {
+    pub fn for_s3() -> Select<s3_object::Entity> {
         s3_object::Entity::find().order_by_asc(s3_object::Column::Sequencer)
     }
 
@@ -434,7 +434,7 @@ pub(crate) mod tests {
     use crate::routes::filter::wildcard::Wildcard;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_current_s3_objects_10(pool: PgPool) {
+    async fn test_current_s3(pool: PgPool) {
         let client = Client::from_pool(pool);
 
         let entries = EntriesBuilder::default()
@@ -452,7 +452,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_current_s3_objects_30(pool: PgPool) {
+    async fn test_current_s3_large_n(pool: PgPool) {
         let client = Client::from_pool(pool);
 
         let entries = EntriesBuilder::default()
@@ -474,7 +474,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_current_s3_objects_with_paginate_10(pool: PgPool) {
+    async fn test_current_s3_with_paginate(pool: PgPool) {
         let client = Client::from_pool(pool);
 
         let entries = EntriesBuilder::default()
@@ -504,7 +504,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_current_s3_objects_with_filter(pool: PgPool) {
+    async fn test_current_s3_with_filter(pool: PgPool) {
         let client = Client::from_pool(pool);
 
         let entries = EntriesBuilder::default()
@@ -543,7 +543,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_list_s3_objects(pool: PgPool) {
+    async fn test_list_s3(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -558,7 +558,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_list_s3_objects_filter_event_type(pool: PgPool) {
+    async fn test_list_s3_filter_event_type(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -566,7 +566,7 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result = filter_all_s3_objects_from(
+        let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
                 event_type: Some(WildcardEither::Or(EventType::Created)),
@@ -580,7 +580,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_list_s3_objects_multiple_filters(pool: PgPool) {
+    async fn test_list_s3_multiple_filters(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -588,7 +588,7 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result = filter_all_s3_objects_from(
+        let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
                 bucket: Some(Wildcard::new("0".to_string())),
@@ -602,7 +602,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_list_s3_objects_filter_attributes(pool: PgPool) {
+    async fn test_list_s3_filter_attributes(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -610,7 +610,7 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result = filter_all_s3_objects_from(
+        let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
                 attributes: Some(json!({
@@ -623,7 +623,7 @@ pub(crate) mod tests {
         .await;
         assert_eq!(result, vec![entries[1].clone()]);
 
-        let result = filter_all_s3_objects_from(
+        let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
                 attributes: Some(json!({
@@ -638,7 +638,7 @@ pub(crate) mod tests {
         .await;
         assert_eq!(result, vec![entries[2].clone()]);
 
-        let result = filter_all_s3_objects_from(
+        let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
                 attributes: Some(json!({
@@ -651,7 +651,7 @@ pub(crate) mod tests {
         .await;
         assert!(result.is_empty());
 
-        let result = filter_all_s3_objects_from(
+        let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
                 attributes: Some(json!({
@@ -665,7 +665,7 @@ pub(crate) mod tests {
         .await;
         assert!(result.is_empty());
 
-        let result = filter_all_s3_objects_from(
+        let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
                 attributes: Some(json!({
@@ -681,7 +681,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_paginate_s3_objects(pool: PgPool) {
+    async fn test_paginate_s3(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -706,7 +706,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_count_s3_objects(pool: PgPool) {
+    async fn test_count_s3(pool: PgPool) {
         let client = Client::from_pool(pool);
         EntriesBuilder::default()
             .with_shuffle(true)
@@ -760,7 +760,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_list_s3_objects_filter_wildcard(pool: PgPool) {
+    async fn test_list_s3_filter_wildcard(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -768,7 +768,7 @@ pub(crate) mod tests {
             .await;
         let s3_entries = entries.s3_objects.clone();
 
-        let result = filter_all_s3_objects_from(
+        let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
                 event_type: Some(WildcardEither::Wildcard(Wildcard::new(
@@ -784,7 +784,7 @@ pub(crate) mod tests {
             filter_event_type(s3_entries.clone(), EventType::Created)
         );
 
-        let result = filter_all_s3_objects_from(
+        let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
                 event_type: Some(WildcardEither::Wildcard(Wildcard::new(
@@ -800,7 +800,7 @@ pub(crate) mod tests {
             filter_event_type(s3_entries.clone(), EventType::Created)
         );
 
-        let result = filter_all_s3_objects_from(
+        let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
                 bucket: Some(Wildcard::new("0%".to_string())),
@@ -813,7 +813,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_list_s3_objects_wildcard_attributes(pool: PgPool) {
+    async fn test_list_s3_wildcard_attributes(pool: PgPool) {
         let client = Client::from_pool(pool);
         let mut entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -998,7 +998,7 @@ pub(crate) mod tests {
         filter: Option<Json>,
         case_sensitive: bool,
     ) -> Vec<s3_object::Model> {
-        filter_all_s3_objects_from(
+        filter_all_s3_from(
             client,
             S3ObjectsFilter {
                 attributes: filter,
@@ -1009,7 +1009,7 @@ pub(crate) mod tests {
         .await
     }
 
-    async fn filter_all_s3_objects_from(
+    async fn filter_all_s3_from(
         client: &Client,
         filter: S3ObjectsFilter,
         case_sensitive: bool,

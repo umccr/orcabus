@@ -72,7 +72,7 @@ where
     }
 
     /// Update the attributes on an s3_object using the attribute patch.
-    pub async fn update_s3_object_attributes(self, patch: PatchBody) -> Result<Self> {
+    pub async fn update_s3_attributes(self, patch: PatchBody) -> Result<Self> {
         self.update_attributes(
             patch,
             s3_object::Column::S3ObjectId,
@@ -371,7 +371,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_s3_attributes_current_state(pool: PgPool) {
+    async fn update_attributes_current_state(pool: PgPool) {
         let client = Client::from_pool(pool);
         let mut entries = EntriesBuilder::default().build(&client).await;
 
@@ -398,7 +398,7 @@ pub(crate) mod tests {
                 },
                 true,
             )
-            .update_s3_object_attributes(PatchBody::new(from_value(patch).unwrap()))
+            .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
             .unwrap()
             .all()
@@ -415,7 +415,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_s3_attributes_wildcard_like(pool: PgPool) {
+    async fn update_attributes_wildcard_like(pool: PgPool) {
         let client = Client::from_pool(pool);
         let mut entries = EntriesBuilder::default().build(&client).await;
 
@@ -440,7 +440,7 @@ pub(crate) mod tests {
                 },
                 true,
             )
-            .update_s3_object_attributes(PatchBody::new(from_value(patch).unwrap()))
+            .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
             .unwrap()
             .all()
@@ -452,7 +452,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_s3_attributes_wildcard_ilike(pool: PgPool) {
+    async fn update_attributes_wildcard_ilike(pool: PgPool) {
         let client = Client::from_pool(pool);
         let mut entries = EntriesBuilder::default().build(&client).await;
 
@@ -477,7 +477,7 @@ pub(crate) mod tests {
                 },
                 false,
             )
-            .update_s3_object_attributes(PatchBody::new(from_value(patch).unwrap()))
+            .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
             .unwrap()
             .all()
@@ -595,7 +595,7 @@ pub(crate) mod tests {
             { "op": "test", "path": "/attribute_id", "value": "2" },
         ]);
 
-        let s3_objects = test_s3_object_builder_result(
+        let s3_objects = test_s3_builder_result(
             &client,
             patch,
             Some(json!({
@@ -664,7 +664,7 @@ pub(crate) mod tests {
         assert_correct_records(&client, entries).await;
     }
 
-    async fn test_s3_object_builder_result(
+    async fn test_s3_builder_result(
         client: &Client,
         patch: Value,
         attributes: Option<Value>,
@@ -677,7 +677,7 @@ pub(crate) mod tests {
                 },
                 true,
             )
-            .update_s3_object_attributes(PatchBody::new(from_value(patch).unwrap()))
+            .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
     }
 
@@ -686,7 +686,7 @@ pub(crate) mod tests {
         patch: Value,
         attributes: Option<Value>,
     ) -> Vec<s3_object::Model> {
-        test_s3_object_builder_result(client, patch, attributes)
+        test_s3_builder_result(client, patch, attributes)
             .await
             .unwrap()
             .all()
@@ -701,7 +701,7 @@ pub(crate) mod tests {
     ) -> Vec<s3_object::Model> {
         UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .for_id(s3_object_id)
-            .update_s3_object_attributes(PatchBody::new(from_value(patch).unwrap()))
+            .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
             .unwrap()
             .all()

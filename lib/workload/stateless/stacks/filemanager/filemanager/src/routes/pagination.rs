@@ -75,7 +75,7 @@ mod tests {
     use crate::routes::AppState;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_objects_api_paginate(pool: PgPool) {
+    async fn list_s3_api_paginate(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -90,7 +90,7 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_objects_api_paginate_large(pool: PgPool) {
+    async fn list_s3_api_paginate_large(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -110,7 +110,7 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_objects_api_zero_page_size(pool: PgPool) {
+    async fn list_s3_api_zero_page_size(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)

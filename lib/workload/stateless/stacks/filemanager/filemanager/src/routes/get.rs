@@ -6,7 +6,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use uuid::Uuid;
 
-use crate::database::entities::s3_object::Model as FileS3Object;
+use crate::database::entities::s3_object::Model as S3;
 use crate::error::Error::ExpectedSomeValue;
 use crate::error::Result;
 use crate::queries::get::GetQueryBuilder;
@@ -18,21 +18,18 @@ use crate::routes::AppState;
     get,
     path = "/s3_objects/{id}",
     responses(
-        (status = OK, description = "The s3_object for the given id", body = FileS3Object),
+        (status = OK, description = "The s3_object for the given id", body = S3),
         ErrorStatusCode,
     ),
     context_path = "/api/v1",
     tag = "get",
 )]
-pub async fn get_s3_object_by_id(
-    state: State<AppState>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<FileS3Object>> {
+pub async fn get_s3_by_id(state: State<AppState>, Path(id): Path<Uuid>) -> Result<Json<S3>> {
     let query = GetQueryBuilder::new(&state.client);
 
     Ok(Json(
         query
-            .get_s3_object_by_id(id)
+            .get_s3_by_id(id)
             .await?
             .ok_or_else(|| ExpectedSomeValue(id))?,
     ))
@@ -40,7 +37,7 @@ pub async fn get_s3_object_by_id(
 
 /// The router for getting object records.
 pub fn get_router() -> Router<AppState> {
-    Router::new().route("/s3_objects/:id", get(get_s3_object_by_id))
+    Router::new().route("/s3_objects/:id", get(get_s3_by_id))
 }
 
 #[cfg(test)]
@@ -59,7 +56,7 @@ mod tests {
     use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn get_s3_objects_api(pool: PgPool) {
+    async fn get_s3_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
             .build(state.client())
@@ -67,7 +64,7 @@ mod tests {
             .s3_objects;
 
         let first = entries.first().unwrap();
-        let result: FileS3Object =
+        let result: S3 =
             response_from_get(state, &format!("/s3_objects/{}", first.s3_object_id)).await;
         assert_eq!(&result, first);
     }

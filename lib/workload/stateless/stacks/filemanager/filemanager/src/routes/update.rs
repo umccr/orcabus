@@ -8,13 +8,13 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::database::entities::s3_object;
-use crate::database::entities::s3_object::Model as FileS3Object;
+use crate::database::entities::s3_object::Model as S3;
 use crate::error::Error::ExpectedSomeValue;
 use crate::error::Result;
 use crate::queries::update::UpdateQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
 use crate::routes::filter::S3ObjectsFilter;
-use crate::routes::list::{ListS3ObjectsParams, WildcardParams};
+use crate::routes::list::{ListS3Params, WildcardParams};
 use crate::routes::AppState;
 
 /// The attributes to update for the request. This updates attributes according to JSON patch.
@@ -76,16 +76,16 @@ impl PatchBody {
     context_path = "/api/v1",
     tag = "update",
 )]
-pub async fn update_s3_object_attributes(
+pub async fn update_s3_attributes(
     state: State<AppState>,
     Path(id): Path<Uuid>,
     Json(patch): Json<PatchBody>,
-) -> Result<Json<FileS3Object>> {
+) -> Result<Json<S3>> {
     let txn = state.client().connection_ref().begin().await?;
 
     let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
         .for_id(id)
-        .update_s3_object_attributes(patch)
+        .update_s3_attributes(patch)
         .await?
         .one()
         .await?
@@ -109,18 +109,18 @@ pub async fn update_s3_object_attributes(
         ),
         ErrorStatusCode,
     ),
-    params(WildcardParams, ListS3ObjectsParams, S3ObjectsFilter),
+    params(WildcardParams, ListS3Params, S3ObjectsFilter),
     request_body = PatchBody,
     context_path = "/api/v1",
     tag = "update",
 )]
-pub async fn update_s3_object_collection_attributes(
+pub async fn update_s3_collection_attributes(
     state: State<AppState>,
     Query(wildcard): Query<WildcardParams>,
-    Query(list): Query<ListS3ObjectsParams>,
+    Query(list): Query<ListS3Params>,
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
     Json(patch): Json<PatchBody>,
-) -> Result<Json<Vec<FileS3Object>>> {
+) -> Result<Json<Vec<S3>>> {
     let txn = state.client().connection_ref().begin().await?;
 
     let mut results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
@@ -130,11 +130,7 @@ pub async fn update_s3_object_collection_attributes(
         results = results.current_state();
     }
 
-    let results = results
-        .update_s3_object_attributes(patch)
-        .await?
-        .all()
-        .await?;
+    let results = results.update_s3_attributes(patch).await?.all().await?;
 
     txn.commit().await?;
 
@@ -144,8 +140,8 @@ pub async fn update_s3_object_collection_attributes(
 /// The router for updating objects.
 pub fn update_router() -> Router<AppState> {
     Router::new()
-        .route("/s3_objects/:id", patch(update_s3_object_attributes))
-        .route("/s3_objects", patch(update_s3_object_collection_attributes))
+        .route("/s3_objects/:id", patch(update_s3_attributes))
+        .route("/s3_objects", patch(update_s3_collection_attributes))
 }
 
 #[cfg(test)]
@@ -186,7 +182,7 @@ mod tests {
             { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
         ]});
 
-        let (_, s3_object) = response_from::<FileS3Object>(
+        let (_, s3_object) = response_from::<S3>(
             state.clone(),
             &format!("/s3_objects/{}", entries.s3_objects[0].s3_object_id),
             Method::PATCH,
@@ -257,7 +253,7 @@ mod tests {
             { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
         ]});
 
-        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+        let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             "/s3_objects?attributes[attribute_id]=1",
             Method::PATCH,
@@ -297,7 +293,7 @@ mod tests {
             { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
         ]});
 
-        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+        let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             "/s3_objects?current_state=true&attributes[attribute_id]=1",
             Method::PATCH,
@@ -337,7 +333,7 @@ mod tests {
             { "op": "remove", "path": "/attribute_id" },
         ]});
 
-        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+        let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             "/s3_objects?attributes[attribute_id]=1",
             Method::PATCH,
@@ -374,7 +370,7 @@ mod tests {
             json!({"attribute_id": "attribute_id", "another_attribute": "1"}),
         );
 
-        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+        let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             "/s3_objects?attributes[attribute_id]=%a%",
             Method::PATCH,
@@ -409,7 +405,7 @@ mod tests {
             json!({"attribute_id": "attribute_id", "another_attribute": "1"}),
         );
 
-        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+        let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             "/s3_objects?attributes[attribute_id]=%A%",
             Method::PATCH,
@@ -418,7 +414,7 @@ mod tests {
         .await;
         assert!(s3_objects.is_empty());
 
-        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+        let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             "/s3_objects?attributes[attribute_id]=%A%&case_sensitive=false",
             Method::PATCH,
@@ -447,7 +443,7 @@ mod tests {
             { "op": "add", "path": "/another_attribute", "value": "1" },
         ]});
 
-        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+        let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             "/s3_objects?event_type=C__%",
             Method::PATCH,
@@ -476,7 +472,7 @@ mod tests {
             { "op": "add", "path": "/another_attribute", "value": "1" },
         ]});
 
-        let (_, s3_objects) = response_from::<Vec<FileS3Object>>(
+        let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             // Percent-encoding should work too.
             "/s3_objects?case_sensitive=false&event_type=c%25_%25d",
