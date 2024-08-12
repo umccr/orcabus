@@ -167,11 +167,8 @@ pub(crate) mod tests {
     async fn insert_created(pool: PgPool) {
         let mut tx = pool.begin().await.unwrap();
 
-        let object_id = UuidGenerator::generate();
         query_file!(
             "../database/queries/ingester/aws/insert_s3_objects.sql",
-            &vec![object_id],
-            &vec![UuidGenerator::generate()],
             &vec![UuidGenerator::generate()],
             &vec!["bucket".to_string()],
             &vec!["key".to_string()],
@@ -190,19 +187,10 @@ pub(crate) mod tests {
         .await
         .unwrap();
 
-        query_file!(
-            "../database/queries/ingester/insert_objects.sql",
-            &vec![object_id],
-        )
-        .fetch_all(&mut *tx)
-        .await
-        .unwrap();
-
         tx.commit().await.unwrap();
 
         let inserted = query!(
             "select s3_object_id as \"s3_object_id!\",
-                object_id as \"object_id!\",
                 bucket,
                 key,
                 date,
@@ -229,11 +217,8 @@ pub(crate) mod tests {
     async fn insert_deleted(pool: PgPool) {
         let mut tx = pool.begin().await.unwrap();
 
-        let object_id = UuidGenerator::generate();
         query_file!(
             "../database/queries/ingester/aws/insert_s3_objects.sql",
-            &vec![object_id],
-            &vec![UuidGenerator::generate()],
             &vec![UuidGenerator::generate()],
             &vec!["bucket".to_string()],
             &vec!["key".to_string()],
@@ -252,19 +237,10 @@ pub(crate) mod tests {
         .await
         .unwrap();
 
-        query_file!(
-            "../database/queries/ingester/insert_objects.sql",
-            &vec![object_id],
-        )
-        .fetch_all(&mut *tx)
-        .await
-        .unwrap();
-
         tx.commit().await.unwrap();
 
         let inserted = query!(
             "select s3_object_id as \"s3_object_id!\",
-                object_id as \"object_id!\",
                 bucket,
                 key,
                 date,

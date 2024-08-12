@@ -68,59 +68,11 @@ mod tests {
     use sqlx::PgPool;
 
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::object::Model as Object;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::queries::EntriesBuilder;
     use crate::routes::list::tests::response_from_get;
     use crate::routes::list::ListResponse;
     use crate::routes::AppState;
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_objects_api_paginate(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let entries = EntriesBuilder::default()
-            .build(state.client())
-            .await
-            .objects;
-
-        let result: ListResponse<Object> =
-            response_from_get(state, "/objects?page=2&page_size=2").await;
-        assert_eq!(result.next_page(), Some(3));
-        assert_eq!(result.results(), &entries[4..6]);
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_objects_api_paginate_large(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let entries = EntriesBuilder::default()
-            .build(state.client())
-            .await
-            .objects;
-
-        let result: ListResponse<Object> =
-            response_from_get(state.clone(), "/objects?page=0&page_size=20").await;
-        assert!(result.next_page().is_none());
-        assert_eq!(result.results(), entries);
-
-        let result: ListResponse<Object> =
-            response_from_get(state, "/objects?page=20&page_size=1").await;
-        assert!(result.next_page().is_none());
-        assert!(result.results().is_empty());
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_objects_api_zero_page_size(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let entries = EntriesBuilder::default()
-            .build(state.client())
-            .await
-            .objects;
-
-        let result: ListResponse<Object> =
-            response_from_get(state, "/s3_objects?page_size=0").await;
-        assert_eq!(result.next_page(), None);
-        assert_eq!(result.results(), entries);
-    }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_objects_api_paginate(pool: PgPool) {

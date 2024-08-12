@@ -6,38 +6,12 @@ use axum::routing::get;
 use axum::{Json, Router};
 use uuid::Uuid;
 
-use crate::database::entities::object::Model as FileObject;
 use crate::database::entities::s3_object::Model as FileS3Object;
 use crate::error::Error::ExpectedSomeValue;
 use crate::error::Result;
 use crate::queries::get::GetQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
 use crate::routes::AppState;
-
-/// Get an object given it's id.
-#[utoipa::path(
-    get,
-    path = "/objects/{id}",
-    responses(
-        (status = OK, description = "The object for the given id", body = FileObject),
-        ErrorStatusCode,
-    ),
-    context_path = "/api/v1",
-    tag = "get",
-)]
-pub async fn get_object_by_id(
-    state: State<AppState>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<FileObject>> {
-    let query = GetQueryBuilder::new(&state.client);
-
-    Ok(Json(
-        query
-            .get_object(id)
-            .await?
-            .ok_or_else(|| ExpectedSomeValue(id))?,
-    ))
-}
 
 /// Get an s3_object given it's id.
 #[utoipa::path(
@@ -66,9 +40,7 @@ pub async fn get_s3_object_by_id(
 
 /// The router for getting object records.
 pub fn get_router() -> Router<AppState> {
-    Router::new()
-        .route("/objects/:id", get(get_object_by_id))
-        .route("/s3_objects/:id", get(get_s3_object_by_id))
+    Router::new().route("/s3_objects/:id", get(get_s3_object_by_id))
 }
 
 #[cfg(test)]
@@ -87,20 +59,6 @@ mod tests {
     use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn get_objects_api(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let entries = EntriesBuilder::default()
-            .build(state.client())
-            .await
-            .objects;
-
-        let first = entries.first().unwrap();
-        let result: FileObject =
-            response_from_get(state, &format!("/objects/{}", first.object_id)).await;
-        assert_eq!(&result, first);
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_s3_objects_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
@@ -117,15 +75,6 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_non_existent(pool: PgPool) {
         let state = AppState::from_pool(pool);
-
-        let (status_code, _) = response_from::<Value>(
-            state.clone(),
-            &format!("/objects/{}", UuidGenerator::generate()),
-            Method::GET,
-            Body::empty(),
-        )
-        .await;
-        assert_eq!(status_code, StatusCode::NOT_FOUND);
 
         let (status_code, _) = response_from::<Value>(
             state,

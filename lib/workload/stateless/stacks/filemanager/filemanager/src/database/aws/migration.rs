@@ -70,18 +70,12 @@ pub(crate) mod tests {
     async fn test_migrate(pool: PgPool) {
         let migrate = Migration::new(Client::from_pool(pool));
 
-        let object_exists = check_table_exists(&migrate, "object").await;
         let s3_object_exists = check_table_exists(&migrate, "s3_object").await;
-
-        assert!(!object_exists.get::<bool, _>("exists"));
         assert!(!s3_object_exists.get::<bool, _>("exists"));
 
         migrate.migrate().await.unwrap();
 
-        let object_exists = check_table_exists(&migrate, "object").await;
         let s3_object_exists = check_table_exists(&migrate, "s3_object").await;
-
-        assert!(object_exists.get::<bool, _>("exists"));
         assert!(s3_object_exists.get::<bool, _>("exists"));
     }
 

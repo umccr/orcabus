@@ -517,9 +517,7 @@ impl From<Record> for FlatS3EventMessage {
         } = record;
 
         Self {
-            object_id: UuidGenerator::generate(),
             s3_object_id: UuidGenerator::generate(),
-            public_id: UuidGenerator::generate(),
             // We don't know when this object was created so there is no event time.
             event_time: None,
             bucket,

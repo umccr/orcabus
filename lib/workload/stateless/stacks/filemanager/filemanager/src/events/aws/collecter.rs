@@ -284,8 +284,6 @@ pub(crate) mod tests {
             .for_each(|(expected_event, event)| {
                 // The object id will be different for each event.
                 expected_event.s3_object_id = event.s3_object_id;
-                expected_event.object_id = event.object_id;
-                expected_event.public_id = event.public_id;
             });
 
         assert_eq!(events, expected);

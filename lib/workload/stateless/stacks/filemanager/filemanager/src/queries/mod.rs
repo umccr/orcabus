@@ -11,8 +11,6 @@ use sea_orm::{ActiveModelTrait, TryIntoModel};
 use serde_json::json;
 use strum::EnumCount;
 
-use crate::database::entities::object::ActiveModel as ActiveObject;
-use crate::database::entities::object::Model as Object;
 use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
 use crate::database::entities::s3_object::Model as S3Object;
 use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
@@ -26,17 +24,12 @@ pub mod update;
 /// Container for generating database entries.
 #[derive(Debug)]
 pub struct Entries {
-    pub objects: Vec<Object>,
     pub s3_objects: Vec<S3Object>,
 }
 
-impl From<Vec<(Object, S3Object)>> for Entries {
-    fn from(objects: Vec<(Object, S3Object)>) -> Self {
-        let (objects, s3_objects) = objects.into_iter().unzip();
-        Self {
-            objects,
-            s3_objects,
-        }
+impl From<Vec<S3Object>> for Entries {
+    fn from(s3_objects: Vec<S3Object>) -> Self {
+        Self { s3_objects }
     }
 }
 
@@ -48,7 +41,7 @@ impl Entries {
         shuffle: bool,
         bucket_divisor: usize,
         key_divisor: usize,
-    ) -> Vec<(Object, S3Object)> {
+    ) -> Vec<S3Object> {
         let mut output = vec![];
 
         let mut entries: Vec<_> = (0..n)
@@ -59,22 +52,14 @@ impl Entries {
             entries.shuffle(&mut thread_rng());
         }
 
-        for (object, s3_object) in entries {
-            object
-                .clone()
-                .insert(client.connection_ref())
-                .await
-                .unwrap();
+        for s3_object in entries {
             s3_object
                 .clone()
                 .insert(client.connection_ref())
                 .await
                 .unwrap();
 
-            output.push((
-                object.try_into_model().unwrap(),
-                s3_object.try_into_model().unwrap(),
-            ));
+            output.push(s3_object.try_into_model().unwrap());
         }
 
         output
@@ -85,8 +70,7 @@ impl Entries {
         index: usize,
         bucket_divisor: usize,
         key_divisor: usize,
-    ) -> (ActiveObject, ActiveS3Object) {
-        let object_id = UuidGenerator::generate();
+    ) -> ActiveS3Object {
         let event = Self::event_type(index);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
         let attributes = Some(json!({
@@ -96,42 +80,34 @@ impl Entries {
             }
         }));
 
-        (
-            ActiveObject {
-                object_id: Set(object_id),
-                attributes: Set(attributes.clone()),
+        ActiveS3Object {
+            s3_object_id: Set(UuidGenerator::generate()),
+            event_type: Set(event.clone()),
+            bucket: Set((index / bucket_divisor).to_string()),
+            key: Set((index / key_divisor).to_string()),
+            version_id: Set((index / key_divisor).to_string()),
+            date: date(),
+            size: Set(Some(index as i64)),
+            sha256: Set(Some(index.to_string())),
+            last_modified_date: date(),
+            e_tag: Set(Some(index.to_string())),
+            storage_class: Set(Some(Self::storage_class(index))),
+            sequencer: Set(Some(index.to_string())),
+            is_delete_marker: Set(false),
+            number_duplicate_events: Set(0),
+            attributes: Set(attributes),
+            deleted_date: if event == EventType::Deleted {
+                date()
+            } else {
+                Set(None)
             },
-            ActiveS3Object {
-                s3_object_id: Set(UuidGenerator::generate()),
-                object_id: Set(object_id),
-                public_id: Set(UuidGenerator::generate()),
-                event_type: Set(event.clone()),
-                bucket: Set((index / bucket_divisor).to_string()),
-                key: Set((index / key_divisor).to_string()),
-                version_id: Set((index / key_divisor).to_string()),
-                date: date(),
-                size: Set(Some(index as i64)),
-                sha256: Set(Some(index.to_string())),
-                last_modified_date: date(),
-                e_tag: Set(Some(index.to_string())),
-                storage_class: Set(Some(Self::storage_class(index))),
-                sequencer: Set(Some(index.to_string())),
-                is_delete_marker: Set(false),
-                number_duplicate_events: Set(0),
-                attributes: Set(attributes),
-                deleted_date: if event == EventType::Deleted {
-                    date()
-                } else {
-                    Set(None)
-                },
-                deleted_sequencer: if event == EventType::Deleted {
-                    Set(Some(index.to_string()))
-                } else {
-                    Set(None)
-                },
-                number_reordered: Set(0),
+            deleted_sequencer: if event == EventType::Deleted {
+                Set(Some(index.to_string()))
+            } else {
+                Set(None)
             },
-        )
+            number_reordered: Set(0),
+        }
     }
 
     fn event_type(index: usize) -> EventType {
@@ -189,7 +165,7 @@ impl EntriesBuilder {
         .await;
 
         // Return the correct ordering for test purposes
-        entries.sort_by(|(_, a), (_, b)| a.sequencer.cmp(&b.sequencer));
+        entries.sort_by(|a, b| a.sequencer.cmp(&b.sequencer));
 
         entries.into()
     }

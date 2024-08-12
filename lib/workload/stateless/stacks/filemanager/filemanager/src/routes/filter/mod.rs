@@ -57,19 +57,3 @@ pub struct S3ObjectsFilter {
     /// rather than `{ "attribute_id" = 1 }`. Supports wildcards.
     pub(crate) attributes: Option<Json>,
 }
-
-/// The available fields to filter `object` queries by. Each query parameter represents
-/// an `and` clause in the SQL statement. Nested query string style syntax is supported on
-/// JSON attributes.
-#[derive(Serialize, Deserialize, Debug, Default, IntoParams, ToSchema)]
-#[serde(default)]
-#[into_params(parameter_in = Query)]
-pub struct ObjectsFilter {
-    #[param(required = false)]
-    /// Query by JSON attributes. Supports nested syntax to access inner
-    /// fields, e.g. `attributes[attribute_id]=...`. This only deserializes
-    /// into string fields, and does not support other JSON types. E.g.
-    /// `attributes[attribute_id]=1` converts to `{ "attribute_id" = "1" }`
-    /// rather than `{ "attribute_id" = 1 }`. Supports wildcards.
-    pub(crate) attributes: Option<Json>,
-}
