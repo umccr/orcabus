@@ -18,7 +18,7 @@ services:
     depends_on:
       - db
     healthcheck:
-      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/"
+      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/api/v1"
       start_period: 30s
       interval: 10s
       timeout: 2s
@@ -38,7 +38,7 @@ services:
     depends_on:
       - db
     healthcheck:
-      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/wfm/v1"
+      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/api/v1"
       start_period: 30s
       interval: 10s
       timeout: 2s
@@ -58,7 +58,7 @@ services:
     depends_on:
       - db
     healthcheck:
-      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/srm/v1"
+      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/api/v1"
       start_period: 30s
       interval: 10s
       timeout: 2s
