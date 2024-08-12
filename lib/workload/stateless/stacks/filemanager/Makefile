@@ -74,19 +74,15 @@ reset-db:
 	@docker exec -e PGPASSWORD=orcabus -it orcabus_db psql -h $(FILEMANAGER_DATABASE_HOST) -U orcabus -d orcabus -c "DROP DATABASE IF EXISTS filemanager;" && \
 	docker exec -e PGPASSWORD=orcabus -it orcabus_db psql -h $(FILEMANAGER_DATABASE_HOST) -U orcabus -d orcabus -c "CREATE DATABASE filemanager;"
 s3-dump-upload:
-	@aws s3 cp data/fm_objects_100000.csv.gz s3://orcabus-test-data-843407916570-ap-southeast-2/file-manager/fm_objects_100000.csv.gz && \
-	aws s3 cp data/fm_s3_objects_100000.csv.gz s3://orcabus-test-data-843407916570-ap-southeast-2/file-manager/fm_s3_objects_100000.csv.gz
+	@aws s3 cp data/fm_s3_objects_100000.csv.gz s3://orcabus-test-data-843407916570-ap-southeast-2/file-manager/fm_s3_objects_100000.csv.gz
 s3-dump-download:
-	@aws s3 cp s3://orcabus-test-data-843407916570-ap-southeast-2/file-manager/fm_objects_100000.csv.gz data/fm_objects_100000.csv.gz && \
-	aws s3 cp s3://orcabus-test-data-843407916570-ap-southeast-2/file-manager/fm_s3_objects_100000.csv.gz data/fm_s3_objects_100000.csv.gz
+	@aws s3 cp s3://orcabus-test-data-843407916570-ap-southeast-2/file-manager/fm_s3_objects_100000.csv.gz data/fm_s3_objects_100000.csv.gz
 db-load-data: reset-db apply-schema
-	@gunzip -c data/fm_objects_100000.csv.gz | \
- 	 docker exec -i orcabus_db psql -U orcabus -d filemanager -c "copy object from stdin with (format csv, header);" && \
- 	 gunzip -c data/fm_s3_objects_100000.csv.gz | \
+	@gunzip -c data/fm_s3_objects_100000.csv.gz | \
      docker exec -i orcabus_db psql -U orcabus -d filemanager -c "copy s3_object from stdin with (format csv, header);"
 s3-dump-download-if-not-exists:
-	@if [ -f "data/fm_objects_100000.csv.gz" ] && [ -f "data/fm_s3_objects_100000.csv.gz" ]; then \
-		echo "Using existing sql dumps from 'data/fm_objects_100000.csv.gz' and './data/fm_s3_objects_100000.csv.gz"; \
+	@if [ -f "data/fm_s3_objects_100000.csv.gz" ]; then \
+		echo "Using existing sql dumps from 'data/fm_s3_objects_100000.csv.gz"; \
 	else \
 		echo "Downloading sql dumps"; \
 		$(MAKE) s3-dump-download; \
