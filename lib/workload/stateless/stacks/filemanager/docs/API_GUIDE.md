@@ -142,13 +142,6 @@ For example, count the total records:
 curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3_objects/count" | jq
 ```
 
-## The `objects` record
-
-There is a similar record kept in the filemanager database called `object`. A similar REST API
-is available for these records under `/api/v1/objects`, however the `object` currently don't server
-a purpose in filemanager. They were initially included to support attribute linking, however they will likely
-be removed because attribute linking can be accomplished using the `attributes` column on `s3_object`.
-
 ## Some missing features
 
 There are some missing features in the query API which are planned, namely:

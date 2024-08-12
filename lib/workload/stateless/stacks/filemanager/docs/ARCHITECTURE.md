@@ -3,7 +3,7 @@
 The aim of the filemanager is to maintain a database state that is as correct as possible at the time an event is received.
 Broadly, the architecture of filemanager reflects this, where cloud storage events that contain information about objects
 are processed and stored in the database. The database tables reflect the information from the events, and data is stored
-in the `object` and `s3_object` tables.
+in the `s3_object` tables.
 
 Some details about S3 event processing needs to be addressed in filemanager, specifically in relation to out of order
 and duplicate events.

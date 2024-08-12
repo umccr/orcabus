@@ -65,9 +65,7 @@ impl StorageClass {
 /// the database structs do not have to perform this conversion.
 #[derive(Debug, Eq, PartialEq, Default, Clone)]
 pub struct TransposedS3EventMessages {
-    pub object_ids: Vec<Uuid>,
     pub s3_object_ids: Vec<Uuid>,
-    pub public_ids: Vec<Uuid>,
     pub event_times: Vec<Option<DateTime<Utc>>>,
     pub buckets: Vec<String>,
     pub keys: Vec<String>,
@@ -87,9 +85,7 @@ impl TransposedS3EventMessages {
     /// TODO: There was a S3 messaging spec about how long those fields are supposed to be?
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            object_ids: Vec::with_capacity(capacity),
             s3_object_ids: Vec::with_capacity(capacity),
-            public_ids: Vec::with_capacity(capacity),
             event_times: Vec::with_capacity(capacity),
             buckets: Vec::with_capacity(capacity),
             keys: Vec::with_capacity(capacity),
@@ -108,9 +104,7 @@ impl TransposedS3EventMessages {
     /// Push an S3 event message.
     pub fn push(&mut self, message: FlatS3EventMessage) {
         let FlatS3EventMessage {
-            object_id,
             s3_object_id,
-            public_id,
             event_time,
             bucket,
             key,
@@ -126,9 +120,7 @@ impl TransposedS3EventMessages {
             ..
         } = message;
 
-        self.object_ids.push(object_id);
         self.s3_object_ids.push(s3_object_id);
-        self.public_ids.push(public_id);
         self.event_times.push(event_time);
         self.buckets.push(bucket);
         self.keys.push(key);
@@ -165,9 +157,7 @@ impl From<FlatS3EventMessages> for TransposedS3EventMessages {
 impl From<TransposedS3EventMessages> for FlatS3EventMessages {
     fn from(messages: TransposedS3EventMessages) -> Self {
         let zip = izip!(
-            messages.object_ids,
             messages.s3_object_ids,
-            messages.public_ids,
             messages.event_times,
             messages.buckets,
             messages.keys,
@@ -183,9 +173,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
         )
         .map(
             |(
-                object_id,
                 s3_object_id,
-                public_id,
                 event_time,
                 bucket,
                 key,
@@ -200,9 +188,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                 is_delete_marker,
             )| {
                 FlatS3EventMessage {
-                    object_id,
                     s3_object_id,
-                    public_id,
                     sequencer,
                     bucket,
                     key,
@@ -435,9 +421,7 @@ impl FlatS3EventMessages {
 /// A flattened AWS S3 record
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default)]
 pub struct FlatS3EventMessage {
-    pub object_id: Uuid,
     pub s3_object_id: Uuid,
-    pub public_id: Uuid,
     pub sequencer: Option<String>,
     pub bucket: String,
     pub key: String,
@@ -457,17 +441,12 @@ pub struct FlatS3EventMessage {
 impl FlatS3EventMessage {
     /// Create an event with a newly generated s3_object_id.
     pub fn new_with_generated_id() -> Self {
-        Self::default()
-            .with_s3_object_id(UuidGenerator::generate())
-            .with_object_id(UuidGenerator::generate())
-            .with_public_id(UuidGenerator::generate())
+        Self::default().with_s3_object_id(UuidGenerator::generate())
     }
 
     /// Create an event with a newly generated s3_object_id.
     pub fn regenerate_ids(mut self) -> Self {
-        self.object_id = UuidGenerator::generate();
         self.s3_object_id = UuidGenerator::generate();
-        self.public_id = UuidGenerator::generate();
         self
     }
 
@@ -510,18 +489,6 @@ impl FlatS3EventMessage {
     /// Set the s3 object id.
     pub fn with_s3_object_id(mut self, s3_object_id: Uuid) -> Self {
         self.s3_object_id = s3_object_id;
-        self
-    }
-
-    /// Set the object group id.
-    pub fn with_object_id(mut self, object_id: Uuid) -> Self {
-        self.object_id = object_id;
-        self
-    }
-
-    /// Set the public id.
-    pub fn with_public_id(mut self, public_id: Uuid) -> Self {
-        self.public_id = public_id;
         self
     }
 

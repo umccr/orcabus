@@ -7,8 +7,7 @@ use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{openapi, Modify, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::database::entities::object::Model as FileObject;
-use crate::database::entities::s3_object::Model as FileS3Object;
+use crate::database::entities::s3_object::Model as S3;
 use crate::database::entities::sea_orm_active_enums::EventType;
 use crate::database::entities::sea_orm_active_enums::StorageClass;
 use crate::routes::error::ErrorResponse;
@@ -32,22 +31,16 @@ pub struct Json(pub Value);
 #[derive(Debug, OpenApi)]
 #[openapi(
     paths(
-        list_objects,
-        get_object_by_id,
-        count_objects,
-        list_s3_objects,
-        get_s3_object_by_id,
-        count_s3_objects,
+        list_s3,
+        get_s3_by_id,
+        count_s3,
         ingest_from_sqs,
-        update_object_attributes,
-        update_object_collection_attributes,
-        update_s3_object_attributes,
-        update_s3_object_collection_attributes,
+        update_s3_attributes,
+        update_s3_collection_attributes,
     ),
     components(
         schemas(
-            FileS3Object,
-            FileObject,
+            S3,
             StorageClass,
             EventType,
             ErrorResponse,
@@ -56,8 +49,7 @@ pub struct Json(pub Value);
             DateTimeWithTimeZone,
             Wildcard,
             Json,
-            ListResponseObject,
-            ListResponseS3Object,
+            ListResponseS3,
             PatchBody,
             Patch,
         )

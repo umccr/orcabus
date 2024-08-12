@@ -1,13 +1,12 @@
 //! Route logic for list API calls.
 //!
 
-use crate::database::entities::object::Model as FileObject;
-use crate::database::entities::s3_object::Model as FileS3Object;
-use crate::database::entities::{object, s3_object};
+use crate::database::entities::s3_object;
+use crate::database::entities::s3_object::Model as S3;
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
-use crate::routes::filter::{ObjectsFilter, S3ObjectsFilter};
+use crate::routes::filter::S3ObjectsFilter;
 use crate::routes::pagination::Pagination;
 use crate::routes::AppState;
 use axum::extract::{Query, State};
@@ -38,7 +37,7 @@ impl ListCount {
 
 /// The response type for list operations.
 #[derive(Debug, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
-#[aliases(ListResponseObject = ListResponse<FileObject>, ListResponseS3Object = ListResponse<FileS3Object>)]
+#[aliases(ListResponseS3 = ListResponse<S3>)]
 pub struct ListResponse<M> {
     /// The results of the list operation.
     results: Vec<M>,
@@ -90,57 +89,6 @@ impl WildcardParams {
     }
 }
 
-/// List all objects according to the parameters.
-#[utoipa::path(
-    get,
-    path = "/objects",
-    responses(
-        (status = OK, description = "The collection of objects", body = ListResponseObject),
-        ErrorStatusCode,
-    ),
-    params(Pagination, WildcardParams, ObjectsFilter),
-    context_path = "/api/v1",
-    tag = "list",
-)]
-pub async fn list_objects(
-    state: State<AppState>,
-    Query(pagination): Query<Pagination>,
-    Query(wildcard): Query<WildcardParams>,
-    QsQuery(filter_all): QsQuery<ObjectsFilter>,
-) -> Result<Json<ListResponse<FileObject>>> {
-    let response = ListQueryBuilder::<_, object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all, wildcard.case_sensitive())
-        .paginate_to_list_response(pagination)
-        .await?;
-
-    Ok(Json(response))
-}
-
-/// Count all objects according to the parameters.
-#[utoipa::path(
-    get,
-    path = "/objects/count",
-    responses(
-        (status = OK, description = "The count of objects", body = ListCount),
-        ErrorStatusCode,
-    ),
-    params(WildcardParams, ObjectsFilter),
-    context_path = "/api/v1",
-    tag = "list",
-)]
-pub async fn count_objects(
-    state: State<AppState>,
-    Query(wildcard): Query<WildcardParams>,
-    QsQuery(filter_all): QsQuery<ObjectsFilter>,
-) -> Result<Json<ListCount>> {
-    let response = ListQueryBuilder::<_, object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all, wildcard.case_sensitive())
-        .to_list_count()
-        .await?;
-
-    Ok(Json(response))
-}
-
 /// The default case sensitivity for s3 object filter queries.
 pub fn default_case_sensitivity() -> bool {
     true
@@ -150,7 +98,7 @@ pub fn default_case_sensitivity() -> bool {
 #[derive(Debug, Deserialize, Default, IntoParams)]
 #[serde(default)]
 #[into_params(parameter_in = Query)]
-pub struct ListS3ObjectsParams {
+pub struct ListS3Params {
     /// Fetch the current state of objects in storage.
     /// This ensures that only `Created` events which represent current
     /// objects in storage are returned, and any historical `Deleted`
@@ -163,7 +111,7 @@ pub struct ListS3ObjectsParams {
     current_state: bool,
 }
 
-impl ListS3ObjectsParams {
+impl ListS3Params {
     /// Create the current state struct.
     pub fn new(current_state: bool) -> Self {
         Self { current_state }
@@ -183,17 +131,17 @@ impl ListS3ObjectsParams {
         (status = OK, description = "The collection of s3_objects", body = ListResponseS3Object),
         ErrorStatusCode,
     ),
-    params(Pagination, WildcardParams, ListS3ObjectsParams, S3ObjectsFilter),
+    params(Pagination, WildcardParams, ListS3Params, S3ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
-pub async fn list_s3_objects(
+pub async fn list_s3(
     state: State<AppState>,
     Query(pagination): Query<Pagination>,
     Query(wildcard): Query<WildcardParams>,
-    Query(list): Query<ListS3ObjectsParams>,
+    Query(list): Query<ListS3Params>,
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
-) -> Result<Json<ListResponse<FileS3Object>>> {
+) -> Result<Json<ListResponse<S3>>> {
     let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
         .filter_all(filter_all, wildcard.case_sensitive());
 
@@ -212,14 +160,14 @@ pub async fn list_s3_objects(
         (status = OK, description = "The count of s3 objects", body = ListCount),
         ErrorStatusCode,
     ),
-    params(WildcardParams, ListS3ObjectsParams, S3ObjectsFilter),
+    params(WildcardParams, ListS3Params, S3ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
-pub async fn count_s3_objects(
+pub async fn count_s3(
     state: State<AppState>,
     Query(wildcard): Query<WildcardParams>,
-    Query(list): Query<ListS3ObjectsParams>,
+    Query(list): Query<ListS3Params>,
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
     let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
@@ -235,10 +183,8 @@ pub async fn count_s3_objects(
 /// The router for list objects.
 pub fn list_router() -> Router<AppState> {
     Router::new()
-        .route("/objects", get(list_objects))
-        .route("/objects/count", get(count_objects))
-        .route("/s3_objects", get(list_s3_objects))
-        .route("/s3_objects/count", get(count_s3_objects))
+        .route("/s3_objects", get(list_s3))
+        .route("/s3_objects/count", get(count_s3))
 }
 
 #[cfg(test)]
@@ -263,44 +209,7 @@ pub(crate) mod tests {
     use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_objects_api(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let entries = EntriesBuilder::default()
-            .build(state.client())
-            .await
-            .objects;
-
-        let result: ListResponse<FileObject> = response_from_get(state, "/objects").await;
-        assert!(result.next_page.is_none());
-        assert_eq!(result.results, entries);
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_objects_api_filter_attributes(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let entries = EntriesBuilder::default()
-            .build(state.client())
-            .await
-            .objects;
-
-        let result: ListResponse<FileObject> =
-            response_from_get(state.clone(), "/objects?attributes[attribute_id]=1").await;
-        assert_eq!(result.results, vec![entries[1].clone()]);
-
-        let result: ListResponse<FileObject> = response_from_get(
-            state.clone(),
-            "/objects?attributes[nested_id][attribute_id]=2",
-        )
-        .await;
-        assert_eq!(result.results, vec![entries[2].clone()]);
-
-        let result: ListResponse<FileObject> =
-            response_from_get(state.clone(), "/objects?attributes[non_existent_id]=1").await;
-        assert!(result.results.is_empty());
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_objects_api(pool: PgPool) {
+    async fn list_s3_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -308,13 +217,13 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<FileS3Object> = response_from_get(state, "/s3_objects").await;
+        let result: ListResponse<S3> = response_from_get(state, "/s3_objects").await;
         assert!(result.next_page.is_none());
         assert_eq!(result.results, entries);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_current_s3_objects_paginate(pool: PgPool) {
+    async fn list_current_s3_paginate(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_bucket_divisor(4)
@@ -324,14 +233,14 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<FileS3Object> =
+        let result: ListResponse<S3> =
             response_from_get(state, "/s3_objects?current_state=true&page_size=1&page=0").await;
         assert_eq!(result.next_page, Some(1));
         assert_eq!(result.results, vec![entries[2].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_current_s3_objects_filter(pool: PgPool) {
+    async fn list_current_s3_filter(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_n(30)
@@ -341,7 +250,7 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<FileS3Object> = response_from_get(
+        let result: ListResponse<S3> = response_from_get(
             state,
             "/s3_objects?current_state=true&size=4&page_size=1&page=0",
         )
@@ -351,7 +260,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_objects_filter_event_type(pool: PgPool) {
+    async fn list_s3_filter_event_type(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -359,7 +268,7 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<FileS3Object> =
+        let result: ListResponse<S3> =
             response_from_get(state, "/s3_objects?event_type=Deleted").await;
         assert_eq!(result.results().len(), 5);
         assert_eq!(
@@ -369,7 +278,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_objects_multiple_filters(pool: PgPool) {
+    async fn list_s3_multiple_filters(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -377,13 +286,12 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<FileS3Object> =
-            response_from_get(state, "/s3_objects?bucket=1&key=2").await;
+        let result: ListResponse<S3> = response_from_get(state, "/s3_objects?bucket=1&key=2").await;
         assert_eq!(result.results, vec![entries[2].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_objects_filter_attributes(pool: PgPool) {
+    async fn list_s3_filter_attributes(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -391,35 +299,35 @@ pub(crate) mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<FileS3Object> =
+        let result: ListResponse<S3> =
             response_from_get(state.clone(), "/s3_objects?attributes[attribute_id]=1").await;
         assert_eq!(result.results, vec![entries[1].clone()]);
 
-        let result: ListResponse<FileS3Object> = response_from_get(
+        let result: ListResponse<S3> = response_from_get(
             state.clone(),
             "/s3_objects?attributes[nested_id][attribute_id]=4",
         )
         .await;
         assert_eq!(result.results, vec![entries[4].clone()]);
 
-        let result: ListResponse<FileS3Object> =
+        let result: ListResponse<S3> =
             response_from_get(state.clone(), "/s3_objects?attributes[non_existent_id]=1").await;
         assert!(result.results.is_empty());
 
-        let result: ListResponse<FileS3Object> = response_from_get(
+        let result: ListResponse<S3> = response_from_get(
             state.clone(),
             "/s3_objects?attributes[attribute_id]=1&key=2",
         )
         .await;
         assert!(result.results.is_empty());
 
-        let result: ListResponse<FileS3Object> =
+        let result: ListResponse<S3> =
             response_from_get(state, "/s3_objects?attributes[attribute_id]=1&key=1").await;
         assert_eq!(result.results, vec![entries[1].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_objects_filter_attributes(pool: PgPool) {
+    async fn list_s3_filter_attributes_wildcard(pool: PgPool) {
         let state = AppState::from_pool(pool);
         let mut entries = EntriesBuilder::default().build(state.client()).await;
 
@@ -437,62 +345,24 @@ pub(crate) mod tests {
             json!({"attribute_id": "attribute_id"}),
         );
 
-        let s3_objects: ListResponse<FileS3Object> =
+        let s3_objects: ListResponse<S3> =
             response_from_get(state.clone(), "/s3_objects?attributes[attribute_id]=%a%").await;
-        let objects: ListResponse<FileObject> =
-            response_from_get(state.clone(), "/objects?attributes[attribute_id]=%a%").await;
-        assert_contains(&objects.results, &s3_objects.results, &entries, 0..2);
+        assert_contains(&s3_objects.results, &entries, 0..2);
 
-        let s3_objects: ListResponse<FileS3Object> =
+        let s3_objects: ListResponse<S3> =
             response_from_get(state.clone(), "/s3_objects?attributes[attribute_id]=%A%").await;
-        let objects: ListResponse<FileObject> =
-            response_from_get(state.clone(), "/objects?attributes[attribute_id]=%A%").await;
         assert!(s3_objects.results.is_empty());
-        assert!(objects.results.is_empty());
 
-        let s3_objects: ListResponse<FileS3Object> = response_from_get(
+        let s3_objects: ListResponse<S3> = response_from_get(
             state.clone(),
             "/s3_objects?attributes[attribute_id]=%A%&case_sensitive=false",
         )
         .await;
-        let objects: ListResponse<FileObject> = response_from_get(
-            state.clone(),
-            "/objects?attributes[attribute_id]=%A%&case_sensitive=false",
-        )
-        .await;
-        assert_contains(&objects.results, &s3_objects.results, &entries, 0..2);
+        assert_contains(&s3_objects.results, &entries, 0..2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn count_objects_api(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        EntriesBuilder::default()
-            .with_shuffle(true)
-            .build(state.client())
-            .await;
-
-        let result: ListCount = response_from_get(state, "/objects/count").await;
-        assert_eq!(result.n_records, 10);
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn count_objects_api_filter(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        EntriesBuilder::default()
-            .with_shuffle(true)
-            .build(state.client())
-            .await;
-
-        let result: ListCount = response_from_get(
-            state,
-            "/objects/count?attributes[nested_id][attribute_id]=0",
-        )
-        .await;
-        assert_eq!(result.n_records, 1);
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn count_s3_objects_api(pool: PgPool) {
+    async fn count_s3_api(pool: PgPool) {
         let state = AppState::from_pool(pool);
         EntriesBuilder::default()
             .with_shuffle(true)
@@ -504,7 +374,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn count_s3_objects_api_filter(pool: PgPool) {
+    async fn count_s3_api_filter(pool: PgPool) {
         let state = AppState::from_pool(pool);
         EntriesBuilder::default()
             .with_shuffle(true)
@@ -516,7 +386,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn count_s3_objects_api_current_state(pool: PgPool) {
+    async fn count_s3_api_current_state(pool: PgPool) {
         let state = AppState::from_pool(pool);
         EntriesBuilder::default()
             .with_bucket_divisor(4)

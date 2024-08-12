@@ -2,9 +2,8 @@
 //!
 
 use chrono::{DateTime, Utc};
-use sqlx::{query_file, query_file_as};
+use sqlx::query_file;
 use tracing::debug;
-use uuid::Uuid;
 
 use crate::database::{Client, CredentialGenerator};
 use crate::env::Config;
@@ -16,13 +15,6 @@ use crate::events::aws::{StorageClass, TransposedS3EventMessages};
 #[derive(Debug)]
 pub struct Ingester {
     pub(crate) client: Client,
-}
-
-/// The type representing an insert query.
-#[derive(Debug)]
-struct Insert {
-    object_id: Uuid,
-    number_duplicate_events: i64,
 }
 
 impl Ingester {
@@ -39,32 +31,6 @@ impl Ingester {
         Ok(Self::new(Client::from_generator(generator, config).await?))
     }
 
-    /// Reprocess inserts to find object ids that are not duplicates from the inserted events.
-    fn reprocess_inserts(object_ids: Vec<Uuid>, inserted: &mut Vec<Insert>) -> Vec<Uuid> {
-        object_ids
-            .into_iter()
-            .rev()
-            .flat_map(|object_id| {
-                // If we cannot find the object in our new ids, this object already exists.
-                let pos = inserted.iter().rposition(|record| {
-                    // This will never be `None`, maybe this is an sqlx bug?
-                    record.object_id == object_id
-                })?;
-
-                // We can remove this to avoid searching over it again.
-                let record = inserted.remove(pos);
-                debug!(
-                    object_id = ?record.object_id,
-                    number_duplicate_events = record.number_duplicate_events,
-                    "duplicate event found"
-                );
-
-                // This is a new event so the corresponding object should be inserted.
-                Some(object_id)
-            })
-            .collect()
-    }
-
     /// Ingest the events into the database by calling the insert and update queries.
     pub async fn ingest_events(&self, events: TransposedS3EventMessages) -> Result<()> {
         let mut tx = self.client().pool().begin().await?;
@@ -73,12 +39,9 @@ impl Ingester {
                 s3_object_ids = ?events.s3_object_ids,
                 "inserting events into s3_object table"
         );
-        let mut inserted = query_file_as!(
-            Insert,
+        query_file!(
             "../database/queries/ingester/aws/insert_s3_objects.sql",
-            &events.object_ids,
             &events.s3_object_ids,
-            &events.public_ids,
             &events.buckets,
             &events.keys,
             &events.event_times as &[Option<DateTime<Utc>>],
@@ -95,22 +58,6 @@ impl Ingester {
         .fetch_all(&mut *tx)
         .await?;
 
-        let object_ids = Self::reprocess_inserts(events.object_ids, &mut inserted);
-        // Insert only the non duplicate events.
-        if !object_ids.is_empty() {
-            debug!(
-                object_ids = ?object_ids,
-                "inserting events into object table"
-            );
-
-            query_file!(
-                "../database/queries/ingester/insert_objects.sql",
-                &object_ids,
-            )
-            .execute(&mut *tx)
-            .await?;
-        }
-
         tx.commit().await?;
 
         Ok(())
@@ -124,14 +71,11 @@ impl Ingester {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::ops::Add;
-
     use chrono::{DateTime, Utc};
     use itertools::Itertools;
     use sqlx::postgres::PgRow;
     use sqlx::{Executor, PgPool, Row};
     use tokio::time::Instant;
-    use uuid::Uuid;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
@@ -156,9 +100,8 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
         assert_created(&s3_object_results[0]);
     }
@@ -174,9 +117,8 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events.into())).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
 
         let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true, Created);
@@ -195,9 +137,8 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
 
         let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true, Created);
@@ -229,9 +170,8 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 1);
         assert_eq!(s3_object_results.len(), 1);
         assert_with(
             &s3_object_results[0],
@@ -250,9 +190,8 @@ pub(crate) mod tests {
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_ingest_events(
             &s3_object_results[0],
@@ -264,18 +203,11 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_duplicates(pool: PgPool) {
         let ingester = test_ingester(pool);
-        ingester
-            .ingest(EventSourceType::S3(test_events(None)))
-            .await
-            .unwrap();
-        ingester
-            .ingest(EventSourceType::S3(test_events(None)))
-            .await
-            .unwrap();
+        ingester.ingest(S3(test_events(None))).await.unwrap();
+        ingester.ingest(S3(test_events(None))).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_eq!(
             1,
@@ -308,14 +240,10 @@ pub(crate) mod tests {
             .into_iter()
             .for_each(|event| events_one.push(event));
 
-        ingester
-            .ingest(EventSourceType::S3(events_one))
-            .await
-            .unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 3);
         assert_eq!(s3_object_results.len(), 3);
         assert_missing_deleted(
             &s3_object_results[0],
@@ -348,14 +276,10 @@ pub(crate) mod tests {
             .into_iter()
             .for_each(|event| events_one.push(event));
 
-        ingester
-            .ingest(EventSourceType::S3(events_one))
-            .await
-            .unwrap();
+        ingester.ingest(S3(events_one)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 3);
         assert_eq!(s3_object_results.len(), 3);
         assert_missing_created(
             &s3_object_results[0],
@@ -373,60 +297,21 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_reordered_duplicates(pool: PgPool) {
-        let ingester = test_ingester(pool);
-        ingester
-            .ingest(EventSourceType::S3(test_events(None)))
-            .await
-            .unwrap();
-
-        // No reason the order should matter if they are duplicates
-        ingester
-            .ingest(EventSourceType::S3(test_events(Some(Deleted))))
-            .await
-            .unwrap();
-        ingester
-            .ingest(EventSourceType::S3(test_events(Some(Created))))
-            .await
-            .unwrap();
-
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
-
-        assert_eq!(object_results.len(), 2);
-        assert_eq!(s3_object_results.len(), 2);
-        assert_eq!(
-            1,
-            s3_object_results[0].get::<i64, _>("number_duplicate_events")
-        );
-        assert_eq!(
-            1,
-            s3_object_results[1].get::<i64, _>("number_duplicate_events")
-        );
-        // Ordering of entries should change because of the on conflict update.
-        assert_ingest_events(
-            &s3_object_results[1],
-            &s3_object_results[0],
-            EXPECTED_VERSION_ID,
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_reorder(pool: PgPool) {
         let ingester = test_ingester(pool);
 
         // Deleted coming before created.
         ingester
-            .ingest(EventSourceType::S3(test_events(Some(Deleted))))
+            .ingest(S3(test_events(Some(Deleted))))
             .await
             .unwrap();
         ingester
-            .ingest(EventSourceType::S3(test_events(Some(Created))))
+            .ingest(S3(test_events(Some(Created))))
             .await
             .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         // Order should be different here.
         assert_ingest_events(
@@ -446,102 +331,14 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_reorder_different_update_field(pool: PgPool) {
-        let ingester = test_ingester(pool);
-        let events = test_events(None);
-        // Regular ingest.
-        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
-
-        let mut sequencer = EXPECTED_SEQUENCER_CREATED_ONE.to_string();
-        sequencer.pop().unwrap();
-        sequencer.push('5');
-        let mut events =
-            replace_sequencers(test_events(Some(Created)), Some(sequencer.to_string()));
-        // Ingest with a different.
-        events.sha256s[0] = None;
-        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
-
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
-
-        assert_eq!(object_results.len(), 3);
-        assert_eq!(s3_object_results.len(), 3);
-        assert_ingest_events(
-            &s3_object_results[0],
-            &s3_object_results[1],
-            EXPECTED_VERSION_ID,
-        );
-
-        // It's expected that a null field is present in the next event.
-        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created)
-            .with_sha256(None);
-        assert_row(
-            &s3_object_results[2],
-            message,
-            Some(sequencer.to_string()),
-            Some(Default::default()),
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_reorder_and_duplicates_complex(pool: PgPool) {
-        let ingester = test_ingester(pool);
-        ingester
-            .ingest(EventSourceType::S3(test_events(None)))
-            .await
-            .unwrap();
-
-        let event = expected_flat_events_simple().sort_and_dedup().into_inner();
-        let mut event = event[0].clone();
-        event.sequencer = Some(event.sequencer.unwrap().add("7"));
-
-        let mut events = vec![event];
-        events.extend(expected_flat_events_simple().sort_and_dedup().into_inner());
-
-        let events = update_test_events(FlatS3EventMessages(events).into());
-        // This also checks to make sure that the update duplicate constraint succeeds.
-        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
-
-        let s3_object_results = fetch_results_ordered(&ingester).await;
-
-        assert_eq!(s3_object_results.len(), 3);
-        assert_eq!(
-            1,
-            s3_object_results[0].get::<i64, _>("number_duplicate_events")
-        );
-        assert_eq!(
-            0,
-            s3_object_results[1].get::<i64, _>("number_duplicate_events")
-        );
-        assert_eq!(
-            1,
-            s3_object_results[2].get::<i64, _>("number_duplicate_events")
-        );
-
-        assert_ingest_events(
-            &s3_object_results[0],
-            &s3_object_results[2],
-            EXPECTED_VERSION_ID,
-        );
-        assert_with(
-            &s3_object_results[1],
-            Some(0),
-            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string().add("7")),
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-            Created,
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_without_version_id(pool: PgPool) {
         let ingester = test_ingester(pool);
         let events = remove_version_ids(test_events(None));
 
-        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
+        ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_ingest_events(
             &s3_object_results[0],
@@ -554,56 +351,15 @@ pub(crate) mod tests {
     async fn ingest_duplicates_without_version_id(pool: PgPool) {
         let ingester = test_ingester(pool);
         ingester
-            .ingest(EventSourceType::S3(remove_version_ids(test_events(None))))
+            .ingest(S3(remove_version_ids(test_events(None))))
             .await
             .unwrap();
         ingester
-            .ingest(EventSourceType::S3(remove_version_ids(test_events(None))))
+            .ingest(S3(remove_version_ids(test_events(None))))
             .await
             .unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
-
-        assert_eq!(object_results.len(), 2);
-        assert_eq!(s3_object_results.len(), 2);
-        assert_eq!(
-            1,
-            s3_object_results[0].get::<i64, _>("number_duplicate_events")
-        );
-        assert_eq!(
-            1,
-            s3_object_results[1].get::<i64, _>("number_duplicate_events")
-        );
-        assert_ingest_events(
-            &s3_object_results[0],
-            &s3_object_results[1],
-            &default_version_id(),
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_reordered_duplicates_without_version_id(pool: PgPool) {
-        let ingester = test_ingester(pool);
-        ingester
-            .ingest(EventSourceType::S3(remove_version_ids(test_events(None))))
-            .await
-            .unwrap();
-
-        // No reason the order should matter if they are duplicates
-        ingester
-            .ingest(EventSourceType::S3(remove_version_ids(test_events(Some(
-                Deleted,
-            )))))
-            .await
-            .unwrap();
-        ingester
-            .ingest(EventSourceType::S3(remove_version_ids(test_events(Some(
-                Created,
-            )))))
-            .await
-            .unwrap();
-
-        let s3_object_results = fetch_results_ordered(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 2);
         assert_eq!(
@@ -614,34 +370,6 @@ pub(crate) mod tests {
             1,
             s3_object_results[1].get::<i64, _>("number_duplicate_events")
         );
-        assert_ingest_events(
-            &s3_object_results[0],
-            &s3_object_results[1],
-            &default_version_id(),
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_reorder_without_version_id(pool: PgPool) {
-        let ingester = test_ingester(pool);
-
-        // Deleted coming before created.
-        ingester
-            .ingest(EventSourceType::S3(remove_version_ids(test_events(Some(
-                Deleted,
-            )))))
-            .await
-            .unwrap();
-        ingester
-            .ingest(EventSourceType::S3(remove_version_ids(test_events(Some(
-                Created,
-            )))))
-            .await
-            .unwrap();
-
-        let s3_object_results = fetch_results_ordered(&ingester).await;
-
-        assert_eq!(s3_object_results.len(), 2);
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
@@ -652,10 +380,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_duplicates_with_version_id(pool: PgPool) {
         let ingester = test_ingester(pool);
-        ingester
-            .ingest(EventSourceType::S3(test_events(None)))
-            .await
-            .unwrap();
+        ingester.ingest(S3(test_events(None))).await.unwrap();
 
         let event = expected_flat_events_simple().sort_and_dedup().into_inner();
         let mut event = event[0].clone();
@@ -666,11 +391,10 @@ pub(crate) mod tests {
 
         let events = update_test_events(FlatS3EventMessages(events).into());
 
-        ingester.ingest(EventSourceType::S3(events)).await.unwrap();
+        ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 3);
         assert_eq!(s3_object_results.len(), 3);
         assert_eq!(
             0,
@@ -715,9 +439,8 @@ pub(crate) mod tests {
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_missing_deleted(
             &s3_object_results[0],
@@ -767,9 +490,8 @@ pub(crate) mod tests {
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_missing_created(
             &s3_object_results[0],
@@ -805,108 +527,6 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_object_missing_deleted_without_version_id(pool: PgPool) {
-        let ingester = test_ingester(pool);
-
-        let events_one = remove_version_ids(test_events(Some(Created)));
-
-        // New created event with a higher sequencer.
-        let events_two = remove_version_ids(replace_sequencers(
-            test_events(Some(Created)),
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-        ));
-
-        ingester.ingest(S3(events_one)).await.unwrap();
-        ingester.ingest(S3(events_two)).await.unwrap();
-
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
-
-        assert_eq!(object_results.len(), 2);
-        assert_eq!(s3_object_results.len(), 2);
-        assert_missing_deleted(
-            &s3_object_results[0],
-            &s3_object_results[1],
-            &default_version_id(),
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_object_missing_deleted_reorder_without_version_id(pool: PgPool) {
-        let ingester = test_ingester(pool);
-
-        let events_one = remove_version_ids(test_events(Some(Created)));
-
-        // New created event with a higher sequencer.
-        let events_two = remove_version_ids(replace_sequencers(
-            test_events(Some(Created)),
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
-        ));
-
-        ingester.ingest(S3(events_two)).await.unwrap();
-        ingester.ingest(S3(events_one)).await.unwrap();
-
-        let s3_object_results = fetch_results_ordered(&ingester).await;
-
-        assert_eq!(s3_object_results.len(), 2);
-        assert_missing_deleted(
-            &s3_object_results[0],
-            &s3_object_results[1],
-            &default_version_id(),
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_object_missing_created_without_version_id(pool: PgPool) {
-        let ingester = test_ingester(pool);
-
-        let events_one = remove_version_ids(test_events(Some(Deleted)));
-
-        // New deleted event with a higher sequencer.
-        let events_two = remove_version_ids(replace_sequencers(
-            test_events(Some(Deleted)),
-            Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
-        ));
-
-        ingester.ingest(S3(events_one)).await.unwrap();
-        ingester.ingest(S3(events_two)).await.unwrap();
-
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
-
-        assert_eq!(object_results.len(), 2);
-        assert_eq!(s3_object_results.len(), 2);
-        assert_missing_created(
-            &s3_object_results[0],
-            &s3_object_results[1],
-            &default_version_id(),
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_object_missing_created_reorder_without_version_id(pool: PgPool) {
-        let ingester = test_ingester(pool);
-
-        let events_one = remove_version_ids(test_events(Some(Deleted)));
-
-        // New deleted event with a higher sequencer.
-        let events_two = remove_version_ids(replace_sequencers(
-            test_events(Some(Deleted)),
-            Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
-        ));
-
-        ingester.ingest(S3(events_two)).await.unwrap();
-        ingester.ingest(S3(events_one)).await.unwrap();
-
-        let s3_object_results = fetch_results_ordered(&ingester).await;
-
-        assert_eq!(s3_object_results.len(), 2);
-        assert_missing_created(
-            &s3_object_results[0],
-            &s3_object_results[1],
-            &default_version_id(),
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_no_sequencer_created(pool: PgPool) {
         let ingester = test_ingester(pool);
 
@@ -916,9 +536,8 @@ pub(crate) mod tests {
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_with(
             &s3_object_results[0],
@@ -948,9 +567,8 @@ pub(crate) mod tests {
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_with(
             &s3_object_results[0],
@@ -977,9 +595,8 @@ pub(crate) mod tests {
         let events = replace_sequencers(test_events(None), None);
         ingester.ingest(S3(events)).await.unwrap();
 
-        let (object_results, s3_object_results) = fetch_results(&ingester).await;
+        let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(object_results.len(), 2);
         assert_eq!(s3_object_results.len(), 2);
         assert_with(
             &s3_object_results[0],
@@ -1301,7 +918,7 @@ pub(crate) mod tests {
             row_asserts(s3_object_results);
 
             // Clean up for next permutation.
-            pool.execute("truncate s3_object, object").await.unwrap();
+            pool.execute("truncate s3_object").await.unwrap();
         }
 
         println!(
@@ -1371,17 +988,11 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) async fn fetch_results<'a>(client: &Client) -> (Vec<PgRow>, Vec<PgRow>) {
-        (
-            sqlx::query("select * from object")
-                .fetch_all(client.pool())
-                .await
-                .unwrap(),
-            sqlx::query("select * from s3_object")
-                .fetch_all(client.pool())
-                .await
-                .unwrap(),
-        )
+    pub(crate) async fn fetch_results<'a>(client: &Client) -> Vec<PgRow> {
+        sqlx::query("select * from s3_object")
+            .fetch_all(client.pool())
+            .await
+            .unwrap()
     }
 
     pub(crate) async fn fetch_results_ordered<'a>(client: &Client) -> Vec<PgRow> {
@@ -1408,10 +1019,6 @@ pub(crate) mod tests {
         sequencer: Option<String>,
         date: Option<DateTime<Utc>>,
     ) {
-        assert_ne!(
-            s3_object_results.get::<Uuid, _>("s3_object_id"),
-            s3_object_results.get::<Uuid, _>("public_id")
-        );
         assert_eq!(message.bucket, s3_object_results.get::<String, _>("bucket"));
         assert_eq!(message.key, s3_object_results.get::<String, _>("key"));
         assert_eq!(
