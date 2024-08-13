@@ -9,6 +9,10 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
+def version_endpoint(ep: str):
+    return "api/v1/" + ep
+
+
 class LabViewSetTestCase(TestCase):
     def setUp(self):
         insert_mock_1()
@@ -35,7 +39,7 @@ class LabViewSetTestCase(TestCase):
         ]
 
         for model in model_to_check:
-            path = model["path"]
+            path = version_endpoint(model['path'])
 
             logger.info(f"check API path for '{path}'")
             response = self.client.get(f"/{path}/")
@@ -65,7 +69,7 @@ class LabViewSetTestCase(TestCase):
         """
         python manage.py test app.tests.test_viewsets.LabViewSetTestCase.test_library_full_model_api
         """
-        path = 'library/full'
+        path = version_endpoint('library/full')
 
         logger.info(f"check API path for '{path}'")
         response = self.client.get(f"/{path}/")
@@ -90,7 +94,7 @@ class LabViewSetTestCase(TestCase):
         """
         python manage.py test app.tests.test_viewsets.LabViewSetTestCase.test_subject_full_model_api
         """
-        path = 'subject/full'
+        path = version_endpoint('subject/full')
 
         logger.info(f"check API path for '{path}'")
         response = self.client.get(f"/{path}/")

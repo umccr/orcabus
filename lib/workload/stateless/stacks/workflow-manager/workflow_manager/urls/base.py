@@ -6,7 +6,7 @@ from workflow_manager.viewsets.workflow_run import WorkflowRunViewSet
 from workflow_manager.viewsets.payload import PayloadViewSet
 from workflow_manager.settings.base import API_VERSION
 
-api_namespace = "wfm"
+api_namespace = "api"
 api_version = API_VERSION
 api_base = f"{api_namespace}/{api_version}/"
 

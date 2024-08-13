@@ -11,6 +11,8 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = '__all__'
-    search_fields = ordering_fields
     ordering = ['-id']
-    queryset = WorkflowRun.objects.all()
+    search_fields = WorkflowRun.get_base_fields()
+
+    def get_queryset(self):
+        return WorkflowRun.objects.get_by_keyword(**self.request.query_params)
