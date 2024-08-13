@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class OrcaBusBaseManager(models.Manager):
+    def get_by_keyword(self, **kwargs) -> QuerySet:
+        qs: QuerySet = super().get_queryset()
+        return self.get_model_fields_query(qs, **kwargs)
 
     @staticmethod
     def reduce_multi_values_qor(key: str, values: List[str]):
