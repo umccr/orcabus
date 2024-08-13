@@ -40,6 +40,7 @@ make ps
 ```
 python manage.py help
 python manage.py showmigrations
+python manage.py makemigrations
 python manage.py migrate
 ```
 
@@ -73,17 +74,17 @@ python manage.py runserver_plus
 ```
 
 ```
-curl -s http://localhost:8000/wfm/v1/workflow | jq
+curl -s http://localhost:8000/api/v1/workflow | jq
 ```
 
 ```
-curl -s http://localhost:8000/wfm/v1/workflow/1 | jq
+curl -s http://localhost:8000/api/v1/workflow/1 | jq
 ```
 
 Or visit in browser:
-- http://localhost:8000/wfm/v1
-- http://localhost:8000/wfm/v1/workflow
-- http://localhost:8000/wfm/v1/workflow/1
+- http://localhost:8000/api/v1
+- http://localhost:8000/api/v1/workflow
+- http://localhost:8000/api/v1/workflow/1
 
 ### API Doc
 
