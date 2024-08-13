@@ -40,7 +40,7 @@ impl<T> WildcardEither<T> {
 /// and '_' for a single character. Use '\\' to escape these characters. Wildcards are converted to
 /// postgres `like` or `ilike` queries.
 #[derive(Serialize, Deserialize, Debug, Default, ToSchema, Eq, PartialEq)]
-#[serde(default)]
+#[serde(default, rename_all = "camelCase")]
 pub struct Wildcard(pub(crate) String);
 
 impl Wildcard {

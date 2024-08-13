@@ -28,8 +28,8 @@ use crate::routes::AppState;
 #[schema(
     example = json!({
         "attributes": [
-            { "op": "test", "path": "/attribute_id", "value": "1" },
-            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" }
+            { "op": "test", "path": "/attributeId", "value": "1" },
+            { "op": "replace", "path": "/attributeId", "value": "attributeId" }
         ]
     })
 )]
@@ -40,6 +40,7 @@ pub struct PatchBody {
 
 /// The JSON patch for attributes.
 #[derive(Debug, Deserialize, Default, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[schema(value_type = Value)]
 pub struct Patch(json_patch::Patch);
 

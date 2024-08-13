@@ -106,7 +106,7 @@ Case-insensitive wildcard matching, which gets converted to a postgres `ilike` s
 
 ```sh
 curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "key=temp\_data%" \
-"https://file.dev.umccr.org/api/v1/s3?case_sensitive=false" | jq
+"https://file.dev.umccr.org/api/v1/s3?caseSensitive=false" | jq
 ```
 
 Wildcard matching is also supported on attributes:

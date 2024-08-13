@@ -20,6 +20,7 @@ pub async fn fallback() -> impl IntoResponse {
 
 /// The error response format returned in the API.
 #[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct ErrorResponse {
     message: String,
 }

@@ -124,6 +124,7 @@ impl<M> ListResponse<M> {
 #[serde(default, rename_all = "camelCase")]
 pub struct PaginatedResponse {
     /// The total number of results in this paginated response.
+    #[schema(default = 0)]
     count: u64,
     #[serde(flatten)]
     pagination: Pagination,

@@ -5,7 +5,7 @@ The API Gateway endpoint is authorized via the OrcaBus bearer token. To access t
 the relevant token:
 
 ```sh
-curl -H "Authorization: Bearer $orcabus_api_token" https://file.<stage>.umccr.org/api/v1/s3_objects/count
+curl -H "Authorization: Bearer $orcabus_api_token" https://file.<stage>.umccr.org/api/v1/s3/count
 ```
 
 View the [API_GUIDE.md][api-guide] for more information about the filemanager API.
