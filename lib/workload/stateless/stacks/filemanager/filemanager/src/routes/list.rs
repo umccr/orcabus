@@ -3,17 +3,20 @@
 
 use crate::database::entities::s3_object;
 use crate::database::entities::s3_object::Model as S3;
+use crate::error::Error::{MissingHostHeader, ParseError};
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
 use crate::routes::filter::S3ObjectsFilter;
-use crate::routes::pagination::Pagination;
+use crate::routes::pagination::{ListResponse, Pagination};
 use crate::routes::AppState;
-use axum::extract::{Query, State};
+use axum::extract::{Query, Request, State};
+use axum::http::header::HOST;
 use axum::routing::get;
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use serde_qs::axum::QsQuery;
+use url::Url;
 use utoipa::{IntoParams, ToSchema};
 
 /// The return value for count operations showing the number of records in the database.
@@ -33,36 +36,6 @@ impl ListCount {
     /// Get the number of records.
     pub fn n_records(&self) -> u64 {
         self.n_records
-    }
-}
-
-/// The response type for list operations.
-#[derive(Debug, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
-#[serde(rename_all = "camelCase")]
-#[aliases(ListResponseS3 = ListResponse<S3>)]
-pub struct ListResponse<M> {
-    /// The results of the list operation.
-    results: Vec<M>,
-    /// The next page if fetching additional pages. Increments by 1 from 0.
-    /// Use this as the `page` parameter in the next request if fetching additional pages.
-    /// Empty if there are no more objects available in the collection.
-    next_page: Option<u64>,
-}
-
-impl<M> ListResponse<M> {
-    /// Create a new list response.
-    pub fn new(results: Vec<M>, next_page: Option<u64>) -> Self {
-        ListResponse { results, next_page }
-    }
-
-    /// Get the results.
-    pub fn results(&self) -> &[M] {
-        &self.results
-    }
-
-    /// Get the next page.
-    pub fn next_page(&self) -> Option<u64> {
-        self.next_page
     }
 }
 
@@ -143,6 +116,7 @@ pub async fn list_s3(
     Query(wildcard): Query<WildcardParams>,
     Query(list): Query<ListS3Params>,
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
+    request: Request,
 ) -> Result<Json<ListResponse<S3>>> {
     let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
         .filter_all(filter_all, wildcard.case_sensitive());
@@ -151,7 +125,18 @@ pub async fn list_s3(
         response = response.current_state();
     }
 
-    Ok(Json(response.paginate_to_list_response(pagination).await?))
+    let host: Url = request
+        .headers()
+        .get(HOST)
+        .ok_or_else(|| MissingHostHeader)?
+        .to_str()
+        .map_err(|err| ParseError(err.to_string()))?
+        .parse()?;
+    let url = host.join(&request.uri().to_string())?;
+
+    Ok(Json(
+        response.paginate_to_list_response(pagination, url).await?,
+    ))
 }
 
 /// Count all s3_objects according to the parameters.
@@ -200,6 +185,7 @@ pub(crate) mod tests {
     use sqlx::PgPool;
     use tower::ServiceExt;
 
+    use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::EventType;
     use crate::queries::list::tests::filter_event_type;
@@ -207,8 +193,7 @@ pub(crate) mod tests {
     use crate::queries::update::tests::{assert_contains, entries_many};
     use crate::queries::EntriesBuilder;
     use crate::routes::api_router;
-
-    use super::*;
+    use crate::routes::pagination::Links;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api(pool: PgPool) {
@@ -220,8 +205,8 @@ pub(crate) mod tests {
             .s3_objects;
 
         let result: ListResponse<S3> = response_from_get(state, "/s3").await;
-        assert!(result.next_page.is_none());
-        assert_eq!(result.results, entries);
+        assert_eq!(result.links(), &Links::new(None, None));
+        assert_eq!(result.results(), entries);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -236,9 +221,19 @@ pub(crate) mod tests {
             .s3_objects;
 
         let result: ListResponse<S3> =
-            response_from_get(state, "/s3?currentState=true&pageSize=1&page=0").await;
-        assert_eq!(result.next_page, Some(1));
-        assert_eq!(result.results, vec![entries[2].clone()]);
+            response_from_get(state, "/s3?currentState=true&rowsPerPage=1&page=0").await;
+        assert_eq!(
+            result.links(),
+            &Links::new(
+                None,
+                Some(
+                    "https://example.com/s3?currentState=true&rowsPerPage=1&page=1"
+                        .parse()
+                        .unwrap()
+                )
+            )
+        );
+        assert_eq!(result.results(), vec![entries[2].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -253,9 +248,9 @@ pub(crate) mod tests {
             .s3_objects;
 
         let result: ListResponse<S3> =
-            response_from_get(state, "/s3?currentState=true&size=4&pageSize=1&page=0").await;
-        assert!(result.next_page.is_none());
-        assert_eq!(result.results, vec![entries[24].clone()]);
+            response_from_get(state, "/s3?currentState=true&size=4&rowsPerPage=1&page=0").await;
+        assert_eq!(result.links(), &Links::new(None, None));
+        assert_eq!(result.results(), vec![entries[24].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -270,7 +265,7 @@ pub(crate) mod tests {
         let result: ListResponse<S3> = response_from_get(state, "/s3?eventType=Deleted").await;
         assert_eq!(result.results().len(), 5);
         assert_eq!(
-            result.results,
+            result.results(),
             filter_event_type(entries, EventType::Deleted)
         );
     }
@@ -285,7 +280,7 @@ pub(crate) mod tests {
             .s3_objects;
 
         let result: ListResponse<S3> = response_from_get(state, "/s3?bucket=1&key=2").await;
-        assert_eq!(result.results, vec![entries[2].clone()]);
+        assert_eq!(result.results(), vec![entries[2].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -299,23 +294,23 @@ pub(crate) mod tests {
 
         let result: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[attributeId]=1").await;
-        assert_eq!(result.results, vec![entries[1].clone()]);
+        assert_eq!(result.results(), vec![entries[1].clone()]);
 
         let result: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[nestedId][attributeId]=4").await;
-        assert_eq!(result.results, vec![entries[4].clone()]);
+        assert_eq!(result.results(), vec![entries[4].clone()]);
 
         let result: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[nonExistentId]=1").await;
-        assert!(result.results.is_empty());
+        assert!(result.results().is_empty());
 
         let result: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[attributeId]=1&key=2").await;
-        assert!(result.results.is_empty());
+        assert!(result.results().is_empty());
 
         let result: ListResponse<S3> =
             response_from_get(state, "/s3?attributes[attributeId]=1&key=1").await;
-        assert_eq!(result.results, vec![entries[1].clone()]);
+        assert_eq!(result.results(), vec![entries[1].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -335,18 +330,18 @@ pub(crate) mod tests {
 
         let s3_objects: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[attributeId]=%a%").await;
-        assert_contains(&s3_objects.results, &entries, 0..2);
+        assert_contains(s3_objects.results(), &entries, 0..2);
 
         let s3_objects: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[attributeId]=%A%").await;
-        assert!(s3_objects.results.is_empty());
+        assert!(s3_objects.results().is_empty());
 
         let s3_objects: ListResponse<S3> = response_from_get(
             state.clone(),
             "/s3?attributes[attributeId]=%A%&caseSensitive=false",
         )
         .await;
-        assert_contains(&s3_objects.results, &entries, 0..2);
+        assert_contains(s3_objects.results(), &entries, 0..2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -399,6 +394,7 @@ pub(crate) mod tests {
                 Request::builder()
                     .method(method)
                     .uri(uri)
+                    .header(HOST, "https://example.com")
                     .header(CONTENT_TYPE, "application/json")
                     .body(body)
                     .unwrap(),

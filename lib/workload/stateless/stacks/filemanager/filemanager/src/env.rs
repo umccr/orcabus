@@ -126,6 +126,6 @@ mod tests {
     fn test_environment_defaults() {
         let config: Config = from_iter(vec![]).unwrap();
 
-        assert_eq!(config, Default::default(),);
+        assert_eq!(config, Default::default());
     }
 }

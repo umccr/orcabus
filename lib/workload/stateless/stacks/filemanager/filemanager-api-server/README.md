@@ -8,3 +8,7 @@ make start
 ```
 
 Then, checkout the OpenAPI docs at: `http://localhost:8000/swagger-ui`.
+
+View the [API_GUIDE.md][api-guide] for more information about the filemanager API.
+
+[api-guide]: ../docs/API_GUIDE.md

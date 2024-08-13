@@ -1,6 +1,14 @@
 //! Query builder involving list operations on the database.
 //!
 
+use crate::database::entities::s3_object;
+use crate::error::Error::OverflowError;
+use crate::error::{Error, Result};
+use crate::routes::filter::wildcard::WildcardEither;
+use crate::routes::filter::S3ObjectsFilter;
+use crate::routes::list::ListCount;
+use crate::routes::pagination::{ListResponse, Pagination};
+
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
@@ -13,14 +21,7 @@ use sea_orm::{
     Select, Value,
 };
 use tracing::trace;
-
-use crate::database::entities::s3_object;
-use crate::error::Error::OverflowError;
-use crate::error::{Error, Result};
-use crate::routes::filter::wildcard::WildcardEither;
-use crate::routes::filter::S3ObjectsFilter;
-use crate::routes::list::{ListCount, ListResponse};
-use crate::routes::pagination::Pagination;
+use url::Url;
 
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
@@ -256,9 +257,10 @@ where
     pub async fn paginate_to_list_response(
         self,
         pagination: Pagination,
+        page_link: Url,
     ) -> Result<ListResponse<M>> {
         let page = pagination.page();
-        let page_size = pagination.page_size();
+        let page_size = pagination.rows_per_page();
         let mut query = self.paginate(page, page_size).await?;
 
         // Always add one to the limit to see if there is additional pages that can be fetched.
@@ -280,7 +282,7 @@ where
             Some(page.checked_add(1).ok_or_else(|| OverflowError)?)
         };
 
-        Ok(ListResponse::new(results, next_page))
+        ListResponse::from_next_page(pagination, results, next_page, page_link)
     }
 
     /// Create a list count from a query builder.
@@ -432,6 +434,7 @@ pub(crate) mod tests {
     use crate::queries::update::tests::{change_many, entries_many, null_attributes};
     use crate::queries::EntriesBuilder;
     use crate::routes::filter::wildcard::Wildcard;
+    use crate::routes::pagination::Links;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_current_s3(pool: PgPool) {
@@ -697,11 +700,26 @@ pub(crate) mod tests {
         assert!(paginate_all(builder.clone(), 10, 2).await.is_empty());
 
         let result = builder
-            .paginate_to_list_response(Pagination::new(0, 2))
+            .paginate_to_list_response(
+                Pagination::new(0, 2),
+                "https://example.com/s3?rowsPerPage=2&page=0"
+                    .parse()
+                    .unwrap(),
+            )
             .await
             .unwrap();
 
-        assert_eq!(result.next_page(), Some(1));
+        assert_eq!(
+            result.links(),
+            &Links::new(
+                None,
+                Some(
+                    "https://example.com/s3?rowsPerPage=2&page=1"
+                        .parse()
+                        .unwrap()
+                )
+            )
+        );
         assert_eq!(result.results(), &entries[0..2]);
     }
 

@@ -8,4 +8,7 @@ the relevant token:
 curl -H "Authorization: Bearer $orcabus_api_token" https://file.<stage>.umccr.org/api/v1/s3_objects/count
 ```
 
+View the [API_GUIDE.md][api-guide] for more information about the filemanager API.
+
+[api-guide]: ../docs/API_GUIDE.md
 [filemanager-api-server]: ../filemanager-api-server

@@ -38,17 +38,25 @@ This route is paginated, and by default returns 1000 records from the first page
 
 ```json
 {
-  "next_page": 1,
+  "links": {
+    "previous": null,
+    "next": "https://file.dev.umccr.org/api/v1/s3_objects?page=1&rowsPerPage=1000"
+  },
+  "pagination": {
+    "count": 1000,
+    "page": 0,
+    "rowsPerPage": 1000
+  },
   "results": [
     "<first 1000 s3_object records>..."
   ]
 }
 ```
 
-Use the `page` and `page_size` query parameters to control the pagination:
+Use the `page` and `rowsPerPage` query parameters to control the pagination:
 
 ```sh
-curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3_objects?page=10&page_size=50" | jq
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3_objects?page=10&rowsPerPage=50" | jq
 ```
 
 The records can be filtered using the same fields from the record by naming the field in a query parameter.

@@ -5788,6 +5788,7 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]
@@ -5825,6 +5826,7 @@ dependencies = [
  "quote",
  "regex",
  "syn 2.0.65",
+ "url",
  "uuid",
 ]
 

@@ -10,6 +10,9 @@ DATABASE_URL ?= postgresql://filemanager:filemanager@${FILEMANAGER_DATABASE_HOST
 ## Override the default project name
 DOCKER_PROJECT_NAME ?= filemanager
 
+## The links url.
+FILEMANAGER_LINKS_URL ?= localhost:8000
+
 
 ## Default target
 default: help

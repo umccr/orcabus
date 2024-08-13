@@ -78,8 +78,12 @@ impl From<Error> for ErrorStatusCode {
             Error::OverflowError | Error::ConversionError(_) => {
                 Self::BadRequest(err.to_string().into())
             }
-            Error::InvalidQuery(_) => Self::BadRequest(err.to_string().into()),
-            Error::QueryError(_) => Self::InternalServerError(err.to_string().into()),
+            Error::InvalidQuery(_) | Error::ParseError(_) | Error::MissingHostHeader => {
+                Self::BadRequest(err.to_string().into())
+            }
+            Error::QueryError(_) | Error::SerdeError(_) => {
+                Self::InternalServerError(err.to_string().into())
+            }
             Error::ExpectedSomeValue(_) => Self::NotFound(err.to_string().into()),
             _ => Self::InternalServerError("unexpected error".to_string().into()),
         }

@@ -31,8 +31,8 @@ strum = { version = "0.26", features = ["derive"] }
 
 # Query server
 axum = "0.7"
-utoipa = { version = "4", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "7", features = ["axum", "debug-embed"] }
+utoipa = { version = "4", features = ["axum_extras", "chrono", "uuid", "url"] }
+utoipa-swagger-ui = { version = "7", features = ["axum", "debug-embed", "url"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["trace"] }
 serde_qs = { version = "0.13", features = ["axum"] }
@@ -45,7 +45,7 @@ uuid = { version = "1", features = ["v7"] }
 mockall = "0.13"
 mockall_double = "0.3"
 itertools = "0.13"
-url = "2"
+url = { version = "2", features = ["serde"] }
 bytes = "1.6"
 envy = "0.4"
 rand = "0.8"

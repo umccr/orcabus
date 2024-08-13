@@ -6,6 +6,7 @@ use std::{io, result};
 
 use sqlx::migrate::MigrateError;
 use thiserror::Error;
+use url::ParseError;
 use uuid::Uuid;
 
 pub type Result<T> = result::Result<T, Error>;
@@ -19,8 +20,8 @@ pub enum Error {
     MigrateError(String),
     #[error("SQS error: `{0}`")]
     SQSError(String),
-    #[error("deserialization error: `{0}`")]
-    DeserializeError(String),
+    #[error("serde error: `{0}`")]
+    SerdeError(String),
     #[error("loading environment variables: `{0}`")]
     ConfigError(String),
     #[error("credential generator error: `{0}`")]
@@ -39,6 +40,10 @@ pub enum Error {
     InvalidQuery(String),
     #[error("expected record for id: `{0}`")]
     ExpectedSomeValue(Uuid),
+    #[error("error parsing: `{0}`")]
+    ParseError(String),
+    #[error("missing host header")]
+    MissingHostHeader,
 }
 
 impl From<sqlx::Error> for Error {
@@ -61,12 +66,18 @@ impl From<MigrateError> for Error {
 
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
-        Self::DeserializeError(err.to_string())
+        Self::SerdeError(err.to_string())
     }
 }
 
 impl From<envy::Error> for Error {
     fn from(error: envy::Error) -> Self {
         Self::ConfigError(error.to_string())
+    }
+}
+
+impl From<ParseError> for Error {
+    fn from(error: ParseError) -> Self {
+        Self::ParseError(error.to_string())
     }
 }
