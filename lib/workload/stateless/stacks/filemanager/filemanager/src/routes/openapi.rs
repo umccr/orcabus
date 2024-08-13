@@ -15,6 +15,7 @@ use crate::routes::filter::wildcard::Wildcard;
 use crate::routes::get::*;
 use crate::routes::ingest::*;
 use crate::routes::list::*;
+use crate::routes::pagination::*;
 use crate::routes::update::*;
 
 /// A newtype equivalent to a `DateTime` with a time zone.
@@ -50,6 +51,9 @@ pub struct Json(pub Value);
             Wildcard,
             Json,
             ListResponseS3,
+            PaginatedResponse,
+            Pagination,
+            Links,
             PatchBody,
             Patch,
         )
@@ -76,7 +80,7 @@ impl Modify for SecurityAddon {
 
 /// Create the swagger ui endpoint.
 pub fn swagger_ui() -> SwaggerUi {
-    SwaggerUi::new("/swagger_ui").url("/api_docs/openapi.json", ApiDoc::openapi())
+    SwaggerUi::new("/swagger-ui").url("/schema/openapi.json", ApiDoc::openapi())
 }
 
 #[cfg(test)]
@@ -97,7 +101,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/swagger_ui")
+                    .uri("/swagger-ui")
                     .body(Body::empty())
                     .unwrap(),
             )

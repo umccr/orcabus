@@ -28,6 +28,8 @@ pub async fn generate_entities() -> Result<()> {
         "strum::FromRepr, strum::EnumCount",
         "--model-extra-derives",
         "utoipa::ToSchema",
+        "--model-extra-attributes",
+        "serde(rename_all = \"camelCase\")",
         "--enum-extra-attributes",
         "repr(u8)",
         "--enum-extra-derives",

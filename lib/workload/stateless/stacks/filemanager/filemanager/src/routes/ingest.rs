@@ -16,12 +16,9 @@ use mockall_double::double;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-/// Params for ingesting from the SQS queue.
-#[derive(Debug, Deserialize)]
-pub struct IngestFromSQS {}
-
 /// The return value for ingest endpoints indicating how many records were processed.
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct IngestCount {
     /// The number of events processed. This potentially includes duplicate records.
     n_records: usize,
@@ -30,7 +27,7 @@ pub struct IngestCount {
 /// Ingest events from the configured SQS queue.
 #[utoipa::path(
     post,
-    path = "/ingest_from_sqs",
+    path = "/ingest",
     responses(
         (status = OK, description = "A successful ingestion with the number of ingested records", body = IngestCount),
         ErrorStatusCode,
@@ -53,7 +50,7 @@ pub async fn ingest_from_sqs(state: State<AppState>) -> Result<Json<IngestCount>
 
 /// The router for ingesting events.
 pub fn ingest_router() -> Router<AppState> {
-    Router::new().route("/ingest_from_sqs", post(ingest_from_sqs))
+    Router::new().route("/ingest", post(ingest_from_sqs))
 }
 
 #[cfg(test)]
@@ -88,7 +85,7 @@ mod tests {
             app.oneshot(
                 Request::builder()
                     .method(Method::POST)
-                    .uri("/ingest_from_sqs")
+                    .uri("/ingest")
                     .body(Body::empty())
                     .unwrap(),
             )

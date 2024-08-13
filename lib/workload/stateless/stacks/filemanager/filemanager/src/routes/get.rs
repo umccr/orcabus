@@ -16,7 +16,7 @@ use crate::routes::AppState;
 /// Get an s3_object given it's id.
 #[utoipa::path(
     get,
-    path = "/s3_objects/{id}",
+    path = "/s3/{id}",
     responses(
         (status = OK, description = "The s3_object for the given id", body = S3),
         ErrorStatusCode,
@@ -37,7 +37,7 @@ pub async fn get_s3_by_id(state: State<AppState>, Path(id): Path<Uuid>) -> Resul
 
 /// The router for getting object records.
 pub fn get_router() -> Router<AppState> {
-    Router::new().route("/s3_objects/:id", get(get_s3_by_id))
+    Router::new().route("/s3/:id", get(get_s3_by_id))
 }
 
 #[cfg(test)]
@@ -64,8 +64,7 @@ mod tests {
             .s3_objects;
 
         let first = entries.first().unwrap();
-        let result: S3 =
-            response_from_get(state, &format!("/s3_objects/{}", first.s3_object_id)).await;
+        let result: S3 = response_from_get(state, &format!("/s3/{}", first.s3_object_id)).await;
         assert_eq!(&result, first);
     }
 
@@ -75,7 +74,7 @@ mod tests {
 
         let (status_code, _) = response_from::<Value>(
             state,
-            &format!("/s3_objects/{}", UuidGenerator::generate()),
+            &format!("/s3/{}", UuidGenerator::generate()),
             Method::GET,
             Body::empty(),
         )

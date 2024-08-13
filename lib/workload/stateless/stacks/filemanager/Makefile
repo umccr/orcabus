@@ -10,6 +10,9 @@ DATABASE_URL ?= postgresql://filemanager:filemanager@${FILEMANAGER_DATABASE_HOST
 ## Override the default project name
 DOCKER_PROJECT_NAME ?= filemanager
 
+## The links url.
+FILEMANAGER_LINKS_URL ?= localhost:8000
+
 
 ## Default target
 default: help
@@ -90,7 +93,7 @@ s3-dump-download-if-not-exists:
 s3-load: s3-dump-download-if-not-exists db-load-data
 
 ## Local API server.
-api: docker-postgres
+start: docker-postgres
 	@cargo run -p filemanager-api-server $(ARGS)
 
 ## Help text

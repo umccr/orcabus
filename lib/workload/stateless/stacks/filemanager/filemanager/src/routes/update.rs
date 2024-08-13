@@ -28,8 +28,8 @@ use crate::routes::AppState;
 #[schema(
     example = json!({
         "attributes": [
-            { "op": "test", "path": "/attribute_id", "value": "1" },
-            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" }
+            { "op": "test", "path": "/attributeId", "value": "1" },
+            { "op": "replace", "path": "/attributeId", "value": "attributeId" }
         ]
     })
 )]
@@ -40,6 +40,7 @@ pub struct PatchBody {
 
 /// The JSON patch for attributes.
 #[derive(Debug, Deserialize, Default, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[schema(value_type = Value)]
 pub struct Patch(json_patch::Patch);
 
@@ -63,12 +64,12 @@ impl PatchBody {
 /// Update the s3_object attributes using a JSON patch request.
 #[utoipa::path(
     patch,
-    path = "/s3_objects/{id}",
+    path = "/s3/{id}",
     responses(
         (
             status = OK,
             description = "The updated s3_object",
-            body = FileS3Object
+            body = S3
         ),
         ErrorStatusCode,
     ),
@@ -100,12 +101,12 @@ pub async fn update_s3_attributes(
 /// This updates all attributes matching the filter params with the same JSON patch.
 #[utoipa::path(
     patch,
-    path = "/s3_objects",
+    path = "/s3",
     responses(
         (
             status = OK,
             description = "The updated s3_objects",
-            body = Vec<FileS3Object>
+            body = Vec<S3>
         ),
         ErrorStatusCode,
     ),
@@ -140,8 +141,8 @@ pub async fn update_s3_collection_attributes(
 /// The router for updating objects.
 pub fn update_router() -> Router<AppState> {
     Router::new()
-        .route("/s3_objects/:id", patch(update_s3_attributes))
-        .route("/s3_objects", patch(update_s3_collection_attributes))
+        .route("/s3/:id", patch(update_s3_attributes))
+        .route("/s3", patch(update_s3_collection_attributes))
 }
 
 #[cfg(test)]
@@ -173,24 +174,24 @@ mod tests {
             state.client(),
             &entries,
             0,
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!({"attributes": [
-            { "op": "test", "path": "/attribute_id", "value": "1" },
-            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+            { "op": "test", "path": "/attributeId", "value": "1" },
+            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
         ]});
 
         let (_, s3_object) = response_from::<S3>(
             state.clone(),
-            &format!("/s3_objects/{}", entries.s3_objects[0].s3_object_id),
+            &format!("/s3/{}", entries.s3_objects[0].s3_object_id),
             Method::PATCH,
             Body::new(patch.to_string()),
         )
         .await;
 
-        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"}));
+        change_attribute_entries(&mut entries, 0, json!({"attributeId": "attributeId"}));
 
         assert_model_contains(&[s3_object], &entries.s3_objects, 0..1);
         assert_correct_records(state.client(), entries).await;
@@ -205,18 +206,18 @@ mod tests {
             state.client(),
             &entries,
             0,
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!({"attributes": [
-            { "op": "test", "path": "/attribute_id", "value": "1" },
-            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+            { "op": "test", "path": "/attributeId", "value": "1" },
+            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
         ]});
 
         let (s3_object_status_code, _) = response_from::<Value>(
             state.clone(),
-            &format!("/s3_objects/{}", UuidGenerator::generate()),
+            &format!("/s3/{}", UuidGenerator::generate()),
             Method::PATCH,
             Body::new(patch.to_string()),
         )
@@ -224,7 +225,7 @@ mod tests {
         assert_eq!(s3_object_status_code, StatusCode::NOT_FOUND);
 
         // Nothing is expected to change.
-        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "1"}));
+        change_attribute_entries(&mut entries, 0, json!({"attributeId": "1"}));
         assert_correct_records(state.client(), entries).await;
     }
 
@@ -237,32 +238,32 @@ mod tests {
             state.client(),
             &entries,
             0,
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
         change_attributes(
             state.client(),
             &entries,
             1,
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!({"attributes": [
-            { "op": "test", "path": "/attribute_id", "value": "1" },
-            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+            { "op": "test", "path": "/attributeId", "value": "1" },
+            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
         ]});
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3_objects?attributes[attribute_id]=1",
+            "/s3?attributes[attributeId]=1",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
         .await;
 
-        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "attribute_id"}));
-        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "attribute_id"}));
+        change_attribute_entries(&mut entries, 0, json!({"attributeId": "attributeId"}));
+        change_attribute_entries(&mut entries, 1, json!({"attributeId": "attributeId"}));
 
         assert_model_contains(&s3_objects, &entries.s3_objects, 0..2);
         assert_correct_records(state.client(), entries).await;
@@ -277,33 +278,33 @@ mod tests {
             state.client(),
             &entries,
             0,
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
         change_attributes(
             state.client(),
             &entries,
             1,
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!({"attributes": [
-            { "op": "test", "path": "/attribute_id", "value": "1" },
-            { "op": "replace", "path": "/attribute_id", "value": "attribute_id" },
+            { "op": "test", "path": "/attributeId", "value": "1" },
+            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
         ]});
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3_objects?current_state=true&attributes[attribute_id]=1",
+            "/s3?currentState=true&attributes[attributeId]=1",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
         .await;
 
         // Only the created event should be updated.
-        entries.s3_objects[0].attributes = Some(json!({"attribute_id": "attribute_id"}));
-        entries.s3_objects[1].attributes = Some(json!({"attribute_id": "1"}));
+        entries.s3_objects[0].attributes = Some(json!({"attributeId": "attributeId"}));
+        entries.s3_objects[1].attributes = Some(json!({"attributeId": "1"}));
 
         assert_model_contains(&s3_objects, &entries.s3_objects, 0..1);
         assert_correct_records(state.client(), entries).await;
@@ -318,32 +319,32 @@ mod tests {
             state.client(),
             &entries,
             0,
-            Some(json!({"attribute_id": "2"})),
+            Some(json!({"attributeId": "2"})),
         )
         .await;
         change_attributes(
             state.client(),
             &entries,
             1,
-            Some(json!({"attribute_id": "2"})),
+            Some(json!({"attributeId": "2"})),
         )
         .await;
 
         let patch = json!({"attributes": [
-            { "op": "remove", "path": "/attribute_id" },
+            { "op": "remove", "path": "/attributeId" },
         ]});
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3_objects?attributes[attribute_id]=1",
+            "/s3?attributes[attributeId]=1",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
         .await;
         assert!(s3_objects.is_empty());
 
-        change_attribute_entries(&mut entries, 0, json!({"attribute_id": "2"}));
-        change_attribute_entries(&mut entries, 1, json!({"attribute_id": "2"}));
+        change_attribute_entries(&mut entries, 0, json!({"attributeId": "2"}));
+        change_attribute_entries(&mut entries, 1, json!({"attributeId": "2"}));
         assert_correct_records(state.client(), entries).await;
     }
 
@@ -356,23 +357,23 @@ mod tests {
             state.client(),
             &entries,
             &[0, 1],
-            Some(json!({"attribute_id": "attribute_id"})),
+            Some(json!({"attributeId": "attributeId"})),
         )
         .await;
 
         let patch = json!({"attributes": [
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]});
 
         entries_many(
             &mut entries,
             &[0, 1],
-            json!({"attribute_id": "attribute_id", "another_attribute": "1"}),
+            json!({"attributeId": "attributeId", "anotherAttribute": "1"}),
         );
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3_objects?attributes[attribute_id]=%a%",
+            "/s3?attributes[attributeId]=%a%",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
@@ -391,23 +392,23 @@ mod tests {
             state.client(),
             &entries,
             &[0, 1],
-            Some(json!({"attribute_id": "attribute_id"})),
+            Some(json!({"attributeId": "attributeId"})),
         )
         .await;
 
         let patch = json!({"attributes": [
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]});
 
         entries_many(
             &mut entries,
             &[0, 1],
-            json!({"attribute_id": "attribute_id", "another_attribute": "1"}),
+            json!({"attributeId": "attributeId", "anotherAttribute": "1"}),
         );
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3_objects?attributes[attribute_id]=%A%",
+            "/s3?attributes[attributeId]=%A%",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
@@ -416,7 +417,7 @@ mod tests {
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3_objects?attributes[attribute_id]=%A%&case_sensitive=false",
+            "/s3?attributes[attributeId]=%A%&caseSensitive=false",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
@@ -435,17 +436,17 @@ mod tests {
             state.client(),
             &entries,
             &[0, 2, 4, 6, 8],
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!({"attributes": [
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]});
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3_objects?event_type=C__%",
+            "/s3?eventType=C__%",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
@@ -464,18 +465,18 @@ mod tests {
             state.client(),
             &entries,
             &[0, 2, 4, 6, 8],
-            Some(json!({"attribute_id": "1"})),
+            Some(json!({"attributeId": "1"})),
         )
         .await;
 
         let patch = json!({"attributes": [
-            { "op": "add", "path": "/another_attribute", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]});
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             // Percent-encoding should work too.
-            "/s3_objects?case_sensitive=false&event_type=c%25_%25d",
+            "/s3?caseSensitive=false&eventType=c%25_%25d",
             Method::PATCH,
             Body::new(patch.to_string()),
         )

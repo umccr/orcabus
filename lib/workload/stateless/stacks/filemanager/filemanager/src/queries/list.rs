@@ -1,6 +1,14 @@
 //! Query builder involving list operations on the database.
 //!
 
+use crate::database::entities::s3_object;
+use crate::error::Error::OverflowError;
+use crate::error::{Error, Result};
+use crate::routes::filter::wildcard::WildcardEither;
+use crate::routes::filter::S3ObjectsFilter;
+use crate::routes::list::ListCount;
+use crate::routes::pagination::{ListResponse, Pagination};
+
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
@@ -13,14 +21,7 @@ use sea_orm::{
     Select, Value,
 };
 use tracing::trace;
-
-use crate::database::entities::s3_object;
-use crate::error::Error::OverflowError;
-use crate::error::{Error, Result};
-use crate::routes::filter::wildcard::WildcardEither;
-use crate::routes::filter::S3ObjectsFilter;
-use crate::routes::list::{ListCount, ListResponse};
-use crate::routes::pagination::Pagination;
+use url::Url;
 
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
@@ -256,9 +257,10 @@ where
     pub async fn paginate_to_list_response(
         self,
         pagination: Pagination,
+        page_link: Url,
     ) -> Result<ListResponse<M>> {
         let page = pagination.page();
-        let page_size = pagination.page_size();
+        let page_size = pagination.rows_per_page();
         let mut query = self.paginate(page, page_size).await?;
 
         // Always add one to the limit to see if there is additional pages that can be fetched.
@@ -280,7 +282,7 @@ where
             Some(page.checked_add(1).ok_or_else(|| OverflowError)?)
         };
 
-        Ok(ListResponse::new(results, next_page))
+        ListResponse::from_next_page(pagination, results, next_page, page_link)
     }
 
     /// Create a list count from a query builder.
@@ -432,6 +434,7 @@ pub(crate) mod tests {
     use crate::queries::update::tests::{change_many, entries_many, null_attributes};
     use crate::queries::EntriesBuilder;
     use crate::routes::filter::wildcard::Wildcard;
+    use crate::routes::pagination::Links;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_current_s3(pool: PgPool) {
@@ -614,7 +617,7 @@ pub(crate) mod tests {
             &client,
             S3ObjectsFilter {
                 attributes: Some(json!({
-                    "attribute_id": "1"
+                    "attributeId": "1"
                 })),
                 ..Default::default()
             },
@@ -627,8 +630,8 @@ pub(crate) mod tests {
             &client,
             S3ObjectsFilter {
                 attributes: Some(json!({
-                    "nested_id": {
-                        "attribute_id": "2"
+                    "nestedId": {
+                        "attributeId": "2"
                     }
                 })),
                 ..Default::default()
@@ -642,7 +645,7 @@ pub(crate) mod tests {
             &client,
             S3ObjectsFilter {
                 attributes: Some(json!({
-                    "non_existent_id": "1"
+                    "nonExistentId": "1"
                 })),
                 ..Default::default()
             },
@@ -655,7 +658,7 @@ pub(crate) mod tests {
             &client,
             S3ObjectsFilter {
                 attributes: Some(json!({
-                    "attribute_id": "1"
+                    "attributeId": "1"
                 })),
                 key: Some(Wildcard::new("2".to_string())),
                 ..Default::default()
@@ -669,7 +672,7 @@ pub(crate) mod tests {
             &client,
             S3ObjectsFilter {
                 attributes: Some(json!({
-                    "attribute_id": "3"
+                    "attributeId": "3"
                 })),
                 key: Some(Wildcard::new("3".to_string())),
                 ..Default::default()
@@ -697,11 +700,26 @@ pub(crate) mod tests {
         assert!(paginate_all(builder.clone(), 10, 2).await.is_empty());
 
         let result = builder
-            .paginate_to_list_response(Pagination::new(0, 2))
+            .paginate_to_list_response(
+                Pagination::new(0, 2),
+                "https://example.com/s3?rowsPerPage=2&page=0"
+                    .parse()
+                    .unwrap(),
+            )
             .await
             .unwrap();
 
-        assert_eq!(result.next_page(), Some(1));
+        assert_eq!(
+            result.links(),
+            &Links::new(
+                None,
+                Some(
+                    "https://example.com/s3?rowsPerPage=2&page=1"
+                        .parse()
+                        .unwrap()
+                )
+            )
+        );
         assert_eq!(result.results(), &entries[0..2]);
     }
 
@@ -821,10 +839,10 @@ pub(crate) mod tests {
             .await;
 
         let test_attributes = json!({
-            "nested_id": {
-                "attribute_id": "1"
+            "nestedId": {
+                "attributeId": "1"
             },
-            "attribute_id": "test"
+            "attributeId": "test"
         });
         change_many(&client, &entries, &[0, 1], Some(test_attributes.clone())).await;
         change_many(
@@ -832,10 +850,10 @@ pub(crate) mod tests {
             &entries,
             &(2..10).collect::<Vec<_>>(),
             Some(json!({
-                "nested_id": {
-                    "attribute_id": "test"
+                "nestedId": {
+                    "attributeId": "test"
                 },
-                "attribute_id": "1"
+                "attributeId": "1"
             })),
         )
         .await;
@@ -844,7 +862,7 @@ pub(crate) mod tests {
         let s3_objects = filter_attributes(
             &client,
             Some(json!({
-                "attribute_id": "t%"
+                "attributeId": "t%"
             })),
             true,
         )
@@ -854,7 +872,7 @@ pub(crate) mod tests {
         assert_eq!(s3_objects, entries.s3_objects[0..2].to_vec());
 
         let test_attributes = json!({
-            "attribute_id": "attribute_id"
+            "attributeId": "attributeId"
         });
         change_many(&client, &entries, &[0, 1], Some(test_attributes.clone())).await;
         change_many(
@@ -862,8 +880,8 @@ pub(crate) mod tests {
             &entries,
             &(2..10).collect::<Vec<_>>(),
             Some(json!({
-                "nested_id": {
-                    "attribute_id": "attribute_id"
+                "nestedId": {
+                    "attributeId": "attributeId"
                 }
             })),
         )
@@ -875,7 +893,7 @@ pub(crate) mod tests {
             &client,
             Some(json!({
                 // This should not trigger a fetch on the nested id.
-                "attribute_id": "%a%"
+                "attributeId": "%a%"
             })),
             true,
         )
@@ -886,7 +904,7 @@ pub(crate) mod tests {
             &client,
             Some(json!({
                 // Case-insensitive should work
-                "attribute_id": "%A%"
+                "attributeId": "%A%"
             })),
             false,
         )
@@ -900,7 +918,7 @@ pub(crate) mod tests {
             &client,
             Some(json!({
                 // A check is okay on null json as well.
-                "attribute_id": "%1%"
+                "attributeId": "%1%"
             })),
             true,
         )
@@ -913,7 +931,7 @@ pub(crate) mod tests {
     fn apply_json_condition() {
         let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
             s3_object::Column::Attributes.into_column_ref(),
-            json!({ "attribute_id": "1" }),
+            json!({ "attributeId": "1" }),
             true,
         );
         assert_eq!(conditions.len(), 1);
@@ -927,7 +945,7 @@ pub(crate) mod tests {
 
         let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
             s3_object::Column::Attributes.into_column_ref(),
-            json!({ "attribute_id": "a%" }),
+            json!({ "attributeId": "a%" }),
             true,
         );
         assert_eq!(conditions.len(), 1);
@@ -938,7 +956,7 @@ pub(crate) mod tests {
 
         let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
             s3_object::Column::Attributes.into_column_ref(),
-            json!({ "attribute_id": "a%" }),
+            json!({ "attributeId": "a%" }),
             false,
         );
         assert_eq!(conditions.len(), 1);

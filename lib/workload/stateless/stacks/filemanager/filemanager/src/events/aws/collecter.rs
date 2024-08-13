@@ -18,7 +18,7 @@ use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::env::Config;
-use crate::error::Error::{DeserializeError, SQSError};
+use crate::error::Error::{SQSError, SerdeError};
 use crate::error::Result;
 use crate::events::aws::{
     EventType, FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages,
@@ -81,8 +81,8 @@ impl CollecterBuilder {
                 trace!(message = ?message, "got the message");
 
                 if let Some(body) = message.body() {
-                    let events: Option<FlatS3EventMessages> = serde_json::from_str(body)
-                        .map_err(|err| DeserializeError(err.to_string()))?;
+                    let events: Option<FlatS3EventMessages> =
+                        serde_json::from_str(body).map_err(|err| SerdeError(err.to_string()))?;
                     Ok(events.unwrap_or_default())
                 } else {
                     Err(SQSError("No body in SQS message".to_string()))
