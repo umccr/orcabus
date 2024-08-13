@@ -47,6 +47,7 @@ test-stateless-iac:
 # 	Python (conda or venv), Rust and Cargo, TypeScript and Node environment, Docker and Container runtimes
 test-stateful-app-suite:
 	@(cd lib/workload/stateful/stacks/postgres-manager && $(MAKE) test)
+	@(cd lib/workload/stateful/stacks/token-service && $(MAKE) test)
 
 test-stateless-app-suite:
 	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) test)
