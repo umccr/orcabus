@@ -3,6 +3,7 @@ from django.db import models
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.payload import Payload
 from workflow_manager.models.workflow import Workflow
+from workflow_manager.models.library import Library
 
 
 class WorkflowRunManager(OrcaBusBaseManager):
@@ -36,6 +37,10 @@ class WorkflowRun(OrcaBusBaseModel):
     # Link to workflow payload data
     payload = models.ForeignKey(Payload, null=True, blank=True, on_delete=models.SET_NULL)
 
+    # Link to library table
+    libraries = models.ManyToManyField(Library, through="LibraryAssociation")
+
+
     objects = WorkflowRunManager()
 
     def __str__(self):
@@ -53,3 +58,10 @@ class WorkflowRun(OrcaBusBaseModel):
             "payload": self.payload.to_dict() if (self.payload is not None) else None,
             "workflow": self.workflow.to_dict() if (self.workflow is not None) else None
         }
+
+
+class LibraryAssociation(OrcaBusBaseModel):
+    workflow_run = models.ForeignKey(WorkflowRun, on_delete=models.CASCADE)
+    library = models.ForeignKey(Library, on_delete=models.CASCADE)
+    association_date = models.DateTimeField()
+    status = models.CharField(max_length=255)
