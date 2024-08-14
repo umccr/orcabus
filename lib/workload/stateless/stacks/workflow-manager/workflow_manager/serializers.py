@@ -54,3 +54,8 @@ class PayloadModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payload
         fields = '__all__'
+
+class LibraryModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Library
+        fields = '__all__'

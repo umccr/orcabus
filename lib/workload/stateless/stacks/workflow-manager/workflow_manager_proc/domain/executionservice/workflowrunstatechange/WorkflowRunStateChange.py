@@ -14,6 +14,7 @@ class WorkflowRunStateChange(object):
         'workflowName': 'str',
         'workflowVersion': 'str',
         'workflowRunName': 'str',
+        'linkedLibraries': 'list[str]',
         'payload': 'Payload'
     }
 
@@ -25,10 +26,11 @@ class WorkflowRunStateChange(object):
         'workflowName': 'workflowName',
         'workflowVersion': 'workflowVersion',
         'workflowRunName': 'workflowRunName',
+        'linkedLibraries': 'linkedLibraries',
         'payload': 'payload'
     }
 
-    def __init__(self, portalRunId=None, executionId=None, timestamp=None, status=None, workflowName=None, workflowVersion=None, workflowRunName=None, payload=None):  # noqa: E501
+    def __init__(self, portalRunId=None, executionId=None, timestamp=None, status=None, workflowName=None, workflowVersion=None, workflowRunName=None, linkedLibraries=None, payload=None):  # noqa: E501
         self._portalRunId = None
         self._executionId = None
         self._timestamp = None
@@ -36,6 +38,7 @@ class WorkflowRunStateChange(object):
         self._workflowName = None
         self._workflowVersion = None
         self._workflowRunName = None
+        self._linkedLibraries = None
         self._payload = None
         self.discriminator = None
         self.portalRunId = portalRunId
@@ -45,6 +48,7 @@ class WorkflowRunStateChange(object):
         self.workflowName = workflowName
         self.workflowVersion = workflowVersion
         self.workflowRunName = workflowRunName
+        self.linkedLibraries = linkedLibraries
         self.payload = payload
 
 
@@ -130,6 +134,18 @@ class WorkflowRunStateChange(object):
 
 
         self._workflowRunName = workflowRunName
+
+
+    @property
+    def linkedLibraries(self):
+
+        return self._linkedLibraries
+
+    @linkedLibraries.setter
+    def linkedLibraries(self, linkedLibraries):
+
+
+        self._linkedLibraries = linkedLibraries
 
 
     @property
