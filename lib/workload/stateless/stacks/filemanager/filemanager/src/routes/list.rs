@@ -3,28 +3,22 @@
 
 use crate::database::entities::s3_object;
 use crate::database::entities::s3_object::Model as S3;
-use crate::error::Error::{ConversionError, MissingHostHeader, ParseError, PresignedUrlError};
+use crate::error::Error::{ConversionError, MissingHostHeader, ParseError};
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
 use crate::routes::filter::S3ObjectsFilter;
 use crate::routes::pagination::{ListResponse, Pagination};
+use crate::routes::presign::PresignedUrlBuilder;
 use crate::routes::AppState;
 use axum::extract::{Query, Request, State};
 use axum::http::header::HOST;
 use axum::routing::get;
 use axum::{Json, Router};
-use chrono::Duration;
 use serde::{Deserialize, Serialize};
 use serde_qs::axum::QsQuery;
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
-
-/// Maximum default presigned URL size limit, 20MB.
-pub const DEFAULT_PRESIGN_LIMIT: u64 = 20971520;
-
-/// Default presigned URL expiry time, 5 minutes.
-pub const DEFAULT_PRESIGN_EXPIRY: Duration = Duration::minutes(5);
 
 /// The return value for count operations showing the number of records in the database.
 #[derive(Debug, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
@@ -176,76 +170,46 @@ pub async fn count_s3(
     Ok(Json(response.to_list_count().await?))
 }
 
-/// Generate AWS presigned URLs for s3_objects according to the parameters. This route implies
-/// `currentState=true` because only existing objects can be presigned. Less presigned URLs may be
-/// returned than the amount of objects in the database because some objects may be over the
-/// `FILEMANAGER_API_PRESIGN_LIMIT`. If any presigned URLs cannot be constructed, and error is
-/// returned.
+/// Generate AWS presigned URLs for s3_objects according to the parameters.
+/// This route implies `currentState=true` because only existing objects can be presigned.
+/// Less presigned URLs may be returned than the amount of objects in the database because some
+/// objects may be over the `FILEMANAGER_API_PRESIGN_LIMIT`.
 #[utoipa::path(
     get,
-    path = "/s3",
+    path = "/s3/presign",
     responses(
         (status = OK, description = "The list of presigned urls", body = ListResponseS3),
         ErrorStatusCode,
     ),
-    params(Pagination, WildcardParams, ListS3Params, S3ObjectsFilter),
+    params(Pagination, WildcardParams, S3ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
 pub async fn presign_s3(
     state: State<AppState>,
-    Query(pagination): Query<Pagination>,
-    Query(wildcard): Query<WildcardParams>,
-    QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
+    pagination: Query<Pagination>,
+    wildcard: Query<WildcardParams>,
+    filter_all: QsQuery<S3ObjectsFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<Url>>> {
-    let response =
-        ListQueryBuilder::<_, s3_object::Entity>::new(state.database_client.connection_ref())
-            .filter_all(filter_all, wildcard.case_sensitive())
-            .current_state();
-
-    let host: Url = request
-        .headers()
-        .get(HOST)
-        .ok_or_else(|| MissingHostHeader)?
-        .to_str()
-        .map_err(|err| ParseError(err.to_string()))?
-        .parse()?;
-    let url = host.join(&request.uri().to_string())?;
-
-    let ListResponse {
+    let Json(ListResponse {
         links,
         mut pagination,
         results,
-    } = response.paginate_to_list_response(pagination, url).await?;
+    }) = list_s3(
+        state.clone(),
+        pagination,
+        wildcard,
+        Query(ListS3Params::new(true)),
+        filter_all,
+        request,
+    )
+    .await?;
 
     let mut urls = Vec::with_capacity(results.len());
     for result in results {
-        let limit = if let Some(size) = result.size {
-            u64::try_from(size).unwrap_or_default()
-                <= state
-                    .config()
-                    .api_presign_limit()
-                    .unwrap_or(DEFAULT_PRESIGN_LIMIT)
-        } else {
-            true
-        };
-
-        if limit {
-            let presign = state
-                .s3_client()
-                .presign_url(
-                    &result.key,
-                    &result.bucket,
-                    state
-                        .config()
-                        .api_presign_expiry()
-                        .unwrap_or(DEFAULT_PRESIGN_EXPIRY),
-                )
-                .await
-                .map_err(|err| PresignedUrlError(err.into_service_error().to_string()))?;
-
-            urls.push(presign.uri().parse().unwrap());
+        if let Some(presigned) = PresignedUrlBuilder::presign_from_model(&state, result).await? {
+            urls.push(presigned);
         }
     }
 
@@ -265,6 +229,9 @@ pub fn list_router() -> Router<AppState> {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use aws_sdk_s3::operation::get_object::GetObjectOutput;
+    use aws_sdk_s3::primitives::ByteStream;
+    use aws_smithy_mocks_experimental::{mock, mock_client, Rule, RuleMode};
     use axum::body::to_bytes;
     use axum::body::Body;
     use axum::http::header::CONTENT_TYPE;
@@ -285,9 +252,6 @@ pub(crate) mod tests {
     use crate::queries::EntriesBuilder;
     use crate::routes::api_router;
     use crate::routes::pagination::Links;
-    use aws_sdk_s3::operation::get_object::GetObjectOutput;
-    use aws_sdk_s3::primitives::ByteStream;
-    use aws_smithy_mocks_experimental::{mock, mock_client, Rule, RuleMode};
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api(pool: PgPool) {
@@ -539,7 +503,11 @@ pub(crate) mod tests {
         assert_eq!(result.n_records, 2);
     }
 
-    fn mock_get_object(key: &'static str, bucket: &'static str, output: &'static [u8]) -> Rule {
+    pub(crate) fn mock_get_object(
+        key: &'static str,
+        bucket: &'static str,
+        output: &'static [u8],
+    ) -> Rule {
         mock!(aws_sdk_s3::Client::get_object)
             .match_requests(|req| req.bucket() == Some(bucket) && req.key() == Some(key))
             .then_output(move || {

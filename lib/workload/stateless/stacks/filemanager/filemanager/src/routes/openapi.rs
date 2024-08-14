@@ -33,7 +33,9 @@ pub struct Json(pub Value);
 #[openapi(
     paths(
         list_s3,
+        presign_s3,
         get_s3_by_id,
+        presign_s3_by_id,
         count_s3,
         ingest_from_sqs,
         update_s3_attributes,
