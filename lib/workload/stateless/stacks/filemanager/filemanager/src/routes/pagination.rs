@@ -15,11 +15,11 @@ use utoipa::{IntoParams, ToSchema};
 #[aliases(ListResponseS3 = ListResponse<S3>)]
 pub struct ListResponse<M> {
     /// Links to next and previous page.
-    links: Links,
+    pub(crate) links: Links,
     /// The pagination response component.
-    pagination: PaginatedResponse,
+    pub(crate) pagination: PaginatedResponse,
     /// The results of the list operation.
-    results: Vec<M>,
+    pub(crate) results: Vec<M>,
 }
 
 /// The paginated links to the next and previous page.
@@ -125,9 +125,9 @@ impl<M> ListResponse<M> {
 pub struct PaginatedResponse {
     /// The total number of results in this paginated response.
     #[schema(default = 0)]
-    count: u64,
+    pub(crate) count: u64,
     #[serde(flatten)]
-    pagination: Pagination,
+    pub(crate) pagination: Pagination,
 }
 
 impl PaginatedResponse {
@@ -213,10 +213,10 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_paginate(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -275,11 +275,11 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_paginate_existing_no_page_size(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .with_n(1001)
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -294,10 +294,10 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_paginate_existing_qs(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -324,10 +324,10 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_paginate_large(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -356,11 +356,11 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_zero_page_size(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
 
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 

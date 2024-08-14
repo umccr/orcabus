@@ -204,13 +204,10 @@ mod tests {
     #[tokio::test]
     async fn generate_iam_token_env() {
         let env_config = EnvConfig {
-            database_url: None,
-            pgpassword: None,
             pghost: Some("127.0.0.1".to_string()),
             pgport: Some(5432),
             pguser: Some("filemanager".to_string()),
-            sqs_url: None,
-            paired_ingest_mode: false,
+            ..Default::default()
         };
 
         test_generate_iam_token(|config| async {

@@ -3,11 +3,8 @@
 
 use std::sync::Arc;
 
-use axum::Router;
-use sqlx::PgPool;
-use tower_http::trace::TraceLayer;
-
-use crate::database::Client;
+use crate::clients::aws::s3;
+use crate::database;
 use crate::env::Config;
 use crate::routes::error::fallback;
 use crate::routes::get::*;
@@ -15,6 +12,9 @@ use crate::routes::ingest::ingest_router;
 use crate::routes::list::*;
 use crate::routes::openapi::swagger_ui;
 use crate::routes::update::update_router;
+use axum::Router;
+use sqlx::PgPool;
+use tower_http::trace::TraceLayer;
 
 pub mod error;
 pub mod filter;
@@ -23,34 +23,71 @@ pub mod ingest;
 pub mod list;
 pub mod openapi;
 pub mod pagination;
+pub mod presign;
 pub mod update;
 
 /// App state containing database client.
 #[derive(Debug, Clone)]
 pub struct AppState {
-    client: Client,
+    database_client: database::Client,
     config: Arc<Config>,
+    s3_client: Arc<s3::Client>,
 }
 
 impl AppState {
     /// Create new state.
-    pub fn new(client: Client, config: Arc<Config>) -> Self {
-        Self { client, config }
+    pub fn new(
+        database_client: database::Client,
+        config: Arc<Config>,
+        s3_client: Arc<s3::Client>,
+    ) -> Self {
+        Self {
+            database_client,
+            config,
+            s3_client,
+        }
     }
 
     /// Create a new state from an existing pool with default config.
-    pub fn from_pool(pool: PgPool) -> Self {
-        Self::new(Client::from_pool(pool), Default::default())
+    pub async fn from_pool(pool: PgPool) -> Self {
+        Self::new(
+            database::Client::from_pool(pool),
+            Default::default(),
+            Arc::new(s3::Client::with_defaults().await),
+        )
     }
 
-    /// Get the client.
-    pub fn client(&self) -> &Client {
-        &self.client
+    /// Modify the config.
+    pub fn with_config(mut self, config: Config) -> Self {
+        self.config = Arc::new(config);
+        self
+    }
+
+    /// Modify the database client.
+    pub fn with_database_client(mut self, client: database::Client) -> Self {
+        self.database_client = client;
+        self
+    }
+
+    /// Modify the s3 client.
+    pub fn with_s3_client(mut self, client: s3::Client) -> Self {
+        self.s3_client = Arc::new(client);
+        self
+    }
+
+    /// Get the database client.
+    pub fn database_client(&self) -> &database::Client {
+        &self.database_client
     }
 
     /// Get the config.
-    pub fn config(&self) -> &Arc<Config> {
+    pub fn config(&self) -> &Config {
         &self.config
+    }
+
+    /// Get the database client.
+    pub fn s3_client(&self) -> &s3::Client {
+        &self.s3_client
     }
 }
 
@@ -94,7 +131,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_unknown_path(pool: PgPool) {
-        let app = router(AppState::from_pool(pool));
+        let app = router(AppState::from_pool(pool).await);
         let response = app
             .oneshot(
                 Request::builder()

@@ -1,5 +1,6 @@
 use axum::serve;
 use clap::{Parser, Subcommand};
+use filemanager::clients::aws::s3;
 use filemanager::database::aws::migration::Migration;
 use filemanager::database::{Client, Migrate};
 use filemanager::env::Config;
@@ -73,7 +74,11 @@ async fn main() -> Result<()> {
     debug!(?config, "running with config");
 
     let client = Client::from_config(&config).await?;
-    let state = AppState::new(client.clone(), config.clone());
+    let state = AppState::new(
+        client.clone(),
+        config.clone(),
+        Arc::new(s3::Client::with_defaults().await),
+    );
 
     if let Some(load) = args.load_sql_file {
         info!(
@@ -85,7 +90,7 @@ async fn main() -> Result<()> {
         File::open(load).await?.read_to_string(&mut script).await?;
 
         state
-            .client()
+            .database_client()
             .connection_ref()
             .execute_unprepared(&script)
             .await?;
@@ -105,7 +110,7 @@ async fn main() -> Result<()> {
             .with_bucket_divisor(bucket_divisor)
             .with_key_divisor(key_divisor)
             .with_shuffle(shuffle)
-            .build(state.client())
+            .build(state.database_client())
             .await;
     }
 

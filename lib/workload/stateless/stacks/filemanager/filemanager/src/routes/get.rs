@@ -25,7 +25,7 @@ use crate::routes::AppState;
     tag = "get",
 )]
 pub async fn get_s3_by_id(state: State<AppState>, Path(id): Path<Uuid>) -> Result<Json<S3>> {
-    let query = GetQueryBuilder::new(&state.client);
+    let query = GetQueryBuilder::new(&state.database_client);
 
     Ok(Json(
         query
@@ -57,9 +57,9 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_s3_api(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -70,7 +70,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_non_existent(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
 
         let (status_code, _) = response_from::<Value>(
             state,

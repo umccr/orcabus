@@ -10,6 +10,15 @@ make start
 
 This serves Swagger OpenAPI docs at `http://localhost:8000/swagger-ui` when using default settings.
 
+## API configuration
+
+The API has some environment variables that can be used to configure behaviour (for the presigned url route):
+
+| Option                           | Description                                                                | Type                | Default      |
+|----------------------------------|----------------------------------------------------------------------------|---------------------|--------------|
+| `FILEMANAGER_API_PRESIGN_LIMIT`  | The maximum file size in bytes which presigned URLs will be generated for. | Integer             | `"20971520"` | 
+| `FILEMANAGER_API_PRESIGN_EXPIRY` | The expiry time for presigned urls.                                        | Duration in seconds | `"300"`      |
+
 The deployed instance of the filemanager API can be reached using the desired stage at `https://file.<stage>.umccr.org`
 using the orcabus API token. To retrieve the token, run:
 
