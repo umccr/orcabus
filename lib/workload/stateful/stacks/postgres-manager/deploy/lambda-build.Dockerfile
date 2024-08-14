@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/nodejs:20-arm64 as builder
+FROM public.ecr.aws/lambda/nodejs:20-arm64 AS builder
 WORKDIR /usr/app
 
 COPY ./function ./function
