@@ -1,22 +1,24 @@
 //! Query builder involving get operations on the database.
 //!
 
-use sea_orm::{EntityTrait, Select};
+use sea_orm::{ConnectionTrait, EntityTrait, Select};
 use uuid::Uuid;
 
 use crate::database::entities::s3_object;
-use crate::database::Client;
 use crate::error::Result;
 
 /// A query builder for get operations.
-pub struct GetQueryBuilder<'a> {
-    client: &'a Client,
+pub struct GetQueryBuilder<'a, C> {
+    connection: &'a C,
 }
 
-impl<'a> GetQueryBuilder<'a> {
+impl<'a, C> GetQueryBuilder<'a, C>
+where
+    C: ConnectionTrait,
+{
     /// Create a new query builder.
-    pub fn new(client: &'a Client) -> Self {
-        Self { client }
+    pub fn new(connection: &'a C) -> Self {
+        Self { connection }
     }
 
     /// Build a select query for finding an s3 object by id.
@@ -26,9 +28,7 @@ impl<'a> GetQueryBuilder<'a> {
 
     /// Get a specific s3 object by id.
     pub async fn get_s3_by_id(&self, id: Uuid) -> Result<Option<s3_object::Model>> {
-        Ok(Self::build_s3_by_id(id)
-            .one(self.client.connection_ref())
-            .await?)
+        Ok(Self::build_s3_by_id(id).one(self.connection).await?)
     }
 }
 
@@ -47,7 +47,7 @@ mod tests {
         let entries = EntriesBuilder::default().build(&client).await.s3_objects;
 
         let first = entries.first().unwrap();
-        let builder = GetQueryBuilder::new(&client);
+        let builder = GetQueryBuilder::new(client.connection_ref());
         let result = builder.get_s3_by_id(first.s3_object_id).await.unwrap();
 
         assert_eq!(result.as_ref(), Some(first));

@@ -145,7 +145,7 @@ where
     ///     (<uuid>, <current_attributes>),
     ///     ...
     /// ) AS values)
-    /// update <object|s3_object> set attributes = (
+    /// update <s3_object> set attributes = (
     ///     select attributes from update_with where object_id = id
     /// ) where object_id in (select id from update_with)
     /// returning <updated_objects>

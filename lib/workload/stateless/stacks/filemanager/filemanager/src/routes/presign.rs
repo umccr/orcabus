@@ -99,7 +99,7 @@ pub(crate) mod tests {
     async fn presign() {
         let client = s3::Client::new(mock_client!(
             aws_sdk_s3,
-            RuleMode::Sequential,
+            RuleMode::MatchAny,
             &[&mock_get_object("0", "1", b""),]
         ));
         let config = Default::default();
