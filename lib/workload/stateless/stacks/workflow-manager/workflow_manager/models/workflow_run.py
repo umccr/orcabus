@@ -40,7 +40,6 @@ class WorkflowRun(OrcaBusBaseModel):
     # Link to library table
     libraries = models.ManyToManyField(Library, through="LibraryAssociation")
 
-
     objects = WorkflowRunManager()
 
     def __str__(self):
@@ -60,8 +59,14 @@ class WorkflowRun(OrcaBusBaseModel):
         }
 
 
+class LibraryAssociationManager(OrcaBusBaseManager):
+    pass
+
+
 class LibraryAssociation(OrcaBusBaseModel):
     workflow_run = models.ForeignKey(WorkflowRun, on_delete=models.CASCADE)
     library = models.ForeignKey(Library, on_delete=models.CASCADE)
     association_date = models.DateTimeField()
     status = models.CharField(max_length=255)
+
+    objects = LibraryAssociationManager()

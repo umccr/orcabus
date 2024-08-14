@@ -51,7 +51,7 @@ _^^^ please make sure to run `python manage.py migrate` first! ^^^_
 #### Generate Workflow Record
 
 ```
-python manage.py help generate_mock_data
+python manage.py help generate_mock_workflow_run
     > Generate mock Workflow data into database for local development and testing
 ```
 

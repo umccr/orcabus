@@ -3,9 +3,7 @@ from typing import Dict, List
 from rest_framework import serializers
 from rest_framework.fields import empty
 
-from workflow_manager.models.workflow import Workflow
-from workflow_manager.models.workflow_run import WorkflowRun
-from workflow_manager.models.payload import Payload
+from workflow_manager.models import Workflow, WorkflowRun, Payload, Library
 
 
 READ_ONLY_SERIALIZER = "READ ONLY SERIALIZER"
