@@ -1,0 +1,13 @@
+# See https://github.com/umccr/orcabus/issues/455
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "09:00"
+      timezone: "Australia/Melbourne"
+    commit-message:
+      # Prefix all commit messages with "[draft] " (no colon, but a trailing whitespace)
+      prefix: "[draft] "
