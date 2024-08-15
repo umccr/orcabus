@@ -7,12 +7,12 @@ use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
 use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
 use sea_orm::prelude::{DateTimeWithTimeZone, Json};
 use serde::{Deserialize, Serialize};
-use utoipa::{IntoParams, ToSchema};
+use utoipa::IntoParams;
 
 /// The available fields to filter `s3_object` queries by. Each query parameter represents
 /// an `and` clause in the SQL statement. Nested query string style syntax is supported on
 /// JSON attributes. Wildcards are supported on some of the fields.
-#[derive(Serialize, Deserialize, Debug, Default, IntoParams, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Default, IntoParams)]
 #[serde(default, rename_all = "camelCase")]
 #[into_params(parameter_in = Query)]
 pub struct S3ObjectsFilter {

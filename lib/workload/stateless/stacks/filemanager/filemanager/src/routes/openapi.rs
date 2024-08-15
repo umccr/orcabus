@@ -16,6 +16,7 @@ use crate::routes::get::*;
 use crate::routes::ingest::*;
 use crate::routes::list::*;
 use crate::routes::pagination::*;
+use crate::routes::presign::ContentDisposition;
 use crate::routes::update::*;
 
 /// A newtype equivalent to a `DateTime` with a time zone.
@@ -53,6 +54,7 @@ pub struct Json(pub Value);
             Wildcard,
             Json,
             ListResponseS3,
+            ContentDisposition,
             PaginatedResponse,
             Pagination,
             Links,

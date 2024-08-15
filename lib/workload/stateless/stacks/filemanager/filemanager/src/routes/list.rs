@@ -9,7 +9,7 @@ use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
 use crate::routes::filter::S3ObjectsFilter;
 use crate::routes::pagination::{ListResponse, Pagination};
-use crate::routes::presign::PresignedUrlBuilder;
+use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
 use crate::routes::AppState;
 use axum::extract::{Query, Request, State};
 use axum::http::header::HOST;
@@ -181,7 +181,7 @@ pub async fn count_s3(
         (status = OK, description = "The list of presigned urls", body = ListResponseS3),
         ErrorStatusCode,
     ),
-    params(Pagination, WildcardParams, S3ObjectsFilter),
+    params(Pagination, WildcardParams, PresignedParams, S3ObjectsFilter),
     context_path = "/api/v1",
     tag = "list",
 )]
@@ -189,6 +189,7 @@ pub async fn presign_s3(
     state: State<AppState>,
     pagination: Query<Pagination>,
     wildcard: Query<WildcardParams>,
+    Query(presigned): Query<PresignedParams>,
     filter_all: QsQuery<S3ObjectsFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<Url>>> {
@@ -208,7 +209,13 @@ pub async fn presign_s3(
 
     let mut urls = Vec::with_capacity(results.len());
     for result in results {
-        if let Some(presigned) = PresignedUrlBuilder::presign_from_model(&state, result).await? {
+        if let Some(presigned) = PresignedUrlBuilder::presign_from_model(
+            &state,
+            result,
+            presigned.response_content_disposition(),
+        )
+        .await?
+        {
             urls.push(presigned);
         }
     }
@@ -320,7 +327,52 @@ pub(crate) mod tests {
         assert_eq!(result.links(), &Links::new(None, None,));
         assert_eq!(2, result.pagination().count);
 
+        let query = result.results()[0].query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(result.results()[0].path(), "/0/0");
+
+        let query = result.results()[1].query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=inline"));
+        assert_eq!(result.results()[1].path(), "/2/2");
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_api_presign_attachment(pool: PgPool) {
+        let client = mock_client!(
+            aws_sdk_s3,
+            RuleMode::Sequential,
+            &[
+                &mock_get_object("0", "0", b""),
+                &mock_get_object("2", "2", b"")
+            ]
+        );
+
+        let state = AppState::from_pool(pool)
+            .await
+            .with_s3_client(s3::Client::new(client));
+
+        EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let result: ListResponse<Url> =
+            response_from_get(state, "/s3/presign?responseContentDisposition=attachment").await;
+        assert_eq!(result.links(), &Links::new(None, None,));
+        assert_eq!(2, result.pagination().count);
+
+        let query = result.results()[0].query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%220%22"));
+        assert_eq!(result.results()[0].path(), "/0/0");
+
+        let query = result.results()[1].query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%222%22"));
         assert_eq!(result.results()[1].path(), "/2/2");
     }
 
@@ -349,9 +401,12 @@ pub(crate) mod tests {
             .await;
 
         let result: ListResponse<Url> = response_from_get(state, "/s3/presign").await;
-        assert_eq!(result.links(), &Links::new(None, None,));
+        assert_eq!(result.links(), &Links::new(None, None));
         assert_eq!(1, result.pagination().count);
 
+        let query = result.results()[0].query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(result.results()[0].path(), "/0/0");
     }
 

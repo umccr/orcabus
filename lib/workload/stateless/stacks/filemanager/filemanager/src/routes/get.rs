@@ -11,9 +11,9 @@ use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
 use crate::routes::filter::wildcard::Wildcard;
 use crate::routes::filter::S3ObjectsFilter;
-use crate::routes::presign::PresignedUrlBuilder;
+use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
 use crate::routes::AppState;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::routing::get;
 use axum::{Json, Router};
 use sea_orm::{ConnectionTrait, TransactionTrait};
@@ -59,10 +59,15 @@ pub async fn get_s3_by_id(state: State<AppState>, id: Path<Uuid>) -> Result<Json
         (status = OK, description = "The presigned url for the object with the id", body = Option<Url>),
         ErrorStatusCode,
     ),
+    params(PresignedParams),
     context_path = "/api/v1",
     tag = "get",
 )]
-pub async fn presign_s3_by_id(state: State<AppState>, id: Path<Uuid>) -> Result<Json<Option<Url>>> {
+pub async fn presign_s3_by_id(
+    state: State<AppState>,
+    id: Path<Uuid>,
+    Query(presigned): Query<PresignedParams>,
+) -> Result<Json<Option<Url>>> {
     let txn = state.database_client().connection_ref().begin().await?;
 
     let Json(response) = get_s3_from_connection(&txn, id).await?;
@@ -94,7 +99,12 @@ pub async fn presign_s3_by_id(state: State<AppState>, id: Path<Uuid>) -> Result<
     if let Some(current) = current.last() {
         if current.s3_object_id == response.s3_object_id {
             return Ok(Json(
-                PresignedUrlBuilder::presign_from_model(&state, response).await?,
+                PresignedUrlBuilder::presign_from_model(
+                    &state,
+                    response,
+                    presigned.response_content_disposition(),
+                )
+                .await?,
             ));
         }
     }
@@ -171,12 +181,50 @@ mod tests {
             .build(state.database_client())
             .await;
 
-        let result: Option<Url> = response_from_get(
+        let result = response_from_get::<Option<Url>>(
             state,
             &format!("/s3/presign/{}", entries.s3_objects[0].s3_object_id),
         )
-        .await;
-        assert_eq!(result.unwrap().path(), "/0/0");
+        .await
+        .unwrap();
+
+        let query = result.query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=inline"));
+        assert_eq!(result.path(), "/0/0");
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn get_presign_attachment(pool: PgPool) {
+        let client = mock_client!(
+            aws_sdk_s3,
+            RuleMode::Sequential,
+            &[&mock_get_object("0", "0", b""),]
+        );
+
+        let state = AppState::from_pool(pool)
+            .await
+            .with_s3_client(s3::Client::new(client));
+
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let result = response_from_get::<Option<Url>>(
+            state,
+            &format!(
+                "/s3/presign/{}?responseContentDisposition=attachment",
+                entries.s3_objects[0].s3_object_id
+            ),
+        )
+        .await
+        .unwrap();
+
+        let query = result.query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%220%22"));
+        assert_eq!(result.path(), "/0/0");
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]

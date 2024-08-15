@@ -73,10 +73,12 @@ impl Client {
         &self,
         key: &str,
         bucket: &str,
+        response_content_disposition: &str,
         expires_in: Duration,
     ) -> Result<PresignedRequest, GetObjectError> {
         self.inner
             .get_object()
+            .response_content_disposition(response_content_disposition)
             .checksum_mode(Enabled)
             .key(key)
             .bucket(bucket)
