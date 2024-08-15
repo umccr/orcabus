@@ -31,3 +31,4 @@ skel/
 docs/
 openapi/
 venv/
+.github/

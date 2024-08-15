@@ -1,0 +1,12 @@
+# See https://github.com/umccr/orcabus/issues/455
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "09:00"
+      timezone: "Australia/Melbourne"
+    commit-message:
+      prefix: "[draft]"
