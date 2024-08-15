@@ -32,6 +32,7 @@ pub struct AppState {
     database_client: database::Client,
     config: Arc<Config>,
     s3_client: Arc<s3::Client>,
+    use_tls_links: bool,
 }
 
 impl AppState {
@@ -40,11 +41,13 @@ impl AppState {
         database_client: database::Client,
         config: Arc<Config>,
         s3_client: Arc<s3::Client>,
+        use_tls_links: bool,
     ) -> Self {
         Self {
             database_client,
             config,
             s3_client,
+            use_tls_links,
         }
     }
 
@@ -54,6 +57,7 @@ impl AppState {
             database::Client::from_pool(pool),
             Default::default(),
             Arc::new(s3::Client::with_defaults().await),
+            false,
         )
     }
 
@@ -75,6 +79,12 @@ impl AppState {
         self
     }
 
+    /// Set the TLS links option.
+    pub fn with_use_tls_links(mut self, use_tls_links: bool) -> Self {
+        self.use_tls_links = use_tls_links;
+        self
+    }
+
     /// Get the database client.
     pub fn database_client(&self) -> &database::Client {
         &self.database_client
@@ -88,6 +98,11 @@ impl AppState {
     /// Get the database client.
     pub fn s3_client(&self) -> &s3::Client {
         &self.s3_client
+    }
+
+    /// Get the links TLS setting.
+    pub fn use_tls_links(&self) -> bool {
+        self.use_tls_links
     }
 }
 

@@ -78,6 +78,8 @@ async fn main() -> Result<()> {
         client.clone(),
         config.clone(),
         Arc::new(s3::Client::with_defaults().await),
+        // For now, the local server is always non-TLS.
+        false,
     );
 
     if let Some(load) = args.load_sql_file {

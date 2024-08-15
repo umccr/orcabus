@@ -26,6 +26,8 @@ async fn main() -> Result<(), Error> {
         client,
         Arc::new(config),
         Arc::new(s3::Client::with_defaults().await),
+        // API Gateway is always TLS.
+        true,
     );
 
     let app =
