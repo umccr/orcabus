@@ -22,6 +22,8 @@ pub struct Config {
     pub(crate) sqs_url: Option<String>,
     #[serde(default, rename = "filemanager_paired_ingest_mode")]
     pub(crate) paired_ingest_mode: bool,
+    #[serde(default, rename = "filemanager_api_tls_links")]
+    pub(crate) api_tls_links: bool,
     #[serde(rename = "filemanager_api_presign_limit")]
     pub(crate) api_presign_limit: Option<u64>,
     #[serde_as(as = "Option<DurationSeconds<i64>>")]
@@ -82,6 +84,11 @@ impl Config {
     }
 
     /// Get the presigned size limit.
+    pub fn api_tls_links(&self) -> bool {
+        self.api_tls_links
+    }
+
+    /// Get the presigned size limit.
     pub fn api_presign_limit(&self) -> Option<u64> {
         self.api_presign_limit
     }
@@ -120,6 +127,7 @@ mod tests {
             ("PGUSER", "user"),
             ("FILEMANAGER_SQS_URL", "url"),
             ("FILEMANAGER_PAIRED_INGEST_MODE", "true"),
+            ("FILEMANAGER_API_TLS_LINKS", "true"),
             ("FILEMANAGER_API_PRESIGN_LIMIT", "123"),
             ("FILEMANAGER_API_PRESIGN_EXPIRY", "60"),
         ]
@@ -138,6 +146,7 @@ mod tests {
                 pguser: Some("user".to_string()),
                 sqs_url: Some("url".to_string()),
                 paired_ingest_mode: true,
+                api_tls_links: true,
                 api_presign_limit: Some(123),
                 api_presign_expiry: Some(Duration::seconds(60))
             }

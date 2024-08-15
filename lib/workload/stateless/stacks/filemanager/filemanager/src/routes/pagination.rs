@@ -226,12 +226,12 @@ mod tests {
             result.links(),
             &Links::new(
                 Some(
-                    "https://example.com/s3?rowsPerPage=2&page=0"
+                    "http://example.com/s3?rowsPerPage=2&page=0"
                         .parse()
                         .unwrap()
                 ),
                 Some(
-                    "https://example.com/s3?rowsPerPage=2&page=2"
+                    "http://example.com/s3?rowsPerPage=2&page=2"
                         .parse()
                         .unwrap()
                 )
@@ -247,7 +247,7 @@ mod tests {
             &Links::new(
                 None,
                 Some(
-                    "https://example.com/s3?rowsPerPage=2&page=1"
+                    "http://example.com/s3?rowsPerPage=2&page=1"
                         .parse()
                         .unwrap()
                 )
@@ -262,7 +262,7 @@ mod tests {
             result.links(),
             &Links::new(
                 Some(
-                    "https://example.com/s3?rowsPerPage=2&page=3"
+                    "http://example.com/s3?rowsPerPage=2&page=3"
                         .parse()
                         .unwrap()
                 ),
@@ -286,7 +286,7 @@ mod tests {
         let result: ListResponse<S3Object> = response_from_get(state.clone(), "/s3?page=0").await;
         assert_eq!(
             result.links(),
-            &Links::new(None, Some("https://example.com/s3?page=1".parse().unwrap()))
+            &Links::new(None, Some("http://example.com/s3?page=1".parse().unwrap()))
         );
         assert_eq!(result.pagination().count, 1000);
         assert_eq!(result.results(), &entries[0..1000]);
@@ -307,12 +307,12 @@ mod tests {
             result.links(),
             &Links::new(
                 Some(
-                    "https://example.com/s3?some_parameter=123&rowsPerPage=2&page=0"
+                    "http://example.com/s3?some_parameter=123&rowsPerPage=2&page=0"
                         .parse()
                         .unwrap()
                 ),
                 Some(
-                    "https://example.com/s3?some_parameter=123&rowsPerPage=2&page=2"
+                    "http://example.com/s3?some_parameter=123&rowsPerPage=2&page=2"
                         .parse()
                         .unwrap()
                 )
@@ -343,7 +343,7 @@ mod tests {
             result.links(),
             &Links::new(
                 Some(
-                    "https://example.com/s3?rowsPerPage=1&page=19"
+                    "http://example.com/s3?rowsPerPage=1&page=19"
                         .parse()
                         .unwrap()
                 ),

@@ -127,13 +127,24 @@ pub async fn list_s3(
         response = response.current_state();
     }
 
-    let host: Url = request
+    let mut host = request
         .headers()
         .get(HOST)
         .ok_or_else(|| MissingHostHeader)?
         .to_str()
         .map_err(|err| ParseError(err.to_string()))?
-        .parse()?;
+        .to_string();
+
+    // A `HOST` is not a valid URL yet.
+    if !host.starts_with("https://") && !host.starts_with("http://") {
+        if state.config().api_tls_links() {
+            host = format!("https://{}", host);
+        } else {
+            host = format!("http://{}", host);
+        }
+    }
+
+    let host: Url = host.parse()?;
     let url = host.join(&request.uri().to_string())?;
 
     Ok(Json(
@@ -277,6 +288,36 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_current_s3_paginate(pool: PgPool) {
         let state = AppState::from_pool(pool).await;
+        let entries = EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await
+            .s3_objects;
+
+        let result: ListResponse<S3> =
+            response_from_get(state, "/s3?currentState=true&rowsPerPage=1&page=0").await;
+        assert_eq!(
+            result.links(),
+            &Links::new(
+                None,
+                Some(
+                    "http://example.com/s3?currentState=true&rowsPerPage=1&page=1"
+                        .parse()
+                        .unwrap()
+                )
+            )
+        );
+        assert_eq!(result.results(), vec![entries[2].clone()]);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_current_s3_paginate_https_links(pool: PgPool) {
+        let state = AppState::from_pool(pool).await.with_config(Config {
+            api_tls_links: true,
+            ..Default::default()
+        });
         let entries = EntriesBuilder::default()
             .with_bucket_divisor(4)
             .with_key_divisor(3)
@@ -584,7 +625,7 @@ pub(crate) mod tests {
                 Request::builder()
                     .method(method)
                     .uri(uri)
-                    .header(HOST, "https://example.com")
+                    .header(HOST, "example.com")
                     .header(CONTENT_TYPE, "application/json")
                     .body(body)
                     .unwrap(),

@@ -702,7 +702,7 @@ pub(crate) mod tests {
         let result = builder
             .paginate_to_list_response(
                 Pagination::new(0, 2),
-                "https://example.com/s3?rowsPerPage=2&page=0"
+                "http://example.com/s3?rowsPerPage=2&page=0"
                     .parse()
                     .unwrap(),
             )
@@ -714,7 +714,7 @@ pub(crate) mod tests {
             &Links::new(
                 None,
                 Some(
-                    "https://example.com/s3?rowsPerPage=2&page=1"
+                    "http://example.com/s3?rowsPerPage=2&page=1"
                         .parse()
                         .unwrap()
                 )
