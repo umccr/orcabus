@@ -19,6 +19,7 @@ use utoipa::{IntoParams, ToSchema};
 pub struct PresignedParams {
     /// Specify the content-disposition for the presigned URLs themselves.
     /// This sets the `response-content-disposition` for the presigned `GetObject` request.
+    #[param(nullable, default = "inline")]
     response_content_disposition: ContentDisposition,
 }
 

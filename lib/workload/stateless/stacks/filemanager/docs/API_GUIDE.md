@@ -159,6 +159,30 @@ For example, count the total records:
 curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/count" | jq
 ```
 
+## Presigned URLs
+
+The filemanager API can also generate presigned URLs. Presigned URLs can only be generated for objects that currently
+exist in S3.
+
+For example, generate a presigned URL for a single record:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/presign/0190465f-68fa-76e4-9c36-12bdf1a1571d" | jq
+```
+
+Or, for multiple records, which supports the same query parameters as list operations (except `currentState` as that is implied):
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/presign?page=10&rowsPerPage=50" | jq
+```
+
+Specify `responseContentDisposition` for either of the above routes to change the `response-content-disposition` for the
+presigned `GetObject` request. This can either be `inline` or `attachment`. The default is `inline`:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/presign?responseContentDisposition=attachment" | jq
+```
+
 ## Some missing features
 
 There are some missing features in the query API which are planned, namely:
