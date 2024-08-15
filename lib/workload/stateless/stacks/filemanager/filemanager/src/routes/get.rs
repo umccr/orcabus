@@ -1,17 +1,38 @@
 //! Route logic for get API calls.
 //!
 
-use axum::extract::{Path, State};
-use axum::routing::get;
-use axum::{Json, Router};
-use uuid::Uuid;
-
+use crate::database::entities::s3_object;
 use crate::database::entities::s3_object::Model as S3;
+use crate::database::entities::sea_orm_active_enums::EventType;
 use crate::error::Error::ExpectedSomeValue;
 use crate::error::Result;
 use crate::queries::get::GetQueryBuilder;
+use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
+use crate::routes::filter::wildcard::Wildcard;
+use crate::routes::filter::S3ObjectsFilter;
+use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
 use crate::routes::AppState;
+use axum::extract::{Path, Query, State};
+use axum::routing::get;
+use axum::{Json, Router};
+use sea_orm::{ConnectionTrait, TransactionTrait};
+use url::Url;
+use uuid::Uuid;
+
+async fn get_s3_from_connection<C>(connection: &C, Path(id): Path<Uuid>) -> Result<Json<S3>>
+where
+    C: ConnectionTrait,
+{
+    let query = GetQueryBuilder::new(connection);
+
+    Ok(Json(
+        query
+            .get_s3_by_id(id)
+            .await?
+            .ok_or_else(|| ExpectedSomeValue(id))?,
+    ))
+}
 
 /// Get an s3_object given it's id.
 #[utoipa::path(
@@ -24,42 +45,103 @@ use crate::routes::AppState;
     context_path = "/api/v1",
     tag = "get",
 )]
-pub async fn get_s3_by_id(state: State<AppState>, Path(id): Path<Uuid>) -> Result<Json<S3>> {
-    let query = GetQueryBuilder::new(&state.client);
+pub async fn get_s3_by_id(state: State<AppState>, id: Path<Uuid>) -> Result<Json<S3>> {
+    get_s3_from_connection(state.database_client().connection_ref(), id).await
+}
 
-    Ok(Json(
-        query
-            .get_s3_by_id(id)
-            .await?
-            .ok_or_else(|| ExpectedSomeValue(id))?,
-    ))
+/// Generate AWS presigned URLs for a single S3 object using its `s3_object_id`.
+/// This route will not return an object if it has been deleted from the database, or its size
+/// is greater than `FILEMANAGER_API_PRESIGN_LIMIT`.
+#[utoipa::path(
+    get,
+    path = "/s3/presign/{id}",
+    responses(
+        (status = OK, description = "The presigned url for the object with the id", body = Option<Url>),
+        ErrorStatusCode,
+    ),
+    params(PresignedParams),
+    context_path = "/api/v1",
+    tag = "get",
+)]
+pub async fn presign_s3_by_id(
+    state: State<AppState>,
+    id: Path<Uuid>,
+    Query(presigned): Query<PresignedParams>,
+) -> Result<Json<Option<Url>>> {
+    let txn = state.database_client().connection_ref().begin().await?;
+
+    let Json(response) = get_s3_from_connection(&txn, id).await?;
+
+    // If this is a deleted object, then it can never be current.
+    if response.event_type == EventType::Deleted {
+        txn.commit().await?;
+        return Ok(Json(None));
+    }
+
+    // Check if this represents a current object.
+    let current = ListQueryBuilder::<_, s3_object::Entity>::new(&txn)
+        .filter_all(
+            S3ObjectsFilter {
+                bucket: Some(Wildcard::new(response.bucket.to_string())),
+                key: Some(Wildcard::new(response.key.to_string())),
+                version_id: Some(Wildcard::new(response.version_id.to_string())),
+                ..Default::default()
+            },
+            true,
+        )
+        .all()
+        .await?;
+
+    txn.commit().await?;
+
+    // If the last object ordered by sequencer is the requested one, then this is a
+    // current object.
+    if let Some(current) = current.last() {
+        if current.s3_object_id == response.s3_object_id {
+            return Ok(Json(
+                PresignedUrlBuilder::presign_from_model(
+                    &state,
+                    response,
+                    presigned.response_content_disposition(),
+                )
+                .await?,
+            ));
+        }
+    }
+
+    Ok(Json(None))
 }
 
 /// The router for getting object records.
 pub fn get_router() -> Router<AppState> {
-    Router::new().route("/s3/:id", get(get_s3_by_id))
+    Router::new()
+        .route("/s3/:id", get(get_s3_by_id))
+        .route("/s3/presign/:id", get(presign_s3_by_id))
 }
 
 #[cfg(test)]
 mod tests {
+    use aws_smithy_mocks_experimental::{mock_client, RuleMode};
     use axum::body::Body;
     use axum::http::{Method, StatusCode};
     use sqlx::PgPool;
 
+    use super::*;
+    use crate::clients::aws::s3;
     use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::env::Config;
     use crate::queries::EntriesBuilder;
+    use crate::routes::list::tests::mock_get_object;
     use crate::routes::list::tests::{response_from, response_from_get};
     use crate::routes::AppState;
     use crate::uuid::UuidGenerator;
     use serde_json::Value;
 
-    use super::*;
-
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_s3_api(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -70,7 +152,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_non_existent(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
 
         let (status_code, _) = response_from::<Value>(
             state,
@@ -80,5 +162,150 @@ mod tests {
         )
         .await;
         assert_eq!(status_code, StatusCode::NOT_FOUND);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn get_presign(pool: PgPool) {
+        let client = mock_client!(
+            aws_sdk_s3,
+            RuleMode::Sequential,
+            &[&mock_get_object("0", "0", b""),]
+        );
+
+        let state = AppState::from_pool(pool)
+            .await
+            .with_s3_client(s3::Client::new(client));
+
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let result = response_from_get::<Option<Url>>(
+            state,
+            &format!("/s3/presign/{}", entries.s3_objects[0].s3_object_id),
+        )
+        .await
+        .unwrap();
+
+        let query = result.query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=inline"));
+        assert_eq!(result.path(), "/0/0");
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn get_presign_attachment(pool: PgPool) {
+        let client = mock_client!(
+            aws_sdk_s3,
+            RuleMode::Sequential,
+            &[&mock_get_object("0", "0", b""),]
+        );
+
+        let state = AppState::from_pool(pool)
+            .await
+            .with_s3_client(s3::Client::new(client));
+
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let result = response_from_get::<Option<Url>>(
+            state,
+            &format!(
+                "/s3/presign/{}?responseContentDisposition=attachment",
+                entries.s3_objects[0].s3_object_id
+            ),
+        )
+        .await
+        .unwrap();
+
+        let query = result.query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%220%22"));
+        assert_eq!(result.path(), "/0/0");
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn get_presign_different_size(pool: PgPool) {
+        let client = mock_client!(
+            aws_sdk_s3,
+            RuleMode::Sequential,
+            &[&mock_get_object("1", "2", b""),]
+        );
+
+        let config = Config {
+            api_presign_limit: Some(1),
+            ..Default::default()
+        };
+        let state = AppState::from_pool(pool)
+            .await
+            .with_config(config)
+            .with_s3_client(s3::Client::new(client));
+
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let result: Option<Url> = response_from_get(
+            state,
+            &format!("/s3/presign/{}", entries.s3_objects[2].s3_object_id),
+        )
+        .await;
+        assert!(result.is_none());
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn get_presign_not_current_deleted(pool: PgPool) {
+        let client = mock_client!(
+            aws_sdk_s3,
+            RuleMode::Sequential,
+            &[&mock_get_object("3", "1", b""),]
+        );
+
+        let state = AppState::from_pool(pool)
+            .await
+            .with_s3_client(s3::Client::new(client));
+
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let result: Option<Url> = response_from_get(
+            state,
+            &format!("/s3/presign/{}", entries.s3_objects[3].s3_object_id),
+        )
+        .await;
+        assert!(result.is_none());
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn get_presign_not_current_created(pool: PgPool) {
+        let client = mock_client!(
+            aws_sdk_s3,
+            RuleMode::Sequential,
+            &[&mock_get_object("0", "0", b""),]
+        );
+
+        let state = AppState::from_pool(pool)
+            .await
+            .with_s3_client(s3::Client::new(client));
+
+        let entries = EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let result: Option<Url> = response_from_get(
+            state,
+            &format!("/s3/presign/{}", entries.s3_objects[0].s3_object_id),
+        )
+        .await;
+        assert!(result.is_none());
     }
 }

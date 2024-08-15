@@ -82,7 +82,7 @@ pub async fn update_s3_attributes(
     Path(id): Path<Uuid>,
     Json(patch): Json<PatchBody>,
 ) -> Result<Json<S3>> {
-    let txn = state.client().connection_ref().begin().await?;
+    let txn = state.database_client().connection_ref().begin().await?;
 
     let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
         .for_id(id)
@@ -122,7 +122,7 @@ pub async fn update_s3_collection_attributes(
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
     Json(patch): Json<PatchBody>,
 ) -> Result<Json<Vec<S3>>> {
-    let txn = state.client().connection_ref().begin().await?;
+    let txn = state.database_client().connection_ref().begin().await?;
 
     let mut results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
         .filter_all(filter_all, wildcard.case_sensitive());
@@ -167,11 +167,13 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attribute_api_replace(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(state.client()).await;
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
 
         change_attributes(
-            state.client(),
+            state.database_client(),
             &entries,
             0,
             Some(json!({"attributeId": "1"})),
@@ -194,16 +196,18 @@ mod tests {
         change_attribute_entries(&mut entries, 0, json!({"attributeId": "attributeId"}));
 
         assert_model_contains(&[s3_object], &entries.s3_objects, 0..1);
-        assert_correct_records(state.client(), entries).await;
+        assert_correct_records(state.database_client(), entries).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attribute_api_not_found(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(state.client()).await;
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
 
         change_attributes(
-            state.client(),
+            state.database_client(),
             &entries,
             0,
             Some(json!({"attributeId": "1"})),
@@ -226,23 +230,25 @@ mod tests {
 
         // Nothing is expected to change.
         change_attribute_entries(&mut entries, 0, json!({"attributeId": "1"}));
-        assert_correct_records(state.client(), entries).await;
+        assert_correct_records(state.database_client(), entries).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_collection_attributes_api_replace(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(state.client()).await;
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
 
         change_attributes(
-            state.client(),
+            state.database_client(),
             &entries,
             0,
             Some(json!({"attributeId": "1"})),
         )
         .await;
         change_attributes(
-            state.client(),
+            state.database_client(),
             &entries,
             1,
             Some(json!({"attributeId": "1"})),
@@ -266,23 +272,25 @@ mod tests {
         change_attribute_entries(&mut entries, 1, json!({"attributeId": "attributeId"}));
 
         assert_model_contains(&s3_objects, &entries.s3_objects, 0..2);
-        assert_correct_records(state.client(), entries).await;
+        assert_correct_records(state.database_client(), entries).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_s3_attributes_current_state(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(state.client()).await;
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
 
         change_attributes(
-            state.client(),
+            state.database_client(),
             &entries,
             0,
             Some(json!({"attributeId": "1"})),
         )
         .await;
         change_attributes(
-            state.client(),
+            state.database_client(),
             &entries,
             1,
             Some(json!({"attributeId": "1"})),
@@ -307,23 +315,25 @@ mod tests {
         entries.s3_objects[1].attributes = Some(json!({"attributeId": "1"}));
 
         assert_model_contains(&s3_objects, &entries.s3_objects, 0..1);
-        assert_correct_records(state.client(), entries).await;
+        assert_correct_records(state.database_client(), entries).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_collection_attributes_api_no_op(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(state.client()).await;
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
 
         change_attributes(
-            state.client(),
+            state.database_client(),
             &entries,
             0,
             Some(json!({"attributeId": "2"})),
         )
         .await;
         change_attributes(
-            state.client(),
+            state.database_client(),
             &entries,
             1,
             Some(json!({"attributeId": "2"})),
@@ -345,16 +355,18 @@ mod tests {
 
         change_attribute_entries(&mut entries, 0, json!({"attributeId": "2"}));
         change_attribute_entries(&mut entries, 1, json!({"attributeId": "2"}));
-        assert_correct_records(state.client(), entries).await;
+        assert_correct_records(state.database_client(), entries).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_wildcard_like(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(state.client()).await;
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
 
         change_many(
-            state.client(),
+            state.database_client(),
             &entries,
             &[0, 1],
             Some(json!({"attributeId": "attributeId"})),
@@ -380,16 +392,18 @@ mod tests {
         .await;
 
         assert_contains(&s3_objects, &entries, 0..2);
-        assert_correct_records(state.client(), entries).await;
+        assert_correct_records(state.database_client(), entries).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_wildcard_ilike(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(state.client()).await;
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
 
         change_many(
-            state.client(),
+            state.database_client(),
             &entries,
             &[0, 1],
             Some(json!({"attributeId": "attributeId"})),
@@ -424,16 +438,18 @@ mod tests {
         .await;
 
         assert_contains(&s3_objects, &entries, 0..2);
-        assert_correct_records(state.client(), entries).await;
+        assert_correct_records(state.database_client(), entries).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_api_wildcard_like(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(state.client()).await;
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
 
         change_many(
-            state.client(),
+            state.database_client(),
             &entries,
             &[0, 2, 4, 6, 8],
             Some(json!({"attributeId": "1"})),
@@ -453,16 +469,18 @@ mod tests {
         .await;
 
         assert_wildcard_update(&mut entries, &s3_objects);
-        assert_correct_records(state.client(), entries).await;
+        assert_correct_records(state.database_client(), entries).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_api_wildcard_ilike(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(state.client()).await;
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
 
         change_many(
-            state.client(),
+            state.database_client(),
             &entries,
             &[0, 2, 4, 6, 8],
             Some(json!({"attributeId": "1"})),
@@ -483,6 +501,6 @@ mod tests {
         .await;
 
         assert_wildcard_update(&mut entries, &s3_objects);
-        assert_correct_records(state.client(), entries).await;
+        assert_correct_records(state.database_client(), entries).await;
     }
 }

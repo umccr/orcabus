@@ -40,7 +40,7 @@ pub async fn ingest_from_sqs(state: State<AppState>) -> Result<Json<IngestCount>
         S3Client::with_defaults().await,
         SQSClient::with_defaults().await,
         None::<String>,
-        &state.client,
+        &state.database_client,
         &state.config,
     )
     .await?;
@@ -69,13 +69,13 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_from_sqs_api(pool: PgPool) {
-        let mut state = AppState::from_pool(pool);
+        let mut state = AppState::from_pool(pool).await;
         Arc::get_mut(&mut state.config)
             .unwrap()
             .sqs_url
             .get_or_insert("url".to_string());
 
-        test_receive_and_ingest_with(state.client(), |sqs_client, s3_client| async {
+        test_receive_and_ingest_with(state.database_client(), |sqs_client, s3_client| async {
             let sqs_ctx = SQSClient::with_defaults_context();
             sqs_ctx.expect().return_once(|| sqs_client);
             let s3_ctx = S3Client::with_defaults_context();

@@ -44,6 +44,8 @@ pub enum Error {
     ParseError(String),
     #[error("missing host header")]
     MissingHostHeader,
+    #[error("creating presigned url: `{0}`")]
+    PresignedUrlError(String),
 }
 
 impl From<sqlx::Error> for Error {

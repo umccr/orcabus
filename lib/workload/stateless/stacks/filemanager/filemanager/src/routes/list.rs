@@ -3,12 +3,13 @@
 
 use crate::database::entities::s3_object;
 use crate::database::entities::s3_object::Model as S3;
-use crate::error::Error::{MissingHostHeader, ParseError};
+use crate::error::Error::{ConversionError, MissingHostHeader, ParseError};
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::ErrorStatusCode;
 use crate::routes::filter::S3ObjectsFilter;
 use crate::routes::pagination::{ListResponse, Pagination};
+use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
 use crate::routes::AppState;
 use axum::extract::{Query, Request, State};
 use axum::http::header::HOST;
@@ -118,21 +119,38 @@ pub async fn list_s3(
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<S3>>> {
-    let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all, wildcard.case_sensitive());
+    let mut response =
+        ListQueryBuilder::<_, s3_object::Entity>::new(state.database_client.connection_ref())
+            .filter_all(filter_all, wildcard.case_sensitive());
 
     if list.current_state {
         response = response.current_state();
     }
 
-    let host: Url = request
-        .headers()
-        .get(HOST)
-        .ok_or_else(|| MissingHostHeader)?
-        .to_str()
-        .map_err(|err| ParseError(err.to_string()))?
-        .parse()?;
-    let url = host.join(&request.uri().to_string())?;
+    let url = if let Some(url) = state.config().api_links_url() {
+        url
+    } else {
+        let mut host = request
+            .headers()
+            .get(HOST)
+            .ok_or_else(|| MissingHostHeader)?
+            .to_str()
+            .map_err(|err| ParseError(err.to_string()))?
+            .to_string();
+
+        // A `HOST` is not a valid URL yet.
+        if !host.starts_with("https://") && !host.starts_with("http://") {
+            if state.use_tls_links() {
+                host = format!("https://{}", host);
+            } else {
+                host = format!("http://{}", host);
+            }
+        }
+
+        &host.parse()?
+    };
+
+    let url = url.join(&request.uri().to_string())?;
 
     Ok(Json(
         response.paginate_to_list_response(pagination, url).await?,
@@ -157,8 +175,9 @@ pub async fn count_s3(
     Query(list): Query<ListS3Params>,
     QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
-    let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(state.client.connection_ref())
-        .filter_all(filter_all, wildcard.case_sensitive());
+    let mut response =
+        ListQueryBuilder::<_, s3_object::Entity>::new(state.database_client.connection_ref())
+            .filter_all(filter_all, wildcard.case_sensitive());
 
     if list.current_state {
         response = response.current_state();
@@ -167,15 +186,75 @@ pub async fn count_s3(
     Ok(Json(response.to_list_count().await?))
 }
 
+/// Generate AWS presigned URLs for s3_objects according to the parameters.
+/// This route implies `currentState=true` because only existing objects can be presigned.
+/// Less presigned URLs may be returned than the amount of objects in the database because some
+/// objects may be over the `FILEMANAGER_API_PRESIGN_LIMIT`.
+#[utoipa::path(
+    get,
+    path = "/s3/presign",
+    responses(
+        (status = OK, description = "The list of presigned urls", body = ListResponseS3),
+        ErrorStatusCode,
+    ),
+    params(Pagination, WildcardParams, PresignedParams, S3ObjectsFilter),
+    context_path = "/api/v1",
+    tag = "list",
+)]
+pub async fn presign_s3(
+    state: State<AppState>,
+    pagination: Query<Pagination>,
+    wildcard: Query<WildcardParams>,
+    Query(presigned): Query<PresignedParams>,
+    filter_all: QsQuery<S3ObjectsFilter>,
+    request: Request,
+) -> Result<Json<ListResponse<Url>>> {
+    let Json(ListResponse {
+        links,
+        mut pagination,
+        results,
+    }) = list_s3(
+        state.clone(),
+        pagination,
+        wildcard,
+        Query(ListS3Params::new(true)),
+        filter_all,
+        request,
+    )
+    .await?;
+
+    let mut urls = Vec::with_capacity(results.len());
+    for result in results {
+        if let Some(presigned) = PresignedUrlBuilder::presign_from_model(
+            &state,
+            result,
+            presigned.response_content_disposition(),
+        )
+        .await?
+        {
+            urls.push(presigned);
+        }
+    }
+
+    pagination.count = u64::try_from(urls.len()).map_err(|err| ConversionError(err.to_string()))?;
+
+    let response = ListResponse::new(links, pagination, urls);
+    Ok(Json(response))
+}
+
 /// The router for list objects.
 pub fn list_router() -> Router<AppState> {
     Router::new()
         .route("/s3", get(list_s3))
         .route("/s3/count", get(count_s3))
+        .route("/s3/presign", get(presign_s3))
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use aws_sdk_s3::operation::get_object::GetObjectOutput;
+    use aws_sdk_s3::primitives::ByteStream;
+    use aws_smithy_mocks_experimental::{mock, mock_client, Rule, RuleMode};
     use axum::body::to_bytes;
     use axum::body::Body;
     use axum::http::header::CONTENT_TYPE;
@@ -186,8 +265,10 @@ pub(crate) mod tests {
     use tower::ServiceExt;
 
     use super::*;
+    use crate::clients::aws::s3;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::EventType;
+    use crate::env::Config;
     use crate::queries::list::tests::filter_event_type;
     use crate::queries::update::tests::change_many;
     use crate::queries::update::tests::{assert_contains, entries_many};
@@ -197,10 +278,10 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -211,12 +292,39 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_current_s3_paginate(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_bucket_divisor(4)
             .with_key_divisor(3)
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
+            .await
+            .s3_objects;
+
+        let result: ListResponse<S3> =
+            response_from_get(state, "/s3?currentState=true&rowsPerPage=1&page=0").await;
+        assert_eq!(
+            result.links(),
+            &Links::new(
+                None,
+                Some(
+                    "http://example.com/s3?currentState=true&rowsPerPage=1&page=1"
+                        .parse()
+                        .unwrap()
+                )
+            )
+        );
+        assert_eq!(result.results(), vec![entries[2].clone()]);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_current_s3_paginate_https_links(pool: PgPool) {
+        let state = AppState::from_pool(pool).await.with_use_tls_links(true);
+        let entries = EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -237,13 +345,152 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_current_s3_paginate_alternate_link(pool: PgPool) {
+        let state = AppState::from_pool(pool).await.with_config(Config {
+            api_links_url: Some("https://localhost:8000".parse().unwrap()),
+            ..Default::default()
+        });
+        let entries = EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await
+            .s3_objects;
+
+        let result: ListResponse<S3> =
+            response_from_get(state, "/s3?currentState=true&rowsPerPage=1&page=0").await;
+        assert_eq!(
+            result.links(),
+            &Links::new(
+                None,
+                Some(
+                    "https://localhost:8000/s3?currentState=true&rowsPerPage=1&page=1"
+                        .parse()
+                        .unwrap()
+                )
+            )
+        );
+        assert_eq!(result.results(), vec![entries[2].clone()]);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_api_presign(pool: PgPool) {
+        let client = mock_client!(
+            aws_sdk_s3,
+            RuleMode::Sequential,
+            &[
+                &mock_get_object("0", "0", b""),
+                &mock_get_object("2", "2", b"")
+            ]
+        );
+
+        let state = AppState::from_pool(pool)
+            .await
+            .with_s3_client(s3::Client::new(client));
+
+        EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let result: ListResponse<Url> = response_from_get(state, "/s3/presign").await;
+        assert_eq!(result.links(), &Links::new(None, None,));
+        assert_eq!(2, result.pagination().count);
+
+        let query = result.results()[0].query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=inline"));
+        assert_eq!(result.results()[0].path(), "/0/0");
+
+        let query = result.results()[1].query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=inline"));
+        assert_eq!(result.results()[1].path(), "/2/2");
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_api_presign_attachment(pool: PgPool) {
+        let client = mock_client!(
+            aws_sdk_s3,
+            RuleMode::Sequential,
+            &[
+                &mock_get_object("0", "0", b""),
+                &mock_get_object("2", "2", b"")
+            ]
+        );
+
+        let state = AppState::from_pool(pool)
+            .await
+            .with_s3_client(s3::Client::new(client));
+
+        EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let result: ListResponse<Url> =
+            response_from_get(state, "/s3/presign?responseContentDisposition=attachment").await;
+        assert_eq!(result.links(), &Links::new(None, None,));
+        assert_eq!(2, result.pagination().count);
+
+        let query = result.results()[0].query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%220%22"));
+        assert_eq!(result.results()[0].path(), "/0/0");
+
+        let query = result.results()[1].query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%222%22"));
+        assert_eq!(result.results()[1].path(), "/2/2");
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_api_presign_different_count(pool: PgPool) {
+        let client = mock_client!(
+            aws_sdk_s3,
+            RuleMode::Sequential,
+            &[&mock_get_object("0", "0", b""),]
+        );
+
+        let config = Config {
+            api_presign_limit: Some(2),
+            ..Default::default()
+        };
+        let state = AppState::from_pool(pool)
+            .await
+            .with_config(config)
+            .with_s3_client(s3::Client::new(client));
+
+        EntriesBuilder::default()
+            .with_bucket_divisor(4)
+            .with_key_divisor(3)
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let result: ListResponse<Url> = response_from_get(state, "/s3/presign").await;
+        assert_eq!(result.links(), &Links::new(None, None));
+        assert_eq!(1, result.pagination().count);
+
+        let query = result.results()[0].query().unwrap();
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("response-content-disposition=inline"));
+        assert_eq!(result.results()[0].path(), "/0/0");
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_current_s3_filter(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_n(30)
             .with_bucket_divisor(8)
             .with_key_divisor(5)
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -255,10 +502,10 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_filter_event_type(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -272,10 +519,10 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_multiple_filters(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -285,10 +532,10 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_filter_attributes(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await
             .s3_objects;
 
@@ -315,11 +562,13 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_filter_attributes_wildcard(pool: PgPool) {
-        let state = AppState::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(state.client()).await;
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
 
         change_many(
-            state.client(),
+            state.database_client(),
             &entries,
             &[0, 1],
             Some(json!({"attributeId": "attributeId"})),
@@ -346,10 +595,10 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_api(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         EntriesBuilder::default()
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await;
 
         let result: ListCount = response_from_get(state, "/s3/count").await;
@@ -358,10 +607,10 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_api_filter(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         EntriesBuilder::default()
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await;
 
         let result: ListCount = response_from_get(state, "/s3/count?bucket=0").await;
@@ -370,16 +619,30 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_api_current_state(pool: PgPool) {
-        let state = AppState::from_pool(pool);
+        let state = AppState::from_pool(pool).await;
         EntriesBuilder::default()
             .with_bucket_divisor(4)
             .with_key_divisor(3)
             .with_shuffle(true)
-            .build(state.client())
+            .build(state.database_client())
             .await;
 
         let result: ListCount = response_from_get(state, "/s3/count?currentState=true").await;
         assert_eq!(result.n_records, 2);
+    }
+
+    pub(crate) fn mock_get_object(
+        key: &'static str,
+        bucket: &'static str,
+        output: &'static [u8],
+    ) -> Rule {
+        mock!(aws_sdk_s3::Client::get_object)
+            .match_requests(|req| req.bucket() == Some(bucket) && req.key() == Some(key))
+            .then_output(move || {
+                GetObjectOutput::builder()
+                    .body(ByteStream::from_static(output))
+                    .build()
+            })
     }
 
     pub(crate) async fn response_from<T: DeserializeOwned>(
@@ -394,7 +657,7 @@ pub(crate) mod tests {
                 Request::builder()
                     .method(method)
                     .uri(uri)
-                    .header(HOST, "https://example.com")
+                    .header(HOST, "example.com")
                     .header(CONTENT_TYPE, "application/json")
                     .body(body)
                     .unwrap(),

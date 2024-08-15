@@ -5,6 +5,7 @@ use filemanager::env::Config;
 use lambda_http::Error;
 use std::sync::Arc;
 
+use filemanager::clients::aws::s3;
 use filemanager::database::Client;
 use filemanager::handlers::aws::{create_database_pool, update_credentials};
 use filemanager::handlers::init_tracing;
@@ -21,7 +22,13 @@ async fn main() -> Result<(), Error> {
     debug!(?config, "running with config");
 
     let client = Client::new(create_database_pool(&config).await?);
-    let state = AppState::new(client, Arc::new(config));
+    let state = AppState::new(
+        client,
+        Arc::new(config),
+        Arc::new(s3::Client::with_defaults().await),
+        // API Gateway is always TLS.
+        true,
+    );
 
     let app =
         router(state.clone()).route_layer(from_fn_with_state(state, update_credentials_middleware));
@@ -35,7 +42,7 @@ async fn update_credentials_middleware(
     request: Request,
     next: Next,
 ) -> Response {
-    let result = update_credentials(state.client().connection_ref(), state.config()).await;
+    let result = update_credentials(state.database_client().connection_ref(), state.config()).await;
 
     if let Err(err) = result {
         return ErrorStatusCode::InternalServerError(ErrorResponse::new(format!(

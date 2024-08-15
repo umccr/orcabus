@@ -16,6 +16,7 @@ use crate::routes::get::*;
 use crate::routes::ingest::*;
 use crate::routes::list::*;
 use crate::routes::pagination::*;
+use crate::routes::presign::ContentDisposition;
 use crate::routes::update::*;
 
 /// A newtype equivalent to a `DateTime` with a time zone.
@@ -33,7 +34,9 @@ pub struct Json(pub Value);
 #[openapi(
     paths(
         list_s3,
+        presign_s3,
         get_s3_by_id,
+        presign_s3_by_id,
         count_s3,
         ingest_from_sqs,
         update_s3_attributes,
@@ -51,6 +54,7 @@ pub struct Json(pub Value);
             Wildcard,
             Json,
             ListResponseS3,
+            ContentDisposition,
             PaginatedResponse,
             Pagination,
             Links,
@@ -97,7 +101,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_swagger_ui(pool: PgPool) {
-        let app = router(AppState::from_pool(pool));
+        let app = router(AppState::from_pool(pool).await);
         let response = app
             .oneshot(
                 Request::builder()

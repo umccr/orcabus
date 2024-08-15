@@ -82,7 +82,7 @@ impl From<Error> for ErrorStatusCode {
             Error::InvalidQuery(_) | Error::ParseError(_) | Error::MissingHostHeader => {
                 Self::BadRequest(err.to_string().into())
             }
-            Error::QueryError(_) | Error::SerdeError(_) => {
+            Error::QueryError(_) | Error::SerdeError(_) | Error::PresignedUrlError(_) => {
                 Self::InternalServerError(err.to_string().into())
             }
             Error::ExpectedSomeValue(_) => Self::NotFound(err.to_string().into()),

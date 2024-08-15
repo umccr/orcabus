@@ -10,6 +10,16 @@ make start
 
 This serves Swagger OpenAPI docs at `http://localhost:8000/swagger-ui` when using default settings.
 
+## API configuration
+
+The API has some environment variables that can be used to configure behaviour (for the presigned url route):
+
+| Option                           | Description                                                                                                                    | Type                | Default      |
+|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------|---------------------|--------------|
+| `FILEMANAGER_API_LINKS_URL`      | Override the URL which is used to generate pagination links. By default the `HOST` header is used to created pagination links. | URL                 | Not set      |
+| `FILEMANAGER_API_PRESIGN_LIMIT`  | The maximum file size in bytes which presigned URLs will be generated for.                                                     | Integer             | `"20971520"` | 
+| `FILEMANAGER_API_PRESIGN_EXPIRY` | The expiry time for presigned urls.                                                                                            | Duration in seconds | `"300"`      |
+
 The deployed instance of the filemanager API can be reached using the desired stage at `https://file.<stage>.umccr.org`
 using the orcabus API token. To retrieve the token, run:
 
@@ -148,6 +158,30 @@ For example, count the total records:
 
 ```sh
 curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/count" | jq
+```
+
+## Presigned URLs
+
+The filemanager API can also generate presigned URLs. Presigned URLs can only be generated for objects that currently
+exist in S3.
+
+For example, generate a presigned URL for a single record:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/presign/0190465f-68fa-76e4-9c36-12bdf1a1571d" | jq
+```
+
+Or, for multiple records, which supports the same query parameters as list operations (except `currentState` as that is implied):
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/presign?page=10&rowsPerPage=50" | jq
+```
+
+Specify `responseContentDisposition` for either of the above routes to change the `response-content-disposition` for the
+presigned `GetObject` request. This can either be `inline` or `attachment`. The default is `inline`:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/presign?responseContentDisposition=attachment" | jq
 ```
 
 ## Some missing features
