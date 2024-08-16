@@ -8,7 +8,7 @@
     "audit": "yarn npm audit"
   },
   "dependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.629.0",
+    "@aws-sdk/client-secrets-manager": "^3.632.0",
     "pg": "^8.12.0"
   },
   "devDependencies": {
