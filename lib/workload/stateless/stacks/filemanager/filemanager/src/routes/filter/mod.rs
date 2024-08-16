@@ -29,8 +29,8 @@ pub struct S3ObjectsFilter {
     /// Query by version_id. Supports wildcards.
     pub(crate) version_id: Option<Wildcard>,
     #[param(required = false, value_type = Wildcard)]
-    /// Query by date. Supports wildcards.
-    pub(crate) date: Option<WildcardEither<DateTimeWithTimeZone>>,
+    /// Query by event_time. Supports wildcards.
+    pub(crate) event_time: Option<WildcardEither<DateTimeWithTimeZone>>,
     #[param(required = false)]
     /// Query by size.
     pub(crate) size: Option<i64>,

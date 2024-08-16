@@ -98,8 +98,8 @@ where
                     case_sensitive,
                 )
             }))
-            .add_option(filter.date.map(|v| {
-                Self::filter_operation(Expr::col(s3_object::Column::Date), v, case_sensitive)
+            .add_option(filter.event_time.map(|v| {
+                Self::filter_operation(Expr::col(s3_object::Column::EventTime), v, case_sensitive)
             }))
             .add_option(filter.size.map(|v| s3_object::Column::Size.eq(v)))
             .add_option(filter.sha256.map(|v| s3_object::Column::Sha256.eq(v)))
@@ -784,7 +784,7 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                date: Some(WildcardEither::Wildcard(Wildcard::new(
+                event_time: Some(WildcardEither::Wildcard(Wildcard::new(
                     "1970-01-0%".to_string(),
                 ))),
                 ..Default::default()
@@ -797,7 +797,11 @@ pub(crate) mod tests {
             s3_entries
                 .clone()
                 .into_iter()
-                .filter(|entry| entry.date.unwrap().to_string().starts_with("1970-01-0"))
+                .filter(|entry| entry
+                    .event_time
+                    .unwrap()
+                    .to_string()
+                    .starts_with("1970-01-0"))
                 .collect::<Vec<_>>()
         );
 

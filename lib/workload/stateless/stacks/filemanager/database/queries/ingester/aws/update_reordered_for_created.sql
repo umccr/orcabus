@@ -92,7 +92,7 @@ objects_to_update as (
 update as (
     update s3_object
     set sequencer = objects_to_update.input_created_sequencer,
-        date = objects_to_update.input_created_date,
+        event_time = objects_to_update.input_created_date,
         size = objects_to_update.input_size,
         sha256 = objects_to_update.input_sha256,
         last_modified_date = objects_to_update.input_last_modified_date,
@@ -116,7 +116,7 @@ select
     input_id as "s3_object_id!",
     bucket,
     key,
-    date as event_time,
+    event_time,
     last_modified_date,
     e_tag,
     sha256,

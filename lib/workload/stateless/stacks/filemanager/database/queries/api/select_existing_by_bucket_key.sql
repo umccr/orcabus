@@ -23,7 +23,7 @@ select
     s3_object_id,
     s3_object.bucket,
     s3_object.key,
-    date as event_time,
+    event_time,
     last_modified_date,
     e_tag,
     sha256,

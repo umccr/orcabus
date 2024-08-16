@@ -1017,7 +1017,7 @@ pub(crate) mod tests {
         s3_object_results: &PgRow,
         message: FlatS3EventMessage,
         sequencer: Option<String>,
-        date: Option<DateTime<Utc>>,
+        event_time: Option<DateTime<Utc>>,
     ) {
         assert_eq!(message.bucket, s3_object_results.get::<String, _>("bucket"));
         assert_eq!(message.key, s3_object_results.get::<String, _>("key"));
@@ -1046,8 +1046,8 @@ pub(crate) mod tests {
             s3_object_results.get::<Option<DateTime<Utc>>, _>("last_modified_date")
         );
         assert_eq!(
-            date,
-            s3_object_results.get::<Option<DateTime<Utc>>, _>("date")
+            event_time,
+            s3_object_results.get::<Option<DateTime<Utc>>, _>("event_time")
         );
         assert_eq!(
             message.is_delete_marker,
@@ -1082,12 +1082,12 @@ pub(crate) mod tests {
         size: Option<i64>,
         sequencer: Option<String>,
         version_id: String,
-        date: Option<DateTime<Utc>>,
+        event_time: Option<DateTime<Utc>>,
         event_type: EventType,
     ) {
         let message = expected_message(size, version_id, false, event_type);
 
-        assert_row(s3_object_results, message, sequencer, date);
+        assert_row(s3_object_results, message, sequencer, event_time);
     }
 
     fn update_test_events(mut events: TransposedS3EventMessages) -> TransposedS3EventMessages {

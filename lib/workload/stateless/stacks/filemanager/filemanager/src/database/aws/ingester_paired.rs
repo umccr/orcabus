@@ -1582,7 +1582,7 @@ pub(crate) mod tests {
         );
         assert_eq!(
             created_date,
-            s3_object_results.get::<Option<DateTime<Utc>>, _>("date")
+            s3_object_results.get::<Option<DateTime<Utc>>, _>("event_time")
         );
         assert_eq!(
             deleted_date,

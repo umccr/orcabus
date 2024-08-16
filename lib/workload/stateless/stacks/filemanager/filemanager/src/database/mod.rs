@@ -193,7 +193,7 @@ pub(crate) mod tests {
             "select s3_object_id as \"s3_object_id!\",
                 bucket,
                 key,
-                date,
+                event_time,
                 last_modified_date,
                 e_tag,
                 storage_class as \"storage_class: StorageClass\",
@@ -210,7 +210,7 @@ pub(crate) mod tests {
             inserted[0].sequencer,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string())
         );
-        assert_eq!(inserted[0].date, Some(DateTime::default()));
+        assert_eq!(inserted[0].event_time, Some(DateTime::default()));
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -243,7 +243,7 @@ pub(crate) mod tests {
             "select s3_object_id as \"s3_object_id!\",
                 bucket,
                 key,
-                date,
+                event_time,
                 last_modified_date,
                 e_tag,
                 storage_class as \"storage_class: StorageClass\",
@@ -260,6 +260,6 @@ pub(crate) mod tests {
             inserted[0].sequencer,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string())
         );
-        assert_eq!(inserted[0].date, Some(DateTime::default()));
+        assert_eq!(inserted[0].event_time, Some(DateTime::default()));
     }
 }

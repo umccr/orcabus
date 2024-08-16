@@ -527,7 +527,7 @@ mod tests {
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3?eventType=C__%",
+            "/s3?currentState=true&eventTime=1970-01-0%",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
@@ -559,7 +559,7 @@ mod tests {
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             // Percent-encoding should work too.
-            "/s3?caseSensitive=false&eventType=c%25_%25d",
+            "/s3?caseSensitive=false&currentState=true&eventTime=1970-01-_%25",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
