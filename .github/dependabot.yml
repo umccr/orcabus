@@ -3,10 +3,17 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: "/"
+    directories:
+      - "**/*"
     schedule:
       interval: daily
       time: "09:00"
       timezone: "Australia/Melbourne"
     commit-message:
       prefix: "[draft]"
+    groups:
+      npm:
+        applies-to: security-updates
+        update-types:
+          - "patch"
+          - "minor"
