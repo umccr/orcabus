@@ -1,7 +1,7 @@
 //! Query builder to handle updating record columns.
 //!
 
-use json_patch::patch;
+use json_patch::{patch, PatchOperation};
 use sea_orm::prelude::{Expr, Json};
 use sea_orm::sea_query::{
     Alias, Asterisk, CommonTableExpression, Query, SelectStatement, SimpleExpr, WithClause,
@@ -135,6 +135,31 @@ where
         Ok(self.all().await?.into_iter().nth(0))
     }
 
+    /// Verifies that the JSON patch operation is supported.
+    fn verify_patch(
+        patch: Vec<PatchOperation>,
+        current_attributes: &serde_json::Value,
+    ) -> Result<Vec<PatchOperation>> {
+        let check_exists = |path: String, patch: PatchOperation| {
+            let exists = current_attributes.pointer(&path);
+            if exists.is_some() {
+                Err(InvalidQuery("path already exists".to_string()))
+            } else {
+                Ok(patch)
+            }
+        };
+
+        patch
+            .into_iter()
+            .map(|patch| match patch {
+                PatchOperation::Test(_) => Ok(patch),
+                PatchOperation::Add(ref op) => check_exists(op.path.to_string(), patch),
+                PatchOperation::Copy(ref op) => check_exists(op.path.to_string(), patch),
+                _ => Err(InvalidQuery("unsupported JSON patch operation".to_string())),
+            })
+            .collect::<Result<Vec<_>>>()
+    }
+
     /// Update the attributes on an object using the attribute patch. This first queries the
     /// required records to update using a previously specified select query in functions like
     /// `Self::for_id` and `Self::filter_all`. It then applies a JSON patch to the attributes of
@@ -185,8 +210,11 @@ where
                     return Err(QueryError("expected JSON attribute column".to_string()));
                 };
 
+                // Only append-style patching is supported.
+                let operations = Self::verify_patch(patch_body.clone().into_inner().0, &current)?;
+
                 // Patch it based on JSON patch.
-                patch(&mut current, &patch_body.get_ref().0).map_err(|err| {
+                patch(&mut current, operations.as_slice()).map_err(|err| {
                     InvalidQuery(format!(
                         "JSON patch {} operation for {} path failed: {}",
                         err.operation, err.path, err.kind
@@ -276,7 +304,7 @@ pub(crate) mod tests {
     use crate::routes::filter::wildcard::WildcardEither;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_attributes_replace(pool: PgPool) {
+    async fn update_attributes_unsupported(pool: PgPool) {
         let client = Client::from_pool(pool);
         let mut entries = EntriesBuilder::default().build(&client).await;
 
@@ -289,15 +317,47 @@ pub(crate) mod tests {
         .await;
 
         let patch = json!([
+            { "op": "remove", "path": "/attributeId" },
+        ]);
+        let results = test_s3_builder_result(
+            &client,
+            patch,
+            Some(json!({
+                "attributeId": "1"
+            })),
+        )
+        .await;
+        assert!(matches!(results, Err(InvalidQuery(_))));
+
+        let patch = json!([
             { "op": "test", "path": "/attributeId", "value": "1" },
             { "op": "replace", "path": "/attributeId", "value": "attributeId" },
         ]);
+        let results = test_s3_builder_result(
+            &client,
+            patch,
+            Some(json!({
+                "attributeId": "1"
+            })),
+        )
+        .await;
+        assert!(matches!(results, Err(InvalidQuery(_))));
 
-        let results = test_update_with_attribute_id(&client, patch).await;
+        let patch = json!([
+            { "op": "test", "path": "/attributeId", "value": "1" },
+            { "op": "add", "path": "/attributeId", "value": "attributeId" },
+        ]);
+        let results = test_s3_builder_result(
+            &client,
+            patch,
+            Some(json!({
+                "attributeId": "1"
+            })),
+        )
+        .await;
+        assert!(matches!(results, Err(InvalidQuery(_))));
 
-        entries_many(&mut entries, &[0, 1], json!({"attributeId": "attributeId"}));
-
-        assert_contains(&results, &entries, 0..2);
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "1"}));
         assert_correct_records(&client, entries).await;
     }
 
@@ -524,31 +584,6 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_attributes_remove(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
-
-        change_many(
-            &client,
-            &entries,
-            &[0, 1],
-            Some(json!({"attributeId": "1"})),
-        )
-        .await;
-
-        let patch = json!([
-            { "op": "remove", "path": "/attributeId" },
-        ]);
-
-        let results = test_update_with_attribute_id(&client, patch).await;
-
-        entries_many(&mut entries, &[0, 1], json!({}));
-
-        assert_contains(&results, &entries, 0..2);
-        assert_correct_records(&client, entries).await;
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_no_op(pool: PgPool) {
         let client = Client::from_pool(pool);
         let mut entries = EntriesBuilder::default().build(&client).await;
@@ -562,7 +597,7 @@ pub(crate) mod tests {
         .await;
 
         let patch = json!([
-            { "op": "remove", "path": "/attributeId" },
+            { "op": "add", "path": "/anotherAttribute", "value": "3" },
         ]);
 
         let results = test_update_with_attribute_id(&client, patch).await;
@@ -587,7 +622,7 @@ pub(crate) mod tests {
         .await;
 
         let patch = json!([
-            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
+            { "op": "add", "path": "/anotherAttribute", "value": "anotherAttribute" },
             { "op": "test", "path": "/attributeId", "value": "2" },
         ]);
 
@@ -608,27 +643,6 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_attributes_for_id(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
-
-        change_attributes(&client, &entries, 0, Some(json!({"attributeId": "1"}))).await;
-
-        let patch = json!([
-            { "op": "test", "path": "/attributeId", "value": "1" },
-            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
-        ]);
-
-        let result =
-            test_update_attributes_for_id(&client, patch, entries.s3_objects[0].s3_object_id).await;
-
-        change_attribute_entries(&mut entries, 0, json!({"attributeId": "attributeId"}));
-
-        assert_contains(&result, &entries, 0..1);
-        assert_correct_records(&client, entries).await;
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_replace_different_attribute_ids(pool: PgPool) {
         let client = Client::from_pool(pool);
         let mut entries = EntriesBuilder::default().build(&client).await;
@@ -638,7 +652,7 @@ pub(crate) mod tests {
         change_attributes(&client, &entries, 2, Some(json!({"attributeId": "2"}))).await;
 
         let patch = json!([
-            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
+            { "op": "add", "path": "/anotherAttribute", "value": "anotherAttribute" },
         ]);
 
         let results_s3_objects = test_update_attributes(
@@ -653,7 +667,7 @@ pub(crate) mod tests {
         entries_many(
             &mut entries,
             &[0, 1, 2],
-            json!({"attributeId": "attributeId"}),
+            json!({"attributeId": "2", "anotherAttribute": "anotherAttribute"}),
         );
 
         assert_model_contains(&results_s3_objects, &entries.s3_objects, 0..3);

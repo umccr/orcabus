@@ -20,22 +20,23 @@ use crate::routes::AppState;
 /// The attributes to update for the request. This updates attributes according to JSON patch.
 /// See [JSON patch](https://jsonpatch.com/) and [RFC6902](https://datatracker.ietf.org/doc/html/rfc6902/).
 ///
-/// In order to apply the patch, the outer type of the JSON input must have one key called "attributes".
-/// Then any JSON patch operation can be used to update the attributes, e.g. "add" or "replace". The
-/// "test" operation can be used to confirm whether a key is a specific value before updating. If the
-/// check fails,  a `BAD_REQUEST` is returned and no records are updated.
-#[derive(Debug, Deserialize, Default, Clone, ToSchema)]
+/// In order to apply the patch, JSON body must contain an array with patch operations. The patch operations
+/// are append-only, which means that only "add" and "test" is supported. If a "test" check fails,
+/// a patch operations that isn't "add" or "test" is used, or if a key already exists, a `BAD_REQUEST`
+/// is returned and no records are updated.
+#[derive(Debug, Deserialize, Clone, ToSchema)]
+#[serde(untagged)]
 #[schema(
-    example = json!({
-        "attributes": [
-            { "op": "test", "path": "/attributeId", "value": "1" },
-            { "op": "replace", "path": "/attributeId", "value": "attributeId" }
-        ]
-    })
+    example = json!([
+        { "op": "add", "path": "/attributeId", "value": "attributeId" }
+    ])
 )]
-pub struct PatchBody {
-    /// The JSON patch for a record's attributes.
-    attributes: Patch,
+pub enum PatchBody {
+    Nested {
+        /// The JSON patch for a record's attributes.
+        attributes: Patch,
+    },
+    Unnested(Patch),
 }
 
 /// The JSON patch for attributes.
@@ -47,17 +48,23 @@ pub struct Patch(json_patch::Patch);
 impl PatchBody {
     /// Create a new attribute body.
     pub fn new(attributes: Patch) -> Self {
-        Self { attributes }
+        Self::Unnested(attributes)
     }
 
     /// Get the inner map.
     pub fn into_inner(self) -> json_patch::Patch {
-        self.attributes.0
+        match self {
+            PatchBody::Nested { attributes } => attributes.0,
+            PatchBody::Unnested(attributes) => attributes.0,
+        }
     }
 
     /// Get the inner map as a reference
     pub fn get_ref(&self) -> &json_patch::Patch {
-        &self.attributes.0
+        match self {
+            PatchBody::Nested { attributes } => &attributes.0,
+            PatchBody::Unnested(attributes) => &attributes.0,
+        }
     }
 }
 
@@ -166,7 +173,7 @@ mod tests {
     use serde_json::Value;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_attribute_api_replace(pool: PgPool) {
+    async fn update_attribute_api_unsupported(pool: PgPool) {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
@@ -180,22 +187,21 @@ mod tests {
         )
         .await;
 
-        let patch = json!({"attributes": [
+        let patch = json!([
             { "op": "test", "path": "/attributeId", "value": "1" },
             { "op": "replace", "path": "/attributeId", "value": "attributeId" },
-        ]});
+        ]);
 
-        let (_, s3_object) = response_from::<S3>(
+        let (status, _) = response_from::<Value>(
             state.clone(),
             &format!("/s3/{}", entries.s3_objects[0].s3_object_id),
             Method::PATCH,
             Body::new(patch.to_string()),
         )
         .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
 
-        change_attribute_entries(&mut entries, 0, json!({"attributeId": "attributeId"}));
-
-        assert_model_contains(&[s3_object], &entries.s3_objects, 0..1);
+        change_attribute_entries(&mut entries, 0, json!({"attributeId": "1"}));
         assert_correct_records(state.database_client(), entries).await;
     }
 
@@ -216,7 +222,7 @@ mod tests {
 
         let patch = json!({"attributes": [
             { "op": "test", "path": "/attributeId", "value": "1" },
-            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
+            { "op": "add", "path": "/anotherAttribute", "value": "anotherAttribute" },
         ]});
 
         let (s3_object_status_code, _) = response_from::<Value>(
@@ -234,7 +240,7 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_collection_attributes_api_replace(pool: PgPool) {
+    async fn update_collection_attributes_api_add_nested(pool: PgPool) {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
@@ -257,7 +263,7 @@ mod tests {
 
         let patch = json!({"attributes": [
             { "op": "test", "path": "/attributeId", "value": "1" },
-            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
+            { "op": "add", "path": "/anotherAttribute", "value": "anotherAttribute" },
         ]});
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
@@ -268,8 +274,66 @@ mod tests {
         )
         .await;
 
-        change_attribute_entries(&mut entries, 0, json!({"attributeId": "attributeId"}));
-        change_attribute_entries(&mut entries, 1, json!({"attributeId": "attributeId"}));
+        change_attribute_entries(
+            &mut entries,
+            0,
+            json!({"attributeId": "1", "anotherAttribute": "anotherAttribute"}),
+        );
+        change_attribute_entries(
+            &mut entries,
+            1,
+            json!({"attributeId": "1", "anotherAttribute": "anotherAttribute"}),
+        );
+
+        assert_model_contains(&s3_objects, &entries.s3_objects, 0..2);
+        assert_correct_records(state.database_client(), entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_collection_attributes_api(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
+
+        change_attributes(
+            state.database_client(),
+            &entries,
+            0,
+            Some(json!({"attributeId": "1"})),
+        )
+        .await;
+        change_attributes(
+            state.database_client(),
+            &entries,
+            1,
+            Some(json!({"attributeId": "1"})),
+        )
+        .await;
+
+        let patch = json!([
+            { "op": "test", "path": "/attributeId", "value": "1" },
+            { "op": "add", "path": "/anotherAttribute", "value": "anotherAttribute" },
+        ]);
+
+        let (_, s3_objects) = response_from::<Vec<S3>>(
+            state.clone(),
+            "/s3?attributes[attributeId]=1",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        change_attribute_entries(
+            &mut entries,
+            0,
+            json!({"attributeId": "1", "anotherAttribute": "anotherAttribute"}),
+        );
+        change_attribute_entries(
+            &mut entries,
+            1,
+            json!({"attributeId": "1", "anotherAttribute": "anotherAttribute"}),
+        );
 
         assert_model_contains(&s3_objects, &entries.s3_objects, 0..2);
         assert_correct_records(state.database_client(), entries).await;
@@ -299,7 +363,7 @@ mod tests {
 
         let patch = json!({"attributes": [
             { "op": "test", "path": "/attributeId", "value": "1" },
-            { "op": "replace", "path": "/attributeId", "value": "attributeId" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]});
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
@@ -311,7 +375,8 @@ mod tests {
         .await;
 
         // Only the created event should be updated.
-        entries.s3_objects[0].attributes = Some(json!({"attributeId": "attributeId"}));
+        entries.s3_objects[0].attributes =
+            Some(json!({"attributeId": "1", "anotherAttribute": "1"}));
         entries.s3_objects[1].attributes = Some(json!({"attributeId": "1"}));
 
         assert_model_contains(&s3_objects, &entries.s3_objects, 0..1);
@@ -341,7 +406,7 @@ mod tests {
         .await;
 
         let patch = json!({"attributes": [
-            { "op": "remove", "path": "/attributeId" },
+            { "op": "add", "path": "/anotherAttribute", "value": "1" },
         ]});
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
