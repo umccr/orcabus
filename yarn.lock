@@ -36,34 +36,34 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-lambda-python-alpha@npm:2.151.0-alpha.0":
-  version: 2.151.0-alpha.0
-  resolution: "@aws-cdk/aws-lambda-python-alpha@npm:2.151.0-alpha.0"
+"@aws-cdk/aws-lambda-python-alpha@npm:2.152.0-alpha.0":
+  version: 2.152.0-alpha.0
+  resolution: "@aws-cdk/aws-lambda-python-alpha@npm:2.152.0-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.151.0
+    aws-cdk-lib: ^2.152.0
     constructs: ^10.0.0
-  checksum: 10/34f6580ca17b3466a04dddad5cf914ea67a27eb1772867a3610de5a88ad3b150284f0bcfca8f3e5905bb54e7a44ef92de4ebe8de1fba5639550990cf37d032cf
+  checksum: 10/2b679ba04eb0ad721fe4ee487d6b953c8eeb30379159848e5c95bdcfc8ed8616f9c53638c67be5c9ec78699f3e25f907b97691c9934b631027c32022e46905ef
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-pipes-alpha@npm:^2.151.0-alpha.0":
-  version: 2.151.0-alpha.0
-  resolution: "@aws-cdk/aws-pipes-alpha@npm:2.151.0-alpha.0"
+"@aws-cdk/aws-pipes-alpha@npm:^2.152.0-alpha.0":
+  version: 2.152.0-alpha.0
+  resolution: "@aws-cdk/aws-pipes-alpha@npm:2.152.0-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.151.0
+    aws-cdk-lib: ^2.152.0
     constructs: ^10.0.0
-  checksum: 10/c36e7a7cd2fd4b7bf20f3ab0fb0a467ca5f28d0019984bca6d940b49ada056d837f9a734e1b09118a8b8e7bfd7569b6d11e897f0a532bedb5afa872a5c92aa55
+  checksum: 10/7ce9b917f5fc1129066772d3ce1da70dbe0e7405974ac3ea28424306ab6173b2efdb6d01dd021a8ce9d162e516f4f7d1883c700fa13cd7bf1c9cc6cd9c900ded
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-pipes-sources-alpha@npm:^2.151.0-alpha.0":
-  version: 2.151.0-alpha.0
-  resolution: "@aws-cdk/aws-pipes-sources-alpha@npm:2.151.0-alpha.0"
+"@aws-cdk/aws-pipes-sources-alpha@npm:^2.152.0-alpha.0":
+  version: 2.152.0-alpha.0
+  resolution: "@aws-cdk/aws-pipes-sources-alpha@npm:2.152.0-alpha.0"
   peerDependencies:
-    "@aws-cdk/aws-pipes-alpha": 2.151.0-alpha.0
-    aws-cdk-lib: ^2.151.0
+    "@aws-cdk/aws-pipes-alpha": 2.152.0-alpha.0
+    aws-cdk-lib: ^2.152.0
     constructs: ^10.0.0
-  checksum: 10/1be0a7fcf76d8aee6bdb48848e6e728cb7f37f1a65acbc2c0f6343645fe866c91b781cc6299859981b11b932832c7f1084ab9930208f522569144e3b7d95cccb
+  checksum: 10/5bdf3eb7dd9309a10678cc1a7261af97bd4a549fa122e87f6712a7f249281322a9045152f41faee4491779352be2f4fa81833f47cb16156a0bba71ee7e87d791
   languageName: node
   linkType: hard
 
@@ -1158,12 +1158,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.2.0":
-  version: 22.2.0
-  resolution: "@types/node@npm:22.2.0"
+"@types/node@npm:^22.3.0":
+  version: 22.3.0
+  resolution: "@types/node@npm:22.3.0"
   dependencies:
-    undici-types: "npm:~6.13.0"
-  checksum: 10/2957c5c81f1a07a1210f28382adae65c11070c301e395fa819448516f1a2a710054b29e0ec7d8e28624afbcd90dae810403a497109545dea835b554fc76edf6c
+    undici-types: "npm:~6.18.2"
+  checksum: 10/c31a798ed722a7417727f018ea6d621db038a613c626da643174cc6f3dcf4ce2fc9933a010aec289103d9564da2c2f9b054c9aa398828f00e17269a78c64d4ec
   languageName: node
   linkType: hard
 
@@ -1499,9 +1499,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aws-cdk-lib@npm:^2.151.0":
-  version: 2.151.0
-  resolution: "aws-cdk-lib@npm:2.151.0"
+"aws-cdk-lib@npm:^2.152.0":
+  version: 2.152.0
+  resolution: "aws-cdk-lib@npm:2.152.0"
   dependencies:
     "@aws-cdk/asset-awscli-v1": "npm:^2.2.202"
     "@aws-cdk/asset-kubectl-v20": "npm:^2.1.2"
@@ -1519,13 +1519,13 @@ __metadata:
     yaml: "npm:1.10.2"
   peerDependencies:
     constructs: ^10.0.0
-  checksum: 10/979ebc51ea50f01bd9e308745851755da13242074216e126b5e867ea7e818bd9fc5ae0389939118fc498f5790bba8878bdaa4f70dbbf531f7ff17d64e40a926e
+  checksum: 10/3f3136c68d4099de3290bcf47bb5a449e988382a490a01deb1561abdcc7ae460112d71550f9d31076ccb92a9fa9aed9df7883e031bfd12bb9626a68f76e7bf81
   languageName: node
   linkType: hard
 
-"aws-cdk@npm:^2.151.0":
-  version: 2.151.0
-  resolution: "aws-cdk@npm:2.151.0"
+"aws-cdk@npm:^2.152.0":
+  version: 2.152.0
+  resolution: "aws-cdk@npm:2.152.0"
   dependencies:
     fsevents: "npm:2.3.2"
   dependenciesMeta:
@@ -1533,7 +1533,7 @@ __metadata:
       optional: true
   bin:
     cdk: bin/cdk
-  checksum: 10/eb65e5087e921e38fa02c5a022c3fe3c9987dffe24550a6dd32a0abe8326274ddfa1983a316776a2ae2aa282e862f37099581846b5be3c301d4b3d732e880588
+  checksum: 10/dc594f3a515b17c6f0746317115a5d49cb3db5ef2efc5ca8125043cb6ae083e8beb41794a2da12206af34281fe4607a31d1b64feac6c08a2319756b56c736985
   languageName: node
   linkType: hard
 
@@ -1765,13 +1765,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cdk-nag@npm:^2.28.178":
-  version: 2.28.178
-  resolution: "cdk-nag@npm:2.28.178"
+"cdk-nag@npm:^2.28.181":
+  version: 2.28.181
+  resolution: "cdk-nag@npm:2.28.181"
   peerDependencies:
     aws-cdk-lib: ^2.116.0
     constructs: ^10.0.5
-  checksum: 10/bac6789b1ecbcc7d9440a73e3449d44494874ca3dc9b2fdfa1e7aaafb84974266dcc3c71918949c6595b020bb0ba6a85a83f5d47583170b28ad0e4b8e35e9ca6
+  checksum: 10/a669e11ec099b40a3001027447e720fa6c37f5d9622466235dc50ea962730fe9a8f97de31d722aca6bbf70023c11d1000665229f3c023b004c8f87dc9680cd3f
   languageName: node
   linkType: hard
 
@@ -4022,17 +4022,17 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "orcabus@workspace:."
   dependencies:
-    "@aws-cdk/aws-lambda-python-alpha": "npm:2.151.0-alpha.0"
-    "@aws-cdk/aws-pipes-alpha": "npm:^2.151.0-alpha.0"
-    "@aws-cdk/aws-pipes-sources-alpha": "npm:^2.151.0-alpha.0"
+    "@aws-cdk/aws-lambda-python-alpha": "npm:2.152.0-alpha.0"
+    "@aws-cdk/aws-pipes-alpha": "npm:^2.152.0-alpha.0"
+    "@aws-cdk/aws-pipes-sources-alpha": "npm:^2.152.0-alpha.0"
     "@eslint/js": "npm:^9.9.0"
     "@types/eslint__js": "npm:^8.42.3"
     "@types/jest": "npm:^29.5.12"
-    "@types/node": "npm:^22.2.0"
-    aws-cdk: "npm:^2.151.0"
-    aws-cdk-lib: "npm:^2.151.0"
+    "@types/node": "npm:^22.3.0"
+    aws-cdk: "npm:^2.152.0"
+    aws-cdk-lib: "npm:^2.152.0"
     cargo-lambda-cdk: "npm:^0.0.22"
-    cdk-nag: "npm:^2.28.178"
+    cdk-nag: "npm:^2.28.181"
     constructs: "npm:^10.3.0"
     dotenv: "npm:^16.4.5"
     eslint: "npm:^9.9.0"
@@ -4908,10 +4908,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~6.13.0":
-  version: 6.13.0
-  resolution: "undici-types@npm:6.13.0"
-  checksum: 10/da52e37cbc6da3a75da86fa08dd795ca8924430deb91005eb884b840e46e19013ccd4c1c289f70018e8cf0c338add24a500e7c3acfcd49b1ffb27ff9f91e38b9
+"undici-types@npm:~6.18.2":
+  version: 6.18.2
+  resolution: "undici-types@npm:6.18.2"
+  checksum: 10/5c863f3cc65d012498cf0f8562b9d81e785c2b8b8a8d66343b9f4351ff40a3a29b500fbaea10667626fd91a32433d4c876810aafa5ab561369de702b62d4b323
   languageName: node
   linkType: hard
 
