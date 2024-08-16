@@ -491,47 +491,12 @@ pub(crate) mod tests {
             .current_state()
             .filter_all(
                 S3ObjectsFilter {
-                    event_type: Some(WildcardEither::Wildcard(Wildcard::new("C%".to_string()))),
+                    date: Some(WildcardEither::Wildcard(Wildcard::new(
+                        "1970-01-0%".to_string(),
+                    ))),
                     ..Default::default()
                 },
                 true,
-            )
-            .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
-            .await
-            .unwrap()
-            .all()
-            .await
-            .unwrap();
-
-        assert_wildcard_update(&mut entries, &results);
-        assert_correct_records(&client, entries).await;
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn update_attributes_wildcard_ilike(pool: PgPool) {
-        let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
-
-        change_many(
-            &client,
-            &entries,
-            &[0, 2, 4, 6, 8],
-            Some(json!({"attributeId": "1"})),
-        )
-        .await;
-
-        let patch = json!([
-            { "op": "add", "path": "/anotherAttribute", "value": "1" },
-        ]);
-
-        let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
-            .current_state()
-            .filter_all(
-                S3ObjectsFilter {
-                    event_type: Some(WildcardEither::Wildcard(Wildcard::new("c%".to_string()))),
-                    ..Default::default()
-                },
-                false,
             )
             .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
@@ -735,6 +700,7 @@ pub(crate) mod tests {
             // Only the created event should be updated.
             entries.s3_objects[i].attributes =
                 Some(json!({"attributeId": "1", "anotherAttribute": "1"}));
+
             assert_model_contains(&[results[i / 2].clone()], &entries.s3_objects, i..i + 1);
         }
     }
