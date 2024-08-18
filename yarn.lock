@@ -1765,13 +1765,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cdk-nag@npm:^2.28.181":
-  version: 2.28.181
-  resolution: "cdk-nag@npm:2.28.181"
+"cdk-nag@npm:^2.28.183":
+  version: 2.28.183
+  resolution: "cdk-nag@npm:2.28.183"
   peerDependencies:
     aws-cdk-lib: ^2.116.0
     constructs: ^10.0.5
-  checksum: 10/a669e11ec099b40a3001027447e720fa6c37f5d9622466235dc50ea962730fe9a8f97de31d722aca6bbf70023c11d1000665229f3c023b004c8f87dc9680cd3f
+  checksum: 10/05362fcf74ecd95de328d37edf5b4d28d5c8150f18c5dc2a343a07d002fb721fb731a931e0580a146789d84319a976dbe2b19e2b33435bec6fd743c2955c6032
   languageName: node
   linkType: hard
 
@@ -4032,7 +4032,7 @@ __metadata:
     aws-cdk: "npm:^2.152.0"
     aws-cdk-lib: "npm:^2.152.0"
     cargo-lambda-cdk: "npm:^0.0.22"
-    cdk-nag: "npm:^2.28.181"
+    cdk-nag: "npm:^2.28.183"
     constructs: "npm:^10.3.0"
     dotenv: "npm:^16.4.5"
     eslint: "npm:^9.9.0"

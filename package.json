@@ -28,7 +28,7 @@
     "@aws-cdk/aws-pipes-sources-alpha": "^2.152.0-alpha.0",
     "aws-cdk-lib": "^2.152.0",
     "cargo-lambda-cdk": "^0.0.22",
-    "cdk-nag": "^2.28.181",
+    "cdk-nag": "^2.28.183",
     "constructs": "^10.3.0",
     "dotenv": "^16.4.5",
     "source-map-support": "^0.5.21",
