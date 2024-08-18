@@ -1,4 +1,4 @@
-use sqlx::{query_file, query_file_as, Acquire, Postgres, Row, Transaction};
+use sqlx::{query_file_as, Acquire, Postgres, Transaction};
 
 use crate::database::Client;
 use crate::error::Result;
@@ -19,25 +19,6 @@ impl Query {
     /// Creates a new filemanager query client.
     pub fn new(client: Client) -> Self {
         Self { client }
-    }
-
-    /// Creates a new filemanager query client with default connection settings.
-    /// -- FIXME: Should not trust user input, should be a bit more robust than like/similar to
-    pub async fn query_objects(&self, query: String) -> Result<QueryResults> {
-        let mut tx = self.client.pool().begin().await?;
-
-        let query_results: Vec<String> =
-            query_file!("../database/queries/api/select_object_ids.sql", &query)
-                .fetch_all(&mut *tx)
-                .await?
-                .into_iter()
-                .map(|row| row.get(0))
-                .collect();
-
-        tx.commit().await?;
-
-        let query_results = QueryResults::new(query_results); // Convert PgQueryResult to QueryResults
-        Ok(query_results)
     }
 
     /// Selects existing objects by the bucket and key for update. This does not start a transaction.

@@ -16,9 +16,9 @@ use utoipa::IntoParams;
 #[serde(default, rename_all = "camelCase")]
 #[into_params(parameter_in = Query)]
 pub struct S3ObjectsFilter {
-    #[param(required = false, value_type = Wildcard)]
-    /// Query by event type. Supports wildcards.
-    pub(crate) event_type: Option<WildcardEither<EventType>>,
+    #[param(required = false)]
+    /// Query by event type.
+    pub(crate) event_type: Option<EventType>,
     #[param(required = false)]
     /// Query by bucket. Supports wildcards.
     pub(crate) bucket: Option<Wildcard>,
@@ -29,8 +29,8 @@ pub struct S3ObjectsFilter {
     /// Query by version_id. Supports wildcards.
     pub(crate) version_id: Option<Wildcard>,
     #[param(required = false, value_type = Wildcard)]
-    /// Query by date. Supports wildcards.
-    pub(crate) date: Option<WildcardEither<DateTimeWithTimeZone>>,
+    /// Query by event_time. Supports wildcards.
+    pub(crate) event_time: Option<WildcardEither<DateTimeWithTimeZone>>,
     #[param(required = false)]
     /// Query by size.
     pub(crate) size: Option<i64>,
@@ -43,9 +43,9 @@ pub struct S3ObjectsFilter {
     #[param(required = false)]
     /// Query by the e_tag.
     pub(crate) e_tag: Option<String>,
-    #[param(required = false, value_type = Wildcard)]
+    #[param(required = false)]
     /// Query by the storage class. Supports wildcards.
-    pub(crate) storage_class: Option<WildcardEither<StorageClass>>,
+    pub(crate) storage_class: Option<StorageClass>,
     #[param(required = false)]
     /// Query by the object delete marker.
     pub(crate) is_delete_marker: Option<bool>,

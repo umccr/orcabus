@@ -3,7 +3,7 @@ insert into s3_object (
     s3_object_id,
     bucket,
     key,
-    date,
+    event_time,
     size,
     sha256,
     last_modified_date,

@@ -86,7 +86,7 @@ impl Entries {
             bucket: Set((index / bucket_divisor).to_string()),
             key: Set((index / key_divisor).to_string()),
             version_id: Set((index / key_divisor).to_string()),
-            date: date(),
+            event_time: date(),
             size: Set(Some(index as i64)),
             sha256: Set(Some(index.to_string())),
             last_modified_date: date(),

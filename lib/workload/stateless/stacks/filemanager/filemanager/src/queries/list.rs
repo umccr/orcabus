@@ -16,9 +16,8 @@ use sea_orm::sea_query::{
 };
 use sea_orm::Order::{Asc, Desc};
 use sea_orm::{
-    ActiveEnum, ColumnTrait, Condition, ConnectionTrait, EntityTrait, FromQueryResult,
-    IntoSimpleExpr, JsonValue, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait,
-    Select, Value,
+    ColumnTrait, Condition, ConnectionTrait, EntityTrait, FromQueryResult, IntoSimpleExpr,
+    JsonValue, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, Select, Value,
 };
 use tracing::trace;
 use url::Url;
@@ -73,13 +72,11 @@ where
     /// Create a condition to filter a query.
     pub fn filter_condition(filter: S3ObjectsFilter, case_sensitive: bool) -> Condition {
         let mut condition = Condition::all()
-            .add_option(filter.event_type.map(|v| {
-                Self::filter_operation(
-                    Expr::col(s3_object::Column::EventType),
-                    v.map(|or| or.as_enum()),
-                    case_sensitive,
-                )
-            }))
+            .add_option(
+                filter
+                    .event_type
+                    .map(|v| s3_object::Column::EventType.eq(v)),
+            )
             .add_option(filter.bucket.map(|v| {
                 Self::filter_operation(
                     Expr::col(s3_object::Column::Bucket),
@@ -101,8 +98,8 @@ where
                     case_sensitive,
                 )
             }))
-            .add_option(filter.date.map(|v| {
-                Self::filter_operation(Expr::col(s3_object::Column::Date), v, case_sensitive)
+            .add_option(filter.event_time.map(|v| {
+                Self::filter_operation(Expr::col(s3_object::Column::EventTime), v, case_sensitive)
             }))
             .add_option(filter.size.map(|v| s3_object::Column::Size.eq(v)))
             .add_option(filter.sha256.map(|v| s3_object::Column::Sha256.eq(v)))
@@ -114,13 +111,11 @@ where
                 )
             }))
             .add_option(filter.e_tag.map(|v| s3_object::Column::ETag.eq(v)))
-            .add_option(filter.storage_class.map(|v| {
-                Self::filter_operation(
-                    Expr::col(s3_object::Column::StorageClass),
-                    v.map(|or| or.as_enum()),
-                    case_sensitive,
-                )
-            }))
+            .add_option(
+                filter
+                    .storage_class
+                    .map(|v| s3_object::Column::StorageClass.eq(v)),
+            )
             .add_option(
                 filter
                     .is_delete_marker
@@ -572,7 +567,7 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                event_type: Some(WildcardEither::Or(EventType::Created)),
+                event_type: Some(EventType::Created),
                 ..Default::default()
             },
             true,
@@ -789,8 +784,8 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                event_type: Some(WildcardEither::Wildcard(Wildcard::new(
-                    "Cr___ed".to_string(),
+                event_time: Some(WildcardEither::Wildcard(Wildcard::new(
+                    "1970-01-0%".to_string(),
                 ))),
                 ..Default::default()
             },
@@ -799,23 +794,15 @@ pub(crate) mod tests {
         .await;
         assert_eq!(
             result,
-            filter_event_type(s3_entries.clone(), EventType::Created)
-        );
-
-        let result = filter_all_s3_from(
-            &client,
-            S3ObjectsFilter {
-                event_type: Some(WildcardEither::Wildcard(Wildcard::new(
-                    "cr___ed".to_string(),
-                ))),
-                ..Default::default()
-            },
-            false,
-        )
-        .await;
-        assert_eq!(
-            result,
-            filter_event_type(s3_entries.clone(), EventType::Created)
+            s3_entries
+                .clone()
+                .into_iter()
+                .filter(|entry| entry
+                    .event_time
+                    .unwrap()
+                    .to_string()
+                    .starts_with("1970-01-0"))
+                .collect::<Vec<_>>()
         );
 
         let result = filter_all_s3_from(

@@ -137,7 +137,7 @@ For example, update attributes on a single record:
 
 ```sh
 curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
---data '{ "attributes": [ { "op": "add", "path": "/portalRunId", "value": "portalRunIdValue" } ] }' \
+--data '[ { "op": "add", "path": "/portalRunId", "value": "portalRunIdValue" } ]' \
 "https://file.dev.umccr.org/api/v1/s3/0190465f-68fa-76e4-9c36-12bdf1a1571d" | jq
 ```
 
@@ -145,7 +145,7 @@ Or, update attributes for multiple records with the same key prefix:
 
 ```sh
 curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
---data '{ "attributes": [ { "op": "add", "path": "/portalRunId", "value": "portalRunIdValue" } ] }' \
+--data '[ { "op": "add", "path": "/portalRunId", "value": "portalRunIdValue" } ]' \
 "https://file.dev.umccr.org/api/v1/s3?key=%25202405212aecb782%25" | jq
 ```
 
