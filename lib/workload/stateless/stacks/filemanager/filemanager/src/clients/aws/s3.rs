@@ -79,7 +79,6 @@ impl Client {
         self.inner
             .get_object()
             .response_content_disposition(response_content_disposition)
-            .checksum_mode(Enabled)
             .key(key)
             .bucket(bucket)
             .presigned(

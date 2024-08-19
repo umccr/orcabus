@@ -37,7 +37,7 @@ docker-run: docker-build
 	docker compose -p "$(DOCKER_PROJECT_NAME)" run -d --service-ports postgres | xargs -I {} docker port {} 4321
 docker-find:
 	# Find a running filemanager docker container.
-	@docker ps --filter name=$(DOCKER_PROJECT_NAME) --latest --format "{{.ID}}" | xargs -I {} docker port {} 4321
+	@docker ps --filter name=$(DOCKER_PROJECT_NAME)-postgres --latest --format "{{.ID}}" | xargs -I {} docker port {} | tail -n 1 | awk '{print $$NF}'
 docker-api: docker-postgres
 	# Run the local API server in a docker container.
 	@docker compose -p "$(DOCKER_PROJECT_NAME)" up api
