@@ -1158,12 +1158,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.3.0":
-  version: 22.3.0
-  resolution: "@types/node@npm:22.3.0"
+"@types/node@npm:^22.4.1":
+  version: 22.4.1
+  resolution: "@types/node@npm:22.4.1"
   dependencies:
-    undici-types: "npm:~6.18.2"
-  checksum: 10/c31a798ed722a7417727f018ea6d621db038a613c626da643174cc6f3dcf4ce2fc9933a010aec289103d9564da2c2f9b054c9aa398828f00e17269a78c64d4ec
+    undici-types: "npm:~6.19.2"
+  checksum: 10/cce9221aea24688bccc3d7c25afd26d95c1bdab73a32ee5c43bb456e070116abf6ba537a9ff19c728bc06fe054e69a2c7ec8e5d818e34a3bf9567eae2cb20059
   languageName: node
   linkType: hard
 
@@ -1765,13 +1765,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cdk-nag@npm:^2.28.181":
-  version: 2.28.181
-  resolution: "cdk-nag@npm:2.28.181"
+"cdk-nag@npm:^2.28.183":
+  version: 2.28.183
+  resolution: "cdk-nag@npm:2.28.183"
   peerDependencies:
     aws-cdk-lib: ^2.116.0
     constructs: ^10.0.5
-  checksum: 10/a669e11ec099b40a3001027447e720fa6c37f5d9622466235dc50ea962730fe9a8f97de31d722aca6bbf70023c11d1000665229f3c023b004c8f87dc9680cd3f
+  checksum: 10/05362fcf74ecd95de328d37edf5b4d28d5c8150f18c5dc2a343a07d002fb721fb731a931e0580a146789d84319a976dbe2b19e2b33435bec6fd743c2955c6032
   languageName: node
   linkType: hard
 
@@ -4028,11 +4028,11 @@ __metadata:
     "@eslint/js": "npm:^9.9.0"
     "@types/eslint__js": "npm:^8.42.3"
     "@types/jest": "npm:^29.5.12"
-    "@types/node": "npm:^22.3.0"
+    "@types/node": "npm:^22.4.1"
     aws-cdk: "npm:^2.152.0"
     aws-cdk-lib: "npm:^2.152.0"
     cargo-lambda-cdk: "npm:^0.0.22"
-    cdk-nag: "npm:^2.28.181"
+    cdk-nag: "npm:^2.28.183"
     constructs: "npm:^10.3.0"
     dotenv: "npm:^16.4.5"
     eslint: "npm:^9.9.0"
@@ -4908,10 +4908,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~6.18.2":
-  version: 6.18.2
-  resolution: "undici-types@npm:6.18.2"
-  checksum: 10/5c863f3cc65d012498cf0f8562b9d81e785c2b8b8a8d66343b9f4351ff40a3a29b500fbaea10667626fd91a32433d4c876810aafa5ab561369de702b62d4b323
+"undici-types@npm:~6.19.2":
+  version: 6.19.6
+  resolution: "undici-types@npm:6.19.6"
+  checksum: 10/0ea9bc25762a86597d095b3772f6cec0bcabb796c339f7dfa2bd601c745a480289eb2939848dc285a56d4f94f50c475868160d8d6d3f54e823f1faf7ea9e9468
   languageName: node
   linkType: hard
 

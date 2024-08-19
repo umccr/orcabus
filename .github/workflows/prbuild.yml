@@ -15,7 +15,6 @@ on:
       - reopened
       - synchronize
       - ready_for_review
-      - edited
     branches:
       - main
 
@@ -41,7 +40,7 @@ env:
 jobs:
   pre-commit-lint-security:
     runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.draft && !contains(github.event.pull_request.title, '[draft]') }}
+    if: ${{ !github.event.pull_request.draft }}
     steps:
       - name: Print toolchain versions
         run: |
@@ -81,7 +80,7 @@ jobs:
     # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
     # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
     runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-    if: ${{ !github.event.pull_request.draft && !contains(github.event.pull_request.title, '[draft]') }}
+    if: ${{ !github.event.pull_request.draft }}
     steps:
       - name: Print toolchain versions
         run: |
@@ -110,7 +109,7 @@ jobs:
     # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
     # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
     runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-    if: ${{ !github.event.pull_request.draft && !contains(github.event.pull_request.title, '[draft]') }}
+    if: ${{ !github.event.pull_request.draft }}
     steps:
       - name: Print toolchain versions
         run: |
@@ -136,7 +135,7 @@ jobs:
     # The format: `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
     # https://docs.aws.amazon.com/codebuild/latest/userguide/action-runner.html
     runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
-    if: ${{ !github.event.pull_request.draft && !contains(github.event.pull_request.title, '[draft]') }}
+    if: ${{ !github.event.pull_request.draft }}
     steps:
       - name: Print toolchain versions
         run: |
