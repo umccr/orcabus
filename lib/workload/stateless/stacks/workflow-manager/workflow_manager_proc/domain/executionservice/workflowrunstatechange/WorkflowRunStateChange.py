@@ -14,7 +14,7 @@ class WorkflowRunStateChange(object):
         'workflowName': 'str',
         'workflowVersion': 'str',
         'workflowRunName': 'str',
-        'linkedLibraries': 'list[str]',
+        'linkedLibraries': 'list[LibraryRecord]',
         'payload': 'Payload'
     }
 
