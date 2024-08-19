@@ -1,11 +1,12 @@
 import { Construct } from 'constructs';
 import * as fn from './function';
 import { DatabaseProps } from './function';
+import { BucketProps } from './ingest';
 
 /**
  * Props for the API function.
  */
-export type ApiFunctionProps = fn.FunctionPropsNoPackage & DatabaseProps;
+export type ApiFunctionProps = fn.FunctionPropsNoPackage & DatabaseProps & BucketProps;
 
 /**
  * A construct for the Lambda API function.
@@ -22,5 +23,7 @@ export class ApiFunction extends fn.Function {
       },
       ...props,
     });
+
+    this.addPoliciesForBuckets(props.buckets);
   }
 }

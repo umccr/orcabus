@@ -136,6 +136,7 @@ export class Filemanager extends Stack {
       vpc: this.vpc,
       host: this.host,
       securityGroup: this.securityGroup,
+      buckets: [...props.eventSourceBuckets, ...props.inventorySourceBuckets],
       ...props,
     });
 
