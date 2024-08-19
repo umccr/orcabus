@@ -8,14 +8,14 @@
     "audit": "yarn npm audit"
   },
   "dependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.629.0",
+    "@aws-sdk/client-secrets-manager": "^3.632.0",
     "pg": "^8.12.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.143",
     "@types/jest": "^29.5.12",
     "@types/pg": "^8.11.6",
-    "esbuild": "^0.23.0",
+    "esbuild": "^0.23.1",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.4",
     "typescript": "^5.5.4"
