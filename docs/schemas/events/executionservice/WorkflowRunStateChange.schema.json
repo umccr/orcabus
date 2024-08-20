@@ -77,8 +77,29 @@
         "workflowRunName": {
           "type": "string"
         },
+        "linkedLibraries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LibraryRecord"
+          }
+        },
         "payload": {
           "$ref": "#/definitions/Payload"
+        }
+      }
+    },
+    "LibraryRecord": {
+      "type": "object",
+      "required": [
+        "libraryId",
+        "orcabusId"
+      ],
+      "properties": {
+        "libraryId": {
+          "type": "string"
+        },
+        "orcabusId": {
+          "type": "string"
         }
       }
     },

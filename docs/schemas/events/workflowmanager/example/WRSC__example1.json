@@ -14,6 +14,16 @@
     "workflowName": "<fill-by-workflow-manager> e.g. bssh_icav2_fastq_copy",
     "workflowVersion": "<fill-by-workflow-manager> e.g. 1.2.3",
     "workflowRunName": "<fill-by-workflow-manager> e.g. 540424_A01001_0193_BBBBMMDRX5 FASTQ Copy",
+    "linkedLibraries": [
+      {
+        "libraryId": "L000001",
+        "orcabusId": "lib.01J5M2J44HFJ9424G7074NKTGN"
+      },
+      {
+        "libraryId": "L000002",
+        "orcabusId": "lib.01J5M2JFE1JPYV62RYQEG99CP5"
+      }
+    ],
     "payload": {
       "refId": "<fill-by-workflow-manager> e.g. <uuid>",
       "version": "0.1.0",
