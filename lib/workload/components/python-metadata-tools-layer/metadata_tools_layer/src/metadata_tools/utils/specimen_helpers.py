@@ -27,7 +27,7 @@ def get_specimen_from_specimen_id(specimen_id: Union[str, int]) -> Dict:
     if isinstance(specimen_id, str):
         # We have an internal id, convert to int
         params = {
-            "internal_id": specimen_id
+            "specimen_id": specimen_id
         }
     else:
         endpoint = f"{endpoint}/{specimen_id}"

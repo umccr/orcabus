@@ -56,7 +56,7 @@
                     },
                     "ResultPath": "$.get_fastq_list_row_ids_step",
                     "ResultSelector": {
-                      "internal_id.$": "$.Item.internal_id.S",
+                      "library_id.$": "$.Item.library_id.S",
                       "fastq_list_row_id_list.$": "$.Item.fastq_list_row_id_set.SS"
                     },
                     "Next": "For each FastqListRowID"
@@ -186,7 +186,7 @@
               }
             ],
             "ResultSelector": {
-              "sample_id.$": "$[0].get_fastq_list_row_ids_step.internal_id",
+              "sample_id.$": "$[0].get_fastq_list_row_ids_step.library_id",
               "samplesheet.$": "$[0].generate_samplesheet_step.samplesheet",
               "fastq_list_rows.$": "$[0].get_fastq_list_row_values_step.fastq_list_rows",
               "fastq_list_row_ids.$": "$[0].get_fastq_list_row_ids_step.fastq_list_row_id_list",

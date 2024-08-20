@@ -16,12 +16,11 @@ from typing import Dict, List
 
 def generate_subject_event_data_object_from_subject(subject_obj: Dict, instrument_run_id: str) -> Dict:
     return {
-        "id": subject_obj.get("id"),
         "event_data": {
             "instrumentRunId": instrument_run_id,
             "subject": {
-                "id": subject_obj.get("id"),
-                "internalId": subject_obj.get("internal_id")
+                "orcabusId": subject_obj.get("orcabus_id"),
+                "subjectId": subject_obj.get("subject_id")
             }
         }
     }
@@ -66,7 +65,7 @@ def get_library_bclconvert_rows(library_obj: Dict, bclconvert_data: List[Dict]) 
     """
     return list(
         filter(
-            lambda bclconvert_row: bclconvert_row.get("sample_id") == library_obj.get("internal_id"),
+            lambda bclconvert_row: bclconvert_row.get("sample_id") == library_obj.get("library_id"),
             bclconvert_data
         )
     )
@@ -90,21 +89,23 @@ def generate_library_event_data_object_from_library_specimen_and_subject(
     """
 
     library_event_obj = {
-        "id": library_obj.get("id"),
-        "internalId": library_obj.get("internal_id"),
+        "orcabusId": library_obj.get("orcabus_id"),
+        "libraryId": library_obj.get("library_id"),
         "phenotype": library_obj.get("phenotype", None),
         "workflow": library_obj.get("workflow", None),
         "quality": library_obj.get("quality", None),
         "type": library_obj.get("type", None),
         "assay": library_obj.get("assay", None),
         "coverage": library_obj.get("coverage", None),
+        "projectOwner": library_obj.get("project_owner", None),
+        "projectName": library_obj.get("project_name", None),
         "specimen": {
-            "id": specimen_obj.get("id"),
-            "internalId": specimen_obj.get("internal_id")
+            "orcabusId": specimen_obj.get("orcabus_id"),
+            "specimenId": specimen_obj.get("specimen_id")
         },
         "subject": {
-            "id": subject_obj.get("id"),
-            "internalId": subject_obj.get("internal_id")
+            "orcabusId": subject_obj.get("orcabus_id"),
+            "subjectId": subject_obj.get("subject_id")
         }
     }
 

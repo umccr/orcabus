@@ -15,7 +15,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.payload_data.library.internalId",
+          "id.$": "$.payload_data.library.libraryId",
           "id_type": "${__library_partition_name__}"
         }
       },
@@ -40,10 +40,10 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Item": {
-          "id.$": "$.payload_data.library.internalId",
+          "id.$": "$.payload_data.library.libraryId",
           "id_type": "${__library_partition_name__}",
-          "metadata_db_id": {
-            "N.$": "States.Format('{}', $.payload_data.library.id)"
+          "orcabus_id": {
+            "S.$": "$.payload_data.library.orcabusId"
           },
           "phenotype": {
             "S.$": "$.payload_data.library.phenotype"
@@ -58,7 +58,7 @@
             "S.$": "$.payload_data.library.assay"
           },
           "subject_id": {
-            "S.$": "$.payload_data.library.subject.internalId"
+            "S.$": "$.payload_data.library.subject.subjectId"
           }
         }
       },
@@ -71,7 +71,7 @@
       "ItemSelector": {
         "bclconvert_data_row.$": "$$.Map.Item.Value",
         "instrument_run_id.$": "$.payload_data.instrumentRunId",
-        "library_id.$": "$.payload_data.library.internalId"
+        "library_id.$": "$.payload_data.library.libraryId"
       },
       "ItemProcessor": {
         "ProcessorConfig": {

@@ -51,7 +51,7 @@
             "Next": "For each FastqListRowID",
             "ResultPath": "$.get_fastq_list_row_ids_step",
             "ResultSelector": {
-              "internal_id.$": "$.Item.internal_id.S",
+              "library_id.$": "$.Item.library_id.S",
               "sample_type.$": "$.Item.sample_type.S",
               "fastq_list_row_id_list.$": "$.Item.fastq_list_row_id_set.SS"
             }
@@ -62,7 +62,7 @@
             "ItemSelector": {
               "fastq_list_row_id.$": "$$.Map.Item.Value",
               "sample_type.$": "$.get_fastq_list_row_ids_step.sample_type",
-              "library_id.$": "$.get_fastq_list_row_ids_step.internal_id",
+              "library_id.$": "$.get_fastq_list_row_ids_step.library_id",
               "instrument_run_id.$": "$.instrument_run_id"
             },
             "ItemProcessor": {

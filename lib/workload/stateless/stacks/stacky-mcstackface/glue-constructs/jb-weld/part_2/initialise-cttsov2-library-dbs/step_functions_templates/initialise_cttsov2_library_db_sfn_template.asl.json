@@ -16,7 +16,7 @@
       "ItemSelector": {
         "bclconvert_data_row.$": "$$.Map.Item.Value",
         "instrument_run_id.$": "$.input_payload_data.instrumentRunId",
-        "library_id.$": "$.input_payload_data.library.internalId"
+        "library_id.$": "$.input_payload_data.library.libraryId"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
@@ -63,7 +63,7 @@
                 "UpdateExpression": "ADD library_set :library_set, fastq_list_row_id_set :fastq_list_row_id_set",
                 "ExpressionAttributeValues": {
                   ":library_set": {
-                    "SS.$": "States.Array($.input_payload_data.library.internalId)"
+                    "SS.$": "States.Array($.input_payload_data.library.libraryId)"
                   },
                   ":fastq_list_row_id_set": {
                     "SS.$": "$.bclconvert_and_fastq_list_row_id_inputs[*].fastq_list_row_id"
@@ -84,16 +84,16 @@
                 "TableName": "${__table_name__}",
                 "Item": {
                   "id": {
-                    "S.$": "$.input_payload_data.library.internalId"
+                    "S.$": "$.input_payload_data.library.libraryId"
                   },
                   "id_type": {
                     "S": "${__library_partition_name__}"
                   },
-                  "metadata_db_id": {
-                    "N.$": "States.Format('{}', $.input_payload_data.library.id)"
+                  "orcabus_id": {
+                    "S.$": "$.input_payload_data.library.orcabusId"
                   },
-                  "internal_id": {
-                    "S.$": "$.input_payload_data.library.internalId"
+                  "library_id": {
+                    "S.$": "$.input_payload_data.library.libraryId"
                   },
                   "fastq_list_row_id_set": {
                     "SS.$": "$.bclconvert_and_fastq_list_row_id_inputs[*].fastq_list_row_id"

@@ -175,8 +175,8 @@
       "Type": "Map",
       "ItemsPath": "$.generate_event_objects_step.subject_event_data_list",
       "ItemSelector": {
-        "subject_id.$": "$$.Map.Item.Value.event_data.subject.internalId",
-        "subject_metadata_db_id.$": "$$.Map.Item.Value.id",
+        "subject_id.$": "$$.Map.Item.Value.event_data.subject.subjectId",
+        "subject_orcabus_id.$": "$$.Map.Item.Value.subject.orcabusId",
         "subject_event_data.$": "$$.Map.Item.Value.event_data",
         "instrument_run_id.$": "$$.Map.Item.Value.event_data.instrumentRunId"
       },
@@ -228,10 +228,10 @@
                 "id_type": {
                   "S": "${__subject_table_partition_name__}"
                 },
-                "metadata_db_id": {
-                  "N.$": "States.Format('{}', $.subject_metadata_db_id)"
+                "orcabus_id": {
+                  "S.$": "$.subject_orcabus_id"
                 },
-                "internal_id": {
+                "subject_id": {
                   "S.$": "$.subject_id"
                 },
                 "instrument_run_id_set": {
@@ -298,8 +298,8 @@
       "Type": "Map",
       "ItemsPath": "$.generate_event_objects_step.library_event_data_list",
       "ItemSelector": {
-        "library_id.$": "$$.Map.Item.Value.event_data.library.internalId",
-        "library_metadata_db_id.$": "$$.Map.Item.Value.id",
+        "library_id.$": "$$.Map.Item.Value.event_data.library.libraryId",
+        "library_orcabus_id.$": "$$.Map.Item.Value.library.orcabusId",
         "library_event_data.$": "$$.Map.Item.Value.event_data",
         "instrument_run_id.$": "$$.Map.Item.Value.event_data.instrumentRunId"
       },
@@ -370,11 +370,11 @@
                 "id_type": {
                   "S": "${__library_table_partition_name__}"
                 },
-                "metadata_db_id": {
-                  "N.$": "States.Format('{}', $.library_metadata_db_id)"
+                "orcabus_id": {
+                  "S.$": "$.library_orcabus_id"
                 },
-                "internal_id": {
-                  "S.$": "$.library_event_data.library.internalId"
+                "library_id": {
+                  "S.$": "$.library_event_data.library.libraryId"
                 },
                 "instrument_run_id_set": {
                   "SS.$": "States.Array($.instrument_run_id)"
