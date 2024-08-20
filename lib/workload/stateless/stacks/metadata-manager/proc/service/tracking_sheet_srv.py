@@ -48,15 +48,15 @@ def persist_lab_metadata(df: pd.DataFrame):
     rows_invalid = list()
 
     # If the df do not contain to what has existed in the db, it will be deleted
-    for lib in Library.objects.exclude(internal_id__in=df['library_id'].tolist()).iterator():
+    for lib in Library.objects.exclude(library_id__in=df['library_id'].tolist()).iterator():
         library_deleted.append(lib)
         lib.delete()
 
-    for spc in Specimen.objects.exclude(internal_id__in=df['sample_id'].tolist()).iterator():
+    for spc in Specimen.objects.exclude(specimen_id__in=df['sample_id'].tolist()).iterator():
         specimen_deleted.append(spc)
         spc.delete()
 
-    for sbj in Subject.objects.exclude(internal_id__in=df['subject_id'].tolist()).iterator():
+    for sbj in Subject.objects.exclude(subject_id__in=df['subject_id'].tolist()).iterator():
         subject_deleted.append(sbj)
         sbj.delete()
 
@@ -78,9 +78,9 @@ def persist_lab_metadata(df: pd.DataFrame):
     #     subject_id_list = record.get("subject_id_list")
     #
     #     try:
-    #         spc = Specimen.objects.get(internal_id=specimen_id)
+    #         spc = Specimen.objects.get(specimen_id=specimen_id)
     #         for sbj in spc.subjects.all().iterator():
-    #             if sbj.internal_id not in subject_id_list:
+    #             if sbj.subject_id not in subject_id_list:
     #                 spc.subjects.remove(sbj)
     #
     #     except ObjectDoesNotExist:
@@ -90,7 +90,7 @@ def persist_lab_metadata(df: pd.DataFrame):
     #
     # # specimen <-> subject (addition only)
     # try:
-    #     specimen.subjects.get(id=subject.id)
+    #     specimen.subjects.get(orcabus_id=subject.orcabus_id)
     # except ObjectDoesNotExist:
     #     specimen.subjects.add(subject)
 
@@ -99,9 +99,9 @@ def persist_lab_metadata(df: pd.DataFrame):
         try:
             # 1. update or create all data in the model from the given record
             subject, is_sub_created = Subject.objects.update_or_create(
-                internal_id=record.get('subject_id'),
+                subject_id=record.get('subject_id'),
                 defaults={
-                    "internal_id": record.get('subject_id')
+                    "subject_id": record.get('subject_id')
                 }
             )
             if is_sub_created:
@@ -110,29 +110,28 @@ def persist_lab_metadata(df: pd.DataFrame):
                 subject_updated.append(subject)
 
             specimen, is_spc_created = Specimen.objects.update_or_create(
-                internal_id=record.get('sample_id'),
+                specimen_id=record.get('sample_id'),
                 defaults={
-                    "internal_id": record.get('sample_id'),
+                    "specimen_id": record.get('sample_id'),
                     "source": get_value_from_human_readable_label(Source.choices, record.get('source')),
-                    'subject_id': subject.id
+                    'subject_id': subject.orcabus_id
                 }
             )
             if is_spc_created:
                 specimen_created.append(specimen)
             else:
                 specimen_updated.append(specimen)
-
             library, is_lib_created = Library.objects.update_or_create(
-                internal_id=record.get('library_id'),
+                library_id=record.get('library_id'),
                 defaults={
-                    'internal_id': record.get('library_id'),
+                    'library_id': record.get('library_id'),
                     'phenotype': get_value_from_human_readable_label(Phenotype.choices, record.get('phenotype')),
                     'workflow': get_value_from_human_readable_label(WorkflowType.choices, record.get('workflow')),
                     'quality': get_value_from_human_readable_label(Quality.choices, record.get('quality')),
                     'type': get_value_from_human_readable_label(LibraryType.choices, record.get('type')),
                     'assay': record.get('assay'),
                     'coverage': sanitize_library_coverage(record.get('coverage')),
-                    'specimen_id': specimen.id
+                    'specimen_id': specimen.orcabus_id
                 }
             )
             if is_lib_created:
@@ -143,17 +142,17 @@ def persist_lab_metadata(df: pd.DataFrame):
             # 2. linking or updating model to each other based on the record (update if it does not match)
 
             # library <-> specimen
-            if library.specimen is None or library.specimen.id != specimen.id:
+            if library.specimen is None or library.specimen.orcabus_id != specimen.orcabus_id:
                 library.specimen = specimen
                 library.save()
 
             # specimen <-> subject
-            if specimen.subject is None or specimen.subject.id != subject.id:
+            if specimen.subject is None or specimen.subject.orcabus_id != subject.orcabus_id:
                 specimen.subject = subject
                 specimen.save()
 
         except Exception as e:
-            if any(record.values()):  # silent off iff blank row
+            if any(record.values()):  # silent off blank row
                 logger.warning(f"Invalid record: {libjson.dumps(record)} Exception: {e}")
                 rows_invalid.append(record)
             continue

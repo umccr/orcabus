@@ -3,21 +3,21 @@ import factory
 from app.models import Subject, Specimen, Library
 
 INDIVIDUAL_1 = {
-    "internal_id": "I001"
+    "individual_id": "I001"
 }
 
 SUBJECT_1 = {
-    "internal_id": "SBJ001",
+    "subject_id": "SBJ001",
     "externalId": "EXTSUBIDA"
 }
 
 SPECIMEN_1 = {
-    "internal_id": "PRJ001",
+    "specimen_id": "PRJ001",
     "source": "FFPE"
 }
 
 LIBRARY_1 = {
-    "internal_id": "LIB01",
+    "library_id": "LIB01",
     "phenotype": "negative-control",
     "workflow": "clinical",
     "quality": "good",

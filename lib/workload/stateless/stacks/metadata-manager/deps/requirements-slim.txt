@@ -20,3 +20,4 @@ serverless-wsgi==3.0.4
 # six and regex required by automatically generated EventBridge code binding
 six==1.16.0
 regex==2024.7.24
+ulid-py==1.1.0
