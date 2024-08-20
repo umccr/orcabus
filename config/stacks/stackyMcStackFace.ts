@@ -14,6 +14,7 @@ import {
   AppStage,
   mockTnGlueTableName,
   mockWtsGlueTableName,
+  mockUmccriseGlueTableName,
 } from '../constants';
 import { GlueStackConfig } from '../../lib/workload/stateless/stacks/stacky-mcstackface/glue-constructs';
 import { StackyStatefulTablesConfig } from '../../lib/workload/stateful/stacks/stacky-mcstackface-dynamodb';
@@ -36,6 +37,7 @@ export const getGlueStackProps = (stage: AppStage): GlueStackConfig => {
     wgtsQcGlueTableName: mockWgtsQcGlueTableName,
     tnGlueTableName: mockTnGlueTableName,
     wtsGlueTableName: mockWtsGlueTableName,
+    umccriseGlueTableName: mockUmccriseGlueTableName,
     /* Secrets */
     icav2AccessTokenSecretName: icav2AccessTokenSecretName[stage],
   };
@@ -50,5 +52,6 @@ export const getStatefulGlueStackProps = (): StackyStatefulTablesConfig => {
     dynamodbWgtsQcGlueTableName: mockWgtsQcGlueTableName,
     dynamodbTnGlueTableName: mockTnGlueTableName,
     dynamodbWtsGlueTableName: mockWtsGlueTableName,
+    dynamodbUmccriseGlueTableName: mockUmccriseGlueTableName,
   };
 };

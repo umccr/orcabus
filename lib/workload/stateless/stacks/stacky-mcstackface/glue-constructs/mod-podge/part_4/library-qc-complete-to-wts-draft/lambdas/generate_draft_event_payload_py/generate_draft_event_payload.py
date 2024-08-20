@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
 
-
-# Set the fastq list rows
-
-# Set the output file prefix
-
-#!/usr/bin/env python3
-
 """
 Generate draft event payload for the event
 
