@@ -93,7 +93,7 @@ class BaseModel(models.Model):
         validators=[
             RegexValidator(
                 regex=r'^[\w]{3}\.[\w]{26}$',
-                message='orcabus_id must start with "idv." followed by a ULID',
+                message='orcabus_id must start with a 3-character prefix, followed by a dot separator and a ULID',
                 code='invalid_orcabus_id'
             )]
 
