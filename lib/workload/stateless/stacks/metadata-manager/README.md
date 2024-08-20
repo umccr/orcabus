@@ -57,18 +57,21 @@ In the near future, we might introduce different ways to load data into the appl
 loading data
 from the Google tracking sheet and mapping it to its respective model as follows.
 
-| Sheet Header | Table      | Field Name |
-|--------------|------------|------------|
-| SubjectID    | `Subject`  | subject_id |
-| SampleID     | `Specimen` | sample_id  |
-| Source       | `Specimen` | source     |
-| LibraryID    | `Library`  | library_id |
-| Phenotype    | `Library`  | phenotype  |
-| Workflow     | `Library`  | workflow   |
-| Quality      | `Library`  | quality    |
-| Type         | `Library`  | type       |
-| Coverage (X) | `Library`  | coverage   |
-| Assay        | `Library`  | assay      |
+| Sheet Header | Table      | Field Name    |
+|--------------|------------|---------------|
+| SubjectID    | `Subject`  | subject_id    |
+| SampleID     | `Specimen` | sample_id     |
+| Source       | `Specimen` | source        |
+| LibraryID    | `Library`  | library_id    |
+| Phenotype    | `Library`  | phenotype     |
+| Workflow     | `Library`  | workflow      |
+| Quality      | `Library`  | quality       |
+| Type         | `Library`  | type          |
+| Coverage (X) | `Library`  | coverage      |
+| Assay        | `Library`  | assay         |
+| ProjectOwner | `Library`  | project_owner |
+| ProjectName  | `Library`  | project_name  |
+
 
 Some important notes of the sync:
 
