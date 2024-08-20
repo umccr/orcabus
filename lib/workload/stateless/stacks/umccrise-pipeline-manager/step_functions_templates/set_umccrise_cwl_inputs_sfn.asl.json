@@ -1,0 +1,219 @@
+{
+  "Comment": "Launch Icav2 Pipeline and log in db",
+  "StartAt": "Get DataBase Entry",
+  "States": {
+    "Get DataBase Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        }
+      },
+      "ResultSelector": {
+        "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "engineParameters.$": "States.StringToJson($.Item.engine_parameters.S)"
+      },
+      "ResultPath": "$.get_input_parameters_from_event_step",
+      "Next": "Configure Inputs"
+    },
+    "Configure Inputs": {
+      "Type": "Parallel",
+      "Next": "Set Input JSON",
+      "Branches": [
+        {
+          "StartAt": "Convert S3 Output Uris To CWL Input Objects (Tumor and Normal)",
+          "States": {
+            "Convert S3 Output Uris To CWL Input Objects (Tumor and Normal)": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Convert Dragen Germline Directory to CWL Input Objects",
+                  "States": {
+                    "Convert Dragen Germline Directory to CWL Input Objects": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__get_cwl_object_from_s3_inputs_lambda_function_arn__}",
+                        "Payload": {
+                          "s3_uri.$": "$.get_input_parameters_from_event_step.inputs.dragenGermlineOutputUri"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "dragen_germline_directory.$": "$.Payload.cwl_object"
+                      },
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Convert Dragen Somatic Directory to CWL Input Objects",
+                  "States": {
+                    "Convert Dragen Somatic Directory to CWL Input Objects": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__get_cwl_object_from_s3_inputs_lambda_function_arn__}",
+                        "Payload": {
+                          "s3_uri.$": "$.get_input_parameters_from_event_step.inputs.dragenSomaticOutputUri"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "dragen_somatic_directory.$": "$.Payload.cwl_object"
+                      },
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "End": true,
+              "ResultSelector": {
+                "cwl_data_inputs": {
+                  "dragen_germline_directory.$": "$.[0].dragen_germline_directory",
+                  "dragen_somatic_directory.$": "$.[1].dragen_somatic_directory"
+                }
+              }
+            }
+          }
+        },
+        {
+          "StartAt": "Is Reference Version Set",
+          "States": {
+            "Is Reference Version Set": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.genomesVersion",
+                  "IsPresent": false,
+                  "Comment": "Get Default Version",
+                  "Next": "Set Reference Version as Default"
+                }
+              ],
+              "Default": "Reference Version Set"
+            },
+            "Reference Version Set": {
+              "Type": "Pass",
+              "Next": "Get the Reference Version Uri Map",
+              "ResultPath": "$.get_reference_version_step",
+              "Parameters": {
+                "reference_version.$": "$.get_input_parameters_from_event_step.inputs.genomesVersion"
+              }
+            },
+            "Set Reference Version as Default": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_version": "${__default_reference_version__}"
+              },
+              "ResultPath": "$.get_reference_version_step",
+              "Next": "Get the Reference Version Uri Map"
+            },
+            "Get the Reference Version Uri Map": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__reference_version_uri_ssm_parameter_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "reference_uri_map.$": "States.StringToJson($.Parameter.Value)"
+              },
+              "ResultPath": "$.get_reference_version_uri_map_step",
+              "Next": "Get the Reference Version Uri"
+            },
+            "Get the Reference Version Uri": {
+              "Type": "Pass",
+              "Parameters": {
+                "reference_uri.$": "States.ArrayGetItem($.get_reference_version_uri_map_step.reference_uri_map[?(@.name==$.get_reference_version_step.reference_version)].uri, 0)"
+              },
+              "ResultPath": "$.get_reference_version_uri_step",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.configure_inputs_step",
+      "ResultSelector": {
+        "cwl_data_inputs.$": "$.[0].cwl_data_inputs",
+        "reference_uri.$": "$.[1].get_reference_version_uri_step.reference_uri",
+        "boolean_parameters.$": "$.[2].get_boolean_parameters_step.boolean_parameters"
+      }
+    },
+    "Set Input JSON": {
+      "Type": "Pass",
+      "Next": "Merge Data Inputs",
+      "Parameters": {
+        "input_json": {
+          "output_directory_name.$": "States.Format('{}__{}', $.get_input_parameters_from_event_step.inputs.dragenSomaticLibraryId, $.get_input_parameters_from_event_step.inputs.dragenGermlineLibraryId)",
+          "dragen_normal_id.$": "$.get_input_parameters_from_event_step.inputs.dragenGermlineLibraryId",
+          "dragen_tumor_id.$": "$.get_input_parameters_from_event_step.inputs.dragenSomaticLibraryId",
+          "subject_identifier.$": "$.get_input_parameters_from_event_step.inputs.subjectId",
+          "reference_tar": {
+            "class": "File",
+            "location.$": "$.configure_inputs_step.reference_uri"
+          }
+        }
+      },
+      "ResultPath": "$.set_input_json_step"
+    },
+    "Merge Data Inputs": {
+      "Type": "Pass",
+      "Next": "Update Database Entry",
+      "Parameters": {
+        "input_json.$": "States.JsonMerge($.set_input_json_step.input_json, $.configure_inputs_step.cwl_data_inputs, false)"
+      },
+      "ResultPath": "$.merge_data_inputs_step"
+    },
+    "Update Database Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.db_uuid",
+          "id_type": "db_uuid"
+        },
+        "UpdateExpression": "SET input_json = :input_json",
+        "ExpressionAttributeValues": {
+          ":input_json": {
+            "S.$": "States.JsonToString($.merge_boolean_enable_parameters_step.input_json)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Wait 1 Second (Pre-execution)"
+    },
+    "Wait 1 Second (Pre-execution)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Wait for databases to sync before continuing",
+      "End": true
+    }
+  }
+}

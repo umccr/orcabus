@@ -37,6 +37,10 @@ import {
   WtsIcav2PipelineTable,
   WtsIcav2PipelineTableStackProps,
 } from './stacks/wts-dynamo-db/deploy/stack';
+import {
+  UmccriseIcav2PipelineTable,
+  UmccriseIcav2PipelineTableStackProps,
+} from './stacks/umccrise-pipeline-dynamo-db/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -49,6 +53,7 @@ export interface StatefulStackCollectionProps {
   wgtsQcIcav2PipelineTableStackProps: WgtsQcIcav2PipelineTableStackProps;
   tnIcav2PipelineTableStackProps: TnIcav2PipelineTableStackProps;
   wtsIcav2PipelineTableStackProps: WtsIcav2PipelineTableStackProps;
+  umccriseIcav2PipelineTableStackProps: UmccriseIcav2PipelineTableStackProps;
   BclConvertTableStackProps: BclConvertTableStackProps;
   stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
 }
@@ -66,6 +71,7 @@ export class StatefulStackCollection {
   readonly wgtsQcIcav2PipelineTableStack: Stack;
   readonly tnIcav2PipelineTableStack: Stack;
   readonly wtsIcav2PipelineTableStack: Stack;
+  readonly umccriseIcav2PipelineTableStack: Stack;
   readonly BclConvertTableStack: Stack;
   readonly stackyStatefulTablesStack: Stack;
 
@@ -141,6 +147,15 @@ export class StatefulStackCollection {
       {
         ...this.createTemplateProps(env, 'WtsIcav2PipelineTableStack'),
         ...statefulConfiguration.wtsIcav2PipelineTableStackProps,
+      }
+    );
+
+    this.umccriseIcav2PipelineTableStack = new UmccriseIcav2PipelineTable(
+      scope,
+      'UmccriseIcav2PipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'UmccriseIcav2PipelineTableStack'),
+        ...statefulConfiguration.umccriseIcav2PipelineTableStackProps,
       }
     );
 
