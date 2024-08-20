@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Duration } from 'aws-cdk-lib';
+import { Duration, Stack } from 'aws-cdk-lib';
 import { ISecurityGroup, IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Architecture, Version } from 'aws-cdk-lib/aws-lambda';
 import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
@@ -100,7 +100,12 @@ export class Function extends Construct {
 
     const manifestPath = path.join(__dirname, '..', '..', '..');
     const uuid = randomUUID();
-    const localDatabaseUrl = this.resolveLocalDatabaseUrl(uuid, manifestPath);
+
+    // Don't bother creating a database if there is no bundling required.
+    let localDatabaseUrl = undefined;
+    if (Stack.of(this).bundlingRequired) {
+      localDatabaseUrl = this.resolveLocalDatabaseUrl(uuid, manifestPath);
+    }
 
     this._function = new RustFunction(this, 'RustFunction', {
       manifestPath: manifestPath,
@@ -109,7 +114,7 @@ export class Function extends Construct {
         environment: {
           ...props.buildEnvironment,
           // The bundling process needs to be able to connect to the container running postgres.
-          DATABASE_URL: localDatabaseUrl,
+          ...(localDatabaseUrl && { DATABASE_URL: localDatabaseUrl }),
         },
         dockerOptions: {
           network: 'host',
