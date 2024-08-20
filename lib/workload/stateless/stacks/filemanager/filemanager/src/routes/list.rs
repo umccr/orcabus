@@ -678,7 +678,7 @@ pub(crate) mod tests {
         method: Method,
         body: Body,
     ) -> (StatusCode, T) {
-        let app = api_router(state);
+        let app = api_router(state).unwrap();
         let response = app
             .oneshot(
                 Request::builder()

@@ -102,7 +102,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_swagger_ui(pool: PgPool) {
-        let app = router(AppState::from_pool(pool).await);
+        let app = router(AppState::from_pool(pool).await).unwrap();
         let response = app
             .oneshot(
                 Request::builder()

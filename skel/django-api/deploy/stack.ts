@@ -2,13 +2,13 @@
 
 import path from 'path';
 import { Construct } from 'constructs';
-import { Architecture, ILayerVersion } from 'aws-cdk-lib/aws-lambda';
+import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
 import { aws_events_targets, aws_lambda, aws_secretsmanager, Duration, Stack, StackProps } from 'aws-cdk-lib';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import { CorsHttpMethod, HttpApi, HttpMethod, HttpRoute, HttpRouteKey, HttpStage } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { PostgresManagerStack } from '../../../lib/workload/stateful/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../lib/workload/components/api-gateway';
@@ -21,6 +21,7 @@ export interface ProjectNameStackProps { // FIXME change prop interface name
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
   apiGwLogsConfig: ApiGwLogsConfig;
+  corsAllowOrigins?: string[];
 }
 
 export class ProjectNameStack extends Stack {  // FIXME change construct name

@@ -32,6 +32,7 @@ export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & 
   cognitoStatusPageAppClientIdParameterName: string;
   apiGwLogsConfig: ApiGwLogsConfig;
   fileManagerIngestRoleName: string;
+  corsAllowOrigins?: string[];
 };
 
 /**
@@ -151,7 +152,6 @@ export class Filemanager extends Stack {
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiLambda.function);
 
     new HttpRoute(this, 'HttpRoute', {
-      // FIXME: Should not be just proxy but objects/{:id}
       httpApi: httpApi,
       integration: apiIntegration,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),

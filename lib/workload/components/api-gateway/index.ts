@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { aws_ssm, Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
-import { CorsHttpMethod, HttpApi, CfnStage, DomainName } from 'aws-cdk-lib/aws-apigatewayv2';
+import { CfnStage, CorsHttpMethod, DomainName, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { IStringParameter, StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -34,6 +34,10 @@ export interface ApiGatewayConstructProps {
    * The configuration for aws cloudwatch logs
    */
   apiGwLogsConfig: ApiGwLogsConfig;
+  /**
+   * Allowed CORS origins.
+   */
+  corsAllowOrigins?: string[];
 }
 
 export class ApiGatewayConstruct extends Construct {
@@ -65,8 +69,9 @@ export class ApiGatewayConstruct extends Construct {
           CorsHttpMethod.HEAD,
           CorsHttpMethod.OPTIONS,
           CorsHttpMethod.POST,
+          CorsHttpMethod.PATCH,
         ],
-        allowOrigins: ['*'], // FIXME allowed origins from config constant
+        allowOrigins: props.corsAllowOrigins,
         maxAge: Duration.days(10),
       },
       defaultAuthorizer: this.getAuthorizer(props),

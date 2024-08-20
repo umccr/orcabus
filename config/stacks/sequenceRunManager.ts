@@ -4,6 +4,7 @@ import {
   cognitoStatusPageAppClientIdParameterName,
   cognitoUserPoolIdParameterName,
   computeSecurityGroupName,
+  corsAllowOrigins,
   eventBusName,
   vpcProps,
 } from '../constants';
@@ -25,5 +26,6 @@ export const getSequenceRunManagerStackProps = (stage: AppStage): SequenceRunMan
     cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
     cognitoStatusPageAppClientIdParameterName: cognitoStatusPageAppClientIdParameterName,
     apiGwLogsConfig: logsConfig,
+    corsAllowOrigins,
   };
 };

@@ -81,7 +81,7 @@ mod tests {
             let s3_ctx = S3Client::with_defaults_context();
             s3_ctx.expect().return_once(|| s3_client);
 
-            let app = api_router(state.clone());
+            let app = api_router(state.clone()).unwrap();
             app.oneshot(
                 Request::builder()
                     .method(Method::POST)

@@ -30,8 +30,8 @@ async fn main() -> Result<(), Error> {
         true,
     );
 
-    let app =
-        router(state.clone()).route_layer(from_fn_with_state(state, update_credentials_middleware));
+    let app = router(state.clone())?
+        .route_layer(from_fn_with_state(state, update_credentials_middleware));
 
     run(app).await
 }

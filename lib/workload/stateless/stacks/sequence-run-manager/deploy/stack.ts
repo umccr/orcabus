@@ -20,6 +20,7 @@ export interface SequenceRunManagerStackProps {
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
   apiGwLogsConfig: ApiGwLogsConfig;
+  corsAllowOrigins?: string[];
 }
 
 export class SequenceRunManagerStack extends Stack {

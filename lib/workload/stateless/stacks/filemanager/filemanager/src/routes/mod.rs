@@ -1,20 +1,26 @@
 //! This module handles API routing.
 //!
 
-use std::sync::Arc;
-
 use crate::clients::aws::s3;
 use crate::database;
 use crate::env::Config;
+use crate::error::Error::ApiConfigurationError;
+use crate::error::Result;
 use crate::routes::error::fallback;
 use crate::routes::get::*;
 use crate::routes::ingest::ingest_router;
 use crate::routes::list::*;
 use crate::routes::openapi::swagger_ui;
 use crate::routes::update::update_router;
+use axum::http::header::AUTHORIZATION;
+use axum::http::{HeaderValue, Method};
 use axum::Router;
+use chrono::Duration;
 use sqlx::PgPool;
+use std::sync::Arc;
+use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
+use tracing::trace;
 
 pub mod error;
 pub mod filter;
@@ -107,36 +113,77 @@ impl AppState {
 }
 
 /// Prefixed router with a version number, swagger ui and fallback route.
-pub fn router(state: AppState) -> Router {
-    Router::new()
-        .nest("/api/v1", api_router(state))
+pub fn router(state: AppState) -> Result<Router> {
+    Ok(Router::new()
+        .nest("/api/v1", api_router(state)?)
         .fallback(fallback)
-        .merge(swagger_ui())
+        .merge(swagger_ui()))
+}
+
+/// Configure the cors layer
+pub fn cors_layer(allow_origins: Option<&[String]>) -> Result<CorsLayer> {
+    let mut layer = CorsLayer::new()
+        .allow_headers([AUTHORIZATION])
+        .allow_methods([
+            Method::GET,
+            Method::HEAD,
+            Method::OPTIONS,
+            Method::POST,
+            Method::PATCH,
+        ])
+        .max_age(
+            Duration::days(10)
+                .to_std()
+                .map_err(|err| ApiConfigurationError(err.to_string()))?,
+        );
+
+    if let Some(origins) = allow_origins {
+        let origins = origins
+            .iter()
+            .map(|origin| {
+                origin
+                    .parse::<HeaderValue>()
+                    .map_err(|err| ApiConfigurationError(err.to_string()))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        layer = layer.allow_origin(origins);
+    }
+
+    trace!(layer = ?layer, "cors");
+    Ok(layer)
 }
 
 /// The main filemanager router for requests.
-pub fn api_router(state: AppState) -> Router {
-    Router::new()
+pub fn api_router(state: AppState) -> Result<Router> {
+    Ok(Router::new()
         .merge(get_router())
         .merge(ingest_router())
         .merge(list_router())
         .merge(update_router())
-        .with_state(state)
+        .layer(cors_layer(state.config().api_cors_allow_origins())?)
         .layer(TraceLayer::new_for_http())
+        .with_state(state))
 }
 
 #[cfg(test)]
 mod tests {
-    use aws_lambda_events::http::Request;
-    use axum::body::Body;
-    use axum::http::StatusCode;
-    use axum::response::IntoResponse;
-    use sqlx::PgPool;
-    use tower::ServiceExt;
-
     use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::env::Config;
     use crate::error::Error;
     use crate::routes::{router, AppState};
+    use aws_lambda_events::http::header::ACCESS_CONTROL_ALLOW_HEADERS;
+    use aws_lambda_events::http::Request;
+    use axum::body::Body;
+    use axum::http::header::{
+        ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_REQUEST_HEADERS,
+        ACCESS_CONTROL_REQUEST_METHOD, HOST, ORIGIN,
+    };
+    use axum::http::{Method, StatusCode};
+    use axum::response::IntoResponse;
+    use sqlx::PgPool;
+    use std::sync::Arc;
+    use tower::ServiceExt;
 
     #[tokio::test]
     async fn internal_error_into_response() {
@@ -146,7 +193,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_unknown_path(pool: PgPool) {
-        let app = router(AppState::from_pool(pool).await);
+        let app = router(AppState::from_pool(pool).await).unwrap();
         let response = app
             .oneshot(
                 Request::builder()
@@ -158,5 +205,102 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_cors(pool: PgPool) {
+        let mut state = AppState::from_pool(pool).await;
+        state.config = Arc::new(Config {
+            api_cors_allow_origins: Some(vec![
+                "localhost:8000".to_string(),
+                "http://example.com".to_string(),
+            ]),
+            ..Default::default()
+        });
+
+        let app = router(state.clone()).unwrap();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/s3")
+                    .header(ORIGIN, "127.0.0.1")
+                    .header(HOST, "127.0.0.1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert!(response
+            .headers()
+            .get(ACCESS_CONTROL_ALLOW_ORIGIN)
+            .is_none());
+
+        let app = router(state.clone()).unwrap();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/s3")
+                    .header(ORIGIN, "localhost:8000")
+                    .header(HOST, "localhost:8000")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(),
+            "localhost:8000"
+        );
+
+        let app = router(state.clone()).unwrap();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/s3")
+                    .header(ORIGIN, "http://example.com")
+                    .header(HOST, "http://example.com")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(),
+            "http://example.com"
+        );
+
+        let app = router(state.clone()).unwrap();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::OPTIONS)
+                    .uri("/api/v1/s3")
+                    .header(ORIGIN, "http://example.com")
+                    .header(HOST, "http://example.com")
+                    .header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
+                    .header(ACCESS_CONTROL_REQUEST_HEADERS, "Authorization")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(),
+            "http://example.com"
+        );
+        assert_eq!(
+            response
+                .headers()
+                .get(ACCESS_CONTROL_ALLOW_METHODS)
+                .unwrap(),
+            "GET,HEAD,OPTIONS,POST,PATCH"
+        );
+        assert_eq!(
+            response
+                .headers()
+                .get(ACCESS_CONTROL_ALLOW_HEADERS)
+                .unwrap(),
+            "authorization"
+        );
     }
 }
