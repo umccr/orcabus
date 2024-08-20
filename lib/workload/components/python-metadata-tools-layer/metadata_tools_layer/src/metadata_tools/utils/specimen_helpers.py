@@ -47,7 +47,7 @@ def list_libraries_in_specimen(specimen_id: Union[str, int]) -> List[Dict]:
     # If subject id is a string, we have the internal id (SBJ...)
     specimen = get_specimen_from_specimen_id(specimen_id)
 
-    endpoint = f"library"
+    endpoint = f"api/v1/library"
 
     # Get the subject
     return list(
@@ -63,7 +63,7 @@ def get_all_specimens():
     Get all specimens from the specimen database
     :return:
     """
-    endpoint = "specimen"
+    endpoint = "api/v1/specimen"
 
     return get_request_response_results(endpoint)
 
