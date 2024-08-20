@@ -3,7 +3,7 @@
 
 use crate::database::entities::s3_object;
 use crate::database::entities::s3_object::Model as S3;
-use crate::error::Error::{ConversionError, MissingHostHeader, ParseError};
+use crate::error::Error::{MissingHostHeader, ParseError};
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::{ErrorStatusCode, QsQuery, Query};
@@ -16,6 +16,7 @@ use axum::http::header::HOST;
 use axum::routing::get;
 use axum::{extract, Json, Router};
 use axum_extra::extract::WithRejection;
+use sea_orm::TransactionTrait;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 use url::Url;
@@ -120,9 +121,10 @@ pub async fn list_s3(
     WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<S3>>> {
-    let mut response =
-        ListQueryBuilder::<_, s3_object::Entity>::new(state.database_client.connection_ref())
-            .filter_all(filter_all, wildcard.case_sensitive());
+    let txn = state.database_client().connection_ref().begin().await?;
+
+    let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(&txn)
+        .filter_all(filter_all.clone(), wildcard.case_sensitive());
 
     if list.current_state {
         response = response.current_state();
@@ -153,9 +155,20 @@ pub async fn list_s3(
 
     let url = url.join(&request.uri().to_string())?;
 
-    Ok(Json(
-        response.paginate_to_list_response(pagination, url).await?,
-    ))
+    let Json(count) = count_s3(
+        state,
+        WithRejection(extract::Query(wildcard), PhantomData),
+        WithRejection(extract::Query(list), PhantomData),
+        WithRejection(serde_qs::axum::QsQuery(filter_all), PhantomData),
+    )
+    .await?;
+    let response = response
+        .paginate_to_list_response(pagination, url, count.n_records)
+        .await?;
+
+    txn.commit().await?;
+
+    Ok(Json(response))
 }
 
 /// Count all s3_objects according to the parameters.
@@ -212,7 +225,7 @@ pub async fn presign_s3(
 ) -> Result<Json<ListResponse<Url>>> {
     let Json(ListResponse {
         links,
-        mut pagination,
+        pagination,
         results,
     }) = list_s3(
         state.clone(),
@@ -236,8 +249,6 @@ pub async fn presign_s3(
             urls.push(presigned);
         }
     }
-
-    pagination.count = u64::try_from(urls.len()).map_err(|err| ConversionError(err.to_string()))?;
 
     let response = ListResponse::new(links, pagination, urls);
     Ok(Json(response))
@@ -289,6 +300,7 @@ pub(crate) mod tests {
         let result: ListResponse<S3> = response_from_get(state, "/s3").await;
         assert_eq!(result.links(), &Links::new(None, None));
         assert_eq!(result.results(), entries);
+        assert_eq!(result.pagination().count, 10);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -316,6 +328,7 @@ pub(crate) mod tests {
             )
         );
         assert_eq!(result.results(), vec![entries[2].clone()]);
+        assert_eq!(result.pagination().count, 2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -343,6 +356,7 @@ pub(crate) mod tests {
             )
         );
         assert_eq!(result.results(), vec![entries[2].clone()]);
+        assert_eq!(result.pagination().count, 2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -373,6 +387,7 @@ pub(crate) mod tests {
             )
         );
         assert_eq!(result.results(), vec![entries[2].clone()]);
+        assert_eq!(result.pagination().count, 2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -476,7 +491,7 @@ pub(crate) mod tests {
 
         let result: ListResponse<Url> = response_from_get(state, "/s3/presign").await;
         assert_eq!(result.links(), &Links::new(None, None));
-        assert_eq!(1, result.pagination().count);
+        assert_eq!(2, result.pagination().count);
 
         let query = result.results()[0].query().unwrap();
         assert!(query.contains("X-Amz-Expires=300"));
@@ -499,6 +514,7 @@ pub(crate) mod tests {
             response_from_get(state, "/s3?currentState=true&size=4&rowsPerPage=1&page=1").await;
         assert_eq!(result.links(), &Links::new(None, None));
         assert_eq!(result.results(), vec![entries[24].clone()]);
+        assert_eq!(result.pagination().count, 1);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -516,6 +532,7 @@ pub(crate) mod tests {
             result.results(),
             filter_event_type(entries, EventType::Deleted)
         );
+        assert_eq!(result.pagination().count, 5);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -529,6 +546,7 @@ pub(crate) mod tests {
 
         let result: ListResponse<S3> = response_from_get(state, "/s3?bucket=1&key=2").await;
         assert_eq!(result.results(), vec![entries[2].clone()]);
+        assert_eq!(result.pagination().count, 1);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -543,22 +561,27 @@ pub(crate) mod tests {
         let result: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[attributeId]=1").await;
         assert_eq!(result.results(), vec![entries[1].clone()]);
+        assert_eq!(result.pagination().count, 1);
 
         let result: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[nestedId][attributeId]=4").await;
         assert_eq!(result.results(), vec![entries[4].clone()]);
+        assert_eq!(result.pagination().count, 1);
 
         let result: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[nonExistentId]=1").await;
         assert!(result.results().is_empty());
+        assert_eq!(result.pagination().count, 0);
 
         let result: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[attributeId]=1&key=2").await;
         assert!(result.results().is_empty());
+        assert_eq!(result.pagination().count, 0);
 
         let result: ListResponse<S3> =
             response_from_get(state, "/s3?attributes[attributeId]=1&key=1").await;
         assert_eq!(result.results(), vec![entries[1].clone()]);
+        assert_eq!(result.pagination().count, 1);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -581,10 +604,12 @@ pub(crate) mod tests {
         let s3_objects: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[attributeId]=%a%").await;
         assert_contains(s3_objects.results(), &entries, 0..2);
+        assert_eq!(s3_objects.pagination().count, 2);
 
         let s3_objects: ListResponse<S3> =
             response_from_get(state.clone(), "/s3?attributes[attributeId]=%A%").await;
         assert!(s3_objects.results().is_empty());
+        assert_eq!(s3_objects.pagination().count, 0);
 
         let s3_objects: ListResponse<S3> = response_from_get(
             state.clone(),
@@ -592,6 +617,7 @@ pub(crate) mod tests {
         )
         .await;
         assert_contains(s3_objects.results(), &entries, 0..2);
+        assert_eq!(s3_objects.pagination().count, 2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]

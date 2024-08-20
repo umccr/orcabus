@@ -2,7 +2,7 @@
 //!
 
 use crate::database::entities::s3_object::Model as S3;
-use crate::error::Error::{ConversionError, OverflowError};
+use crate::error::Error::OverflowError;
 use crate::error::{Error, Result};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::num::NonZeroU64;
@@ -57,6 +57,7 @@ impl<M> ListResponse<M> {
         results: Vec<M>,
         next_page: Option<NonZeroU64>,
         page_link: Url,
+        count: u64,
     ) -> Result<Self> {
         let create_link = |page_link: &Url, pagination: Pagination| {
             let query_params = page_link
@@ -95,8 +96,6 @@ impl<M> ListResponse<M> {
             )?;
             create_link(&page_link, qs)?
         };
-
-        let count = u64::try_from(results.len()).map_err(|err| ConversionError(err.to_string()))?;
 
         Ok(Self::new(
             Links::new(previous, next),
@@ -255,7 +254,7 @@ mod tests {
                 )
             )
         );
-        assert_eq!(result.pagination().count, 2);
+        assert_eq!(result.pagination().count, 10);
         assert_eq!(result.results(), &entries[2..4]);
 
         let result: ListResponse<S3Object> =
@@ -271,7 +270,7 @@ mod tests {
                 )
             )
         );
-        assert_eq!(result.pagination().count, 2);
+        assert_eq!(result.pagination().count, 10);
         assert_eq!(result.results(), &entries[0..2]);
 
         let result: ListResponse<S3Object> =
@@ -287,7 +286,7 @@ mod tests {
                 None
             )
         );
-        assert_eq!(result.pagination().count, 2);
+        assert_eq!(result.pagination().count, 10);
         assert_eq!(result.results(), &entries[8..10]);
 
         let (status_code, _) = response_from::<ErrorResponse>(
@@ -315,7 +314,7 @@ mod tests {
             result.links(),
             &Links::new(None, Some("http://example.com/s3?page=2".parse().unwrap()))
         );
-        assert_eq!(result.pagination().count, 1000);
+        assert_eq!(result.pagination().count, 1001);
         assert_eq!(result.results(), &entries[0..1000]);
     }
 
@@ -345,7 +344,7 @@ mod tests {
                 )
             )
         );
-        assert_eq!(result.pagination().count, 2);
+        assert_eq!(result.pagination().count, 10);
         assert_eq!(result.results(), &entries[2..4]);
     }
 
@@ -377,7 +376,7 @@ mod tests {
                 None,
             )
         );
-        assert_eq!(result.pagination().count, 0);
+        assert_eq!(result.pagination().count, 10);
         assert!(result.results().is_empty());
     }
 

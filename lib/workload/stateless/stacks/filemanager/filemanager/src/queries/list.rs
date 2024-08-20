@@ -253,6 +253,7 @@ where
         self,
         pagination: Pagination,
         page_link: Url,
+        count: u64,
     ) -> Result<ListResponse<M>> {
         let offset = pagination.offset()?;
         let page_size = pagination.rows_per_page();
@@ -282,7 +283,7 @@ where
             )
         };
 
-        ListResponse::from_next_page(pagination, results, next_page, page_link)
+        ListResponse::from_next_page(pagination, results, next_page, page_link, count)
     }
 
     /// Create a list count from a query builder.
@@ -705,6 +706,7 @@ pub(crate) mod tests {
                 "http://example.com/s3?rowsPerPage=2&page=1"
                     .parse()
                     .unwrap(),
+                10,
             )
             .await
             .unwrap();
