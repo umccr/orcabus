@@ -15,6 +15,16 @@
     "workflowName": "BclConvert",
     "workflowVersion": "4.2.7",
     "workflowRunName": "540424_A01001_0193_BBBBMMDRX5",
+    "linkedLibraries": [
+      {
+        "libraryId": "L000001",
+        "orcabusId": "lib.01J5M2J44HFJ9424G7074NKTGN"
+      },
+      {
+        "libraryId": "L000002",
+        "orcabusId": "lib.01J5M2JFE1JPYV62RYQEG99CP5"
+      }
+    ],
     "payload": {
       "version": "0.1.0",
       "data": {
