@@ -21,7 +21,7 @@ use crate::routes::update::*;
 
 /// A newtype equivalent to a `DateTime` with a time zone.
 #[derive(ToSchema)]
-#[schema(value_type = DateTime)]
+#[schema(value_type = DateTime, format = DateTime)]
 pub struct DateTimeWithTimeZone(pub DateTime<FixedOffset>);
 
 /// A newtype equivalent to an arbitrary JSON `Value`.

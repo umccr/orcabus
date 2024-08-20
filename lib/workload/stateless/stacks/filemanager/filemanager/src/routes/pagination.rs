@@ -146,11 +146,12 @@ pub struct Pagination {
     /// The one-indexed page to fetch from the list of objects.
     /// Increments by 1 starting from 1.
     /// Defaults to the beginning of the collection.
-    #[param(nullable, default = 1)]
+    #[param(required = false, default = 1, minimum = 1, value_type = u64)]
+    #[schema(required = false, default = 1, minimum = 1, value_type = u64)]
     page: NonZeroU64,
     /// The number of rows per page, i.e. the page size.
     /// If this is zero then the default is used.
-    #[param(nullable, default = 1000)]
+    #[param(required = false, default = 1000)]
     #[serde(deserialize_with = "deserialize_zero_page_as_default")]
     rows_per_page: u64,
 }
