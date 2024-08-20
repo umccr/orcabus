@@ -13,13 +13,15 @@ from workflow_manager_proc.domain.executionservice.workflowrunstatechange import
     LibraryRecord,
     Marshaller,
 )
-from workflow_manager.models.workflow_run import (
+from workflow_manager.models import (
     WorkflowRun,
     Workflow,
+    State,
     Payload,
     Library,
     LibraryAssociation,
 )
+from . import create_workflow_run_state
 
 ASSOCIATION_STATUS = "ACTIVE"
 
@@ -53,32 +55,28 @@ def handler(event, context):
         print("Persisting Workflow record.")
         workflow.save()
 
-    # then create the actual workflow run state change entry
-    wfr = WorkflowRun(
-        workflow=workflow,
-        portal_run_id=wrsc.portalRunId,
-        execution_id=wrsc.executionId,  # the execution service WRSC does carry the execution ID
-        workflow_run_name=wrsc.workflowRunName,
-        status=wrsc.status,
-        comment=None,
-        timestamp=wrsc.timestamp,
-    )
-
-    # if payload is not null, create a new payload entry and assign a unique reference ID for it
-    input_payload: Payload = wrsc.payload
-    if input_payload:
-        pld = Payload(
-            payload_ref_id=str(uuid.uuid4()),
-            version=input_payload.version,
-            data=input_payload.data,
+    # then create the actual workflow run entry if it does not exist
+    try:
+        wfr: WorkflowRun = WorkflowRun.objects.get(portal_run_id=wrsc.portalRunId)
+        wfr.current_status = wrsc.status
+        wfr.last_modified = wrsc.timestamp
+    except Exception:
+        print("No workflow found! Creating new entry.")
+        wfr = WorkflowRun(
+            workflow=workflow,
+            portal_run_id=wrsc.portalRunId,
+            execution_id=wrsc.executionId,  # the execution service WRSC does carry the execution ID
+            workflow_run_name=wrsc.workflowRunName,
+            current_status=wrsc.status,
+            comment=None,
+            last_modified=wrsc.timestamp,
+            created=wrsc.timestamp
         )
-        print("Persisting Payload record.")
-        pld.save()
-
-        wfr.payload = pld  # Note: payload type depend on workflow + status and will carry a version in it
-
-    print("Persisting WorkflowRun record.")
+    print("Persisting Workflow record.")
     wfr.save()
+
+    # create the related state & payload entries for the WRSC
+    create_workflow_run_state(wrsc=wrsc, wfr=wfr)
 
     # if the workflow run is linked to library record(s), create the association(s)
     input_libraries: list[LibraryRecord] = wrsc.linkedLibraries
