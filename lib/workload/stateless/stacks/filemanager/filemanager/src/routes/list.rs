@@ -6,17 +6,18 @@ use crate::database::entities::s3_object::Model as S3;
 use crate::error::Error::{ConversionError, MissingHostHeader, ParseError};
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
-use crate::routes::error::ErrorStatusCode;
+use crate::routes::error::{ErrorStatusCode, QsQuery, Query};
 use crate::routes::filter::S3ObjectsFilter;
 use crate::routes::pagination::{ListResponse, Pagination};
 use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
 use crate::routes::AppState;
-use axum::extract::{Query, Request, State};
+use axum::extract::{Request, State};
 use axum::http::header::HOST;
 use axum::routing::get;
-use axum::{Json, Router};
+use axum::{extract, Json, Router};
+use axum_extra::extract::WithRejection;
 use serde::{Deserialize, Serialize};
-use serde_qs::axum::QsQuery;
+use std::marker::PhantomData;
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
 
@@ -113,10 +114,10 @@ impl ListS3Params {
 )]
 pub async fn list_s3(
     state: State<AppState>,
-    Query(pagination): Query<Pagination>,
-    Query(wildcard): Query<WildcardParams>,
-    Query(list): Query<ListS3Params>,
-    QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
+    WithRejection(extract::Query(pagination), _): Query<Pagination>,
+    WithRejection(extract::Query(wildcard), _): Query<WildcardParams>,
+    WithRejection(extract::Query(list), _): Query<ListS3Params>,
+    WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<S3>>> {
     let mut response =
@@ -171,9 +172,9 @@ pub async fn list_s3(
 )]
 pub async fn count_s3(
     state: State<AppState>,
-    Query(wildcard): Query<WildcardParams>,
-    Query(list): Query<ListS3Params>,
-    QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
+    WithRejection(extract::Query(wildcard), _): Query<WildcardParams>,
+    WithRejection(extract::Query(list), _): Query<ListS3Params>,
+    WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
     let mut response =
         ListQueryBuilder::<_, s3_object::Entity>::new(state.database_client.connection_ref())
@@ -194,7 +195,7 @@ pub async fn count_s3(
     get,
     path = "/s3/presign",
     responses(
-        (status = OK, description = "The list of presigned urls", body = ListResponseS3),
+        (status = OK, description = "The list of presigned urls", body = ListResponseUrl),
         ErrorStatusCode,
     ),
     params(Pagination, WildcardParams, PresignedParams, S3ObjectsFilter),
@@ -205,7 +206,7 @@ pub async fn presign_s3(
     state: State<AppState>,
     pagination: Query<Pagination>,
     wildcard: Query<WildcardParams>,
-    Query(presigned): Query<PresignedParams>,
+    WithRejection(extract::Query(presigned), _): Query<PresignedParams>,
     filter_all: QsQuery<S3ObjectsFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<Url>>> {
@@ -217,7 +218,7 @@ pub async fn presign_s3(
         state.clone(),
         pagination,
         wildcard,
-        Query(ListS3Params::new(true)),
+        WithRejection(extract::Query(ListS3Params::new(true)), PhantomData),
         filter_all,
         request,
     )
@@ -302,13 +303,13 @@ pub(crate) mod tests {
             .s3_objects;
 
         let result: ListResponse<S3> =
-            response_from_get(state, "/s3?currentState=true&rowsPerPage=1&page=0").await;
+            response_from_get(state, "/s3?currentState=true&rowsPerPage=1&page=1").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 None,
                 Some(
-                    "http://example.com/s3?currentState=true&rowsPerPage=1&page=1"
+                    "http://example.com/s3?currentState=true&rowsPerPage=1&page=2"
                         .parse()
                         .unwrap()
                 )
@@ -329,13 +330,13 @@ pub(crate) mod tests {
             .s3_objects;
 
         let result: ListResponse<S3> =
-            response_from_get(state, "/s3?currentState=true&rowsPerPage=1&page=0").await;
+            response_from_get(state, "/s3?currentState=true&rowsPerPage=1&page=1").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 None,
                 Some(
-                    "https://example.com/s3?currentState=true&rowsPerPage=1&page=1"
+                    "https://example.com/s3?currentState=true&rowsPerPage=1&page=2"
                         .parse()
                         .unwrap()
                 )
@@ -359,13 +360,13 @@ pub(crate) mod tests {
             .s3_objects;
 
         let result: ListResponse<S3> =
-            response_from_get(state, "/s3?currentState=true&rowsPerPage=1&page=0").await;
+            response_from_get(state, "/s3?currentState=true&rowsPerPage=1&page=1").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 None,
                 Some(
-                    "https://localhost:8000/s3?currentState=true&rowsPerPage=1&page=1"
+                    "https://localhost:8000/s3?currentState=true&rowsPerPage=1&page=2"
                         .parse()
                         .unwrap()
                 )
@@ -495,7 +496,7 @@ pub(crate) mod tests {
             .s3_objects;
 
         let result: ListResponse<S3> =
-            response_from_get(state, "/s3?currentState=true&size=4&rowsPerPage=1&page=0").await;
+            response_from_get(state, "/s3?currentState=true&size=4&rowsPerPage=1&page=1").await;
         assert_eq!(result.links(), &Links::new(None, None));
         assert_eq!(result.results(), vec![entries[24].clone()]);
     }

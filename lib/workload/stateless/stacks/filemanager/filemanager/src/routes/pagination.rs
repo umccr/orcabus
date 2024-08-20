@@ -5,6 +5,7 @@ use crate::database::entities::s3_object::Model as S3;
 use crate::error::Error::{ConversionError, OverflowError};
 use crate::error::{Error, Result};
 use serde::{Deserialize, Deserializer, Serialize};
+use std::num::NonZeroU64;
 use std::result;
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
@@ -12,7 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 /// The response type for list operations.
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[aliases(ListResponseS3 = ListResponse<S3>)]
+#[aliases(ListResponseS3 = ListResponse<S3>, ListResponseUrl = ListResponse<Url>)]
 pub struct ListResponse<M> {
     /// Links to next and previous page.
     pub(crate) links: Links,
@@ -54,7 +55,7 @@ impl<M> ListResponse<M> {
     pub fn from_next_page(
         pagination: Pagination,
         results: Vec<M>,
-        next_page: Option<u64>,
+        next_page: Option<NonZeroU64>,
         page_link: Url,
     ) -> Result<Self> {
         let create_link = |page_link: &Url, pagination: Pagination| {
@@ -81,16 +82,17 @@ impl<M> ListResponse<M> {
             None
         };
 
-        let previous = if pagination.page() == 0 {
+        let previous = if pagination.page().get() == 1 {
             None
         } else {
-            let qs = Pagination::new(
+            let qs = Pagination::from_u64(
                 pagination
                     .page()
+                    .get()
                     .checked_sub(1)
                     .ok_or_else(|| OverflowError)?,
                 pagination.rows_per_page(),
-            );
+            )?;
             create_link(&page_link, qs)?
         };
 
@@ -142,11 +144,11 @@ impl PaginatedResponse {
 #[serde(default, rename_all = "camelCase")]
 #[into_params(parameter_in = Query)]
 pub struct Pagination {
-    /// The zero-indexed page to fetch from the list of objects.
-    /// Increments by 1 starting from 0.
+    /// The one-indexed page to fetch from the list of objects.
+    /// Increments by 1 starting from 1.
     /// Defaults to the beginning of the collection.
-    #[param(nullable, default = 0)]
-    page: u64,
+    #[param(nullable, default = 1)]
+    page: NonZeroU64,
     /// The number of rows per page, i.e. the page size.
     /// If this is zero then the default is used.
     #[param(nullable, default = 1000)]
@@ -156,16 +158,29 @@ pub struct Pagination {
 
 impl Pagination {
     /// Create a new pagination struct.
-    pub fn new(page: u64, rows_per_page: u64) -> Self {
+    pub fn new(page: NonZeroU64, rows_per_page: u64) -> Self {
         Self {
             page,
             rows_per_page,
         }
     }
 
+    /// Create a new pagination struct.
+    pub fn from_u64(page: u64, rows_per_page: u64) -> Result<Self> {
+        Ok(Self::new(
+            NonZeroU64::new(page).ok_or_else(|| OverflowError)?,
+            rows_per_page,
+        ))
+    }
+
     /// Get the page.
-    pub fn page(&self) -> u64 {
+    pub fn page(&self) -> NonZeroU64 {
         self.page
+    }
+
+    /// Get the zero-indexed offset.
+    pub fn offset(&self) -> Result<u64> {
+        self.page.get().checked_sub(1).ok_or_else(|| OverflowError)
     }
 
     /// Get the page size.
@@ -193,7 +208,7 @@ where
 impl Default for Pagination {
     fn default() -> Self {
         Self {
-            page: 0,
+            page: NonZeroU64::new(1).expect("valid non-zero usize"),
             rows_per_page: DEFAULT_ROWS_PER_PAGE,
         }
     }
@@ -201,15 +216,18 @@ impl Default for Pagination {
 
 #[cfg(test)]
 mod tests {
+    use aws_lambda_events::http::StatusCode;
+    use axum::body::Body;
+    use axum::http::Method;
     use sqlx::PgPool;
 
+    use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::queries::EntriesBuilder;
-    use crate::routes::list::tests::response_from_get;
+    use crate::routes::error::ErrorResponse;
+    use crate::routes::list::tests::{response_from, response_from_get};
     use crate::routes::AppState;
-
-    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_paginate(pool: PgPool) {
@@ -221,17 +239,17 @@ mod tests {
             .s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from_get(state.clone(), "/s3?page=1&rowsPerPage=2").await;
+            response_from_get(state.clone(), "/s3?page=2&rowsPerPage=2").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 Some(
-                    "http://example.com/s3?rowsPerPage=2&page=0"
+                    "http://example.com/s3?rowsPerPage=2&page=1"
                         .parse()
                         .unwrap()
                 ),
                 Some(
-                    "http://example.com/s3?rowsPerPage=2&page=2"
+                    "http://example.com/s3?rowsPerPage=2&page=3"
                         .parse()
                         .unwrap()
                 )
@@ -241,13 +259,13 @@ mod tests {
         assert_eq!(result.results(), &entries[2..4]);
 
         let result: ListResponse<S3Object> =
-            response_from_get(state.clone(), "/s3?rowsPerPage=2&page=0").await;
+            response_from_get(state.clone(), "/s3?rowsPerPage=2&page=1").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 None,
                 Some(
-                    "http://example.com/s3?rowsPerPage=2&page=1"
+                    "http://example.com/s3?rowsPerPage=2&page=2"
                         .parse()
                         .unwrap()
                 )
@@ -257,12 +275,12 @@ mod tests {
         assert_eq!(result.results(), &entries[0..2]);
 
         let result: ListResponse<S3Object> =
-            response_from_get(state, "/s3?page=4&rowsPerPage=2").await;
+            response_from_get(state.clone(), "/s3?page=5&rowsPerPage=2").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 Some(
-                    "http://example.com/s3?rowsPerPage=2&page=3"
+                    "http://example.com/s3?rowsPerPage=2&page=4"
                         .parse()
                         .unwrap()
                 ),
@@ -271,6 +289,15 @@ mod tests {
         );
         assert_eq!(result.pagination().count, 2);
         assert_eq!(result.results(), &entries[8..10]);
+
+        let (status_code, _) = response_from::<ErrorResponse>(
+            state,
+            "/s3?page=0&rowsPerPage=2",
+            Method::GET,
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(status_code, StatusCode::BAD_REQUEST);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -283,10 +310,10 @@ mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<S3Object> = response_from_get(state.clone(), "/s3?page=0").await;
+        let result: ListResponse<S3Object> = response_from_get(state.clone(), "/s3?page=1").await;
         assert_eq!(
             result.links(),
-            &Links::new(None, Some("http://example.com/s3?page=1".parse().unwrap()))
+            &Links::new(None, Some("http://example.com/s3?page=2".parse().unwrap()))
         );
         assert_eq!(result.pagination().count, 1000);
         assert_eq!(result.results(), &entries[0..1000]);
@@ -302,17 +329,17 @@ mod tests {
             .s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from_get(state.clone(), "/s3?some_parameter=123&page=1&rowsPerPage=2").await;
+            response_from_get(state.clone(), "/s3?some_parameter=123&page=2&rowsPerPage=2").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 Some(
-                    "http://example.com/s3?some_parameter=123&rowsPerPage=2&page=0"
+                    "http://example.com/s3?some_parameter=123&rowsPerPage=2&page=1"
                         .parse()
                         .unwrap()
                 ),
                 Some(
-                    "http://example.com/s3?some_parameter=123&rowsPerPage=2&page=2"
+                    "http://example.com/s3?some_parameter=123&rowsPerPage=2&page=3"
                         .parse()
                         .unwrap()
                 )
@@ -332,18 +359,18 @@ mod tests {
             .s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from_get(state.clone(), "/s3?page=0&rowsPerPage=20").await;
+            response_from_get(state.clone(), "/s3?page=1&rowsPerPage=20").await;
         assert_eq!(result.links(), &Links::new(None, None));
         assert_eq!(result.pagination().count, 10);
         assert_eq!(result.results(), entries);
 
         let result: ListResponse<S3Object> =
-            response_from_get(state, "/s3?rowsPerPage=1&page=20").await;
+            response_from_get(state, "/s3?rowsPerPage=1&page=21").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 Some(
-                    "http://example.com/s3?rowsPerPage=1&page=19"
+                    "http://example.com/s3?rowsPerPage=1&page=20"
                         .parse()
                         .unwrap()
                 ),

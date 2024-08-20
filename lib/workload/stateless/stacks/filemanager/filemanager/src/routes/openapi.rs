@@ -54,6 +54,7 @@ pub struct Json(pub Value);
             Wildcard,
             Json,
             ListResponseS3,
+            ListResponseUrl,
             ContentDisposition,
             PaginatedResponse,
             Pagination,

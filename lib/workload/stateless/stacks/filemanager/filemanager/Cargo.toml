@@ -31,6 +31,7 @@ strum = { version = "0.26", features = ["derive"] }
 
 # Query server
 axum = "0.7"
+axum-extra = "0.9"
 utoipa = { version = "4", features = ["axum_extras", "chrono", "uuid", "url"] }
 utoipa-swagger-ui = { version = "7", features = ["axum", "debug-embed", "url"] }
 tower = "0.4"
