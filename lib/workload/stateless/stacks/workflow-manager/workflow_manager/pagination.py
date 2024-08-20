@@ -6,7 +6,7 @@ from rest_framework.settings import api_settings
 
 
 class PaginationConstant(ABC):
-    ROWS_PER_PAGE = "rowsPerPage"
+    ROWS_PER_PAGE = "rows_per_page"
     PAGE = "page"
     COUNT = "count"
 
