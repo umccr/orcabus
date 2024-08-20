@@ -15,7 +15,7 @@ router = OptionalSlashDefaultRouter()
 router.register(r"workflow", WorkflowViewSet, basename="workflow")
 router.register(r"workflowrun", WorkflowRunViewSet, basename="workflowrun")
 router.register(r"payload", PayloadViewSet, basename="payload")
-router.register(r"library", LibraryViewSet, basename="library")
+# router.register(r"library", LibraryViewSet, basename="library")
 
 urlpatterns = [
     path(f"{api_base}", include(router.urls)),
