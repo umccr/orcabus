@@ -26,6 +26,7 @@ export interface WorkflowManagerStackProps extends StackProps {
   cognitoPortalAppClientIdParameterName: string;
   cognitoStatusPageAppClientIdParameterName: string;
   apiGwLogsConfig: ApiGwLogsConfig;
+  corsAllowOrigins?: string[];
 }
 
 export class WorkflowManagerStack extends Stack {

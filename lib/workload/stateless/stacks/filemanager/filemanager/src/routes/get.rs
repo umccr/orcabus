@@ -8,19 +8,23 @@ use crate::error::Error::ExpectedSomeValue;
 use crate::error::Result;
 use crate::queries::get::GetQueryBuilder;
 use crate::queries::list::ListQueryBuilder;
-use crate::routes::error::ErrorStatusCode;
+use crate::routes::error::{ErrorStatusCode, Path, Query};
 use crate::routes::filter::wildcard::Wildcard;
 use crate::routes::filter::S3ObjectsFilter;
 use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
 use crate::routes::AppState;
-use axum::extract::{Path, Query, State};
+use axum::extract::State;
 use axum::routing::get;
-use axum::{Json, Router};
+use axum::{extract, Json, Router};
+use axum_extra::extract::WithRejection;
 use sea_orm::{ConnectionTrait, TransactionTrait};
 use url::Url;
 use uuid::Uuid;
 
-async fn get_s3_from_connection<C>(connection: &C, Path(id): Path<Uuid>) -> Result<Json<S3>>
+async fn get_s3_from_connection<C>(
+    connection: &C,
+    WithRejection(extract::Path(id), _): Path<Uuid>,
+) -> Result<Json<S3>>
 where
     C: ConnectionTrait,
 {
@@ -66,7 +70,7 @@ pub async fn get_s3_by_id(state: State<AppState>, id: Path<Uuid>) -> Result<Json
 pub async fn presign_s3_by_id(
     state: State<AppState>,
     id: Path<Uuid>,
-    Query(presigned): Query<PresignedParams>,
+    WithRejection(extract::Query(presigned), _): Query<PresignedParams>,
 ) -> Result<Json<Option<Url>>> {
     let txn = state.database_client().connection_ref().begin().await?;
 

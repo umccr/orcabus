@@ -3,7 +3,6 @@ import { Construct } from 'constructs';
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { Vpc, VpcLookupOptions, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
-import { Schedule } from 'aws-cdk-lib/aws-events';
 import { Code, Runtime, Architecture, LayerVersion } from 'aws-cdk-lib/aws-lambda';
 
 // import custom constructs
@@ -26,6 +25,10 @@ export type MetadataManagerStackProps = {
    * A boolean to tell whether the sync lambda should run daily
    */
   isDailySync: boolean;
+  /**
+   * Allowed CORS origins.
+   */
+  corsAllowOrigins?: string[];
   /**
    * API Gateway props
    */
@@ -100,6 +103,7 @@ export class MetadataManagerStack extends Stack {
         customDomainNamePrefix: 'metadata',
         ...props.apiGatewayCognitoProps,
       },
+      corsAllowOrigins: props.corsAllowOrigins,
     });
 
     // (2)

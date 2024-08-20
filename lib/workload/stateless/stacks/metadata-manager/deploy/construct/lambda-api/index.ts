@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
-import { HttpMethod, HttpRoute, HttpRouteKey, IHttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { PythonFunction, PythonFunctionProps } from '@aws-cdk/aws-lambda-python-alpha';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -22,6 +22,10 @@ type LambdaProps = {
    * The props for api-gateway
    */
   apiGatewayConstructProps: ApiGatewayConstructProps;
+  /**
+   * Allowed CORS origins.
+   */
+  corsAllowOrigins?: string[];
 };
 
 export class LambdaAPIConstruct extends Construct {

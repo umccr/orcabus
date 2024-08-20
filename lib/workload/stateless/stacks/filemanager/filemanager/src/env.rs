@@ -30,6 +30,8 @@ pub struct Config {
     #[serde_as(as = "Option<DurationSeconds<i64>>")]
     #[serde(rename = "filemanager_api_presign_expiry")]
     pub(crate) api_presign_expiry: Option<Duration>,
+    #[serde(rename = "filemanager_api_cors_allow_origins")]
+    pub(crate) api_cors_allow_origins: Option<Vec<String>>,
 }
 
 impl Config {
@@ -99,6 +101,11 @@ impl Config {
         self.api_presign_expiry
     }
 
+    /// Get the allowed origins
+    pub fn api_cors_allow_origins(&self) -> Option<&[String]> {
+        self.api_cors_allow_origins.as_deref()
+    }
+
     /// Get the value from an optional, or else try and get a different value, unwrapping into a Result.
     pub fn value_or_else<T>(value: Option<T>, or_else: Option<T>) -> Result<T> {
         value
@@ -131,6 +138,10 @@ mod tests {
             ("FILEMANAGER_API_LINKS_URL", "https://localhost:8000"),
             ("FILEMANAGER_API_PRESIGN_LIMIT", "123"),
             ("FILEMANAGER_API_PRESIGN_EXPIRY", "60"),
+            (
+                "FILEMANAGER_API_CORS_ALLOW_ORIGINS",
+                "localhost:8000,127.0.0.1",
+            ),
         ]
         .into_iter()
         .map(|(key, value)| (key.to_string(), value.to_string()));
@@ -149,7 +160,11 @@ mod tests {
                 paired_ingest_mode: true,
                 api_links_url: Some("https://localhost:8000".parse().unwrap()),
                 api_presign_limit: Some(123),
-                api_presign_expiry: Some(Duration::seconds(60))
+                api_presign_expiry: Some(Duration::seconds(60)),
+                api_cors_allow_origins: Some(vec![
+                    "localhost:8000".to_string(),
+                    "127.0.0.1".to_string()
+                ])
             }
         )
     }

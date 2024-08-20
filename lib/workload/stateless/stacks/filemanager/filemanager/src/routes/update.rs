@@ -1,9 +1,9 @@
-use axum::extract::{Path, Query, State};
+use axum::extract::State;
 use axum::routing::patch;
-use axum::{Json, Router};
+use axum::{extract, Router};
+use axum_extra::extract::WithRejection;
 use sea_orm::TransactionTrait;
 use serde::Deserialize;
-use serde_qs::axum::QsQuery;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -12,7 +12,7 @@ use crate::database::entities::s3_object::Model as S3;
 use crate::error::Error::ExpectedSomeValue;
 use crate::error::Result;
 use crate::queries::update::UpdateQueryBuilder;
-use crate::routes::error::ErrorStatusCode;
+use crate::routes::error::{ErrorStatusCode, Json, Path, QsQuery, Query};
 use crate::routes::filter::S3ObjectsFilter;
 use crate::routes::list::{ListS3Params, WildcardParams};
 use crate::routes::AppState;
@@ -86,9 +86,9 @@ impl PatchBody {
 )]
 pub async fn update_s3_attributes(
     state: State<AppState>,
-    Path(id): Path<Uuid>,
-    Json(patch): Json<PatchBody>,
-) -> Result<Json<S3>> {
+    WithRejection(extract::Path(id), _): Path<Uuid>,
+    WithRejection(extract::Json(patch), _): Json<PatchBody>,
+) -> Result<extract::Json<S3>> {
     let txn = state.database_client().connection_ref().begin().await?;
 
     let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
@@ -101,7 +101,7 @@ pub async fn update_s3_attributes(
 
     txn.commit().await?;
 
-    Ok(Json(results))
+    Ok(extract::Json(results))
 }
 
 /// Update the attributes for a collection of s3_objects using a JSON patch request.
@@ -124,11 +124,11 @@ pub async fn update_s3_attributes(
 )]
 pub async fn update_s3_collection_attributes(
     state: State<AppState>,
-    Query(wildcard): Query<WildcardParams>,
-    Query(list): Query<ListS3Params>,
-    QsQuery(filter_all): QsQuery<S3ObjectsFilter>,
-    Json(patch): Json<PatchBody>,
-) -> Result<Json<Vec<S3>>> {
+    WithRejection(extract::Query(wildcard), _): Query<WildcardParams>,
+    WithRejection(extract::Query(list), _): Query<ListS3Params>,
+    WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
+    WithRejection(extract::Json(patch), _): Json<PatchBody>,
+) -> Result<extract::Json<Vec<S3>>> {
     let txn = state.database_client().connection_ref().begin().await?;
 
     let mut results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
@@ -142,7 +142,7 @@ pub async fn update_s3_collection_attributes(
 
     txn.commit().await?;
 
-    Ok(Json(results))
+    Ok(extract::Json(results))
 }
 
 /// The router for updating objects.

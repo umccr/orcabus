@@ -239,8 +239,8 @@ where
     ///     limit page_size
     ///     offset page * page_size;
     /// ```
-    pub async fn paginate(mut self, page: u64, page_size: u64) -> Result<Self> {
-        let offset = page.checked_mul(page_size).ok_or_else(|| OverflowError)?;
+    pub async fn paginate(mut self, offset: u64, page_size: u64) -> Result<Self> {
+        let offset = offset.checked_mul(page_size).ok_or_else(|| OverflowError)?;
         self.select = self.select.offset(offset).limit(page_size);
 
         self.trace_query("paginate");
@@ -253,10 +253,11 @@ where
         self,
         pagination: Pagination,
         page_link: Url,
+        count: u64,
     ) -> Result<ListResponse<M>> {
-        let page = pagination.page();
+        let offset = pagination.offset()?;
         let page_size = pagination.rows_per_page();
-        let mut query = self.paginate(page, page_size).await?;
+        let mut query = self.paginate(offset, page_size).await?;
 
         // Always add one to the limit to see if there is additional pages that can be fetched.
         QuerySelect::query(&mut query.select).reset_limit();
@@ -274,10 +275,15 @@ where
         } else {
             // Remove the last element because we fetched one additional result.
             results.pop();
-            Some(page.checked_add(1).ok_or_else(|| OverflowError)?)
+            Some(
+                pagination
+                    .page()
+                    .checked_add(1)
+                    .ok_or_else(|| OverflowError)?,
+            )
         };
 
-        ListResponse::from_next_page(pagination, results, next_page, page_link)
+        ListResponse::from_next_page(pagination, results, next_page, page_link, count)
     }
 
     /// Create a list count from a query builder.
@@ -696,10 +702,11 @@ pub(crate) mod tests {
 
         let result = builder
             .paginate_to_list_response(
-                Pagination::new(0, 2),
-                "http://example.com/s3?rowsPerPage=2&page=0"
+                Pagination::from_u64(1, 2).unwrap(),
+                "http://example.com/s3?rowsPerPage=2&page=1"
                     .parse()
                     .unwrap(),
+                10,
             )
             .await
             .unwrap();
@@ -709,7 +716,7 @@ pub(crate) mod tests {
             &Links::new(
                 None,
                 Some(
-                    "http://example.com/s3?rowsPerPage=2&page=1"
+                    "http://example.com/s3?rowsPerPage=2&page=2"
                         .parse()
                         .unwrap()
                 )
@@ -981,7 +988,7 @@ pub(crate) mod tests {
 
     async fn paginate_all<C, T, M>(
         builder: ListQueryBuilder<'_, C, T>,
-        page: u64,
+        offset: u64,
         page_size: u64,
     ) -> Vec<M>
     where
@@ -990,7 +997,7 @@ pub(crate) mod tests {
         M: FromQueryResult + Send + Sync,
     {
         builder
-            .paginate(page, page_size)
+            .paginate(offset, page_size)
             .await
             .unwrap()
             .all()

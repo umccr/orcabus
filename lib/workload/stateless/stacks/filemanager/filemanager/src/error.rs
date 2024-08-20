@@ -46,6 +46,8 @@ pub enum Error {
     MissingHostHeader,
     #[error("creating presigned url: `{0}`")]
     PresignedUrlError(String),
+    #[error("configuring API: `{0}`")]
+    ApiConfigurationError(String),
 }
 
 impl From<sqlx::Error> for Error {

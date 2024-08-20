@@ -120,7 +120,7 @@ async fn main() -> Result<()> {
         Migration::new(client).migrate().await?;
     }
 
-    let app = router(state);
+    let app = router(state)?;
     let listener = TcpListener::bind(args.api_server_addr).await?;
 
     let local_addr = listener.local_addr()?;

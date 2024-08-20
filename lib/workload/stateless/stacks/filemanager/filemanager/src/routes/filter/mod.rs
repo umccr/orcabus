@@ -12,7 +12,7 @@ use utoipa::IntoParams;
 /// The available fields to filter `s3_object` queries by. Each query parameter represents
 /// an `and` clause in the SQL statement. Nested query string style syntax is supported on
 /// JSON attributes. Wildcards are supported on some of the fields.
-#[derive(Serialize, Deserialize, Debug, Default, IntoParams)]
+#[derive(Serialize, Deserialize, Debug, Default, IntoParams, Clone)]
 #[serde(default, rename_all = "camelCase")]
 #[into_params(parameter_in = Query)]
 pub struct S3ObjectsFilter {

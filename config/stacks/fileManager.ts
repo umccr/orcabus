@@ -13,6 +13,7 @@ import {
   oncoanalyserBucket,
   icav2PipelineCacheBucket,
   fileManagerIngestRoleName,
+  corsAllowOrigins,
 } from '../constants';
 import { RemovalPolicy } from 'aws-cdk-lib';
 
@@ -36,5 +37,6 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     inventorySourceBuckets: ['filemanager-inventory-test'],
     eventSourceBuckets: [oncoanalyserBucket[stage], icav2PipelineCacheBucket[stage]],
     fileManagerIngestRoleName: fileManagerIngestRoleName,
+    corsAllowOrigins,
   };
 };

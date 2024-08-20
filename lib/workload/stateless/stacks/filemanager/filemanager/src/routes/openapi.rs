@@ -21,7 +21,7 @@ use crate::routes::update::*;
 
 /// A newtype equivalent to a `DateTime` with a time zone.
 #[derive(ToSchema)]
-#[schema(value_type = DateTime)]
+#[schema(value_type = DateTime, format = DateTime)]
 pub struct DateTimeWithTimeZone(pub DateTime<FixedOffset>);
 
 /// A newtype equivalent to an arbitrary JSON `Value`.
@@ -54,6 +54,7 @@ pub struct Json(pub Value);
             Wildcard,
             Json,
             ListResponseS3,
+            ListResponseUrl,
             ContentDisposition,
             PaginatedResponse,
             Pagination,
@@ -101,7 +102,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_swagger_ui(pool: PgPool) {
-        let app = router(AppState::from_pool(pool).await);
+        let app = router(AppState::from_pool(pool).await).unwrap();
         let response = app
             .oneshot(
                 Request::builder()

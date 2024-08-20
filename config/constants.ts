@@ -154,6 +154,8 @@ export const bclconvertInteropQcDynamoDbTableSSMArn = path.join(
 
 // Stateless
 
+export const corsAllowOrigins = ['*'];
+
 export const bclconvertInteropQcIcav2PipelineWorkflowName = 'bclconvert-interop-qc';
 export const bclconvertInteropQcIcav2PipelineWorkflowTypeVersion = '1.3.1--1.21';
 export const bclconvertInteropQcIcav2ServiceVersion = '2024.07.01';

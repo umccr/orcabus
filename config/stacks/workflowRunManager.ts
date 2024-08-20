@@ -8,6 +8,7 @@ import {
   cognitoPortalAppClientIdParameterName,
   cognitoStatusPageAppClientIdParameterName,
   AppStage,
+  corsAllowOrigins,
 } from '../constants';
 import { RemovalPolicy } from 'aws-cdk-lib';
 
@@ -25,5 +26,6 @@ export const getWorkflowManagerStackProps = (stage: AppStage): WorkflowManagerSt
     cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
     cognitoStatusPageAppClientIdParameterName: cognitoStatusPageAppClientIdParameterName,
     apiGwLogsConfig: logsConfig,
+    corsAllowOrigins,
   };
 };
