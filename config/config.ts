@@ -39,6 +39,10 @@ import {
   getWtsIcav2PipelineManagerStackProps,
   getWtsIcav2PipelineTableStackProps,
 } from './stacks/wtsPipelineManager';
+import {
+  getUmccriseIcav2PipelineManagerStackProps,
+  getUmccriseIcav2PipelineTableStackProps,
+} from './stacks/umccrisePipelineManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -70,6 +74,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       wgtsQcIcav2PipelineTableStackProps: getWgtsQcIcav2PipelineTableStackProps(),
       tnIcav2PipelineTableStackProps: getTnIcav2PipelineTableStackProps(),
       wtsIcav2PipelineTableStackProps: getWtsIcav2PipelineTableStackProps(),
+      umccriseIcav2PipelineTableStackProps: getUmccriseIcav2PipelineTableStackProps(),
       BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
       stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
     },
@@ -85,6 +90,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       wgtsQcIcav2PipelineManagerStackProps: getWgtsQcIcav2PipelineManagerStackProps(stage),
       tnIcav2PipelineManagerStackProps: getTnIcav2PipelineManagerStackProps(stage),
       wtsIcav2PipelineManagerStackProps: getWtsIcav2PipelineManagerStackProps(stage),
+      umccriseIcav2PipelineManagerStackProps: getUmccriseIcav2PipelineManagerStackProps(stage),
       eventSchemaStackProps: getEventSchemaStackProps(),
       dataSchemaStackProps: getDataSchemaStackProps(),
       bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
