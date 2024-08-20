@@ -136,7 +136,8 @@
       "ResultPath": "$.generate_draft_event_payload_data_step",
       "Next": "Push WTS Draft Event",
       "ResultSelector": {
-        "input_event_data.$": "$.Payload.input_event_data"
+        "input_event_data.$": "$.Payload.input_event_data",
+        "event_tags.$": "$.Payload.event_tags"
       }
     },
     "Push WTS Draft Event": {

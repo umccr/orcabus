@@ -403,8 +403,8 @@ export const mockInputMakerTableName = 'stacky-input-maker-table';
 export const mockCttsov2InputGlueTableName = 'stacky-cttsov2-workflow-glue-table';
 export const mockWgtsQcGlueTableName = 'stacky-wgts-qc-glue-table';
 export const mockTnGlueTableName = 'stacky-tn-glue-table';
-
 export const mockWtsGlueTableName = 'stacky-wts-glue-table';
+export const mockUmccriseGlueTableName = 'stacky-umccrise-glue-table';
 
 export const mockWorkflowManagerTableName = 'stacky-workflow-manager-table';
 

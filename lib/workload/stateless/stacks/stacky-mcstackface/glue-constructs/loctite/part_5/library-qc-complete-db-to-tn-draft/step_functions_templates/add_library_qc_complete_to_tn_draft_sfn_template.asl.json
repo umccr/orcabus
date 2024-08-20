@@ -340,6 +340,7 @@
       "Parameters": {
         "FunctionName": "${__generate_draft_event_payload_lambda_function_arn__}",
         "Payload": {
+          "subject_id.$": "$.get_library_item_step.Item.subject_id.S",
           "tumor_library_id.$": "$.get_tn_pair_step.tumor_library.id",
           "normal_library_id.$": "$.get_tn_pair_step.normal_library.id",
           "tumor_fastq_list_rows.$": "$.get_parameters_step.tumor_fastq_list_rows",
