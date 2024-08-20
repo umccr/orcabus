@@ -1,9 +1,11 @@
 import logging
 import operator
+import ulid
 from functools import reduce
 from typing import List
 
 from django.core.exceptions import FieldError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import (
     Q,
@@ -81,6 +83,21 @@ class BaseManager(models.Manager):
 class BaseModel(models.Model):
     class Meta:
         abstract = True
+
+    orcabus_id = models.CharField(
+        primary_key=True,
+        unique=True,
+        editable=False,
+        blank=False,
+        null=False,
+        validators=[
+            RegexValidator(
+                regex=r'^[\w]{3}\.[\w]{26}$',
+                message='orcabus_id must start with a 3-character prefix, followed by a dot separator and a ULID',
+                code='invalid_orcabus_id'
+            )]
+
+    )
 
     def save(self, *args, **kwargs):
         self.full_clean()

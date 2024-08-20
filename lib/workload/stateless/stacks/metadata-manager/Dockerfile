@@ -10,4 +10,4 @@ COPY . .
 
 RUN make install
 
-ENTRYPOINT ["make", "start"]
+ENTRYPOINT ["make", "docker-start"]

@@ -1,5 +1,7 @@
 import logging
 
+import ulid
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import QuerySet
 from simple_history.models import HistoricalRecords
@@ -12,6 +14,7 @@ class IndividualManager(BaseManager):
 
 
 class Individual(BaseModel):
+    orcabus_id_prefix = 'idv'
     objects = IndividualManager()
 
     internal_id = models.CharField(
@@ -21,3 +24,8 @@ class Individual(BaseModel):
     )
 
     history = HistoricalRecords()
+
+    def save(self, *args, **kwargs):
+        if not self.orcabus_id:
+            self.orcabus_id = self.orcabus_id_prefix + '.' + ulid.new().str
+        super().save(*args, **kwargs)
