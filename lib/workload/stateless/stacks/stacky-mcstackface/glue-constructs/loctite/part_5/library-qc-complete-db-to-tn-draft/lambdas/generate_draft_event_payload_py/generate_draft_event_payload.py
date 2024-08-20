@@ -29,6 +29,7 @@ def handler(event, context) -> Dict:
     :param event: event object
     :return: draft event payload
     """
+    subject_id = event['subject_id']
 
     tumor_library_id = event['tumor_library_id']
     normal_library_id = event['normal_library_id']
@@ -52,8 +53,9 @@ def handler(event, context) -> Dict:
             "dragenReferenceVersion": DEFAULT_DRAGEN_REFERENCE_VERSION
         },
         "event_tags": {
+            "subjectId": subject_id,
             "tumorLibraryId": tumor_library_id,
-            "normalLibrary_id": normal_library_id,
+            "normalLibraryId": normal_library_id,
             "tumorFastqListRowIds": tumor_fastq_list_row_ids,
             "normalFastqListRowIds": fastq_list_row_ids
         }

@@ -11,6 +11,7 @@ import { Cttsov2GlueHandlerConstruct } from './jb-weld';
 import { WgtsQcGlueHandlerConstruct } from './kwik';
 import { TnGlueHandlerConstruct } from './loctite';
 import { WtsGlueHandlerConstruct } from './mod-podge';
+import { UmccriseGlueHandlerConstruct } from './pva';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -28,6 +29,7 @@ export interface GlueConstructProps {
   wgtsQcGlueTableObj: dynamodb.ITableV2;
   tnGlueTableObj: dynamodb.ITableV2;
   wtsGlueTableObj: dynamodb.ITableV2;
+  umccriseGlueTableObj: dynamodb.ITableV2;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
   bsshOutputFastqCopyOutputUriSsmParameterObj: ssm.IStringParameter;
@@ -43,8 +45,8 @@ export class GlueConstruct extends Construct {
     super(scope, id);
 
     /*
-        Part A: Send 'showered' events if a new samplesheet arrives or new fastq list rows arrive
-        */
+    Part A: Send 'showered' events if a new samplesheet arrives or new fastq list rows arrive
+    */
     const clag = new showerGlueHandlerConstruct(this, 'clag', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
@@ -67,8 +69,8 @@ export class GlueConstruct extends Construct {
     });
 
     /*
-        Part C: Connect the bclconvert interop qc
-        */
+    Part C: Connect the bclconvert interop qc
+    */
     const gorilla = new BsshFastqCopyToBclconvertInteropQcConstruct(this, 'gorilla', {
       /* Event Objects */
       eventBusObj: props.eventBusObj,
@@ -101,8 +103,8 @@ export class GlueConstruct extends Construct {
     });
 
     /*
-        Part E: Plumber-up the WGTS QC Execution Service to the shower services
-        */
+    Part E: Plumber-up the WGTS QC Execution Service to the shower services
+    */
     const kwik = new WgtsQcGlueHandlerConstruct(this, 'kwik', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
@@ -153,6 +155,24 @@ export class GlueConstruct extends Construct {
       /* Secrets */
       icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
     });
+
+    /*
+    Part H: Plumber-up the UMCCRise Execution Service to the shower services
+    */
+    const pva = new UmccriseGlueHandlerConstruct(this, 'pva', {
+      /* Event Bus */
+      eventBusObj: props.eventBusObj,
+      /* Tables */
+      inputMakerTableObj: props.inputMakerTableObj,
+      umccriseGlueTableObj: props.umccriseGlueTableObj,
+      /* SSM Parameters */
+      icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    });
   }
 }
 
@@ -167,6 +187,7 @@ export interface GlueStackConfig {
   wgtsQcGlueTableName: string;
   tnGlueTableName: string;
   wtsGlueTableName: string;
+  umccriseGlueTableName: string;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterName: string;
   bsshOutputFastqCopyUriSsmParameterName: string;
@@ -230,6 +251,11 @@ export class GlueStack extends cdk.Stack {
       'wtsGlueTableObj',
       props.wtsGlueTableName
     );
+    const umccriseGlueTableObj = dynamodb.Table.fromTableName(
+      this,
+      'umccriseGlueTableObj',
+      props.umccriseGlueTableName
+    );
 
     /*
         Get the SSM Parameters
@@ -285,6 +311,7 @@ export class GlueStack extends cdk.Stack {
       cttsov2GlueTableObj: cttsov2GlueTableObj,
       tnGlueTableObj: tnGlueTableObj,
       wtsGlueTableObj: wtsGlueTableObj,
+      umccriseGlueTableObj: umccriseGlueTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: icav2ProjectIdSsmParameterObj,
       bsshOutputFastqCopyOutputUriSsmParameterObj: bsshOutputFastqCopyUriSsmParameterObj,

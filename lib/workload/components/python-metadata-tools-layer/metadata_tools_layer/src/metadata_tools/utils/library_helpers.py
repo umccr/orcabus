@@ -10,7 +10,7 @@ def get_library_from_library_id(library_id: Union[int | str]) -> Dict:
     :param library_id:
     :return:
     """
-    endpoint = "library"
+    endpoint = "api/v1/library"
 
     # Get library id
     if isinstance(library_id, str):
@@ -99,6 +99,6 @@ def get_all_libraries() -> List[Dict]:
     Collect all libraries from the database
     :return:
     """
-    endpoint = "library"
+    endpoint = "api/v1/library"
 
     return get_request_response_results(endpoint)

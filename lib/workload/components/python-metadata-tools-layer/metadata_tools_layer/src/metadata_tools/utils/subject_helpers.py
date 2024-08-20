@@ -18,7 +18,7 @@ def get_subject_from_subject_id(subject_id: Union[str, int]) -> Dict:
     :param subject_id:
     :return:
     """
-    endpoint = "subject"
+    endpoint = "api/v1/subject"
 
     # Get subject id
     if isinstance(subject_id, str):
@@ -80,6 +80,6 @@ def get_all_subjects() -> List[Dict]:
     :return:
     """
 
-    endpoint = "subject"
+    endpoint = "api/v1/subject"
 
     return get_request_response_results(endpoint)
