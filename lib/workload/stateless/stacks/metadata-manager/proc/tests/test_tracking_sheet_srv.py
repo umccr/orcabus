@@ -120,9 +120,12 @@ class TrackingSheetSrvUnitTests(TestCase):
         self.assertEqual(result.get("subject").get("update_count"), 2, "2 update in subject")
 
         lib_1 = Library.objects.get(library_id=RECORD_1.get("LibraryID"))
-        self.assertEqual(lib_1.type, RECORD_1.get("Type"), "incorrect value stored")
-        self.assertEqual(lib_1.phenotype, RECORD_1.get("Phenotype"), "incorrect value stored")
-        self.assertEqual(lib_1.workflow, RECORD_1.get("Workflow"), "incorrect value stored")
+        self.assertEqual(lib_1.type, RECORD_1.get("Type"), "incorrect value (Type) stored")
+        self.assertEqual(lib_1.phenotype, RECORD_1.get("Phenotype"), "incorrect value (Phenotype) stored")
+        self.assertEqual(lib_1.assay, RECORD_1.get("Assay"), "incorrect value (Assay) stored")
+        self.assertEqual(lib_1.workflow, RECORD_1.get("Workflow"), "incorrect value (Workflow) stored")
+        self.assertEqual(lib_1.project_owner, RECORD_1.get("ProjectOwner"), "incorrect value (ProjectOwner) stored")
+        self.assertEqual(lib_1.project_name, RECORD_1.get("ProjectName"),"incorrect value (ProjectName) stored")
         self.assertEqual(lib_1.specimen.specimen_id, RECORD_1.get("SampleID"), "incorrect specimen linked")
 
         spc_1 = Specimen.objects.get(specimen_id=RECORD_1.get("SampleID"))

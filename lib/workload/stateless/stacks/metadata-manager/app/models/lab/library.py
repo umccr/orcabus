@@ -92,6 +92,14 @@ class Library(BaseModel):
         blank=True,
         null=True
     )
+    project_owner = models.CharField(
+        blank=True,
+        null=True
+    )
+    project_name = models.CharField(
+        blank=True,
+        null=True
+    )
 
     specimen = models.ForeignKey(Specimen, on_delete=models.SET_NULL, blank=True, null=True)
     history = HistoricalRecords()

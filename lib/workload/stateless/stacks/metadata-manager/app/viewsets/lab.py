@@ -15,7 +15,7 @@ class SubjectViewSet(ReadOnlyModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = "__all__"
-    ordering = ["-library_id"]
+    ordering = ["-subject_id"]
     search_fields = Subject.get_base_fields()
     queryset = Subject.objects.none()
 

@@ -12,7 +12,6 @@ class SubjectManager(BaseManager):
 
 class Subject(BaseModel):
     orcabus_id_prefix = 'sbj'
-
     objects = SubjectManager()
 
     subject_id = models.CharField(

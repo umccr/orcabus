@@ -87,13 +87,12 @@ class BaseModel(models.Model):
     orcabus_id = models.CharField(
         primary_key=True,
         unique=True,
-        max_length=30,  # 26 chars for ULID, 4 chars for prefix
         editable=False,
         blank=False,
         null=False,
         validators=[
             RegexValidator(
-                regex=r'^[\w]{3}.[\w]{26}$',
+                regex=r'^[\w]{3}\.[\w]{26}$',
                 message='orcabus_id must start with "idv." followed by a ULID',
                 code='invalid_orcabus_id'
             )]

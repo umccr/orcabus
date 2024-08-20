@@ -33,7 +33,9 @@ class MetadataTestCase(TestCase):
             type='WTS',
             assay='NebRNA',
             coverage='6.3',
-            specimen=specimen
+            specimen=specimen,
+            project_name='test_project',
+            project_owner='test_owner',
         )
         library.full_clean()
         library.save()

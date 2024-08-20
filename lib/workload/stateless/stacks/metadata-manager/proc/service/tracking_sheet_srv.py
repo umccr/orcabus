@@ -131,7 +131,9 @@ def persist_lab_metadata(df: pd.DataFrame):
                     'type': get_value_from_human_readable_label(LibraryType.choices, record.get('type')),
                     'assay': record.get('assay'),
                     'coverage': sanitize_library_coverage(record.get('coverage')),
-                    'specimen_id': specimen.orcabus_id
+                    'specimen_id': specimen.orcabus_id,
+                    'project_owner': record.get('project_owner'),
+                    'project_name': record.get('project_name'),
                 }
             )
             if is_lib_created:
