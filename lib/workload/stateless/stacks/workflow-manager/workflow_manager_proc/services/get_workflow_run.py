@@ -24,11 +24,11 @@ def handler(event, context):
     # time_window = event.get('time_window', None)  # FIXME: make configurable later?
 
     qs = WorkflowRun.objects.filter(
-        portal_run_id = portal_run_id
+        portal_run_id=portal_run_id
     )
     if status:
         qs = qs.filter(
-            status = status
+            status=status
         )
     if timestamp:
         dt = datetime.datetime.fromisoformat(str(timestamp))

@@ -10,17 +10,17 @@ class LibraryManager(OrcaBusBaseManager):
 
 
 class Library(OrcaBusBaseModel):
-    id = models.BigAutoField(primary_key=True)
 
-    library_id = models.CharField(max_length=255, unique=True)
+    orcabus_id = models.CharField(primary_key=True, max_length=255)
+    library_id = models.CharField(max_length=255)
 
     objects = LibraryManager()
 
     def __str__(self):
-        return f"ID: {self.id}, library_id: {self.library_id}"
+        return f"orcabus_id: {self.orcabus_id}, library_id: {self.library_id}"
     
     def to_dict(self):
         return {
-            "id": self.id,
+            "orcabus_id": self.orcabus_id,
             "library_id": self.library_id
         }

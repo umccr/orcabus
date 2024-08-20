@@ -45,7 +45,17 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_srv.WorkflowSrvUnitTests.test_get_workflow_from_db2
         """
-        lib_ids = ["L000001", "L000002"]
+        library_ids = ["L000001", "L000002"]
+        lib_ids = [
+            {
+                "libraryId": library_ids[0],
+                "orcabusId": "lib.01J5M2J44HFJ9424G7074NKTGN"
+            },
+            {
+                "libraryId": library_ids[1],
+                "orcabusId": "lib.01J5M2JFE1JPYV62RYQEG99CP5"
+            }
+        ]
 
         test_event = {
             "portalRunId": "202405012397gatc",
@@ -78,4 +88,5 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual("ctTSO500-L000002", test_wfl.workflow_run_name)
         libs = test_wfl.libraries.all()
         for lib in libs:
-            self.assertIn(lib.library_id, lib_ids)
+            logger.info(lib)
+            self.assertIn(lib.library_id, library_ids)

@@ -10,6 +10,7 @@ from django.db import transaction
 from django.utils.timezone import make_aware
 from workflow_manager_proc.domain.executionservice.workflowrunstatechange import (
     WorkflowRunStateChange,
+    LibraryRecord,
     Marshaller,
 )
 from workflow_manager.models.workflow_run import (
@@ -80,21 +81,24 @@ def handler(event, context):
     wfr.save()
 
     # if the workflow run is linked to library record(s), create the association(s)
-    input_libraries: list[str] = wrsc.linkedLibraries
-    for input_lib in input_libraries:
-        # check if the library has already a DB record
-        db_lib: Library = Library.objects.get_by_keyword(library_id=input_lib)
-        # create it if not
-        if not db_lib:
-            db_lib = Library.objects.create(library_id=input_lib)
+    input_libraries: list[LibraryRecord] = wrsc.linkedLibraries
+    if input_libraries:
+        for input_rec in input_libraries:
+            # check if the library has already a DB record
+            db_lib: Library = Library.objects.get_by_keyword(orcabus_id=input_rec.orcabusId)
+            # create it if not
+            if not db_lib:
+                # TODO: the library record should exist in the future - synced with metadata service on
+                #       LibraryStateChange events
+                db_lib = Library.objects.create(orcabus_id=input_rec.orcabusId, library_id=input_rec.libraryId)
 
-        # create the library association
-        LibraryAssociation.objects.create(
-            workflow_run=wfr,
-            library=db_lib,
-            association_date=make_aware(datetime.now()),
-            status=ASSOCIATION_STATUS,
-        )
+            # create the library association
+            LibraryAssociation.objects.create(
+                workflow_run=wfr,
+                library=db_lib,
+                association_date=make_aware(datetime.now()),
+                status=ASSOCIATION_STATUS,
+            )
 
     print(f"{__name__} done.")
     return wfr  # FIXME: serialise in future (json.dumps)

@@ -11,7 +11,7 @@ class LibraryViewSet(ReadOnlyModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = '__all__'
-    ordering = ['-id']
+    ordering = ['-orcabus_id']
     search_fields = Library.get_base_fields()
 
     def get_queryset(self):

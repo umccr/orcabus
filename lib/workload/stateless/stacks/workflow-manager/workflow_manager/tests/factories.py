@@ -16,8 +16,11 @@ class TestConstant(Enum):
         "foo": uuid.uuid4(),
         "bar": datetime.now().astimezone(ZoneInfo('Australia/Sydney')),
         "sub": {"my": "sub"}
+    },
+    library = {
+        "library_id": "L000001",
+        "orcabus_id": "lib.01J5M2J44HFJ9424G7074NKTGN"
     }
-    library_id = "L000001"
 
 
 class WorkflowFactory(factory.django.DjangoModelFactory):
@@ -60,4 +63,5 @@ class LibraryFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Library
 
-    library_id = TestConstant.library_id.value
+    library_id = TestConstant.library.value["library_id"]
+    orcabus_id = TestConstant.library.value["orcabus_id"]
