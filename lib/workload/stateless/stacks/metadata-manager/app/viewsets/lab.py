@@ -11,6 +11,7 @@ from app.serializers import SubjectSerializer, SpecimenSerializer, LibrarySerial
 
 
 class SubjectViewSet(ReadOnlyModelViewSet):
+    lookup_value_regex = "[^/]+"
     serializer_class = SubjectSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
@@ -68,6 +69,7 @@ class SubjectViewSet(ReadOnlyModelViewSet):
 
 
 class SpecimenViewSet(ReadOnlyModelViewSet):
+    lookup_value_regex = "[^/]+"
     serializer_class = SpecimenSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
@@ -87,6 +89,7 @@ class SpecimenViewSet(ReadOnlyModelViewSet):
 
 
 class LibraryViewSet(ReadOnlyModelViewSet):
+    lookup_value_regex = "[^/]+"
     serializer_class = LibrarySerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
