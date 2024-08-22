@@ -4,7 +4,7 @@
 use crate::database::entities::s3_object;
 use crate::error::Error::OverflowError;
 use crate::error::{Error, Result};
-use crate::routes::filter::wildcard::WildcardEither;
+use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
 use crate::routes::filter::S3ObjectsFilter;
 use crate::routes::list::ListCount;
 use crate::routes::pagination::{ListResponse, Pagination};
@@ -12,12 +12,12 @@ use crate::routes::pagination::{ListResponse, Pagination};
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
-    Alias, Asterisk, ColumnRef, IntoColumnRef, PostgresQueryBuilder, Query, SimpleExpr,
+    Alias, Asterisk, BinOper, ColumnRef, IntoColumnRef, PostgresQueryBuilder, Query, SimpleExpr,
 };
 use sea_orm::Order::{Asc, Desc};
 use sea_orm::{
     ColumnTrait, Condition, ConnectionTrait, EntityTrait, FromQueryResult, IntoSimpleExpr,
-    JsonValue, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, Select, Value,
+    JsonValue, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, Select,
 };
 use tracing::trace;
 use url::Url;
@@ -59,57 +59,86 @@ where
     ///     bucket = filter.bucket and
     ///     ...;
     /// ```
-    pub fn filter_all(mut self, filter: S3ObjectsFilter, case_sensitive: bool) -> Self {
+    pub fn filter_all(mut self, filter: S3ObjectsFilter, case_sensitive: bool) -> Result<Self> {
         self.select = self
             .select
-            .filter(Self::filter_condition(filter, case_sensitive));
+            .filter(Self::filter_condition(filter, case_sensitive)?);
 
         self.trace_query("filter_all");
 
-        self
+        Ok(self)
     }
 
     /// Create a condition to filter a query.
-    pub fn filter_condition(filter: S3ObjectsFilter, case_sensitive: bool) -> Condition {
+    pub fn filter_condition(filter: S3ObjectsFilter, case_sensitive: bool) -> Result<Condition> {
         let mut condition = Condition::all()
             .add_option(
                 filter
                     .event_type
                     .map(|v| s3_object::Column::EventType.eq(v)),
             )
-            .add_option(filter.bucket.map(|v| {
-                Self::filter_operation(
-                    Expr::col(s3_object::Column::Bucket),
-                    WildcardEither::Wildcard::<String>(v),
-                    case_sensitive,
-                )
-            }))
-            .add_option(filter.key.map(|v| {
-                Self::filter_operation(
-                    Expr::col(s3_object::Column::Key),
-                    WildcardEither::Wildcard::<String>(v),
-                    case_sensitive,
-                )
-            }))
-            .add_option(filter.version_id.map(|v| {
-                Self::filter_operation(
-                    Expr::col(s3_object::Column::VersionId),
-                    WildcardEither::Wildcard::<String>(v),
-                    case_sensitive,
-                )
-            }))
-            .add_option(filter.event_time.map(|v| {
-                Self::filter_operation(Expr::col(s3_object::Column::EventTime), v, case_sensitive)
-            }))
+            .add_option(
+                filter
+                    .bucket
+                    .map(|v| {
+                        Self::filter_operation(
+                            Expr::col(s3_object::Column::Bucket),
+                            WildcardEither::Wildcard::<String>(v),
+                            case_sensitive,
+                        )
+                    })
+                    .transpose()?,
+            )
+            .add_option(
+                filter
+                    .key
+                    .map(|v| {
+                        Self::filter_operation(
+                            Expr::col(s3_object::Column::Key),
+                            WildcardEither::Wildcard::<String>(v),
+                            case_sensitive,
+                        )
+                    })
+                    .transpose()?,
+            )
+            .add_option(
+                filter
+                    .version_id
+                    .map(|v| {
+                        Self::filter_operation(
+                            Expr::col(s3_object::Column::VersionId),
+                            WildcardEither::Wildcard::<String>(v),
+                            case_sensitive,
+                        )
+                    })
+                    .transpose()?,
+            )
+            .add_option(
+                filter
+                    .event_time
+                    .map(|v| {
+                        Self::filter_operation(
+                            Expr::col(s3_object::Column::EventTime),
+                            v,
+                            case_sensitive,
+                        )
+                    })
+                    .transpose()?,
+            )
             .add_option(filter.size.map(|v| s3_object::Column::Size.eq(v)))
             .add_option(filter.sha256.map(|v| s3_object::Column::Sha256.eq(v)))
-            .add_option(filter.last_modified_date.map(|v| {
-                Self::filter_operation(
-                    Expr::col(s3_object::Column::LastModifiedDate),
-                    v,
-                    case_sensitive,
-                )
-            }))
+            .add_option(
+                filter
+                    .last_modified_date
+                    .map(|v| {
+                        Self::filter_operation(
+                            Expr::col(s3_object::Column::LastModifiedDate),
+                            v,
+                            case_sensitive,
+                        )
+                    })
+                    .transpose()?,
+            )
             .add_option(filter.e_tag.map(|v| s3_object::Column::ETag.eq(v)))
             .add_option(
                 filter
@@ -127,13 +156,14 @@ where
                 s3_object::Column::Attributes.into_column_ref(),
                 attributes,
                 case_sensitive,
-            );
+            )?;
+
             for json_condition in json_conditions {
                 condition = condition.add(json_condition);
             }
         }
 
-        condition
+        Ok(condition)
     }
 
     /// Update this query to find objects that represent the current state of S3 objects. That is,
@@ -296,7 +326,7 @@ where
         expr: S,
         wildcard: WildcardEither<W>,
         case_sensitive: bool,
-    ) -> SimpleExpr
+    ) -> Result<SimpleExpr>
     where
         S: Into<SimpleExpr>,
         W: Into<SimpleExpr>,
@@ -304,95 +334,91 @@ where
         let text_cast = Alias::new("text");
         let expr = expr.into();
         match wildcard {
-            WildcardEither::Or(value) => expr.eq(value),
+            WildcardEither::Or(value) => Ok(expr.eq(value)),
             WildcardEither::Wildcard(wildcard) => {
                 if wildcard.contains_wildcard() && case_sensitive {
-                    expr.cast_as(text_cast).like(wildcard.into_inner())
+                    Ok(expr.cast_as(text_cast).like(wildcard.to_like_expression()?))
                 } else if wildcard.contains_wildcard() && !case_sensitive {
-                    expr.cast_as(text_cast).ilike(wildcard.into_inner())
+                    Ok(expr
+                        .cast_as(text_cast)
+                        .ilike(wildcard.to_like_expression()?))
                 } else {
-                    expr.eq(wildcard.into_inner())
+                    Ok(expr.eq(wildcard.to_eq_expression()?))
                 }
             }
         }
-    }
-
-    /// Add a json condition using equality and a concrete type.
-    fn add_eq_condition<V>(
-        acc: &mut Vec<SimpleExpr>,
-        expr: SimpleExpr,
-        value: V,
-        case_sensitive: bool,
-    ) where
-        V: Into<Value>,
-    {
-        acc.push(Self::filter_operation(
-            expr,
-            WildcardEither::<V>::or(value),
-            case_sensitive,
-        ))
-    }
-
-    /// Add a json condition using like and a wildcard.
-    fn add_like_condition(
-        acc: &mut Vec<SimpleExpr>,
-        expr: SimpleExpr,
-        value: String,
-        case_sensitive: bool,
-    ) {
-        acc.push(Self::filter_operation(
-            expr,
-            WildcardEither::<String>::wildcard(value),
-            case_sensitive,
-        ))
     }
 
     /// A recursive function to convert a json value to postgres ->> statements. This traverses the
     /// JSON tree and appends a list of conditions to `acc`. In practice, this should never
     /// produce more than one condition if using serde_qs because serde_qs should only parse one nested
     /// json object. However,  it is implemented fully here in case it is useful for JSON-based rules.
-    fn apply_json_condition(
-        acc: &mut Vec<SimpleExpr>,
-        expr: SimpleExpr,
+    fn construct_json_path(
+        acc: &mut Vec<String>,
+        current: &mut String,
         json: JsonValue,
         case_sensitive: bool,
-    ) {
-        let mut traverse_expr = |cast_expr, v| {
-            let expr = expr
-                .clone()
-                .cast_as(Alias::new("jsonb"))
-                .cast_json_field(cast_expr);
-            Self::apply_json_condition(acc, expr, v, case_sensitive)
+    ) -> Result<()> {
+        let mut traverse_expr = |current: &mut String, traverse, next| {
+            current.push_str(&format!(".{traverse}"));
+            Self::construct_json_path(acc, current, next, case_sensitive)
+        };
+        let add_eq_condition = |acc: &mut Vec<String>, current: &mut String, v| {
+            current.push_str(&format!(" ? (@ == {v})"));
+            acc.push(current.to_string());
+        };
+        let add_like_condition = |acc: &mut Vec<String>, current: &mut String, v| {
+            if !case_sensitive {
+                current.push_str(&format!(" ? (@ like_regex \"{v}\" flag \"i\")"));
+            } else {
+                current.push_str(&format!(" ? (@ like_regex \"{v}\")"));
+            }
+            acc.push(current.to_string());
         };
 
         match json {
             // Primitive types are compared for equality.
-            v @ JsonValue::Null => Self::add_eq_condition(acc, expr, v, case_sensitive),
-            JsonValue::Bool(v) => Self::add_eq_condition(acc, expr, v, case_sensitive),
+            v @ JsonValue::Null => add_eq_condition(acc, current, v.to_string()),
+            JsonValue::Bool(v) => add_eq_condition(acc, current, v.to_string()),
             JsonValue::Number(v) => {
                 if let Some(n) = v.as_f64() {
-                    Self::add_eq_condition(acc, expr, n, case_sensitive)
+                    add_eq_condition(acc, current, n.to_string());
                 } else if let Some(n) = v.as_i64() {
-                    Self::add_eq_condition(acc, expr, n, case_sensitive)
+                    add_eq_condition(acc, current, n.to_string());
                 } else if let Some(n) = v.as_u64() {
-                    Self::add_eq_condition(acc, expr, n, case_sensitive)
+                    add_eq_condition(acc, current, n.to_string());
                 }
             }
             // Strings are compared as wildcards.
-            JsonValue::String(v) => Self::add_like_condition(acc, expr, v, case_sensitive),
+            JsonValue::String(v) => {
+                let wildcard = Wildcard::new(v);
+                if wildcard.contains_wildcard() {
+                    let like_regex = wildcard.to_like_regex()?;
+                    add_like_condition(acc, current, like_regex);
+                } else {
+                    // Extra quotes needed for JSON strings.
+                    add_eq_condition(
+                        acc,
+                        current,
+                        format!("\"{}\"", wildcard.to_eq_expression()?),
+                    );
+                }
+            }
             // Arrays traverse with an index.
             JsonValue::Array(array) => {
                 for (i, v) in array.into_iter().enumerate() {
-                    traverse_expr(Expr::val(i as u32), v)
+                    traverse_expr(current, i.to_string(), v)?;
                 }
             }
             // Objects traverse with a key.
             JsonValue::Object(o) => {
                 for (k, v) in o.into_iter() {
-                    traverse_expr(Expr::val(k), v)
+                    traverse_expr(current, k.to_string(), v)?;
                 }
             }
         }
+
+        Ok(())
     }
 
     /// Create a series of json conditions by traversing the JSON tree.
@@ -400,13 +426,21 @@ where
         col: ColumnRef,
         json: JsonValue,
         case_sensitive: bool,
-    ) -> Vec<SimpleExpr> {
+    ) -> Result<Vec<SimpleExpr>> {
         let mut conditions = vec![];
-        let expr = Expr::col(col).into_simple_expr();
 
-        Self::apply_json_condition(&mut conditions, expr, json, case_sensitive);
+        let mut acc = "$".to_string();
+        Self::construct_json_path(&mut conditions, &mut acc, json, case_sensitive)?;
 
-        conditions
+        Ok(conditions
+            .into_iter()
+            .map(|cond| {
+                let cond = Expr::val(cond).cast_as(Alias::new("jsonpath"));
+                Expr::col(col.clone())
+                    .into_simple_expr()
+                    .binary(BinOper::Custom("@?"), cond)
+            })
+            .collect())
     }
 
     /// Trace the current query.
@@ -415,6 +449,7 @@ where
             "{message}: {}",
             self.select.as_query().to_string(PostgresQueryBuilder)
         );
+        println!("{}", self.select.as_query().to_string(PostgresQueryBuilder));
     }
 }
 
@@ -424,6 +459,7 @@ pub(crate) mod tests {
     use sea_orm::sea_query::extension::postgres::PgBinOper;
     use sea_orm::sea_query::types::BinOper;
     use sea_orm::sea_query::IntoColumnRef;
+    use sea_orm::sea_query::SimpleExpr::Binary;
     use sea_orm::DatabaseConnection;
     use serde_json::json;
     use sqlx::PgPool;
@@ -528,7 +564,8 @@ pub(crate) mod tests {
                     ..Default::default()
                 },
                 true,
-            );
+            )
+            .unwrap();
         let result = builder.all().await.unwrap();
         assert_eq!(result, vec![entries[6].clone()]);
 
@@ -541,6 +578,7 @@ pub(crate) mod tests {
                 },
                 true,
             )
+            .unwrap()
             .current_state();
         let result = builder.all().await.unwrap();
         assert_eq!(result, vec![entries[24].clone()]);
@@ -741,38 +779,46 @@ pub(crate) mod tests {
 
     #[test]
     fn test_filter_operation() {
-        let operation = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
-            Expr::col(s3_object::Column::StorageClass),
-            WildcardEither::Or(StorageClass::Standard),
-            true,
-        );
+        let operation =
+            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
+                Expr::col(s3_object::Column::StorageClass),
+                WildcardEither::Or(StorageClass::Standard),
+                true,
+            )
+            .unwrap();
         assert!(matches!(
             operation,
             SimpleExpr::Binary(_, BinOper::Equal, _)
         ));
 
-        let operation = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
-            Expr::col(s3_object::Column::StorageClass),
-            WildcardEither::Or(StorageClass::Standard),
-            false,
-        );
+        let operation =
+            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
+                Expr::col(s3_object::Column::StorageClass),
+                WildcardEither::Or(StorageClass::Standard),
+                false,
+            )
+            .unwrap();
         assert!(matches!(
             operation,
             SimpleExpr::Binary(_, BinOper::Equal, _)
         ));
 
-        let operation = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
-            Expr::col(s3_object::Column::StorageClass),
-            WildcardEither::Wildcard::<StorageClass>(Wildcard::new("Standar%".to_string())),
-            true,
-        );
+        let operation =
+            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
+                Expr::col(s3_object::Column::StorageClass),
+                WildcardEither::Wildcard::<StorageClass>(Wildcard::new("Standar*".to_string())),
+                true,
+            )
+            .unwrap();
         assert!(matches!(operation, SimpleExpr::Binary(_, BinOper::Like, _)));
 
-        let operation = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
-            Expr::col(s3_object::Column::StorageClass),
-            WildcardEither::Wildcard::<StorageClass>(Wildcard::new("Standar%".to_string())),
-            false,
-        );
+        let operation =
+            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::filter_operation(
+                Expr::col(s3_object::Column::StorageClass),
+                WildcardEither::Wildcard::<StorageClass>(Wildcard::new("Standar*".to_string())),
+                false,
+            )
+            .unwrap();
         assert!(matches!(
             operation,
             SimpleExpr::Binary(_, BinOper::PgOperator(PgBinOper::ILike), _)
@@ -792,7 +838,7 @@ pub(crate) mod tests {
             &client,
             S3ObjectsFilter {
                 event_time: Some(WildcardEither::Wildcard(Wildcard::new(
-                    "1970-01-0%".to_string(),
+                    "1970-01-0*".to_string(),
                 ))),
                 ..Default::default()
             },
@@ -815,7 +861,7 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                bucket: Some(Wildcard::new("0%".to_string())),
+                bucket: Some(Wildcard::new("0*".to_string())),
                 ..Default::default()
             },
             false,
@@ -856,7 +902,7 @@ pub(crate) mod tests {
         let s3_objects = filter_attributes(
             &client,
             Some(json!({
-                "attributeId": "t%"
+                "attributeId": "t*"
             })),
             true,
         )
@@ -887,7 +933,7 @@ pub(crate) mod tests {
             &client,
             Some(json!({
                 // This should not trigger a fetch on the nested id.
-                "attributeId": "%a%"
+                "attributeId": "*a*"
             })),
             true,
         )
@@ -898,7 +944,7 @@ pub(crate) mod tests {
             &client,
             Some(json!({
                 // Case-insensitive should work
-                "attributeId": "%A%"
+                "attributeId": "*A*"
             })),
             false,
         )
@@ -912,7 +958,7 @@ pub(crate) mod tests {
             &client,
             Some(json!({
                 // A check is okay on null json as well.
-                "attributeId": "%1%"
+                "attributeId": "*1*"
             })),
             true,
         )
@@ -923,56 +969,66 @@ pub(crate) mod tests {
 
     #[test]
     fn apply_json_condition() {
-        let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-            s3_object::Column::Attributes.into_column_ref(),
-            json!({ "attributeId": "1" }),
-            true,
-        );
-        assert_eq!(conditions.len(), 1);
-
-        let operation = conditions[0].clone();
-        assert!(matches!(
-            conditions[0].clone(),
-            SimpleExpr::Binary(_, BinOper::Equal, _)
-        ));
-        assert_cast_json(&operation);
-
-        let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-            s3_object::Column::Attributes.into_column_ref(),
-            json!({ "attributeId": "a%" }),
-            true,
-        );
-        assert_eq!(conditions.len(), 1);
-
-        let operation = conditions[0].clone();
-        assert!(matches!(operation, SimpleExpr::Binary(_, BinOper::Like, _)));
-        assert_cast_json(&operation);
-
-        let conditions = ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-            s3_object::Column::Attributes.into_column_ref(),
-            json!({ "attributeId": "a%" }),
-            false,
-        );
+        let conditions =
+            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
+                s3_object::Column::Attributes.into_column_ref(),
+                json!({ "attributeId": "1" }),
+                true,
+            )
+            .unwrap();
         assert_eq!(conditions.len(), 1);
 
         let operation = conditions[0].clone();
         assert!(matches!(
             operation,
-            SimpleExpr::Binary(_, BinOper::PgOperator(PgBinOper::ILike), _)
+            SimpleExpr::Binary(_, BinOper::Custom("@?"), _)
         ));
-        assert_cast_json(&operation);
+        assert_json_path(operation, "$.attributeId ? (@ == \"1\")");
+
+        let conditions =
+            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
+                s3_object::Column::Attributes.into_column_ref(),
+                json!({ "attributeId": "a*" }),
+                true,
+            )
+            .unwrap();
+        assert_eq!(conditions.len(), 1);
+
+        let operation = conditions[0].clone();
+        assert!(matches!(
+            operation,
+            SimpleExpr::Binary(_, BinOper::Custom("@?"), _)
+        ));
+        assert_json_path(operation, "$.attributeId ? (@ like_regex \"a.*\")");
+
+        let conditions =
+            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
+                s3_object::Column::Attributes.into_column_ref(),
+                json!({ "attributeId": "a*" }),
+                false,
+            )
+            .unwrap();
+        assert_eq!(conditions.len(), 1);
+
+        let operation = conditions[0].clone();
+        assert!(matches!(
+            operation,
+            SimpleExpr::Binary(_, BinOper::Custom("@?"), _)
+        ));
+        assert_json_path(
+            operation,
+            "$.attributeId ? (@ like_regex \"a.*\" flag \"i\")",
+        );
     }
 
-    fn assert_cast_json(operation: &SimpleExpr) {
-        if let SimpleExpr::Binary(operation, _, _) = operation {
-            if let SimpleExpr::FunctionCall(call) = operation.as_ref() {
-                call.get_args().iter().for_each(assert_cast_json);
-            } else {
-                assert!(matches!(
-                    operation.as_ref(),
-                    SimpleExpr::Binary(_, BinOper::PgOperator(PgBinOper::CastJsonField), _)
-                ));
-            }
+    fn assert_json_path(operation: SimpleExpr, value: &str) {
+        if let Binary(_, _, result) = operation {
+            assert_eq!(
+                Expr::val(value)
+                    .cast_as(Alias::new("jsonpath"))
+                    .into_simple_expr(),
+                *result
+            );
         }
     }
 
@@ -1028,6 +1084,7 @@ pub(crate) mod tests {
     ) -> Vec<s3_object::Model> {
         ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .filter_all(filter, case_sensitive)
+            .unwrap()
             .all()
             .await
             .unwrap()
