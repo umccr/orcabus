@@ -30,6 +30,11 @@ migrate:
 start: migrate
 	@python manage.py runserver_plus 0.0.0.0:8000
 
+mock:
+	@python manage.py generate_mock_workflow_run
+
+run-mock: reset-db migrate mock start
+
 openapi:
 	@python manage.py generateschema > orcabus.hlo.openapi.yaml
 
