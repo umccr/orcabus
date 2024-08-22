@@ -1,7 +1,8 @@
 from django.db import models
 
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
-from workflow_manager.models import WorkflowRun, Payload
+from workflow_manager.models.workflow_run import WorkflowRun
+from workflow_manager.models.payload import Payload
 
 
 class StateManager(OrcaBusBaseManager):

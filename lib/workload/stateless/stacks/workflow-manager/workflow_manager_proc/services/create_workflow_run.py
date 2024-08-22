@@ -16,8 +16,6 @@ from workflow_manager_proc.domain.executionservice.workflowrunstatechange import
 from workflow_manager.models import (
     WorkflowRun,
     Workflow,
-    State,
-    Payload,
     Library,
     LibraryAssociation,
 )
@@ -58,8 +56,6 @@ def handler(event, context):
     # then create the actual workflow run entry if it does not exist
     try:
         wfr: WorkflowRun = WorkflowRun.objects.get(portal_run_id=wrsc.portalRunId)
-        wfr.current_status = wrsc.status
-        wfr.last_modified = wrsc.timestamp
     except Exception:
         print("No workflow found! Creating new entry.")
         wfr = WorkflowRun(
@@ -67,10 +63,7 @@ def handler(event, context):
             portal_run_id=wrsc.portalRunId,
             execution_id=wrsc.executionId,  # the execution service WRSC does carry the execution ID
             workflow_run_name=wrsc.workflowRunName,
-            current_status=wrsc.status,
-            comment=None,
-            last_modified=wrsc.timestamp,
-            created=wrsc.timestamp
+            comment=None
         )
     print("Persisting Workflow record.")
     wfr.save()

@@ -5,8 +5,9 @@ from django.utils.timezone import make_aware
 import json
 from datetime import datetime
 from libumccr import libjson
-from workflow_manager.models import Workflow, WorkflowRun, LibraryAssociation
-from workflow_manager.tests.factories import WorkflowRunFactory, WorkflowFactory, PayloadFactory, LibraryFactory
+from workflow_manager.models import Workflow, WorkflowRun, LibraryAssociation, State
+from workflow_manager.tests.factories import WorkflowRunFactory, WorkflowFactory, PayloadFactory, LibraryFactory, \
+    StateFactory
 
 WORKFLOW_NAME = "TestWorkflow"
 
@@ -16,7 +17,6 @@ class Command(BaseCommand):
     help = "Generate mock Workflow data into database for local development and testing"
 
     def handle(self, *args, **options):
-        wf_payload = PayloadFactory()
         qs: QuerySet = Workflow.objects.filter(workflow_name=WORKFLOW_NAME)
 
         if qs.exists():
@@ -27,8 +27,13 @@ class Command(BaseCommand):
         wfr: WorkflowRun = WorkflowRunFactory(
             workflow_run_name="MockWorkflowRun",
             portal_run_id="1234",
-            payload=wf_payload,
             workflow=wf
+        )
+
+        wf_payload = PayloadFactory()
+        StateFactory(
+            workflow_run=wfr,
+            payload=wf_payload
         )
 
         library = LibraryFactory()
@@ -42,9 +47,14 @@ class Command(BaseCommand):
         wfr2: WorkflowRun = WorkflowRunFactory(
             workflow_run_name="MockWorkflowRun2",
             portal_run_id="1235",
-            payload=wf_payload,
             workflow=wf
         )
+        StateFactory(
+            workflow_run=wfr2,
+            status="RUNNING",
+            payload=wf_payload
+        )
+
         library2 = LibraryFactory(orcabus_id="lib.01J5M2JFE1JPYV62RYQEG99CP5", library_id="L000002")
         LibraryAssociation.objects.create(
             workflow_run=wfr2,

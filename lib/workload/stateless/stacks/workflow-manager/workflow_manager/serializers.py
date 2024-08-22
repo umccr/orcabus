@@ -1,9 +1,6 @@
-from typing import Dict, List
-
 from rest_framework import serializers
-from rest_framework.fields import empty
 
-from workflow_manager.models import Workflow, WorkflowRun, Payload, Library
+from workflow_manager.models import Workflow, WorkflowRun, Payload, Library, State
 
 
 READ_ONLY_SERIALIZER = "READ ONLY SERIALIZER"
@@ -53,7 +50,14 @@ class PayloadModelSerializer(serializers.ModelSerializer):
         model = Payload
         fields = '__all__'
 
+
 class LibraryModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Library
+        fields = '__all__'
+
+
+class StateModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = State
         fields = '__all__'

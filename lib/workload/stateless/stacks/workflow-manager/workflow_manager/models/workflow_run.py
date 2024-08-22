@@ -1,7 +1,8 @@
 from django.db import models
 
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
-from workflow_manager.models import Workflow, Library, State
+from workflow_manager.models.library import Library
+from workflow_manager.models.workflow import Workflow
 
 
 class WorkflowRunManager(OrcaBusBaseManager):
@@ -15,9 +16,6 @@ class WorkflowRun(OrcaBusBaseModel):
     # --- mandatory fields
 
     portal_run_id = models.CharField(max_length=255, unique=True)
-    current_status = models.CharField(max_length=255)
-    created = models.DateTimeField()
-    last_modified = models.DateTimeField()
 
     # --- optional fields
 
@@ -43,9 +41,6 @@ class WorkflowRun(OrcaBusBaseModel):
         return {
             "id": self.id,
             "portal_run_id": self.portal_run_id,
-            "current_status": self.current_status,
-            "created": str(self.created),
-            "last_modified": str(self.last_modified),
             "execution_id": self.execution_id,
             "workflow_run_name": self.workflow_run_name,
             "comment": self.comment,

@@ -1,12 +1,12 @@
 from enum import Enum
-import uuid, json
+import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import factory
 from django.utils.timezone import make_aware
 
-from workflow_manager.models import Workflow, WorkflowRun, Payload, Library
+from workflow_manager.models import Workflow, WorkflowRun, Payload, Library, State
 
 
 class TestConstant(Enum):
@@ -51,11 +51,8 @@ class WorkflowRunFactory(factory.django.DjangoModelFactory):
     portal_run_id = f"20240130{_uid[:8]}"
     execution_id = _uid
     workflow_run_name = f"TestWorkflowRun{_uid[:8]}"
-    status = "READY"
     comment = "Lorem Ipsum"
-    timestamp = make_aware(datetime.now())
     # If required, set later
-    payload = None
     workflow = None
 
 
@@ -65,3 +62,14 @@ class LibraryFactory(factory.django.DjangoModelFactory):
 
     library_id = TestConstant.library.value["library_id"]
     orcabus_id = TestConstant.library.value["orcabus_id"]
+
+
+class StateFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = State
+
+    status = "READY"
+    timestamp = make_aware(datetime.now())
+    comment = "Comment"
+    payload = None
+    workflow_run = factory.SubFactory(WorkflowRunFactory)

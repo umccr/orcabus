@@ -2,7 +2,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
-from workflow_manager.models.workflow import Workflow
 
 
 class LibraryManager(OrcaBusBaseManager):
