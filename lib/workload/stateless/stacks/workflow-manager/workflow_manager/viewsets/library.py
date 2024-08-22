@@ -15,4 +15,6 @@ class LibraryViewSet(ReadOnlyModelViewSet):
     search_fields = Library.get_base_fields()
 
     def get_queryset(self):
-        return Library.objects.get_by_keyword(**self.request.query_params)
+        qs = Library.objects.filter(workflowrun=self.kwargs["workflowrun_id"])
+        qs = Library.objects.get_model_fields_query(qs, **self.request.query_params)
+        return qs
