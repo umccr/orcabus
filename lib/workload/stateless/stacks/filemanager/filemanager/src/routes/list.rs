@@ -1,8 +1,6 @@
 //! Route logic for list API calls.
 //!
 
-use std::marker::PhantomData;
-
 use axum::extract::{Request, State};
 use axum::http::header::{CONTENT_ENCODING, CONTENT_TYPE, HOST};
 use axum::routing::get;
@@ -10,6 +8,7 @@ use axum::{extract, Json, Router};
 use axum_extra::extract::WithRejection;
 use sea_orm::TransactionTrait;
 use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
 
@@ -19,7 +18,7 @@ use crate::error::Error::MissingHostHeader;
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::{ErrorStatusCode, QsQuery, Query};
-use crate::routes::filter::S3ObjectsFilter;
+use crate::routes::filter::{AttributesOnlyFilter, S3ObjectsFilter};
 use crate::routes::header::HeaderParser;
 use crate::routes::pagination::{ListResponse, Pagination};
 use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
@@ -258,12 +257,50 @@ pub async fn presign_s3(
     Ok(Json(response))
 }
 
+/// List all S3 objects according to a set of attribute filter parameters.
+/// This route is a convenience for querying using top-level attributes and accepts arbitrary
+/// parameters. For example, instead of using `/api/v1/s3?attributes[attributeId]=...`, this route
+/// can express the same query as `/api/v1/s3/attributes?attributeId=...`. Similar to the
+/// `attributes` filter parameter, nested JSON queries are supported using the bracket notation.
+/// Note that regular filtering parameters, like `key` or `bucket` are not supported on this route.
+#[utoipa::path(
+    get,
+    path = "/s3/attributes",
+    responses(
+        (status = OK, description = "The collection of s3_objects", body = ListResponseS3),
+        ErrorStatusCode,
+    ),
+    params(Pagination, WildcardParams, ListS3Params, AttributesOnlyFilter),
+    context_path = "/api/v1",
+    tag = "list",
+)]
+pub async fn attributes_s3(
+    state: State<AppState>,
+    pagination: Query<Pagination>,
+    wildcard: Query<WildcardParams>,
+    list: Query<ListS3Params>,
+    WithRejection(serde_qs::axum::QsQuery(attributes_only), _): QsQuery<AttributesOnlyFilter>,
+    request: Request,
+) -> Result<Json<ListResponse<S3>>> {
+    let filter = S3ObjectsFilter::from(attributes_only);
+    list_s3(
+        state,
+        pagination,
+        wildcard,
+        list,
+        WithRejection(serde_qs::axum::QsQuery(filter), PhantomData),
+        request,
+    )
+    .await
+}
+
 /// The router for list objects.
 pub fn list_router() -> Router<AppState> {
     Router::new()
         .route("/s3", get(list_s3))
         .route("/s3/count", get(count_s3))
         .route("/s3/presign", get(presign_s3))
+        .route("/s3/attributes", get(attributes_s3))
 }
 
 #[cfg(test)]
@@ -626,6 +663,39 @@ pub(crate) mod tests {
             response_from_get(state, "/s3?attributes[attributeId]=1&key=1").await;
         assert_eq!(result.results(), vec![entries[1].clone()]);
         assert_eq!(result.pagination().count, 1);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn attributes_s3(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await
+            .s3_objects;
+
+        let result: ListResponse<S3> =
+            response_from_get(state.clone(), "/s3/attributes?attributeId=1").await;
+        assert_eq!(result.results(), vec![entries[1].clone()]);
+        assert_eq!(result.pagination().count, 1);
+
+        let result: ListResponse<S3> =
+            response_from_get(state.clone(), "/s3/attributes?nestedId[attributeId]=4").await;
+        assert_eq!(result.results(), vec![entries[4].clone()]);
+        assert_eq!(result.pagination().count, 1);
+
+        let result: ListResponse<S3> =
+            response_from_get(state.clone(), "/s3/attributes?nonExistentId=1").await;
+        assert!(result.results().is_empty());
+        assert_eq!(result.pagination().count, 0);
+
+        let result: ListResponse<S3> = response_from_get(
+            state.clone(),
+            "/s3/attributes?attributeId=1&nonExistentId=2",
+        )
+        .await;
+        assert!(result.results().is_empty());
+        assert_eq!(result.pagination().count, 0);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]

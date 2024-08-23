@@ -104,6 +104,14 @@ curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "attributes[portal
 > Attributes on filemanager records start empty. They need to be added to the record to query on them later.
 > See [updating records](#updating-records)
 
+As a convience, the filemanager has an attributes route that can be used to query by top-level attribute properties.
+For example, the following is equivalent to the above query:
+
+```sh
+curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "portalRunId=202405212aecb782" \
+"https://file.dev.umccr.org/api/v1/s3/attributes" | jq
+```
+
 ### Wilcard matching
 
 The API supports using wildcards to match multiple characters in a value for most field. Use `*` to match multiple characters
