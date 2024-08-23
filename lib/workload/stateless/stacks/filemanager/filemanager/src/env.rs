@@ -1,6 +1,8 @@
 //! Handles loading environment variables as config options for filemanager.
 //!
 
+use axum::http::header::AUTHORIZATION;
+use axum::http::Method;
 use chrono::Duration;
 use envy::from_env;
 use serde::Deserialize;
@@ -13,7 +15,7 @@ use crate::error::Result;
 
 /// Configuration environment variables for filemanager.
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Default, Eq, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq)]
 pub struct Config {
     pub(crate) database_url: Option<String>,
     pub(crate) pgpassword: Option<String>,
@@ -33,6 +35,50 @@ pub struct Config {
     pub(crate) api_presign_expiry: Option<Duration>,
     #[serde(rename = "filemanager_api_cors_allow_origins")]
     pub(crate) api_cors_allow_origins: Option<Vec<String>>,
+    #[serde(
+        default = "default_allow_methods",
+        rename = "filemanager_api_cors_allow_methods"
+    )]
+    pub(crate) api_cors_allow_methods: Vec<String>,
+    #[serde(
+        default = "default_allow_headers",
+        rename = "filemanager_api_cors_allow_headers"
+    )]
+    pub(crate) api_cors_allow_headers: Vec<String>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            database_url: None,
+            pgpassword: None,
+            pghost: None,
+            pgport: None,
+            pguser: None,
+            sqs_url: None,
+            paired_ingest_mode: false,
+            api_links_url: None,
+            api_presign_limit: None,
+            api_presign_expiry: None,
+            api_cors_allow_origins: None,
+            api_cors_allow_methods: default_allow_methods(),
+            api_cors_allow_headers: default_allow_headers(),
+        }
+    }
+}
+
+fn default_allow_methods() -> Vec<String> {
+    vec![
+        Method::GET.to_string(),
+        Method::HEAD.to_string(),
+        Method::OPTIONS.to_string(),
+        Method::POST.to_string(),
+        Method::PATCH.to_string(),
+    ]
+}
+
+fn default_allow_headers() -> Vec<String> {
+    vec![AUTHORIZATION.to_string()]
 }
 
 impl Config {
@@ -107,6 +153,16 @@ impl Config {
         self.api_cors_allow_origins.as_deref()
     }
 
+    /// Get the allowed origins
+    pub fn api_cors_allow_methods(&self) -> &[String] {
+        self.api_cors_allow_methods.as_slice()
+    }
+
+    /// Get the allowed origins
+    pub fn api_cors_allow_headers(&self) -> &[String] {
+        self.api_cors_allow_headers.as_slice()
+    }
+
     /// Get the value from an optional, or else try and get a different value, unwrapping into a Result.
     pub fn value_or_else<T>(value: Option<T>, or_else: Option<T>) -> Result<T> {
         value
@@ -143,6 +199,8 @@ mod tests {
                 "FILEMANAGER_API_CORS_ALLOW_ORIGINS",
                 "localhost:8000,127.0.0.1",
             ),
+            ("FILEMANAGER_API_CORS_ALLOW_METHODS", "GET,POST"),
+            ("FILEMANAGER_API_CORS_ALLOW_HEADERS", "Authorization,Accept"),
         ]
         .into_iter()
         .map(|(key, value)| (key.to_string(), value.to_string()));
@@ -165,7 +223,9 @@ mod tests {
                 api_cors_allow_origins: Some(vec![
                     "localhost:8000".to_string(),
                     "127.0.0.1".to_string()
-                ])
+                ]),
+                api_cors_allow_methods: vec!["GET".to_string(), "POST".to_string()],
+                api_cors_allow_headers: vec!["Authorization".to_string(), "Accept".to_string()]
             }
         )
     }

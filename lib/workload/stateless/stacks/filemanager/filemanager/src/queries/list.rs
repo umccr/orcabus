@@ -449,7 +449,6 @@ where
             "{message}: {}",
             self.select.as_query().to_string(PostgresQueryBuilder)
         );
-        println!("{}", self.select.as_query().to_string(PostgresQueryBuilder));
     }
 }
 

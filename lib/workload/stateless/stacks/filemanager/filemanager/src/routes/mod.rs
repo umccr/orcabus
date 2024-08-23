@@ -3,8 +3,9 @@
 
 use std::sync::Arc;
 
-use axum::http::header::AUTHORIZATION;
-use axum::http::{HeaderValue, Method};
+use axum::http::header::InvalidHeaderName;
+use axum::http::method::InvalidMethod;
+use axum::http::HeaderValue;
 use axum::Router;
 use chrono::Duration;
 use sqlx::PgPool;
@@ -124,23 +125,37 @@ pub fn router(state: AppState) -> Result<Router> {
 }
 
 /// Configure the cors layer
-pub fn cors_layer(allow_origins: Option<&[String]>) -> Result<CorsLayer> {
+pub fn cors_layer(config: &Config) -> Result<CorsLayer> {
     let mut layer = CorsLayer::new()
-        .allow_headers([AUTHORIZATION])
-        .allow_methods([
-            Method::GET,
-            Method::HEAD,
-            Method::OPTIONS,
-            Method::POST,
-            Method::PATCH,
-        ])
+        .allow_headers(
+            config
+                .api_cors_allow_headers()
+                .iter()
+                .map(|method| {
+                    method
+                        .parse()
+                        .map_err(|err: InvalidHeaderName| ApiConfigurationError(err.to_string()))
+                })
+                .collect::<Result<Vec<_>>>()?,
+        )
+        .allow_methods(
+            config
+                .api_cors_allow_methods()
+                .iter()
+                .map(|method| {
+                    method
+                        .parse()
+                        .map_err(|err: InvalidMethod| ApiConfigurationError(err.to_string()))
+                })
+                .collect::<Result<Vec<_>>>()?,
+        )
         .max_age(
             Duration::days(10)
                 .to_std()
                 .map_err(|err| ApiConfigurationError(err.to_string()))?,
         );
 
-    if let Some(origins) = allow_origins {
+    if let Some(origins) = config.api_cors_allow_origins() {
         let origins = origins
             .iter()
             .map(|origin| {
@@ -164,7 +179,7 @@ pub fn api_router(state: AppState) -> Result<Router> {
         .merge(ingest_router())
         .merge(list_router())
         .merge(update_router())
-        .layer(cors_layer(state.config().api_cors_allow_origins())?)
+        .layer(cors_layer(state.config())?)
         .layer(TraceLayer::new_for_http())
         .with_state(state))
 }

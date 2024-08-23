@@ -14,12 +14,14 @@ This serves Swagger OpenAPI docs at `http://localhost:8000/swagger-ui` when usin
 
 The API has some environment variables that can be used to configure behaviour (for the presigned url route):
 
-| Option                               | Description                                                                                                                    | Type                | Default                     |
-|--------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|---------------------|-----------------------------|
-| `FILEMANAGER_API_LINKS_URL`          | Override the URL which is used to generate pagination links. By default the `HOST` header is used to created pagination links. | URL                 | Not set                     |
-| `FILEMANAGER_API_PRESIGN_LIMIT`      | The maximum file size in bytes which presigned URLs will be generated for.                                                     | Integer             | `"20971520"`                | 
-| `FILEMANAGER_API_PRESIGN_EXPIRY`     | The expiry time for presigned urls.                                                                                            | Duration in seconds | `"300"`                     |
-| `FILEMANAGER_API_CORS_ALLOW_ORIGINS` | The origins to allow for CORS.                                                                                                 | List of origins     | Not set, no origins allowed |
+| Option                               | Description                                                                                                                    | Type                | Default                         |
+|--------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|---------------------|---------------------------------|
+| `FILEMANAGER_API_LINKS_URL`          | Override the URL which is used to generate pagination links. By default the `HOST` header is used to created pagination links. | URL                 | Not set                         |
+| `FILEMANAGER_API_PRESIGN_LIMIT`      | The maximum file size in bytes which presigned URLs will be generated for.                                                     | Integer             | `"20971520"`                    | 
+| `FILEMANAGER_API_PRESIGN_EXPIRY`     | The expiry time for presigned urls.                                                                                            | Duration in seconds | `"300"`                         |
+| `FILEMANAGER_API_CORS_ALLOW_ORIGINS` | The origins to allow for CORS.                                                                                                 | List of origins     | Not set, no origins allowed     |
+| `FILEMANAGER_API_CORS_ALLOW_METHODS` | The methods to allow for CORS.                                                                                                 | List of origins     | `"GET,HEAD,OPTIONS,POST,PATCH"` |
+| `FILEMANAGER_API_CORS_ALLOW_HEADERS` | The headers to allow for CORS.                                                                                                 | List of origins     | `"authorization"`               |
 
 The deployed instance of the filemanager API can be reached using the desired stage at `https://file.<stage>.umccr.org`
 using the orcabus API token. To retrieve the token, run:
