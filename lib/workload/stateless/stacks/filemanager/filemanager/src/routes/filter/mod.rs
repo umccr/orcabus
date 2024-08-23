@@ -1,13 +1,14 @@
 //! Routing logic for query filtering.
 //!
 
-pub mod wildcard;
-
-use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
-use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
 use sea_orm::prelude::{DateTimeWithTimeZone, Json};
 use serde::{Deserialize, Serialize};
 use utoipa::IntoParams;
+
+use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
+use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
+
+pub mod wildcard;
 
 /// The available fields to filter `s3_object` queries by. Each query parameter represents
 /// an `and` clause in the SQL statement. Nested query string style syntax is supported on

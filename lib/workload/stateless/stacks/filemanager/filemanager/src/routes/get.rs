@@ -1,6 +1,15 @@
 //! Route logic for get API calls.
 //!
 
+use axum::extract::{Request, State};
+use axum::http::header::{CONTENT_ENCODING, CONTENT_TYPE};
+use axum::routing::get;
+use axum::{extract, Json, Router};
+use axum_extra::extract::WithRejection;
+use sea_orm::{ConnectionTrait, TransactionTrait};
+use url::Url;
+use uuid::Uuid;
+
 use crate::database::entities::s3_object;
 use crate::database::entities::s3_object::Model as S3;
 use crate::database::entities::sea_orm_active_enums::EventType;
@@ -11,15 +20,9 @@ use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::{ErrorStatusCode, Path, Query};
 use crate::routes::filter::wildcard::Wildcard;
 use crate::routes::filter::S3ObjectsFilter;
+use crate::routes::header::HeaderParser;
 use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
 use crate::routes::AppState;
-use axum::extract::State;
-use axum::routing::get;
-use axum::{extract, Json, Router};
-use axum_extra::extract::WithRejection;
-use sea_orm::{ConnectionTrait, TransactionTrait};
-use url::Url;
-use uuid::Uuid;
 
 async fn get_s3_from_connection<C>(
     connection: &C,
@@ -71,6 +74,7 @@ pub async fn presign_s3_by_id(
     state: State<AppState>,
     id: Path<Uuid>,
     WithRejection(extract::Query(presigned), _): Query<PresignedParams>,
+    request: Request,
 ) -> Result<Json<Option<Url>>> {
     let txn = state.database_client().connection_ref().begin().await?;
 
@@ -98,6 +102,9 @@ pub async fn presign_s3_by_id(
 
     txn.commit().await?;
 
+    let content_type = HeaderParser::new(request.headers()).parse_header(CONTENT_TYPE)?;
+    let content_encoding = HeaderParser::new(request.headers()).parse_header(CONTENT_ENCODING)?;
+
     // If the last object ordered by sequencer is the requested one, then this is a
     // current object.
     if let Some(current) = current.last() {
@@ -107,6 +114,8 @@ pub async fn presign_s3_by_id(
                     &state,
                     response,
                     presigned.response_content_disposition(),
+                    content_type,
+                    content_encoding,
                 )
                 .await?,
             ));
@@ -128,18 +137,20 @@ mod tests {
     use aws_smithy_mocks_experimental::{mock_client, RuleMode};
     use axum::body::Body;
     use axum::http::{Method, StatusCode};
+    use serde_json::Value;
     use sqlx::PgPool;
 
-    use super::*;
     use crate::clients::aws::s3;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::env::Config;
     use crate::queries::EntriesBuilder;
     use crate::routes::list::tests::mock_get_object;
     use crate::routes::list::tests::{response_from, response_from_get};
+    use crate::routes::presign::tests::assert_presigned_params;
     use crate::routes::AppState;
     use crate::uuid::UuidGenerator;
-    use serde_json::Value;
+
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_s3_api(pool: PgPool) {
@@ -193,8 +204,7 @@ mod tests {
         .unwrap();
 
         let query = result.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=300"));
-        assert!(query.contains("response-content-disposition=inline"));
+        assert_presigned_params(query, "inline");
         assert_eq!(result.path(), "/0/0");
     }
 
@@ -226,8 +236,7 @@ mod tests {
         .unwrap();
 
         let query = result.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=300"));
-        assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%220%22"));
+        assert_presigned_params(query, "attachment%3B%20filename%3D%220%22");
         assert_eq!(result.path(), "/0/0");
     }
 

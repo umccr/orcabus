@@ -2,14 +2,15 @@ use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use serde::de::IgnoredAny;
 use serde::Deserialize;
 
-use crate::CloudFormationRequest::Delete;
-use crate::Event::Provider;
 use filemanager::database::aws::migration::Migration;
 use filemanager::database::Client as DbClient;
 use filemanager::database::Migrate;
 use filemanager::env::Config;
 use filemanager::handlers::aws::{create_database_pool, update_credentials};
 use filemanager::handlers::init_tracing;
+
+use crate::CloudFormationRequest::Delete;
+use crate::Event::Provider;
 
 /// The lambda event for this function. This is normally a CloudFormationCustomResourceRequest.
 /// If anything else is present, the migrate lambda will still attempt to perform a migration.
@@ -61,10 +62,12 @@ async fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use serde_json::{from_value, json};
+
     use crate::CloudFormationRequest::Delete;
     use crate::Event::Ignored;
-    use serde_json::{from_value, json};
+
+    use super::*;
 
     #[test]
     fn event_deserialize_provider_delete() {

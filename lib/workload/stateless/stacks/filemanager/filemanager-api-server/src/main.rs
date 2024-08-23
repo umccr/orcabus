@@ -1,5 +1,16 @@
+use std::io;
+use std::path::PathBuf;
+use std::sync::Arc;
+
 use axum::serve;
 use clap::{Parser, Subcommand};
+use http::Uri;
+use sea_orm::ConnectionTrait;
+use tokio::fs::File;
+use tokio::io::AsyncReadExt;
+use tokio::net::TcpListener;
+use tracing::{debug, info};
+
 use filemanager::clients::aws::s3;
 use filemanager::database::aws::migration::Migration;
 use filemanager::database::{Client, Migrate};
@@ -10,15 +21,6 @@ use filemanager::handlers::init_tracing_with_format;
 use filemanager::handlers::Format::Pretty;
 use filemanager::queries::EntriesBuilder;
 use filemanager::routes::{router, AppState};
-use http::Uri;
-use sea_orm::ConnectionTrait;
-use std::io;
-use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::fs::File;
-use tokio::io::AsyncReadExt;
-use tokio::net::TcpListener;
-use tracing::{debug, info};
 
 /// Run the filemanager API server locally to explore the API.
 #[derive(Parser, Debug)]

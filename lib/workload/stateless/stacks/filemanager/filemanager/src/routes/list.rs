@@ -1,26 +1,29 @@
 //! Route logic for list API calls.
 //!
 
-use crate::database::entities::s3_object;
-use crate::database::entities::s3_object::Model as S3;
-use crate::error::Error::{MissingHostHeader, ParseError};
-use crate::error::Result;
-use crate::queries::list::ListQueryBuilder;
-use crate::routes::error::{ErrorStatusCode, QsQuery, Query};
-use crate::routes::filter::S3ObjectsFilter;
-use crate::routes::pagination::{ListResponse, Pagination};
-use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
-use crate::routes::AppState;
+use std::marker::PhantomData;
+
 use axum::extract::{Request, State};
-use axum::http::header::HOST;
+use axum::http::header::{CONTENT_ENCODING, CONTENT_TYPE, HOST};
 use axum::routing::get;
 use axum::{extract, Json, Router};
 use axum_extra::extract::WithRejection;
 use sea_orm::TransactionTrait;
 use serde::{Deserialize, Serialize};
-use std::marker::PhantomData;
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::database::entities::s3_object;
+use crate::database::entities::s3_object::Model as S3;
+use crate::error::Error::MissingHostHeader;
+use crate::error::Result;
+use crate::queries::list::ListQueryBuilder;
+use crate::routes::error::{ErrorStatusCode, QsQuery, Query};
+use crate::routes::filter::S3ObjectsFilter;
+use crate::routes::header::HeaderParser;
+use crate::routes::pagination::{ListResponse, Pagination};
+use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
+use crate::routes::AppState;
 
 /// The return value for count operations showing the number of records in the database.
 #[derive(Debug, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
@@ -133,13 +136,9 @@ pub async fn list_s3(
     let url = if let Some(url) = state.config().api_links_url() {
         url
     } else {
-        let mut host = request
-            .headers()
-            .get(HOST)
-            .ok_or_else(|| MissingHostHeader)?
-            .to_str()
-            .map_err(|err| ParseError(err.to_string()))?
-            .to_string();
+        let mut host = HeaderParser::new(request.headers())
+            .parse_header(HOST)?
+            .ok_or_else(|| MissingHostHeader)?;
 
         // A `HOST` is not a valid URL yet.
         if !host.starts_with("https://") && !host.starts_with("http://") {
@@ -223,6 +222,9 @@ pub async fn presign_s3(
     filter_all: QsQuery<S3ObjectsFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<Url>>> {
+    let content_type = HeaderParser::new(request.headers()).parse_header(CONTENT_TYPE)?;
+    let content_encoding = HeaderParser::new(request.headers()).parse_header(CONTENT_ENCODING)?;
+
     let Json(ListResponse {
         links,
         pagination,
@@ -243,6 +245,8 @@ pub async fn presign_s3(
             &state,
             result,
             presigned.response_content_disposition(),
+            content_type.clone(),
+            content_encoding.clone(),
         )
         .await?
         {
@@ -264,17 +268,6 @@ pub fn list_router() -> Router<AppState> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::*;
-    use crate::clients::aws::s3;
-    use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::sea_orm_active_enums::EventType;
-    use crate::env::Config;
-    use crate::queries::list::tests::filter_event_type;
-    use crate::queries::update::tests::{assert_contains, entries_many};
-    use crate::queries::update::tests::{change_key, change_many};
-    use crate::queries::EntriesBuilder;
-    use crate::routes::api_router;
-    use crate::routes::pagination::Links;
     use aws_sdk_s3::operation::get_object::GetObjectOutput;
     use aws_sdk_s3::primitives::ByteStream;
     use aws_smithy_mocks_experimental::{mock, mock_client, Rule, RuleMode};
@@ -288,6 +281,20 @@ pub(crate) mod tests {
     use sqlx::PgPool;
     use tower::ServiceExt;
     use uuid::Uuid;
+
+    use crate::clients::aws::s3;
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::entities::sea_orm_active_enums::EventType;
+    use crate::env::Config;
+    use crate::queries::list::tests::filter_event_type;
+    use crate::queries::update::tests::{assert_contains, entries_many};
+    use crate::queries::update::tests::{change_key, change_many};
+    use crate::queries::EntriesBuilder;
+    use crate::routes::api_router;
+    use crate::routes::pagination::Links;
+    use crate::routes::presign::tests::assert_presigned_params;
+
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api(pool: PgPool) {
@@ -419,12 +426,12 @@ pub(crate) mod tests {
 
         let query = result.results()[0].query().unwrap();
         assert!(query.contains("X-Amz-Expires=300"));
-        assert!(query.contains("response-content-disposition=inline"));
+        assert_presigned_params(query, "inline");
+
         assert_eq!(result.results()[0].path(), "/0/0");
 
         let query = result.results()[1].query().unwrap();
-        assert!(query.contains("X-Amz-Expires=300"));
-        assert!(query.contains("response-content-disposition=inline"));
+        assert_presigned_params(query, "inline");
         assert_eq!(result.results()[1].path(), "/2/2");
     }
 
@@ -457,12 +464,11 @@ pub(crate) mod tests {
 
         let query = result.results()[0].query().unwrap();
         assert!(query.contains("X-Amz-Expires=300"));
-        assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%220%22"));
+        assert_presigned_params(query, "attachment%3B%20filename%3D%220%22");
         assert_eq!(result.results()[0].path(), "/0/0");
 
         let query = result.results()[1].query().unwrap();
-        assert!(query.contains("X-Amz-Expires=300"));
-        assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%222%22"));
+        assert_presigned_params(query, "attachment%3B%20filename%3D%222%22");
         assert_eq!(result.results()[1].path(), "/2/2");
     }
 
@@ -781,6 +787,7 @@ pub(crate) mod tests {
                     .uri(uri)
                     .header(HOST, "example.com")
                     .header(CONTENT_TYPE, "application/json")
+                    .header(CONTENT_ENCODING, "gzip")
                     .body(body)
                     .unwrap(),
             )

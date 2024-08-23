@@ -1,14 +1,15 @@
 //! Handles loading environment variables as config options for filemanager.
 //!
 
-use crate::error::Error::ConfigError;
-use crate::error::Result;
 use chrono::Duration;
 use envy::from_env;
 use serde::Deserialize;
 use serde_with::serde_as;
 use serde_with::DurationSeconds;
 use url::Url;
+
+use crate::error::Error::ConfigError;
+use crate::error::Result;
 
 /// Configuration environment variables for filemanager.
 #[serde_as]

@@ -286,11 +286,8 @@ where
 
 #[cfg(test)]
 pub(crate) mod tests {
-
     use std::ops::{Index, Range};
 
-    use crate::queries::{Entries, EntriesBuilder};
-    use crate::routes::filter::wildcard::Wildcard;
     use sea_orm::{ActiveModelTrait, IntoActiveModel};
     use sea_orm::{DatabaseConnection, Set};
     use serde_json::json;
@@ -298,10 +295,12 @@ pub(crate) mod tests {
     use sqlx::PgPool;
 
     use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::Client;
+    use crate::queries::{Entries, EntriesBuilder};
+    use crate::routes::filter::wildcard::Wildcard;
+    use crate::routes::filter::wildcard::WildcardEither;
 
     use super::*;
-    use crate::database::Client;
-    use crate::routes::filter::wildcard::WildcardEither;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_unsupported(pool: PgPool) {

@@ -585,9 +585,10 @@ pub(crate) mod tests {
     use serde_json::json;
     use serde_json::Value;
 
-    use super::*;
     use crate::events::aws::inventory::Manifest;
     use crate::events::aws::tests::EXPECTED_E_TAG;
+
+    use super::*;
 
     const CSV_MANIFEST_SCHEMA: &str = "Bucket, Key, VersionId, IsLatest, IsDeleteMarker, Size, \
                 LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, \

@@ -1,6 +1,17 @@
 //! This module handles API routing.
 //!
 
+use std::sync::Arc;
+
+use axum::http::header::AUTHORIZATION;
+use axum::http::{HeaderValue, Method};
+use axum::Router;
+use chrono::Duration;
+use sqlx::PgPool;
+use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
+use tracing::trace;
+
 use crate::clients::aws::s3;
 use crate::database;
 use crate::env::Config;
@@ -12,19 +23,11 @@ use crate::routes::ingest::ingest_router;
 use crate::routes::list::*;
 use crate::routes::openapi::swagger_ui;
 use crate::routes::update::update_router;
-use axum::http::header::AUTHORIZATION;
-use axum::http::{HeaderValue, Method};
-use axum::Router;
-use chrono::Duration;
-use sqlx::PgPool;
-use std::sync::Arc;
-use tower_http::cors::CorsLayer;
-use tower_http::trace::TraceLayer;
-use tracing::trace;
 
 pub mod error;
 pub mod filter;
 pub mod get;
+pub mod header;
 pub mod ingest;
 pub mod list;
 pub mod openapi;
@@ -168,10 +171,8 @@ pub fn api_router(state: AppState) -> Result<Router> {
 
 #[cfg(test)]
 mod tests {
-    use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::env::Config;
-    use crate::error::Error;
-    use crate::routes::{router, AppState};
+    use std::sync::Arc;
+
     use aws_lambda_events::http::header::ACCESS_CONTROL_ALLOW_HEADERS;
     use aws_lambda_events::http::Request;
     use axum::body::Body;
@@ -182,8 +183,12 @@ mod tests {
     use axum::http::{Method, StatusCode};
     use axum::response::IntoResponse;
     use sqlx::PgPool;
-    use std::sync::Arc;
     use tower::ServiceExt;
+
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::env::Config;
+    use crate::error::Error;
+    use crate::routes::{router, AppState};
 
     #[tokio::test]
     async fn internal_error_into_response() {

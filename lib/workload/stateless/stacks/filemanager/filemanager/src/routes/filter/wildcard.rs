@@ -1,10 +1,11 @@
 //! Wildcard filtering logic.
 //!
 
-use crate::error::Error::ParseError;
-use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+use crate::error::Error::ParseError;
+use crate::error::Result;
 
 /// An enum which deserializes into a concrete type or a wildcard. This is used for better
 /// type support when non-string filter parameters such as `StorageClass` or `EventType`.
@@ -180,10 +181,12 @@ impl Wildcard {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
     use sea_orm::prelude::DateTimeWithTimeZone;
     use serde_json::json;
+
+    use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
+
+    use super::*;
 
     #[test]
     fn deserialize_wildcard_either() {

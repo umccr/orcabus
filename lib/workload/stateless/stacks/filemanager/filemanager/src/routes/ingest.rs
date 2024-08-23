@@ -1,6 +1,13 @@
 //! Route logic for ingesting entries into the database.
 //!
 
+use axum::extract::State;
+use axum::routing::post;
+use axum::{Json, Router};
+use mockall_double::double;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
 #[double]
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
@@ -9,12 +16,6 @@ use crate::error::Result;
 use crate::handlers::aws::receive_and_ingest;
 use crate::routes::error::ErrorStatusCode;
 use crate::routes::AppState;
-use axum::extract::State;
-use axum::routing::post;
-use axum::{Json, Router};
-use mockall_double::double;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 /// The return value for ingest endpoints indicating how many records were processed.
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
@@ -55,10 +56,11 @@ pub fn ingest_router() -> Router<AppState> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use axum::body::Body;
     use axum::http::{Method, Request};
     use sqlx::PgPool;
-    use std::sync::Arc;
     use tower::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;

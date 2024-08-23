@@ -204,12 +204,13 @@ pub async fn update_credentials(
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::future::Future;
+
     use aws_lambda_events::sqs::SqsMessage;
     use chrono::DateTime;
     use sqlx::postgres::PgRow;
-    use std::future::Future;
+    use sqlx::PgPool;
 
-    use super::*;
     use crate::database::aws::ingester::tests::{
         assert_row, expected_message, fetch_results, remove_version_ids, replace_sequencers,
         test_events, test_ingester,
@@ -232,7 +233,8 @@ pub(crate) mod tests {
     };
     use crate::events::aws::FlatS3EventMessage;
     use crate::events::EventSourceType::S3;
-    use sqlx::PgPool;
+
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_receive_and_ingest(pool: PgPool) {
