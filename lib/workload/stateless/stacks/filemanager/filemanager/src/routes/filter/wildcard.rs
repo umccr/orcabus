@@ -149,7 +149,7 @@ impl Wildcard {
     pub fn contains_wildcard(&self) -> bool {
         !self.wildcard_positions().0.is_empty()
     }
-    
+
     /// Convert this wildcard to a postgres jsonbpath `like_regex` string, escaping relevant characters.
     pub fn to_like_regex(&self) -> Result<String> {
         // Valid postgres regex characters need to be escaped.
