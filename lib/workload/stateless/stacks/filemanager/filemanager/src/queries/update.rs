@@ -57,12 +57,12 @@ where
     }
 
     /// Filter records by all fields in the filter variable.
-    pub fn filter_all(mut self, filter: S3ObjectsFilter, case_sensitive: bool) -> Self {
-        self.select_to_update = self.select_to_update.filter_all(filter, case_sensitive);
+    pub fn filter_all(mut self, filter: S3ObjectsFilter, case_sensitive: bool) -> Result<Self> {
+        self.select_to_update = self.select_to_update.filter_all(filter, case_sensitive)?;
 
         self.trace_query("filter_all");
 
-        self
+        Ok(self)
     }
 
     /// Update the current state according to `ListQueryBuilder::current_state`.
@@ -411,7 +411,7 @@ pub(crate) mod tests {
             &client,
             patch,
             Some(json!({
-                "attributeId": "%a%"
+                "attributeId": "*a*"
             })),
         )
         .await;
@@ -454,6 +454,7 @@ pub(crate) mod tests {
                 },
                 true,
             )
+            .unwrap()
             .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
             .unwrap()
@@ -492,12 +493,13 @@ pub(crate) mod tests {
             .filter_all(
                 S3ObjectsFilter {
                     event_time: Some(WildcardEither::Wildcard(Wildcard::new(
-                        "1970-01-0%".to_string(),
+                        "1970-01-0*".to_string(),
                     ))),
                     ..Default::default()
                 },
                 true,
             )
+            .unwrap()
             .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
             .unwrap()
@@ -652,6 +654,7 @@ pub(crate) mod tests {
                 },
                 true,
             )
+            .unwrap()
             .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
             .await
     }
@@ -731,6 +734,18 @@ pub(crate) mod tests {
         let mut model: s3_object::ActiveModel =
             entries.s3_objects[entry].clone().into_active_model();
         model.attributes = Set(value);
+        model.update(client.connection_ref()).await.unwrap();
+    }
+
+    pub(crate) async fn change_key(
+        client: &Client,
+        entries: &Entries,
+        entry: usize,
+        value: String,
+    ) {
+        let mut model: s3_object::ActiveModel =
+            entries.s3_objects[entry].clone().into_active_model();
+        model.key = Set(value);
         model.update(client.connection_ref()).await.unwrap();
     }
 

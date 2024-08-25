@@ -92,7 +92,7 @@ pub async fn presign_s3_by_id(
                 ..Default::default()
             },
             true,
-        )
+        )?
         .all()
         .await?;
 

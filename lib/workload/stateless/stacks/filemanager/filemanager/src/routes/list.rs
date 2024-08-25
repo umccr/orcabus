@@ -124,7 +124,7 @@ pub async fn list_s3(
     let txn = state.database_client().connection_ref().begin().await?;
 
     let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(&txn)
-        .filter_all(filter_all.clone(), wildcard.case_sensitive());
+        .filter_all(filter_all.clone(), wildcard.case_sensitive())?;
 
     if list.current_state {
         response = response.current_state();
@@ -191,7 +191,7 @@ pub async fn count_s3(
 ) -> Result<Json<ListCount>> {
     let mut response =
         ListQueryBuilder::<_, s3_object::Entity>::new(state.database_client.connection_ref())
-            .filter_all(filter_all, wildcard.case_sensitive());
+            .filter_all(filter_all, wildcard.case_sensitive())?;
 
     if list.current_state {
         response = response.current_state();
@@ -264,6 +264,17 @@ pub fn list_router() -> Router<AppState> {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use super::*;
+    use crate::clients::aws::s3;
+    use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::entities::sea_orm_active_enums::EventType;
+    use crate::env::Config;
+    use crate::queries::list::tests::filter_event_type;
+    use crate::queries::update::tests::{assert_contains, entries_many};
+    use crate::queries::update::tests::{change_key, change_many};
+    use crate::queries::EntriesBuilder;
+    use crate::routes::api_router;
+    use crate::routes::pagination::Links;
     use aws_sdk_s3::operation::get_object::GetObjectOutput;
     use aws_sdk_s3::primitives::ByteStream;
     use aws_smithy_mocks_experimental::{mock, mock_client, Rule, RuleMode};
@@ -271,22 +282,12 @@ pub(crate) mod tests {
     use axum::body::Body;
     use axum::http::header::CONTENT_TYPE;
     use axum::http::{Method, Request, StatusCode};
+    use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
     use serde::de::DeserializeOwned;
     use serde_json::{from_slice, json};
     use sqlx::PgPool;
     use tower::ServiceExt;
-
-    use super::*;
-    use crate::clients::aws::s3;
-    use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::sea_orm_active_enums::EventType;
-    use crate::env::Config;
-    use crate::queries::list::tests::filter_event_type;
-    use crate::queries::update::tests::change_many;
-    use crate::queries::update::tests::{assert_contains, entries_many};
-    use crate::queries::EntriesBuilder;
-    use crate::routes::api_router;
-    use crate::routes::pagination::Links;
+    use uuid::Uuid;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api(pool: PgPool) {
@@ -550,6 +551,43 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_filter_wildcard(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await;
+
+        let value = "test-!)regex_%like";
+        change_key(state.database_client(), &entries, 0, value.to_string()).await;
+        change_key(state.database_client(), &entries, 1, value.to_string()).await;
+        entries.s3_objects[0].key = value.to_string();
+        entries.s3_objects[1].key = value.to_string();
+
+        let s3_objects: ListResponse<S3> = response_from_get(state.clone(), "/s3?key=te*").await;
+        assert_contains(s3_objects.results(), &entries, 0..2);
+        assert_eq!(s3_objects.pagination().count, 2);
+
+        let query = percent_encode("tes?-!)regex_%like".as_bytes(), NON_ALPHANUMERIC).to_string();
+        let s3_objects: ListResponse<S3> =
+            response_from_get(state.clone(), &format!("/s3?key={query}")).await;
+        assert_contains(s3_objects.results(), &entries, 0..2);
+        assert_eq!(s3_objects.pagination().count, 2);
+
+        let query = percent_encode("test???regex??like".as_bytes(), NON_ALPHANUMERIC).to_string();
+        let s3_objects: ListResponse<S3> =
+            response_from_get(state.clone(), &format!("/s3?key={query}")).await;
+        assert_contains(s3_objects.results(), &entries, 0..2);
+        assert_eq!(s3_objects.pagination().count, 2);
+
+        let query = percent_encode("test-!)regex_%like".as_bytes(), NON_ALPHANUMERIC).to_string();
+        let s3_objects: ListResponse<S3> =
+            response_from_get(state.clone(), &format!("/s3?key={query}")).await;
+        assert_contains(s3_objects.results(), &entries, 0..2);
+        assert_eq!(s3_objects.pagination().count, 2);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_filter_attributes(pool: PgPool) {
         let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
@@ -602,18 +640,75 @@ pub(crate) mod tests {
         entries_many(&mut entries, &[0, 1], json!({"attributeId": "attributeId"}));
 
         let s3_objects: ListResponse<S3> =
-            response_from_get(state.clone(), "/s3?attributes[attributeId]=%a%").await;
+            response_from_get(state.clone(), "/s3?attributes[attributeId]=*a*").await;
         assert_contains(s3_objects.results(), &entries, 0..2);
         assert_eq!(s3_objects.pagination().count, 2);
 
         let s3_objects: ListResponse<S3> =
-            response_from_get(state.clone(), "/s3?attributes[attributeId]=%A%").await;
+            response_from_get(state.clone(), "/s3?attributes[attributeId]=*A*").await;
         assert!(s3_objects.results().is_empty());
         assert_eq!(s3_objects.pagination().count, 0);
 
         let s3_objects: ListResponse<S3> = response_from_get(
             state.clone(),
-            "/s3?attributes[attributeId]=%A%&caseSensitive=false",
+            "/s3?attributes[attributeId]=*A*&caseSensitive=false",
+        )
+        .await;
+        assert_contains(s3_objects.results(), &entries, 0..2);
+        assert_eq!(s3_objects.pagination().count, 2);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_filter_escaped_attributes_wildcard(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let mut entries = EntriesBuilder::default()
+            .build(state.database_client())
+            .await;
+
+        change_many(
+            state.database_client(),
+            &entries,
+            &[0, 1],
+            Some(json!({"attributeId": Uuid::default()})),
+        )
+        .await;
+        entries_many(
+            &mut entries,
+            &[0, 1],
+            json!({"attributeId": Uuid::default()}),
+        );
+
+        let s3_objects: ListResponse<S3> = response_from_get(
+            state.clone(),
+            "/s3?attributes[attributeId]=????????-????-????-????-????????????",
+        )
+        .await;
+        assert_contains(s3_objects.results(), &entries, 0..2);
+        assert_eq!(s3_objects.pagination().count, 2);
+
+        let s3_objects: ListResponse<S3> =
+            response_from_get(state.clone(), "/s3?attributes[attributeId]=*-*-*-*-*").await;
+        assert_contains(s3_objects.results(), &entries, 0..2);
+        assert_eq!(s3_objects.pagination().count, 2);
+
+        change_many(
+            state.database_client(),
+            &entries,
+            &[0, 1],
+            Some(json!({"attributeId": r"!$()*+.:<=>?[\]^{|}-"})),
+        )
+        .await;
+        entries_many(
+            &mut entries,
+            &[0, 1],
+            json!({"attributeId": r"!$()*+.:<=>?[\]^{|}-"}),
+        );
+
+        let query =
+            percent_encode(r"!$()\*+.:<=>\?[\\]^{|}-".as_bytes(), NON_ALPHANUMERIC).to_string();
+        let s3_objects: ListResponse<S3> = response_from_get(
+            state.clone(),
+            &format!("/s3?attributes[attributeId]={query}"),
         )
         .await;
         assert_contains(s3_objects.results(), &entries, 0..2);

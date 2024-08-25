@@ -104,26 +104,28 @@ curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "attributes[portal
 
 ### Wilcard matching
 
-The API supports using wildcards to match multiple characters in a value for most field. Use `%` to match multiple characters
-and `_` to match one character. These queries get converted to postgres `like` queries under the hood. For example, query
-on a key prefix:
+The API supports using wildcards to match multiple characters in a value for most field. Use `*` to match multiple characters
+and `?` to match one character. Use a backslash character to match a literal `*` or `?` in the query. Another backslash can be used
+to escape itself. No other escape characters are supported.
+
+These get converted to postgres `like` queries under the hood. For example, query on a key prefix:
 
 ```sh
-curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "key=temp\_data%" \
+curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "key=temp_data*" \
 "https://file.dev.umccr.org/api/v1/s3" | jq
 ```
 
 Case-insensitive wildcard matching, which gets converted to a postgres `ilike` statement, is supported by using `caseSensitive`:
 
 ```sh
-curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "key=temp\_data%" \
+curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "key=temp_data*" \
 "https://file.dev.umccr.org/api/v1/s3?caseSensitive=false" | jq
 ```
 
-Wildcard matching is also supported on attributes:
+Wildcard matching is also supported on attributes, which get converted to jsonpath `like_regex` queries:
 
 ```sh
-curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "attributes[portalRunId]=20240521%" \
+curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "attributes[portalRunId]=20240521*" \
 "https://file.dev.umccr.org/api/v1/s3" | jq
 ```
 
@@ -147,7 +149,7 @@ Or, update attributes for multiple records with the same key prefix:
 ```sh
 curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
 --data '[ { "op": "add", "path": "/portalRunId", "value": "portalRunIdValue" } ]' \
-"https://file.dev.umccr.org/api/v1/s3?key=%25202405212aecb782%25" | jq
+"https://file.dev.umccr.org/api/v1/s3?key=*202405212aecb782*" | jq
 ```
 
 ## Count objects

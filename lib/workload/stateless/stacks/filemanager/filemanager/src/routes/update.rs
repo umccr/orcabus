@@ -132,7 +132,7 @@ pub async fn update_s3_collection_attributes(
     let txn = state.database_client().connection_ref().begin().await?;
 
     let mut results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
-        .filter_all(filter_all, wildcard.case_sensitive());
+        .filter_all(filter_all, wildcard.case_sensitive())?;
 
     if list.current_state() {
         results = results.current_state();
@@ -450,7 +450,7 @@ mod tests {
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3?attributes[attributeId]=%a%",
+            "/s3?attributes[attributeId]=*a*",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
@@ -487,7 +487,7 @@ mod tests {
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3?attributes[attributeId]=%A%",
+            "/s3?attributes[attributeId]=*A*",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
@@ -496,7 +496,7 @@ mod tests {
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3?attributes[attributeId]=%A%&caseSensitive=false",
+            "/s3?attributes[attributeId]=*A*&caseSensitive=false",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
@@ -527,7 +527,7 @@ mod tests {
 
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
-            "/s3?currentState=true&eventTime=1970-01-0%",
+            "/s3?currentState=true&eventTime=1970-01-0*",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
@@ -559,7 +559,7 @@ mod tests {
         let (_, s3_objects) = response_from::<Vec<S3>>(
             state.clone(),
             // Percent-encoding should work too.
-            "/s3?caseSensitive=false&currentState=true&eventTime=1970-01-_%25",
+            "/s3?caseSensitive=false&currentState=true&eventTime=1970-01-?%2A",
             Method::PATCH,
             Body::new(patch.to_string()),
         )
