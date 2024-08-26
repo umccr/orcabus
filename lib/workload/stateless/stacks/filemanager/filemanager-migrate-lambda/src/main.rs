@@ -1,33 +1,15 @@
-use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-use serde::de::IgnoredAny;
-use serde::Deserialize;
-
-use crate::CloudFormationRequest::Delete;
-use crate::Event::Provider;
+use aws_lambda_events::cloudformation::provider::CloudFormationCustomResourceRequest;
+use aws_sdk_cloudformation::types::StackStatus;
+use aws_sdk_cloudformation::Client;
+use filemanager::clients::aws::config;
 use filemanager::database::aws::migration::Migration;
 use filemanager::database::Client as DbClient;
 use filemanager::database::Migrate;
 use filemanager::env::Config;
 use filemanager::handlers::aws::{create_database_pool, update_credentials};
 use filemanager::handlers::init_tracing;
-
-/// The lambda event for this function. This is normally a CloudFormationCustomResourceRequest.
-/// If anything else is present, the migrate lambda will still attempt to perform a migration.
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-pub enum Event {
-    Provider(CloudFormationRequest),
-    Ignored(IgnoredAny),
-}
-
-/// Deserialize only the Delete type because this is the only event with different behaviour.
-/// Todo, replace with `provider::CloudFormationCustomResourceRequest` when it gets released:
-/// https://github.com/awslabs/aws-lambda-rust-runtime/pull/846
-#[derive(Debug, Deserialize)]
-#[serde(tag = "RequestType")]
-pub enum CloudFormationRequest {
-    Delete,
-}
+use lambda_runtime::{run, service_fn, Error, LambdaEvent};
+use tracing::trace;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -35,84 +17,71 @@ async fn main() -> Result<(), Error> {
 
     let config = &Config::load()?;
     let options = &create_database_pool(config).await?;
-    run(service_fn(|event: LambdaEvent<Event>| async move {
-        update_credentials(options, config).await?;
+    let cfn_client = &Client::new(&config::Config::with_defaults().await.load());
 
-        // Migrate depending on the type of lifecycle event using the CDK provider framework:
-        // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.custom_resources-readme.html#provider-framework
-        //
-        // Note, we don't care what's contained within the event, as the action will always be
-        // to try and migrate unless this is a Delete event.
-        match event.payload {
-            // If it's a Delete there's no need to do anything.
-            Provider(Delete) => Ok(()),
-            _ => {
-                // If there's nothing to migrate, then this will just return Ok.
-                Ok::<_, Error>(
-                    Migration::new(DbClient::new(options.clone()))
-                        .migrate()
-                        .await?,
-                )
+    run(service_fn(
+        |event: LambdaEvent<CloudFormationCustomResourceRequest>| async move {
+            update_credentials(options, config).await?;
+
+            // Migrate depending on the type of lifecycle event using the CDK provider framework:
+            // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.custom_resources-readme.html#provider-framework
+            match event.payload {
+                // Migrate normally if this resource is being created.
+                CloudFormationCustomResourceRequest::Create(create) => {
+                    trace!(create = ?create, "during create");
+
+                    Ok::<_, Error>(
+                        Migration::new(DbClient::new(options.clone()))
+                            .migrate()
+                            .await?,
+                    )
+                }
+                // If this is an update event, then we need to check if a rollback is in progress.
+                CloudFormationCustomResourceRequest::Update(update) => {
+                    trace!(update = ?update, "during update");
+
+                    // Find the state of the top-level stack which is being updated. This will
+                    // contain a status indicating if this is the first update, or a rollback update.
+                    let stack_state = cfn_client
+                        .describe_stacks()
+                        .stack_name(update.common.stack_id.as_str())
+                        .send()
+                        .await?
+                        .stacks
+                        .and_then(|stacks| {
+                            stacks.into_iter().find(|stack| {
+                                stack.stack_id() == Some(update.common.stack_id.as_str())
+                            })
+                        })
+                        .and_then(|stack| stack.stack_status);
+
+                    // Only migrate when this is a normal update.
+                    if let Some(ref status) = stack_state {
+                        trace!(stack_state = ?stack_state);
+
+                        if let StackStatus::UpdateInProgress = status {
+                            return Ok::<_, Error>(
+                                Migration::new(DbClient::new(options.clone()))
+                                    .migrate()
+                                    .await?,
+                            );
+                        }
+                    }
+
+                    // If this was a rollback update, then no migration should be performed,
+                    // because the previous update indicated a failed migration, and the migration
+                    // would have already been rolled back. If a migration occurred here it would
+                    // just fail again, resulting in an `UPDATE_ROLLBACK_FAILED`.
+                    Ok(())
+                }
+                // If this is a delete event, there is nothing to do.
+                CloudFormationCustomResourceRequest::Delete(delete) => {
+                    trace!(delete = ?delete, "during delete");
+
+                    Ok(())
+                }
             }
-        }
-    }))
+        },
+    ))
     .await
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::CloudFormationRequest::Delete;
-    use crate::Event::Ignored;
-    use serde_json::{from_value, json};
-
-    #[test]
-    fn event_deserialize_provider_delete() {
-        // From https://github.com/awslabs/aws-lambda-rust-runtime/blob/a68de584154958c524692cb43dc208d520d05a13/lambda-events/src/fixtures/example-cloudformation-custom-resource-provider-delete-request.json
-        let event = json!({
-            "RequestType": "Delete",
-            "RequestId": "ef70561d-d4ba-42a4-801b-33ad88dafc37",
-            "StackId": "arn:aws:cloudformation:us-east-1:123456789012:stack/stack-name/16580499-7622-4a9c-b32f-4eba35da93da",
-            "ResourceType": "Custom::MyCustomResourceType",
-            "LogicalResourceId": "CustomResource",
-            "PhysicalResourceId": "custom-resource-f4bd5382-3de3-4caf-b7ad-1be06b899647",
-            "ResourceProperties": {
-                "Key1" : "string",
-                "Key2" : ["list"],
-                "Key3" : { "Key4": "map" }
-            }
-        });
-
-        // A Provider lifecycle event should deserialize into the Provider enum.
-        assert!(matches!(from_value(event).unwrap(), Provider(Delete)));
-    }
-
-    #[test]
-    fn event_deserialize_ignored_create() {
-        // From https://github.com/awslabs/aws-lambda-rust-runtime/blob/a68de584154958c524692cb43dc208d520d05a13/lambda-events/src/fixtures/example-cloudformation-custom-resource-provider-create-request.json
-        let event = json!({
-            "RequestType": "Create",
-            "RequestId": "82304eb2-bdda-469f-a33b-a3f1406d0a52",
-            "StackId": "arn:aws:cloudformation:us-east-1:123456789012:stack/stack-name/16580499-7622-4a9c-b32f-4eba35da93da",
-            "ResourceType": "Custom::MyCustomResourceType",
-            "LogicalResourceId": "CustomResource",
-            "ResourceProperties": {
-                "Key1": "string",
-                "Key2": ["list"],
-                "Key3": { "Key4": "map" }
-            }
-        });
-
-        // Any non-deleted cloud formation event data should be ignored.
-        assert!(matches!(from_value(event).unwrap(), Ignored(IgnoredAny)));
-    }
-
-    #[test]
-    fn event_deserialize_ignored_empty() {
-        // Any other data should deserialize into the Ignored enum.
-        assert!(matches!(
-            from_value(json!({})).unwrap(),
-            Ignored(IgnoredAny)
-        ));
-    }
 }

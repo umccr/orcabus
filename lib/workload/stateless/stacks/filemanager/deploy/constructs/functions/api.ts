@@ -6,7 +6,7 @@ import { BucketProps } from './ingest';
 /**
  * Props for the API function.
  */
-export type ApiFunctionProps = fn.FunctionPropsNoPackage & DatabaseProps & BucketProps;
+export type ApiFunctionProps = fn.FunctionPropsConfigurable & DatabaseProps & BucketProps;
 
 /**
  * A construct for the Lambda API function.

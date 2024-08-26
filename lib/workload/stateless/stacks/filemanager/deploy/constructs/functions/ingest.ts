@@ -28,7 +28,7 @@ export type EventSourceProps = {
 /**
  * Props for the ingest function.
  */
-export type IngestFunctionProps = fn.FunctionPropsNoPackage & DatabaseProps & EventSourceProps;
+export type IngestFunctionProps = fn.FunctionPropsConfigurable & DatabaseProps & EventSourceProps;
 
 /**
  * A construct for the Lambda ingest function.
