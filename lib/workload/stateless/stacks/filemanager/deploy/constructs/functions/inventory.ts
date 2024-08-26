@@ -19,7 +19,7 @@ export type InventoryFunctionConfig = {
 /**
  * Props for the inventory function.
  */
-export type InventoryFunctionProps = fn.FunctionPropsNoPackage &
+export type InventoryFunctionProps = fn.FunctionPropsConfigurable &
   DatabaseProps &
   InventoryFunctionConfig;
 
