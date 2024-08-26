@@ -1,7 +1,8 @@
 import { Construct } from 'constructs';
 import * as fn from './function';
 import { DatabaseProps } from './function';
-import { Duration } from 'aws-cdk-lib';
+import { Duration, Stack } from 'aws-cdk-lib';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 /**
  * Props for the migrate function.
@@ -18,5 +19,13 @@ export class MigrateFunction extends fn.Function {
       timeout: Duration.minutes(2),
       ...props,
     });
+
+    // Need to be able to determine if the stack is in rollback state.
+    this.addToPolicy(
+      new PolicyStatement({
+        actions: ['cloudformation:DescribeStacks'],
+        resources: [Stack.of(this).stackId],
+      })
+    );
   }
 }
