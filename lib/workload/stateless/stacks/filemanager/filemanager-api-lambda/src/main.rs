@@ -1,18 +1,19 @@
+use std::sync::Arc;
+
 use axum::extract::{Request, State};
 use axum::middleware::{from_fn_with_state, Next};
 use axum::response::{IntoResponse, Response};
-use filemanager::env::Config;
+use lambda_http::run;
 use lambda_http::Error;
-use std::sync::Arc;
+use tracing::debug;
 
 use filemanager::clients::aws::s3;
 use filemanager::database::Client;
+use filemanager::env::Config;
 use filemanager::handlers::aws::{create_database_pool, update_credentials};
 use filemanager::handlers::init_tracing;
 use filemanager::routes::error::{ErrorResponse, ErrorStatusCode};
 use filemanager::routes::{router, AppState};
-use lambda_http::run;
-use tracing::debug;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

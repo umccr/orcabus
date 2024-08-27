@@ -1,16 +1,16 @@
 //! This module handles connecting to the filemanager database for actions such as ingesting events.
 //!
 
-use crate::database::aws::credentials::IamGenerator;
-use crate::database::aws::ingester::Ingester;
-use crate::database::aws::ingester_paired::IngesterPaired;
-use crate::env::Config;
 use async_trait::async_trait;
 use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
 use tracing::debug;
 
+use crate::database::aws::credentials::IamGenerator;
+use crate::database::aws::ingester::Ingester;
+use crate::database::aws::ingester_paired::IngesterPaired;
+use crate::env::Config;
 use crate::error::Result;
 use crate::events::EventSourceType;
 

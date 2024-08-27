@@ -19,7 +19,8 @@ services:
       # Container database address for running server inside a docker container.
       - DATABASE_URL=postgresql://filemanager:filemanager@postgres:4321/filemanager
       - RUST_LOG=debug
-      - FILEMANAGER_API_CORS_ALLOW_ORIGINS=${FILEMANAGER_API_CORS_ALLOW_ORIGINS:-http://localhost:8000}
+      - FILEMANAGER_API_CORS_ALLOW_ORIGINS=${FILEMANAGER_API_CORS_ALLOW_ORIGINS:-http://localhost:3000}
+      - FILEMANAGER_API_CORS_ALLOW_HEADERS=${FILEMANAGER_API_CORS_ALLOW_HEADERS:-accept,authorization,content-type,user-agent,x-csrftoken,x-requested-with,x-amz-security-token,x-amz-date,content-disposition}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-access_key_id}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-secret_access_key}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-southeast-2}

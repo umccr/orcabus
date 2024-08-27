@@ -154,15 +154,14 @@ pub fn update_router() -> Router<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use crate::queries::update::tests::{assert_contains, entries_many};
     use axum::body::Body;
     use axum::http::{Method, StatusCode};
     use serde_json::json;
+    use serde_json::Value;
     use sqlx::PgPool;
 
     use crate::database::aws::migration::tests::MIGRATOR;
-
-    use super::*;
+    use crate::queries::update::tests::{assert_contains, entries_many};
     use crate::queries::update::tests::{
         assert_correct_records, assert_model_contains, assert_wildcard_update,
         change_attribute_entries, change_attributes, change_many,
@@ -170,7 +169,8 @@ mod tests {
     use crate::queries::EntriesBuilder;
     use crate::routes::list::tests::response_from;
     use crate::uuid::UuidGenerator;
-    use serde_json::Value;
+
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attribute_api_unsupported(pool: PgPool) {

@@ -1,7 +1,9 @@
 //! Error related parsing code specific to HTTP routes and responses.
 //!
 
-use crate::error::Error;
+use std::fmt;
+use std::fmt::{Debug, Display, Formatter};
+
 use aws_lambda_events::http::StatusCode;
 use axum::extract;
 use axum::extract::rejection::{JsonRejection, PathRejection, QueryRejection};
@@ -10,10 +12,10 @@ use axum_extra::extract::WithRejection;
 use sea_orm::DbErr;
 use serde::{Deserialize, Serialize};
 use serde_qs::axum::QsQueryRejection;
-use std::fmt;
-use std::fmt::{Debug, Display, Formatter};
 use thiserror::Error;
 use utoipa::{IntoResponses, ToSchema};
+
+use crate::error::Error;
 
 /// Type alias for a Query with a custom rejection.
 pub type Query<T> = WithRejection<extract::Query<T>, ErrorStatusCode>;

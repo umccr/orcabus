@@ -1,7 +1,8 @@
+use miette::Result;
+
 use filemanager_build::gen_entities::generate_entities;
 use filemanager_build::gen_openapi::generate_openapi;
 use filemanager_build::rebuild_if_changed;
-use miette::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {

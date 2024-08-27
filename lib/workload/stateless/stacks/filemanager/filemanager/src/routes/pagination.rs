@@ -1,14 +1,16 @@
 //! Pagination structs and logic for API routes.
 //!
 
+use std::num::NonZeroU64;
+use std::result;
+
+use serde::{Deserialize, Deserializer, Serialize};
+use url::Url;
+use utoipa::{IntoParams, ToSchema};
+
 use crate::database::entities::s3_object::Model as S3;
 use crate::error::Error::OverflowError;
 use crate::error::{Error, Result};
-use serde::{Deserialize, Deserializer, Serialize};
-use std::num::NonZeroU64;
-use std::result;
-use url::Url;
-use utoipa::{IntoParams, ToSchema};
 
 /// The response type for list operations.
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
@@ -221,13 +223,14 @@ mod tests {
     use axum::http::Method;
     use sqlx::PgPool;
 
-    use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::s3_object::Model as S3Object;
     use crate::queries::EntriesBuilder;
     use crate::routes::error::ErrorResponse;
     use crate::routes::list::tests::{response_from, response_from_get};
     use crate::routes::AppState;
+
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_paginate(pool: PgPool) {

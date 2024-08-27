@@ -1,7 +1,8 @@
 //! A mockable wrapper around the S3 client.
 //!
 
-use crate::clients::aws::config::Config;
+use std::result;
+
 use aws_sdk_s3 as s3;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
@@ -11,7 +12,8 @@ use aws_sdk_s3::presigning::{PresignedRequest, PresigningConfig};
 use aws_sdk_s3::types::ChecksumMode::Enabled;
 use chrono::Duration;
 use mockall::automock;
-use std::result;
+
+use crate::clients::aws::config::Config;
 
 pub type Result<T, E> = result::Result<T, SdkError<E>>;
 
@@ -74,11 +76,15 @@ impl Client {
         key: &str,
         bucket: &str,
         response_content_disposition: &str,
+        response_content_type: Option<String>,
+        response_content_encoding: Option<String>,
         expires_in: Duration,
     ) -> Result<PresignedRequest, GetObjectError> {
         self.inner
             .get_object()
             .response_content_disposition(response_content_disposition)
+            .set_response_content_type(response_content_type)
+            .set_response_content_encoding(response_content_encoding)
             .key(key)
             .bucket(bucket)
             .presigned(
