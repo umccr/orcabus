@@ -69,7 +69,7 @@ def handler(event, context):
     wfr.save()
 
     # create the related state & payload entries for the WRSC
-    create_workflow_run_state(wrsc=wrsc, wfr=wfr)
+    # create_workflow_run_state(wrsc=wrsc, wfr=wfr)  # FIXME State creation is "time window" WRSC timestamp dependant
 
     # if the workflow run is linked to library record(s), create the association(s)
     input_libraries: list[LibraryRecord] = wrsc.linkedLibraries
