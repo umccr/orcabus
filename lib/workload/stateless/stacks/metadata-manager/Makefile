@@ -57,6 +57,9 @@ s3-load: s3-dump-download-if-not-exists db-load-data
 # application
 
 start: migrate
+	@python manage.py runserver
+
+docker-start: migrate
 	@python manage.py runserver 0.0.0.0:8000
 
 stop: down

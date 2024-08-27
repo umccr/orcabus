@@ -1,5 +1,7 @@
 import logging
 
+import ulid
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import QuerySet
 from simple_history.models import HistoricalRecords
@@ -35,9 +37,11 @@ class SpecimenManager(BaseManager):
 
 
 class Specimen(BaseModel):
+    orcabus_id_prefix = 'spc'
+
     objects = SpecimenManager()
 
-    internal_id = models.CharField(
+    specimen_id = models.CharField(
         unique=True,
         blank=True,
         null=True
@@ -46,3 +50,8 @@ class Specimen(BaseModel):
     subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True)
 
     history = HistoricalRecords()
+
+    def save(self, *args, **kwargs):
+        if not self.orcabus_id:
+            self.orcabus_id = self.orcabus_id_prefix + '.' + ulid.new().str
+        super().save(*args, **kwargs)

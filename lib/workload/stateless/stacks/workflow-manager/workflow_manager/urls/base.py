@@ -4,6 +4,8 @@ from workflow_manager.routers import OptionalSlashDefaultRouter
 from workflow_manager.viewsets.workflow import WorkflowViewSet
 from workflow_manager.viewsets.workflow_run import WorkflowRunViewSet
 from workflow_manager.viewsets.payload import PayloadViewSet
+from workflow_manager.viewsets.state import StateViewSet
+from workflow_manager.viewsets.library import LibraryViewSet
 from workflow_manager.settings.base import API_VERSION
 
 api_namespace = "api"
@@ -14,6 +16,18 @@ router = OptionalSlashDefaultRouter()
 router.register(r"workflow", WorkflowViewSet, basename="workflow")
 router.register(r"workflowrun", WorkflowRunViewSet, basename="workflowrun")
 router.register(r"payload", PayloadViewSet, basename="payload")
+
+router.register(
+    "workflowrun/(?P<workflowrun_id>[^/.]+)/state",
+    StateViewSet,
+    basename="workflowrun-state",
+)
+
+router.register(
+    "workflowrun/(?P<workflowrun_id>[^/.]+)/library",
+    LibraryViewSet,
+    basename="workflowrun-library",
+)
 
 urlpatterns = [
     path(f"{api_base}", include(router.urls)),

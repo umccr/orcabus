@@ -549,6 +549,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-cloudformation"
+version = "1.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ace4f1ef88afc41ef46a3343ce9ac49f78e0d03dbf749ed27e9f032004f1581"
+dependencies = [
+ "aws-credential-types",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-query",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-smithy-xml",
+ "aws-types",
+ "fastrand",
+ "http 0.2.12",
+ "once_cell",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
 name = "aws-sdk-s3"
 version = "1.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2260,6 +2284,7 @@ dependencies = [
 name = "filemanager-migrate-lambda"
 version = "0.1.0"
 dependencies = [
+ "aws-sdk-cloudformation",
  "aws_lambda_events",
  "filemanager",
  "lambda_runtime",

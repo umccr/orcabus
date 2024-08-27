@@ -40,6 +40,7 @@ make ps
 ```
 python manage.py help
 python manage.py showmigrations
+python manage.py makemigrations
 python manage.py migrate
 ```
 
@@ -50,7 +51,7 @@ _^^^ please make sure to run `python manage.py migrate` first! ^^^_
 #### Generate Workflow Record
 
 ```
-python manage.py help generate_mock_data
+python manage.py help generate_mock_workflow_run
     > Generate mock Workflow data into database for local development and testing
 ```
 
@@ -73,17 +74,17 @@ python manage.py runserver_plus
 ```
 
 ```
-curl -s http://localhost:8000/wfm/v1/workflow | jq
+curl -s http://localhost:8000/api/v1/workflow | jq
 ```
 
 ```
-curl -s http://localhost:8000/wfm/v1/workflow/1 | jq
+curl -s http://localhost:8000/api/v1/workflow/1 | jq
 ```
 
 Or visit in browser:
-- http://localhost:8000/wfm/v1
-- http://localhost:8000/wfm/v1/workflow
-- http://localhost:8000/wfm/v1/workflow/1
+- http://localhost:8000/api/v1
+- http://localhost:8000/api/v1/workflow
+- http://localhost:8000/api/v1/workflow/1
 
 ### API Doc
 
