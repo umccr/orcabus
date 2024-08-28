@@ -70,7 +70,8 @@ class WorkflowRunUtil:
                 return True
             else:
                 logger.error(f"WorkflowRun does not have state yet, but new state is not DRAFT: {new_state}")
-                return False
+                self.persist_state(new_state)  # FIXME: remove once convention is enforced
+                return True
 
         # Ignore any state that's older than the current one
         if new_state.timestamp < self.get_current_state().timestamp:
