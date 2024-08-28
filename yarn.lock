@@ -36,6 +36,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aws-cdk/aws-lambda-go-alpha@npm:^2.154.1-alpha.0":
+  version: 2.154.1-alpha.0
+  resolution: "@aws-cdk/aws-lambda-go-alpha@npm:2.154.1-alpha.0"
+  peerDependencies:
+    aws-cdk-lib: ^2.154.1
+    constructs: ^10.0.0
+  checksum: 10/54ee0471035ac77dc9a9d3c1fbfce9301e04938c90ebd7b1543c369cdd7cc4f61d09ab6e93951da8f7ffab56cd8691b87618d604ecc0443d0e07404dd05d32e9
+  languageName: node
+  linkType: hard
+
 "@aws-cdk/aws-lambda-python-alpha@npm:2.152.0-alpha.0":
   version: 2.152.0-alpha.0
   resolution: "@aws-cdk/aws-lambda-python-alpha@npm:2.152.0-alpha.0"
@@ -4022,6 +4032,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "orcabus@workspace:."
   dependencies:
+    "@aws-cdk/aws-lambda-go-alpha": "npm:^2.154.1-alpha.0"
     "@aws-cdk/aws-lambda-python-alpha": "npm:2.152.0-alpha.0"
     "@aws-cdk/aws-pipes-alpha": "npm:^2.152.0-alpha.0"
     "@aws-cdk/aws-pipes-sources-alpha": "npm:^2.152.0-alpha.0"

@@ -43,6 +43,7 @@ import {
   getUmccriseIcav2PipelineManagerStackProps,
   getUmccriseIcav2PipelineTableStackProps,
 } from './stacks/umccrisePipelineManager';
+import { getAttributeLinkerProps } from './stacks/attributeLinker';
 
 interface EnvironmentConfig {
   name: string;
@@ -96,6 +97,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
       workflowManagerStackProps: getWorkflowManagerStackProps(stage),
       stackyMcStackFaceProps: getGlueStackProps(stage),
+      attributeLinkerProps: getAttributeLinkerProps(),
     },
   };
 

@@ -53,6 +53,7 @@ import {
   UmccriseIcav2PipelineManagerStack,
   UmccriseIcav2PipelineManagerStackProps,
 } from './stacks/umccrise-pipeline-manager/deploy';
+import { AttributeLinker, AttributeLinkerProps } from './stacks/attribute-linker/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -71,6 +72,7 @@ export interface StatelessStackCollectionProps {
   bclConvertManagerStackProps: BclConvertManagerStackProps;
   workflowManagerStackProps: WorkflowManagerStackProps;
   stackyMcStackFaceProps: GlueStackProps;
+  attributeLinkerProps: AttributeLinkerProps;
 }
 
 export class StatelessStackCollection {
@@ -91,6 +93,7 @@ export class StatelessStackCollection {
   readonly bclConvertManagerStack: Stack;
   readonly workflowManagerStack: Stack;
   readonly stackyMcStackFaceStack: Stack;
+  readonly attributeLinkerStack: Stack;
 
   constructor(
     scope: Construct,
@@ -207,6 +210,11 @@ export class StatelessStackCollection {
     this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
       ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
       ...statelessConfiguration.stackyMcStackFaceProps,
+    });
+
+    this.attributeLinkerStack = new AttributeLinker(scope, 'AttributeLinkerStack', {
+      ...this.createTemplateProps(env, 'AttributeLinkerStack'),
+      ...statelessConfiguration.attributeLinkerProps,
     });
   }
 
