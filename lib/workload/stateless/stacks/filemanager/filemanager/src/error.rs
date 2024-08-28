@@ -1,9 +1,9 @@
 //! Errors used by the filemanager crate.
 //!
 
-use sea_orm::{sqlx_error_to_query_err, DbErr};
 use std::{io, result};
 
+use sea_orm::{sqlx_error_to_query_err, DbErr};
 use sqlx::migrate::MigrateError;
 use thiserror::Error;
 use url::ParseError;

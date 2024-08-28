@@ -7,6 +7,7 @@ from workflow_manager.serializers import LibraryModelSerializer
 
 
 class LibraryViewSet(ReadOnlyModelViewSet):
+    lookup_value_regex = "[^/]+"
     serializer_class = LibraryModelSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]

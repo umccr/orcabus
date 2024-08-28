@@ -36,10 +36,11 @@ where
 mod tests {
     use sqlx::PgPool;
 
-    use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::Client;
     use crate::queries::EntriesBuilder;
+
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_s3(pool: PgPool) {

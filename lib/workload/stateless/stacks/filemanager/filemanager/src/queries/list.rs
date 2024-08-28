@@ -1,14 +1,6 @@
 //! Query builder involving list operations on the database.
 //!
 
-use crate::database::entities::s3_object;
-use crate::error::Error::OverflowError;
-use crate::error::{Error, Result};
-use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
-use crate::routes::filter::S3ObjectsFilter;
-use crate::routes::list::ListCount;
-use crate::routes::pagination::{ListResponse, Pagination};
-
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
@@ -21,6 +13,14 @@ use sea_orm::{
 };
 use tracing::trace;
 use url::Url;
+
+use crate::database::entities::s3_object;
+use crate::error::Error::OverflowError;
+use crate::error::{Error, Result};
+use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
+use crate::routes::filter::S3ObjectsFilter;
+use crate::routes::list::ListCount;
+use crate::routes::pagination::{ListResponse, Pagination};
 
 /// A query builder for list operations.
 #[derive(Debug, Clone)]
@@ -449,7 +449,6 @@ where
             "{message}: {}",
             self.select.as_query().to_string(PostgresQueryBuilder)
         );
-        println!("{}", self.select.as_query().to_string(PostgresQueryBuilder));
     }
 }
 
@@ -464,7 +463,6 @@ pub(crate) mod tests {
     use serde_json::json;
     use sqlx::PgPool;
 
-    use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
     use crate::database::Client;
@@ -472,6 +470,8 @@ pub(crate) mod tests {
     use crate::queries::EntriesBuilder;
     use crate::routes::filter::wildcard::Wildcard;
     use crate::routes::pagination::Links;
+
+    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_current_s3(pool: PgPool) {

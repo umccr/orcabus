@@ -35,6 +35,7 @@ pub struct Json(pub Value);
     paths(
         list_s3,
         presign_s3,
+        attributes_s3,
         get_s3_by_id,
         presign_s3_by_id,
         count_s3,

@@ -1,7 +1,7 @@
-use filemanager::clients::aws::s3::Client;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use serde::Deserialize;
 
+use filemanager::clients::aws::s3::Client;
 use filemanager::database::Client as DbClient;
 use filemanager::env::Config;
 use filemanager::events::aws::inventory::Manifest;
@@ -59,10 +59,12 @@ async fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use aws_sdk_s3::types::InventoryFormat;
-    use filemanager::events::aws::inventory::File;
     use serde_json::{from_str, json};
+
+    use filemanager::events::aws::inventory::File;
+
+    use super::*;
 
     #[test]
     fn deserialize_bucket_key() {

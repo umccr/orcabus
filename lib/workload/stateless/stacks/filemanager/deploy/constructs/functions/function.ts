@@ -31,9 +31,9 @@ export type DatabaseProps = {
 };
 
 /**
- * Props for a Rust function without the package.
+ * Props for a Rust function which can be configured from the top-level orcabus context.
  */
-export type FunctionPropsNoPackage = {
+export type FunctionPropsConfigurable = {
   /**
    * Additional build environment variables when building the Lambda function.
    */
@@ -57,9 +57,9 @@ export type FunctionPropsNoPackage = {
 };
 
 /**
- * Props for the Rust function.
+ * Props for the Rust function which can be configured from the top-level orcabus context.
  */
-export type FunctionProps = FunctionPropsNoPackage &
+export type FunctionProps = FunctionPropsConfigurable &
   DatabaseProps & {
     /**
      * The package to build for this function.
@@ -69,6 +69,10 @@ export type FunctionProps = FunctionPropsNoPackage &
      * Name of the Lambda function resource.
      */
     readonly functionName?: string;
+    /**
+     * The timeout for the Lambda function, defaults to 28 seconds.
+     */
+    readonly timeout?: Duration;
   };
 
 /**
@@ -121,7 +125,7 @@ export class Function extends Construct {
         },
       },
       memorySize: 128,
-      timeout: Duration.seconds(28),
+      timeout: props.timeout ?? Duration.seconds(28),
       environment: {
         // No password here, using RDS IAM to generate credentials.
         PGHOST: props.host,

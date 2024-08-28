@@ -107,7 +107,10 @@ class LibraryViewSet(ReadOnlyModelViewSet):
     def get_queryset(self):
         return Library.objects.get_by_keyword(**self.request.query_params)
 
-    @extend_schema(responses={200: LibraryFullSerializer(many=True)})
+    @extend_schema(
+        parameters=[LibrarySerializer],
+        responses={200: LibraryFullSerializer(many=True)}
+    )
     @action(detail=False, methods=['get'], url_path='full')
     def get_full_model_set(self, request):
         qs = Library.objects.select_related("specimen__subject").all().order_by("-library_id")

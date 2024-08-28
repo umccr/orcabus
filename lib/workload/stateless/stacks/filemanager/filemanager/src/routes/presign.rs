@@ -1,16 +1,17 @@
 //! Logic for the presigned url route.
 //!
 
+use chrono::Duration;
+use serde::{Deserialize, Serialize};
+use url::Url;
+use utoipa::{IntoParams, ToSchema};
+
 use crate::clients::aws::s3;
 use crate::database::entities::s3_object;
 use crate::env::Config;
 use crate::error::Error::PresignedUrlError;
 use crate::error::Result;
 use crate::routes::AppState;
-use chrono::Duration;
-use serde::{Deserialize, Serialize};
-use url::Url;
-use utoipa::{IntoParams, ToSchema};
 
 /// Parameters for presigned URL routes.
 #[derive(Serialize, Deserialize, Debug, Default, IntoParams)]
@@ -86,6 +87,8 @@ impl<'a> PresignedUrlBuilder<'a> {
         key: &str,
         bucket: &str,
         response_content_disposition: ContentDisposition,
+        response_content_type: Option<String>,
+        response_content_encoding: Option<String>,
     ) -> Result<Option<Url>> {
         let limit = if let Some(size) = self.object_size {
             u64::try_from(size).unwrap_or_default()
@@ -109,6 +112,8 @@ impl<'a> PresignedUrlBuilder<'a> {
                     key,
                     bucket,
                     content_disposition,
+                    response_content_type,
+                    response_content_encoding,
                     self.config
                         .api_presign_expiry()
                         .unwrap_or(DEFAULT_PRESIGN_EXPIRY),
@@ -127,11 +132,19 @@ impl<'a> PresignedUrlBuilder<'a> {
         state: &'a AppState,
         model: s3_object::Model,
         response_content_disposition: ContentDisposition,
+        response_content_type: Option<String>,
+        response_content_encoding: Option<String>,
     ) -> Result<Option<Url>> {
         let builder = Self::new(state.s3_client(), state.config()).set_object_size(model.size);
 
         if let Some(presigned) = builder
-            .presign_url(&model.key, &model.bucket, response_content_disposition)
+            .presign_url(
+                &model.key,
+                &model.bucket,
+                response_content_disposition,
+                response_content_type,
+                response_content_encoding,
+            )
             .await?
         {
             Ok(Some(presigned))
@@ -145,10 +158,11 @@ impl<'a> PresignedUrlBuilder<'a> {
 pub(crate) mod tests {
     use aws_smithy_mocks_experimental::{mock_client, RuleMode};
 
-    use super::*;
     use crate::clients::aws::s3;
     use crate::env::Config;
     use crate::routes::list::tests::mock_get_object;
+
+    use super::*;
 
     #[tokio::test]
     async fn presign() {
@@ -161,7 +175,7 @@ pub(crate) mod tests {
 
         let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(None);
         let url = builder
-            .presign_url("0", "1", ContentDisposition::Inline)
+            .presign_url("0", "1", ContentDisposition::Inline, None, None)
             .await
             .unwrap()
             .unwrap();
@@ -173,7 +187,7 @@ pub(crate) mod tests {
 
         let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(Some(2));
         let url = builder
-            .presign_url("0", "1", ContentDisposition::Inline)
+            .presign_url("0", "1", ContentDisposition::Inline, None, None)
             .await
             .unwrap()
             .unwrap();
@@ -181,6 +195,33 @@ pub(crate) mod tests {
         let query = url.query().unwrap();
         assert!(query.contains("X-Amz-Expires=300"));
         assert!(query.contains("response-content-disposition=inline"));
+        assert_eq!(url.path(), "/1/0");
+    }
+
+    #[tokio::test]
+    async fn presign_mirror_headers() {
+        let client = s3::Client::new(mock_client!(
+            aws_sdk_s3,
+            RuleMode::MatchAny,
+            &[&mock_get_object("0", "1", b""),]
+        ));
+        let config = Default::default();
+
+        let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(None);
+        let url = builder
+            .presign_url(
+                "0",
+                "1",
+                ContentDisposition::Inline,
+                Some("application/json".to_string()),
+                Some("gzip".to_string()),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+
+        let query = url.query().unwrap();
+        assert_presigned_params(query, "inline");
         assert_eq!(url.path(), "/1/0");
     }
 
@@ -195,7 +236,7 @@ pub(crate) mod tests {
 
         let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(None);
         let url = builder
-            .presign_url("0", "1", ContentDisposition::Attachment)
+            .presign_url("0", "1", ContentDisposition::Attachment, None, None)
             .await
             .unwrap()
             .unwrap();
@@ -220,7 +261,7 @@ pub(crate) mod tests {
 
         let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(Some(2));
         let url = builder
-            .presign_url("0", "1", ContentDisposition::Inline)
+            .presign_url("0", "1", ContentDisposition::Inline, None, None)
             .await
             .unwrap();
 
@@ -241,7 +282,7 @@ pub(crate) mod tests {
 
         let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(Some(2));
         let url = builder
-            .presign_url("0", "1", ContentDisposition::Inline)
+            .presign_url("0", "1", ContentDisposition::Inline, None, None)
             .await
             .unwrap()
             .unwrap();
@@ -250,5 +291,14 @@ pub(crate) mod tests {
         assert!(query.contains("X-Amz-Expires=500"));
         assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(url.path(), "/1/0");
+    }
+
+    pub(crate) fn assert_presigned_params(query: &str, content_disposition: &str) {
+        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains(&format!(
+            "response-content-disposition={content_disposition}"
+        )));
+        assert!(query.contains("response-content-type=application%2Fjson"));
+        assert!(query.contains("response-content-encoding=gzip"));
     }
 }
