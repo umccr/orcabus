@@ -15,5 +15,4 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
     search_fields = WorkflowRun.get_base_fields()
 
     def get_queryset(self):
-        print(self.request.query_params)
         return WorkflowRun.objects.get_by_keyword(**self.request.query_params)

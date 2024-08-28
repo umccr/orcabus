@@ -6,7 +6,6 @@ django.setup()
 from workflow_manager.models.workflow_run import WorkflowRun
 import workflow_manager_proc.domain.executionservice.workflowrunstatechange as srv
 import workflow_manager_proc.domain.workflowmanager.workflowrunstatechange as wfm
-from workflow_manager_proc.services import get_workflow_run, create_workflow_run, emit_workflow_run_state_change
 
 
 def handler(event, context):

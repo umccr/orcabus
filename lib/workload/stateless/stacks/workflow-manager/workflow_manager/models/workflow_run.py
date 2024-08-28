@@ -10,7 +10,6 @@ class WorkflowRunManager(OrcaBusBaseManager):
 
 
 class WorkflowRun(OrcaBusBaseModel):
-
     id = models.BigAutoField(primary_key=True)
 
     # --- mandatory fields
@@ -35,7 +34,8 @@ class WorkflowRun(OrcaBusBaseModel):
     objects = WorkflowRunManager()
 
     def __str__(self):
-        return f"ID: {self.id}, portal_run_id: {self.portal_run_id}"
+        return f"ID: {self.id}, portal_run_id: {self.portal_run_id}, workflow_run_name: {self.workflow_run_name}, " \
+               f"workflow: {self.workflow.workflow_name} "
 
     def to_dict(self):
         return {
@@ -46,6 +46,10 @@ class WorkflowRun(OrcaBusBaseModel):
             "comment": self.comment,
             "workflow": self.workflow.to_dict() if (self.workflow is not None) else None
         }
+
+    def get_all_states(self):
+        # retrieve all states (DB records rather than a queryset)
+        return list(self.state_set.all())  # TODO: ensure order by timestamp ?
 
 
 class LibraryAssociationManager(OrcaBusBaseManager):

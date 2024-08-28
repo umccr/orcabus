@@ -11,6 +11,7 @@ from workflow_manager.tests.factories import WorkflowRunFactory, WorkflowFactory
 
 WORKFLOW_NAME = "TestWorkflow"
 
+STATUS_DRAFT = "DRAFT"
 STATUS_START = "READY"
 STATUS_RUNNING = "RUNNING"
 STATUS_END = "SUCCEEDED"
@@ -59,7 +60,7 @@ class Command(BaseCommand):
             portal_run_id="1234",
             workflow=wf
         )
-        for state in [STATUS_START, STATUS_RUNNING, STATUS_FAIL]:
+        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_FAIL]:
             StateFactory(workflow_run=wfr_1, status=state, payload=generic_payload)
         for i in [0, 1, 2, 3]:
             LibraryAssociation.objects.create(
@@ -75,7 +76,7 @@ class Command(BaseCommand):
             portal_run_id="1235",
             workflow=wf
         )
-        for state in [STATUS_START, STATUS_RUNNING, STATUS_END]:
+        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]:
             StateFactory(workflow_run=wfr_2, status=state, payload=generic_payload)
         for i in [0, 1, 2, 3]:
             LibraryAssociation.objects.create(
@@ -102,7 +103,7 @@ class Command(BaseCommand):
             portal_run_id="2345",
             workflow=wf_qc
         )
-        for state in [STATUS_START, STATUS_RUNNING, STATUS_END]:
+        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]:
             StateFactory(workflow_run=wfr_qc_1, status=state, payload=generic_payload)
         LibraryAssociation.objects.create(
             workflow_run=wfr_qc_1,
@@ -117,7 +118,7 @@ class Command(BaseCommand):
             portal_run_id="2346",
             workflow=wf_qc
         )
-        for state in [STATUS_START, STATUS_RUNNING, STATUS_END]:
+        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]:
             StateFactory(workflow_run=wfr_qc_2, status=state, payload=generic_payload)
         LibraryAssociation.objects.create(
             workflow_run=wfr_qc_2,
@@ -133,7 +134,7 @@ class Command(BaseCommand):
             portal_run_id="3456",
             workflow=wf_align
         )
-        for state in [STATUS_START, STATUS_RUNNING, STATUS_END]:
+        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]:
             StateFactory(workflow_run=wfr_a, status=state, payload=generic_payload)
         for i in [0, 1]:
             LibraryAssociation.objects.create(
@@ -150,7 +151,7 @@ class Command(BaseCommand):
             portal_run_id="4567",
             workflow=wf_vc
         )
-        for state in [STATUS_START, STATUS_RUNNING, STATUS_END]:
+        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]:
             StateFactory(workflow_run=wfr_vc, status=state, payload=generic_payload)
         for i in [0, 1]:
             LibraryAssociation.objects.create(
