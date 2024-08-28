@@ -10,7 +10,7 @@ from workflow_manager.models.payload import Payload
 class Status(Enum):
     DRAFT = "DRAFT", ['DRAFT', 'INITIAL', 'CREATED']
     READY = "READY", ['READY']
-    RUNNING = "RUNNING", ['RUNNING']
+    RUNNING = "RUNNING", ['RUNNING', 'IN_PROGRESS']
     SUCCEEDED = "SUCCEEDED", ['SUCCEEDED', 'SUCCESS']
     FAILED = "FAILED", ['FAILED', 'FAILURE']
     ABORTED = "ABORTED", ['ABORTED', 'CANCELLED', 'CANCELED']
@@ -26,12 +26,13 @@ class Status(Enum):
     def get_convention(status: str):
         # enforce upper case convention
         status = status.upper()
+        status = status.replace("-", "_")
+        # TODO: handle other characters?
         for s in Status:
             if status in s.aliases:
                 return s.convention
 
         # retain all uncontrolled states
-        # TODO: handle other characters (dash to underscore,...)
         return status
 
     @staticmethod
@@ -92,7 +93,7 @@ class State(OrcaBusBaseModel):
 
     # --- mandatory fields
     workflow_run = models.ForeignKey(WorkflowRun, on_delete=models.CASCADE)
-    status = models.CharField(max_length=255)
+    status = models.CharField(max_length=255)  # TODO: How and where to enforce conventions?
     timestamp = models.DateTimeField()
 
     comment = models.CharField(max_length=255, null=True, blank=True)

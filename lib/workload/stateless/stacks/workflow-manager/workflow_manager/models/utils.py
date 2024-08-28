@@ -64,12 +64,14 @@ class WorkflowRunUtil:
         new_state.status = Status.get_convention(new_state.status)  # TODO: encapsulate into State ?!
 
         # If it's a brand new WorkflowRun we expect the first state to be DRAFT
+        # TODO: handle exceptions;
+        #       BCL Convert may not create a DRAFT state
         if not self.get_current_state():
             if new_state.is_draft():
                 self.persist_state(new_state)
                 return True
             else:
-                logger.error(f"WorkflowRun does not have state yet, but new state is not DRAFT: {new_state}")
+                logger.warning(f"WorkflowRun does not have state yet, but new state is not DRAFT: {new_state}")
                 self.persist_state(new_state)  # FIXME: remove once convention is enforced
                 return True
 

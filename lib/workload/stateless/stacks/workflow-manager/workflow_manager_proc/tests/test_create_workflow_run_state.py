@@ -5,7 +5,7 @@ from django.db.models import QuerySet
 from django.utils.timezone import make_aware
 
 from workflow_manager_proc.domain.workflowmanager.workflowrunstatechange import WorkflowRunStateChange
-from workflow_manager_proc.services.create_workflow_run_state import handler
+from workflow_manager_proc.services import create_workflow_run_state
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 from workflow_manager.models import WorkflowRun, State, WorkflowRunUtil
 from workflow_manager.tests.factories import WorkflowRunFactory
@@ -43,7 +43,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         }
 
         logger.info("Test the created WRSC event...")
-        result_wrsc: WorkflowRunStateChange = handler(test_event, None)
+        result_wrsc: WorkflowRunStateChange = create_workflow_run_state.handler(test_event, None)
         logger.info(result_wrsc)
         self.assertIsNotNone(result_wrsc)
         self.assertEqual("ctTSO500-L000002", result_wrsc.workflowRunName)
@@ -100,7 +100,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         }
 
         logger.info("Test the created WRSC event...")
-        result_wrsc: WorkflowRunStateChange = handler(test_event, None)
+        result_wrsc: WorkflowRunStateChange = create_workflow_run_state.handler(test_event, None)
         logger.info(result_wrsc)
         self.assertIsNotNone(result_wrsc)
         self.assertEqual("ctTSO500-L000002", result_wrsc.workflowRunName)
@@ -178,4 +178,3 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         window = timedelta(hours=1)
         print(f"window sec: {window.total_seconds()}")
         self.assertTrue(delta > window, "delta > 1h")
-
