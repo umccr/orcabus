@@ -1,8 +1,84 @@
 from django.db import models
 
+from enum import Enum
+from typing import List
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.workflow_run import WorkflowRun
 from workflow_manager.models.payload import Payload
+
+
+class Status(Enum):
+    DRAFT = "DRAFT", ['DRAFT', 'INITIAL', 'CREATED']
+    READY = "READY", ['READY']
+    RUNNING = "RUNNING", ['RUNNING', 'IN_PROGRESS']
+    SUCCEEDED = "SUCCEEDED", ['SUCCEEDED', 'SUCCESS']
+    FAILED = "FAILED", ['FAILED', 'FAILURE']
+    ABORTED = "ABORTED", ['ABORTED', 'CANCELLED', 'CANCELED']
+
+    def __init__(self, convention: str, aliases: List[str]):
+        self.convention = convention
+        self.aliases = aliases
+
+    def __str__(self):
+        return self.convention
+
+    @staticmethod
+    def get_convention(status: str):
+        # enforce upper case convention
+        status = status.upper()
+        status = status.replace("-", "_")
+        # TODO: handle other characters?
+        for s in Status:
+            if status in s.aliases:
+                return s.convention
+
+        # retain all uncontrolled states
+        return status
+
+    @staticmethod
+    def is_supported(status: str) -> bool:
+        # enforce upper case convention
+        status = status.upper()
+        for s in Status:
+            if status in s.aliases:
+                return True
+        return False
+
+    @staticmethod
+    def is_terminal(status: str) -> bool:
+        # enforce upper case convention
+        status = status.upper()
+        for s in [Status.SUCCEEDED, Status.FAILED, Status.ABORTED]:
+            if status in s.aliases:
+                return True
+        return False
+
+    @staticmethod
+    def is_draft(status: str) -> bool:
+        # enforce upper case convention
+        status = status.upper()
+        if status in Status.DRAFT.aliases:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def is_running(status: str) -> bool:
+        # enforce upper case convention
+        status = status.upper()
+        if status in Status.RUNNING.aliases:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def is_ready(status: str) -> bool:
+        # enforce upper case convention
+        status = status.upper()
+        if status in Status.READY.aliases:
+            return True
+        else:
+            return False
 
 
 class StateManager(OrcaBusBaseManager):
@@ -17,7 +93,7 @@ class State(OrcaBusBaseModel):
 
     # --- mandatory fields
     workflow_run = models.ForeignKey(WorkflowRun, on_delete=models.CASCADE)
-    status = models.CharField(max_length=255)
+    status = models.CharField(max_length=255)  # TODO: How and where to enforce conventions?
     timestamp = models.DateTimeField()
 
     comment = models.CharField(max_length=255, null=True, blank=True)
@@ -40,3 +116,14 @@ class State(OrcaBusBaseModel):
             "payload": self.payload.to_dict() if (self.payload is not None) else None,
         }
 
+    def is_terminal(self) -> bool:
+        return Status.is_terminal(str(self.status))
+
+    def is_draft(self) -> bool:
+        return Status.is_draft(str(self.status))
+
+    def is_ready(self) -> bool:
+        return Status.is_ready(str(self.status))
+
+    def is_running(self) -> bool:
+        return Status.is_running(str(self.status))
