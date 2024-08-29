@@ -53,7 +53,10 @@ import {
   UmccriseIcav2PipelineManagerStack,
   UmccriseIcav2PipelineManagerStackProps,
 } from './stacks/umccrise-pipeline-manager/deploy';
-import { AttributeLinker, AttributeLinkerProps } from './stacks/attribute-linker/deploy/stack';
+import {
+  AttributeAnnotator,
+  AttributeLinkerConfigurableProps,
+} from './stacks/attribute-annotator/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -72,7 +75,7 @@ export interface StatelessStackCollectionProps {
   bclConvertManagerStackProps: BclConvertManagerStackProps;
   workflowManagerStackProps: WorkflowManagerStackProps;
   stackyMcStackFaceProps: GlueStackProps;
-  attributeLinkerProps: AttributeLinkerProps;
+  attributeLinkerProps: AttributeLinkerConfigurableProps;
 }
 
 export class StatelessStackCollection {
@@ -93,7 +96,7 @@ export class StatelessStackCollection {
   readonly bclConvertManagerStack: Stack;
   readonly workflowManagerStack: Stack;
   readonly stackyMcStackFaceStack: Stack;
-  readonly attributeLinkerStack: Stack;
+  readonly attributeAnnotatorStack: Stack;
 
   constructor(
     scope: Construct,
@@ -110,10 +113,11 @@ export class StatelessStackCollection {
       ...statelessConfiguration.dataSchemaStackProps,
     });
 
-    this.fileManagerStack = new Filemanager(scope, 'FileManagerStack', {
+    const fileManagerStack = new Filemanager(scope, 'FileManagerStack', {
       ...this.createTemplateProps(env, 'FileManagerStack'),
       ...statelessConfiguration.fileManagerStackProps,
     });
+    this.fileManagerStack = fileManagerStack;
 
     this.metadataManagerStack = new MetadataManagerStack(scope, 'MetadataManagerStack', {
       ...this.createTemplateProps(env, 'MetadataManagerStack'),
@@ -212,9 +216,10 @@ export class StatelessStackCollection {
       ...statelessConfiguration.stackyMcStackFaceProps,
     });
 
-    this.attributeLinkerStack = new AttributeLinker(scope, 'AttributeLinkerStack', {
+    this.attributeAnnotatorStack = new AttributeAnnotator(scope, 'AttributeLinkerStack', {
       ...this.createTemplateProps(env, 'AttributeLinkerStack'),
       ...statelessConfiguration.attributeLinkerProps,
+      domainName: fileManagerStack.domainName,
     });
   }
 

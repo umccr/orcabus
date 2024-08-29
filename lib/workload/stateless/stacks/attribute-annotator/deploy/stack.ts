@@ -1,5 +1,4 @@
 import { aws_events_targets as targets, Duration, Stack, StackProps } from 'aws-cdk-lib';
-import { DatabaseProps } from '../../filemanager/deploy/constructs/functions/function';
 import {
   ISecurityGroup,
   IVpc,
@@ -8,11 +7,9 @@ import {
   Vpc,
   VpcLookupOptions,
 } from 'aws-cdk-lib/aws-ec2';
-import { ApiGwLogsConfig } from '../../../../components/api-gateway';
 import { Construct } from 'constructs';
 import { GoFunction } from '@aws-cdk/aws-lambda-go-alpha';
 import path from 'path';
-import { FILEMANAGER_SERVICE_NAME } from '../../filemanager/deploy/stack';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
 
@@ -25,14 +22,21 @@ export type AttributeLinkerConfig = {
 };
 
 /**
+ * Props for the attribute linker stack which can be configured
+ */
+export type AttributeLinkerConfigurableProps = StackProps & AttributeLinkerConfig;
+
+/**
  * Props for the attribute linker stack.
  */
-export type AttributeLinkerProps = StackProps & AttributeLinkerConfig;
+export type AttributeLinkerProps = AttributeLinkerConfigurableProps & {
+  domainName: string;
+};
 
 /**
  * Construct used to configure the attribute linker.
  */
-export class AttributeLinker extends Stack {
+export class AttributeAnnotator extends Stack {
   private readonly vpc: IVpc;
   private readonly securityGroup: ISecurityGroup;
   private readonly eventBus: IEventBus;
@@ -52,6 +56,9 @@ export class AttributeLinker extends Stack {
     const entry = path.join(__dirname, '..');
     const fn = new GoFunction(this, 'handler', {
       entry,
+      environment: {
+        ANNOTATOR_FILEMANAGER_ENDPOINT: props.domainName,
+      },
       memorySize: 128,
       timeout: Duration.seconds(28),
       architecture: Architecture.ARM_64,

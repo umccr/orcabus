@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/umccr/orcabus/lib/workload/stateless/stacks/attribute-linker/schema/orcabus_workflowmanager/workflowrunstatechange"
 	"io"
 	"log/slog"
@@ -13,6 +14,10 @@ import (
 	"net/url"
 	"strings"
 )
+
+type Config struct {
+	FileManagerEndpoint string
+}
 
 type AttributePatch struct {
 	Op    string `json:"op"`
@@ -35,11 +40,21 @@ func handler(event workflowrunstatechange.Event) (err error) {
 		return err
 	}
 
+	var config Config
+	err = envconfig.Process("annotator", &config)
+	if err != nil {
+		return err
+	}
+	endpoint, err := url.JoinPath(config.FileManagerEndpoint, "/api/v1/s3")
+	if err != nil {
+		return err
+	}
+
 	client := &http.Client{}
 
 	req, err := http.NewRequest(
 		"PATCH",
-		"https://file.dev.umccr.org/api/v1/s3",
+		endpoint,
 		bytes.NewBuffer(patch),
 	)
 	if err != nil {
