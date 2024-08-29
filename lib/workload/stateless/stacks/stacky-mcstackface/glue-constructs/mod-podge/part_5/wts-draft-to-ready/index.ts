@@ -17,7 +17,7 @@ Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The wtsInputMaker, subscribes to the wts input event glue (itself) and generates a ready event for the wtsReadySfn
-  * However, in order to be 'ready' we need to use a few more variables such as
+  * However, in order to be 'READY' we need to use a few more variables such as
     * icaLogsUri,
     * analysisOutputUri
     * cacheUri
@@ -44,10 +44,10 @@ export class WtsInputMakerConstruct extends Construct {
     prefix: 'modpodge-wts',
     tablePartition: 'wts',
     triggerSource: 'orcabus.wtsinputeventglue',
-    triggerStatus: 'draft',
+    triggerStatus: 'DRAFT',
     triggerDetailType: 'WorkflowDraftRunStateChange',
     outputSource: 'orcabus.wtsinputeventglue',
-    outputStatus: 'ready',
+    outputStatus: 'READY',
     payloadVersion: '2024.07.16',
     workflowName: 'wts',
     workflowVersion: '4.2.4',

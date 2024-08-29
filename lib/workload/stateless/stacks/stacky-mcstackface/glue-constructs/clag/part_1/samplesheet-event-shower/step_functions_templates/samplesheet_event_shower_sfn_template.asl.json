@@ -37,6 +37,36 @@
       "ResultSelector": {
         "samplesheet.$": "$.Payload.decompressed_dict"
       },
+      "Next": "Get Library / Subject Map from SampleSheet"
+    },
+    "Get Library / Subject Map from SampleSheet": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__get_subject_library_map_from_samplesheet_lambda_function_arn__}",
+        "Payload": {
+          "samplesheet.$": "$.decompress_samplesheet_step.samplesheet"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.get_subject_library_map_from_samplesheet",
+      "ResultSelector": {
+        "library_obj_list.$": "$.Payload.library_obj_list",
+        "specimen_obj_list.$": "$.Payload.specimen_obj_list",
+        "subject_obj_list.$": "$.Payload.subject_obj_list"
+      },
       "Next": "Save SampleSheet and Get Subject / Library Map Objects"
     },
     "Save SampleSheet and Get Subject / Library Map Objects": {
@@ -44,38 +74,8 @@
       "Next": "Start Samplesheet Shower",
       "Branches": [
         {
-          "StartAt": "Get Library / Subject Map from SampleSheet",
+          "StartAt": "Generate event data objects",
           "States": {
-            "Get Library / Subject Map from SampleSheet": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${__get_subject_library_map_from_samplesheet_lambda_function_arn__}",
-                "Payload": {
-                  "samplesheet.$": "$.decompress_samplesheet_step.samplesheet"
-                }
-              },
-              "Retry": [
-                {
-                  "ErrorEquals": [
-                    "Lambda.ServiceException",
-                    "Lambda.AWSLambdaException",
-                    "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException"
-                  ],
-                  "IntervalSeconds": 1,
-                  "MaxAttempts": 3,
-                  "BackoffRate": 2
-                }
-              ],
-              "ResultPath": "$.get_subject_library_map_from_samplesheet",
-              "ResultSelector": {
-                "library_obj_list.$": "$.Payload.library_obj_list",
-                "specimen_obj_list.$": "$.Payload.specimen_obj_list",
-                "subject_obj_list.$": "$.Payload.subject_obj_list"
-              },
-              "Next": "Generate event data objects"
-            },
             "Generate event data objects": {
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
@@ -106,6 +106,7 @@
                 "start_samplesheet_shower_event_data.$": "$.Payload.start_samplesheet_shower_event_data",
                 "complete_samplesheet_shower_event_data.$": "$.Payload.complete_samplesheet_shower_event_data",
                 "subject_event_data_list.$": "$.Payload.subject_event_data_list",
+                "project_event_data_list.$": "$.Payload.project_event_data_list",
                 "library_event_data_list.$": "$.Payload.library_event_data_list"
               },
               "ResultPath": "$.generate_event_objects_step",
@@ -126,6 +127,9 @@
                   "id_type": "${__samplesheet_table_partition_name__}",
                   "samplesheet_dict": {
                     "S.$": "States.JsonToString($.decompress_samplesheet_step.samplesheet)"
+                  },
+                  "library_ids_set": {
+                    "SS.$": "$.get_subject_library_map_from_samplesheet.library_obj_list[*].libraryId"
                   }
                 }
               },
@@ -137,9 +141,10 @@
       ],
       "ResultSelector": {
         "start_samplesheet_shower_event_data.$": "$.[0].generate_event_objects_step.start_samplesheet_shower_event_data",
-        "complete_samplesheet_shower_event_data.$": "$.[0].generate_event_objects_step.complete_samplesheet_shower_event_data",
+        "project_event_data_list.$": "$.[0].generate_event_objects_step.project_event_data_list",
         "subject_event_data_list.$": "$.[0].generate_event_objects_step.subject_event_data_list",
-        "library_event_data_list.$": "$.[0].generate_event_objects_step.library_event_data_list"
+        "library_event_data_list.$": "$.[0].generate_event_objects_step.library_event_data_list",
+        "complete_samplesheet_shower_event_data.$": "$.[0].generate_event_objects_step.complete_samplesheet_shower_event_data"
       },
       "ResultPath": "$.generate_event_objects_step"
     },
@@ -169,6 +174,130 @@
     "Wait 5 Seconds": {
       "Type": "Wait",
       "Seconds": 5,
+      "Next": "Push Project Events"
+    },
+    "Push Project Events": {
+      "Type": "Map",
+      "ItemsPath": "$.generate_event_objects_step.project_event_data_list",
+      "ItemSelector": {
+        "project_event_data.$": "$$.Map.Item.Value.event_data",
+        "instrument_run_id.$": "$.inputs.payload.data.instrumentRunId"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Get Project (Instrument Run DB)",
+        "States": {
+          "Get Project (Instrument Run DB)": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "States.Format('{}__{}', $.project_event_data.projectName, $.project_event_data.projectOwner)",
+                "id_type": "${__project_table_partition_name__}"
+              }
+            },
+            "ResultSelector": {
+              "db_response.$": "$"
+            },
+            "ResultPath": "$.get_project_from_db_step",
+            "Next": "Check if Project in Instrument Run DB"
+          },
+          "Check if Project in Instrument Run DB": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Not": {
+                  "Variable": "$.get_project_from_db_step.db_response.Item",
+                  "IsPresent": true
+                },
+                "Next": "New Project",
+                "Comment": "New Project"
+              }
+            ],
+            "Default": "Update Project"
+          },
+          "Update Project": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:updateItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id": {
+                  "S.$": "States.Format('{}__{}', $.project_event_data.projectName, $.project_event_data.projectOwner)"
+                },
+                "id_type": {
+                  "S": "${__project_table_partition_name__}"
+                }
+              },
+              "UpdateExpression": "ADD instrument_run_id_set :instrument_run_id_set",
+              "ExpressionAttributeValues": {
+                ":instrument_run_id_set": {
+                  "SS.$": "States.Array($.instrument_run_id)"
+                }
+              }
+            },
+            "ResultPath": null,
+            "Next": "Wait"
+          },
+          "New Project": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:putItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Item": {
+                "id": {
+                  "S.$": "States.Format('{}__{}', $.project_event_data.projectName, $.project_event_data.projectOwner)"
+                },
+                "id_type": {
+                  "S": "${__project_table_partition_name__}"
+                },
+                "project_name": {
+                  "S.$": "$.project_event_data.projectName"
+                },
+                "project_owner": {
+                  "S.$": "$.project_event_data.projectOwner"
+                },
+                "instrument_run_id_set": {
+                  "SS.$": "States.Array($.instrument_run_id)"
+                }
+              }
+            },
+            "ResultPath": null,
+            "Next": "Wait"
+          },
+          "Wait": {
+            "Type": "Wait",
+            "Seconds": 5,
+            "Next": "EventBridge PutEvents"
+          },
+          "EventBridge PutEvents": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents",
+            "Parameters": {
+              "Entries": [
+                {
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "${__event_source__}",
+                  "DetailType": "${__project_in_samplesheet_detail_type__}",
+                  "Detail": {
+                    "timestamp.$": "$$.Execution.StartTime",
+                    "status": "${__project_in_samplesheet_status__}",
+                    "payload": {
+                      "version": "${__project_in_samplesheet_payload_version__}",
+                      "data.$": "$.project_event_data"
+                    }
+                  }
+                }
+              ]
+            },
+            "End": true
+          }
+        }
+      },
+      "ResultPath": null,
       "Next": "Push Subject Events"
     },
     "Push Subject Events": {
@@ -176,7 +305,7 @@
       "ItemsPath": "$.generate_event_objects_step.subject_event_data_list",
       "ItemSelector": {
         "subject_id.$": "$$.Map.Item.Value.event_data.subject.subjectId",
-        "subject_orcabus_id.$": "$$.Map.Item.Value.subject.orcabusId",
+        "subject_orcabus_id.$": "$$.Map.Item.Value.event_data.subject.orcabusId",
         "subject_event_data.$": "$$.Map.Item.Value.event_data",
         "instrument_run_id.$": "$$.Map.Item.Value.event_data.instrumentRunId"
       },
@@ -299,7 +428,7 @@
       "ItemsPath": "$.generate_event_objects_step.library_event_data_list",
       "ItemSelector": {
         "library_id.$": "$$.Map.Item.Value.event_data.library.libraryId",
-        "library_orcabus_id.$": "$$.Map.Item.Value.library.orcabusId",
+        "library_orcabus_id.$": "$$.Map.Item.Value.event_data.library.orcabusId",
         "library_event_data.$": "$$.Map.Item.Value.event_data",
         "instrument_run_id.$": "$$.Map.Item.Value.event_data.instrumentRunId"
       },
@@ -375,6 +504,12 @@
                 },
                 "library_id": {
                   "S.$": "$.library_event_data.library.libraryId"
+                },
+                "project_name": {
+                  "S.$": "$.library_event_data.library.projectName"
+                },
+                "project_owner": {
+                  "S.$": "$.library_event_data.library.projectOwner"
                 },
                 "instrument_run_id_set": {
                   "SS.$": "States.Array($.instrument_run_id)"

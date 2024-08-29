@@ -5,6 +5,7 @@
     "Move Inputs": {
       "Type": "Pass",
       "Parameters": {
+        "linked_libraries.$": "$.linkedLibraries",
         "payload_data.$": "$.payload.data"
       },
       "Next": "Get Subject Item"
@@ -96,8 +97,8 @@
               "workflowName": "${__workflow_name__}",
               "workflowVersion": "${__workflow_version__}",
               "workflowRunName.$": "$.get_parameters_step.workflow_run_name",
+              "linkedLibraries.$": "$.linked_libraries",
               "payload": {
-                "refId": null,
                 "version": "${__payload_version__}",
                 "data": {
                   "inputs.$": "$.generate_draft_event_payload_data_step.input_event_data",

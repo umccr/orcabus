@@ -76,6 +76,9 @@
                   "workflow_run_name": {
                     "S.$": "$.workflow_inputs.workflowRunName"
                   },
+                  "linked_libraries": {
+                    "S.$": "States.JsonToString($.workflow_inputs.linkedLibraries)"
+                  },
                   "workflow_version": {
                     "S.$": "$.workflow_inputs.workflowVersion"
                   },
@@ -502,6 +505,7 @@
         "workflowName": "${__workflow_type__}",
         "workflowVersion": "${__workflow_version__}",
         "workflowRunName.$": "$.Item.workflow_run_name.S",
+        "linkedLibraries.$": "States.StringToJson($.Item.linked_libraries.S)",
         "payload": {
           "version": "${__service_version__}",
           "data": {

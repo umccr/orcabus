@@ -48,7 +48,7 @@ export class BclConvertInteropQcIcav2PipelineConstruct extends Construct {
     /*
     Aim of this construct is to generate a cloudformation construct with the following attributes
 
-    1. A step function that listens to the 'ready' event from the WFM for bclconvert interop qc pipelines
+    1. A step function that listens to the 'READY' event from the WFM for bclconvert interop qc pipelines
     2. A step function that can take the parameters of the payload and convert these into an input json for the ICAv2 pipeline analysis
     3. A step function that can take the analysis output uri of a completed workflow and generate the output json
     4. A step function that listens to icav2 events and returns internal events to the WFM. This workflow will trigger (3) when appropriate
@@ -102,7 +102,7 @@ export class BclConvertInteropQcIcav2PipelineConstruct extends Construct {
     // Configure step function invoke access to the lambda function
     set_outputs_json_lambda_function.currentVersion.grantInvoke(configure_outputs_sfn.role);
 
-    // Generate state machine for handling the 'ready' event
+    // Generate state machine for handling the 'READY' event
     const handle_wfm_ready_event_sfn = new WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct(
       this,
       'handle_wfm_ready_event',

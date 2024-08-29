@@ -15,7 +15,7 @@ export class LambdaB64GzTranslatorConstruct extends Construct {
 
     // UUID 7 Generator lambda
     this.lambdaObj = new PythonFunction(this, 'b64_gzip_translator_obj', {
-      functionName: `${props.functionNamePrefix}-b64gz-translator`,
+      functionName: `${props.functionNamePrefix}-b64gz-t`,
       entry: path.join(__dirname, 'b64gz_translator_py'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,

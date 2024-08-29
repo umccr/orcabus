@@ -111,6 +111,8 @@
       "ItemsPath": "$.payload_data.bclconvertDataRows",
       "ItemSelector": {
         "bclconvert_data_row.$": "$$.Map.Item.Value",
+        "index.$": "$$.Map.Item.Index",
+        "fastq_list_row_objs.$": "$.payload_data.fastqListRows",
         "instrument_run_id.$": "$.payload_data.instrumentRunId",
         "library_id.$": "$.payload_data.library.libraryId"
       },
@@ -124,7 +126,7 @@
             "Type": "Pass",
             "Next": "Initialise Fastq List Row and Update Library",
             "Parameters": {
-              "fastq_list_row_id.$": "States.Format('{}.{}.{}.{}.{}', $.bclconvert_data_row.index, $.bclconvert_data_row.index2, $.bclconvert_data_row.lane, $.instrument_run_id, $.bclconvert_data_row.sampleId)"
+              "fastq_list_row_id.$": "States.ArrayGetItem($.fastq_list_row_objs[*].fastqListRowId, $.index)"
             },
             "ResultPath": "$.get_fastq_list_row_id_step"
           },

@@ -30,7 +30,7 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
   public readonly bsshIcav2FastqCopyEventMap = {
     triggerSource: 'orcabus.workflowmanager',
     triggerDetailType: 'WorkflowRunStateChange',
-    triggerDetailStatus: 'ready',
+    triggerDetailStatus: 'READY',
   };
 
   constructor(scope: Construct, id: string, props: BsshIcav2FastqCopyStateMachineConstructProps) {

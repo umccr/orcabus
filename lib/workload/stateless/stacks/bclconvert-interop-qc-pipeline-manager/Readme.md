@@ -27,7 +27,7 @@
 This BCLConvert InterOpQC Pipeline Manager performs the following actions
 
 * Subscribes to the workflow run manager EventBus source (orcabus.wfm)
-* Waits for a workflow run manager event to be published with the 'ready' status where the workflow type is set to `bclconvert_interop_qc`
+* Waits for a workflow run manager event to be published with the 'READY' status where the workflow type is set to `bclconvert_interop_qc`
 * Launches the bclconvert interop qc CWL pipeline on ICAv2
 * Tracks the status of the pipeline run through ICAv2 events. 
 * Logs launches, intermediate status changes and completions in a DynamoDB database.  
@@ -149,7 +149,7 @@ In the top level of the payload we require the following values
 
 The AWS Step functions requires the following event detail information
 
-* status - The status of the workflow run manager event (should be 'ready')
+* status - The status of the workflow run manager event (should be 'READY')
 * workflowType - this MUST be set to bclconvert_interop_qc
 * workflowVersion - Not currently used, set to 1.0.0
 * portalRunId - This is required to be set to a unique identifier for the run

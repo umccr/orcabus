@@ -131,7 +131,7 @@
                 "UpdateExpression": "SET analysis_status = :analysis_status",
                 "ExpressionAttributeValues": {
                   ":analysis_status": {
-                    "S": "ready"
+                    "S": "READY"
                   }
                 }
               },
@@ -179,12 +179,12 @@
             "Detail": {
               "portalRunId.$": "$.input_event_detail.portalRunId",
               "timestamp.$": "$$.State.EnteredTime",
-              "status": "ready",
+              "status": "READY",
               "workflowName.$": "$.input_event_detail.workflowName",
               "workflowVersion.$": "$.input_event_detail.workflowVersion",
               "workflowRunName.$": "$.input_event_detail.workflowRunName",
+              "linkedLibraries.$": "$.input_event_detail.linkedLibraries",
               "payload": {
-                "refId": null,
                 "version": "${__payload_version__}",
                 "data": {
                   "inputs.$": "$.get_event_data_output_step.inputs",

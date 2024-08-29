@@ -25,7 +25,7 @@ export class WtsFastqListRowQcCompleteConstruct extends Construct {
     prefix: 'modpodge-fqlr-qc-complete',
     tablePartition: 'fastq_list_row',
     triggerSource: 'orcabus.wgtsqcinputeventglue',
-    triggerStatus: 'QcComplete',
+    triggerStatus: 'QC_COMPLETE',
     triggerDetailType: 'FastqListRowStateChange',
   };
 

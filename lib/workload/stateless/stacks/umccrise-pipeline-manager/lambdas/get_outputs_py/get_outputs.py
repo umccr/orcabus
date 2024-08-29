@@ -11,7 +11,7 @@ from urllib.parse import (
 from pathlib import Path
 
 
-def hander(event, context):
+def handler(event, context):
     """
     Doesn't really get much simpler than this one,
     take the analysis output uri and the output directory name and simply plonk them together!

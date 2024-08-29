@@ -112,21 +112,23 @@
       "ItemSelector": {
         "bclconvert_data_row.$": "$$.Map.Item.Value",
         "instrument_run_id.$": "$.payload_data.instrumentRunId",
-        "library_id.$": "$.payload_data.library.libraryId"
+        "library_id.$": "$.payload_data.library.libraryId",
+        "index.$": "$$.Map.Item.Index",
+        "fastq_list_row_objs.$": "$.payload_data.fastqListRows"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Get Fastq List Row Id",
+        "StartAt": "Get Fastq List Row ID Step",
         "States": {
-          "Get Fastq List Row Id": {
+          "Get Fastq List Row ID Step": {
             "Type": "Pass",
-            "Next": "Initialise Fastq List Row and Update Library",
             "Parameters": {
-              "fastq_list_row_id.$": "States.Format('{}.{}.{}.{}.{}', $.bclconvert_data_row.index, $.bclconvert_data_row.index2, $.bclconvert_data_row.lane, $.instrument_run_id, $.bclconvert_data_row.sampleId)"
+              "fastq_list_row_id.$": "States.ArrayGetItem($.fastq_list_row_objs[*].fastqListRowRgid, $.index)"
             },
-            "ResultPath": "$.get_fastq_list_row_id_step"
+            "ResultPath": "$.get_fastq_list_row_id_step",
+            "Next": "Initialise Fastq List Row and Update Library"
           },
           "Initialise Fastq List Row and Update Library": {
             "Type": "Parallel",

@@ -159,6 +159,7 @@
         "workflow_name": "${__workflow_type__}",
         "workflow_version": "${__workflow_version__}",
         "workflow_run_name.$": "$.Item.workflow_run_name.S",
+        "linked_libraries.$": "$.Item.linked_libraries.S",
         "payload_version": "${__service_version__}",
         "payload_inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
         "payload_tags.$": "States.StringToJson($.Item.tags.S)",
@@ -216,6 +217,7 @@
               "workflowName.$": "$.get_event_data_step.workflow_name",
               "workflowVersion.$": "$.get_event_data_step.workflow_version",
               "workflowRunName.$": "$.get_event_data_step.workflow_run_name",
+              "linkedLibraries.$": "$.get_event_data_step.linked_libraries",
               "payload": {
                 "version": "${__service_version__}",
                 "data.$": "$.set_data_event_outputs"

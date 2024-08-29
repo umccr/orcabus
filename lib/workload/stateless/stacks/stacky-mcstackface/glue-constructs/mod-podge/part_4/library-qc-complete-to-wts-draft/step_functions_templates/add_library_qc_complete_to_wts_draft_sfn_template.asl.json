@@ -146,6 +146,9 @@
       "Parameters": {
         "Entries": [
           {
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}",
+            "DetailType": "${__detail_type__}",
             "Detail": {
               "portalRunId.$": "$.get_parameters_step.portal_run_id",
               "timestamp.$": "$$.State.EnteredTime",
@@ -153,18 +156,20 @@
               "workflowName": "${__workflow_name__}",
               "workflowVersion": "${__workflow_version__}",
               "workflowRunName.$": "$.get_parameters_step.workflow_run_name",
+              "linkedLibraries": [
+                {
+                  "libraryId.$": "$.get_library_item_step.id",
+                  "orcabusId.$": "$.get_library_item_step.orcabus_id"
+                }
+              ],
               "payload": {
-                "refId": null,
                 "version": "${__payload_version__}",
                 "data": {
                   "inputs.$": "$.generate_draft_event_payload_data_step.input_event_data",
                   "tags.$": "$.generate_draft_event_payload_data_step.event_tags"
                 }
               }
-            },
-            "DetailType": "${__detail_type__}",
-            "EventBusName": "${__event_bus_name__}",
-            "Source": "${__event_source__}"
+            }
           }
         ]
       },

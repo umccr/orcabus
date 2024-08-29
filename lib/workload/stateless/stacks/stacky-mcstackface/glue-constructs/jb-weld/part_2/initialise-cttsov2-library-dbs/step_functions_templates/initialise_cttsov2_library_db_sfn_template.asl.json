@@ -15,28 +15,30 @@
       "ItemsPath": "$.input_payload_data.bclconvertDataRows",
       "ItemSelector": {
         "bclconvert_data_row.$": "$$.Map.Item.Value",
+        "index.$": "$$.Map.Item.Index",
         "instrument_run_id.$": "$.input_payload_data.instrumentRunId",
-        "library_id.$": "$.input_payload_data.library.libraryId"
+        "library_id.$": "$.input_payload_data.library.libraryId",
+        "fastq_list_row_objs.$": "$.input_payload_data.fastqListRows"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Get FastqListRowID from BCLConvert Data",
+        "StartAt": "Set Fastq List Row",
         "States": {
-          "Get FastqListRowID from BCLConvert Data": {
+          "Set Fastq List Row": {
             "Type": "Pass",
             "Parameters": {
-              "fastq_list_row_id.$": "States.Format('{}.{}.{}.{}.{}', $.bclconvert_data_row.index, $.bclconvert_data_row.index2, $.bclconvert_data_row.lane, $.instrument_run_id, $.library_id)"
+              "fastq_list_row_id.$": "States.ArrayGetItem($.fastq_list_row_objs[*].fastqListRowRgid, $.index)"
             },
-            "ResultPath": "$.get_fastq_list_row_id_step",
+            "ResultPath": "$.get_fastq_list_row_obj",
             "Next": "Set Outputs"
           },
           "Set Outputs": {
             "Type": "Pass",
             "End": true,
             "Parameters": {
-              "fastq_list_row_id.$": "$.get_fastq_list_row_id_step.fastq_list_row_id",
+              "fastq_list_row_id.$": "$.get_fastq_list_row_obj.fastq_list_row_id",
               "bclconvert_data_row.$": "$.bclconvert_data_row"
             }
           }

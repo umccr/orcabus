@@ -17,7 +17,7 @@ Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The umccriseInputMaker, subscribes to the umccrise input event glue (itself) and generates a ready event for the umccriseReadySfn
-  * However, in order to be 'ready' we need to use a few more variables such as
+  * However, in order to be 'READY' we need to use a few more variables such as
     * icaLogsUri,
     * analysisOutputUri
     * cacheUri
@@ -44,10 +44,10 @@ export class UmccriseInputMakerConstruct extends Construct {
     prefix: 'pva-umccrise',
     tablePartition: 'umccrise',
     triggerSource: 'orcabus.umccriseinputeventglue',
-    triggerStatus: 'draft',
+    triggerStatus: 'DRAFT',
     triggerDetailType: 'WorkflowDraftRunStateChange',
     outputSource: 'orcabus.umccriseinputeventglue',
-    outputStatus: 'ready',
+    outputStatus: 'READY',
     payloadVersion: '2024.07.16',
     workflowName: 'umccrise',
     workflowVersion: '4.2.4',

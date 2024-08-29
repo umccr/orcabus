@@ -42,7 +42,7 @@ export class TnCompleteToUmccriseDraftConstruct extends Construct {
     triggerDetailType: 'WorkflowRunStateChange',
     outputSource: 'orcabus.umccriseinputeventglue',
     outputDetailType: 'WorkflowDraftRunStateChange',
-    outputStatus: 'draft',
+    outputStatus: 'DRAFT',
     payloadVersion: '2024.07.23',
     workflowName: 'umccrise',
     workflowVersion: '4.2.4',

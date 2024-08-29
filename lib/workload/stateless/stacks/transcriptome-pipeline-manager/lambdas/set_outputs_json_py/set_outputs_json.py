@@ -109,6 +109,33 @@ def get_files_from_transcriptome_directory(dragen_transcriptome_project_data_obj
     }
 
 
+def get_files_from_arriba_directory(arriba_project_data_obj: ProjectData) -> Dict[str, ProjectData]:
+    """
+    Get the following files from the germline directory:
+    arriba_html_report
+    :return:
+    """
+
+    arriba_files_list: typing.List[ProjectData] = list_project_data_non_recursively(
+        project_id=arriba_project_data_obj.project_id,
+        parent_folder_id=arriba_project_data_obj.data.id,
+        data_type=DataType.FILE
+    )
+
+    # Find the dragen germline bam as the only bam in the directory that doesn't have the somatic prefix
+    # Derived instead from the germline prefix
+    arriba_fusions_tsv = next(
+        filter(
+            lambda project_data_iter: project_data_iter.data.details.name == "fusions.tsv",
+            arriba_files_list
+        )
+    )
+
+    return {
+        "arriba_fusions_tsv": arriba_fusions_tsv
+    }
+
+
 def get_files_from_qualimap_directory(qualimap_project_data_obj: ProjectData) -> Dict[str, ProjectData]:
     """
     Get the following files from the germline directory:
@@ -191,6 +218,13 @@ def handler(event, context):
     )
 
     # Get the directories
+    arriba_directory = next(
+        filter(
+            lambda project_data_iter: project_data_iter.data.details.name == f"{output_prefix}_arriba",
+            top_dir_list
+        )
+    )
+
     dragen_transcriptome_directory = next(
         filter(
             lambda project_data_iter: project_data_iter.data.details.name == f"{output_prefix}_dragen_transcriptome",
@@ -214,16 +248,20 @@ def handler(event, context):
 
     # File outputs
     file_outputs_dict = {
+        "arriba_output": arriba_directory,
         "dragen_transcriptome_output": dragen_transcriptome_directory,
         "qualimap_output": qualimap_directory,
         "multiqc_output": multiqc_directory,
     }
 
-    # Get the files from the germline directory
+    # Get the files from the transcriptome directory
     file_outputs_dict.update(get_files_from_transcriptome_directory(dragen_transcriptome_directory, output_prefix))
 
-    # Get the files from the somatic directory
+    # Get the files from the qualimap directory
     file_outputs_dict.update(get_files_from_qualimap_directory(qualimap_directory))
+
+    # Get the files from the arriba directory
+    file_outputs_dict.update(get_files_from_arriba_directory(arriba_directory))
 
     # Get the html report from the multiqc directory
     file_outputs_dict.update(get_files_from_multiqc_directory(multiqc_directory))

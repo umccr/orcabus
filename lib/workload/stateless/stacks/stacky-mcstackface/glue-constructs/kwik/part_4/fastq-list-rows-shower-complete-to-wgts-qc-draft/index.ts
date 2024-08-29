@@ -47,7 +47,7 @@ export class WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct extends Co
     triggerDetailType: 'FastqListRowShowerStateChange',
     /* Output Event Settings */
     outputSource: 'orcabus.wgtsqcinputeventglue',
-    outputStatus: 'draft',
+    outputStatus: 'DRAFT',
     outputDetailType: 'WorkflowDraftRunStateChange',
     /* Payload version */
     payloadVersion: '0.1.0',

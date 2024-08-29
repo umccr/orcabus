@@ -102,7 +102,7 @@ def get_library_project_owner(library_id: str) -> Union[str | None]:
     """
     library = get_library_from_library_id(library_id)
 
-    return library.get("project_owner")
+    return library.get("projectOwner")
 
 
 def get_library_project_name(library_id: str) -> Union[str | None]:
@@ -113,7 +113,7 @@ def get_library_project_name(library_id: str) -> Union[str | None]:
     """
     library = get_library_from_library_id(library_id)
 
-    return library.get("project_name")
+    return library.get("projectName")
 
 
 def get_all_libraries() -> List[Dict]:

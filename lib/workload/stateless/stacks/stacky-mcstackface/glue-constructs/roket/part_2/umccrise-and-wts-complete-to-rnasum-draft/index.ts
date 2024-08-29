@@ -18,8 +18,7 @@ Input Event DetailType: `WorkflowRunStateChange`
 Input Event WorkflowName: tumor_normal
 Input Event status: `succeeded`
 
-Output Event Source: `orcabus.
-inputeventglue`
+Output Event Source: `orcabus.inputeventglue`
 Output Event DetailType: `WorkflowDraftRunStateChange`
 Output Event status: `draft`
 

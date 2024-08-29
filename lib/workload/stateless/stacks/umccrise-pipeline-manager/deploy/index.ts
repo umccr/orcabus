@@ -13,6 +13,7 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../components/dynamodb-icav2-ready-event-handler-sfn';
 import { Icav2AnalysisEventHandlerConstruct } from '../../../../components/dynamodb-icav2-handle-event-change-sfn';
+import { PythonLambdaGetCwlObjectFromS3InputsConstruct } from '../../../../components/python-lambda-get-cwl-object-from-s3-inputs-py';
 
 export interface UmccriseIcav2PipelineManagerConfig {
   /* ICAv2 Pipeline analysis essentials */
@@ -88,22 +89,11 @@ export class UmccriseIcav2PipelineManagerStack extends cdk.Stack {
     */
 
     // Convert Fastq List Rows to Lambda Object
-    const getCwlObjectFromS3InputsLambdaObj = new PythonFunction(
+    const getCwlObjectFromS3InputsLambdaObj = new PythonLambdaGetCwlObjectFromS3InputsConstruct(
       this,
-      'get_cwl_object_from_s3_inputs_py',
-      {
-        entry: path.join(__dirname, '../lambdas/get_cwl_object_from_s3_inputs_py'),
-        runtime: lambda.Runtime.PYTHON_3_12,
-        architecture: lambda.Architecture.ARM_64,
-        index: 'get_cwl_object_from_s3_inputs.py',
-        handler: 'handler',
-        memorySize: 1024,
-        timeout: Duration.seconds(60),
-        environment: {
-          ICAV2_ACCESS_TOKEN_SECRET_ID: this.icav2AccessTokenSecretObj.secretName,
-        },
-      }
-    );
+      'get_cwl_object_from_s3_inputs_lambda'
+    ).lambdaObj;
+
     // Add permissions to lambda
     this.icav2AccessTokenSecretObj.grantRead(
       <iam.IRole>getCwlObjectFromS3InputsLambdaObj.currentVersion.role
