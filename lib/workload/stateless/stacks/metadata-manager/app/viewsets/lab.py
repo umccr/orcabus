@@ -16,7 +16,7 @@ class SubjectViewSet(ReadOnlyModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = "__all__"
-    ordering = ["-subject_id"]
+    ordering = ["-orcabus_id"]
     search_fields = Subject.get_base_fields()
     queryset = Subject.objects.none()
 
@@ -33,7 +33,7 @@ class SubjectViewSet(ReadOnlyModelViewSet):
                    responses={200: SubjectFullSerializer(many=True)},
                    parameters=[
                        SubjectSerializer,
-                       OpenApiParameter(name='libraryId',
+                       OpenApiParameter(name='library_id',
                                         description='Filter the subjects that has the given library_id in '
                                                     'the Library model.',
                                         required=False,
@@ -43,10 +43,12 @@ class SubjectViewSet(ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'], url_path='full')
     def get_full_model_set(self, request):
         query_params = self.request.query_params.copy()
-        qs = Subject.objects.prefetch_related("specimen_set__library_set").all().order_by("-subject_id")
 
-        # Allow filtering by libraryId
-        library_id = query_params.get("libraryId", None)
+        ordering = query_params.get("ordering", '-orcabus_id')
+        qs = Subject.objects.prefetch_related("specimen_set__library_set").all().order_by(ordering)
+
+        # Allow filtering by library_id
+        library_id = query_params.get("library_id", None)
         if library_id:
             query_params.pop("library_id")
             qs = qs.filter(specimen__library__library_id=library_id)
@@ -74,7 +76,7 @@ class SpecimenViewSet(ReadOnlyModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = "__all__"
-    ordering = ["-specimen_id"]
+    ordering = ["-orcabus_id"]
     search_fields = Specimen.get_base_fields()
     queryset = Specimen.objects.none()
 
@@ -94,7 +96,7 @@ class LibraryViewSet(ReadOnlyModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = "__all__"
-    ordering = ["-library_id"]
+    ordering = ["-orcabus_id"]
     search_fields = Library.get_base_fields()
     queryset = Library.objects.none()
 
@@ -113,7 +115,10 @@ class LibraryViewSet(ReadOnlyModelViewSet):
     )
     @action(detail=False, methods=['get'], url_path='full')
     def get_full_model_set(self, request):
-        qs = Library.objects.select_related("specimen__subject").all().order_by("-library_id")
+        query_params = self.request.query_params.copy()
+
+        ordering = query_params.get("ordering", '-orcabus_id')
+        qs = Library.objects.select_related("specimen__subject").all().order_by(ordering)
 
         # Allow filtering by the keys inside the library model
         qs = Library.objects.get_model_fields_query(qs, **self.request.query_params)
