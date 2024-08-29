@@ -1,0 +1,349 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      },
+      "Next": "Get Subject ID from Tags"
+    },
+    "Get Subject ID from Tags": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.workflow_inputs.data.tags.subjectId",
+          "id_type": "${__subject_table_partition_name__}"
+        }
+      },
+      "ResultPath": "$.get_subject_id_step",
+      "Next": "Update DB"
+    },
+    "Update DB": {
+      "Type": "Parallel",
+      "Next": "Get Subject Item",
+      "Branches": [
+        {
+          "StartAt": "Check Workflow Type to Update",
+          "States": {
+            "Check Workflow Type to Update": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.workflow_inputs.workflowName",
+                  "StringEquals": "${__wts_workflow_name__}",
+                  "Comment": "Is WTS Workflow",
+                  "Next": "Update WTS Status for Subject"
+                }
+              ],
+              "Default": "Update Umccrise Status for Subject"
+            },
+            "Update WTS Status for Subject": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.workflow_inputs.data.tags.subjectId",
+                  "id_type": "${__subject_table_partition_name__}"
+                },
+                "UpdateExpression": "SET wts_workflow_status = :wts_workflow_status, wts_tumor_library_id = :wts_tumor_library_id, wts_tumor_fastq_list_row_ids =: wts_tumor_fastq_list_row_ids, arriba_output_uri = :arriba_output_uri, dragen_wts_output_uri = :dragen_wts_output_uri",
+                "ExpressionAttributeValues": {
+                  ":wts_workflow_status": {
+                    "S.$": "$.workflow_inputs.status"
+                  },
+                  ":wts_tumor_library_id": {
+                    "S": "$.workflow_inputs.data.tags.libraryId"
+                  },
+                  ":arriba_output_uri": {
+                    "S.$": "$.workflow_inputs.data.outputs.arribaOutputUri"
+                  },
+                  ":dragen_wts_output_uri": {
+                    "S.$": "$.workflow_inputs.data.outputs.dragenTranscriptomeOutputUri"
+                  },
+                  ":wts_tumor_fastq_list_row_ids": {
+                    "S.$": "$.workflow_inputs.data.tags.tumorLibraryId"
+                  }
+                }
+              },
+              "ResultPath": null,
+              "Next": "Wait for DB Update"
+            },
+            "Update Umccrise Status for Subject": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.workflow_inputs.data.tags.subjectId",
+                  "id_type": "${__subject_table_partition_name__}"
+                },
+                "UpdateExpression": "SET umccrise_workflow_status = :umccrise_workflow_status, umccrise_tumor_library_id = :umccrise_tumor_library_id, umccrise_normal_library_id = :umccrise_normal_library_id, umccrise_output_uri = :umccrise_output_uri, umccrise_tumor_fastq_list_row_ids = :umccrise_tumor_fastq_list_row_ids, umccrise_normal_fastq_list_row_ids = :umccrise_normal_fastq_list_row_ids",
+                "ExpressionAttributeValues": {
+                  ":umccrise_workflow_status": {
+                    "S.$": "$.workflow_inputs.status"
+                  },
+                  ":umccrise_tumor_library_id": {
+                    "S.$": "$.workflow_inputs.data.tags.tumorLibraryId"
+                  },
+                  ":umccrise_normal_library_id": {
+                    "S.$": "$.workflow_inputs.data.tags.normalLibraryId"
+                  },
+                  ":umccrise_output_uri": {
+                    "S.$": "$.workflow_inputs.data.outputs.outputDirectoryUri"
+                  },
+                  ":umccrise_tumor_fastq_list_row_ids": {
+                    "S.$": "States.JsonToString($.workflow_inputs.data.tags.tumorFastqListRowIds)"
+                  },
+                  ":umccrise_normal_fastq_list_row_ids": {
+                    "S.$": "States.JsonToString($.workflow_inputs.data.tags.normalFastqListRowIds)"
+                  }
+                }
+              },
+              "ResultPath": null,
+              "Next": "Wait for DB Update"
+            },
+            "Wait for DB Update": {
+              "Type": "Wait",
+              "Seconds": 1,
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Linked Libraries to String",
+          "States": {
+            "Linked Libraries to String": {
+              "Type": "Map",
+              "ItemsPath": "$.workflow_inputs.linkedLibraries",
+              "ItemSelector": {
+                "subject_id.$": "$.workflow_inputs.data.tags.subjectId",
+                "linked_library.$": "$$.Map.Item.Value"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Convert Json to String for each Linked Library",
+                "States": {
+                  "Convert Json to String for each Linked Library": {
+                    "Type": "Pass",
+                    "Parameters": {
+                      "linked_library_str.$": "States.JsonToString($.linked_library)"
+                    },
+                    "End": true
+                  }
+                }
+              },
+              "ResultPath": "$.get_linked_libraries_as_str",
+              "ResultSelector": {
+                "linked_libraries_str_list.$": "$[*].linked_library_str"
+              },
+              "Next": "Append Linked Libraries to Subject"
+            },
+            "Append Linked Libraries to Subject": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.subject_id",
+                  "id_type": "${__subject_table_partition_name__}"
+                },
+                "UpdateExpression": "ADD linked_libraries_set = :linked_libraries_set",
+                "ExpressionAttributeValues": {
+                  ":linked_libraries_set": {
+                    "SS.$": "$.linked_libraries_str_list"
+                  }
+                }
+              },
+              "ResultPath": null,
+              "End": true
+            }
+          }
+        }
+      ]
+    },
+    "Get Subject Item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.workflow_inputs.data.tags.subjectId",
+          "id_type": "${__subject_table_partition_name__}"
+        }
+      },
+      "ResultPath": "$.get_subject_item_step",
+      "Next": "Both workflows are successful"
+    },
+    "Both workflows are successful": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            {
+              "Variable": "$.get_subject_item_step.Item.umccrise_workflow_status",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.get_subject_item_step.Item.umccrise_workflow_status.S",
+              "StringMatches": "${__success_workflow_status__}"
+            },
+            {
+              "Variable": "$.get_subject_item_step.Item.wts_workflow_status",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.get_subject_item_step.Item.wts_workflow_status.S",
+              "StringMatches": "${__success_workflow_status__}"
+            }
+          ],
+          "Next": "Get workflow inputs"
+        }
+      ],
+      "Default": "Success"
+    },
+    "Get workflow inputs": {
+      "Type": "Parallel",
+      "Next": "Generate RNASum Draft Event",
+      "Branches": [
+        {
+          "StartAt": "Generate workflow inputs",
+          "States": {
+            "Generate workflow inputs": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__generate_workflow_inputs_lambda_function_arn__}",
+                "Payload": {
+                  "arriba_output_uri.$": "$.get_subject_item_step.Item.arriba_output_uri.S",
+                  "dragen_wts_output_uri.$": "$.get_subject_item_step.Item.dragen_wts_output_uri.S",
+                  "umccrise_output_uri.$": "$.get_subject_item_step.Item.umccrise_output_uri.S",
+                  "wts_tumor_library_id.$": "$.get_subject_item_step.Item.wts_tumor_library_id.S",
+                  "wgs_tumor_library_id.$": "$.get_subject_item_step.Item.umccrise_tumor_library_id.S",
+                  "wgs_normal_library_id.$": "$.get_subject_item_step.Item.umccrise_normal_library_id.S",
+                  "wts_tumor_fastq_list_row_ids.$": "$.get_subject_item_step.Item.wts_tumor_library_id.S",
+                  "wgs_tumor_fastq_list_row_ids.$": "$.get_subject_item_step.Item.umccrise_tumor_fastq_list_row_ids.S",
+                  "wgs_normal_fastq_list_row_ids.$": "$.get_subject_item_step.Item.umccrise_normal_fastq_list_row_ids.S",
+                  "subject_id.$": "$.get_subject_item_step.Item.id.S"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultSelector": {
+                "input_event_data.$": "$.Payload.input_event_data",
+                "event_tags.$": "$.Payload.event_tags"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get workflow run name and portal run id",
+          "States": {
+            "Get workflow run name and portal run id": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "${__sfn_preamble_state_machine_arn__}",
+                "Input": {}
+              },
+              "ResultSelector": {
+                "portal_run_id.$": "$.Output.portal_run_id",
+                "workflow_run_name.$": "$.Output.workflow_run_name"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Linked Libraries Set to Object List",
+          "States": {
+            "Linked Libraries Set to Object List": {
+              "Type": "Map",
+              "ItemsPath": "$.get_subject_item_step.Item.linked_libraries_set.SS",
+              "ItemSelector": {
+                "linked_library_str": "$$.Map.Item.Value"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Convert String to Json for Linked Library",
+                "States": {
+                  "Convert String to Json for Linked Library": {
+                    "Type": "Pass",
+                    "Parameters": {
+                      "linked_library.$": "States.StringToJson($.linked_library_str)"
+                    },
+                    "End": true
+                  }
+                }
+              },
+              "ResultSelector": {
+                "linked_libraries.$": "$[*].linked_library"
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultSelector": {
+        "input_event_data.$": "$[0].input_event_data",
+        "event_tags.$": "$[0].event_tags",
+        "portal_run_id.$": "$[1].portal_run_id",
+        "workflow_run_name.$": "$[1].workflow_run_name",
+        "linked_libraries.$": "$[2].linked_libraries"
+      },
+      "ResultPath": "$.get_parameters_step"
+    },
+    "Generate RNASum Draft Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}",
+            "DetailType": "${__detail_type__}",
+            "Detail": {
+              "portalRunId.$": "$.get_parameters_step.portal_run_id",
+              "timestamp.$": "$$.State.EnteredTime",
+              "status": "${__output_status__}",
+              "workflowName": "${__workflow_name__}",
+              "workflowVersion": "${__workflow_version__}",
+              "workflowRunName.$": "$.get_parameters_step.workflow_run_name",
+              "linkedLibraries.$": "$.get_parameters_step.linked_libraries",
+              "payload": {
+                "version": "${__payload_version__}",
+                "data": {
+                  "inputs.$": "$.get_parameters_step.input_event_data",
+                  "tags.$": "$.get_parameters_step.event_tags"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "End": true
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}

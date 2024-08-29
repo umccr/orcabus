@@ -53,6 +53,10 @@ import {
   UmccriseIcav2PipelineManagerStack,
   UmccriseIcav2PipelineManagerStackProps,
 } from './stacks/umccrise-pipeline-manager/deploy';
+import {
+  RnasumIcav2PipelineManagerStack,
+  RnasumIcav2PipelineManagerStackProps,
+} from './stacks/rnasum-pipeline-manager/deploy';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -66,6 +70,7 @@ export interface StatelessStackCollectionProps {
   tnIcav2PipelineManagerStackProps: TnIcav2PipelineManagerStackProps;
   wtsIcav2PipelineManagerStackProps: WtsIcav2PipelineManagerStackProps;
   umccriseIcav2PipelineManagerStackProps: UmccriseIcav2PipelineManagerStackProps;
+  rnasumIcav2PipelineManagerStackProps: RnasumIcav2PipelineManagerStackProps;
   eventSchemaStackProps: SchemaStackProps;
   dataSchemaStackProps: SchemaStackProps;
   bclConvertManagerStackProps: BclConvertManagerStackProps;
@@ -86,6 +91,7 @@ export class StatelessStackCollection {
   readonly tnIcav2PipelineManagerStack: Stack;
   readonly wtsIcav2PipelineManagerStack: Stack;
   readonly umccriseIcav2PipelineManagerStack: Stack;
+  readonly rnasumIcav2PipelineManagerStack: Stack;
   readonly eventSchemaStack: Stack;
   readonly dataSchemaStack: Stack;
   readonly bclConvertManagerStack: Stack;
@@ -192,6 +198,15 @@ export class StatelessStackCollection {
       {
         ...this.createTemplateProps(env, 'UmccriseIcav2PipelineManagerStack'),
         ...statelessConfiguration.umccriseIcav2PipelineManagerStackProps,
+      }
+    );
+
+    this.rnasumIcav2PipelineManagerStack = new RnasumIcav2PipelineManagerStack(
+      scope,
+      'RnasumIcav2PipelineManagerStack',
+      {
+        ...this.createTemplateProps(env, 'RnasumIcav2PipelineManagerStack'),
+        ...statelessConfiguration.rnasumIcav2PipelineManagerStackProps,
       }
     );
 
