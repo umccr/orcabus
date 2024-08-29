@@ -92,12 +92,13 @@ def handler(event, context):
         input_libraries: list[srv.LibraryRecord] = srv_wrsc.linkedLibraries
         if input_libraries:
             for input_rec in input_libraries:
-                # check if the library has already a DB record
-                db_lib: Library = Library.objects.get_by_keyword(orcabus_id=input_rec.orcabusId)
-                # create it if not
-                if not db_lib:
-                    # TODO: the library record should exist in the future - synced with metadata service on
-                    #       LibraryStateChange events
+                # get the DB record of the library
+                try:
+                    db_lib: Library = Library.objects.get(orcabus_id=input_rec.orcabusId)
+                except Library.DoesNotExist:
+                    # The library record should exist - synced with metadata service on LibraryStateChange events
+                    # However, until that sync is in place we may need to create a record on demand
+                    # FIXME: remove this once library records are automatically synced
                     db_lib = Library.objects.create(orcabus_id=input_rec.orcabusId, library_id=input_rec.libraryId)
 
                 # create the library association
