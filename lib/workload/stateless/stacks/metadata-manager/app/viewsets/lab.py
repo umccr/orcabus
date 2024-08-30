@@ -120,8 +120,18 @@ class LibraryViewSet(ReadOnlyModelViewSet):
         ordering = query_params.get("ordering", '-orcabus_id')
         qs = Library.objects.select_related("specimen__subject").all().order_by(ordering)
 
+        coverage__lte = query_params.get("coverage__lte", None)
+        if coverage__lte:
+            query_params.pop("coverage__lte")
+            qs = qs.filter(coverage__lte=coverage__lte)
+
+        coverage__gte = query_params.get("coverage__gte", None)
+        if coverage__gte:
+            query_params.pop("coverage__gte")
+            qs = qs.filter(coverage__gte=coverage__gte)
+
         # Allow filtering by the keys inside the library model
-        qs = Library.objects.get_model_fields_query(qs, **self.request.query_params)
+        qs = Library.objects.get_model_fields_query(qs, **query_params)
 
         page = self.paginate_queryset(qs)
         serializer = LibraryFullSerializer(page, many=True)
