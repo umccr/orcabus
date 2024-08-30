@@ -1,11 +1,8 @@
 from django.core.management import BaseCommand
-from django.db.models import QuerySet
 from django.utils.timezone import make_aware
 
-import json
-from datetime import datetime
-from libumccr import libjson
-from workflow_manager.models import Workflow, WorkflowRun, LibraryAssociation, State
+from datetime import datetime, timedelta
+from workflow_manager.models import Workflow, WorkflowRun, LibraryAssociation
 from workflow_manager.tests.factories import WorkflowRunFactory, WorkflowFactory, PayloadFactory, LibraryFactory, \
     StateFactory
 
@@ -16,6 +13,7 @@ STATUS_START = "READY"
 STATUS_RUNNING = "RUNNING"
 STATUS_END = "SUCCEEDED"
 STATUS_FAIL = "FAILED"
+
 
 # https://docs.djangoproject.com/en/5.0/howto/custom-management-commands/
 class Command(BaseCommand):
@@ -60,8 +58,9 @@ class Command(BaseCommand):
             portal_run_id="1234",
             workflow=wf
         )
-        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_FAIL]:
-            StateFactory(workflow_run=wfr_1, status=state, payload=generic_payload)
+
+        for i, state in enumerate([STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_FAIL]):
+            StateFactory(workflow_run=wfr_1, status=state, payload=generic_payload, timestamp=make_aware(datetime.now() + timedelta(hours=i)))
         for i in [0, 1, 2, 3]:
             LibraryAssociation.objects.create(
                 workflow_run=wfr_1,
@@ -76,8 +75,8 @@ class Command(BaseCommand):
             portal_run_id="1235",
             workflow=wf
         )
-        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]:
-            StateFactory(workflow_run=wfr_2, status=state, payload=generic_payload)
+        for i, state in enumerate([STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]):
+            StateFactory(workflow_run=wfr_2, status=state, payload=generic_payload, timestamp=make_aware(datetime.now() + timedelta(hours=i)))
         for i in [0, 1, 2, 3]:
             LibraryAssociation.objects.create(
                 workflow_run=wfr_2,
@@ -103,8 +102,8 @@ class Command(BaseCommand):
             portal_run_id="2345",
             workflow=wf_qc
         )
-        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]:
-            StateFactory(workflow_run=wfr_qc_1, status=state, payload=generic_payload)
+        for i, state in enumerate([STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]):
+            StateFactory(workflow_run=wfr_qc_1, status=state, payload=generic_payload, timestamp=make_aware(datetime.now() + timedelta(hours=i)))
         LibraryAssociation.objects.create(
             workflow_run=wfr_qc_1,
             library=libraries[0],
@@ -118,8 +117,8 @@ class Command(BaseCommand):
             portal_run_id="2346",
             workflow=wf_qc
         )
-        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]:
-            StateFactory(workflow_run=wfr_qc_2, status=state, payload=generic_payload)
+        for i, state in enumerate([STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]):
+            StateFactory(workflow_run=wfr_qc_2, status=state, payload=generic_payload, timestamp=make_aware(datetime.now() + timedelta(hours=i)))
         LibraryAssociation.objects.create(
             workflow_run=wfr_qc_2,
             library=libraries[1],
@@ -134,8 +133,8 @@ class Command(BaseCommand):
             portal_run_id="3456",
             workflow=wf_align
         )
-        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]:
-            StateFactory(workflow_run=wfr_a, status=state, payload=generic_payload)
+        for i, state in enumerate([STATUS_DRAFT, STATUS_START]):
+            StateFactory(workflow_run=wfr_a, status=state, payload=generic_payload, timestamp=make_aware(datetime.now() + timedelta(hours=i)))
         for i in [0, 1]:
             LibraryAssociation.objects.create(
                 workflow_run=wfr_a,
@@ -151,8 +150,8 @@ class Command(BaseCommand):
             portal_run_id="4567",
             workflow=wf_vc
         )
-        for state in [STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]:
-            StateFactory(workflow_run=wfr_vc, status=state, payload=generic_payload)
+        for i, state in enumerate([STATUS_DRAFT, STATUS_START, STATUS_RUNNING]):
+                StateFactory(workflow_run=wfr_vc, status=state, payload=generic_payload, timestamp=make_aware(datetime.now() + timedelta(hours=i)))
         for i in [0, 1]:
             LibraryAssociation.objects.create(
                 workflow_run=wfr_vc,
