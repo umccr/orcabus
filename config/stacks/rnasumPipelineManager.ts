@@ -3,7 +3,6 @@ import {
   eventBusName,
   icaEventPipeStackName,
   icav2AccessTokenSecretName,
-  dragenIcav2ReferenceUriMappingSSMParameterPath,
   rnasumIcav2PipelineIdSSMParameterPath,
   rnasumIcav2PipelineManagerDynamodbTableName,
   rnasumIcav2PipelineWorkflowType,
