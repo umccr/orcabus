@@ -8,8 +8,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         }
       },
       "ResultSelector": {
@@ -357,10 +357,8 @@
       "Next": "Merge Data Inputs",
       "Parameters": {
         "input_json": {
-          "output_directory_germline.$": "States.Format('{}_dragen_germline', $.get_input_parameters_from_event_step.inputs.outputPrefixGermline)",
-          "output_directory_somatic.$": "States.Format('{}_dragen_somatic', $.get_input_parameters_from_event_step.inputs.outputPrefixSomatic)",
-          "output_file_prefix_germline.$": "$.get_input_parameters_from_event_step.inputs.outputPrefixGermline",
-          "output_file_prefix_somatic.$": "$.get_input_parameters_from_event_step.inputs.outputPrefixSomatic",
+          "output_prefix_germline.$": "$.get_input_parameters_from_event_step.inputs.outputPrefixGermline",
+          "output_prefix_somatic.$": "$.get_input_parameters_from_event_step.inputs.outputPrefixSomatic",
           "reference_tar": {
             "class": "File",
             "location.$": "$.configure_inputs_step.reference_uri"
@@ -391,8 +389,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         },
         "UpdateExpression": "SET input_json = :input_json",
         "ExpressionAttributeValues": {

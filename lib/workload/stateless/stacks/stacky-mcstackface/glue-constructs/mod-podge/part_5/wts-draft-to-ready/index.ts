@@ -69,6 +69,7 @@ export class WtsInputMakerConstruct extends Construct {
         lambdaPrefix: this.wtsInputMakerEventMap.prefix,
         payloadVersion: this.wtsInputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.wtsInputMakerEventMap.prefix,
+        rulePrefix: `stacky-${this.wtsInputMakerEventMap.prefix}`,
 
         /*
         Table objects

@@ -268,7 +268,7 @@ External resources required by the wgtsqc Stack
 */
 
 // Deployed under dev/stg/prod
-export const wgtsQcIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wgts_qc_4.2.4_pipeline_id'; // 413b3c60-a3f5-42eb-a9df-8a77768a8328
+export const wgtsQcIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wgts_qc_4.2.4_pipeline_id'; // 03689516-b7f8-4dca-bba9-8405b85fae45
 
 export const wgtsQcIcav2PipelineWorkflowType = 'wgtsQc';
 export const wgtsQcIcav2PipelineWorkflowTypeVersion = '4.2.4';
@@ -302,7 +302,7 @@ TN Stateless stack
 */
 
 // Deployed under dev/stg/prod
-export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // fc82a668-4a60-4acf-a528-38f5ee3ffdf5
+export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 0f5575bc-6cf8-4a90-a80e-05088aae8ed7
 export const tnIcav2PipelineWorkflowType = 'tumor_normal';
 export const tnIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const tnIcav2ServiceVersion = '2024.07.01';
@@ -378,7 +378,7 @@ WTS Stateless stack
 */
 
 // Deployed under dev/stg/prod
-export const wtsIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wts_4.2.4_pipeline_id'; // 66c89437-ec33-4138-8a92-9c018ee533af
+export const wtsIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wts_4.2.4_pipeline_id'; // 1e53ae07-08a6-458b-9fa3-9cf7430409a0
 export const wtsIcav2PipelineWorkflowType = 'wts';
 export const wtsIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const wtsIcav2ServiceVersion = '2024.07.01';
@@ -469,9 +469,9 @@ UMCCRise Stateless stack
 */
 
 // Deployed in dev/stg/prod
-export const rnasumIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/rnasum_1.0.0_pipeline_id'; // bd6e5690-3ccf-4ac4-997d-59462f852f65
+export const rnasumIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/rnasum_1.1.0_pipeline_id'; // 69362d8e-8f6f-4d87-84b5-a8c6205b7032
 export const rnasumIcav2PipelineWorkflowType = 'rnasum';
-export const rnasumIcav2PipelineWorkflowTypeVersion = '2.3.1';
+export const rnasumIcav2PipelineWorkflowTypeVersion = '1.1.0';
 export const rnasumIcav2ServiceVersion = '2024.07.01';
 export const rnasumIcav2ReadyEventSource = 'orcabus.workflowmanager';
 export const rnasumIcav2EventSource = 'orcabus.rnasum';

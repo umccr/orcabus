@@ -8,8 +8,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         }
       },
       "Next": "Set outputs from analysis uri",
@@ -25,8 +25,8 @@
       "Parameters": {
         "FunctionName": "${__set_outputs_json_lambda_function_arn__}",
         "Payload": {
-          "output_directory_name.$": "States.Format('{}__{}', $.get_input_parameters_from_event_step.inputs.subjectId, $.get_input_parameters_from_event_step.inputs.wtsTumorLibraryId)",
-          "wts_tumor_library_id.$": "$.get_input_parameters_from_event_step.inputs.wtsTumorLibraryId",
+          "output_directory_name.$": "States.Format('{}__{}', $.get_db_attributes_step.ready_event_data_inputs.subjectId, $.get_db_attributes_step.ready_event_data_inputs.wtsTumorLibraryId)",
+          "wts_tumor_library_id.$": "$.get_db_attributes_step.ready_event_data_inputs.wtsTumorLibraryId",
           "analysis_output_uri.$": "$.get_db_attributes_step.engine_parameters.outputUri"
         }
       },
@@ -46,7 +46,8 @@
       "TimeoutSeconds": 60,
       "ResultSelector": {
         "output_json": {
-          "outputDirectoryUri.$": "$.Payload.output_uri"
+          "outputDirectoryUri.$": "$.Payload.output_directory_uri",
+          "htmlReportUri.$": "$.Payload.html_report_uri"
         }
       },
       "ResultPath": "$.analysis_outputs_step",
@@ -58,8 +59,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         },
         "UpdateExpression": "SET analysis_output = :output_json",
         "ExpressionAttributeValues": {

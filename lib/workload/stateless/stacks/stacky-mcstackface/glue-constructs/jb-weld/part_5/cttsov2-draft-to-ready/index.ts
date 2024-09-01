@@ -73,6 +73,7 @@ export class Cttsov2InputMakerConstruct extends Construct {
         lambdaPrefix: this.cttsov2InputMakerEventMap.prefix,
         payloadVersion: this.cttsov2InputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.cttsov2InputMakerEventMap.prefix,
+        rulePrefix: this.cttsov2InputMakerEventMap.prefix,
 
         /*
         Table objects

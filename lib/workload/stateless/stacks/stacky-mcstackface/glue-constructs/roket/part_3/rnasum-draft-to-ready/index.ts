@@ -69,6 +69,7 @@ export class RnasumInputMakerConstruct extends Construct {
         lambdaPrefix: this.rnasumInputMakerEventMap.prefix,
         payloadVersion: this.rnasumInputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.rnasumInputMakerEventMap.prefix,
+        rulePrefix: `stacky-${this.rnasumInputMakerEventMap.prefix}`,
 
         /*
         Table objects

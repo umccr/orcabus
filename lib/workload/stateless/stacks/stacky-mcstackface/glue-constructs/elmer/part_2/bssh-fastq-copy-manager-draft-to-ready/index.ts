@@ -62,6 +62,7 @@ export class BsshFastqCopyManagerDraftToReadyMakerConstruct extends Construct {
         lambdaPrefix: this.bsshFastqCopyManagerDraftToReadyMakerEventMap.prefix,
         payloadVersion: this.bsshFastqCopyManagerDraftToReadyMakerEventMap.payloadVersion,
         stateMachinePrefix: this.bsshFastqCopyManagerDraftToReadyMakerEventMap.prefix,
+        rulePrefix: `stacky-${this.bsshFastqCopyManagerDraftToReadyMakerEventMap.prefix}`,
 
         /*
         Table objects

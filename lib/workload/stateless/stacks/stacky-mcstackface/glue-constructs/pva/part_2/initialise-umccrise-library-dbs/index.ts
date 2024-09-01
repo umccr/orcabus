@@ -89,6 +89,7 @@ export class UmccriseInitialiseLibraryAndFastqListRowConstruct extends Construct
     and where the phenotype is NORMAL or TUMOR
     */
     const rule = new events.Rule(this, 'initialise_library_assay', {
+      ruleName: `stacky-${this.UmccriseInitialiseLibraryAndFastqListRowMap.prefix}-rule`,
       eventBus: props.eventBusObj,
       eventPattern: {
         source: [this.UmccriseInitialiseLibraryAndFastqListRowMap.triggerSource],

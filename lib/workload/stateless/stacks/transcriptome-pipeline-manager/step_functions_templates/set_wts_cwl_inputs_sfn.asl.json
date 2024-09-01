@@ -8,8 +8,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         }
       },
       "ResultSelector": {
@@ -433,8 +433,7 @@
           "cl_config.$": "States.JsonToString($.configure_inputs_step.cl_config_sample_names_replace)",
           "cytobands.$": "$.configure_inputs_step.cytobands_uri",
           "fastq_list_rows.$": "$.configure_inputs_step.tumor_fastq_list_rows_cwl",
-          "output_file_prefix.$": "$.get_input_parameters_from_event_step.inputs.outputPrefix",
-          "output_directory.$": "States.Format('{}_dragen_transcriptome', $.get_input_parameters_from_event_step.inputs.outputPrefix)",
+          "output_prefix.$": "$.get_input_parameters_from_event_step.inputs.outputPrefix",
           "protein_domains.$": "$.configure_inputs_step.protein_domains_uri",
           "qc_reference_samples.$": "$.configure_inputs_step.qc_reference_samples_list",
           "reference_fasta.$": "$.configure_inputs_step.reference_fasta_uri",
@@ -457,8 +456,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         },
         "UpdateExpression": "SET input_json = :input_json",
         "ExpressionAttributeValues": {

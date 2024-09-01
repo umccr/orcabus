@@ -228,10 +228,11 @@
                           "status": "${__output_status__}",
                           "workflowName": "${__workflow_name__}",
                           "workflowVersion": "${__workflow_version__}",
+                          "workflowRunName.$": "$.get_per_workflow_run_inputs_step.workflow_run_name",
                           "linkedLibraries": [
                             {
-                              "libraryId.$": "$.get_fastq_list_row_ids_step.library_id",
-                              "orcabusId.$": "$.get_fastq_list_row_ids_step.orcabus_id"
+                              "libraryId.$": "$.library_id",
+                              "orcabusId.$": "$.orcabus_id"
                             }
                           ],
                           "payload": {

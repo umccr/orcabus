@@ -69,6 +69,7 @@ export class UmccriseInputMakerConstruct extends Construct {
         lambdaPrefix: this.umccriseInputMakerEventMap.prefix,
         payloadVersion: this.umccriseInputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.umccriseInputMakerEventMap.prefix,
+        rulePrefix: this.umccriseInputMakerEventMap.prefix,
 
         /*
         Table objects

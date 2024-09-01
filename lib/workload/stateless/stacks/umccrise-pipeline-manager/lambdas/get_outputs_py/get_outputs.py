@@ -21,6 +21,7 @@ def handler(event, context):
     {
         "analysis_output_uri": "s3://umccr-raw-data/analysis/2019/2019-06-04/2019-06-04_1",
         "output_directory_name": "TUMOR_LIBRARY_ID__NORMAL_LIBRARY_ID"
+        "output_subdirectory_name": "SUBJECT_ID__TUMOR_LIBRARY_ID"
     }
 
     :param event:
@@ -28,8 +29,9 @@ def handler(event, context):
     :return:
     """
 
-    analysis_output_uri = event["analysis_output_uri"]
     output_directory_name = event["output_directory_name"]
+    output_subdirectory_name = event['output_subdirectory_name']
+    analysis_output_uri = event["analysis_output_uri"]
 
     # Parse the analysis output uri
     parsed_uri = urlparse(analysis_output_uri)
@@ -42,7 +44,7 @@ def handler(event, context):
             # Extend the path with the output directory name
             # Then add in the trailing slash
             str(
-                Path(parsed_uri.path) / output_directory_name
+                Path(parsed_uri.path) / output_directory_name / output_subdirectory_name
             ) + "/",
             None, None, None
         )

@@ -285,8 +285,8 @@ def handler(event, context):
 #         json.dumps(
 #             handler(
 #                 {
-#                     "output_prefix": "L2400195",
-#                     "analysis_output_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/wts/202407237e0fd947/"
+#                     "output_prefix": "L2400255",
+#                     "analysis_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/"
 #                 },
 #                 None
 #             ),
@@ -295,15 +295,13 @@ def handler(event, context):
 #     )
 #
 #     # {
-#     #     "dragen_germline_output": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/",
-#     #     "dragen_somatic_output": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/",
-#     #     "multiqc_output": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195__L2400191_dragen_somatic_and_germline_multiqc/",
-#     #     "dragen_germline_snv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/L2400191.vcf.gz",
-#     #     "dragen_germline_snv_vcf_hard_filtered": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/L2400191.hard-filtered.vcf.gz",
-#     #     "dragen_germline_bam": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400191_normal.bam",
-#     #     "dragen_somatic_snv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.vcf.gz",
-#     #     "dragen_somatic_snv_vcf_hard_filtered": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.hard-filtered.vcf.gz",
-#     #     "dragen_somatic_sv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.sv.vcf.gz",
-#     #     "dragen_somatic_bam": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195_tumor.bam",
-#     #     "multiqc_html_report": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195__L2400191_dragen_somatic_and_germline_multiqc/L2400195__L2400191_dragen_somatic_and_germline_multiqc.html"
+#     #     "arriba_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_arriba/",
+#     #     "dragen_transcriptome_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_dragen_transcriptome/",
+#     #     "qualimap_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_qualimap/",
+#     #     "multiqc_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_dragen_transcriptome_multiqc/",
+#     #     "dragen_transcriptome_bam": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_dragen_transcriptome/L2400255.bam",
+#     #     "dragen_transcriptome_fusion_candidates_vcf": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_dragen_transcriptome/L2400255.fusion_candidates.vcf.gz",
+#     #     "qualimap_html_report": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_qualimap/qualimapReport.html",
+#     #     "arriba_fusions_tsv": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_arriba/fusions.tsv",
+#     #     "multiqc_html_report": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_dragen_transcriptome_multiqc/L2400255_dragen_transcriptome_multiqc.html"
 #     # }

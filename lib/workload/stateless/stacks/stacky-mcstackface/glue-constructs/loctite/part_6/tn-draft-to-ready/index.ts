@@ -69,6 +69,7 @@ export class TnInputMakerConstruct extends Construct {
         lambdaPrefix: this.tnInputMakerEventMap.prefix,
         payloadVersion: this.tnInputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.tnInputMakerEventMap.prefix,
+        rulePrefix: `stacky-${this.tnInputMakerEventMap.prefix}`,
 
         /*
         Table objects

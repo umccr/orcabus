@@ -15,7 +15,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.workflow_inputs.data.tags.subjectId",
+          "id.$": "$.workflow_inputs.payload.data.tags.subjectId",
           "id_type": "${__subject_table_partition_name__}"
         }
       },
@@ -47,25 +47,25 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id.$": "$.workflow_inputs.data.tags.subjectId",
+                  "id.$": "$.workflow_inputs.payload.data.tags.subjectId",
                   "id_type": "${__subject_table_partition_name__}"
                 },
-                "UpdateExpression": "SET wts_workflow_status = :wts_workflow_status, wts_tumor_library_id = :wts_tumor_library_id, wts_tumor_fastq_list_row_ids =: wts_tumor_fastq_list_row_ids, arriba_output_uri = :arriba_output_uri, dragen_wts_output_uri = :dragen_wts_output_uri",
+                "UpdateExpression": "SET wts_workflow_status = :wts_workflow_status, wts_tumor_library_id = :wts_tumor_library_id, wts_tumor_fastq_list_row_ids = :wts_tumor_fastq_list_row_ids, arriba_output_uri = :arriba_output_uri, dragen_wts_output_uri = :dragen_wts_output_uri",
                 "ExpressionAttributeValues": {
                   ":wts_workflow_status": {
                     "S.$": "$.workflow_inputs.status"
                   },
                   ":wts_tumor_library_id": {
-                    "S": "$.workflow_inputs.data.tags.libraryId"
+                    "S.$": "$.workflow_inputs.payload.data.tags.tumorLibraryId"
                   },
                   ":arriba_output_uri": {
-                    "S.$": "$.workflow_inputs.data.outputs.arribaOutputUri"
+                    "S.$": "$.workflow_inputs.payload.data.outputs.arribaOutputUri"
                   },
                   ":dragen_wts_output_uri": {
-                    "S.$": "$.workflow_inputs.data.outputs.dragenTranscriptomeOutputUri"
+                    "S.$": "$.workflow_inputs.payload.data.outputs.dragenTranscriptomeOutputUri"
                   },
                   ":wts_tumor_fastq_list_row_ids": {
-                    "S.$": "$.workflow_inputs.data.tags.tumorLibraryId"
+                    "S.$": "States.JsonToString($.workflow_inputs.payload.data.tags.tumorFastqListRowIds)"
                   }
                 }
               },
@@ -78,7 +78,7 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id.$": "$.workflow_inputs.data.tags.subjectId",
+                  "id.$": "$.workflow_inputs.payload.data.tags.subjectId",
                   "id_type": "${__subject_table_partition_name__}"
                 },
                 "UpdateExpression": "SET umccrise_workflow_status = :umccrise_workflow_status, umccrise_tumor_library_id = :umccrise_tumor_library_id, umccrise_normal_library_id = :umccrise_normal_library_id, umccrise_output_uri = :umccrise_output_uri, umccrise_tumor_fastq_list_row_ids = :umccrise_tumor_fastq_list_row_ids, umccrise_normal_fastq_list_row_ids = :umccrise_normal_fastq_list_row_ids",
@@ -87,19 +87,19 @@
                     "S.$": "$.workflow_inputs.status"
                   },
                   ":umccrise_tumor_library_id": {
-                    "S.$": "$.workflow_inputs.data.tags.tumorLibraryId"
+                    "S.$": "$.workflow_inputs.payload.data.tags.tumorLibraryId"
                   },
                   ":umccrise_normal_library_id": {
-                    "S.$": "$.workflow_inputs.data.tags.normalLibraryId"
+                    "S.$": "$.workflow_inputs.payload.data.tags.normalLibraryId"
                   },
                   ":umccrise_output_uri": {
-                    "S.$": "$.workflow_inputs.data.outputs.outputDirectoryUri"
+                    "S.$": "$.workflow_inputs.payload.data.outputs.outputDirectoryUri"
                   },
                   ":umccrise_tumor_fastq_list_row_ids": {
-                    "S.$": "States.JsonToString($.workflow_inputs.data.tags.tumorFastqListRowIds)"
+                    "S.$": "States.JsonToString($.workflow_inputs.payload.data.tags.tumorFastqListRowIds)"
                   },
                   ":umccrise_normal_fastq_list_row_ids": {
-                    "S.$": "States.JsonToString($.workflow_inputs.data.tags.normalFastqListRowIds)"
+                    "S.$": "States.JsonToString($.workflow_inputs.payload.data.tags.normalFastqListRowIds)"
                   }
                 }
               },
@@ -120,7 +120,7 @@
               "Type": "Map",
               "ItemsPath": "$.workflow_inputs.linkedLibraries",
               "ItemSelector": {
-                "subject_id.$": "$.workflow_inputs.data.tags.subjectId",
+                "subject_id.$": "$.workflow_inputs.payload.data.tags.subjectId",
                 "linked_library.$": "$$.Map.Item.Value"
               },
               "ItemProcessor": {
@@ -150,13 +150,13 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id.$": "$.subject_id",
+                  "id.$": "$.workflow_inputs.payload.data.tags.subjectId",
                   "id_type": "${__subject_table_partition_name__}"
                 },
-                "UpdateExpression": "ADD linked_libraries_set = :linked_libraries_set",
+                "UpdateExpression": "ADD linked_libraries_set :linked_libraries_set",
                 "ExpressionAttributeValues": {
                   ":linked_libraries_set": {
-                    "SS.$": "$.linked_libraries_str_list"
+                    "SS.$": "$.get_linked_libraries_as_str.linked_libraries_str_list"
                   }
                 }
               },
@@ -165,7 +165,8 @@
             }
           }
         }
-      ]
+      ],
+      "ResultPath": null
     },
     "Get Subject Item": {
       "Type": "Task",
@@ -173,7 +174,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.workflow_inputs.data.tags.subjectId",
+          "id.$": "$.workflow_inputs.payload.data.tags.subjectId",
           "id_type": "${__subject_table_partition_name__}"
         }
       },
@@ -226,9 +227,9 @@
                   "wts_tumor_library_id.$": "$.get_subject_item_step.Item.wts_tumor_library_id.S",
                   "wgs_tumor_library_id.$": "$.get_subject_item_step.Item.umccrise_tumor_library_id.S",
                   "wgs_normal_library_id.$": "$.get_subject_item_step.Item.umccrise_normal_library_id.S",
-                  "wts_tumor_fastq_list_row_ids.$": "$.get_subject_item_step.Item.wts_tumor_library_id.S",
-                  "wgs_tumor_fastq_list_row_ids.$": "$.get_subject_item_step.Item.umccrise_tumor_fastq_list_row_ids.S",
-                  "wgs_normal_fastq_list_row_ids.$": "$.get_subject_item_step.Item.umccrise_normal_fastq_list_row_ids.S",
+                  "wts_tumor_fastq_list_row_ids.$": "States.StringToJson($.get_subject_item_step.Item.wts_tumor_fastq_list_row_ids.S)",
+                  "wgs_tumor_fastq_list_row_ids.$": "States.StringToJson($.get_subject_item_step.Item.umccrise_tumor_fastq_list_row_ids.S)",
+                  "wgs_normal_fastq_list_row_ids.$": "States.StringToJson($.get_subject_item_step.Item.umccrise_normal_fastq_list_row_ids.S)",
                   "subject_id.$": "$.get_subject_item_step.Item.id.S"
                 }
               },
@@ -278,7 +279,7 @@
               "Type": "Map",
               "ItemsPath": "$.get_subject_item_step.Item.linked_libraries_set.SS",
               "ItemSelector": {
-                "linked_library_str": "$$.Map.Item.Value"
+                "linked_library_str.$": "$$.Map.Item.Value"
               },
               "ItemProcessor": {
                 "ProcessorConfig": {

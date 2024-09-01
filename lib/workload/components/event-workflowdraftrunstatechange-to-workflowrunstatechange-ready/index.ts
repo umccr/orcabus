@@ -22,6 +22,7 @@ export interface WorkflowRunStateChangeInternalInputMakerProps {
   /* Object name prefixes */
   stateMachinePrefix: string;
   lambdaPrefix: string;
+  rulePrefix: string;
   /* Table configs */
   tableObj: dynamodb.ITableV2;
   tablePartitionName: string;
@@ -204,6 +205,7 @@ export class WorkflowDraftRunStateChangeToWorkflowRunStateChangeReadyConstruct e
     Part 4 - Set up a rule to trigger the state machine
     */
     const rule = new events.Rule(this, 'workflowrunstatechangeparser_event_rule', {
+      ruleName: `${props.rulePrefix}-rule`,
       eventBus: props.eventBusObj,
       eventPattern: {
         source: [props.triggerSource],

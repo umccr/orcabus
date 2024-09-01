@@ -3,7 +3,6 @@ import {
   eventBusName,
   icaEventPipeStackName,
   icav2AccessTokenSecretName,
-  dragenIcav2ReferenceUriMappingSSMParameterPath,
   umccriseIcav2PipelineIdSSMParameterPath,
   umccriseIcav2PipelineManagerDynamodbTableName,
   umccriseIcav2PipelineWorkflowType,
@@ -16,6 +15,7 @@ import {
   umccriseDefaultGenomeVersion,
   umccriseDynamoDbTableSSMArn,
   umccriseDynamoDbTableSSMName,
+  icav2UmccriseGenomesReferenceUriMappingSSMParameterPath,
 } from '../constants';
 import { UmccriseIcav2PipelineManagerConfig } from '../../lib/workload/stateless/stacks/umccrise-pipeline-manager/deploy';
 import { UmccriseIcav2PipelineTableConfig } from '../../lib/workload/stateful/stacks/umccrise-pipeline-dynamo-db/deploy/stack';
@@ -53,6 +53,6 @@ export const getUmccriseIcav2PipelineManagerStackProps = (
     stateMachinePrefix: umccriseStateMachinePrefix,
     /* SSM Workflow Parameters */
     defaultReferenceVersion: umccriseDefaultGenomeVersion,
-    referenceUriSsmPath: dragenIcav2ReferenceUriMappingSSMParameterPath,
+    referenceUriSsmPath: icav2UmccriseGenomesReferenceUriMappingSSMParameterPath,
   };
 };

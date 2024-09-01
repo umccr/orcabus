@@ -70,6 +70,7 @@ export class WgtsQcInputMakerConstruct extends Construct {
         lambdaPrefix: this.wgtsQcInputMakerEventMap.prefix,
         payloadVersion: this.wgtsQcInputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.wgtsQcInputMakerEventMap.prefix,
+        rulePrefix: `stacky-${this.wgtsQcInputMakerEventMap.prefix}`,
 
         /*
         Table objects

@@ -65,6 +65,7 @@ export class BclconvertInteropQcDraftToReadyMakerConstruct extends Construct {
         lambdaPrefix: this.bclconvertInteropQcDraftToReadyMakerEventMap.prefix,
         payloadVersion: this.bclconvertInteropQcDraftToReadyMakerEventMap.payloadVersion,
         stateMachinePrefix: this.bclconvertInteropQcDraftToReadyMakerEventMap.prefix,
+        rulePrefix: `stacky-${this.bclconvertInteropQcDraftToReadyMakerEventMap.prefix}-rule`,
 
         /*
         Table objects

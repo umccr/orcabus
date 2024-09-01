@@ -91,7 +91,10 @@ export class UmccriseIcav2PipelineManagerStack extends cdk.Stack {
     // Convert Fastq List Rows to Lambda Object
     const getCwlObjectFromS3InputsLambdaObj = new PythonLambdaGetCwlObjectFromS3InputsConstruct(
       this,
-      'get_cwl_object_from_s3_inputs_lambda'
+      'get_cwl_object_from_s3_inputs_lambda',
+      {
+        icav2AccessTokenSecretObj: this.icav2AccessTokenSecretObj,
+      }
     ).lambdaObj;
 
     // Add permissions to lambda

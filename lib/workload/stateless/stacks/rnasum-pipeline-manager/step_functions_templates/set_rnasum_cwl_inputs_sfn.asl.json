@@ -8,8 +8,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         }
       },
       "ResultSelector": {
@@ -201,13 +201,13 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         },
         "UpdateExpression": "SET input_json = :input_json",
         "ExpressionAttributeValues": {
           ":input_json": {
-            "S.$": "States.JsonToString($.merge_boolean_enable_parameters_step.input_json)"
+            "S.$": "States.JsonToString($.merge_data_inputs_step.input_json)"
           }
         }
       },
