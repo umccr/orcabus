@@ -16,26 +16,28 @@ import (
 )
 
 type Config struct {
-	FileManagerEndpoint string
+	FileManagerEndpoint string `required:"true" split_words:"true"`
 }
 
-type AttributePatch struct {
+type JsonPatch struct {
 	Op    string `json:"op"`
 	Path  string `json:"path"`
-	Value string `json:"value"`
+	Value string `json:"value,omitempty"`
 }
 
-func handler(event workflowrunstatechange.Event) (err error) {
+type PatchList []JsonPatch
+
+func Handler(event workflowrunstatechange.Event) (err error) {
 	status := strings.ToUpper(event.Detail.Status)
 	if status != "SUCCEEDED" && status != "FAILED" && status != "ABORTED" {
 		return nil
 	}
 
-	patch, err := json.Marshal(AttributePatch{
+	patch, err := json.Marshal(PatchList{JsonPatch{
 		"add",
 		"/portalRunId",
 		event.Detail.PortalRunId,
-	})
+	}})
 	if err != nil {
 		return err
 	}
@@ -64,6 +66,7 @@ func handler(event workflowrunstatechange.Event) (err error) {
 	req.URL.RawQuery = url.Values{
 		"key": {fmt.Sprintf("*%v*", event.Detail.PortalRunId)},
 	}.Encode()
+	req.Header.Add("Content-Type", "application/json")
 
 	slog.Debug(fmt.Sprintf("sending attributes patch %v to %v", patch, req.URL.String()))
 
@@ -79,6 +82,9 @@ func handler(event workflowrunstatechange.Event) (err error) {
 	if err != nil {
 		return err
 	}
+	if resp.StatusCode != 200 {
+		return errors.New(fmt.Sprintf("error annotating attributes with status %v: %v", resp.Status, string(body)))
+	}
 
 	slog.Debug(fmt.Sprintf("received response %v with body: %v", resp.StatusCode, body))
 
@@ -86,5 +92,5 @@ func handler(event workflowrunstatechange.Event) (err error) {
 }
 
 func main() {
-	lambda.Start(handler)
+	lambda.Start(Handler)
 }
