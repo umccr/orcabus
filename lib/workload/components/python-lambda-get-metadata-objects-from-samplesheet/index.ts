@@ -43,7 +43,7 @@ export class GetLibraryObjectsFromSamplesheetConstruct extends Construct {
 
     // Get library objects
     this.lambdaObj = new PythonFunction(this, 'get_library_objects_from_samplesheet', {
-      functionName: `${props.functionNamePrefix}-library-objects-from-samplesheet`,
+      functionName: `${props.functionNamePrefix}-library-objs-from-ss`,
       entry: path.join(__dirname, 'get_metadata_objects_from_samplesheet_py'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,

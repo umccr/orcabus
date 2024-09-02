@@ -23,6 +23,7 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
       samplesheetByInstrumentRun: 'samplesheet_by_instrument_run',
       subject: 'subject',
       library: 'library',
+      project: 'project',
     },
     // Set event triggers
     triggerSource: 'orcabus.workflowmanager',
@@ -36,6 +37,7 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
       completeEventShower: 'SamplesheetRegisteredEventShowerComplete',
       subjectInSamplesheet: 'SubjectInSamplesheet',
       libraryInSamplesheet: 'LibraryInSamplesheet',
+      projectInSamplesheet: 'ProjectInSamplesheet',
     },
     outputDetailType: {
       showerTerminal: 'SamplesheetShowerStateChange',
@@ -111,6 +113,14 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
         __start_samplesheet_shower_status__:
           this.newSamplesheetEventShowerMap.outputStatus.startEventShower,
 
+        // Project In Samplesheet
+        __project_in_samplesheet_detail_type__:
+          this.newSamplesheetEventShowerMap.outputDetailType.metadataInSampleSheet,
+        __project_in_samplesheet_status__:
+          this.newSamplesheetEventShowerMap.outputStatus.projectInSamplesheet,
+        __project_in_samplesheet_payload_version__:
+          this.newSamplesheetEventShowerMap.outputPayloadVersion,
+
         // Subject In Samplesheet
         __subject_in_samplesheet_detail_type__:
           this.newSamplesheetEventShowerMap.outputDetailType.metadataInSampleSheet,
@@ -141,6 +151,7 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
         __library_table_partition_name__: this.newSamplesheetEventShowerMap.tablePartition.library,
         __samplesheet_table_partition_name__:
           this.newSamplesheetEventShowerMap.tablePartition.samplesheetByInstrumentRun,
+        __project_table_partition_name__: this.newSamplesheetEventShowerMap.tablePartition.project,
 
         // Lambdas
         __decompress_samplesheet_function_arn__:

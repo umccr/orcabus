@@ -42,10 +42,11 @@ export class TnCompleteToUmccriseDraftConstruct extends Construct {
     triggerDetailType: 'WorkflowRunStateChange',
     outputSource: 'orcabus.umccriseinputeventglue',
     outputDetailType: 'WorkflowDraftRunStateChange',
-    outputStatus: 'draft',
+    outputStatus: 'DRAFT',
     payloadVersion: '2024.07.23',
     workflowName: 'umccrise',
-    workflowVersion: '4.2.4',
+    workflowVersion: '2.3.1',
+    tablePartitionName: 'subject',
   };
 
   constructor(scope: Construct, id: string, props: TnCompleteToUmccriseDraftConstructProps) {
@@ -107,6 +108,9 @@ export class TnCompleteToUmccriseDraftConstruct extends Construct {
 
         /* Tables */
         __table_name__: props.tableObj.tableName,
+
+        /* Table Partitions */
+        __subject_table_partition_name__: this.UmccriseDraftMap.tablePartitionName,
 
         // State Machines
         __sfn_preamble_state_machine_arn__: sfn_preamble.stateMachineArn,

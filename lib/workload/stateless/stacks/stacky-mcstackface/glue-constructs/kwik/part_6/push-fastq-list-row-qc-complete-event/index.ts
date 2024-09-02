@@ -43,7 +43,7 @@ export class FastqListRowQcCompleteConstruct extends Construct {
     triggerWorkflowName: 'wgtsQc',
     outputSource: 'orcabus.wgtsqcinputeventglue',
     outputDetailType: 'FastqListRowStateChange',
-    outputStatus: 'QcComplete',
+    outputStatus: 'QC_COMPLETE',
     payloadVersion: '2024.05.24',
   };
 

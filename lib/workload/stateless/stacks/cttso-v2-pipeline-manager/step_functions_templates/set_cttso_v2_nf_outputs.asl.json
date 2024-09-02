@@ -8,8 +8,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         }
       },
       "Next": "Delete Cache and Set Outputs JSON",
@@ -98,10 +98,8 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id": {
-                    "S.$": "$.db_uuid"
-                  },
-                  "id_type": "db_uuid"
+                  "id.$": "$.portal_run_id",
+                  "id_type": "portal_run_id"
                 },
                 "UpdateExpression": "SET analysis_output = :output_json",
                 "ExpressionAttributeValues": {

@@ -25,7 +25,7 @@ export class TnFastqListRowQcCompleteConstruct extends Construct {
     prefix: 'loctite-fqlr-qc-complete-to-db',
     tablePartition: 'fastq_list_row',
     triggerSource: 'orcabus.wgtsqcinputeventglue',
-    triggerStatus: 'QcComplete',
+    triggerStatus: 'QC_COMPLETE',
     triggerDetailType: 'FastqListRowStateChange',
   };
 

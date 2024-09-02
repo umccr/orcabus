@@ -1,0 +1,224 @@
+{
+  "Comment": "Launch Icav2 Pipeline and log in db",
+  "StartAt": "Get DataBase Entry",
+  "States": {
+    "Get DataBase Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
+        }
+      },
+      "ResultSelector": {
+        "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "engineParameters.$": "States.StringToJson($.Item.engine_parameters.S)"
+      },
+      "ResultPath": "$.get_input_parameters_from_event_step",
+      "Next": "Configure Inputs"
+    },
+    "Configure Inputs": {
+      "Type": "Parallel",
+      "Next": "Set Input JSON",
+      "Branches": [
+        {
+          "StartAt": "Convert S3 Output Uris To CWL Input Objects (Tumor and Normal)",
+          "States": {
+            "Convert S3 Output Uris To CWL Input Objects (Tumor and Normal)": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Convert Dragen Transcriptome Directory to CWL Input Objects",
+                  "States": {
+                    "Convert Dragen Transcriptome Directory to CWL Input Objects": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__get_cwl_object_from_s3_inputs_lambda_function_arn__}",
+                        "Payload": {
+                          "s3_uri.$": "$.get_input_parameters_from_event_step.inputs.dragenTranscriptomeUri"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "dragen_wts_dir.$": "$.Payload.cwl_object"
+                      },
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Convert Arriba Directory to CWL Input Objects",
+                  "States": {
+                    "Convert Arriba Directory to CWL Input Objects": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__get_cwl_object_from_s3_inputs_lambda_function_arn__}",
+                        "Payload": {
+                          "s3_uri.$": "$.get_input_parameters_from_event_step.inputs.arribaUri"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "arriba_dir.$": "$.Payload.cwl_object"
+                      },
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Convert Umccrise Directory to CWL Input Objects",
+                  "States": {
+                    "Convert Umccrise Directory to CWL Input Objects": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__get_cwl_object_from_s3_inputs_lambda_function_arn__}",
+                        "Payload": {
+                          "s3_uri.$": "$.get_input_parameters_from_event_step.inputs.umccriseUri"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "umccrise.$": "$.Payload.cwl_object"
+                      },
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "End": true,
+              "ResultSelector": {
+                "cwl_data_inputs": {
+                  "dragen_wts_dir.$": "$.[0].dragen_wts_dir",
+                  "arriba_dir.$": "$.[1].arriba_dir",
+                  "umccrise.$": "$.[2].umccrise"
+                }
+              }
+            }
+          }
+        },
+        {
+          "StartAt": "Is DataSet Set",
+          "States": {
+            "Is DataSet Set": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.genomesVersion",
+                  "IsPresent": false,
+                  "Comment": "Get Default Version",
+                  "Next": "Set Dataset as Default (PANCAN)"
+                }
+              ],
+              "Default": "Dataset is Set"
+            },
+            "Dataset is Set": {
+              "Type": "Pass",
+              "Parameters": {
+                "dataset.$": "$.get_input_parameters_from_event_step.inputs.dataset"
+              },
+              "End": true
+            },
+            "Set Dataset as Default (PANCAN)": {
+              "Type": "Pass",
+              "Parameters": {
+                "dataset": "${__default_dataset_version__}"
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.configure_inputs_step",
+      "ResultSelector": {
+        "cwl_data_inputs.$": "$.[0].cwl_data_inputs",
+        "dataset.$": "$.[1].dataset"
+      }
+    },
+    "Set Input JSON": {
+      "Type": "Pass",
+      "Next": "Merge Data Inputs",
+      "Parameters": {
+        "input_json": {
+          "sample_name.$": "$.get_input_parameters_from_event_step.inputs.wtsTumorLibraryId",
+          "dataset.$": "$.configure_inputs_step.dataset",
+          "report_dir.$": "States.Format('{}__{}', $.get_input_parameters_from_event_step.inputs.subjectId, $.get_input_parameters_from_event_step.inputs.wtsTumorLibraryId)"
+        }
+      },
+      "ResultPath": "$.set_input_json_step"
+    },
+    "Merge Data Inputs": {
+      "Type": "Pass",
+      "Next": "Update Database Entry",
+      "Parameters": {
+        "input_json.$": "States.JsonMerge($.set_input_json_step.input_json, $.configure_inputs_step.cwl_data_inputs, false)"
+      },
+      "ResultPath": "$.merge_data_inputs_step"
+    },
+    "Update Database Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
+        },
+        "UpdateExpression": "SET input_json = :input_json",
+        "ExpressionAttributeValues": {
+          ":input_json": {
+            "S.$": "States.JsonToString($.merge_data_inputs_step.input_json)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Wait 1 Second (Pre-execution)"
+    },
+    "Wait 1 Second (Pre-execution)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Wait for databases to sync before continuing",
+      "End": true
+    }
+  }
+}

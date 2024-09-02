@@ -33,10 +33,10 @@ export class BsshFastqCopyManagerDraftToReadyMakerConstruct extends Construct {
     prefix: 'elmer-bssh-fastq-copy',
     tablePartition: 'bssh_fastq_copy',
     triggerSource: 'orcabus.bsshfastqcopyinputeventglue',
-    triggerStatus: 'draft',
+    triggerStatus: 'DRAFT',
     triggerDetailType: 'WorkflowDraftRunStateChange',
     outputSource: 'orcabus.bsshfastqcopyinputeventglue',
-    outputStatus: 'ready',
+    outputStatus: 'READY',
     payloadVersion: '2024.05.24',
     workflowName: 'bsshFastqCopy',
     workflowVersion: '2024.05.24',
@@ -62,6 +62,7 @@ export class BsshFastqCopyManagerDraftToReadyMakerConstruct extends Construct {
         lambdaPrefix: this.bsshFastqCopyManagerDraftToReadyMakerEventMap.prefix,
         payloadVersion: this.bsshFastqCopyManagerDraftToReadyMakerEventMap.payloadVersion,
         stateMachinePrefix: this.bsshFastqCopyManagerDraftToReadyMakerEventMap.prefix,
+        rulePrefix: `stacky-${this.bsshFastqCopyManagerDraftToReadyMakerEventMap.prefix}`,
 
         /*
         Table objects

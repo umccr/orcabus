@@ -127,7 +127,7 @@ export class WtsGlueHandlerConstruct extends Construct {
     Output Event status: `ready`
 
     * The wtsInputMaker, subscribes to the wts input event glue (itself) and generates a ready event for the wtsReadySfn
-      * However, in order to be 'ready' we need to use a few more variables such as
+      * However, in order to be 'READY' we need to use a few more variables such as
         * icaLogsUri,
         * analysisOutputUri
         * cacheUri

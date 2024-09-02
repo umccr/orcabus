@@ -113,7 +113,7 @@ Output Event status: `ready`
 
 * The ctTSOv2InputMaker, subscribes to the cttsov2 input event glue (itself) and generates a ready event for the ctTSOv2ReadySfn
   * For the cttso v2 workflow we require a samplesheet, a set of fastq list rows (provided in the last step)
-  * However, in order to be 'ready' we need to use a few more variables such as  
+  * However, in order to be 'READY' we need to use a few more variables such as  
     * icaLogsUri,
     * analysisOutputUri
     * cacheUri

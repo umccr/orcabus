@@ -89,6 +89,7 @@ export class TnInitialiseLibraryAndFastqListRowConstruct extends Construct {
     and where the phenotype is NORMAL or TUMOR
     */
     const rule = new events.Rule(this, 'initialise_library_assay', {
+      ruleName: `stacky-${this.TnInitialiseLibraryAndFastqListRowMap.prefix}-rule`,
       eventBus: props.eventBusObj,
       eventPattern: {
         source: [this.TnInitialiseLibraryAndFastqListRowMap.triggerSource],

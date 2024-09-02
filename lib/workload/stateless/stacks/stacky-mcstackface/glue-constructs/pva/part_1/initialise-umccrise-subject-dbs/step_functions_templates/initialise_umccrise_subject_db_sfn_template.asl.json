@@ -15,7 +15,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.payload_data.subject.internalId",
+          "id.$": "$.payload_data.subject.subjectId",
           "id_type": "${__subject_partition_name__}"
         }
       },
@@ -44,10 +44,10 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Item": {
-          "id.$": "$.payload_data.subject.internalId",
+          "id.$": "$.payload_data.subject.subjectId",
           "id_type": "${__subject_partition_name__}",
-          "metadata_db_id": {
-            "N.$": "States.Format('{}', $.payload_data.subject.id)"
+          "orcabus_id": {
+            "S.$": "$.payload_data.subject.orcabusId"
           }
         }
       },

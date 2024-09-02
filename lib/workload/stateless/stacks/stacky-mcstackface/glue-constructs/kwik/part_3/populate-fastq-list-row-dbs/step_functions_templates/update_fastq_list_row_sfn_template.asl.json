@@ -6,7 +6,7 @@
       "Type": "Pass",
       "Next": "DynamoDB GetItem",
       "Parameters": {
-        "fastq_list_row_id.$": "$.payload.data.id",
+        "fastq_list_row_id.$": "$.payload.data.fastqListRow.rgid",
         "fastq_list_row_event_data.$": "$.payload.data.fastqListRow",
         "instrument_run_id.$": "$.payload.data.instrumentRunId"
       }

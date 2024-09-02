@@ -8,8 +8,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         }
       },
       "ResultPath": "$.get_ready_event_step",
@@ -25,8 +25,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         },
         "UpdateExpression": "SET analysis_status = :analysis_status",
         "ExpressionAttributeValues": {
@@ -145,8 +145,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         },
         "UpdateExpression": "SET analysis_status = :analysis_status",
         "ExpressionAttributeValues": {
@@ -177,10 +177,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id": {
-            "S.$": "$.db_uuid"
-          },
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         },
         "UpdateExpression": "SET input_json = :input_json",
         "ExpressionAttributeValues": {

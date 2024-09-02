@@ -36,10 +36,10 @@ export class BclconvertInteropQcDraftToReadyMakerConstruct extends Construct {
     prefix: 'gorilla-interop-qc',
     tablePartition: 'bclconvert_interop_qc',
     triggerSource: 'orcabus.bclconvertinteropqcinputeventglue',
-    triggerStatus: 'draft',
+    triggerStatus: 'DRAFT',
     triggerDetailType: 'WorkflowDraftRunStateChange',
     outputSource: 'orcabus.bclconvertinteropqcinputeventglue',
-    outputStatus: 'ready',
+    outputStatus: 'READY',
     payloadVersion: '2024.05.24',
     workflowName: 'bclconvert-interop-qc',
     workflowVersion: '2024.05.24',
@@ -65,6 +65,7 @@ export class BclconvertInteropQcDraftToReadyMakerConstruct extends Construct {
         lambdaPrefix: this.bclconvertInteropQcDraftToReadyMakerEventMap.prefix,
         payloadVersion: this.bclconvertInteropQcDraftToReadyMakerEventMap.payloadVersion,
         stateMachinePrefix: this.bclconvertInteropQcDraftToReadyMakerEventMap.prefix,
+        rulePrefix: `stacky-${this.bclconvertInteropQcDraftToReadyMakerEventMap.prefix}-rule`,
 
         /*
         Table objects

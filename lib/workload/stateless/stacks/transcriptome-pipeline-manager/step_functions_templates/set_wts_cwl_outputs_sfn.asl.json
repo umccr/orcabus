@@ -8,8 +8,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         }
       },
       "Next": "Set outputs from analysis uri",
@@ -48,6 +48,8 @@
           "dragenTranscriptomeOutputUri.$": "$.Payload.dragen_transcriptome_output",
           "dragenTranscriptomeBamUri.$": "$.Payload.dragen_transcriptome_bam",
           "dragenTranscriptomeFusionCandidatesVcfUri.$": "$.Payload.dragen_transcriptome_fusion_candidates_vcf",
+          "arribaOutputUri.$": "$.Payload.arriba_output",
+          "arribaFusionsTsvUri.$": "$.Payload.arriba_fusions_tsv",
           "dragenQualimapOutputUri.$": "$.Payload.qualimap_output",
           "dragenQualimapHtmlReportUri.$": "$.Payload.qualimap_html_report",
           "multiqcOutputUri.$": "$.Payload.multiqc_output",
@@ -63,8 +65,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         },
         "UpdateExpression": "SET analysis_output = :output_json",
         "ExpressionAttributeValues": {

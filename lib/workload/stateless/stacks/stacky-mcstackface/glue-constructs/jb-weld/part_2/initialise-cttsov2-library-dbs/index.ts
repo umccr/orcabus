@@ -83,6 +83,7 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
     Part 4: Subscribe to the library events from the event bus where the library assay type is cttsov2
     */
     const rule = new events.Rule(this, 'initialise_library_assay', {
+      ruleName: `stacky-${this.Cttsov2InitialiseLibraryAndFastqListRowMap.prefix}-rule`,
       eventBus: props.eventBusObj,
       eventPattern: {
         source: [this.Cttsov2InitialiseLibraryAndFastqListRowMap.triggerSource],

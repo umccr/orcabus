@@ -8,8 +8,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         }
       },
       "Next": "Set outputs from analysis uri",
@@ -26,6 +26,7 @@
         "FunctionName": "${__set_outputs_json_lambda_function_arn__}",
         "Payload": {
           "output_directory_name.$": "States.Format('{}__{}', $.get_db_attributes_step.ready_event_data_inputs.dragenSomaticLibraryId, $.get_db_attributes_step.ready_event_data_inputs.dragenGermlineLibraryId)",
+          "output_subdirectory_name.$": "States.Format('{}__{}', $.get_db_attributes_step.ready_event_data_inputs.subjectId, $.get_db_attributes_step.ready_event_data_inputs.dragenSomaticLibraryId)",
           "analysis_output_uri.$": "$.get_db_attributes_step.engine_parameters.outputUri"
         }
       },
@@ -57,8 +58,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         },
         "UpdateExpression": "SET analysis_output = :output_json",
         "ExpressionAttributeValues": {

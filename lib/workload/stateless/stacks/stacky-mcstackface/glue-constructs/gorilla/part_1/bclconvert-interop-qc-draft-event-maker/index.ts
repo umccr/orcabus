@@ -7,6 +7,8 @@ import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../../../../components/sfn-workflowdraftrunstatechange-common-preamble';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
+import { LambdaB64GzTranslatorConstruct } from '../../../../../../../components/python-lambda-b64gz-translator';
+import { GetLibraryObjectsFromSamplesheetConstruct } from '../../../../../../../components/python-lambda-get-metadata-objects-from-samplesheet';
 
 /*
 Part 1
@@ -44,7 +46,7 @@ export class BclconvertInteropQcDraftMakerConstruct extends Construct {
     triggerWorkflowName: 'bsshFastqCopy',
     outputSource: 'orcabus.bclconvertinteropqcinputeventglue',
     outputDetailType: 'WorkflowDraftRunStateChange',
-    outputStatus: 'draft',
+    outputStatus: 'DRAFT',
     payloadVersion: '2024.05.24',
     workflowName: 'bclconvert-interop-qc',
     workflowVersion: '2024.05.24',
@@ -99,10 +101,10 @@ export class BclconvertInteropQcDraftMakerConstruct extends Construct {
     Part 2: Grant the sfn permissions
     */
     // Read/write to the table
-    props.tableObj.grantReadWriteData(draftMakerSfn.role);
+    props.tableObj.grantReadWriteData(draftMakerSfn);
 
     // Allow the step function to submit events
-    props.eventBusObj.grantPutEventsTo(draftMakerSfn.role);
+    props.eventBusObj.grantPutEventsTo(draftMakerSfn);
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr

@@ -15,29 +15,31 @@
       "ItemsPath": "$.input_payload_data.bclconvertDataRows",
       "ItemSelector": {
         "bclconvert_data_row.$": "$$.Map.Item.Value",
+        "index.$": "$$.Map.Item.Index",
+        "fastq_list_row_objs.$": "$.input_payload_data.fastqListRows",
         "instrument_run_id.$": "$.input_payload_data.instrumentRunId",
-        "library_id.$": "$.input_payload_data.library.internalId"
+        "library_id.$": "$.input_payload_data.library.libraryId"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Get FastqListRowID from BCLConvert Data",
+        "StartAt": "Set Fastq List Row",
         "States": {
-          "Get FastqListRowID from BCLConvert Data": {
+          "Set Fastq List Row": {
             "Type": "Pass",
             "Parameters": {
-              "fastq_list_row_id.$": "States.Format('{}.{}.{}.{}.{}', $.bclconvert_data_row.index, $.bclconvert_data_row.index2, $.bclconvert_data_row.lane, $.instrument_run_id, $.library_id)"
+              "fastq_list_row_id.$": "States.ArrayGetItem($.fastq_list_row_objs[*].fastqListRowRgid, $.index)"
             },
             "ResultPath": "$.get_fastq_list_row_id_step",
             "Next": "Set Map Outputs"
           },
           "Set Map Outputs": {
             "Type": "Pass",
-            "End": true,
             "Parameters": {
               "fastq_list_row_id.$": "$.get_fastq_list_row_id_step.fastq_list_row_id"
-            }
+            },
+            "End": true
           }
         }
       },
@@ -62,7 +64,7 @@
                 "UpdateExpression": "ADD library_set :library_set, fastq_list_row_id_set :fastq_list_row_id_set",
                 "ExpressionAttributeValues": {
                   ":library_set": {
-                    "SS.$": "States.Array($.input_payload_data.library.internalId)"
+                    "SS.$": "States.Array($.input_payload_data.library.libraryId)"
                   },
                   ":fastq_list_row_id_set": {
                     "SS.$": "$.bclconvert_and_fastq_list_row_id_inputs[*].fastq_list_row_id"
@@ -83,16 +85,16 @@
                 "TableName": "${__table_name__}",
                 "Item": {
                   "id": {
-                    "S.$": "$.input_payload_data.library.internalId"
+                    "S.$": "$.input_payload_data.library.libraryId"
                   },
                   "id_type": {
                     "S": "${__library_partition_name__}"
                   },
-                  "metadata_db_id": {
-                    "N.$": "States.Format('{}', $.input_payload_data.library.id)"
+                  "orcabus_id": {
+                    "S.$": "$.input_payload_data.library.orcabusId"
                   },
-                  "internal_id": {
-                    "S.$": "$.input_payload_data.library.internalId"
+                  "library_id": {
+                    "S.$": "$.input_payload_data.library.libraryId"
                   },
                   "sample_type": {
                     "S.$": "$.input_payload_data.library.type"
@@ -114,7 +116,7 @@
               "ItemsPath": "$.bclconvert_and_fastq_list_row_id_inputs",
               "ItemSelector": {
                 "fastq_list_row_id.$": "$$.Map.Item.Value.fastq_list_row_id",
-                "library_id.$": "$.input_payload_data.library.internalId",
+                "library_id.$": "$.input_payload_data.library.libraryId",
                 "instrument_run_id.$": "$.input_payload_data.instrumentRunId"
               },
               "ItemProcessor": {

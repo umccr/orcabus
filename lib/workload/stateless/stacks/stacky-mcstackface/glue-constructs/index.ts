@@ -12,6 +12,7 @@ import { WgtsQcGlueHandlerConstruct } from './kwik';
 import { TnGlueHandlerConstruct } from './loctite';
 import { WtsGlueHandlerConstruct } from './mod-podge';
 import { UmccriseGlueHandlerConstruct } from './pva';
+import { RnasumGlueHandlerConstruct } from './roket';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -30,6 +31,7 @@ export interface GlueConstructProps {
   tnGlueTableObj: dynamodb.ITableV2;
   wtsGlueTableObj: dynamodb.ITableV2;
   umccriseGlueTableObj: dynamodb.ITableV2;
+  rnasumGlueTableObj: dynamodb.ITableV2;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
   bsshOutputFastqCopyOutputUriSsmParameterObj: ssm.IStringParameter;
@@ -173,6 +175,24 @@ export class GlueConstruct extends Construct {
       /* Secrets */
       icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
     });
+
+    /*
+    Part I: Plumber-up the RNASum Exection Service to the shower services
+    */
+    const roket = new RnasumGlueHandlerConstruct(this, 'roket', {
+      /* Event Bus */
+      eventBusObj: props.eventBusObj,
+      /* Tables */
+      inputMakerTableObj: props.inputMakerTableObj,
+      rnasumGlueTableObj: props.rnasumGlueTableObj,
+      /* SSM Parameters */
+      icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    });
   }
 }
 
@@ -188,6 +208,7 @@ export interface GlueStackConfig {
   tnGlueTableName: string;
   wtsGlueTableName: string;
   umccriseGlueTableName: string;
+  rnasumGlueTableName: string;
   /* SSM Parameters */
   icav2ProjectIdSsmParameterName: string;
   bsshOutputFastqCopyUriSsmParameterName: string;
@@ -256,10 +277,15 @@ export class GlueStack extends cdk.Stack {
       'umccriseGlueTableObj',
       props.umccriseGlueTableName
     );
+    const rnasumGlueTableObj = dynamodb.Table.fromTableName(
+      this,
+      'rnasumGlueTableObj',
+      props.rnasumGlueTableName
+    );
 
     /*
-        Get the SSM Parameters
-        */
+    Get the SSM Parameters
+    */
     const icav2ProjectIdSsmParameterObj = ssm.StringParameter.fromStringParameterName(
       this,
       'icav2ProjectIdSsmParameterObj',
@@ -312,6 +338,7 @@ export class GlueStack extends cdk.Stack {
       tnGlueTableObj: tnGlueTableObj,
       wtsGlueTableObj: wtsGlueTableObj,
       umccriseGlueTableObj: umccriseGlueTableObj,
+      rnasumGlueTableObj: rnasumGlueTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: icav2ProjectIdSsmParameterObj,
       bsshOutputFastqCopyOutputUriSsmParameterObj: bsshOutputFastqCopyUriSsmParameterObj,

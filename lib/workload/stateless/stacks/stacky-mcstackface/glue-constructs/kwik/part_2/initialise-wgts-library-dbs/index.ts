@@ -88,6 +88,7 @@ export class WgtsQcInitialiseLibraryAndFastqListRowConstruct extends Construct {
     is WGS or WTS and the workflow is QC, RESEARCH or CLINICAL
     */
     const rule = new events.Rule(this, 'initialise_library_assay', {
+      ruleName: `stacky-${this.WgtsQcInitialiseLibraryAndFastqListRowMap.prefix}-rule`,
       eventBus: props.eventBusObj,
       eventPattern: {
         source: [this.WgtsQcInitialiseLibraryAndFastqListRowMap.triggerSource],

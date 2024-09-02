@@ -109,6 +109,33 @@ def get_files_from_transcriptome_directory(dragen_transcriptome_project_data_obj
     }
 
 
+def get_files_from_arriba_directory(arriba_project_data_obj: ProjectData) -> Dict[str, ProjectData]:
+    """
+    Get the following files from the germline directory:
+    arriba_html_report
+    :return:
+    """
+
+    arriba_files_list: typing.List[ProjectData] = list_project_data_non_recursively(
+        project_id=arriba_project_data_obj.project_id,
+        parent_folder_id=arriba_project_data_obj.data.id,
+        data_type=DataType.FILE
+    )
+
+    # Find the dragen germline bam as the only bam in the directory that doesn't have the somatic prefix
+    # Derived instead from the germline prefix
+    arriba_fusions_tsv = next(
+        filter(
+            lambda project_data_iter: project_data_iter.data.details.name == "fusions.tsv",
+            arriba_files_list
+        )
+    )
+
+    return {
+        "arriba_fusions_tsv": arriba_fusions_tsv
+    }
+
+
 def get_files_from_qualimap_directory(qualimap_project_data_obj: ProjectData) -> Dict[str, ProjectData]:
     """
     Get the following files from the germline directory:
@@ -191,6 +218,13 @@ def handler(event, context):
     )
 
     # Get the directories
+    arriba_directory = next(
+        filter(
+            lambda project_data_iter: project_data_iter.data.details.name == f"{output_prefix}_arriba",
+            top_dir_list
+        )
+    )
+
     dragen_transcriptome_directory = next(
         filter(
             lambda project_data_iter: project_data_iter.data.details.name == f"{output_prefix}_dragen_transcriptome",
@@ -214,16 +248,20 @@ def handler(event, context):
 
     # File outputs
     file_outputs_dict = {
+        "arriba_output": arriba_directory,
         "dragen_transcriptome_output": dragen_transcriptome_directory,
         "qualimap_output": qualimap_directory,
         "multiqc_output": multiqc_directory,
     }
 
-    # Get the files from the germline directory
+    # Get the files from the transcriptome directory
     file_outputs_dict.update(get_files_from_transcriptome_directory(dragen_transcriptome_directory, output_prefix))
 
-    # Get the files from the somatic directory
+    # Get the files from the qualimap directory
     file_outputs_dict.update(get_files_from_qualimap_directory(qualimap_directory))
+
+    # Get the files from the arriba directory
+    file_outputs_dict.update(get_files_from_arriba_directory(arriba_directory))
 
     # Get the html report from the multiqc directory
     file_outputs_dict.update(get_files_from_multiqc_directory(multiqc_directory))
@@ -247,8 +285,8 @@ def handler(event, context):
 #         json.dumps(
 #             handler(
 #                 {
-#                     "output_prefix": "L2400195",
-#                     "analysis_output_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/wts/202407237e0fd947/"
+#                     "output_prefix": "L2400255",
+#                     "analysis_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/"
 #                 },
 #                 None
 #             ),
@@ -257,15 +295,13 @@ def handler(event, context):
 #     )
 #
 #     # {
-#     #     "dragen_germline_output": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/",
-#     #     "dragen_somatic_output": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/",
-#     #     "multiqc_output": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195__L2400191_dragen_somatic_and_germline_multiqc/",
-#     #     "dragen_germline_snv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/L2400191.vcf.gz",
-#     #     "dragen_germline_snv_vcf_hard_filtered": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400191_dragen_germline/L2400191.hard-filtered.vcf.gz",
-#     #     "dragen_germline_bam": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400191_normal.bam",
-#     #     "dragen_somatic_snv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.vcf.gz",
-#     #     "dragen_somatic_snv_vcf_hard_filtered": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.hard-filtered.vcf.gz",
-#     #     "dragen_somatic_sv_vcf": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195.sv.vcf.gz",
-#     #     "dragen_somatic_bam": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195_dragen_somatic/L2400195_tumor.bam",
-#     #     "multiqc_html_report": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/tumor_normal/202407237e0fd947/L2400195__L2400191_dragen_somatic_and_germline_multiqc/L2400195__L2400191_dragen_somatic_and_germline_multiqc.html"
+#     #     "arriba_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_arriba/",
+#     #     "dragen_transcriptome_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_dragen_transcriptome/",
+#     #     "qualimap_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_qualimap/",
+#     #     "multiqc_output": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_dragen_transcriptome_multiqc/",
+#     #     "dragen_transcriptome_bam": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_dragen_transcriptome/L2400255.bam",
+#     #     "dragen_transcriptome_fusion_candidates_vcf": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_dragen_transcriptome/L2400255.fusion_candidates.vcf.gz",
+#     #     "qualimap_html_report": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_qualimap/qualimapReport.html",
+#     #     "arriba_fusions_tsv": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_arriba/fusions.tsv",
+#     #     "multiqc_html_report": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/wts/2024083105106d48/L2400255_dragen_transcriptome_multiqc/L2400255_dragen_transcriptome_multiqc.html"
 #     # }

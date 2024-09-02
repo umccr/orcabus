@@ -199,6 +199,7 @@ def handler(event, context):
     project_id = event.get("project_id", None)
     user_reference = event.get("user_reference", None)
     input_json = json.loads(event.get("input_json", {}))
+    idempotency_key = event.get("idempotency_key", None)
 
     # Get the output uris
     analysis_output_uri = event.get("analysis_output_uri", None)
@@ -303,7 +304,9 @@ def handler(event, context):
     # Generate the inputs and analysis object
     # Call the object to launch it
     logger.info("Launching the ICAv2 Analysis")
-    analysis_launch_obj: Analysis = analysis_obj()
+    analysis_launch_obj: Analysis = analysis_obj(
+        idempotency_key=idempotency_key
+    )
 
     # Save the analysis
     logger.info("Saving the analysis")

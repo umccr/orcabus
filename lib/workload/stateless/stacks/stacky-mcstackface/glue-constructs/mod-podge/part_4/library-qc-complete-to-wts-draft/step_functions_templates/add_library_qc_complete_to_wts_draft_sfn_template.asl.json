@@ -63,7 +63,7 @@
                       }
                     },
                     "ResultSelector": {
-                      "fastq_list_row_id.$": "$.Item.id",
+                      "fastq_list_row_id.$": "$.Item.id.S",
                       "fastq_list_row_obj.$": "States.StringToJson($.Item.fastq_list_row_json.S)"
                     },
                     "ResultPath": "$.get_tumor_fastq_list_row_obj",
@@ -117,7 +117,8 @@
         "Payload": {
           "tumor_library_id.$": "$.payload_data.libraryId",
           "tumor_fastq_list_rows.$": "$.get_parameters_step.tumor_fastq_list_rows",
-          "tumor_fastq_list_row_ids.$": "$.get_parameters_step.tumor_fastq_list_row_ids"
+          "tumor_fastq_list_row_ids.$": "$.get_parameters_step.tumor_fastq_list_row_ids",
+          "subject_id.$": "$.get_library_item_step.Item.subject_id.S"
         }
       },
       "Retry": [
@@ -146,6 +147,9 @@
       "Parameters": {
         "Entries": [
           {
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}",
+            "DetailType": "${__detail_type__}",
             "Detail": {
               "portalRunId.$": "$.get_parameters_step.portal_run_id",
               "timestamp.$": "$$.State.EnteredTime",
@@ -153,18 +157,20 @@
               "workflowName": "${__workflow_name__}",
               "workflowVersion": "${__workflow_version__}",
               "workflowRunName.$": "$.get_parameters_step.workflow_run_name",
+              "linkedLibraries": [
+                {
+                  "libraryId.$": "$.get_library_item_step.Item.id.S",
+                  "orcabusId.$": "$.get_library_item_step.Item.orcabus_id.S"
+                }
+              ],
               "payload": {
-                "refId": null,
                 "version": "${__payload_version__}",
                 "data": {
                   "inputs.$": "$.generate_draft_event_payload_data_step.input_event_data",
                   "tags.$": "$.generate_draft_event_payload_data_step.event_tags"
                 }
               }
-            },
-            "DetailType": "${__detail_type__}",
-            "EventBusName": "${__event_bus_name__}",
-            "Source": "${__event_source__}"
+            }
           }
         ]
       },

@@ -76,7 +76,7 @@
           "workflow_name": "${__workflow_name__}",
           "workflow_version": "${__workflow_version__}",
           "workflow_run_name.$": "$.generate_workflow_run_name_step.workflow_run_name",
-          "status": "draft"
+          "status": "DRAFT"
         }
       },
       "Next": "Wait 1 Second",
