@@ -1,4 +1,4 @@
-module github.com/umccr/orcabus/lib/workload/stateless/stacks/attribute-linker
+module github.com/umccr/orcabus/lib/workload/stateless/stacks/fmannotator
 
 go 1.23
 

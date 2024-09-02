@@ -56,7 +56,7 @@ import {
 import {
   AttributeAnnotator,
   AttributeLinkerConfigurableProps,
-} from './stacks/attribute-annotator/deploy/stack';
+} from './stacks/fmannotator/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;

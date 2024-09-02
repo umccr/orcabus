@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"context"
@@ -9,23 +9,26 @@ import (
 	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"github.com/umccr/orcabus/lib/workload/stateless/stacks/attribute-linker/schema/orcabus_workflowmanager/workflowrunstatechange"
+	"github.com/umccr/orcabus/lib/workload/stateless/stacks/fmannotator/schema/orcabus_workflowmanager/workflowrunstatechange"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 )
 
-var (
-	fmEndpoint       string
-	databaseEndpoint string
-	db               *sql.DB
-)
+type S3Object struct {
+	EventType    string         `db:"event_type"`
+	Bucket       string         `db:"bucket"`
+	Key          string         `db:"key"`
+	EventTime    sql.NullTime   `db:"event_time"`
+	Size         sql.NullInt64  `db:"size"`
+	StorageClass sql.NullString `db:"storage_class"`
+}
 
 func setupService(t *testing.T, buildContext string, port nat.Port, wait wait.Strategy, env map[string]string) (string, nat.Port) {
 	ctx := context.Background()
@@ -69,7 +72,7 @@ func setupService(t *testing.T, buildContext string, port nat.Port, wait wait.St
 	return ip, port
 }
 
-func setupFileManager(t *testing.T) {
+func SetupFileManager(t *testing.T, fmEndpoint *string, databaseEndpoint *string, db *sql.DB) {
 	// This has to be such a large timeout because FM needs to compile/build with access to a Postgres database. If
 	// the timeout is too low, before the FM compilation connects to the database, testcontainers will kill the postgres
 	// container as there are no connections to it.
@@ -100,16 +103,16 @@ func setupFileManager(t *testing.T) {
 			"DATABASE_URL": databaseUrl,
 		})
 
-	fmEndpoint = fmt.Sprintf("http://%v:%v", ip, port.Port())
-	databaseEndpoint = fmt.Sprintf(databaseFmt, databaseIp, intPort, testDatabaseName)
+	*fmEndpoint = fmt.Sprintf("http://%v:%v", ip, port.Port())
+	*databaseEndpoint = fmt.Sprintf(databaseFmt, databaseIp, intPort, testDatabaseName)
 
-	t.Setenv("ANNOTATOR_FILE_MANAGER_ENDPOINT", fmEndpoint)
-	loadFixtures(t, databaseEndpoint)
+	t.Setenv("ANNOTATOR_FILE_MANAGER_ENDPOINT", *fmEndpoint)
+	loadFixtures(t, databaseEndpoint, db)
 }
 
-func loadFixtures(t *testing.T, databaseUrl string) {
+func loadFixtures(t *testing.T, databaseUrl *string, db *sql.DB) {
 	var err error
-	db, err = sql.Open("postgres", databaseUrl)
+	db, err = sql.Open("postgres", *databaseUrl)
 	require.NoError(t, err)
 
 	fixtures, err := testfixtures.New(
@@ -125,17 +128,11 @@ func loadFixtures(t *testing.T, databaseUrl string) {
 	require.NoError(t, err)
 }
 
-type S3Object struct {
-	EventType    string         `db:"event_type"`
-	Bucket       string         `db:"bucket"`
-	Key          string         `db:"key"`
-	EventTime    sql.NullTime   `db:"event_time"`
-	Size         sql.NullInt64  `db:"size"`
-	StorageClass sql.NullString `db:"storage_class"`
-}
+func CreateEvent(t *testing.T, path string) workflowrunstatechange.Event {
+	_, file, _, _ := runtime.Caller(0)
+	root := filepath.Join(filepath.Dir(file), "../..")
 
-func testEvent(t *testing.T, path string) workflowrunstatechange.Event {
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(filepath.Join(root, "fixtures", path))
 	require.NoError(t, err)
 
 	var event workflowrunstatechange.Event
@@ -145,87 +142,10 @@ func testEvent(t *testing.T, path string) workflowrunstatechange.Event {
 	return event
 }
 
-func queryObjects(t *testing.T, db *sql.DB, query string) []S3Object {
+func QueryObjects(t *testing.T, db *sql.DB, query string) []S3Object {
 	var s3Objects []S3Object
 	err := sqlx.NewDb(db, "postgres").Unsafe().Select(&s3Objects, query)
 	require.NoError(t, err)
 
 	return s3Objects
-}
-
-type TestCase struct {
-	event       string
-	portalRunId string
-	expected    []S3Object
-}
-
-func successCase(location *time.Location) TestCase {
-	return TestCase{"fixtures/event_succeeded.json", "202409021221e6e6", []S3Object{
-		{
-			"Created",
-			"bucket",
-			"byob-icav2/development/analysis/wts/202409021221e6e6/_manifest.json",
-			sql.NullTime{Time: time.Date(2024, 9, 2, 0, 0, 0, 0, location), Valid: true},
-			sql.NullInt64{Int64: 5, Valid: true},
-			sql.NullString{String: "Standard", Valid: true},
-		},
-		{
-			"Deleted",
-			"bucket",
-			"byob-icav2/development/analysis/wts/202409021221e6e6/_manifest.json",
-			sql.NullTime{Time: time.Date(2024, 9, 3, 0, 0, 0, 0, location), Valid: true},
-			sql.NullInt64{},
-			sql.NullString{},
-		},
-		{
-			"Created",
-			"bucket",
-			"byob-icav2/development/analysis/wts/202409021221e6e6/_tags.json",
-			sql.NullTime{Time: time.Date(2024, 9, 4, 0, 0, 0, 0, location), Valid: true},
-			sql.NullInt64{Int64: 10, Valid: true},
-			sql.NullString{String: "Standard", Valid: true},
-		},
-	}}
-}
-
-func failCase(location *time.Location) TestCase {
-	return TestCase{"fixtures/event_failed.json", "202409021221e6c6", []S3Object{
-		{
-			"Created",
-			"bucket",
-			"byob-icav2/development/analysis/wts/202409021221e6c6/_manifest.json",
-			sql.NullTime{Time: time.Date(2024, 9, 5, 0, 0, 0, 0, location), Valid: true},
-			sql.NullInt64{Int64: 3, Valid: true},
-			sql.NullString{String: "Standard", Valid: true},
-		},
-		{
-			"Deleted",
-			"bucket",
-			"byob-icav2/development/analysis/wts/202409021221e6c6/_manifest.json",
-			sql.NullTime{Time: time.Date(2024, 9, 6, 0, 0, 0, 0, location), Valid: true},
-			sql.NullInt64{},
-			sql.NullString{},
-		},
-	}}
-}
-
-func TestHandler(t *testing.T) {
-	setupFileManager(t)
-
-	location, err := time.LoadLocation("Etc/UTC")
-	require.NoError(t, err)
-
-	testCases := []TestCase{successCase(location), failCase(location)}
-
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("%v", tc.event), func(t *testing.T) {
-			event := testEvent(t, tc.event)
-
-			err := Handler(event)
-			require.NoError(t, err)
-
-			s3Objects := queryObjects(t, db, fmt.Sprintf("select * from s3_object where key like '%%%v%%'", tc.portalRunId))
-			require.Equal(t, tc.expected, s3Objects)
-		})
-	}
 }

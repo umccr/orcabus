@@ -7,12 +7,14 @@ all: build
 ## Build related commands
 build:
 	@go build -o build
+test:
+	@go test
 lint:
 	@gofmt -l
 lint-fix:
 	@gofmt
 golangci-lint:
-	@golangci-lint run
+	@golangci-lint run --verbose
 check: lint golangci-lint
 check-fix: lint-fix golangci-lint
 
