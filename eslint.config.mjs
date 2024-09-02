@@ -8,6 +8,7 @@ export default [
     // https://eslint.org/docs/latest/use/configure/ignore
     ignores: [
       '**/build/',
+      '**/dist/',
       '**/coverage/',
       '**/*.html',
       '**/.pre-commit-config.yaml',
