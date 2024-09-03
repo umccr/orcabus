@@ -10,12 +10,6 @@ import (
 	"time"
 )
 
-var (
-	fmEndpoint       string
-	databaseEndpoint string
-	db               *sql.DB
-)
-
 type TestCase struct {
 	event       string
 	portalRunId string
@@ -73,7 +67,7 @@ func failCase(location *time.Location) TestCase {
 }
 
 func TestHandler(t *testing.T) {
-	test.SetupFileManager(t, &fmEndpoint, &databaseEndpoint, db)
+	db := test.SetupFileManager(t)
 
 	location, err := time.LoadLocation("Etc/UTC")
 	require.NoError(t, err)
@@ -84,7 +78,10 @@ func TestHandler(t *testing.T) {
 		t.Run(fmt.Sprintf("%v", tc.event), func(t *testing.T) {
 			event := test.CreateEvent(t, tc.event)
 
-			err := Handler(event)
+			config, err := LoadConfig()
+			require.NoError(t, err)
+
+			err = Handler(event, &config, "token")
 			require.NoError(t, err)
 
 			s3Objects := test.QueryObjects(t, db, fmt.Sprintf("select * from s3_object where key like '%%%v%%'", tc.portalRunId))

@@ -4,6 +4,7 @@ go 1.23
 
 require (
 	github.com/aws/aws-lambda-go v1.47.0
+	github.com/aws/aws-secretsmanager-caching-go v1.2.0
 	github.com/docker/go-connections v0.5.0
 	github.com/go-testfixtures/testfixtures/v3 v3.12.0
 	github.com/google/uuid v1.6.0
@@ -21,6 +22,7 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.26.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/aws/aws-sdk-go v1.47.10 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/containerd/containerd v1.7.18 // indirect
 	github.com/containerd/log v0.1.0 // indirect
@@ -38,6 +40,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect

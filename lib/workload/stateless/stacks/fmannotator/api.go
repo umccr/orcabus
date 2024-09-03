@@ -42,7 +42,6 @@ func NewApiClient(config *Config, body io.Reader) (*ApiClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("Content-Type", "application/json")
 
 	return &ApiClient{
 		Client:  &http.Client{},
@@ -53,6 +52,12 @@ func NewApiClient(config *Config, body io.Reader) (*ApiClient, error) {
 // WithMethod Set the method for the request.
 func (c *ApiClient) WithMethod(method string) *ApiClient {
 	c.Request.Method = method
+	return c
+}
+
+// WithHeader Add a header to the request
+func (c *ApiClient) WithHeader(key string, value string) *ApiClient {
+	c.Request.Header.Add(key, value)
 	return c
 }
 

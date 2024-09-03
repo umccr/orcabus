@@ -12,36 +12,41 @@ import { GoFunction } from '@aws-cdk/aws-lambda-go-alpha';
 import path from 'path';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
+import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
+import { NamedLambdaRole } from '../../../../components/named-lambda-role';
+import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 
 /**
- * Config for the attribute linker.
+ * Config for the FM annotator.
  */
-export type AttributeLinkerConfig = {
+export type FMAnnotatorConfig = {
   vpcProps: VpcLookupOptions;
   eventBusName: string;
 };
 
 /**
- * Props for the attribute linker stack which can be configured
+ * Props for the FM annotator stack which can be configured
  */
-export type AttributeLinkerConfigurableProps = StackProps & AttributeLinkerConfig;
+export type FMAnnotatorConfigurableProps = StackProps & FMAnnotatorConfig;
 
 /**
- * Props for the attribute linker stack.
+ * Props for the FM annotator stack.
  */
-export type AttributeLinkerProps = AttributeLinkerConfigurableProps & {
+export type FMAnnotatorProps = FMAnnotatorConfigurableProps & {
   domainName: string;
+  secret: ISecret;
 };
 
 /**
- * Construct used to configure the attribute linker.
+ * Construct used to configure the FM annotator.
  */
-export class AttributeAnnotator extends Stack {
+export class FMAnnotator extends Stack {
   private readonly vpc: IVpc;
   private readonly securityGroup: ISecurityGroup;
   private readonly eventBus: IEventBus;
+  private readonly role: Role;
 
-  constructor(scope: Construct, id: string, props: AttributeLinkerProps) {
+  constructor(scope: Construct, id: string, props: FMAnnotatorProps) {
     super(scope, id, props);
 
     this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
@@ -50,40 +55,66 @@ export class AttributeAnnotator extends Stack {
     this.securityGroup = new SecurityGroup(this, 'SecurityGroup', {
       vpc: this.vpc,
       allowAllOutbound: true,
-      description: 'Security group that allows the attribute linker Lambda to egress out.',
+      description: 'Security group that allows the annotator Lambda to egress out.',
     });
+
+    this.role = new NamedLambdaRole(this, 'Role');
+    this.addAwsManagedPolicy('service-role/AWSLambdaVPCAccessExecutionRole');
+    // Need access to secrets to fetch FM JWT token.
+    this.addToPolicy(
+      new PolicyStatement({
+        actions: ['secretsmanager:DescribeSecret', 'secretsmanager:GetSecretValue'],
+        resources: [props.secret.secretArn],
+      })
+    );
 
     const entry = path.join(__dirname, '..');
     const fn = new GoFunction(this, 'handler', {
       entry,
       environment: {
-        ANNOTATOR_FILEMANAGER_ENDPOINT: props.domainName,
+        FMANNOTATOR_FILE_MANAGER_ENDPOINT: props.domainName,
+        FMANNOTATOR_FILE_MANAGER_SECRET: props.secret.secretName,
       },
       memorySize: 128,
       timeout: Duration.seconds(28),
       architecture: Architecture.ARM_64,
+      role: this.role,
       vpc: this.vpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [this.securityGroup],
     });
 
     const eventRule = new Rule(this, 'EventRule', {
-      description: 'Send WorkflowRunStateChange events to the AttributeLinker Lambda',
+      description: 'Send WorkflowRunStateChange events to the annotator Lambda',
       eventBus: this.eventBus,
     });
 
     eventRule.addTarget(new targets.LambdaFunction(fn));
     eventRule.addEventPattern({
-      source: ['orcabus.workflowmanager'],
+      // Allow accepting a self-made event used for testing.
+      source: ['orcabus.workflowmanager', 'orcabus.fmannotator'],
       detailType: ['WorkflowRunStateChange'],
       detail: {
         status: [
           { 'equals-ignore-case': 'SUCCEEDED' },
           { 'equals-ignore-case': 'FAILED' },
           { 'equals-ignore-case': 'ABORTED' },
-          { 'equals-ignore-case': 'TEST' },
         ],
       },
     });
+  }
+
+  /**
+   * Add an AWS managed policy to the function's role.
+   */
+  addAwsManagedPolicy(policyName: string) {
+    this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName(policyName));
+  }
+
+  /**
+   * Add a policy statement to this function's role.
+   */
+  addToPolicy(policyStatement: PolicyStatement) {
+    this.role.addToPolicy(policyStatement);
   }
 }

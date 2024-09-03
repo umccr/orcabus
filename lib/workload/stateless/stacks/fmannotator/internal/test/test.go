@@ -72,7 +72,7 @@ func setupService(t *testing.T, buildContext string, port nat.Port, wait wait.St
 	return ip, port
 }
 
-func SetupFileManager(t *testing.T, fmEndpoint *string, databaseEndpoint *string, db *sql.DB) {
+func SetupFileManager(t *testing.T) *sql.DB {
 	// This has to be such a large timeout because FM needs to compile/build with access to a Postgres database. If
 	// the timeout is too low, before the FM compilation connects to the database, testcontainers will kill the postgres
 	// container as there are no connections to it.
@@ -103,22 +103,24 @@ func SetupFileManager(t *testing.T, fmEndpoint *string, databaseEndpoint *string
 			"DATABASE_URL": databaseUrl,
 		})
 
-	*fmEndpoint = fmt.Sprintf("http://%v:%v", ip, port.Port())
-	*databaseEndpoint = fmt.Sprintf(databaseFmt, databaseIp, intPort, testDatabaseName)
+	fmEndpoint := fmt.Sprintf("http://%v:%v", ip, port.Port())
+	databaseEndpoint := fmt.Sprintf(databaseFmt, databaseIp, intPort, testDatabaseName)
 
-	t.Setenv("ANNOTATOR_FILE_MANAGER_ENDPOINT", *fmEndpoint)
-	loadFixtures(t, databaseEndpoint, db)
+	t.Setenv("FMANNOTATOR_FILE_MANAGER_ENDPOINT", fmEndpoint)
+	t.Setenv("FMANNOTATOR_FILE_MANAGER_SECRET", "secret")
+
+	return loadFixtures(t, databaseEndpoint)
 }
 
-func loadFixtures(t *testing.T, databaseUrl *string, db *sql.DB) {
+func loadFixtures(t *testing.T, databaseUrl string) *sql.DB {
 	var err error
-	db, err = sql.Open("postgres", *databaseUrl)
+	db, err := sql.Open("postgres", databaseUrl)
 	require.NoError(t, err)
 
 	fixtures, err := testfixtures.New(
 		testfixtures.Database(db),
 		testfixtures.Dialect("postgres"),
-		testfixtures.Directory("fixtures"),
+		testfixtures.Directory(fixturesPath()),
 	)
 	require.NoError(t, err)
 
@@ -126,13 +128,17 @@ func loadFixtures(t *testing.T, databaseUrl *string, db *sql.DB) {
 
 	err = fixtures.Load()
 	require.NoError(t, err)
+
+	return db
+}
+
+func fixturesPath() string {
+	_, file, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(file), "../../fixtures")
 }
 
 func CreateEvent(t *testing.T, path string) workflowrunstatechange.Event {
-	_, file, _, _ := runtime.Caller(0)
-	root := filepath.Join(filepath.Dir(file), "../..")
-
-	b, err := os.ReadFile(filepath.Join(root, "fixtures", path))
+	b, err := os.ReadFile(filepath.Join(fixturesPath(), path))
 	require.NoError(t, err)
 
 	var event workflowrunstatechange.Event

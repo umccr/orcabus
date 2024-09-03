@@ -26,14 +26,14 @@ func TestMarshallPortalRunId(t *testing.T) {
 }
 
 func TestApiBuild(t *testing.T) {
-	config := Config{"http://localhost:8000"}
+	config := Config{"http://localhost:8000", "token"}
 
 	api, err := NewApiClient(&config, bytes.NewBuffer([]byte{}))
 	require.NoError(t, err)
 
 	api = api.WithMethod("PATCH").WithS3Endpoint().WithQuery(url.Values{
 		"key": {"value"},
-	})
+	}).WithHeader("Content-Type", "application/json")
 
 	require.Equal(t, []string{"application/json"}, api.Request.Header.Values("Content-Type"))
 	require.Equal(t, "PATCH", api.Request.Method)

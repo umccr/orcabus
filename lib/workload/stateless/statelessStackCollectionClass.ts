@@ -53,10 +53,7 @@ import {
   UmccriseIcav2PipelineManagerStack,
   UmccriseIcav2PipelineManagerStackProps,
 } from './stacks/umccrise-pipeline-manager/deploy';
-import {
-  AttributeAnnotator,
-  AttributeLinkerConfigurableProps,
-} from './stacks/fmannotator/deploy/stack';
+import { FMAnnotator, FMAnnotatorConfigurableProps } from './stacks/fmannotator/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -75,7 +72,7 @@ export interface StatelessStackCollectionProps {
   bclConvertManagerStackProps: BclConvertManagerStackProps;
   workflowManagerStackProps: WorkflowManagerStackProps;
   stackyMcStackFaceProps: GlueStackProps;
-  attributeLinkerProps: AttributeLinkerConfigurableProps;
+  fmAnnotatorProps: FMAnnotatorConfigurableProps;
 }
 
 export class StatelessStackCollection {
@@ -96,7 +93,7 @@ export class StatelessStackCollection {
   readonly bclConvertManagerStack: Stack;
   readonly workflowManagerStack: Stack;
   readonly stackyMcStackFaceStack: Stack;
-  readonly attributeAnnotatorStack: Stack;
+  readonly fmAnnotator: Stack;
 
   constructor(
     scope: Construct,
@@ -216,9 +213,9 @@ export class StatelessStackCollection {
       ...statelessConfiguration.stackyMcStackFaceProps,
     });
 
-    this.attributeAnnotatorStack = new AttributeAnnotator(scope, 'AttributeLinkerStack', {
-      ...this.createTemplateProps(env, 'AttributeLinkerStack'),
-      ...statelessConfiguration.attributeLinkerProps,
+    this.fmAnnotator = new FMAnnotator(scope, 'FMAnnotatorStack', {
+      ...this.createTemplateProps(env, 'FMAnnotatorStack'),
+      ...statelessConfiguration.fmAnnotatorProps,
       domainName: fileManagerStack.domainName,
     });
   }

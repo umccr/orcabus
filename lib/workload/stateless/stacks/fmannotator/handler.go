@@ -10,15 +10,11 @@ import (
 	"strings"
 )
 
-func Handler(event workflowrunstatechange.Event) (err error) {
+// Handler Handle an incoming WorkflowRunStateChange event using the config and FM endpoint token.
+func Handler(event workflowrunstatechange.Event, config *Config, token string) (err error) {
 	eventStatus := strings.ToUpper(event.Detail.Status)
 	if eventStatus != "SUCCEEDED" && eventStatus != "FAILED" && eventStatus != "ABORTED" {
 		return nil
-	}
-
-	config, err := LoadConfig()
-	if err != nil {
-		return err
 	}
 
 	patch, err := MarshallPortalRunId(&event)
@@ -26,14 +22,14 @@ func Handler(event workflowrunstatechange.Event) (err error) {
 		return err
 	}
 
-	resp, err := NewApiClient(&config, bytes.NewBuffer(patch))
+	resp, err := NewApiClient(config, bytes.NewBuffer(patch))
 	if err != nil {
 		return err
 	}
 
 	resp = resp.WithMethod("PATCH").WithS3Endpoint().WithQuery(url.Values{
 		"key": {fmt.Sprintf("*%v*", event.Detail.PortalRunId)},
-	})
+	}).WithHeader("Content-Type", "application/json").WithHeader("Authorization", fmt.Sprintf("Bearer %v", token))
 	body, status, err := resp.Do()
 	if err != nil {
 		return err
