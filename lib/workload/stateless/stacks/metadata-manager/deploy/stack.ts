@@ -26,19 +26,9 @@ export type MetadataManagerStackProps = {
    */
   isDailySync: boolean;
   /**
-   * Allowed CORS origins.
-   */
-  corsAllowOrigins?: string[];
-  /**
    * API Gateway props
    */
-  apiGatewayCognitoProps: Pick<
-    ApiGatewayConstructProps,
-    | 'cognitoUserPoolIdParameterName'
-    | 'cognitoPortalAppClientIdParameterName'
-    | 'cognitoStatusPageAppClientIdParameterName'
-    | 'apiGwLogsConfig'
-  >;
+  apiGatewayCognitoProps: ApiGatewayConstructProps;
 };
 
 export class MetadataManagerStack extends Stack {
@@ -97,13 +87,7 @@ export class MetadataManagerStack extends Stack {
     new LambdaAPIConstruct(this, 'APILambda', {
       basicLambdaConfig: basicLambdaConfig,
       dbConnectionSecret: dbSecret,
-      apiGatewayConstructProps: {
-        region: this.region,
-        apiName: 'MetadataManager',
-        customDomainNamePrefix: 'metadata',
-        ...props.apiGatewayCognitoProps,
-      },
-      corsAllowOrigins: props.corsAllowOrigins,
+      apiGatewayConstructProps: props.apiGatewayCognitoProps,
     });
 
     // (2)

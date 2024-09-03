@@ -16,17 +16,13 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../../components/api-gateway';
+import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
 
 export interface WorkflowManagerStackProps extends StackProps {
   lambdaSecurityGroupName: string;
   vpcProps: VpcLookupOptions;
   mainBusName: string;
-  cognitoUserPoolIdParameterName: string;
-  cognitoPortalAppClientIdParameterName: string;
-  cognitoStatusPageAppClientIdParameterName: string;
-  apiGwLogsConfig: ApiGwLogsConfig;
-  corsAllowOrigins?: string[];
+  apiGatewayCognitoProps: ApiGatewayConstructProps;
 }
 
 export class WorkflowManagerStack extends Stack {
@@ -121,20 +117,15 @@ export class WorkflowManagerStack extends Stack {
       timeout: Duration.seconds(28),
     });
 
-    const wfmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
-      region: this.region,
-      apiName: 'WorkflowManager',
-      customDomainNamePrefix: 'workflow',
-      ...props,
-    });
+    const wfmApi = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
     const httpApi = wfmApi.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
 
-    new HttpRoute(this, 'HttpRoute', {
+    new HttpRoute(this, 'GetHttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.GET),
     });
   }
 
