@@ -28,7 +28,7 @@ func PortalRunId(event workflowrunstatechange.Event, config *Config, token strin
 	}
 
 	req = req.WithMethod("PATCH").WithS3Endpoint().WithQuery(url.Values{
-		"key": {fmt.Sprintf("*%v*", event.Detail.PortalRunId)},
+		"key": {fmt.Sprintf("*/%v/*", event.Detail.PortalRunId)},
 	}).WithHeader("Content-Type", "application/json").WithHeader("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	body, status, err := req.Do()

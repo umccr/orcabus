@@ -84,7 +84,7 @@ func TestHandler(t *testing.T) {
 			err = PortalRunId(event, &config, "token")
 			require.NoError(t, err)
 
-			s3Objects := test.QueryObjects(t, db, fmt.Sprintf("select * from s3_object where key like '%%%v%%'", tc.portalRunId))
+			s3Objects := test.QueryObjects(t, db, fmt.Sprintf("select * from s3_object where key like '%%/%v/%%'", tc.portalRunId))
 			require.Equal(t, tc.expected, s3Objects)
 		})
 	}
