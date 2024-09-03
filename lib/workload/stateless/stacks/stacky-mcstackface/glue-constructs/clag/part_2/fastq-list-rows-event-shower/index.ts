@@ -28,7 +28,13 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
     // General
     prefix: 'clag-new-fqlr-event-shower',
     // Tables
-    tablePartition: 'fastqlistrows_by_instrument_run',
+    tablePartition: {
+      fastqListRowsByInstrumentRun: 'fastqlistrows_by_instrument_run',
+      samplesheetByInstrumentRun: 'samplesheet_by_instrument_run',
+      subject: 'subject',
+      library: 'library',
+      project: 'project',
+    },
     // Set Event Triggers
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
@@ -40,10 +46,12 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
       startEventShower: 'FastqListRowEventShowerStarting',
       completeEventShower: 'FastqListRowEventShowerComplete',
       newFastqListRow: 'newFastqListRow',
+      newProjectPrimaryData: 'newProjectPrimaryData',
     },
     outputDetailType: {
       showerTerminal: 'FastqListRowShowerStateChange',
       fastqListRowStateChange: 'FastqListRowStateChange',
+      projectDataAvailable: 'ProjectDataAvailable',
     },
     outputPayloadVersion: '0.1.0',
   };
@@ -106,6 +114,13 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
         __fastq_list_row_transfer_starting_status__:
           this.newFastqListRowsEventShowerMap.outputStatus.startEventShower,
 
+        // Project Data Available event
+        __project_data_available_detail_type__:
+          this.newFastqListRowsEventShowerMap.outputDetailType.projectDataAvailable,
+        __project_data_payload_version__: this.newFastqListRowsEventShowerMap.outputPayloadVersion,
+        __project_data_available_status__:
+          this.newFastqListRowsEventShowerMap.outputStatus.newProjectPrimaryData,
+
         // New Fastq List Row
         __fastq_pair_added_detail_type__:
           this.newFastqListRowsEventShowerMap.outputDetailType.fastqListRowStateChange,
@@ -124,7 +139,12 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
 
         /* Table settings */
         __table_name__: props.tableObj.tableName,
-        __table_partition_name__: this.newFastqListRowsEventShowerMap.tablePartition,
+        __fastq_list_rows_table_partition_name__:
+          this.newFastqListRowsEventShowerMap.tablePartition.fastqListRowsByInstrumentRun,
+        __library_table_partition_name__:
+          this.newFastqListRowsEventShowerMap.tablePartition.library,
+        __samplesheet_table_partition_name__:
+          this.newFastqListRowsEventShowerMap.tablePartition.samplesheetByInstrumentRun,
 
         /* Lambda functions */
         __decompress_fastq_list_rows_lambda_function_arn__:

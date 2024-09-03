@@ -42,7 +42,7 @@ In the top level of the payload we require the following values
 
 The AWSSSTep functions requires the following event detail information
 
-* status - The status of the workflow run manager event (should be 'ready')
+* status - The status of the workflow run manager event (should be 'READY')
 * workflowType - This must be set to bssh_fastq_copy
 * workflowVersion - Not currently used, set to 1.0.0
 * portalRunId - This is required to be set to a unique identifier for the run

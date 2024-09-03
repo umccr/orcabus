@@ -15,7 +15,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.payload_data.id",
+          "id.$": "$.payload_data.fastqListRow.rgid",
           "id_type": "${__fastq_list_row_partition_name__}"
         }
       },

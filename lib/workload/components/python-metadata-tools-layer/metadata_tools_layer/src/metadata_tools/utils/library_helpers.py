@@ -16,7 +16,7 @@ def get_library_from_library_id(library_id: Union[int | str]) -> Dict:
     if isinstance(library_id, str):
         # We have an internal id, convert to int
         params = {
-            "internal_id": library_id
+            "library_id": library_id
         }
     else:
         endpoint = f"{endpoint}/{library_id}"
@@ -92,6 +92,28 @@ def get_library_workflow(library_id: str) -> Union[str | None]:
     library = get_library_from_library_id(library_id)
 
     return library.get("workflow")
+
+
+def get_library_project_owner(library_id: str) -> Union[str | None]:
+    """
+    Given a library id, collect the library project owner
+    :param library_id:
+    :return:
+    """
+    library = get_library_from_library_id(library_id)
+
+    return library.get("projectOwner")
+
+
+def get_library_project_name(library_id: str) -> Union[str | None]:
+    """
+    Given a library id, collect the library workflow
+    :param library_id:
+    :return:
+    """
+    library = get_library_from_library_id(library_id)
+
+    return library.get("projectName")
 
 
 def get_all_libraries() -> List[Dict]:

@@ -29,7 +29,7 @@
 This Cttso V2 Pipeline Manager performs the following actions:
 
 * Subscribes to the workflow run manager EventBus for a specific event (orcabus.wfm)
-* Waits for a workflow run manager event to be published with the 'ready' status where the workflow type is set to `cttsov2`
+* Waits for a workflow run manager event to be published with the 'READY' status where the workflow type is set to `cttsov2`
 * Launches the nextflow cttso v2 pipeline on ICAv2
   * This involves first fixing up the samplesheet
   * Moving fastq files and the samplesheet to a precise directory structure
@@ -155,7 +155,7 @@ In the top level of the payload we require the following values
 
 The AWS Step functions takes in the following event information:
 
-* status - The status of the workflow run manager event (should be 'ready')
+* status - The status of the workflow run manager event (should be 'READY')
 * workflowType - this MUST be set to cttsov2
 * workflowVersion - Not currently used, set to 1.0.0
 * portalRunId - This is required to be set to a unique identifier for the run

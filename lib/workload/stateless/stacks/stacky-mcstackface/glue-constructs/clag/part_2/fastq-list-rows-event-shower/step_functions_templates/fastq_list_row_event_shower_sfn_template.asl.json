@@ -4,60 +4,136 @@
   "States": {
     "Move Inputs": {
       "Type": "Pass",
-      "Next": "Decompress fastq list rows",
+      "Next": "Get Inputs for event maps",
       "Parameters": {
         "inputs.$": "$"
       }
     },
-    "Decompress fastq list rows": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "${__decompress_fastq_list_rows_lambda_function_arn__}",
-        "Payload": {
-          "decompress": true,
-          "input.$": "$.inputs.payload.data.outputs.fastqListRowsB64gz"
-        }
-      },
-      "Retry": [
+    "Get Inputs for event maps": {
+      "Type": "Parallel",
+      "Next": "Generate Event Maps",
+      "Branches": [
         {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "Lambda.TooManyRequestsException"
-          ],
-          "IntervalSeconds": 1,
-          "MaxAttempts": 3,
-          "BackoffRate": 2
-        }
-      ],
-      "ResultPath": "$.decompress_fastq_list_rows_step",
-      "ResultSelector": {
-        "fastq_list_rows.$": "$.Payload.decompressed_dict"
-      },
-      "Next": "Add fastq list rows to instrument run id (Instrument DB)"
-    },
-    "Add fastq list rows to instrument run id (Instrument DB)": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:putItem",
-      "Parameters": {
-        "TableName": "${__table_name__}",
-        "Item": {
-          "id.$": "$.inputs.payload.data.outputs.instrumentRunId",
-          "id_type": "${__table_partition_name__}",
-          "fastq_list_rows": {
-            "S.$": "States.JsonToString($.decompress_fastq_list_rows_step.fastq_list_rows)"
+          "StartAt": "Decompress fastq list rows",
+          "States": {
+            "Decompress fastq list rows": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__decompress_fastq_list_rows_lambda_function_arn__}",
+                "Payload": {
+                  "decompress": true,
+                  "input.$": "$.inputs.payload.data.outputs.fastqListRowsB64gz"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultPath": "$.decompress_fastq_list_rows_step",
+              "ResultSelector": {
+                "fastq_list_rows.$": "$.Payload.decompressed_dict"
+              },
+              "Next": "Add fastq list rows to instrument run id (Instrument DB)"
+            },
+            "Add fastq list rows to instrument run id (Instrument DB)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "id.$": "$.inputs.payload.data.outputs.instrumentRunId",
+                  "id_type": "${__fastq_list_rows_table_partition_name__}",
+                  "fastq_list_rows": {
+                    "S.$": "States.JsonToString($.decompress_fastq_list_rows_step.fastq_list_rows)"
+                  }
+                }
+              },
+              "ResultPath": null,
+              "Next": "Wait For DB Update"
+            },
+            "Wait For DB Update": {
+              "Type": "Wait",
+              "Seconds": 1,
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Libraries in Instrument Run",
+          "States": {
+            "Get Libraries in Instrument Run": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:getItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.inputs.payload.data.outputs.instrumentRunId",
+                  "id_type": "${__samplesheet_table_partition_name__}"
+                }
+              },
+              "ResultSelector": {
+                "library_ids.$": "$.Item.library_ids_set.SS"
+              },
+              "ResultPath": "$.get_libraries_step",
+              "Next": "Get Library Objects Map"
+            },
+            "Get Library Objects Map": {
+              "Type": "Map",
+              "ItemsPath": "$.get_libraries_step.library_ids",
+              "ItemSelector": {
+                "library_id.$": "$$.Map.Item.Value"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Get Library",
+                "States": {
+                  "Get Library": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:getItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Key": {
+                        "id.$": "$.library_id",
+                        "id_type": "${__library_table_partition_name__}"
+                      }
+                    },
+                    "ResultSelector": {
+                      "library_obj": {
+                        "library_id.$": "$.Item.library_id.S",
+                        "orcabus_id.$": "$.Item.orcabus_id.S",
+                        "project_name.$": "$.Item.project_name.S",
+                        "project_owner.$": "$.Item.project_owner.S"
+                      }
+                    },
+                    "End": true
+                  }
+                }
+              },
+              "ResultSelector": {
+                "library_objects_list.$": "$.[*].library_obj"
+              },
+              "End": true
+            }
           }
         }
+      ],
+      "ResultSelector": {
+        "fastq_list_rows.$": "$.[0].decompress_fastq_list_rows_step.fastq_list_rows",
+        "library_objects_list.$": "$.[1].library_objects_list"
       },
-      "ResultPath": null,
-      "Next": "Wait For DB Update"
-    },
-    "Wait For DB Update": {
-      "Type": "Wait",
-      "Seconds": 1,
-      "Next": "Generate Event Maps"
+      "ResultPath": "$.get_inputs_step"
     },
     "Generate Event Maps": {
       "Type": "Task",
@@ -65,7 +141,8 @@
       "Parameters": {
         "FunctionName": "${__generate_event_maps_lambda_function_arn__}",
         "Payload": {
-          "fastq_list_rows.$": "$.decompress_fastq_list_rows_step.fastq_list_rows",
+          "fastq_list_rows.$": "$.get_inputs_step.fastq_list_rows",
+          "library_objs.$": "$.get_inputs_step.library_objects_list",
           "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId"
         }
       },
@@ -85,8 +162,9 @@
       "Next": "FastqListRow Event Shower Starting",
       "ResultSelector": {
         "start_fastq_list_row_shower_event_data.$": "$.Payload.start_fastq_list_row_shower_event_data",
-        "complete_fastq_list_row_shower_event_data.$": "$.Payload.complete_fastq_list_row_shower_event_data",
-        "fastq_list_rows_event_data_list.$": "$.Payload.fastq_list_rows_event_data_list"
+        "project_event_data_list.$": "$.Payload.project_event_data_list",
+        "fastq_list_rows_event_data_list.$": "$.Payload.fastq_list_rows_event_data_list",
+        "complete_fastq_list_row_shower_event_data.$": "$.Payload.complete_fastq_list_row_shower_event_data"
       },
       "ResultPath": "$.generate_event_maps_step"
     },
@@ -111,10 +189,50 @@
         ]
       },
       "ResultPath": null,
+      "Next": "For each Project"
+    },
+    "For each Project": {
+      "Type": "Map",
+      "ItemsPath": "$.generate_event_maps_step.project_event_data_list",
+      "ItemSelector": {
+        "project_event_data.$": "$$.Map.Item.Value"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Generate ProjectData Added Event",
+        "States": {
+          "Generate ProjectData Added Event": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents",
+            "Parameters": {
+              "Entries": [
+                {
+                  "Detail": {
+                    "timestamp.$": "$$.Execution.StartTime",
+                    "status": "${__project_data_available_status__}",
+                    "payload": {
+                      "version": "${__project_data_payload_version__}",
+                      "data.$": "$.project_event_data"
+                    }
+                  },
+                  "DetailType": "${__project_data_available_detail_type__}",
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "${__event_source__}"
+                }
+              ]
+            },
+            "End": true
+          }
+        }
+      },
+      "ResultPath": null,
       "Next": "For each fastq list row pair"
     },
     "For each fastq list row pair": {
       "Type": "Map",
+      "ItemsPath": "$.generate_event_maps_step.fastq_list_rows_event_data_list",
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
@@ -147,7 +265,6 @@
         }
       },
       "Next": "Wait 5 Seconds",
-      "ItemsPath": "$.generate_event_maps_step.fastq_list_rows_event_data_list",
       "ResultPath": null,
       "ItemSelector": {
         "fastq_list_row_event_data.$": "$$.Map.Item.Value"

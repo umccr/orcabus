@@ -122,6 +122,7 @@
                   "type.$": "$.get_library_map_step.Item.type.S",
                   "assay.$": "$.get_library_map_step.Item.assay.S",
                   "subject_id.$": "$.get_library_map_step.Item.subject_id.S",
+                  "orcabus_id.$": "$.get_library_map_step.Item.orcabus_id.S",
                   "fastq_list_row_id_set.$": "$.get_library_map_step.Item.fastq_list_row_id_set.SS"
                 }
               }
@@ -158,6 +159,7 @@
             "type.$": "$.get_library_item_step.Item.type.S",
             "assay.$": "$.get_library_item_step.Item.assay.S",
             "subject_id.$": "$.get_library_item_step.Item.subject_id.S",
+            "orcabus_id.$": "$.get_library_item_step.Item.orcabus_id.S",
             "fastq_list_row_id_set.$": "$.get_library_item_step.Item.fastq_list_row_id_set.SS"
           },
           "complementary_library_obj_list.$": "$.get_complementary_libraries_step.complementary_library_obj_list"
@@ -382,8 +384,17 @@
               "workflowName": "${__workflow_name__}",
               "workflowVersion": "${__workflow_version__}",
               "workflowRunName.$": "$.get_parameters_step.workflow_run_name",
+              "linkedLibraries": [
+                {
+                  "libraryId.$": "$.get_tn_pair_step.tumor_library.id",
+                  "orcabusId.$": "$.get_tn_pair_step.tumor_library.orcabus_id"
+                },
+                {
+                  "libraryId.$": "$.get_tn_pair_step.normal_library.id",
+                  "orcabusId.$": "$.get_tn_pair_step.normal_library.orcabus_id"
+                }
+              ],
               "payload": {
-                "refId": null,
                 "version": "${__payload_version__}",
                 "data": {
                   "inputs.$": "$.generate_draft_event_payload_data_step.input_event_data",

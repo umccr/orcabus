@@ -24,7 +24,7 @@ def get_subject_from_subject_id(subject_id: Union[str, int]) -> Dict:
     if isinstance(subject_id, str):
         # We have an internal id, convert to int
         params = {
-            "internal_id": subject_id
+            "subject_id": subject_id
         }
     else:
         endpoint = f"{endpoint}/{subject_id}"

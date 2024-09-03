@@ -5,6 +5,7 @@
     "Move Inputs": {
       "Type": "Pass",
       "Parameters": {
+        "linked_libraries.$": "$.linkedLibraries",
         "payload_data.$": "$.payload.data"
       },
       "Next": "Get Subject Item"
@@ -16,7 +17,7 @@
         "TableName": "${__table_name__}",
         "Key": {
           "id.$": "$.payload_data.tags.subjectId",
-          "id_type": "${__subject_partition_name__}"
+          "id_type": "${__subject_table_partition_name__}"
         }
       },
       "ResultPath": "$.get_subject_item_step",
@@ -90,14 +91,14 @@
         "Entries": [
           {
             "Detail": {
-              "portalRunId.$": "$.get_parameters_step.portal_run_id",
+              "portalRunId.$": "$.get_portal_and_run_name_step.portal_run_id",
               "timestamp.$": "$$.State.EnteredTime",
               "status": "${__output_status__}",
               "workflowName": "${__workflow_name__}",
               "workflowVersion": "${__workflow_version__}",
-              "workflowRunName.$": "$.get_parameters_step.workflow_run_name",
+              "workflowRunName.$": "$.get_portal_and_run_name_step.workflow_run_name",
+              "linkedLibraries.$": "$.linked_libraries",
               "payload": {
-                "refId": null,
                 "version": "${__payload_version__}",
                 "data": {
                   "inputs.$": "$.generate_draft_event_payload_data_step.input_event_data",

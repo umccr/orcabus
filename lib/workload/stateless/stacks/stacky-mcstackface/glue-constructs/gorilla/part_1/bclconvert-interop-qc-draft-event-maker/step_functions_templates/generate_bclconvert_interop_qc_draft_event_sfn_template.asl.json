@@ -4,12 +4,12 @@
   "States": {
     "Move Inputs": {
       "Type": "Pass",
-      "Next": "Step Functions StartExecution",
       "Parameters": {
         "inputs.$": "$"
-      }
+      },
+      "Next": "Get workflow inputs"
     },
-    "Step Functions StartExecution": {
+    "Get workflow inputs": {
       "Type": "Task",
       "Resource": "arn:aws:states:::states:startExecution.sync:2",
       "Parameters": {
@@ -35,10 +35,11 @@
             "Detail": {
               "portalRunId.$": "$.get_sfn_preamble_outputs_step.portal_run_id",
               "timestamp.$": "$$.State.EnteredTime",
-              "status": "draft",
+              "status": "DRAFT",
               "workflowName": "${__workflow_name__}",
               "workflowVersion": "${__workflow_version__}",
               "workflowRunName.$": "$.get_sfn_preamble_outputs_step.workflow_run_name",
+              "linkedLibraries.$": "$.inputs.linkedLibraries",
               "payload": {
                 "version": "${__payload_version__}",
                 "data": {

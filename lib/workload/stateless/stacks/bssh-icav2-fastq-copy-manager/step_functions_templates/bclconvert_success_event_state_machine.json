@@ -68,14 +68,14 @@
       "Next": "Submit Completion Event",
       "Parameters": {
         "workflow_detail": {
-          "status": "succeeded",
+          "status": "SUCCEEDED",
           "timestamp.$": "$$.State.EnteredTime",
           "portalRunId.$": "$.workflow_inputs.portalRunId",
           "workflowName": "${__workflow_name__}",
           "workflowVersion": "${__workflow_version__}",
           "workflowRunName.$": "$.workflow_inputs.workflowRunName",
+          "linkedLibraries.$": "$.workflow_inputs.linkedLibraries",
           "payload": {
-            "refId": null,
             "version": "${__payload_version__}",
             "data": {
               "inputs.$": "$.workflow_inputs.payload.data.inputs",

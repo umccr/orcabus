@@ -18,7 +18,7 @@ Output Event status: `ready`
 
 * The wgtsQcInputMaker, subscribes to the wgtsqc input event glue (itself) and generates a ready event for the wgtsqcReadySfn
   * For the cttso v2 workflow we require a samplesheet, a set of fastq list rows (provided in the last step)
-  * However, in order to be 'ready' we need to use a few more variables such as
+  * However, in order to be 'READY' we need to use a few more variables such as
     * icaLogsUri,
     * analysisOutputUri
     * cacheUri
@@ -45,10 +45,10 @@ export class WgtsQcInputMakerConstruct extends Construct {
     prefix: 'kwik-wgtsqc',
     tablePartition: 'wgts_qc',
     triggerSource: 'orcabus.wgtsqcinputeventglue',
-    triggerStatus: 'draft',
+    triggerStatus: 'DRAFT',
     triggerDetailType: 'WorkflowDraftRunStateChange',
     outputSource: 'orcabus.wgtsqcinputeventglue',
-    outputStatus: 'ready',
+    outputStatus: 'READY',
     payloadVersion: '2024.05.24',
     workflowName: 'wgtsQc',
     workflowVersion: '4.2.4',
@@ -70,6 +70,7 @@ export class WgtsQcInputMakerConstruct extends Construct {
         lambdaPrefix: this.wgtsQcInputMakerEventMap.prefix,
         payloadVersion: this.wgtsQcInputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.wgtsQcInputMakerEventMap.prefix,
+        rulePrefix: `stacky-${this.wgtsQcInputMakerEventMap.prefix}`,
 
         /*
         Table objects

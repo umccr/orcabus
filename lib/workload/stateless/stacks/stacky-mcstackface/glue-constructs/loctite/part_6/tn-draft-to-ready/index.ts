@@ -17,7 +17,7 @@ Output Event DetailType: `WorkflowRunStateChange`
 Output Event status: `ready`
 
 * The tnInputMaker, subscribes to the tn input event glue (itself) and generates a ready event for the tnReadySfn
-  * However, in order to be 'ready' we need to use a few more variables such as
+  * However, in order to be 'READY' we need to use a few more variables such as
     * icaLogsUri,
     * analysisOutputUri
     * cacheUri
@@ -44,10 +44,10 @@ export class TnInputMakerConstruct extends Construct {
     prefix: 'loctite-tn',
     tablePartition: 'tn',
     triggerSource: 'orcabus.tninputeventglue',
-    triggerStatus: 'draft',
+    triggerStatus: 'DRAFT',
     triggerDetailType: 'WorkflowDraftRunStateChange',
     outputSource: 'orcabus.tninputeventglue',
-    outputStatus: 'ready',
+    outputStatus: 'READY',
     payloadVersion: '2024.07.16',
     workflowName: 'tumor_normal',
     workflowVersion: '4.2.4',
@@ -69,6 +69,7 @@ export class TnInputMakerConstruct extends Construct {
         lambdaPrefix: this.tnInputMakerEventMap.prefix,
         payloadVersion: this.tnInputMakerEventMap.payloadVersion,
         stateMachinePrefix: this.tnInputMakerEventMap.prefix,
+        rulePrefix: `stacky-${this.tnInputMakerEventMap.prefix}`,
 
         /*
         Table objects

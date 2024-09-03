@@ -37,11 +37,11 @@ export class WgtsQcLibraryQcCompleteConstruct extends Construct {
     },
     payloadVersion: '2024.07.16',
     triggerSource: 'orcabus.wgtsqcinputeventglue',
-    triggerStatus: 'QcComplete',
+    triggerStatus: 'QC_COMPLETE',
     triggerDetailType: 'FastqListRowStateChange',
     outputSource: 'orcabus.wgtsqcinputeventglue',
     outputDetailType: 'LibraryStateChange',
-    outputStatus: 'QcComplete',
+    outputStatus: 'QC_COMPLETE',
   };
 
   constructor(scope: Construct, id: string, props: WgtsQcLibraryQcCompleteConstructProps) {

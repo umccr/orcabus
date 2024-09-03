@@ -42,9 +42,9 @@
             "Type": "Parallel",
             "Branches": [
               {
-                "StartAt": "Get FastqListRowIds from Library",
+                "StartAt": "Get Library Obj from DB",
                 "States": {
-                  "Get FastqListRowIds from Library": {
+                  "Get Library Obj from DB": {
                     "Type": "Task",
                     "Resource": "arn:aws:states:::dynamodb:getItem",
                     "Parameters": {
@@ -54,16 +54,17 @@
                         "id_type": "${__library_partition_name__}"
                       }
                     },
-                    "ResultPath": "$.get_fastq_list_row_ids_step",
                     "ResultSelector": {
-                      "internal_id.$": "$.Item.internal_id.S",
+                      "library_id.$": "$.Item.library_id.S",
+                      "orcabus_id.$": "$.Item.orcabus_id.S",
                       "fastq_list_row_id_list.$": "$.Item.fastq_list_row_id_set.SS"
                     },
+                    "ResultPath": "$.get_library_obj_step",
                     "Next": "For each FastqListRowID"
                   },
                   "For each FastqListRowID": {
                     "Type": "Map",
-                    "ItemsPath": "$.get_fastq_list_row_ids_step.fastq_list_row_id_list",
+                    "ItemsPath": "$.get_library_obj_step.fastq_list_row_id_list",
                     "ItemSelector": {
                       "fastq_list_row_id.$": "$$.Map.Item.Value"
                     },
@@ -186,12 +187,18 @@
               }
             ],
             "ResultSelector": {
-              "sample_id.$": "$[0].get_fastq_list_row_ids_step.internal_id",
+              "sample_id.$": "$[0].get_library_obj_step.library_id",
               "samplesheet.$": "$[0].generate_samplesheet_step.samplesheet",
               "fastq_list_rows.$": "$[0].get_fastq_list_row_values_step.fastq_list_rows",
-              "fastq_list_row_ids.$": "$[0].get_fastq_list_row_ids_step.fastq_list_row_id_list",
+              "fastq_list_row_ids.$": "$[0].get_library_obj_step.fastq_list_row_id_list",
               "portal_run_id.$": "$[1].get_sfn_preamble_outputs_step.portal_run_id",
-              "workflow_run_name.$": "$[1].get_sfn_preamble_outputs_step.workflow_run_name"
+              "workflow_run_name.$": "$[1].get_sfn_preamble_outputs_step.workflow_run_name",
+              "linked_libraries": [
+                {
+                  "libraryId.$": "$[0].get_library_obj_step.library_id",
+                  "orcabusId.$": "$[0].get_library_obj_step.orcabus_id"
+                }
+              ]
             },
             "ResultPath": "$.get_draft_inputs",
             "Next": "Push cttsov2 draft event"
@@ -209,8 +216,8 @@
                     "workflowName": "${__workflow_name__}",
                     "workflowVersion": "${__workflow_version__}",
                     "workflowRunName.$": "$.get_draft_inputs.workflow_run_name",
+                    "linkedLibraries.$": "$.get_draft_inputs.linked_libraries",
                     "payload": {
-                      "refId": null,
                       "version": "${__payload_version__}",
                       "data": {
                         "inputs": {

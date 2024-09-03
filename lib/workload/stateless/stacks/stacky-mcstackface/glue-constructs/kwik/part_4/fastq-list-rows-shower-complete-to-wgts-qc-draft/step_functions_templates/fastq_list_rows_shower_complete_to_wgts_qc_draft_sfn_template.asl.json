@@ -49,12 +49,13 @@
               }
             },
             "Next": "For each FastqListRowID",
-            "ResultPath": "$.get_fastq_list_row_ids_step",
             "ResultSelector": {
-              "internal_id.$": "$.Item.internal_id.S",
+              "library_id.$": "$.Item.library_id.S",
+              "orcabus_id.$": "$.Item.orcabus_id.S",
               "sample_type.$": "$.Item.sample_type.S",
               "fastq_list_row_id_list.$": "$.Item.fastq_list_row_id_set.SS"
-            }
+            },
+            "ResultPath": "$.get_fastq_list_row_ids_step"
           },
           "For each FastqListRowID": {
             "Type": "Map",
@@ -62,7 +63,8 @@
             "ItemSelector": {
               "fastq_list_row_id.$": "$$.Map.Item.Value",
               "sample_type.$": "$.get_fastq_list_row_ids_step.sample_type",
-              "library_id.$": "$.get_fastq_list_row_ids_step.internal_id",
+              "library_id.$": "$.get_fastq_list_row_ids_step.library_id",
+              "orcabus_id.$": "$.get_fastq_list_row_ids_step.orcabus_id",
               "instrument_run_id.$": "$.instrument_run_id"
             },
             "ItemProcessor": {
@@ -227,8 +229,13 @@
                           "workflowName": "${__workflow_name__}",
                           "workflowVersion": "${__workflow_version__}",
                           "workflowRunName.$": "$.get_per_workflow_run_inputs_step.workflow_run_name",
+                          "linkedLibraries": [
+                            {
+                              "libraryId.$": "$.library_id",
+                              "orcabusId.$": "$.orcabus_id"
+                            }
+                          ],
                           "payload": {
-                            "refId": null,
                             "version": "${__payload_version__}",
                             "data": {
                               "inputs.$": "$.get_per_workflow_run_inputs_step.event_data",

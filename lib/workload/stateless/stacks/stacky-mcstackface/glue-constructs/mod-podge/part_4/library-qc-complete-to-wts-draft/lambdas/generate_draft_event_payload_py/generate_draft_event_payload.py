@@ -24,6 +24,7 @@ def handler(event, context) -> Dict:
     """
 
     tumor_library_id = event['tumor_library_id']
+    subject_id = event['subject_id']
     tumor_fastq_list_rows: List[Dict] = event['tumor_fastq_list_rows']
     tumor_fastq_list_row_ids: List[str] = event['tumor_fastq_list_row_ids']
 
@@ -33,6 +34,7 @@ def handler(event, context) -> Dict:
             "tumorFastqListRows": tumor_fastq_list_rows,
         },
         "event_tags": {
+            "subjectId": subject_id,
             "tumorLibraryId": tumor_library_id,
             "tumorFastqListRowIds": tumor_fastq_list_row_ids
         }

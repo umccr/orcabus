@@ -41,6 +41,10 @@ import {
   UmccriseIcav2PipelineTable,
   UmccriseIcav2PipelineTableStackProps,
 } from './stacks/umccrise-pipeline-dynamo-db/deploy/stack';
+import {
+  RnasumIcav2PipelineTable,
+  RnasumIcav2PipelineTableStackProps,
+} from './stacks/rnasum-pipeline-dynamo-db/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -54,6 +58,7 @@ export interface StatefulStackCollectionProps {
   tnIcav2PipelineTableStackProps: TnIcav2PipelineTableStackProps;
   wtsIcav2PipelineTableStackProps: WtsIcav2PipelineTableStackProps;
   umccriseIcav2PipelineTableStackProps: UmccriseIcav2PipelineTableStackProps;
+  rnasumIcav2PipelineTableStackProps: RnasumIcav2PipelineTableStackProps;
   BclConvertTableStackProps: BclConvertTableStackProps;
   stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
 }
@@ -72,6 +77,7 @@ export class StatefulStackCollection {
   readonly tnIcav2PipelineTableStack: Stack;
   readonly wtsIcav2PipelineTableStack: Stack;
   readonly umccriseIcav2PipelineTableStack: Stack;
+  readonly rnasumIcav2PipelineTableStack: Stack;
   readonly BclConvertTableStack: Stack;
   readonly stackyStatefulTablesStack: Stack;
 
@@ -156,6 +162,15 @@ export class StatefulStackCollection {
       {
         ...this.createTemplateProps(env, 'UmccriseIcav2PipelineTableStack'),
         ...statefulConfiguration.umccriseIcav2PipelineTableStackProps,
+      }
+    );
+
+    this.rnasumIcav2PipelineTableStack = new RnasumIcav2PipelineTable(
+      scope,
+      'RnasumIcav2PipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'RnasumIcav2PipelineTableStack'),
+        ...statefulConfiguration.rnasumIcav2PipelineTableStackProps,
       }
     );
 

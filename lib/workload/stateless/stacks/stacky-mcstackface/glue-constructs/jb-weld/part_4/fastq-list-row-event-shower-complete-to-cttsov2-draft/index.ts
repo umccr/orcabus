@@ -48,7 +48,7 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
     triggerDetailType: 'FastqListRowShowerStateChange',
     /* Output Event Settings */
     outputSource: 'orcabus.cttsov2inputeventglue',
-    outputStatus: 'draft',
+    outputStatus: 'DRAFT',
     outputDetailType: 'WorkflowDraftRunStateChange',
     /* Payload version */
     payloadVersion: '0.1.0',

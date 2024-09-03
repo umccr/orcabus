@@ -8,8 +8,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         }
       },
       "ResultSelector": {
@@ -180,8 +180,7 @@
           "enable_rna": false,
           "enable_sort": true,
           "fastq_list_rows.$": "$.configure_inputs_step.fastq_list_rows_cwl",
-          "output_directory.$": "States.Format('{}_dragen_alignment', $.get_input_parameters_from_event_step.inputs.outputPrefix)",
-          "output_file_prefix.$": "$.get_input_parameters_from_event_step.inputs.outputPrefix",
+          "output_prefix.$": "$.get_input_parameters_from_event_step.inputs.outputPrefix",
           "reference_tar": {
             "class": "File",
             "location.$": "$.configure_inputs_step.reference_uri"
@@ -232,8 +231,8 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.db_uuid",
-          "id_type": "db_uuid"
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
         },
         "UpdateExpression": "SET input_json = :input_json",
         "ExpressionAttributeValues": {

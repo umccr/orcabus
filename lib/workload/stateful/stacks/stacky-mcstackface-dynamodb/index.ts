@@ -13,6 +13,7 @@ export interface StackyStatefulTablesConfig {
   dynamodbTnGlueTableName: string;
   dynamodbWtsGlueTableName: string;
   dynamodbUmccriseGlueTableName: string;
+  dynamodbRnasumGlueTableName: string;
   removalPolicy?: RemovalPolicy;
 }
 
@@ -27,6 +28,7 @@ export class StackyStatefulTablesStack extends Stack {
   public readonly tnGlueTable: dynamodb.ITableV2;
   public readonly wtsGlueTable: dynamodb.ITableV2;
   public readonly umccriseGlueTable: dynamodb.ITableV2;
+  public readonly rnasumGlueTable: dynamodb.ITableV2;
   constructor(scope: Construct, id: string, props: StackProps & StackyStatefulTablesStackProps) {
     super(scope, id, props);
 
@@ -103,6 +105,14 @@ export class StackyStatefulTablesStack extends Stack {
     */
     this.umccriseGlueTable = new DynamodbPartitionedPipelineConstruct(this, 'umccriseGlueTable', {
       tableName: props.dynamodbUmccriseGlueTableName,
+      removalPolicy: props.removalPolicy,
+    }).tableObj;
+
+    /*
+    Initialise dynamodb table for the rnasum glue service
+    */
+    this.rnasumGlueTable = new DynamodbPartitionedPipelineConstruct(this, 'rnasumGlueTable', {
+      tableName: props.dynamodbRnasumGlueTableName,
       removalPolicy: props.removalPolicy,
     }).tableObj;
   }

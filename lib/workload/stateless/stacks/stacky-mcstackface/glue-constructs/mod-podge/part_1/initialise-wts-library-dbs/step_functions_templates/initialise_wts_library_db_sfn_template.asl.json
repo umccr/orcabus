@@ -15,7 +15,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.payload_data.library.internalId",
+          "id.$": "$.payload_data.library.libraryId",
           "id_type": "${__library_partition_name__}"
         }
       },
@@ -40,10 +40,10 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Item": {
-          "id.$": "$.payload_data.library.internalId",
+          "id.$": "$.payload_data.library.libraryId",
           "id_type": "${__library_partition_name__}",
-          "metadata_db_id": {
-            "N.$": "States.Format('{}', $.payload_data.library.id)"
+          "orcabus_id": {
+            "S.$": "$.payload_data.library.orcabusId"
           },
           "phenotype": {
             "S.$": "$.payload_data.library.phenotype"
@@ -58,7 +58,7 @@
             "S.$": "$.payload_data.library.assay"
           },
           "subject_id": {
-            "S.$": "$.payload_data.library.subject.internalId"
+            "S.$": "$.payload_data.library.subject.subjectId"
           }
         }
       },
@@ -70,8 +70,10 @@
       "ItemsPath": "$.payload_data.bclconvertDataRows",
       "ItemSelector": {
         "bclconvert_data_row.$": "$$.Map.Item.Value",
+        "index.$": "$$.Map.Item.Index",
+        "fastq_list_row_objs.$": "$.payload_data.fastqListRows",
         "instrument_run_id.$": "$.payload_data.instrumentRunId",
-        "library_id.$": "$.payload_data.library.internalId"
+        "library_id.$": "$.payload_data.library.libraryId"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
@@ -83,7 +85,7 @@
             "Type": "Pass",
             "Next": "Initialise Fastq List Row and Update Library",
             "Parameters": {
-              "fastq_list_row_id.$": "States.Format('{}.{}.{}.{}.{}', $.bclconvert_data_row.index, $.bclconvert_data_row.index2, $.bclconvert_data_row.lane, $.instrument_run_id, $.bclconvert_data_row.sampleId)"
+              "fastq_list_row_id.$": "States.ArrayGetItem($.fastq_list_row_objs[*].fastqListRowRgId, $.index)"
             },
             "ResultPath": "$.get_fastq_list_row_id_step"
           },

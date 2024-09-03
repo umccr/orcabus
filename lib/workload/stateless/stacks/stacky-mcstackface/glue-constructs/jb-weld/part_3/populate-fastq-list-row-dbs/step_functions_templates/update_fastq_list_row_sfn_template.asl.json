@@ -4,14 +4,14 @@
   "States": {
     "Get Event Data": {
       "Type": "Pass",
-      "Next": "DynamoDB GetItem",
+      "Next": "Get FastqListRow from DB",
       "Parameters": {
-        "fastq_list_row_id.$": "$.payload.data.id",
+        "fastq_list_row_id.$": "$.payload.data.fastqListRow.rgid",
         "fastq_list_row_event_data.$": "$.payload.data.fastqListRow",
         "instrument_run_id.$": "$.payload.data.instrumentRunId"
       }
     },
-    "DynamoDB GetItem": {
+    "Get FastqListRow from DB": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
