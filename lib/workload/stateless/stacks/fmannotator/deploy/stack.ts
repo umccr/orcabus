@@ -12,7 +12,7 @@ import { GoFunction } from '@aws-cdk/aws-lambda-go-alpha';
 import path from 'path';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
-import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
+import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { NamedLambdaRole } from '../../../../components/named-lambda-role';
 import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 
@@ -22,6 +22,7 @@ import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 export type FMAnnotatorConfig = {
   vpcProps: VpcLookupOptions;
   eventBusName: string;
+  jwtSecretName: string;
 };
 
 /**
@@ -34,7 +35,6 @@ export type FMAnnotatorConfigurableProps = StackProps & FMAnnotatorConfig;
  */
 export type FMAnnotatorProps = FMAnnotatorConfigurableProps & {
   domainName: string;
-  secret: ISecret;
 };
 
 /**
@@ -58,22 +58,20 @@ export class FMAnnotator extends Stack {
       description: 'Security group that allows the annotator Lambda to egress out.',
     });
 
+    const tokenSecret = Secret.fromSecretNameV2(this, 'JwtSecret', props.jwtSecretName);
+
     this.role = new NamedLambdaRole(this, 'Role');
     this.addAwsManagedPolicy('service-role/AWSLambdaVPCAccessExecutionRole');
     // Need access to secrets to fetch FM JWT token.
-    this.addToPolicy(
-      new PolicyStatement({
-        actions: ['secretsmanager:DescribeSecret', 'secretsmanager:GetSecretValue'],
-        resources: [props.secret.secretArn],
-      })
-    );
+    tokenSecret.grantRead(this.role);
 
-    const entry = path.join(__dirname, '..');
+    const entry = path.join(__dirname, '..', 'cmd', 'portalrunid');
     const fn = new GoFunction(this, 'handler', {
       entry,
       environment: {
-        FMANNOTATOR_FILE_MANAGER_ENDPOINT: props.domainName,
-        FMANNOTATOR_FILE_MANAGER_SECRET: props.secret.secretName,
+        FMANNOTATOR_FILE_MANAGER_ENDPOINT: `https://${props.domainName}`,
+        FMANNOTATOR_FILE_MANAGER_SECRET_NAME: tokenSecret.secretName,
+        GO_LOG: 'debug',
       },
       memorySize: 128,
       timeout: Duration.seconds(28),

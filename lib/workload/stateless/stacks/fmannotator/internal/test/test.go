@@ -107,7 +107,7 @@ func SetupFileManager(t *testing.T) *sql.DB {
 	databaseEndpoint := fmt.Sprintf(databaseFmt, databaseIp, intPort, testDatabaseName)
 
 	t.Setenv("FMANNOTATOR_FILE_MANAGER_ENDPOINT", fmEndpoint)
-	t.Setenv("FMANNOTATOR_FILE_MANAGER_SECRET", "secret")
+	t.Setenv("FMANNOTATOR_FILE_MANAGER_SECRET_NAME", "secret")
 
 	return loadFixtures(t, databaseEndpoint)
 }

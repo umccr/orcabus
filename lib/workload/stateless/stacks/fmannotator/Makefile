@@ -10,13 +10,10 @@ build:
 test:
 	@go test
 lint:
-	@gofmt -l
-lint-fix:
-	@gofmt
+	@go fmt
 golangci-lint:
-	@golangci-lint run --verbose
+	@golangci-lint run
 check: lint golangci-lint
-check-fix: lint-fix golangci-lint
 
 ## Clean
 clean:

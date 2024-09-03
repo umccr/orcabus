@@ -1,3 +1,4 @@
+// Package fmannotator This file contains definitions for calling the FileManager API.
 package fmannotator
 
 import (
@@ -42,6 +43,8 @@ func NewApiClient(config *Config, body io.Reader) (*ApiClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	slog.Debug(fmt.Sprintf("host set to: %s", req.Host))
 
 	return &ApiClient{
 		Client:  &http.Client{},
