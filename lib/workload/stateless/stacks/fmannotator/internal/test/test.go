@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/google/uuid"
@@ -14,6 +16,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/umccr/orcabus/lib/workload/stateless/stacks/fmannotator/schema/orcabus_workflowmanager/workflowrunstatechange"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -41,16 +44,23 @@ func setupService(t *testing.T, buildContext string, port nat.Port, wait wait.St
 	containerName := strings.ReplaceAll(strings.Trim(buildContext, "./"), "/", "_")
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:   buildContext,
-			Repo:      containerName,
-			Tag:       containerName,
-			BuildArgs: args,
-			KeepImage: true,
+			Context:       buildContext,
+			Repo:          containerName,
+			Tag:           containerName,
+			BuildArgs:     args,
+			KeepImage:     true,
+			PrintBuildLog: true,
+			BuildOptionsModifier: func(options *types.ImageBuildOptions) {
+				options.ExtraHosts = []string{"host.docker.internal:host-gateway"}
+			},
 		},
 		ExposedPorts: []string{port.Port()},
 		Env:          env,
 		WaitingFor:   wait,
 		Name:         containerName,
+		HostConfigModifier: func(config *container.HostConfig) {
+			config.ExtraHosts = []string{"host.docker.internal:host-gateway"}
+		},
 	}
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
@@ -80,6 +90,12 @@ func SetupFileManager(t *testing.T) *sql.DB {
 	// expect this to be the case.
 	t.Setenv("TESTCONTAINERS_RYUK_CONNECTION_TIMEOUT", "10m")
 	t.Setenv("TESTCONTAINERS_RYUK_RECONNECTION_TIMEOUT", "5m")
+
+	// This works around an issue in test containers which requires the presence of a config.json file.
+	dir := t.TempDir()
+	err := os.WriteFile(path.Join(dir, "config.json"), []byte("{}"), 0666)
+	require.NoError(t, err)
+	t.Setenv("DOCKER_CONFIG", dir)
 
 	// Database
 	testDatabaseName := fmt.Sprintf("filemanager_test_%v", strings.ReplaceAll(uuid.New().String(), "-", "_"))

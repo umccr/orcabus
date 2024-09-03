@@ -96,6 +96,7 @@ jobs:
           rustc --version
           go version
           make --version
+          docker version
 
       - name: Checkout code
         uses: actions/checkout@v4
