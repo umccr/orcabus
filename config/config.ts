@@ -47,6 +47,7 @@ import {
   getRnasumIcav2PipelineManagerStackProps,
   getRnasumIcav2PipelineTableStackProps,
 } from './stacks/rnasumPipelineManager';
+import { getFmAnnotatorProps } from './stacks/fmAnnotator';
 
 interface EnvironmentConfig {
   name: string;
@@ -102,6 +103,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
       workflowManagerStackProps: getWorkflowManagerStackProps(stage),
       stackyMcStackFaceProps: getGlueStackProps(stage),
+      fmAnnotatorProps: getFmAnnotatorProps(),
     },
   };
 

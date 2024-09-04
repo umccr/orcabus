@@ -23,6 +23,7 @@
     "cdk-stateful": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/statefulPipeline.ts'"
   },
   "dependencies": {
+    "@aws-cdk/aws-lambda-go-alpha": "^2.155.0-alpha.0",
     "@aws-cdk/aws-lambda-python-alpha": "2.155.0-alpha.0",
     "@aws-cdk/aws-pipes-alpha": "^2.155.0-alpha.0",
     "@aws-cdk/aws-pipes-sources-alpha": "^2.155.0-alpha.0",

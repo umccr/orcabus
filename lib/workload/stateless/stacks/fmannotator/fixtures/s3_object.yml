@@ -1,0 +1,31 @@
+- s3_object_id: RAW=gen_random_uuid()
+  event_type: 'Created'
+  bucket: 'bucket'
+  key: 'byob-icav2/development/analysis/wts/202409021221e6e6/_manifest.json'
+  event_time: 2024-09-02 00:00:00
+  size: 5
+  storage_class: 'Standard'
+- s3_object_id: RAW=gen_random_uuid()
+  event_type: 'Deleted'
+  bucket: 'bucket'
+  key: 'byob-icav2/development/analysis/wts/202409021221e6e6/_manifest.json'
+  event_time: 2024-09-03 00:00:00
+- s3_object_id: RAW=gen_random_uuid()
+  event_type: 'Created'
+  bucket: 'bucket'
+  key: 'byob-icav2/development/analysis/wts/202409021221e6e6/_tags.json'
+  event_time: 2024-09-04 00:00:00
+  size: 10
+  storage_class: 'Standard'
+- s3_object_id: RAW=gen_random_uuid()
+  event_type: 'Created'
+  bucket: 'bucket'
+  key: 'byob-icav2/development/analysis/wts/202409021221e6c6/_manifest.json'
+  event_time: 2024-09-05 00:00:00
+  size: 3
+  storage_class: 'Standard'
+- s3_object_id: RAW=gen_random_uuid()
+  event_type: 'Deleted'
+  bucket: 'bucket'
+  key: 'byob-icav2/development/analysis/wts/202409021221e6c6/_manifest.json'
+  event_time: 2024-09-06 00:00:00

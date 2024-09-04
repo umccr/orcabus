@@ -91,6 +91,7 @@ export class StatelessPipelineStack extends cdk.Stack {
           install: {
             'runtime-versions': {
               python: '3.12',
+              golang: '1.22',
             },
           },
         },
@@ -126,6 +127,18 @@ export class StatelessPipelineStack extends cdk.Stack {
           resources: ['*'],
         }),
       ],
+      partialBuildSpec: codebuild.BuildSpec.fromObject({
+        phases: {
+          install: {
+            'runtime-versions': {
+              // Don't strictly need golang here as CDK can do docker bundling, but `local`
+              // bundling tends to be faster.
+              golang: '1.22',
+            },
+          },
+        },
+        version: '0.2',
+      }),
     });
 
     const pipeline = new pipelines.CodePipeline(this, 'Pipeline', {
