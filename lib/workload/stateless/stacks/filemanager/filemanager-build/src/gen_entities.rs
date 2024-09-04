@@ -17,6 +17,8 @@ use crate::Config;
 pub async fn generate_entities() -> Result<()> {
     let config = Config::load()?;
 
+    println!("{:#?}", config);
+
     let out_dir = config.out_dir;
     let command: &[&_] = &[
         "sea-orm-cli",

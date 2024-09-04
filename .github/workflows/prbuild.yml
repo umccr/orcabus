@@ -36,6 +36,7 @@ env:
   #
   # And from pyenv docs setting this PYENV_VERSION as env-var would set the python version globally
   PYENV_VERSION: '3.12'
+  GOENV_VERSION: '1.22'
 
 jobs:
   pre-commit-lint-security:
@@ -82,20 +83,23 @@ jobs:
     runs-on: codebuild-orcabus-codebuild-gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
     if: ${{ !github.event.pull_request.draft }}
     steps:
+      - name: Rust installation
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
+
       - name: Print toolchain versions
         run: |
           node -v
           python -V
           pip3 -V
+          rustc --version
+          go version
           make --version
+          docker version
 
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Rust installation
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          components: rustfmt
 
       - name: Install dependencies
         run: |

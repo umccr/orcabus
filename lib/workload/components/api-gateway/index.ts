@@ -55,6 +55,7 @@ export interface ApiGatewayConstructProps {
 
 export class ApiGatewayConstruct extends Construct {
   private readonly _httpApi: HttpApi;
+  private readonly _domainName: string;
 
   constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
     super(scope, id);
@@ -67,9 +68,9 @@ export class ApiGatewayConstruct extends Construct {
     );
     const hostedZoneId = StringParameter.valueForStringParameter(this, '/hosted_zone/umccr/id');
 
-    const domainName = `${props.customDomainNamePrefix}.${hostedDomainName}`;
+    this._domainName = `${props.customDomainNamePrefix}.${hostedDomainName}`;
     const apiGWDomainName = new DomainName(this, 'UmccrDomainName', {
-      domainName: `${props.customDomainNamePrefix}.${hostedDomainName}`,
+      domainName: this.domainName,
       certificate: Certificate.fromCertificateArn(this, 'cert', umccrAcmArn),
     });
 
@@ -106,7 +107,7 @@ export class ApiGatewayConstruct extends Construct {
         hostedZoneId,
         zoneName: hostedDomainName,
       }),
-      recordName: domainName,
+      recordName: this.domainName,
       target: RecordTarget.fromAlias(
         new ApiGatewayv2DomainProperties(
           apiGWDomainName.regionalDomainName,
@@ -191,5 +192,9 @@ export class ApiGatewayConstruct extends Construct {
 
   get httpApi(): HttpApi {
     return this._httpApi;
+  }
+
+  get domainName(): string {
+    return this._domainName;
   }
 }

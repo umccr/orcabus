@@ -44,6 +44,7 @@ export class Filemanager extends Stack {
   private readonly host: string;
   private readonly securityGroup: ISecurityGroup;
   private readonly queue: IQueue;
+  readonly domainName: string;
 
   constructor(scope: Construct, id: string, props: FilemanagerProps) {
     super(scope, id, props);
@@ -89,8 +90,9 @@ export class Filemanager extends Stack {
     );
 
     this.createIngestFunction(props);
-    this.createApiFunction(props);
     this.createInventoryFunction(props);
+
+    this.domainName = this.createApiFunction(props);
   }
 
   private createIngestRole(name: string) {
@@ -126,9 +128,9 @@ export class Filemanager extends Stack {
   }
 
   /**
-   * Query function and API Gateway fronting the function.
+   * Query function and API Gateway fronting the function. Returns the configured domain name.
    */
-  private createApiFunction(props: FilemanagerProps) {
+  private createApiFunction(props: FilemanagerProps): string {
     let apiLambda = new ApiFunction(this, 'ApiFunction', {
       vpc: this.vpc,
       host: this.host,
@@ -137,7 +139,7 @@ export class Filemanager extends Stack {
       ...props,
     });
 
-    const ApiGateway = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
+    const apiGateway = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
     const httpApi = ApiGateway.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiLambda.function);
@@ -159,5 +161,7 @@ export class Filemanager extends Stack {
       integration: apiIntegration,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.POST),
     });
+
+    return apiGateway.domainName;
   }
 }
