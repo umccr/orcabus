@@ -140,7 +140,7 @@ export class Filemanager extends Stack {
     });
 
     const apiGateway = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
-    const httpApi = ApiGateway.httpApi;
+    const httpApi = apiGateway.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiLambda.function);
 
