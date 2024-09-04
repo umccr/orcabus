@@ -11,17 +11,13 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { PostgresManagerStack } from '../../../lib/workload/stateful/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../lib/workload/components/api-gateway';
+import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../lib/workload/components/api-gateway';
 
 export interface ProjectNameStackProps { // FIXME change prop interface name
   lambdaSecurityGroupName: string;
   vpcProps: VpcLookupOptions;
   mainBusName: string;
-  cognitoUserPoolIdParameterName: string;
-  cognitoPortalAppClientIdParameterName: string;
-  cognitoStatusPageAppClientIdParameterName: string;
-  apiGwLogsConfig: ApiGwLogsConfig;
-  corsAllowOrigins?: string[];
+  apiGatewayCognitoProps: ApiGatewayConstructProps;
 }
 
 export class ProjectNameStack extends Stack {  // FIXME change construct name
@@ -116,20 +112,15 @@ export class ProjectNameStack extends Stack {  // FIXME change construct name
       timeout: Duration.seconds(28),
     });
 
-    const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
-      region: this.region,
-      apiName: 'SequenceRunManager',
-      customDomainNamePrefix: 'sequence',
-      ...props,
-    });
+    const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
     const httpApi = srmApi.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
 
-    new HttpRoute(this, 'HttpRoute', {
+    new HttpRoute(this, 'GetHttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.GET),
     });
   }
 
