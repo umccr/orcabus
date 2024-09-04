@@ -153,5 +153,11 @@ export class Filemanager extends Stack {
       integration: apiIntegration,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.PATCH),
     });
+
+    new HttpRoute(this, 'PostHttpRoute', {
+      httpApi: httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.POST),
+    });
   }
 }
