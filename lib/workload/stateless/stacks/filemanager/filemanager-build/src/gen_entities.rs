@@ -2,15 +2,14 @@
 //! database schema.
 //!
 
+use crate::error::ErrorKind::EntityGeneration;
+use crate::error::{Error, Result};
 use clap_builder::Parser;
 use quote::quote;
 use sea_orm_cli::{run_generate_command, Cli, Commands};
 use std::ffi::OsStr;
-use std::fs::write;
 use std::path::Path;
-
-use crate::error::ErrorKind::EntityGeneration;
-use crate::error::{Error, Result};
+use tokio::fs::write;
 
 /// Generate sea-orm entities into the `OUT_DIR`. `generate_mod` controls whether an additional
 /// `generated.rs` module file is created with can be used with `include!(concat!(env!("OUT_DIR"), "/generated.rs"));`
@@ -60,7 +59,7 @@ pub async fn generate_entities(
         );
 
         let out_file = out_dir.join("generated.rs");
-        write(out_file, format!("{}\n\n{}", generated_comment, generated))?;
+        write(out_file, format!("{}\n\n{}", generated_comment, generated)).await?;
     }
 
     Ok(())

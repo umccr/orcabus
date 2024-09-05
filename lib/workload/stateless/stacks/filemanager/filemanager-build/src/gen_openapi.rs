@@ -5,16 +5,15 @@
 //! is here.
 //!
 
+use crate::error::ErrorKind::OpenAPIGeneration;
+use crate::Result;
 use heck::AsPascalCase;
-use prettyplease::unparse;
-use quote::format_ident;
+use quote::{format_ident, ToTokens};
 use std::fs::{read_dir, read_to_string, write};
 use std::path::Path;
 use syn::visit_mut::VisitMut;
 use syn::{parse_file, parse_quote, Ident, ItemStruct};
-
-use crate::error::ErrorKind::OpenAPIGeneration;
-use crate::Result;
+use tokio::process::Command;
 
 /// OpenAPI definition generator implementing `VisitMut`.
 #[derive(Debug)]
@@ -53,7 +52,16 @@ pub async fn generate_openapi(out_dir: &Path) -> Result<()> {
         }
         .visit_file_mut(&mut tokens);
 
-        write(path, unparse(&tokens))?;
+        write(&path, tokens.into_token_stream().to_string())?;
+
+        let exit_status = Command::new("rustfmt").arg(&path).status().await?;
+        if !exit_status.success() {
+            return Err(OpenAPIGeneration(format!(
+                "running rustfmt on `{}`",
+                path.to_string_lossy()
+            ))
+            .into());
+        }
     }
 
     Ok(())

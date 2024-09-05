@@ -22,7 +22,7 @@ pub mod message;
 /// A wrapper around AWS storage types with sqlx support.
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sqlx(type_name = "storage_class")]
+#[sqlx(type_name = "storage_class", no_pg_array)]
 pub enum StorageClass {
     DeepArchive,
     Glacier,
