@@ -1,9 +1,8 @@
-use sqlx::{query_file_as, Acquire, Postgres, Transaction};
+use sqlx::{query_as, Acquire, Postgres, Transaction};
 
 use crate::database::Client;
 use crate::error::Result;
-use crate::events::aws::message::EventType;
-use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
+use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 
 /// Query the filemanager via REST interface.
 #[derive(Debug)]
@@ -33,13 +32,12 @@ impl Query {
         let mut conn = conn.acquire().await?;
 
         Ok(FlatS3EventMessages(
-            query_file_as!(
-                FlatS3EventMessage,
-                "../database/queries/api/select_existing_by_bucket_key.sql",
-                buckets,
-                keys,
-                version_ids
-            )
+            query_as::<_, FlatS3EventMessage>(include_str!(
+                "../../../../database/queries/api/select_existing_by_bucket_key.sql"
+            ))
+            .bind(buckets)
+            .bind(keys)
+            .bind(version_ids)
             .fetch_all(&mut *conn)
             .await?,
         ))

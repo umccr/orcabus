@@ -27,14 +27,14 @@ select
     last_modified_date,
     e_tag,
     sha256,
-    storage_class as "storage_class?: StorageClass",
-    s3_object.version_id as "version_id!",
+    storage_class,
+    s3_object.version_id,
     sequencer,
     number_duplicate_events,
     size,
     is_delete_marker,
-    event_type as "event_type!: EventType",
-    0 as "number_reordered!"
+    event_type,
+    0::bigint as "number_reordered"
 from input
 -- Grab the most recent object in each input group.
 cross join lateral (

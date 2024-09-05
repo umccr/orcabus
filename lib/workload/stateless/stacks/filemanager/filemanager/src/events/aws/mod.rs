@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 use message::EventMessage;
@@ -419,7 +420,7 @@ impl FlatS3EventMessages {
 }
 
 /// A flattened AWS S3 record
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default, FromRow)]
 pub struct FlatS3EventMessage {
     pub s3_object_id: Uuid,
     pub sequencer: Option<String>,

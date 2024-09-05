@@ -5,16 +5,15 @@
 //! is here.
 //!
 
-use std::fs::{read_dir, read_to_string, write};
-
 use heck::AsPascalCase;
 use prettyplease::unparse;
 use quote::format_ident;
+use std::fs::{read_dir, read_to_string, write};
+use std::path::Path;
 use syn::visit_mut::VisitMut;
 use syn::{parse_file, parse_quote, Ident, ItemStruct};
 
 use crate::error::ErrorKind::OpenAPIGeneration;
-use crate::Config;
 use crate::Result;
 
 /// OpenAPI definition generator implementing `VisitMut`.
@@ -34,11 +33,9 @@ impl<'a> VisitMut for GenerateOpenAPI<'a> {
 }
 
 /// Generate OpenAPI utoipa definitions on top of the sea-orm entities.
-pub async fn generate_openapi() -> Result<()> {
-    let config = Config::load()?;
-
+pub async fn generate_openapi(out_dir: &Path) -> Result<()> {
     let model_ident: Ident = parse_quote! { Model };
-    for path in read_dir(config.out_dir)? {
+    for path in read_dir(out_dir)? {
         let path = path?.path();
         let content = read_to_string(&path)?;
 

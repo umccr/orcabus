@@ -15,9 +15,7 @@ use crate::error::Result;
 use crate::events::EventSourceType;
 
 pub mod aws;
-
-// Include the generated entities module.
-include!(concat!(env!("OUT_DIR"), "/generated.rs"));
+pub mod entities;
 
 /// A trait which can generate database credentials.
 #[async_trait]
@@ -154,7 +152,7 @@ pub trait Migrate {
 #[cfg(test)]
 pub(crate) mod tests {
     use chrono::{DateTime, Utc};
-    use sqlx::{query, query_file, PgPool};
+    use sqlx::{query, PgPool, Row};
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::message::EventType;
@@ -165,31 +163,9 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn insert_created(pool: PgPool) {
-        let mut tx = pool.begin().await.unwrap();
+        insert_s3_objects(&pool, Created).await;
 
-        query_file!(
-            "../database/queries/ingester/aws/insert_s3_objects.sql",
-            &vec![UuidGenerator::generate()],
-            &vec!["bucket".to_string()],
-            &vec!["key".to_string()],
-            &vec![DateTime::<Utc>::default()],
-            &vec![Some(0i64)] as &[Option<i64>],
-            &vec![None] as &[Option<String>],
-            &vec![DateTime::<Utc>::default()],
-            &vec![None] as &[Option<String>],
-            &vec![Some(StorageClass::Standard)] as &[Option<StorageClass>],
-            &vec![EXPECTED_VERSION_ID.to_string()],
-            &vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()],
-            &vec![false],
-            &vec![Created] as &[EventType],
-        )
-        .fetch_all(&mut *tx)
-        .await
-        .unwrap();
-
-        tx.commit().await.unwrap();
-
-        let inserted = query!(
+        let inserted = query(
             "select s3_object_id as \"s3_object_id!\",
                 bucket,
                 key,
@@ -199,7 +175,7 @@ pub(crate) mod tests {
                 storage_class as \"storage_class: StorageClass\",
                 version_id,
                 sequencer,
-                number_duplicate_events from s3_object order by sequencer"
+                number_duplicate_events from s3_object order by sequencer",
         )
         .fetch_all(&pool)
         .await
@@ -207,39 +183,20 @@ pub(crate) mod tests {
 
         assert_eq!(inserted.len(), 1);
         assert_eq!(
-            inserted[0].sequencer,
+            inserted[0].get::<Option<String>, _>("sequencer"),
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string())
         );
-        assert_eq!(inserted[0].event_time, Some(DateTime::default()));
+        assert_eq!(
+            inserted[0].get::<Option<DateTime<Utc>>, _>("event_time"),
+            Some(DateTime::default())
+        );
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn insert_deleted(pool: PgPool) {
-        let mut tx = pool.begin().await.unwrap();
+        insert_s3_objects(&pool, Deleted).await;
 
-        query_file!(
-            "../database/queries/ingester/aws/insert_s3_objects.sql",
-            &vec![UuidGenerator::generate()],
-            &vec!["bucket".to_string()],
-            &vec!["key".to_string()],
-            &vec![DateTime::<Utc>::default()],
-            &vec![Some(0i64)] as &[Option<i64>],
-            &vec![None] as &[Option<String>],
-            &vec![DateTime::<Utc>::default()],
-            &vec![None] as &[Option<String>],
-            &vec![Some(StorageClass::Standard)] as &[Option<StorageClass>],
-            &vec![EXPECTED_VERSION_ID.to_string()],
-            &vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()],
-            &vec![false],
-            &vec![Deleted] as &[EventType],
-        )
-        .fetch_all(&mut *tx)
-        .await
-        .unwrap();
-
-        tx.commit().await.unwrap();
-
-        let inserted = query!(
+        let inserted = query(
             "select s3_object_id as \"s3_object_id!\",
                 bucket,
                 key,
@@ -249,7 +206,7 @@ pub(crate) mod tests {
                 storage_class as \"storage_class: StorageClass\",
                 version_id,
                 sequencer,
-                number_duplicate_events from s3_object order by sequencer"
+                number_duplicate_events from s3_object order by sequencer",
         )
         .fetch_all(&pool)
         .await
@@ -257,9 +214,34 @@ pub(crate) mod tests {
 
         assert_eq!(inserted.len(), 1);
         assert_eq!(
-            inserted[0].sequencer,
+            inserted[0].get::<Option<String>, _>("sequencer"),
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string())
         );
-        assert_eq!(inserted[0].event_time, Some(DateTime::default()));
+        assert_eq!(
+            inserted[0].get::<Option<DateTime<Utc>>, _>("event_time"),
+            Some(DateTime::default())
+        );
+    }
+
+    async fn insert_s3_objects(pool: &PgPool, event_type: EventType) {
+        query(include_str!(
+            "../../../database/queries/ingester/aws/insert_s3_objects.sql"
+        ))
+        .bind(vec![UuidGenerator::generate()])
+        .bind(vec!["bucket".to_string()])
+        .bind(vec!["key".to_string()])
+        .bind(vec![DateTime::<Utc>::default()])
+        .bind(vec![Some(0i64)])
+        .bind(vec![None::<String>])
+        .bind(vec![DateTime::<Utc>::default()])
+        .bind(vec![None::<String>])
+        .bind(vec![Some(StorageClass::Standard)])
+        .bind(vec![EXPECTED_VERSION_ID.to_string()])
+        .bind(vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()])
+        .bind(vec![false])
+        .bind(vec![event_type])
+        .fetch_all(pool)
+        .await
+        .unwrap();
     }
 }

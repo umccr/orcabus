@@ -2243,8 +2243,9 @@ dependencies = [
 name = "filemanager-build"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "clap_builder",
- "envy",
+ "dotenvy",
  "heck 0.5.0",
  "miette",
  "prettyplease",
