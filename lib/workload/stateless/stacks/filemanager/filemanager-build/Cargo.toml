@@ -17,4 +17,5 @@ miette = { version = "7", features = ["fancy"] }
 serde = { version = "1", features = ["derive"] }
 quote = "1"
 syn = { version = "2", features = ["full", "extra-traits", "parsing", "visit-mut"] }
+prettyplease = "0.2"
 heck = "0.5"

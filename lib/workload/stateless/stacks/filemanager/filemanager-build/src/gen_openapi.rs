@@ -8,7 +8,8 @@
 use crate::error::ErrorKind::OpenAPIGeneration;
 use crate::Result;
 use heck::AsPascalCase;
-use quote::{format_ident, ToTokens};
+use prettyplease::unparse;
+use quote::format_ident;
 use std::fs::{read_dir, read_to_string, write};
 use std::path::Path;
 use syn::visit_mut::VisitMut;
@@ -52,7 +53,7 @@ pub async fn generate_openapi(out_dir: &Path) -> Result<()> {
         }
         .visit_file_mut(&mut tokens);
 
-        write(&path, tokens.into_token_stream().to_string())?;
+        write(&path, unparse(&tokens))?;
 
         let exit_status = Command::new("rustfmt").arg(&path).status().await?;
         if !exit_status.success() {

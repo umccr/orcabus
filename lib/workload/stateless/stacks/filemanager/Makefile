@@ -40,7 +40,7 @@ docker-find:
 	@docker ps --filter name=$(DOCKER_PROJECT_NAME)-postgres --latest --format "{{.ID}}" | xargs -I {} docker port {} | tail -n 1 | awk '{print $$NF}'
 docker-api: docker-postgres
 	# Run the local API server in a docker container.
-	@docker compose -p "$(DOCKER_PROJECT_NAME)" -f compose-api.yml up api
+	@docker compose -p "$(DOCKER_PROJECT_NAME)" up api
 
 ## Build related commands
 entity: docker-postgres

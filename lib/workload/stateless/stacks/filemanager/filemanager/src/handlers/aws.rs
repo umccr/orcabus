@@ -313,7 +313,7 @@ pub(crate) mod tests {
         .unwrap();
 
         // Delete a record so that the next ingestion has copies from before.
-        sqlx::query!("delete from s3_object where key = 'inventory_test/key1'")
+        sqlx::query("delete from s3_object where key = 'inventory_test/key1'")
             .execute(ingester.pool())
             .await
             .unwrap();

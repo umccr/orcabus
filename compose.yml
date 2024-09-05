@@ -81,9 +81,6 @@ services:
     build:
       context: ./lib/workload/stateless/stacks/filemanager
       dockerfile: Dockerfile
-      args:
-        # The build itself needs access to the database.
-        DATABASE_URL: postgresql://orcabus:orcabus@host.docker.internal:5432/filemanager # pragma: allowlist secret
     depends_on:
       - db
     healthcheck:
