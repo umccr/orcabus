@@ -49,9 +49,9 @@ build: docker-postgres entity
 	@cargo build --all-features --all-targets
 watch: docker-postgres entity
 	@cargo watch -w *.toml -w *.rs
-test: docker-postgres entity
+test:
 	@cargo test --all-features --all-targets
-test-ignored: docker-postgres entity
+test-ignored:
 	@cargo test --all-features --all-targets -- --ignored
 lint:
 	@cargo fmt --check
