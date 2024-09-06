@@ -10,7 +10,7 @@ use crate::uuid::UuidGenerator;
 
 /// The type of S3 event.
 #[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
-#[sqlx(type_name = "event_type")]
+#[sqlx(type_name = "event_type", no_pg_array)]
 pub enum EventType {
     #[default]
     Created,

@@ -9,3 +9,20 @@ services:
       - PGPORT=4321
     ports:
       - "${FILEMANAGER_DATABASE_HOST}:${FILEMANAGER_DATABASE_PORT}:4321"
+  api:
+    build:
+      context: .
+    environment:
+      # Container database address for running server inside a docker container.
+      - DATABASE_URL=postgresql://filemanager:filemanager@postgres:4321/filemanager
+      - RUST_LOG=debug
+      - FILEMANAGER_API_CORS_ALLOW_ORIGINS=${FILEMANAGER_API_CORS_ALLOW_ORIGINS:-http://localhost:3000}
+      - FILEMANAGER_API_CORS_ALLOW_HEADERS=${FILEMANAGER_API_CORS_ALLOW_HEADERS:-accept,authorization,content-type,user-agent,x-csrftoken,x-requested-with,x-amz-security-token,x-amz-date,content-disposition}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-access_key_id}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-secret_access_key}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-southeast-2}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-session_token}
+    ports:
+      - '${API_PORT}:8000'
+    restart: always
+

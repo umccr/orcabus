@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 use message::EventMessage;
@@ -21,7 +22,7 @@ pub mod message;
 /// A wrapper around AWS storage types with sqlx support.
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sqlx(type_name = "storage_class")]
+#[sqlx(type_name = "storage_class", no_pg_array)]
 pub enum StorageClass {
     DeepArchive,
     Glacier,
@@ -419,7 +420,7 @@ impl FlatS3EventMessages {
 }
 
 /// A flattened AWS S3 record
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default, FromRow)]
 pub struct FlatS3EventMessage {
     pub s3_object_id: Uuid,
     pub sequencer: Option<String>,

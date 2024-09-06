@@ -103,22 +103,12 @@ export class Function extends Construct {
     });
 
     const manifestPath = path.join(__dirname, '..', '..', '..');
-    const uuid = randomUUID();
-
-    // Don't bother creating a database if there is no bundling required.
-    let localDatabaseUrl = undefined;
-    if (Stack.of(this).bundlingRequired) {
-      localDatabaseUrl = this.resolveLocalDatabaseUrl(uuid, manifestPath);
-    }
-
     this._function = new RustFunction(this, 'RustFunction', {
       manifestPath: manifestPath,
       binaryName: props.package,
       bundling: {
         environment: {
           ...props.buildEnvironment,
-          // The bundling process needs to be able to connect to the container running postgres.
-          ...(localDatabaseUrl && { DATABASE_URL: localDatabaseUrl }),
         },
         dockerOptions: {
           network: 'host',
@@ -149,39 +139,6 @@ export class Function extends Construct {
     });
 
     // TODO: this should probably connect to an RDS proxy rather than directly to the database.
-  }
-
-  /**
-   * Resolve the local database url for checking compiled queries.
-   */
-  private resolveLocalDatabaseUrl(uuid: string, manifestPath: string) {
-    const execMake = (commandArgs: string) => {
-      print(`running \`make ${commandArgs}\``);
-      return exec('make', [commandArgs], { cwd: manifestPath, shell: true });
-    };
-
-    print('trying to find running filemanager container');
-
-    // Check to see if there is a running database, no need to create these unnecessarily.
-    let commandArgs = `-s docker-find DOCKER_PROJECT_NAME=${FILEMANAGER_SERVICE_NAME}`;
-    let output = execMake(commandArgs);
-
-    if (!output.stdout.toString()) {
-      print('could not find a running filemanager container, starting a new one');
-
-      // This starts the container running postgres in order to compile queries using sqlx.
-      // It needs to be executed outside `beforeBundling`, because `beforeBundling` can run inside
-      // the container context, and docker compose needs to run outside of this context.
-      commandArgs = `-s docker-run DOCKER_PROJECT_NAME=${FILEMANAGER_SERVICE_NAME}-${uuid}`;
-      output = execMake(commandArgs);
-    }
-
-    // Grab the last line only in case there are other outputs.
-    const address = output.stdout.toString().trim().match('.*$')?.pop();
-    const localDatabaseUrl = `postgresql://${FILEMANAGER_SERVICE_NAME}:${FILEMANAGER_SERVICE_NAME}@${address}/${FILEMANAGER_SERVICE_NAME}`; // pragma: allowlist secret
-    print(`the local filemanager database url is: ${localDatabaseUrl}`);
-
-    return localDatabaseUrl;
   }
 
   /**

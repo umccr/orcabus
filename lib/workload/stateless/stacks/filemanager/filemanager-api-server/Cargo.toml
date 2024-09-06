@@ -12,6 +12,6 @@ axum = "0.7"
 dotenvy = "0.15"
 http = "1"
 clap = { version = "4", features = ["derive", "env"] }
-sea-orm = { version = "0.12", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
+sea-orm = { version = "1.1.0-rc.1", default-features = false, features = ["sqlx-postgres", "runtime-tokio-rustls"] }
 
 filemanager = { path = "../filemanager", features = ["migrate"] }
