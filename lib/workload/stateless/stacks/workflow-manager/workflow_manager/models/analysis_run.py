@@ -16,8 +16,12 @@ class AnalysisRun(OrcaBusBaseModel):
     analysis_run_name = models.CharField(max_length=255)
     comment = models.CharField(max_length=255)
 
-    approval_context = models.ForeignKey(AnalysisContext, null=True, blank=True, on_delete=models.SET_NULL)
-    project_context = models.ForeignKey(AnalysisContext, null=True, blank=True, on_delete=models.SET_NULL)
+    approval_context = models.ForeignKey(AnalysisContext,
+                                         null=True, blank=True, on_delete=models.SET_NULL,
+                                         related_name="approval_context")
+    project_context = models.ForeignKey(AnalysisContext,
+                                        null=True, blank=True, on_delete=models.SET_NULL,
+                                        related_name="project_context")
 
     objects = AnalysisRunManager()
 

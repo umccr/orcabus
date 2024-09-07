@@ -2,6 +2,7 @@ from django.db import models
 
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.analysis_context import AnalysisContext
+from workflow_manager.models.workflow import Workflow
 
 
 class AnalysisManager(OrcaBusBaseManager):
@@ -19,7 +20,9 @@ class Analysis(OrcaBusBaseModel):
     description = models.CharField(max_length=255)
     status = models.CharField(max_length=255)
 
-    allowed_contexts = models.ManyToManyField(AnalysisContext)
+    # relationships
+    contexts = models.ManyToManyField(AnalysisContext)
+    workflows = models.ManyToManyField(Workflow)
 
     objects = AnalysisManager()
 
