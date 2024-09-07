@@ -1,7 +1,9 @@
 from django.db import models
 
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
+from workflow_manager.models.analysis import Analysis
 from workflow_manager.models.analysis_context import AnalysisContext
+from workflow_manager.models.library import Library
 
 
 class AnalysisRunManager(OrcaBusBaseManager):
@@ -14,14 +16,15 @@ class AnalysisRun(OrcaBusBaseModel):
     analysis_run_id = models.CharField(max_length=255, unique=True)
 
     analysis_run_name = models.CharField(max_length=255)
-    comment = models.CharField(max_length=255)
+    comment = models.CharField(max_length=255, null=True, blank=True)
+    status = models.CharField(max_length=255, null=True, blank=True)
 
-    approval_context = models.ForeignKey(AnalysisContext,
-                                         null=True, blank=True, on_delete=models.SET_NULL,
+    approval_context = models.ForeignKey(AnalysisContext, null=True, blank=True, on_delete=models.SET_NULL,
                                          related_name="approval_context")
-    project_context = models.ForeignKey(AnalysisContext,
-                                        null=True, blank=True, on_delete=models.SET_NULL,
+    project_context = models.ForeignKey(AnalysisContext, null=True, blank=True, on_delete=models.SET_NULL,
                                         related_name="project_context")
+    analysis = models.ForeignKey(Analysis, null=True, blank=True, on_delete=models.SET_NULL)
+    libraries = models.ManyToManyField(Library)
 
     objects = AnalysisRunManager()
 
