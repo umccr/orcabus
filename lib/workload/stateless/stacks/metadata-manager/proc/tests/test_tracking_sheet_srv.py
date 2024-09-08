@@ -126,14 +126,16 @@ class TrackingSheetSrvUnitTests(TestCase):
         self.assertEqual(lib_1.workflow, RECORD_1.get("Workflow"), "incorrect value (Workflow) stored")
         self.assertEqual(lib_1.project_owner, RECORD_1.get("ProjectOwner"), "incorrect value (ProjectOwner) stored")
         self.assertEqual(lib_1.project_name, RECORD_1.get("ProjectName"),"incorrect value (ProjectName) stored")
-        self.assertEqual(lib_1.specimen.specimen_id, RECORD_1.get("SampleID"), "incorrect specimen linked")
+        self.assertEqual(lib_1.specimen.lab_specimen_id, RECORD_1.get("SampleID"), "incorrect specimen linked")
 
-        spc_1 = Specimen.objects.get(specimen_id=RECORD_1.get("SampleID"))
+        spc_1 = Specimen.objects.get(lab_specimen_id=RECORD_1.get("SampleID"))
         self.assertIsNotNone(spc_1)
         self.assertEqual(spc_1.source, RECORD_1.get("Source"), "incorrect value stored")
+        self.assertEqual(spc_1.external_specimen_id, RECORD_1.get("ExternalSampleID"), "incorrect value stored")
 
-        sbj_1 = Subject.objects.get(subject_id=RECORD_1.get("SubjectID"))
+        sbj_1 = Subject.objects.get(lab_subject_id=RECORD_1.get("SubjectID"))
         self.assertIsNotNone(sbj_1)
+        self.assertEqual(sbj_1.external_subject_id, RECORD_1.get("ExternalSubjectID"), "incorrect value stored")
 
         # check relationships if lib_1 and lib_2 is in the same spc_1
         spc_lib_qs = spc_1.library_set.all()
@@ -145,7 +147,7 @@ class TrackingSheetSrvUnitTests(TestCase):
         # check if all lib is the same with sbj_1
         for rec in mock_sheet_data:
             lib = Library.objects.get(library_id=rec.get("LibraryID"))
-            self.assertEqual(lib.specimen.subject.subject_id, RECORD_1.get("SubjectID"),
+            self.assertEqual(lib.specimen.subject.lab_subject_id, RECORD_1.get("SubjectID"),
                              "library is not linked to the same subject")
 
     def test_persist_lab_metadata_alter_sbj(self):
@@ -164,10 +166,10 @@ class TrackingSheetSrvUnitTests(TestCase):
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
         persist_lab_metadata(metadata_pd)
 
-        sbj_4 = Subject.objects.get(subject_id=RECORD_3_DIFF_SBJ['SubjectID'])
+        sbj_4 = Subject.objects.get(lab_subject_id=RECORD_3_DIFF_SBJ['SubjectID'])
         self.assertIsNotNone(sbj_4)
-        spc_4 = sbj_4.specimen_set.get(specimen_id=RECORD_3_DIFF_SBJ['SampleID'])
-        self.assertEqual(spc_4.specimen_id, RECORD_3_DIFF_SBJ['SampleID'],
+        spc_4 = sbj_4.specimen_set.get(lab_specimen_id=RECORD_3_DIFF_SBJ['SampleID'])
+        self.assertEqual(spc_4.lab_specimen_id, RECORD_3_DIFF_SBJ['SampleID'],
                          'specimen obj should not change on link update')
 
         metadata_pd = pd.json_normalize([RECORD_3_DIFF_SPC])
@@ -175,7 +177,7 @@ class TrackingSheetSrvUnitTests(TestCase):
         persist_lab_metadata(metadata_pd)
 
         lib_3 = Library.objects.get(library_id=RECORD_3['LibraryID'])
-        self.assertEqual(lib_3.specimen.specimen_id, RECORD_3_DIFF_SPC['SampleID'],
+        self.assertEqual(lib_3.specimen.lab_specimen_id, RECORD_3_DIFF_SPC['SampleID'],
                          'incorrect link between lib and spc when changing links')
 
     def test_with_deleted_model(self) -> None:
@@ -212,6 +214,6 @@ class TrackingSheetSrvUnitTests(TestCase):
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
         persist_lab_metadata(metadata_pd)
 
-        spc = Specimen.objects.get(specimen_id=mock_record.get("SampleID"))
+        spc = Specimen.objects.get(lab_specimen_id=mock_record.get("SampleID"))
         self.assertIsNotNone(spc)
         self.assertEqual(spc.source, 'water', "incorrect value stored")

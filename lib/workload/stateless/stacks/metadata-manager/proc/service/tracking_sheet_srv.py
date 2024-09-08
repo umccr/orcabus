@@ -52,11 +52,11 @@ def persist_lab_metadata(df: pd.DataFrame):
         library_deleted.append(lib)
         lib.delete()
 
-    for spc in Specimen.objects.exclude(specimen_id__in=df['sample_id'].tolist()).iterator():
+    for spc in Specimen.objects.exclude(lab_specimen_id__in=df['sample_id'].tolist()).iterator():
         specimen_deleted.append(spc)
         spc.delete()
 
-    for sbj in Subject.objects.exclude(subject_id__in=df['subject_id'].tolist()).iterator():
+    for sbj in Subject.objects.exclude(lab_subject_id__in=df['subject_id'].tolist()).iterator():
         subject_deleted.append(sbj)
         sbj.delete()
 
@@ -99,9 +99,10 @@ def persist_lab_metadata(df: pd.DataFrame):
         try:
             # 1. update or create all data in the model from the given record
             subject, is_sub_created = Subject.objects.update_or_create(
-                subject_id=record.get('subject_id'),
+                lab_subject_id=record.get('subject_id'),
                 defaults={
-                    "subject_id": record.get('subject_id')
+                    "lab_subject_id": record.get('subject_id'),
+                    "external_subject_id": record.get('external_subject_id')
                 }
             )
             if is_sub_created:
@@ -110,9 +111,10 @@ def persist_lab_metadata(df: pd.DataFrame):
                 subject_updated.append(subject)
 
             specimen, is_spc_created = Specimen.objects.update_or_create(
-                specimen_id=record.get('sample_id'),
+                lab_specimen_id=record.get('sample_id'),
                 defaults={
-                    "specimen_id": record.get('sample_id'),
+                    "lab_specimen_id": record.get('sample_id'),
+                    "external_specimen_id": record.get('external_sample_id'),
                     "source": get_value_from_human_readable_label(Source.choices, record.get('source')),
                     'subject_id': subject.orcabus_id
                 }

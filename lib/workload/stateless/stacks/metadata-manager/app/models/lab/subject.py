@@ -14,8 +14,12 @@ class Subject(BaseModel):
     orcabus_id_prefix = 'sbj'
     objects = SubjectManager()
 
-    subject_id = models.CharField(
+    lab_subject_id = models.CharField(
         unique=True,
+        blank=True,
+        null=True
+    )
+    external_subject_id = models.CharField(
         blank=True,
         null=True
     )

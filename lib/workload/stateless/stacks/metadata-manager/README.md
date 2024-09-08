@@ -32,8 +32,8 @@ An example of how to use a curl command to access the production API:
 curl -s -H "Authorization: Bearer $ORCABUS_TOKEN" "https://metadata.umccr.org/api/v1/library" | jq
 ```
 
-Filtering of results is also supported by the API. For example, to filter by `internal_id`, append the query parameter
-to the URL: `.../library?library_id=LIB001`
+Filtering of results is also supported by the API. For example, to filter by `libraryId`, append the query parameter
+to the URL: `.../library?libraryId=LIB001`
 
 ## Schema
 
@@ -57,20 +57,22 @@ In the near future, we might introduce different ways to load data into the appl
 loading data
 from the Google tracking sheet and mapping it to its respective model as follows.
 
-| Sheet Header | Table      | Field Name    |
-|--------------|------------|---------------|
-| SubjectID    | `Subject`  | subject_id    |
-| SampleID     | `Specimen` | sample_id     |
-| Source       | `Specimen` | source        |
-| LibraryID    | `Library`  | library_id    |
-| Phenotype    | `Library`  | phenotype     |
-| Workflow     | `Library`  | workflow      |
-| Quality      | `Library`  | quality       |
-| Type         | `Library`  | type          |
-| Coverage (X) | `Library`  | coverage      |
-| Assay        | `Library`  | assay         |
-| ProjectOwner | `Library`  | project_owner |
-| ProjectName  | `Library`  | project_name  |
+| Sheet Header      | Table      | Field Name          |
+|-------------------|------------|---------------------|
+| SubjectID         | `Subject`  | lab_subject_id      |
+| ExternalSubjectID | `Subject`  | external_subject_id |
+| SampleID          | `Specimen` | sample_id           |
+| ExternalSampleID  | `Specimen` | external_sample_id  |
+| Source            | `Specimen` | source              |
+| LibraryID         | `Library`  | library_id          |
+| Phenotype         | `Library`  | phenotype           |
+| Workflow          | `Library`  | workflow            |
+| Quality           | `Library`  | quality             |
+| Type              | `Library`  | type                |
+| Coverage (X)      | `Library`  | coverage            |
+| Assay             | `Library`  | assay               |
+| ProjectOwner      | `Library`  | project_owner       |
+| ProjectName       | `Library`  | project_name        |
 
 
 Some important notes of the sync:

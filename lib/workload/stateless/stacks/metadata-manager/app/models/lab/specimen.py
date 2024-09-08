@@ -1,9 +1,5 @@
-import logging
-
 import ulid
-from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models import QuerySet
 from simple_history.models import HistoricalRecords
 
 from app.models.base import BaseModel, BaseManager
@@ -41,11 +37,16 @@ class Specimen(BaseModel):
 
     objects = SpecimenManager()
 
-    specimen_id = models.CharField(
+    lab_specimen_id = models.CharField(
         unique=True,
         blank=True,
         null=True
     )
+    external_specimen_id = models.CharField(
+        blank=True,
+        null=True
+    )
+
     source = models.CharField(choices=Source.choices, blank=True, null=True)
     subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True)
 
