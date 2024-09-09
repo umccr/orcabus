@@ -42,6 +42,7 @@ class WorkflowModelSerializer(serializers.ModelSerializer):
 class WorkflowRunModelSerializer(serializers.ModelSerializer):
     current_state = serializers.SerializerMethodField()
     libraries = serializers.SerializerMethodField()
+    workflow = WorkflowModelSerializer(read_only=True)
     class Meta:
         model = WorkflowRun
         fields = '__all__'
