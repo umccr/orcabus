@@ -17,7 +17,7 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
     search_fields = WorkflowRun.get_base_fields()
 
     def get_queryset(self):
-        return WorkflowRun.objects.get_by_keyword(**self.request.query_params).prefetch_related('states').prefetch_related('library_association__library') # add prefetch_related to reduce the number of queries
+        return WorkflowRun.objects.get_by_keyword(**self.request.query_params).prefetch_related('states').prefetch_related('library_association__library').select_related('workflow') # add prefetch_related & select_related to reduce the number of queries
 
     @action(detail=False, methods=['GET'])
     def ongoing(self, request):
