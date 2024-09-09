@@ -27,30 +27,34 @@ class LabViewSetTestCase(TestCase):
             {
                 "path": "library",
                 "props": LIBRARY_1,
+                "lab_id_key": "library_id"
             },
             {
                 "path": "specimen",
-                "props": SPECIMEN_1
+                "props": SPECIMEN_1,
+                "lab_id_key": "lab_specimen_id"
             },
             {
                 "path": "subject",
-                "props": SUBJECT_1
+                "props": SUBJECT_1,
+                "lab_id_key": "lab_subject_id"
             }
         ]
 
         for model in model_to_check:
             path_id = model['path']
+            lab_id_key = model['lab_id_key']
             path = version_endpoint(path_id)
 
             logger.info(f"check API path for '{path}'")
             response = self.client.get(f"/{path}/")
             self.assertEqual(response.status_code, 200,
                              "Ok status response is expected")
-
+            print(lab_id_key)
             result_response = response.data["results"]
             self.assertGreater(len(result_response), 0, "A result is expected")
             logger.debug("Check if unique data has a single entry")
-            response = self.client.get(f"/{path}/?{path_id}_id={model['props'][f'{path_id}_id']}")
+            response = self.client.get(f"/{path}/?{lab_id_key}={model['props'][lab_id_key]}")
             results_response = response.data["results"]
             self.assertEqual(
                 len(results_response), 1, "Single result is expected for unique data"
@@ -87,8 +91,8 @@ class LabViewSetTestCase(TestCase):
         )
 
         logger.debug("check if specimen and library are linked")
-        self.assertEqual(result_response[0]['specimen']['specimen_id'], SPECIMEN_1["specimen_id"], )
-        self.assertEqual(result_response[0]['specimen']['subject']['subject_id'], SUBJECT_1["subject_id"], )
+        self.assertEqual(result_response[0]['specimen']['lab_specimen_id'], SPECIMEN_1["lab_specimen_id"], )
+        self.assertEqual(result_response[0]['specimen']['subject']['lab_subject_id'], SUBJECT_1["lab_subject_id"], )
 
     def test_subject_full_model_api(self):
         """
@@ -105,13 +109,13 @@ class LabViewSetTestCase(TestCase):
         self.assertGreater(len(result_response), 0, "A result is expected")
 
         logger.debug("Check if unique data has a single entry")
-        response = self.client.get(f"/{path}/?subject_id={SUBJECT_1['subject_id']}")
+        response = self.client.get(f"/{path}/?lab_subject_id={SUBJECT_1['lab_subject_id']}")
         results_response = response.data["results"]
         self.assertEqual(
             len(results_response), 1, "Single result is expected for unique data"
         )
 
         logger.debug("check if specimen and library are linked")
-        self.assertEqual(result_response[0]['specimen_set'][0]['specimen_id'], SPECIMEN_1["specimen_id"], )
+        self.assertEqual(result_response[0]['specimen_set'][0]['lab_specimen_id'], SPECIMEN_1["lab_specimen_id"], )
         self.assertEqual(result_response[0]['specimen_set'][0]['library_set'][0]['library_id'],
                          LIBRARY_1["library_id"], )
