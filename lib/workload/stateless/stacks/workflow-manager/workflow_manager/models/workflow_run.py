@@ -3,6 +3,7 @@ from django.db import models
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.library import Library
 from workflow_manager.models.workflow import Workflow
+from workflow_manager.models.analysis_run import AnalysisRun
 
 
 class WorkflowRunManager(OrcaBusBaseManager):
@@ -25,10 +26,9 @@ class WorkflowRun(OrcaBusBaseModel):
 
     # --- FK link to value objects
 
-    # Link to workflow table
+    # Relationships
     workflow = models.ForeignKey(Workflow, null=True, blank=True, on_delete=models.SET_NULL)
-
-    # Link to library table
+    analysis_run = models.ForeignKey(AnalysisRun, null=True, blank=True, on_delete=models.SET_NULL)
     libraries = models.ManyToManyField(Library, through="LibraryAssociation")
 
     objects = WorkflowRunManager()
