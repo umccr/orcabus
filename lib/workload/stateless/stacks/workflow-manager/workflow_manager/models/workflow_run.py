@@ -29,7 +29,7 @@ class WorkflowRun(OrcaBusBaseModel):
     workflow = models.ForeignKey(Workflow, null=True, blank=True, on_delete=models.SET_NULL)
 
     # Link to library table
-    libraries = models.ManyToManyField(Library, through="LibraryAssociation")
+    # libraries = models.ManyToManyField(Library, through="LibraryAssociation")
 
     objects = WorkflowRunManager()
 
@@ -51,14 +51,21 @@ class WorkflowRun(OrcaBusBaseModel):
         # retrieve all states (DB records rather than a queryset)
         return list(self.state_set.all())  # TODO: ensure order by timestamp ?
 
+    def get_latest_state(self):
+        # retrieve all related states and get the latest one
+        return self.states.order_by('-timestamp').first()
+    
+    def get_libraries(self):
+        # retrieve all related libraries objects
+        return Library.objects.filter(workflow_run_association__workflow_run=self).distinct()
 
 class LibraryAssociationManager(OrcaBusBaseManager):
     pass
 
 
 class LibraryAssociation(OrcaBusBaseModel):
-    workflow_run = models.ForeignKey(WorkflowRun, on_delete=models.CASCADE)
-    library = models.ForeignKey(Library, on_delete=models.CASCADE)
+    workflow_run = models.ForeignKey(WorkflowRun, related_name="library_association", on_delete=models.CASCADE)
+    library = models.ForeignKey(Library, related_name="workflow_run_association", on_delete=models.CASCADE)
     association_date = models.DateTimeField()
     status = models.CharField(max_length=255)
 

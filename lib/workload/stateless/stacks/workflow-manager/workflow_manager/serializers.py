@@ -40,10 +40,19 @@ class WorkflowModelSerializer(serializers.ModelSerializer):
 
 
 class WorkflowRunModelSerializer(serializers.ModelSerializer):
+    current_state = serializers.SerializerMethodField()
+    libraries = serializers.SerializerMethodField()
     class Meta:
         model = WorkflowRun
         fields = '__all__'
 
+    def get_current_state(self, obj)->dict:
+        latest_state = obj.get_latest_state()
+        return StateModelSerializer(latest_state).data if latest_state else None
+    
+    def get_libraries(self, obj)->list:
+        libraries = obj.get_libraries()
+        return [library.library_id for library in libraries]
 
 class PayloadModelSerializer(serializers.ModelSerializer):
     class Meta:
