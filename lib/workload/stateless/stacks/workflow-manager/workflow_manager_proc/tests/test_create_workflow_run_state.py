@@ -56,7 +56,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         db_wfr: WorkflowRun = wfr_qs.first()
         self.assertEqual("ctTSO500-L000002", db_wfr.workflow_run_name)
         # We don't expect any library associations here!
-        self.assertEqual(0, db_wfr.libraries.count())
+        self.assertEqual(0, db_wfr.get_libraries().count())
 
     def test_create_wrsc_library(self):
         """
@@ -116,8 +116,8 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         db_wfr: WorkflowRun = wfr_qs.first()
         self.assertEqual("ctTSO500-L000002", db_wfr.workflow_run_name)
         # We do expect 2 library associations here!
-        self.assertEqual(2, db_wfr.libraries.count())
-        for lib in db_wfr.libraries.all():
+        self.assertEqual(2, db_wfr.get_libraries().count())
+        for lib in db_wfr.get_libraries().all():
             self.assertTrue(lib.library_id in library_ids)
 
     def test_create_wrsc_library_exists(self):
@@ -184,8 +184,8 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         db_wfr: WorkflowRun = wfr_qs.first()
         self.assertEqual("ctTSO500-L000002", db_wfr.workflow_run_name)
         # We do expect 2 library associations here!
-        self.assertEqual(2, db_wfr.libraries.count())
-        for lib in db_wfr.libraries.all():
+        self.assertEqual(2, db_wfr.get_libraries().count())
+        for lib in db_wfr.get_libraries().all():
             self.assertTrue(lib.library_id in library_ids)
 
     def test_get_last_state(self):
