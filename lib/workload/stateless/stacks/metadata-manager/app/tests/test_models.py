@@ -20,6 +20,7 @@ class MetadataTestCase(TestCase):
 
         specimen = Specimen.objects.create(
             specimen_id='SPC001',
+            source='blood',
             subject=subject,
         )
         specimen.full_clean()
@@ -70,3 +71,43 @@ class MetadataTestCase(TestCase):
         # find the linked subject
         sub_one = spc_one.subject
         self.assertEqual(sub_one.subject_id, "SBJ001", "incorrect subject 'id' linked to specimen")
+
+    def test_upsert_method(self):
+        """
+        python manage.py test app.tests.test_models.MetadataTestCase.test_upsert_method
+        """
+
+        # Test function with updating existing record
+        updated_spc_data = {
+            "specimen_id": 'SPC001',
+            "source": 'skin',
+        }
+        obj, is_created, is_updated = Specimen.objects.update_or_create(
+            {"specimen_id": updated_spc_data['specimen_id']},
+            updated_spc_data
+        )
+        self.assertIsNotNone(obj, "object should not be None")
+        self.assertFalse(is_created, "object should not be created")
+        self.assertTrue(is_updated, "object should not be updated")
+
+        spc_one = Specimen.objects.get(specimen_id=updated_spc_data['specimen_id'])
+        self.assertEqual(spc_one.source, updated_spc_data['source'], "incorrect 'source' from updated specimen id")
+
+        # Test function with creating new record
+        new_spc_data = {
+            "specimen_id": 'SPC002',
+            "source": 'RNA',
+        }
+        obj, is_created, is_updated = Specimen.objects.update_or_create(
+            {"specimen_id": new_spc_data['specimen_id']},
+            new_spc_data
+        )
+        self.assertIsNotNone(obj, "object should not be None")
+        self.assertTrue(is_created, "new object should be created")
+        self.assertFalse(is_updated, "new object should not be updated")
+        spc_two = Specimen.objects.get(specimen_id=new_spc_data['specimen_id'])
+        self.assertEqual(spc_two.specimen_id, new_spc_data["specimen_id"], "incorrect specimen 'id'")
+        self.assertEqual(spc_two.source, new_spc_data['source'], "incorrect 'source' from new specimen id")
+
+
+

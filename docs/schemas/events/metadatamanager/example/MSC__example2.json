@@ -1,0 +1,21 @@
+{
+  "version": "0",
+  "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "WorkflowRunStateChange",
+  "source": "orcabus.workflowmanager",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "model": "SPECIMEN",
+    "action": "CREATE",
+    "data": {
+      "orcabus_id": "spc.01H5S9FNZH3KX5SSGK8BWPSFST",
+      "lab_specimen_id": "PRJ10001",
+      "external_specimen_id": "EXT_PRJ10001",
+      "source": "blood",
+      "subject": "sbj.01H5S9FNZH3KX5SSGK8BWPSFST"
+    }
+  }
+}

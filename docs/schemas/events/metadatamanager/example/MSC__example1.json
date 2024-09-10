@@ -1,0 +1,27 @@
+{
+  "version": "0",
+  "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "WorkflowRunStateChange",
+  "source": "orcabus.workflowmanager",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "model": "LIBRARY",
+    "action": "CREATE",
+    "data": {
+      "orcabus_id": "lib.01FZ7N3XK1GZ5V9P8Z4H7J5S9F",
+      "library_id": "L00001",
+      "phenotype": "normal",
+      "workflow": "control",
+      "quality": "good",
+      "type": "WTS",
+      "assay": "ctTSO",
+      "coverage": 75,
+      "project_owner": "UMCCR",
+      "project_name": "Alpha",
+      "specimen": "spc.01FZ7N3XK1GZ5V9P8Z4H7J5S9F"
+    }
+  }
+}

@@ -40,6 +40,15 @@ export const getEventSchemaStackProps = (): SchemaStackProps => {
           docBase + '/executionservice/WorkflowRunStateChange.schema.json'
         ),
       },
+      {
+        ...defaultProps,
+        schemaName: 'orcabus.metadatamanager@MetadataStateChange',
+        schemaDescription: 'State change event for metadata changes from the MetadataManager',
+        schemaLocation: path.join(
+          __dirname,
+          docBase + '/metadatamanager/MetadataStateChange.schema.json'
+        ),
+      },
     ],
   };
 };

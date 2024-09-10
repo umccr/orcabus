@@ -79,6 +79,32 @@ class BaseManager(models.Manager):
 
         return qs
 
+    def update_or_create(self, search_key: dict, data: dict) -> tuple[models.Model, bool, bool]:
+        """
+        The regular django update_or_create method will always update the record even if there is no change. This
+        method is a wrapper that will check and only update or create when necessary.
+
+        Args:
+            search_key (dict): The search key to find the object
+            data (dict): The latest data to update or create if needed
+
+        Returns:
+            obj: The object that is updated or created
+            is_created: A boolean flag to indicate if the object is created
+            is_updated: A boolean flag to indicate if the object is updated
+        """
+
+        try:
+            # We wanted the exact match of the data, else we need to update this
+            obj = super().get(**data)
+            return obj, False, False
+        except self.model.DoesNotExist:
+            # If the search key doesn't exist it will create a new one, else it will update the record no matter what
+            obj, is_created = super().update_or_create(**search_key, defaults=data)
+
+            # obj, is_created, is_updated (if the object is created, it is not updated)
+            return obj, is_created, not is_created
+
 
 class BaseModel(models.Model):
     class Meta:
