@@ -23,14 +23,14 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
         start_time, end_time : range of latest state timestamp
         is_ongoing : filter by ongoing workflow runs
         """
-        # default start time is 0
+        # default time is 0
         start_time = self.request.query_params.get('start_time', 0)
-        # default is current time
         end_time = self.request.query_params.get('end_time', 0)
         
         # get is ongoing flag
         is_ongoing = self.request.query_params.get('is_ongoing', 'false')
         
+        # exclude the custom query params from the rest of the query params
         def exclude_params(params):
             for param in params:
                 self.request.query_params.pop(param) if param in self.request.query_params.keys() else None
@@ -41,7 +41,7 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
             'is_ongoing'
         ])
                 
-        # get all workflow runs with rest (build-in) of the query params
+        # get all workflow runs with rest of the query params
         result_set = WorkflowRun.objects.get_by_keyword(**self.request.query_params).prefetch_related('states').prefetch_related('libraries').select_related('workflow') # add prefetch_related & select_related to reduce the number of queries
  
         if start_time and end_time:
