@@ -1,0 +1,8 @@
+include:
+  - path:
+      - ../../../../../shared/mock-db.yml
+
+#services:
+#
+#  myapp:
+#    image: myapp

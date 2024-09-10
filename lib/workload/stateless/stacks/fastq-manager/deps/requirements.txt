@@ -1,0 +1,20 @@
+# Intentionally leave out the xray version here. They bump like daily and latest is always fine.
+aws-xray-sdk
+# Intentionally commented boto3. We can just leverage the AWS Lambda Python Runtime cache for boto3 and botocore.
+#boto3
+
+##
+# FIXME You should pin exact version for following packages. Remove this comment after done so.
+##
+
+Django
+djangorestframework
+django-cors-headers
+django-environ
+djangorestframework-camel-case
+drf-spectacular
+psycopg[binary]
+Werkzeug
+serverless-wsgi
+cachetools
+libumccr

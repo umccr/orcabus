@@ -1,0 +1,14 @@
+-r requirements.txt
+
+# Intentionally leave out the boto3 version here. They bump like daily and latest is always fine for test scope.
+boto3
+
+##
+# FIXME You should pin exact version for following packages. Remove this comment after done so.
+##
+
+pytest
+factory_boy
+pytz
+mockito
+coverage
