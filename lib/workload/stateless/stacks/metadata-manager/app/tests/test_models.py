@@ -1,5 +1,6 @@
 import logging
 
+from unittest.mock import MagicMock
 from django.test import TestCase
 import ulid
 
@@ -76,13 +77,14 @@ class MetadataTestCase(TestCase):
         """
         python manage.py test app.tests.test_models.MetadataTestCase.test_upsert_method
         """
+        # Specimen.objects.update_or_create = MagicMock(return_value=(None, False))
 
         # Test function with updating existing record
         updated_spc_data = {
             "specimen_id": 'SPC001',
             "source": 'skin',
         }
-        obj, is_created, is_updated = Specimen.objects.update_or_create(
+        obj, is_created, is_updated = Specimen.objects.update_or_create_if_needed(
             {"specimen_id": updated_spc_data['specimen_id']},
             updated_spc_data
         )
@@ -98,7 +100,7 @@ class MetadataTestCase(TestCase):
             "specimen_id": 'SPC002',
             "source": 'RNA',
         }
-        obj, is_created, is_updated = Specimen.objects.update_or_create(
+        obj, is_created, is_updated = Specimen.objects.update_or_create_if_needed(
             {"specimen_id": new_spc_data['specimen_id']},
             new_spc_data
         )
@@ -109,5 +111,15 @@ class MetadataTestCase(TestCase):
         self.assertEqual(spc_two.specimen_id, new_spc_data["specimen_id"], "incorrect specimen 'id'")
         self.assertEqual(spc_two.source, new_spc_data['source'], "incorrect 'source' from new specimen id")
 
+        # Test if no update called if no data has changed
+        Specimen.objects.update_or_create = MagicMock(return_value=(None, False))
+        obj, is_created, is_updated = Specimen.objects.update_or_create_if_needed(
+            {"specimen_id": new_spc_data['specimen_id']},
+            new_spc_data
+        )
+        Specimen.objects.update_or_create.assert_not_called()
+        self.assertIsNotNone(obj, "object should not be None")
+        self.assertFalse(is_created, "object should not be created")
+        self.assertFalse(is_updated, "object should not be updated")
 
 

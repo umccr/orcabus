@@ -1,6 +1,10 @@
+from unittest.mock import MagicMock
+
 import pandas as pd
 
 from django.test import TestCase
+from libumccr.aws import libeb
+
 from app.models import Library, Specimen, Subject
 
 from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata
@@ -94,6 +98,7 @@ class TrackingSheetSrvUnitTests(TestCase):
 
     def setUp(self) -> None:
         super(TrackingSheetSrvUnitTests, self).setUp()
+        libeb.dispatch_events = MagicMock()
 
     def tearDown(self) -> None:
         super(TrackingSheetSrvUnitTests, self).tearDown()
@@ -114,10 +119,10 @@ class TrackingSheetSrvUnitTests(TestCase):
         self.assertEqual(result.get("library").get("update_count"), 0, "0 update in library")
 
         self.assertEqual(result.get("specimen").get("new_count"), 2, "2 new specimen should be created")
-        self.assertEqual(result.get("specimen").get("update_count"), 1, "1 update in specimen")
+        self.assertEqual(result.get("specimen").get("update_count"), 0, "no update in specimen")
 
         self.assertEqual(result.get("subject").get("new_count"), 1, "1 new subject should be created")
-        self.assertEqual(result.get("subject").get("update_count"), 2, "2 update in subject")
+        self.assertEqual(result.get("subject").get("update_count"), 0, "no update in subject")
 
         lib_1 = Library.objects.get(library_id=RECORD_1.get("LibraryID"))
         self.assertEqual(lib_1.type, RECORD_1.get("Type"), "incorrect value (Type) stored")

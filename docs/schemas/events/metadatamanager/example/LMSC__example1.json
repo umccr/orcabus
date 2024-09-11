@@ -1,8 +1,8 @@
 {
   "version": "0",
   "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
-  "detail-type": "WorkflowRunStateChange",
-  "source": "orcabus.workflowmanager",
+  "detail-type": "LabMetadataStateChange",
+  "source": "orcabus.metadatamanager",
   "account": "123456789012",
   "time": "2024-05-01T09:25:44Z",
   "region": "ap-southeast-2",

@@ -1,5 +1,6 @@
 import os
 import re
+import json
 from typing import List
 
 import pandas as pd
@@ -7,7 +8,7 @@ import numpy as np
 from django.db import transaction
 
 from libumccr import libgdrive, libjson
-from libumccr.aws import libssm
+from libumccr.aws import libssm, libeb
 
 import logging
 
@@ -15,6 +16,8 @@ from app.models import Subject, Specimen, Library
 from app.models.lab.library import Quality, LibraryType, Phenotype, WorkflowType
 from app.models.lab.specimen import Source
 from app.models.lab.utils import get_value_from_human_readable_label
+from app.serializers import SubjectSerializer, SpecimenSerializer, LibrarySerializer
+from proc.aws.event.lab import LabMetadataStateChangeEvent
 from proc.service.utils import clean_model_history
 
 logger = logging.getLogger()
@@ -33,6 +36,9 @@ def persist_lab_metadata(df: pd.DataFrame):
     :return: result statistics - count of LabMetadata rows created
     """
     logger.info(f"Start processing LabMetadata")
+
+    # Event entries for the event bus
+    event_bus_entries = list()
 
     # Used for statistics
     library_created = list()
@@ -98,32 +104,59 @@ def persist_lab_metadata(df: pd.DataFrame):
     for record in df.to_dict('records'):
         try:
             # 1. update or create all data in the model from the given record
-            subject, is_sub_created = Subject.objects.update_or_create(
-                subject_id=record.get('subject_id'),
-                defaults={
+            subject, is_sub_created, is_sub_updated = Subject.objects.update_or_create_if_needed(
+                search_key={"subject_id": record.get('subject_id')},
+                data={
                     "subject_id": record.get('subject_id')
                 }
             )
             if is_sub_created:
+                event = LabMetadataStateChangeEvent(
+                    action='CREATE',
+                    model='SUBJECT',
+                    data=SubjectSerializer(subject).data
+                )
+                event_bus_entries.append(event.get_put_event_entry())
                 subject_created.append(subject)
-            else:
+
+            if is_sub_updated:
+                event = LabMetadataStateChangeEvent(
+                    action='UPDATE',
+                    model='SUBJECT',
+                    data=SubjectSerializer(subject).data
+                )
+                event_bus_entries.append(event.get_put_event_entry())
                 subject_updated.append(subject)
 
-            specimen, is_spc_created = Specimen.objects.update_or_create(
-                specimen_id=record.get('sample_id'),
-                defaults={
+            specimen, is_spc_created, is_spc_updated = Specimen.objects.update_or_create_if_needed(
+                search_key={"specimen_id": record.get('sample_id')},
+                data={
                     "specimen_id": record.get('sample_id'),
                     "source": get_value_from_human_readable_label(Source.choices, record.get('source')),
                     'subject_id': subject.orcabus_id
                 }
             )
             if is_spc_created:
+                event = LabMetadataStateChangeEvent(
+                    action='CREATE',
+                    model='SPECIMEN',
+                    data=SpecimenSerializer(specimen).data
+                )
+                event_bus_entries.append(event.get_put_event_entry())
                 specimen_created.append(specimen)
-            else:
+
+            if is_spc_updated:
+                event = LabMetadataStateChangeEvent(
+                    action='UPDATE',
+                    model='SPECIMEN',
+                    data=SpecimenSerializer(specimen).data
+                )
+                event_bus_entries.append(event.get_put_event_entry())
                 specimen_updated.append(specimen)
-            library, is_lib_created = Library.objects.update_or_create(
-                library_id=record.get('library_id'),
-                defaults={
+
+            library, is_lib_created, is_lib_updated = Library.objects.update_or_create_if_needed(
+                search_key={"library_id": record.get('library_id')},
+                data={
                     'library_id': record.get('library_id'),
                     'phenotype': get_value_from_human_readable_label(Phenotype.choices, record.get('phenotype')),
                     'workflow': get_value_from_human_readable_label(WorkflowType.choices, record.get('workflow')),
@@ -136,9 +169,23 @@ def persist_lab_metadata(df: pd.DataFrame):
                     'project_name': record.get('project_name'),
                 }
             )
+
             if is_lib_created:
+                event = LabMetadataStateChangeEvent(
+                    action='CREATE',
+                    model='LIBRARY',
+                    data=LibrarySerializer(library).data
+                )
+                event_bus_entries.append(event.get_put_event_entry())
                 library_created.append(library)
-            else:
+
+            if is_lib_updated:
+                event = LabMetadataStateChangeEvent(
+                    action='UPDATE',
+                    model='LIBRARY',
+                    data=LibrarySerializer(library).data
+                )
+                event_bus_entries.append(event.get_put_event_entry())
                 library_updated.append(library)
 
             # 2. linking or updating model to each other based on the record (update if it does not match)
@@ -155,10 +202,14 @@ def persist_lab_metadata(df: pd.DataFrame):
 
         except Exception as e:
             if any(record.values()):  # silent off blank row
-                logger.warning(f"Invalid record: {libjson.dumps(record)} Exception: {e}")
+                logger.warning(f"Invalid record ({e}): {json.dumps(record, indent=2)}")
                 rows_invalid.append(record)
             continue
 
+    logger.info(f'Dispatch event bridge entries: {libjson.dumps(event_bus_entries)}')
+    libeb.dispatch_events(event_bus_entries)
+
+    # clean up history for django-simple-history model
     clean_model_history()
 
     return {

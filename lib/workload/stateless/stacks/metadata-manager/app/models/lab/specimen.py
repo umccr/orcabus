@@ -33,7 +33,7 @@ class Source(models.TextChoices):
 
 
 class SpecimenManager(BaseManager):
-    None
+    pass
 
 
 class Specimen(BaseModel):

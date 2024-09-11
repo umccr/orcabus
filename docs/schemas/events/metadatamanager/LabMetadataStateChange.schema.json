@@ -23,7 +23,7 @@
       }
     },
     "source": {
-      "const": "orcabus.metadatamanager"
+      "enum": ["orcabus.metadatamanager"]
     },
     "time": {
       "type": "string",
@@ -36,7 +36,7 @@
       "type": "string"
     },
     "detail-type": {
-      "const": "MetadataStateChange"
+      "enum": ["LabMetadataStateChange"]
     },
     "detail": {
       "$ref": "#/definitions/MetadataStateChange"

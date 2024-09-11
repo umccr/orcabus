@@ -2,7 +2,6 @@ import logging
 
 import ulid
 from django.db import models
-from django.core.validators import RegexValidator
 from simple_history.models import HistoricalRecords
 
 from app.models.base import BaseManager, BaseModel
@@ -51,7 +50,7 @@ class LibraryType(models.TextChoices):
 
 
 class LibraryManager(BaseManager):
-    None
+    pass
 
 
 class Library(BaseModel):

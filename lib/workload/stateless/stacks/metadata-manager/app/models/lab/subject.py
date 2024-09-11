@@ -1,13 +1,12 @@
 import ulid
 from django.db import models
-from django.core.validators import RegexValidator
 from simple_history.models import HistoricalRecords
 
 from app.models.base import BaseModel, BaseManager
 
 
 class SubjectManager(BaseManager):
-    None
+    pass
 
 
 class Subject(BaseModel):
