@@ -224,16 +224,16 @@ class TrackingSheetSrvUnitTests(TestCase):
         self.assertIsNotNone(spc)
         self.assertEqual(spc.source, 'water', "incorrect value stored")
 
-    def test_event_bus_put_event(self)->None:
+    def test_eb_put_event(self)->None:
         """
-        python manage.py test proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_event_bus_put_event
+        python manage.py test proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_eb_put_event
         """
         os.environ['EVENT_BUS_NAME'] = TEST_EVENT_BUS_NAME
 
         mock_dispatch_events = MagicMock()
         libeb.dispatch_events = mock_dispatch_events
-        mock_sheet_data = [RECORD_1]
 
+        mock_sheet_data = [RECORD_1]
         metadata_pd = pd.json_normalize(mock_sheet_data)
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
         persist_lab_metadata(metadata_pd)
@@ -250,3 +250,11 @@ class TrackingSheetSrvUnitTests(TestCase):
             self.assertEqual(entry['DetailType'], "LabMetadataStateChange")
             self.assertEqual(entry['EventBusName'], TEST_EVENT_BUS_NAME)
 
+        # mock_dispatch_events.reset_mock()
+        # mock_sheet_data = [RECORD_3]
+        # metadata_pd = pd.json_normalize(mock_sheet_data)
+        # metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        # persist_lab_metadata(metadata_pd)
+        #
+        # arg = mock_dispatch_events.call_args.args[0]
+        # print(arg)

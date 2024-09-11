@@ -16,7 +16,7 @@ class LabMetadataStateChangeEvent:
         self.detail = {
             "action": action,
             "model": model,
-            "data": json.dumps(Marshaller.marshall(data))
+            "data": Marshaller.marshall(data)
         }
 
     def __str__(self):
