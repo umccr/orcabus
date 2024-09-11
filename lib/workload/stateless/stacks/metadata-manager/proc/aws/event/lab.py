@@ -3,18 +3,16 @@ import json
 from typing import Literal
 from .schema.orcabus_metadatamanager.labmetadatastatechange import Marshaller
 
-EVENT_BUS_NAME = os.environ.get("EVENT_BUS_NAME")
-
 
 class LabMetadataStateChangeEvent:
     namespace = "orcabus.metadatamanager"
     detail_type = "LabMetadataStateChange"
-    event_bus_name = EVENT_BUS_NAME
 
     def __init__(self,
                  action: Literal['CREATE', 'UPDATE', 'DELETE'],
                  model: Literal['LIBRARY', 'SPECIMEN', 'SUBJECT'],
                  data: dict) -> None:
+        self.event_bus_name = os.getenv('EVENT_BUS_NAME', '')
         self.detail = {
             "action": action,
             "model": model,

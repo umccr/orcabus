@@ -1,4 +1,5 @@
-from unittest.mock import MagicMock
+import os
+from unittest.mock import MagicMock, call
 
 import pandas as pd
 
@@ -8,6 +9,8 @@ from libumccr.aws import libeb
 from app.models import Library, Specimen, Subject
 
 from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata
+
+TEST_EVENT_BUS_NAME = "TEST_BUS"
 
 RECORD_1 = {
     "LibraryID": "L10001",
@@ -220,3 +223,30 @@ class TrackingSheetSrvUnitTests(TestCase):
         spc = Specimen.objects.get(specimen_id=mock_record.get("SampleID"))
         self.assertIsNotNone(spc)
         self.assertEqual(spc.source, 'water', "incorrect value stored")
+
+    def test_event_bus_put_event(self)->None:
+        """
+        python manage.py test proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_event_bus_put_event
+        """
+        os.environ['EVENT_BUS_NAME'] = TEST_EVENT_BUS_NAME
+
+        mock_dispatch_events = MagicMock()
+        libeb.dispatch_events = mock_dispatch_events
+        mock_sheet_data = [RECORD_1]
+
+        metadata_pd = pd.json_normalize(mock_sheet_data)
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        persist_lab_metadata(metadata_pd)
+
+        arg = mock_dispatch_events.call_args.args[0]
+
+        for entry in arg:
+            self.assertIn('Source', entry)
+            self.assertIn('DetailType', entry)
+            self.assertIn('Detail', entry)
+            self.assertIn('EventBusName', entry)
+
+            self.assertEqual(entry['Source'], "orcabus.metadatamanager")
+            self.assertEqual(entry['DetailType'], "LabMetadataStateChange")
+            self.assertEqual(entry['EventBusName'], TEST_EVENT_BUS_NAME)
+

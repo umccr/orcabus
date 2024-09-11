@@ -55,16 +55,34 @@ def persist_lab_metadata(df: pd.DataFrame):
 
     # If the df do not contain to what has existed in the db, it will be deleted
     for lib in Library.objects.exclude(library_id__in=df['library_id'].tolist()).iterator():
-        library_deleted.append(lib)
         lib.delete()
+        event = LabMetadataStateChangeEvent(
+            action='DELETE',
+            model='LIBRARY',
+            data=LibrarySerializer(lib).data
+        )
+        event_bus_entries.append(event.get_put_event_entry())
+        library_deleted.append(lib)
 
     for spc in Specimen.objects.exclude(specimen_id__in=df['sample_id'].tolist()).iterator():
-        specimen_deleted.append(spc)
         spc.delete()
+        event = LabMetadataStateChangeEvent(
+            action='DELETE',
+            model='SPECIMEN',
+            data=SpecimenSerializer(spc).data
+        )
+        event_bus_entries.append(event.get_put_event_entry())
+        specimen_deleted.append(spc)
 
     for sbj in Subject.objects.exclude(subject_id__in=df['subject_id'].tolist()).iterator():
-        subject_deleted.append(sbj)
         sbj.delete()
+        event = LabMetadataStateChangeEvent(
+            action='DELETE',
+            model='SUBJECT',
+            data=SubjectSerializer(sbj).data
+        )
+        event_bus_entries.append(event.get_put_event_entry())
+        subject_deleted.append(sbj)
 
     # Update: 12/07/2024. 'Subject' -> 'Specimen' is now ONE to Many, therefore the process of unliking the many to
     # many is not needed. The following code is commented for future reference when the 'Individual' concept is
