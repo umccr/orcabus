@@ -1,0 +1,84 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Convert Fastq List Row ORA to Array",
+  "States": {
+    "Convert Fastq List Row ORA to Array": {
+      "Type": "Pass",
+      "Next": "Decompress ORA Files",
+      "Parameters": {
+        "ora_files_map": [
+          {
+            "input_uri.$": "$.read1OraFileUri",
+            "output_uri.$": "$.read1GzOutputFileUri",
+            "estimated_gz_file_size.$": "States.Format('{}', $.read1EstimatedGzFileSize)"
+          },
+          {
+            "input_uri.$": "$.read2OraFileUri",
+            "output_uri.$": "$.read2GzOutputFileUri",
+            "estimated_gz_file_size.$": "States.Format('{}', $.read2EstimatedGzFileSize)"
+          }
+        ]
+      },
+      "ResultPath": "$.fastq_list_row_as_map"
+    },
+    "Decompress ORA Files": {
+      "Type": "Map",
+      "ItemsPath": "$.fastq_list_row_as_map.ora_files_map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Decompress ORA File",
+        "States": {
+          "Decompress ORA File": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::ecs:runTask.sync",
+            "Parameters": {
+              "LaunchType": "FARGATE",
+              "Cluster": "${__ora_decompression_cluster_arn__}",
+              "TaskDefinition": "${__ora_task_definition_arn__}",
+              "NetworkConfiguration": {
+                "AwsvpcConfiguration": {
+                  "Subnets.$": "States.StringSplit('${__subnets__}', ',')",
+                  "SecurityGroups.$": "States.Array('${__sg_group__}')"
+                }
+              },
+              "Overrides": {
+                "ContainerOverrides": [
+                  {
+                    "Name": "${__ora_container_name__}",
+                    "Environment": [
+                      {
+                        "Name": "INPUT_URI",
+                        "Value.$": "$.input_uri"
+                      },
+                      {
+                        "Name": "OUTPUT_URI",
+                        "Value.$": "$.output_uri"
+                      },
+                      {
+                        "Name": "ESTIMATED_GZ_FILE_SIZE",
+                        "Value.$": "$.estimated_gz_file_size"
+                      },
+                      {
+                        "Name": "ICAV2_ACCESS_TOKEN_SECRET_ID",
+                        "Value": "${__icav2_access_token_secret_id__}"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "TimeoutSeconds": 7200,
+            "End": true
+          }
+        }
+      },
+      "ResultPath": "$.fastq_list_row_as_map",
+      "Next": "Success"
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}
