@@ -10,6 +10,7 @@
   "detail": {
     "model": "SPECIMEN",
     "action": "CREATE",
+    "refId": "spc.01FZ7N3XK1GZ5V9P8Z4H7J5S9F",
     "data": {
       "orcabus_id": "spc.01H5S9FNZH3KX5SSGK8BWPSFST",
       "lab_specimen_id": "PRJ10001",

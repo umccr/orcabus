@@ -17,7 +17,7 @@ from app.models.lab.library import Quality, LibraryType, Phenotype, WorkflowType
 from app.models.lab.specimen import Source
 from app.models.lab.utils import get_value_from_human_readable_label
 from app.serializers import SubjectSerializer, SpecimenSerializer, LibrarySerializer
-from proc.aws.event.lab import LabMetadataStateChangeEvent
+from proc.aws.event.lab import MetadataStateChangeEvent
 from proc.service.utils import clean_model_history
 
 logger = logging.getLogger()
@@ -56,30 +56,36 @@ def persist_lab_metadata(df: pd.DataFrame):
     # If the df do not contain to what has existed in the db, it will be deleted
     for lib in Library.objects.exclude(library_id__in=df['library_id'].tolist()).iterator():
         lib.delete()
-        event = LabMetadataStateChangeEvent(
+        lib_dict = LibrarySerializer(lib).data
+        event = MetadataStateChangeEvent(
             action='DELETE',
             model='LIBRARY',
-            data=LibrarySerializer(lib).data
+            ref_id=lib_dict.get('orcabus_id'),
+            data=lib_dict
         )
         event_bus_entries.append(event.get_put_event_entry())
         library_deleted.append(lib)
 
     for spc in Specimen.objects.exclude(specimen_id__in=df['sample_id'].tolist()).iterator():
         spc.delete()
-        event = LabMetadataStateChangeEvent(
+        spc_dict = SpecimenSerializer(spc).data
+        event = MetadataStateChangeEvent(
             action='DELETE',
             model='SPECIMEN',
-            data=SpecimenSerializer(spc).data
+            ref_id=spc_dict.get('orcabus_id'),
+            data=spc_dict
         )
         event_bus_entries.append(event.get_put_event_entry())
         specimen_deleted.append(spc)
 
     for sbj in Subject.objects.exclude(subject_id__in=df['subject_id'].tolist()).iterator():
         sbj.delete()
-        event = LabMetadataStateChangeEvent(
+        sbj_dict = SubjectSerializer(sbj).data
+        event = MetadataStateChangeEvent(
             action='DELETE',
             model='SUBJECT',
-            data=SubjectSerializer(sbj).data
+            ref_id=sbj_dict.get('orcabus_id'),
+            data=sbj_dict
         )
         event_bus_entries.append(event.get_put_event_entry())
         subject_deleted.append(sbj)
@@ -128,20 +134,23 @@ def persist_lab_metadata(df: pd.DataFrame):
                     "subject_id": record.get('subject_id')
                 }
             )
+            sbj_dict = SubjectSerializer(subject).data
             if is_sub_created:
-                event = LabMetadataStateChangeEvent(
+                event = MetadataStateChangeEvent(
                     action='CREATE',
                     model='SUBJECT',
-                    data=SubjectSerializer(subject).data
+                    ref_id=sbj_dict.get('orcabus_id'),
+                    data=sbj_dict
                 )
                 event_bus_entries.append(event.get_put_event_entry())
                 subject_created.append(subject)
 
             if is_sub_updated:
-                event = LabMetadataStateChangeEvent(
+                event = MetadataStateChangeEvent(
                     action='UPDATE',
                     model='SUBJECT',
-                    data=SubjectSerializer(subject).data
+                    ref_id=sbj_dict.get('orcabus_id'),
+                    data=sbj_dict
                 )
                 event_bus_entries.append(event.get_put_event_entry())
                 subject_updated.append(subject)
@@ -154,20 +163,24 @@ def persist_lab_metadata(df: pd.DataFrame):
                     'subject_id': subject.orcabus_id
                 }
             )
+            spc_dict = SpecimenSerializer(specimen).data
+
             if is_spc_created:
-                event = LabMetadataStateChangeEvent(
+                event = MetadataStateChangeEvent(
                     action='CREATE',
                     model='SPECIMEN',
-                    data=SpecimenSerializer(specimen).data
+                    ref_id=spc_dict.get('orcabus_id'),
+                    data=spc_dict
                 )
                 event_bus_entries.append(event.get_put_event_entry())
                 specimen_created.append(specimen)
 
             if is_spc_updated:
-                event = LabMetadataStateChangeEvent(
+                event = MetadataStateChangeEvent(
                     action='UPDATE',
                     model='SPECIMEN',
-                    data=SpecimenSerializer(specimen).data
+                    ref_id=spc_dict.get('orcabus_id'),
+                    data=spc_dict
                 )
                 event_bus_entries.append(event.get_put_event_entry())
                 specimen_updated.append(specimen)
@@ -187,21 +200,24 @@ def persist_lab_metadata(df: pd.DataFrame):
                     'project_name': record.get('project_name'),
                 }
             )
+            lib_dict = LibrarySerializer(library).data
 
             if is_lib_created:
-                event = LabMetadataStateChangeEvent(
+                event = MetadataStateChangeEvent(
                     action='CREATE',
                     model='LIBRARY',
-                    data=LibrarySerializer(library).data
+                    ref_id=lib_dict.get('orcabus_id'),
+                    data=lib_dict
                 )
                 event_bus_entries.append(event.get_put_event_entry())
                 library_created.append(library)
 
             if is_lib_updated:
-                event = LabMetadataStateChangeEvent(
+                event = MetadataStateChangeEvent(
                     action='UPDATE',
                     model='LIBRARY',
-                    data=LibrarySerializer(library).data
+                    ref_id=lib_dict.get('orcabus_id'),
+                    data=lib_dict,
                 )
                 event_bus_entries.append(event.get_put_event_entry())
                 library_updated.append(library)
@@ -212,11 +228,30 @@ def persist_lab_metadata(df: pd.DataFrame):
             if library.specimen is None or library.specimen.orcabus_id != specimen.orcabus_id:
                 library.specimen = specimen
                 library.save()
+                lib_dict = LibrarySerializer(library).data
+                event = MetadataStateChangeEvent(
+                    action='UPDATE',
+                    model='LIBRARY',
+                    ref_id=lib_dict.get('orcabus_id'),
+                    data=lib_dict,
+                )
+                event_bus_entries.append(event.get_put_event_entry())
+                library_updated.append(library)
 
             # specimen <-> subject
             if specimen.subject is None or specimen.subject.orcabus_id != subject.orcabus_id:
                 specimen.subject = subject
                 specimen.save()
+
+                spc_dict = SpecimenSerializer(specimen).data
+                event = MetadataStateChangeEvent(
+                    action='UPDATE',
+                    model='SPECIMEN',
+                    ref_id=spc_dict.get('orcabus_id'),
+                    data=spc_dict,
+                )
+                event_bus_entries.append(event.get_put_event_entry())
+                specimen_updated.append(specimen)
 
         except Exception as e:
             if any(record.values()):  # silent off blank row

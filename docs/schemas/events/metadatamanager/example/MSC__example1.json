@@ -10,6 +10,7 @@
   "detail": {
     "model": "LIBRARY",
     "action": "CREATE",
+    "refId": "lib.01FZ7N3XK1GZ5V9P8Z4H7J5S9F",
     "data": {
       "orcabus_id": "lib.01FZ7N3XK1GZ5V9P8Z4H7J5S9F",
       "library_id": "L00001",
