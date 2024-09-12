@@ -71,7 +71,7 @@ export class FastqManagerStack extends Stack {
       ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMReadOnlyAccess')
     );
 
-    const secretId: string = PostgresManagerStack.formatDbSecretManagerName('hello_manager');
+    const secretId: string = PostgresManagerStack.formatDbSecretManagerName('fastq_manager');
     const dbSecret = aws_secretsmanager.Secret.fromSecretNameV2(this, 'DbSecret', secretId);
     dbSecret.grantRead(this.lambdaRole);
 
@@ -136,7 +136,7 @@ export class FastqManagerStack extends Stack {
 
   private createProcHandler() {
     const procFn: PythonFunction = this.createPythonFunction('Proc', {
-      index: 'fastq_manager_proc/lambdas/hello_proc.py', // FIXME update appropriate path to Lambda entry point
+      index: 'fastq_manager_proc/lambdas/fastq_pair_proc.py',
       handler: 'handler',
       timeout: Duration.seconds(28),
     });
@@ -147,7 +147,7 @@ export class FastqManagerStack extends Stack {
 
   private createProcSqsHandler() {
     const procSqsFn: PythonFunction = this.createPythonFunction('ProcSqs', {
-      index: 'fastq_manager_proc/lambdas/hello_proc.py', // FIXME update appropriate path to Lambda entry point
+      index: 'fastq_manager_proc/lambdas/fastq_pair_proc.py',
       handler: 'sqs_handler',
       timeout: Duration.seconds(28),
     });
@@ -165,8 +165,8 @@ export class FastqManagerStack extends Stack {
 
     eventRule.addTarget(new aws_events_targets.LambdaFunction(fn));
     eventRule.addEventPattern({
-      source: ['orcabus.foo'], // FIXME complete source to destination event mapping
-      detailType: ['FooRunStateChange'],
+      source: ['orcabus.fqm'], // FIXME complete source to destination event mapping
+      detailType: ['FastqPairStateChange'],
     });
   }
 }

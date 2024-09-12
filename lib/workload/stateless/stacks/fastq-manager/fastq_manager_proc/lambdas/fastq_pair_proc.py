@@ -5,8 +5,7 @@ django.setup()
 # --- keep ^^^ at top of the module
 
 from libumccr import libjson
-
-from fastq_manager_proc.services import hello_srv
+from fastq_manager_proc.services import fastq_pair_srv
 
 
 def sqs_handler(event, context):
@@ -52,10 +51,10 @@ def handler(event, context):
     """
     print(f"Processing {event}, {context}")
 
-    hallo = hello_srv.get_hello_from_db()
-    print(f"Hello > {hallo}")
+    fastq_pair = fastq_pair_srv.get_fastq_pair_from_db()
+    print(f"FastqPair > {fastq_pair}")
 
     response = {
-        "hello": "world"
+        "fastq_pair": fastq_pair
     }
     return response
