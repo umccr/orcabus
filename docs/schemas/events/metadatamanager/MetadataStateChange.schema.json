@@ -36,7 +36,7 @@
       "type": "string"
     },
     "detail-type": {
-      "enum": ["LabMetadataStateChange"]
+      "enum": ["MetadataStateChange"]
     },
     "detail": {
       "$ref": "#/definitions/MetadataStateChange"

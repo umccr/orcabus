@@ -11,23 +11,27 @@ class MetadataStateChange(object):
     _types = {
         'action': 'str',
         'data': 'object',
-        'model': 'str'
+        'model': 'str',
+        'refId': 'str'
     }
 
     _attribute_map = {
         'action': 'action',
         'data': 'data',
-        'model': 'model'
+        'model': 'model',
+        'refId': 'refId'
     }
 
-    def __init__(self, action=None, data=None, model=None):  # noqa: E501
+    def __init__(self, action=None, data=None, model=None, refId=None):  # noqa: E501
         self._action = None
         self._data = None
         self._model = None
+        self._refId = None
         self.discriminator = None
         self.action = action
         self.data = data
         self.model = model
+        self.refId = refId
 
 
     @property
@@ -64,6 +68,18 @@ class MetadataStateChange(object):
 
 
         self._model = model
+
+
+    @property
+    def refId(self):
+
+        return self._refId
+
+    @refId.setter
+    def refId(self, refId):
+
+
+        self._refId = refId
 
     def to_dict(self):
         result = {}

@@ -42,11 +42,11 @@ export const getEventSchemaStackProps = (): SchemaStackProps => {
       },
       {
         ...defaultProps,
-        schemaName: 'orcabus.metadatamanager@LabMetadataStateChange',
+        schemaName: 'orcabus.metadatamanager@MetadataStateChange',
         schemaDescription: 'State change event for lab metadata changes',
         schemaLocation: path.join(
           __dirname,
-          docBase + '/metadatamanager/LabMetadataStateChange.schema.json'
+          docBase + '/metadatamanager/MetadataStateChange.schema.json'
         ),
       },
     ],

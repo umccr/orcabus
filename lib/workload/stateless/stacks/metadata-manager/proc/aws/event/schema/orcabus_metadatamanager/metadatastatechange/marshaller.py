@@ -1,8 +1,7 @@
 import datetime
 import re
 import six
-
-from proc.aws.event.schema.orcabus_metadatamanager import labmetadatastatechange
+from .MetadataStateChange import MetadataStateChange
 
 class Marshaller:
     PRIMITIVE_TYPES = (float, bool, bytes, six.text_type) + six.integer_types
@@ -63,7 +62,7 @@ class Marshaller:
             if typeName in cls.NATIVE_TYPES_MAPPING:
                 typeName = cls.NATIVE_TYPES_MAPPING[typeName]
             else:
-                typeName = getattr(labmetadatastatechange, typeName)
+                typeName = getattr(MetadataStateChange, typeName)
 
         if typeName in cls.PRIMITIVE_TYPES:
             return cls.__unmarshall_primitive(data, typeName)

@@ -1,7 +1,7 @@
 import os
 import json
 from typing import Literal
-from .schema.orcabus_metadatamanager.labmetadatastatechange import Marshaller
+from .schema.orcabus_metadatamanager.metadatastatechange import Marshaller
 
 
 class MetadataStateChangeEvent:
