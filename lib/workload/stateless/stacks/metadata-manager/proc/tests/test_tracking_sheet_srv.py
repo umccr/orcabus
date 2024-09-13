@@ -5,6 +5,8 @@ from app.models import Library, Specimen, Subject
 
 from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata
 
+SHEET_YEAR = "2010"
+
 RECORD_1 = {
     "LibraryID": "L10001",
     "SampleID": "PRJ10001",
@@ -106,7 +108,7 @@ class TrackingSheetSrvUnitTests(TestCase):
 
         metadata_pd = pd.json_normalize(mock_sheet_data)
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        result = persist_lab_metadata(metadata_pd)
+        result = persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         self.assertEqual(result.get("invalid_record_count"), 0, "non invalid record should exist")
 
@@ -114,10 +116,10 @@ class TrackingSheetSrvUnitTests(TestCase):
         self.assertEqual(result.get("library").get("update_count"), 0, "0 update in library")
 
         self.assertEqual(result.get("specimen").get("new_count"), 2, "2 new specimen should be created")
-        self.assertEqual(result.get("specimen").get("update_count"), 1, "1 update in specimen")
+        self.assertEqual(result.get("specimen").get("update_count"), 0, "no update in specimen")
 
         self.assertEqual(result.get("subject").get("new_count"), 1, "1 new subject should be created")
-        self.assertEqual(result.get("subject").get("update_count"), 2, "2 update in subject")
+        self.assertEqual(result.get("subject").get("update_count"), 0, "no update in subject")
 
         lib_1 = Library.objects.get(library_id=RECORD_1.get("LibraryID"))
         self.assertEqual(lib_1.type, RECORD_1.get("Type"), "incorrect value (Type) stored")
@@ -125,8 +127,8 @@ class TrackingSheetSrvUnitTests(TestCase):
         self.assertEqual(lib_1.assay, RECORD_1.get("Assay"), "incorrect value (Assay) stored")
         self.assertEqual(lib_1.workflow, RECORD_1.get("Workflow"), "incorrect value (Workflow) stored")
         self.assertEqual(lib_1.project_owner, RECORD_1.get("ProjectOwner"), "incorrect value (ProjectOwner) stored")
-        self.assertEqual(lib_1.project_name, RECORD_1.get("ProjectName"),"incorrect value (ProjectName) stored")
-        self.assertEqual(lib_1.specimen.lab_specimen_id, RECORD_1.get("SampleID"), "incorrect specimen linked")
+        self.assertEqual(lib_1.project_name, RECORD_1.get("ProjectName"), "incorrect value (ProjectName) stored")
+        self.assertEqual(lib_1.specimen.specimen_id, RECORD_1.get("SampleID"), "incorrect specimen linked")
 
         spc_1 = Specimen.objects.get(lab_specimen_id=RECORD_1.get("SampleID"))
         self.assertIsNotNone(spc_1)
@@ -150,6 +152,32 @@ class TrackingSheetSrvUnitTests(TestCase):
             self.assertEqual(lib.specimen.subject.lab_subject_id, RECORD_1.get("SubjectID"),
                              "library is not linked to the same subject")
 
+    def test_new_df_in_different_year(self) -> None:
+        """
+        python manage.py test proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_new_df_in_different_year
+        """
+
+        metadata_pd = pd.json_normalize([RECORD_1])
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
+
+        new_lib_id = 'L24001'
+        mock_record = RECORD_1.copy()
+        mock_record['LibraryID'] = new_lib_id
+        metadata_pd = pd.json_normalize([mock_record])
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        persist_lab_metadata(metadata_pd, '2024')
+
+        lib_all = Library.objects.all()
+        self.assertEqual(lib_all.count(), 2, "2 library should be created")
+
+        lib_1 = Library.objects.get(library_id=RECORD_1.get("LibraryID"))
+        self.assertIsNotNone(lib_1)
+
+        lib_change = Library.objects.get(library_id=new_lib_id)
+        self.assertIsNotNone(lib_change)
+
+
     def test_persist_lab_metadata_alter_sbj(self):
         """
         test where lib moved to different spc, and spc to different sbj
@@ -160,11 +188,11 @@ class TrackingSheetSrvUnitTests(TestCase):
 
         metadata_pd = pd.json_normalize([RECORD_3])
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        persist_lab_metadata(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         metadata_pd = pd.json_normalize([RECORD_3_DIFF_SBJ])
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        persist_lab_metadata(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         sbj_4 = Subject.objects.get(lab_subject_id=RECORD_3_DIFF_SBJ['SubjectID'])
         self.assertIsNotNone(sbj_4)
@@ -174,7 +202,7 @@ class TrackingSheetSrvUnitTests(TestCase):
 
         metadata_pd = pd.json_normalize([RECORD_3_DIFF_SPC])
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        persist_lab_metadata(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         lib_3 = Library.objects.get(library_id=RECORD_3['LibraryID'])
         self.assertEqual(lib_3.specimen.lab_specimen_id, RECORD_3_DIFF_SPC['SampleID'],
@@ -188,13 +216,13 @@ class TrackingSheetSrvUnitTests(TestCase):
 
         metadata_pd = pd.json_normalize(mock_sheet_data)
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        persist_lab_metadata(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         mock_sheet_data = [RECORD_3]
 
         metadata_pd = pd.json_normalize(mock_sheet_data)
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        result = persist_lab_metadata(metadata_pd)
+        result = persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         deleted_lib = Library.objects.filter(library_id__in=[RECORD_1.get('LibraryID'), RECORD_2.get('LibraryID')])
         self.assertEqual(deleted_lib.count(), 0, 'these library query should all be deleted')
@@ -212,7 +240,7 @@ class TrackingSheetSrvUnitTests(TestCase):
 
         metadata_pd = pd.json_normalize(mock_sheet_data)
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        persist_lab_metadata(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         spc = Specimen.objects.get(lab_specimen_id=mock_record.get("SampleID"))
         self.assertIsNotNone(spc)
