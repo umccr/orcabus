@@ -55,6 +55,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     # Only doing this for library records and (dangling) specimen/subject may be removed on a separate process
 
     # For the library_id we need craft the library_id prefix to match the year
+    # E.g. year 2024, library_id prefix is 'L24' as what the Lab tracking sheet convention
     library_prefix = f'L{sheet_year[-2:]}'
     for lib in Library.objects.filter(library_id__startswith=library_prefix).exclude(
             library_id__in=df['library_id'].tolist()).iterator():
