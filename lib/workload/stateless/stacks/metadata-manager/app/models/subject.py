@@ -1,20 +1,20 @@
 import ulid
 from django.db import models
-from django.core.validators import RegexValidator
 from simple_history.models import HistoricalRecords
 
 from app.models.base import BaseModel, BaseManager
 
 
 class SubjectManager(BaseManager):
-    None
+    pass
 
 
 class Subject(BaseModel):
     orcabus_id_prefix = 'sbj'
     objects = SubjectManager()
+    history = HistoricalRecords()
 
-    lab_subject_id = models.CharField(
+    subject_id = models.CharField(
         unique=True,
         blank=True,
         null=True
@@ -23,7 +23,6 @@ class Subject(BaseModel):
         blank=True,
         null=True
     )
-    history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
         if not self.orcabus_id:

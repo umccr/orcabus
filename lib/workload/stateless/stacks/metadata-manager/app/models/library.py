@@ -2,11 +2,12 @@ import logging
 
 import ulid
 from django.db import models
-from django.core.validators import RegexValidator
 from simple_history.models import HistoricalRecords
 
 from app.models.base import BaseManager, BaseModel
-from app.models.lab.specimen import Specimen
+from app.models.subject import Subject
+from app.models.sample import Sample
+from app.models.project import Project
 
 logger = logging.getLogger(__name__)
 
@@ -51,13 +52,13 @@ class LibraryType(models.TextChoices):
 
 
 class LibraryManager(BaseManager):
-    None
+    pass
 
 
 class Library(BaseModel):
     orcabus_id_prefix = 'lib'
-
     objects = LibraryManager()
+    history = HistoricalRecords()
 
     library_id = models.CharField(
         unique=True,
@@ -92,17 +93,11 @@ class Library(BaseModel):
         blank=True,
         null=True
     )
-    project_owner = models.CharField(
-        blank=True,
-        null=True
-    )
-    project_name = models.CharField(
-        blank=True,
-        null=True
-    )
 
-    specimen = models.ForeignKey(Specimen, on_delete=models.SET_NULL, blank=True, null=True)
-    history = HistoricalRecords()
+    # Relationships
+    sample = models.ForeignKey(Sample, on_delete=models.SET_NULL, blank=True, null=True)
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True)
+    project = models.ForeignKey(Project, on_delete=models.SET_NULL, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.orcabus_id:

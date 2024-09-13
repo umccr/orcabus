@@ -1,29 +1,28 @@
-import logging
-
 import ulid
-from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models import QuerySet
 from simple_history.models import HistoricalRecords
 
+from app.models.contact import Contact
 from app.models.base import BaseModel, BaseManager
 
 
-class IndividualManager(BaseManager):
-    None
+class ProjectManager(BaseManager):
+    pass
 
 
-class Individual(BaseModel):
-    orcabus_id_prefix = 'idv'
-    objects = IndividualManager()
+class Project(BaseModel):
+    orcabus_id_prefix = 'prj'
+    objects = ProjectManager()
+    history = HistoricalRecords()
 
-    internal_id = models.CharField(
+    project_id = models.CharField(
         unique=True,
         blank=True,
         null=True
     )
 
-    history = HistoricalRecords()
+    # Relationships
+    contact = models.ForeignKey(Contact, on_delete=models.SET_NULL, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.orcabus_id:

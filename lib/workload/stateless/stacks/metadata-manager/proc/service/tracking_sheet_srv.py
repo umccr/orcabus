@@ -1,21 +1,20 @@
 import os
 import re
 import json
-from typing import List
 
 import pandas as pd
 import numpy as np
 from django.db import transaction
 
-from libumccr import libgdrive, libjson
+from libumccr import libgdrive
 from libumccr.aws import libssm
 
 import logging
 
-from app.models import Subject, Specimen, Library
-from app.models.lab.library import Quality, LibraryType, Phenotype, WorkflowType
-from app.models.lab.specimen import Source
-from app.models.lab.utils import get_value_from_human_readable_label
+from app.models import Subject, Sample, Library,Project,Contact
+from app.models.library import Quality, LibraryType, Phenotype, WorkflowType
+from app.models.sample import Source
+from app.models.utils import get_value_from_human_readable_label
 from proc.service.utils import clean_model_history
 
 logger = logging.getLogger()
@@ -41,9 +40,9 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     library_created = list()
     library_updated = list()
     library_deleted = list()
-    specimen_created = list()
-    specimen_updated = list()
-    specimen_deleted = list()
+    sample_created = list()
+    sample_updated = list()
+    sample_deleted = list()
     subject_created = list()
     subject_updated = list()
     subject_deleted = list()
@@ -52,7 +51,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
 
     # The data frame is to be the source of truth for the particular year
     # So we need to remove db records which are not in the data frame
-    # Only doing this for library records and (dangling) specimen/subject may be removed on a separate process
+    # Only doing this for library records and (dangling) sample/subject may be removed on a separate process
 
     # For the library_id we need craft the library_id prefix to match the year
     # E.g. year 2024, library_id prefix is 'L24' as what the Lab tracking sheet convention
@@ -62,40 +61,6 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
         library_deleted.append(lib)
         lib.delete()
 
-    # Update: 12/07/2024. 'Subject' -> 'Specimen' is now ONE to Many, therefore the process of unliking the many to
-    # many is not needed. The following code is commented for future reference when the 'Individual' concept is
-    # introduced (which will have many-to-many as 'Individual' <-> 'Subject').
-
-    # # removing relation of spc <-> sbj when needed as this is the many-to-many relationship
-    # # adding relation between specimen and subject could be done per library records
-    # # but removal will need all records to consider before the removing
-    # # this `spc_sbj_df` will convert mapping between `sample_id` to all related `subject_id` as list
-    # spc_sbj_df = df.loc[:, df.columns.isin(['sample_id', 'subject_id'])] \
-    #     .groupby('sample_id')['subject_id'] \
-    #     .apply(list) \
-    #     .reset_index(name='subject_id_list')
-    #
-    # for record in spc_sbj_df.to_dict('records'):
-    #     specimen_id = record.get("sample_id")
-    #     subject_id_list = record.get("subject_id_list")
-    #
-    #     try:
-    #         spc = Specimen.objects.get(specimen_id=specimen_id)
-    #         for sbj in spc.subjects.all().iterator():
-    #             if sbj.subject_id not in subject_id_list:
-    #                 spc.subjects.remove(sbj)
-    #
-    #     except ObjectDoesNotExist:
-    #         pass
-    #
-    # ... added below...
-    #
-    # # specimen <-> subject (addition only)
-    # try:
-    #     specimen.subjects.get(orcabus_id=subject.orcabus_id)
-    # except ObjectDoesNotExist:
-    #     specimen.subjects.add(subject)
-
     # this the where records are updated, inserted, linked based on library_id
     for record in df.to_dict('records'):
         try:
@@ -103,7 +68,8 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
             subject, is_sub_created, is_sub_updated = Subject.objects.update_or_create_if_needed(
                 search_key={"subject_id": record.get('subject_id')},
                 data={
-                    "subject_id": record.get('subject_id')
+                    "subject_id": record.get('subject_id'),
+                    "external_subject_id": record.get('external_subject_id'),
                 }
             )
             if is_sub_created:
@@ -111,18 +77,33 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
             if is_sub_updated:
                 subject_updated.append(subject)
 
-            specimen, is_spc_created, is_spc_updated = Specimen.objects.update_or_create_if_needed(
-                search_key={"specimen_id": record.get('sample_id')},
+            sample, is_smp_created, is_smp_updated = Sample.objects.update_or_create_if_needed(
+                search_key={"sample_id": record.get('sample_id')},
                 data={
-                    "specimen_id": record.get('sample_id'),
+                    "sample_id": record.get('sample_id'),
+                    "external_sample_id": record.get('external_sample_id'),
                     "source": get_value_from_human_readable_label(Source.choices, record.get('source')),
-                    'subject_id': subject.orcabus_id
                 }
             )
-            if is_spc_created:
-                specimen_created.append(specimen)
-            if is_spc_updated:
-                specimen_updated.append(specimen)
+            if is_smp_created:
+                sample_created.append(sample)
+            if is_smp_updated:
+                sample_updated.append(sample)
+
+            contact, _is_cnt_created, _is_cnt_updated = Contact.objects.update_or_create_if_needed(
+                search_key={"contact_id": record.get('project_owner')},
+                data={
+                    "contact_id": record.get('project_owner'),
+                }
+            )
+
+            project, _is_prj_created, _is_prj_updated = Project.objects.update_or_create_if_needed(
+                search_key={"project_id": record.get('project_name')},
+                data={
+                    "project_id": record.get('project_name'),
+                    "contact_id": contact.orcabus_id,
+                }
+            )
 
             library, is_lib_created, is_lib_updated = Library.objects.update_or_create_if_needed(
                 search_key={"library_id": record.get('library_id')},
@@ -134,9 +115,12 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
                     'type': get_value_from_human_readable_label(LibraryType.choices, record.get('type')),
                     'assay': record.get('assay'),
                     'coverage': sanitize_library_coverage(record.get('coverage')),
-                    'specimen_id': specimen.orcabus_id,
-                    'project_owner': record.get('project_owner'),
-                    'project_name': record.get('project_name'),
+
+                    # relationships
+                    'sample_id': sample.orcabus_id,
+                    'subject_id': subject.orcabus_id,
+                    'project_id': project.orcabus_id,
+
                 }
             )
             if is_lib_created:
@@ -144,21 +128,9 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
             if is_lib_updated:
                 library_updated.append(library)
 
-            # 2. linking or updating model to each other based on the record (update if it does not match)
-
-            # library <-> specimen
-            if library.specimen is None or library.specimen.orcabus_id != specimen.orcabus_id:
-                library.specimen = specimen
-                library.save()
-
-            # specimen <-> subject
-            if specimen.subject is None or specimen.subject.orcabus_id != subject.orcabus_id:
-                specimen.subject = subject
-                specimen.save()
-
         except Exception as e:
             if any(record.values()):  # silent off blank row
-                logger.warning(f"Invalid record ({e}): {json.dumps(record, indent=2)}")
+                print(f"Invalid record ({e}): {json.dumps(record, indent=2)}")
                 rows_invalid.append(record)
             continue
 
@@ -171,10 +143,10 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
             "update_count": len(library_updated),
             "delete_count": len(library_deleted)
         },
-        "specimen": {
-            "new_count": len(specimen_created),
-            "update_count": len(specimen_updated),
-            "delete_count": len(specimen_deleted)
+        "sample": {
+            "new_count": len(sample_created),
+            "update_count": len(sample_updated),
+            "delete_count": len(sample_deleted)
 
         },
         "subject": {

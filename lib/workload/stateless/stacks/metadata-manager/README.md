@@ -90,7 +90,7 @@ Some important notes of the sync:
    the latter record will be retained.
 5. The sync happens every night periodically. See `./deploy/README.md` for more info.
 
-Please refer to the [traking-sheet-service](proc/service/tracking_sheet_srv.py) implementation.
+Please refer to the [tracking-sheet-service](proc/service/tracking_sheet_srv.py) implementation.
 
 ### Audit Data
 
