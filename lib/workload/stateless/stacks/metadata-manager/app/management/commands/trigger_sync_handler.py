@@ -13,7 +13,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         event = {
-            "years": [2024]
+            "year": 2024
         }
 
         print(f"Trigger lambda handler for sync tracking sheet. Event {libjson.dumps(event)}")
