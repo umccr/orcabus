@@ -187,7 +187,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     }
 
 
-def download_tracking_sheet(year: int) -> pd.DataFrame:
+def download_tracking_sheet(year: str) -> pd.DataFrame:
     """
     Download the full original metadata from Google tracking sheet
     """
@@ -195,9 +195,8 @@ def download_tracking_sheet(year: int) -> pd.DataFrame:
     account_info = libssm.get_secret(SSM_NAME_GDRIVE_ACCOUNT)
 
     frames = []
-    year_str = str(year)
-    logger.info(f"Downloading {year_str} sheet")
-    sheet_df = libgdrive.download_sheet(account_info, sheet_id, year_str)
+    logger.info(f"Downloading {year} sheet")
+    sheet_df = libgdrive.download_sheet(account_info, sheet_id, year)
     sheet_df = sanitize_lab_metadata_df(sheet_df)
 
     frames.append(sheet_df)
