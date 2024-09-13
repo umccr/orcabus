@@ -18,7 +18,7 @@ def handler(event, context):
     logger.info("Start processing update from google tracking sheet")
     logger.info(f'event: {libjson.dumps(event)}')
 
-    year = event.get('year', datetime.date.today().year)
+    year: str = str(event.get('year', datetime.date.today().year))
     if isinstance(year, list):
         raise ValueError("Year cannot be an array")
 
