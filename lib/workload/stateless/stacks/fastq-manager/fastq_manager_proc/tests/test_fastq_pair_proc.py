@@ -1,9 +1,9 @@
-from fastq_manager.models.helloworld import HelloWorld
-from fastq_manager_proc.lambdas import hello_proc
-from fastq_manager_proc.tests.case import HelloProcUnitTestCase
+from fastq_manager.tests.factories import FastqPairFactory
+from fastq_manager_proc.lambdas import fastq_pair_proc
+from fastq_manager_proc.tests.case import FastqPairProcUnitTestCase
 
 
-class HelloProcUnitTests(HelloProcUnitTestCase):
+class HelloProcUnitTests(FastqPairProcUnitTestCase):
 
     def test_handler(self):
         """
@@ -12,6 +12,6 @@ class HelloProcUnitTests(HelloProcUnitTestCase):
         mock_event = {
             "key": "value"
         }
-        mock_hello = HelloWorld.objects.create(text="Hi")
-        resp = hello_proc.handler(mock_event, None)
+        fastq_pair = FastqPairFactory()
+        resp = fastq_pair_proc.handler(mock_event, None)
         self.assertIsNotNone(resp)
