@@ -197,7 +197,8 @@ def collect_analysis_objects(project_id: str, analysis_id: str) -> Dict:
     logger.info("Reading in the samplesheet")
     samplesheet_dict = read_v2_samplesheet(
         project_id=project_id,
-        data_id=samplesheet_file_id
+        samplesheet_data_id=samplesheet_file_id,
+        runinfo_data_id=run_info_file_id
     )
 
     return {
