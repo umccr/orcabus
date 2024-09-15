@@ -126,7 +126,7 @@
             "Type": "Pass",
             "Next": "Initialise Fastq List Row and Update Library",
             "Parameters": {
-              "fastq_list_row_id.$": "States.ArrayGetItem($.fastq_list_row_objs[*].fastqListRowRgId, $.index)"
+              "fastq_list_row_id.$": "States.ArrayGetItem($.fastq_list_row_objs[*].fastqListRowRgid, $.index)"
             },
             "ResultPath": "$.get_fastq_list_row_id_step"
           },
