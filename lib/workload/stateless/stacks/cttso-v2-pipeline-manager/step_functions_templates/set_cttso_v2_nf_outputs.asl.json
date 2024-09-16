@@ -28,7 +28,6 @@
             "Delete Cache Uri": {
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
-              "OutputPath": "$.Payload",
               "Parameters": {
                 "FunctionName": "${__delete_cache_uri_lambda_function_arn__}",
                 "Payload": {
@@ -50,21 +49,21 @@
                 }
               ],
               "TimeoutSeconds": 60,
+              "ResultPath": null,
               "End": true
             }
           }
         },
         {
-          "StartAt": "Set outputs from analysis uri",
+          "StartAt": "Check successful analysis",
           "States": {
-            "Set outputs from analysis uri": {
+            "Check successful analysis": {
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
-                "FunctionName": "${__set_outputs_json_lambda_function_arn__}",
+                "FunctionName": "${__check_successful_analysis_lambda_function_arn__}",
                 "Payload": {
-                  "sample_id.$": "$.get_db_attributes_step.ready_event_data_inputs.sampleId",
-                  "analysis_output_uri.$": "$.get_db_attributes_step.engine_parameters.outputUri"
+                  "output_uri.$": "$.get_db_attributes_step.engine_parameters.outputUri"
                 }
               },
               "Retry": [
@@ -80,19 +79,172 @@
                   "BackoffRate": 2
                 }
               ],
-              "TimeoutSeconds": 60,
               "ResultSelector": {
-                "output_json": {
-                  "resultsDir.$": "$.Payload.results_dir",
-                  "logsIntermediatesDir.$": "$.Payload.logs_intermediates_dir",
-                  "tso500NextflowLogs.$": "$.Payload.nextflow_logs_dir",
-                  "samplePassed.$": "$.Payload.sample_passed"
-                }
+                "workflow_success.$": "$.Payload.success",
+                "error_message.$": "$.Payload.error_message"
               },
-              "ResultPath": "$.analysis_outputs_step",
-              "Next": "Update Database entry"
+              "ResultPath": "$.check_successful_analysis_step",
+              "Next": "Is successful analysis"
             },
-            "Update Database entry": {
+            "Is successful analysis": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.check_successful_analysis_step.workflow_success",
+                  "BooleanEquals": false,
+                  "Next": "Update Database with error status"
+                }
+              ],
+              "Default": "Set Outputs JSON"
+            },
+            "Set Outputs JSON": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Set outputs from analysis uri",
+                  "States": {
+                    "Set outputs from analysis uri": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__set_outputs_json_lambda_function_arn__}",
+                        "Payload": {
+                          "sample_id.$": "$.get_db_attributes_step.ready_event_data_inputs.sampleId",
+                          "analysis_output_uri.$": "$.get_db_attributes_step.engine_parameters.outputUri"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "TimeoutSeconds": 60,
+                      "ResultSelector": {
+                        "output_json": {
+                          "resultsDir.$": "$.Payload.results_dir",
+                          "logsIntermediatesDir.$": "$.Payload.logs_intermediates_dir",
+                          "tso500NextflowLogs.$": "$.Payload.nextflow_logs_dir",
+                          "samplePassed.$": "$.Payload.sample_passed"
+                        }
+                      },
+                      "ResultPath": "$.analysis_outputs_step",
+                      "Next": "Update Database entry"
+                    },
+                    "Update Database entry": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::dynamodb:updateItem",
+                      "Parameters": {
+                        "TableName": "${__table_name__}",
+                        "Key": {
+                          "id.$": "$.portal_run_id",
+                          "id_type": "portal_run_id"
+                        },
+                        "UpdateExpression": "SET analysis_output = :output_json",
+                        "ExpressionAttributeValues": {
+                          ":output_json": {
+                            "S.$": "States.JsonToString($.analysis_outputs_step.output_json)"
+                          }
+                        }
+                      },
+                      "ResultPath": "$.update_entry_post_launch_step",
+                      "Next": "Wait 1 Second (Post database-updates)"
+                    },
+                    "Wait 1 Second (Post database-updates)": {
+                      "Type": "Wait",
+                      "Seconds": 1,
+                      "Comment": "Wait for databases to sync before continuing",
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Find all vcf files in the output directory",
+                  "States": {
+                    "Find all vcf files in the output directory": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "Payload": {
+                          "icav2_uri.$": "States.Format('{}/Results/', $.get_db_attributes_step.engine_parameters.outputUri)"
+                        },
+                        "FunctionName": "${__find_all_vcf_files_lambda_function_arn__}"
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "vcf_files_list.$": "$.Payload.vcf_icav2_uri_list"
+                      },
+                      "ResultPath": "$.get_vcf_files_step",
+                      "Next": "For each vcf file"
+                    },
+                    "For each vcf file": {
+                      "Type": "Map",
+                      "ItemsPath": "$.get_vcf_files_step.vcf_files_list",
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Compress vcf file",
+                        "States": {
+                          "Compress vcf file": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Parameters": {
+                              "FunctionName": "${__compress_vcf_file_lambda_function_arn__}",
+                              "Payload": {
+                                "vcf_icav2_uri.$": "$.vcf_icav2_uri"
+                              }
+                            },
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "Lambda.ServiceException",
+                                  "Lambda.AWSLambdaException",
+                                  "Lambda.SdkClientException",
+                                  "Lambda.TooManyRequestsException"
+                                ],
+                                "IntervalSeconds": 1,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2
+                              }
+                            ],
+                            "ResultPath": null,
+                            "End": true
+                          }
+                        }
+                      },
+                      "ResultPath": null,
+                      "End": true,
+                      "ItemSelector": {
+                        "vcf_icav2_uri.$": "$$.Map.Item.Value"
+                      }
+                    }
+                  }
+                }
+              ],
+              "ResultPath": null,
+              "End": true
+            },
+            "Update Database with error status": {
               "Type": "Task",
               "Resource": "arn:aws:states:::dynamodb:updateItem",
               "Parameters": {
@@ -101,95 +253,16 @@
                   "id.$": "$.portal_run_id",
                   "id_type": "portal_run_id"
                 },
-                "UpdateExpression": "SET analysis_output = :output_json",
+                "UpdateExpression": "SET error_message = :error_message, analysis_status = :analysis_status",
                 "ExpressionAttributeValues": {
-                  ":output_json": {
-                    "S.$": "States.JsonToString($.analysis_outputs_step.output_json)"
+                  ":error_message": {
+                    "S.$": "$.check_successful_analysis_step.error_message"
+                  },
+                  ":analysis_status": {
+                    "S": "FAILED"
                   }
-                }
-              },
-              "ResultPath": "$.update_entry_post_launch_step",
-              "Next": "Wait 1 Second (Post database-updates)"
-            },
-            "Wait 1 Second (Post database-updates)": {
-              "Type": "Wait",
-              "Seconds": 1,
-              "Comment": "Wait for databases to sync before continuing",
-              "End": true
-            }
-          }
-        },
-        {
-          "StartAt": "Find all vcf files in the output directory",
-          "States": {
-            "Find all vcf files in the output directory": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "Payload": {
-                  "icav2_uri.$": "States.Format('{}/Results/', $.get_db_attributes_step.engine_parameters.outputUri)"
                 },
-                "FunctionName": "${__find_all_vcf_files_lambda_function_arn__}"
-              },
-              "Retry": [
-                {
-                  "ErrorEquals": [
-                    "Lambda.ServiceException",
-                    "Lambda.AWSLambdaException",
-                    "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException"
-                  ],
-                  "IntervalSeconds": 1,
-                  "MaxAttempts": 3,
-                  "BackoffRate": 2
-                }
-              ],
-              "ResultSelector": {
-                "vcf_files_list.$": "$.Payload.vcf_icav2_uri_list"
-              },
-              "ResultPath": "$.get_vcf_files_step",
-              "Next": "For each vcf file"
-            },
-            "For each vcf file": {
-              "Type": "Map",
-              "ItemsPath": "$.get_vcf_files_step.vcf_files_list",
-              "ItemProcessor": {
-                "ProcessorConfig": {
-                  "Mode": "INLINE"
-                },
-                "StartAt": "Compress vcf file",
-                "States": {
-                  "Compress vcf file": {
-                    "Type": "Task",
-                    "Resource": "arn:aws:states:::lambda:invoke",
-                    "Parameters": {
-                      "FunctionName": "${__compress_vcf_file_lambda_function_arn__}",
-                      "Payload": {
-                        "vcf_icav2_uri.$": "$.vcf_icav2_uri"
-                      }
-                    },
-                    "Retry": [
-                      {
-                        "ErrorEquals": [
-                          "Lambda.ServiceException",
-                          "Lambda.AWSLambdaException",
-                          "Lambda.SdkClientException",
-                          "Lambda.TooManyRequestsException"
-                        ],
-                        "IntervalSeconds": 1,
-                        "MaxAttempts": 3,
-                        "BackoffRate": 2
-                      }
-                    ],
-                    "ResultPath": null,
-                    "End": true
-                  }
-                }
-              },
-              "ResultPath": null,
-              "End": true,
-              "ItemSelector": {
-                "vcf_icav2_uri.$": "$$.Map.Item.Value"
+                "End": true
               }
             }
           }

@@ -197,6 +197,24 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       },
     });
 
+    // Check success lambda
+    const check_success_lambda_function = new PythonFunction(
+      this,
+      'check_success_lambda_function',
+      {
+        entry: path.join(__dirname, '../lambdas/check_success_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'check_success.py',
+        handler: 'handler',
+        memorySize: 1024,
+        timeout: Duration.seconds(60),
+        environment: {
+          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
+        },
+      }
+    );
+
     // Create the state machine to launch the nextflow workflow on ICAv2
     const cttso_v2_launch_state_machine = new Cttsov2Icav2PipelineManagerConstruct(this, id, {
       /* Stack Objects */
@@ -211,6 +229,7 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       setOutputJsonLambdaObj: set_output_json_lambda_function,
       getVcfsLambdaObj: get_vcfs_lambda_function,
       compressVcfLambdaObj: compress_vcf_lambda_function,
+      checkSuccessSampleLambdaObj: check_success_lambda_function,
       /* Step function templates */
       generateInputJsonSfnTemplatePath: path.join(
         __dirname,
