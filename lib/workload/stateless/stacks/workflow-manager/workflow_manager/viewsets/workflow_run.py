@@ -1,4 +1,4 @@
-from django.db.models import Q, Max
+from django.db.models import Q, Max, F
 from rest_framework import filters
 from rest_framework.decorators import action
 from rest_framework.viewsets import ReadOnlyModelViewSet
@@ -19,9 +19,15 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
     def get_queryset(self):
         
         """
-        custom queryset to filter by:
+        custom queryset:
+        add filter by:
         start_time, end_time : range of latest state timestamp
         is_ongoing : filter by ongoing workflow runs
+        status : filter by latest state status
+        
+        add search terms: 
+        library_id: filter by library_id
+        orcabus_id: filter by orcabus_id
         """
         # default time is 0
         start_time = self.request.query_params.get('start_time', 0)
@@ -29,6 +35,12 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
         
         # get is ongoing flag
         is_ongoing = self.request.query_params.get('is_ongoing', 'false')
+        
+        # get status
+        status = self.request.query_params.get('status', '')
+        
+        # get search query params
+        search_params = self.request.query_params.get('search', '')
         
         # exclude the custom query params from the rest of the query params
         def exclude_params(params):
@@ -38,9 +50,11 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
         exclude_params([
             'start_time',
             'end_time',
-            'is_ongoing'
+            'is_ongoing',
+            'status',
+            'search'
         ])
-                
+        
         # get all workflow runs with rest of the query params
         result_set = WorkflowRun.objects.get_by_keyword(**self.request.query_params).prefetch_related('states').prefetch_related('libraries').select_related('workflow') # add prefetch_related & select_related to reduce the number of queries
  
@@ -55,6 +69,23 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
                 ~Q(states__status="ABORTED") &
                 ~Q(states__status="SUCCEEDED")
             )
+        
+        if status:
+            result_set = result_set.annotate(latest_state_time=Max('states__timestamp')).filter(
+                states__timestamp=F('latest_state_time'),
+                states__status=status
+            )
+        
+        # # Combine search across multiple fields (worfkflow run name, comment, library_id, orcabus_id, workflow name)
+        if search_params:
+            result_set = result_set.filter(
+                Q(workflow_run_name__icontains=search_params) |
+                Q(comment__icontains=search_params) |
+                Q(libraries__library_id__icontains=search_params) |
+                Q(libraries__orcabus_id__icontains=search_params) |
+                Q(workflow__workflow_name__icontains=search_params)
+            )
+            
         
         return result_set
 
