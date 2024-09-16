@@ -11,3 +11,5 @@ CREATE DATABASE sequence_run_manager OWNER sequence_run_manager;
 CREATE ROLE workflow_manager;
 CREATE DATABASE workflow_manager OWNER workflow_manager;
 
+CREATE ROLE fastq_manager;
+CREATE DATABASE fastq_manager OWNER fastq_manager;
