@@ -52,13 +52,9 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
             'end_time',
             'is_ongoing',
             'status',
+            'search'
         ])
         
-        if search_params.startswith('L') or search_params.startswith('lib'):
-            exclude_params([
-                'search'
-            ])
-                
         # get all workflow runs with rest of the query params
         result_set = WorkflowRun.objects.get_by_keyword(**self.request.query_params).prefetch_related('states').prefetch_related('libraries').select_related('workflow') # add prefetch_related & select_related to reduce the number of queries
  
@@ -80,11 +76,16 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
                 states__status=status
             )
         
-        # search by library_id or orcabus_id
-        if search_params.startswith('L'):
-            result_set = result_set.filter(libraries__library_id__icontains=search_params)
-        if search_params.startswith('lib'):
-            result_set = result_set.filter(libraries__orcabus_id__icontains=search_params)
+        # # Combine search across multiple fields (worfkflow run name, comment, library_id, orcabus_id, workflow name)
+        if search_params:
+            result_set = result_set.filter(
+                Q(workflow_run_name__icontains=search_params) |
+                Q(comment__icontains=search_params) |
+                Q(libraries__library_id__icontains=search_params) |
+                Q(libraries__orcabus_id__icontains=search_params) |
+                Q(workflow__workflow_name__icontains=search_params)
+            )
+            
         
         return result_set
 
