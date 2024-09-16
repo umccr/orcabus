@@ -43,6 +43,7 @@ interface Cttsov2Icav2PipelineManagerConstructProps {
   setOutputJsonLambdaObj: PythonFunction;
   getVcfsLambdaObj: PythonFunction;
   compressVcfLambdaObj: DockerImageFunction;
+  checkSuccessSampleLambdaObj: PythonFunction;
   // ICAv2 Copy Batch State Machine Object
   icav2CopyFilesStateMachineObj: sfn.IStateMachine;
 }
@@ -119,6 +120,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       props.setOutputJsonLambdaObj,
       props.getVcfsLambdaObj,
       props.compressVcfLambdaObj,
+      props.checkSuccessSampleLambdaObj,
     ].forEach((lambda_obj) => {
       props.icav2AccessTokenSecretObj.grantRead(<iam.Role>lambda_obj.currentVersion.role);
     });
@@ -139,6 +141,8 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
           props.getVcfsLambdaObj.currentVersion.functionArn,
         __compress_vcf_file_lambda_function_arn__:
           props.compressVcfLambdaObj.currentVersion.functionArn,
+        __check_successful_analysis_lambda_function_arn__:
+          props.checkSuccessSampleLambdaObj.currentVersion.functionArn,
       },
     });
 
@@ -151,6 +155,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       props.setOutputJsonLambdaObj,
       props.getVcfsLambdaObj,
       props.compressVcfLambdaObj,
+      props.checkSuccessSampleLambdaObj,
     ].forEach((lambda_obj) => {
       lambda_obj.currentVersion.grantInvoke(<iam.IRole>configure_outputs_sfn.role);
     });
