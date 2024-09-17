@@ -261,9 +261,9 @@
                   ":analysis_status": {
                     "S": "FAILED"
                   }
-                },
-                "End": true
-              }
+                }
+              },
+              "End": true
             }
           }
         }
