@@ -1,19 +1,19 @@
-from fastq_manager_proc.services import hello_srv
-from fastq_manager_proc.tests.case import HelloProcUnitTestCase, logger
-from fastq_manager.models.helloworld import HelloWorld
+from fastq_manager.tests.factories import FastqPairFactory
+from fastq_manager.models.fastq_pair import FastqPair
+from fastq_manager_proc.services import fastq_pair_srv
+from fastq_manager_proc.tests.case import FastqPairProcUnitTestCase, logger
 
 
-class HelloSrvUnitTests(HelloProcUnitTestCase):
+class FastqPairSrvUnitTests(FastqPairProcUnitTestCase):
 
-    def test_get_hello_from_db(self):
+    def test_get_fastq_pair_from_db(self):
         """
-        python manage.py test fastq_manager_proc.tests.test_hello_srv.HelloSrvUnitTests.test_get_hello_from_db
+        python manage.py fastq_manager_proc.tests.test_fastq_pair_srv.FastqPairSrvUnitTests.test_get_fastq_pair_from_db
         """
-        mock_hello = HelloWorld()
-        mock_hello.text = "Hola Mundo"
-        mock_hello.save()
+        rgid = "test.id.123"
+        FastqPairFactory(rgid=rgid)
 
-        hola = hello_srv.get_hello_from_db()
-        logger.info(hola)
-        self.assertIsNotNone(hola)
-        self.assertIn("Hola", hola.text)
+        fp: FastqPair = fastq_pair_srv.get_fastq_pair_from_db(rgid=rgid)
+        logger.info(fp)
+        self.assertIsNotNone(fp)
+        self.assertEqual(rgid, fp.rgid)

@@ -17,7 +17,7 @@ class FastqPairViewSetTestCase(TestCase):
 
     def test_get_api(self):
         """
-        python manage.py test fastq_manager.tests.test_viewsets.HelloViewSetTestCase.test_get_api
+        python manage.py test fastq_manager.tests.test_viewsets.FastqPairViewSetTestCase.test_get_api
         """
         response = self.client.get(f"{self.endpoint}/")
         logger.info(response.json())

@@ -1,5 +1,7 @@
 import django
 
+from fastq_manager.models import FastqPair
+
 django.setup()
 
 # --- keep ^^^ at top of the module
@@ -45,13 +47,26 @@ def sqs_handler(event, context):
 
 def handler(event, context):
     """event payload
+    # TODO: define what a reasonable event would look like
     {
-        THIS SHOULD TYPICALLY BE BOUND TO RESPECTIVE config/event_schemas
+        "rgid": "1234",
+        "rgsm": "sample1",
+        "rglb": "L000001",
+        "read_1_id": "file.1234.r1",
+        "read_2_id": "file.1234.r2"
     }
     """
     print(f"Processing {event}, {context}")
 
-    fastq_pair = fastq_pair_srv.get_fastq_pair_from_db()
+    fastq_pair = FastqPair(
+        rgid=event["rgid"],
+        rgsm=event["rgsm"],
+        rglb=event["rglb"],
+        read_1_id=event["read_1_id"],
+        read_2_id=event["read_2_id"]
+    )
+    fastq_pair.save()
+
     print(f"FastqPair > {fastq_pair}")
 
     response = {

@@ -13,7 +13,7 @@ class FastqPairModelTests(TestCase):
 
     def test_save_fastq_pair(self):
         """
-        python manage.py test fastq_manager.tests.test_models.HelloModelTests.test_save_hello
+        python manage.py test fastq_manager.tests.test_models.FastqPairModelTests.test_save_fastq_pair
         """
         fastq_pair = FastqPairFactory()
         fastq_pair.save()
