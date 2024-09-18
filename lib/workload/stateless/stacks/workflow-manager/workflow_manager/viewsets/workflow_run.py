@@ -1,11 +1,13 @@
 from django.db.models import Q, Max, F
 from rest_framework import filters
 from rest_framework.decorators import action
+from drf_spectacular.utils import extend_schema
 from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.response import Response
 
 from workflow_manager.models.workflow_run import WorkflowRun
 from workflow_manager.pagination import StandardResultsSetPagination
-from workflow_manager.serializers import WorkflowRunModelSerializer
+from workflow_manager.serializers import WorkflowRunModelSerializer, WorkflowRunCountByStatusSerializer
 
 
 class WorkflowRunViewSet(ReadOnlyModelViewSet):
@@ -73,10 +75,10 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
         if status:
             result_set = result_set.annotate(latest_state_time=Max('states__timestamp')).filter(
                 states__timestamp=F('latest_state_time'),
-                states__status=status
+                states__status=status.upper()
             )
         
-        # # Combine search across multiple fields (worfkflow run name, comment, library_id, orcabus_id, workflow name)
+        # Combine search across multiple fields (worfkflow run name, comment, library_id, orcabus_id, workflow name)
         if search_params:
             result_set = result_set.filter(
                 Q(workflow_run_name__icontains=search_params) |
@@ -86,7 +88,6 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
                 Q(workflow__workflow_name__icontains=search_params)
             )
             
-        
         return result_set
 
     @action(detail=False, methods=['GET'])
@@ -111,3 +112,44 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
         pagw_qs = self.paginate_queryset(result_set)
         serializer = self.get_serializer(pagw_qs, many=True)
         return self.get_paginated_response(serializer.data)
+    
+    @extend_schema(operation_id='/api/v1/workflow_run/count_by_status/', responses=WorkflowRunCountByStatusSerializer)
+    @action(detail=False, methods=['GET'])
+    def count_by_status(self, request):
+        """
+        Returns the count of records for each status: 'SUCCEEDED', 'ABORTED', 'FAILED', and 'Onging' State.
+        """
+        base_queryset = WorkflowRun.objects.prefetch_related('states')
+        
+        all_count = base_queryset.count()
+        
+        annotate_queryset = base_queryset.annotate(latest_state_time=Max('states__timestamp'))
+        
+        succeeded_count = annotate_queryset.filter(
+            states__timestamp=F('latest_state_time'),
+            states__status="SUCCEEDED"
+        ).count()
+        
+        aborted_count = annotate_queryset.filter(
+            states__timestamp=F('latest_state_time'),
+            states__status="ABORTED"
+        ).count()
+        
+        failed_count = annotate_queryset.filter(
+            states__timestamp=F('latest_state_time'),
+            states__status="FAILED"
+        ).count()
+        
+        ongoing_count = base_queryset.filter(
+            ~Q(states__status="FAILED") &
+            ~Q(states__status="ABORTED") &
+            ~Q(states__status="SUCCEEDED")
+        ).count()
+        
+        return Response({
+            'all': all_count,
+            'succeeded': succeeded_count,
+            'aborted': aborted_count,
+            'failed': failed_count,
+            'ongoing': ongoing_count
+        }, status=200)
