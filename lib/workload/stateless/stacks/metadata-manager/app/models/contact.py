@@ -1,4 +1,3 @@
-import ulid
 from django.db import models
 from simple_history.models import HistoricalRecords
 
@@ -10,7 +9,7 @@ class ContactManager(BaseManager):
 
 
 class Contact(BaseModel):
-    orcabus_id_prefix = 'cnt'
+    orcabus_id_prefix = 'ctc.'
     objects = ContactManager()
 
     contact_id = models.CharField(
@@ -18,10 +17,18 @@ class Contact(BaseModel):
         blank=True,
         null=True
     )
+    name = models.CharField(
+        blank=True,
+        null=True
+    )
+    description = models.CharField(
+        blank=True,
+        null=True
+    )
+    email = models.EmailField(
+        blank=True,
+        null=True
+    )
 
+    # history
     history = HistoricalRecords()
-
-    def save(self, *args, **kwargs):
-        if not self.orcabus_id:
-            self.orcabus_id = self.orcabus_id_prefix + '.' + ulid.new().str
-        super().save(*args, **kwargs)

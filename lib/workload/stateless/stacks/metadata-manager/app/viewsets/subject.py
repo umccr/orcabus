@@ -2,29 +2,22 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import filters
 
 from app.models import Subject
-from app.serializers.subject import SubjectSerializer
+from app.serializers.subject import SubjectDetailSerializer
 from app.pagination import StandardResultsSetPagination
+from .base import BaseViewSet
 
-from rest_framework.viewsets import ReadOnlyModelViewSet
 
-
-class SubjectViewSet(ReadOnlyModelViewSet):
-    lookup_value_regex = "[^/]+"
-    serializer_class = SubjectSerializer
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    ordering_fields = "__all__"
-    ordering = ["-orcabus_id"]
+class SubjectViewSet(BaseViewSet):
+    serializer_class = SubjectDetailSerializer
     search_fields = Subject.get_base_fields()
-    queryset = Subject.objects.none()
+    queryset = Subject.objects.prefetch_related('individual_set').all()
+    orcabus_id_prefix = Subject.orcabus_id_prefix
 
     @extend_schema(parameters=[
-        SubjectSerializer
+        SubjectDetailSerializer
     ])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        return Subject.objects.get_by_keyword(**self.request.query_params)
-
-
+        return Subject.objects.get_by_keyword(self.queryset, **self.request.query_params)

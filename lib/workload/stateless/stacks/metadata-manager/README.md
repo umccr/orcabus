@@ -62,7 +62,7 @@ from the Google tracking sheet and mapping it to its respective model as follows
 | Sheet Header      | Table      | Field Name           |
 |-------------------|------------|----------------------|
 | SubjectID         | `Subject`  | lab_subject_id       |
-| ExternalSubjectID | `Subject`  | external_subject_id  |
+| ExternalSubjectID | `Subject`  | subject_id  |
 | SampleID          | `Specimen` | sample_id            |
 | ExternalSampleID  | `Specimen` | external_specimen_id |
 | Source            | `Specimen` | source               |

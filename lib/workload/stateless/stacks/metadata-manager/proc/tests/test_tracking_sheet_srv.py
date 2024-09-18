@@ -1,7 +1,7 @@
 import pandas as pd
 
 from django.test import TestCase
-from app.models import Library, Specimen, Subject
+from app.models import Library, Sample, Subject, Project, Contact, Individual
 
 from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata
 
@@ -82,14 +82,6 @@ RECORD_3 = {
     "SampleName": "PRJ10003-IN_RUN_2",
     "rRNA": ""
 }
-RECORD_3_DIFF_SBJ = {
-    **RECORD_3,
-    "SubjectID": "SBJ004"
-}
-RECORD_3_DIFF_SPC = {
-    **RECORD_3_DIFF_SBJ,
-    "SampleID": "PRJ10004"
-}
 
 
 class TrackingSheetSrvUnitTests(TestCase):
@@ -110,15 +102,13 @@ class TrackingSheetSrvUnitTests(TestCase):
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
         result = persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
+        # Stats check
         self.assertEqual(result.get("invalid_record_count"), 0, "non invalid record should exist")
-
-        self.assertEqual(result.get("library").get("new_count"), 3, "3 new library should be created")
+        self.assertEqual(result.get("library").get("create_count"), 3, "3 new library should be created")
         self.assertEqual(result.get("library").get("update_count"), 0, "0 update in library")
-
-        self.assertEqual(result.get("specimen").get("new_count"), 2, "2 new specimen should be created")
-        self.assertEqual(result.get("specimen").get("update_count"), 0, "no update in specimen")
-
-        self.assertEqual(result.get("subject").get("new_count"), 1, "1 new subject should be created")
+        self.assertEqual(result.get("sample").get("create_count"), 2, "2 new sample should be created")
+        self.assertEqual(result.get("sample").get("update_count"), 0, "no update in sample")
+        self.assertEqual(result.get("subject").get("create_count"), 1, "1 new subject should be created")
         self.assertEqual(result.get("subject").get("update_count"), 0, "no update in subject")
 
         lib_1 = Library.objects.get(library_id=RECORD_1.get("LibraryID"))
@@ -126,31 +116,48 @@ class TrackingSheetSrvUnitTests(TestCase):
         self.assertEqual(lib_1.phenotype, RECORD_1.get("Phenotype"), "incorrect value (Phenotype) stored")
         self.assertEqual(lib_1.assay, RECORD_1.get("Assay"), "incorrect value (Assay) stored")
         self.assertEqual(lib_1.workflow, RECORD_1.get("Workflow"), "incorrect value (Workflow) stored")
-        self.assertEqual(lib_1.project_owner, RECORD_1.get("ProjectOwner"), "incorrect value (ProjectOwner) stored")
-        self.assertEqual(lib_1.project_name, RECORD_1.get("ProjectName"), "incorrect value (ProjectName) stored")
-        self.assertEqual(lib_1.specimen.specimen_id, RECORD_1.get("SampleID"), "incorrect specimen linked")
+        self.assertEqual(lib_1.sample.sample_id, RECORD_1.get("SampleID"), "incorrect sample linked")
 
-        spc_1 = Specimen.objects.get(lab_specimen_id=RECORD_1.get("SampleID"))
-        self.assertIsNotNone(spc_1)
-        self.assertEqual(spc_1.source, RECORD_1.get("Source"), "incorrect value stored")
-        self.assertEqual(spc_1.external_specimen_id, RECORD_1.get("ExternalSampleID"), "incorrect value stored")
+        smp_1 = Sample.objects.get(sample_id=RECORD_1.get("SampleID"))
+        self.assertIsNotNone(smp_1)
+        self.assertEqual(smp_1.source, RECORD_1.get("Source"), "incorrect value stored")
+        self.assertEqual(smp_1.external_sample_id, RECORD_1.get("ExternalSampleID"), "incorrect value stored")
 
-        sbj_1 = Subject.objects.get(lab_subject_id=RECORD_1.get("SubjectID"))
+        sbj_1 = Subject.objects.get(subject_id=RECORD_1.get("ExternalSubjectID"))
         self.assertIsNotNone(sbj_1)
-        self.assertEqual(sbj_1.external_subject_id, RECORD_1.get("ExternalSubjectID"), "incorrect value stored")
+        self.assertEqual(sbj_1.subject_id, RECORD_1.get("ExternalSubjectID"), "incorrect value stored")
 
-        # check relationships if lib_1 and lib_2 is in the same spc_1
-        spc_lib_qs = spc_1.library_set.all()
-        self.assertEqual(spc_lib_qs.filter(library_id=RECORD_1.get("LibraryID")).count(), 1,
-                         "lib_1 and spc_1 is not linked")
-        self.assertEqual(spc_lib_qs.filter(library_id=RECORD_2.get("LibraryID")).count(), 1,
-                         "lib_2 and spc_1 is not linked")
+        idv_1 = Individual.objects.get(individual_id=RECORD_1.get("SubjectID"))
+        self.assertIsNotNone(idv_1)
+        self.assertEqual(idv_1.individual_id, RECORD_1.get("SubjectID"), "incorrect value stored")
 
-        # check if all lib is the same with sbj_1
+        ctc_1 = Contact.objects.get(contact_id=RECORD_1.get("ProjectOwner"))
+        self.assertIsNotNone(ctc_1)
+        self.assertEqual(ctc_1.contact_id, RECORD_1.get("ProjectOwner"), "incorrect value (ProjectOwner) stored")
+
+        prj_1 = Project.objects.get(project_id=RECORD_1.get("ProjectName"))
+        self.assertIsNotNone(prj_1)
+        self.assertEqual(prj_1.project_id, RECORD_1.get("ProjectName"), "incorrect value (ProjectName) stored")
+
+        # check all relationships from each record
         for rec in mock_sheet_data:
             lib = Library.objects.get(library_id=rec.get("LibraryID"))
-            self.assertEqual(lib.specimen.subject.lab_subject_id, RECORD_1.get("SubjectID"),
-                             "library is not linked to the same subject")
+
+            ext_sbj = lib.subject
+            self.assertEqual(ext_sbj.subject_id, rec.get("ExternalSubjectID"),
+                             'incorrect library-subject link')
+
+            smp = lib.sample
+            self.assertEqual(smp.sample_id, rec.get("SampleID"), 'incorrect library-sample link')
+
+            idv = ext_sbj.individual_set.get(individual_id=rec.get("SubjectID"))
+            self.assertEqual(idv.individual_id, rec.get("SubjectID"), 'incorrect subject-individual link')
+
+            prj = lib.project_set.get(project_id=rec.get("ProjectName"))
+            self.assertEqual(prj.project_id, rec.get("ProjectName"), 'incorrect library-project link')
+
+            ctc = prj.contact_set.get(contact_id=rec.get("ProjectOwner"))
+            self.assertEqual(ctc.contact_id, rec.get("ProjectOwner"), 'incorrect project-contact link')
 
     def test_new_df_in_different_year(self) -> None:
         """
@@ -177,36 +184,85 @@ class TrackingSheetSrvUnitTests(TestCase):
         lib_change = Library.objects.get(library_id=new_lib_id)
         self.assertIsNotNone(lib_change)
 
-
-    def test_persist_lab_metadata_alter_sbj(self):
+    def test_alter_sbj_smp(self):
         """
-        test where lib moved to different spc, and spc to different sbj
+        test where lib moved to different subject and sample
 
-
-        python manage.py test proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_persist_lab_metadata_alter_sbj
+        python manage.py test proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_alter_sbj_smp
         """
 
         metadata_pd = pd.json_normalize([RECORD_3])
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
         persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
-        metadata_pd = pd.json_normalize([RECORD_3_DIFF_SBJ])
-        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        persist_lab_metadata(metadata_pd, SHEET_YEAR)
-
-        sbj_4 = Subject.objects.get(lab_subject_id=RECORD_3_DIFF_SBJ['SubjectID'])
-        self.assertIsNotNone(sbj_4)
-        spc_4 = sbj_4.specimen_set.get(lab_specimen_id=RECORD_3_DIFF_SBJ['SampleID'])
-        self.assertEqual(spc_4.lab_specimen_id, RECORD_3_DIFF_SBJ['SampleID'],
-                         'specimen obj should not change on link update')
-
-        metadata_pd = pd.json_normalize([RECORD_3_DIFF_SPC])
-        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        persist_lab_metadata(metadata_pd, SHEET_YEAR)
-
         lib_3 = Library.objects.get(library_id=RECORD_3['LibraryID'])
-        self.assertEqual(lib_3.specimen.lab_specimen_id, RECORD_3_DIFF_SPC['SampleID'],
-                         'incorrect link between lib and spc when changing links')
+        self.assertEqual(lib_3.sample.sample_id, RECORD_3['SampleID'], 'incorrect link between lib and smp')
+        self.assertEqual(lib_3.subject.subject_id, RECORD_3['ExternalSubjectID'],
+                         'incorrect link between lib and sbj')
+        idv_3 = lib_3.subject.individual_set.get(individual_id=RECORD_3['SubjectID'])
+        self.assertIsNotNone(idv_3)
+        self.assertEqual(lib_3.subject.individual_set.count(), 1, 'only 1 individual should be linked')
+
+        # Change smp and sample
+        record_3_altered = {
+            **RECORD_3,
+            "ExternalSubjectID": "EXT_SBJ004",
+            "SampleID": "PRJ10004",
+        }
+
+        metadata_pd = pd.json_normalize([record_3_altered])
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
+
+        lib_3_altered = Library.objects.get(library_id=record_3_altered['LibraryID'])
+        self.assertEqual(lib_3_altered.sample.sample_id, record_3_altered['SampleID'],
+                         'incorrect link between lib and smp')
+        self.assertEqual(lib_3_altered.subject.subject_id, record_3_altered['ExternalSubjectID'],
+                         'incorrect link between lib and sbj')
+        idv_3 = lib_3_altered.subject.individual_set.all()
+        self.assertIsNotNone(idv_3)
+        self.assertEqual(lib_3_altered.subject.individual_set.count(), 1, 'only 1 individual should be linked')
+
+    def test_alter_idv_prj_ctc(self):
+        """
+        test where object is move betweeb many-to-many relationship (idv, prj, ctc)
+
+        python manage.py test proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_alter_idv_prj_ctc
+        """
+
+        metadata_pd = pd.json_normalize([RECORD_3])
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
+
+        sbj_3 = Subject.objects.get(subject_id=RECORD_3['ExternalSubjectID'])
+        self.assertIsNotNone(sbj_3)
+        self.assertEqual(sbj_3.individual_set.count(), 1, 'only 1 individual should be linked')
+        idv_3 = sbj_3.individual_set.get(individual_id=RECORD_3['SubjectID'])
+        self.assertIsNotNone(idv_3)
+
+        # Change individual id
+        record_3_altered = {
+            **RECORD_3,
+            "SubjectID": "SBJ004",
+            "ProjectOwner": "Doe",
+            "ProjectName": "test",
+        }
+
+        metadata_pd = pd.json_normalize([record_3_altered])
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
+
+        # We don't unlink previous many-to-many relationships, but only add new ones
+        sbj_3 = Subject.objects.get(subject_id=record_3_altered['ExternalSubjectID'])
+        idv_3 = sbj_3.individual_set.get(individual_id=record_3_altered['SubjectID'])
+        self.assertIsNotNone(idv_3)
+
+        prj_3 = Library.objects.get(library_id=record_3_altered['LibraryID']).project_set.get(
+            project_id=record_3_altered['ProjectName'])
+        self.assertIsNotNone(prj_3)
+
+        ctc_3 = prj_3.contact_set.get(contact_id=record_3_altered['ProjectOwner'])
+        self.assertIsNotNone(ctc_3)
 
     def test_with_deleted_model(self) -> None:
         """
@@ -219,7 +275,6 @@ class TrackingSheetSrvUnitTests(TestCase):
         persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         mock_sheet_data = [RECORD_3]
-
         metadata_pd = pd.json_normalize(mock_sheet_data)
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
         result = persist_lab_metadata(metadata_pd, SHEET_YEAR)
@@ -242,6 +297,6 @@ class TrackingSheetSrvUnitTests(TestCase):
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
         persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
-        spc = Specimen.objects.get(lab_specimen_id=mock_record.get("SampleID"))
+        spc = Sample.objects.get(sample_id=mock_record.get("SampleID"))
         self.assertIsNotNone(spc)
         self.assertEqual(spc.source, 'water', "incorrect value stored")

@@ -5,18 +5,14 @@ from app.models import Sample
 from app.serializers.sample import SampleSerializer
 from app.pagination import StandardResultsSetPagination
 
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from .base import BaseViewSet
 
 
-class SampleViewSet(ReadOnlyModelViewSet):
-    lookup_value_regex = "[^/]+"
+class SampleViewSet(BaseViewSet):
     serializer_class = SampleSerializer
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    ordering_fields = "__all__"
-    ordering = ["-orcabus_id"]
     search_fields = Sample.get_base_fields()
-    queryset = Sample.objects.none()
+    queryset = Sample.objects.all()
+    orcabus_id_prefix = Sample.orcabus_id_prefix
 
     @extend_schema(parameters=[
         SampleSerializer

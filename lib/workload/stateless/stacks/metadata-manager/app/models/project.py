@@ -11,20 +11,25 @@ class ProjectManager(BaseManager):
 
 
 class Project(BaseModel):
-    orcabus_id_prefix = 'prj'
+    orcabus_id_prefix = 'prj.'
     objects = ProjectManager()
-    history = HistoricalRecords()
 
     project_id = models.CharField(
         unique=True,
         blank=True,
         null=True
     )
+    name = models.CharField(
+        blank=True,
+        null=True
+    )
+    description = models.CharField(
+        blank=True,
+        null=True
+    )
 
     # Relationships
-    contact = models.ForeignKey(Contact, on_delete=models.SET_NULL, blank=True, null=True)
+    contact_set = models.ManyToManyField(Contact, related_name='project_set', blank=True, null=True)
 
-    def save(self, *args, **kwargs):
-        if not self.orcabus_id:
-            self.orcabus_id = self.orcabus_id_prefix + '.' + ulid.new().str
-        super().save(*args, **kwargs)
+    # history
+    history = HistoricalRecords(m2m_fields=[contact_set])

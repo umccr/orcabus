@@ -5,18 +5,14 @@ from app.models import Contact
 from app.serializers.contact import ContactSerializer
 from app.pagination import StandardResultsSetPagination
 
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from .base import BaseViewSet
 
 
-class ContactViewSet(ReadOnlyModelViewSet):
-    lookup_value_regex = "[^/]+"
+class ContactViewSet(BaseViewSet):
     serializer_class = ContactSerializer
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    ordering_fields = "__all__"
-    ordering = ["-orcabus_id"]
     search_fields = Contact.get_base_fields()
-    queryset = Contact.objects.none()
+    queryset = Contact.objects.all()
+    orcabus_id_prefix = Contact.orcabus_id_prefix
 
     @extend_schema(parameters=[
         ContactSerializer

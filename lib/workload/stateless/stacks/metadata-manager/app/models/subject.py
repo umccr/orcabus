@@ -1,4 +1,3 @@
-import ulid
 from django.db import models
 from simple_history.models import HistoricalRecords
 
@@ -10,21 +9,16 @@ class SubjectManager(BaseManager):
 
 
 class Subject(BaseModel):
-    orcabus_id_prefix = 'sbj'
+    orcabus_id_prefix = 'sbj.'
     objects = SubjectManager()
-    history = HistoricalRecords()
-
     subject_id = models.CharField(
         unique=True,
         blank=True,
         null=True
     )
-    external_subject_id = models.CharField(
-        blank=True,
-        null=True
-    )
 
-    def save(self, *args, **kwargs):
-        if not self.orcabus_id:
-            self.orcabus_id = self.orcabus_id_prefix + '.' + ulid.new().str
-        super().save(*args, **kwargs)
+    # Relationships
+    individual_set = models.ManyToManyField('Individual', related_name='subject_set', blank=True, null=True)
+
+    # history
+    history = HistoricalRecords(m2m_fields=[individual_set])

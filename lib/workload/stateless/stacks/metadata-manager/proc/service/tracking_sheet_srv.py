@@ -4,6 +4,7 @@ import json
 
 import pandas as pd
 import numpy as np
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 from libumccr import libgdrive
@@ -11,7 +12,7 @@ from libumccr.aws import libssm
 
 import logging
 
-from app.models import Subject, Sample, Library,Project,Contact
+from app.models import Subject, Sample, Library, Project, Contact, Individual
 from app.models.library import Quality, LibraryType, Phenotype, WorkflowType
 from app.models.sample import Source
 from app.models.utils import get_value_from_human_readable_label
@@ -37,17 +38,40 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     logger.info(f"Start processing LabMetadata")
 
     # Used for statistics
-    library_created = list()
-    library_updated = list()
-    library_deleted = list()
-    sample_created = list()
-    sample_updated = list()
-    sample_deleted = list()
-    subject_created = list()
-    subject_updated = list()
-    subject_deleted = list()
+    stats = {
+        "library": {
+            "create_count": 0,
+            "update_count": 0,
+            "delete_count": 0,
+        },
+        "sample": {
+            "create_count": 0,
+            "update_count": 0,
+            "delete_count": 0,
 
-    rows_invalid = list()
+        },
+        "subject": {
+            "create_count": 0,
+            "update_count": 0,
+            "delete_count": 0,
+        },
+        "individual": {
+            "create_count": 0,
+            "update_count": 0,
+            "delete_count": 0,
+        },
+        "project": {
+            "create_count": 0,
+            "update_count": 0,
+            "delete_count": 0,
+        },
+        "contact": {
+            "create_count": 0,
+            "update_count": 0,
+            "delete_count": 0,
+        },
+        'invalid_record_count': 0,
+    }
 
     # The data frame is to be the source of truth for the particular year
     # So we need to remove db records which are not in the data frame
@@ -58,25 +82,61 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     library_prefix = f'L{sheet_year[-2:]}'
     for lib in Library.objects.filter(library_id__startswith=library_prefix).exclude(
             library_id__in=df['library_id'].tolist()).iterator():
-        library_deleted.append(lib)
+        stats['library']['delete_count'] += 1
         lib.delete()
 
     # this the where records are updated, inserted, linked based on library_id
     for record in df.to_dict('records'):
         try:
             # 1. update or create all data in the model from the given record
-            subject, is_sub_created, is_sub_updated = Subject.objects.update_or_create_if_needed(
-                search_key={"subject_id": record.get('subject_id')},
+
+            # ------------------------------
+            # Individual
+            # ------------------------------
+            idv, is_idv_created, is_idv_updated = Individual.objects.update_or_create_if_needed(
+                search_key={
+                    "individual_id": record.get('subject_id'),
+                    "source": "lab"
+                },
                 data={
-                    "subject_id": record.get('subject_id'),
-                    "external_subject_id": record.get('external_subject_id'),
+                    "individual_id": record.get('subject_id'),
+                    "source": "lab"
                 }
             )
-            if is_sub_created:
-                subject_created.append(subject)
-            if is_sub_updated:
-                subject_updated.append(subject)
+            if is_idv_created:
+                stats['individual']['create_count'] += 1
+            if is_idv_updated:
+                stats['individual']['update_count'] += 1
 
+            # ------------------------------
+            # Subject: We map the external_subject_id to the subject_id in the model
+            # ------------------------------
+            subject, is_sub_created, is_sub_updated = Subject.objects.update_or_create_if_needed(
+                search_key={"subject_id": record.get('external_subject_id')},
+                data={
+                    "subject_id": record.get('external_subject_id'),
+                }
+            )
+
+            if is_sub_created:
+                stats['subject']['create_count'] += 1
+            if is_sub_updated:
+                stats['subject']['update_count'] += 1
+
+            # link individual to external subject
+            try:
+                subject.individual_set.get(orcabus_id=idv.orcabus_id)
+            except ObjectDoesNotExist:
+                subject.individual_set.add(idv)
+
+                # We update the stats when new idv is linked to sbj, only if this is not recorded as
+                # update/create in previous upsert method
+                if not is_sub_created and not is_sub_updated:
+                    stats['subject']['update_count'] += 1
+
+            # ------------------------------
+            # Sample
+            # ------------------------------
             sample, is_smp_created, is_smp_updated = Sample.objects.update_or_create_if_needed(
                 search_key={"sample_id": record.get('sample_id')},
                 data={
@@ -86,25 +146,43 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
                 }
             )
             if is_smp_created:
-                sample_created.append(sample)
+                stats['sample']['create_count'] += 1
             if is_smp_updated:
-                sample_updated.append(sample)
+                stats['sample']['create_update'] += 1
 
-            contact, _is_cnt_created, _is_cnt_updated = Contact.objects.update_or_create_if_needed(
+            # ------------------------------
+            # Contact
+            # ------------------------------
+            contact, _is_ctc_created, _is_ctc_updated = Contact.objects.update_or_create_if_needed(
                 search_key={"contact_id": record.get('project_owner')},
                 data={
                     "contact_id": record.get('project_owner'),
                 }
             )
 
-            project, _is_prj_created, _is_prj_updated = Project.objects.update_or_create_if_needed(
+            # ------------------------------
+            # Project: Upsert project with contact as part of the project
+            # ------------------------------
+            project, is_prj_created, is_prj_updated = Project.objects.update_or_create_if_needed(
                 search_key={"project_id": record.get('project_name')},
                 data={
                     "project_id": record.get('project_name'),
-                    "contact_id": contact.orcabus_id,
                 }
             )
+            # link project to its contact
+            try:
+                project.contact_set.get(orcabus_id=contact.orcabus_id)
+            except ObjectDoesNotExist:
+                project.contact_set.add(contact)
 
+                # We update the stats when new ctc is linked to prj, only if this is not recorded as
+                # update/create in previous upsert method
+                if not is_prj_created and not is_prj_updated:
+                    stats['project']['update_count'] += 1
+
+            # ------------------------------
+            # Library: Upsert library record with related sample, subject, project
+            # ------------------------------
             library, is_lib_created, is_lib_updated = Library.objects.update_or_create_if_needed(
                 search_key={"library_id": record.get('library_id')},
                 data={
@@ -119,44 +197,35 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
                     # relationships
                     'sample_id': sample.orcabus_id,
                     'subject_id': subject.orcabus_id,
-                    'project_id': project.orcabus_id,
-
                 }
             )
             if is_lib_created:
-                library_created.append(library)
+                stats['library']['create_count'] += 1
             if is_lib_updated:
-                library_updated.append(library)
+                stats['library']['update_count'] += 1
+
+            # link library to its project
+            try:
+                library.project_set.get(orcabus_id=project.orcabus_id)
+            except ObjectDoesNotExist:
+                library.project_set.add(project)
+
+                # We update the stats when new project is linked to library, only if this is not recorded as
+                # update/create in previous upsert method
+                if not is_lib_created and not is_lib_updated:
+                    stats['library']['update_count'] += 1
 
         except Exception as e:
-            if any(record.values()):  # silent off blank row
-                print(f"Invalid record ({e}): {json.dumps(record, indent=2)}")
-                rows_invalid.append(record)
+            if any(record.values()):
+                logger.warning(f"Invalid record ({e}): {json.dumps(record, indent=2)}")
+                stats['invalid_record_count'] += 1
             continue
 
     # clean up history for django-simple-history model if any
-    clean_model_history()
+    # Only clean for the past 15 minutes as this is what the maximum lambda cutoff
+    clean_model_history(minutes=15)
 
-    return {
-        "library": {
-            "new_count": len(library_created),
-            "update_count": len(library_updated),
-            "delete_count": len(library_deleted)
-        },
-        "sample": {
-            "new_count": len(sample_created),
-            "update_count": len(sample_updated),
-            "delete_count": len(sample_deleted)
-
-        },
-        "subject": {
-            "new_count": len(subject_created),
-            "update_count": len(subject_updated),
-            "delete_count": len(subject_deleted)
-
-        },
-        'invalid_record_count': len(rows_invalid),
-    }
+    return stats
 
 
 def download_tracking_sheet(year: str) -> pd.DataFrame:

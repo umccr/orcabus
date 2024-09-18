@@ -1,25 +1,18 @@
 from drf_spectacular.utils import extend_schema
-from rest_framework import filters
-
 from app.models import Library
 from app.serializers.library import LibrarySerializer
-from app.pagination import StandardResultsSetPagination
 
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from .base import BaseViewSet
 
 
-class LibraryViewSet(ReadOnlyModelViewSet):
-    lookup_value_regex = "[^/]+"
+class LibraryViewSet(BaseViewSet):
     serializer_class = LibrarySerializer
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    ordering_fields = "__all__"
-    ordering = ["-orcabus_id"]
     search_fields = Library.get_base_fields()
-    queryset = Library.objects.none()
+    queryset = Library.objects.select_related('sample').select_related('subject').prefetch_related('project_set').all()
+    orcabus_id_prefix = Library.orcabus_id_prefix
 
     def get_queryset(self):
-        qs = Library.objects.all()
+        qs = self.queryset
         query_params = self.request.query_params.copy()
 
         coverage__lte = query_params.get("coverage__lte", None)
@@ -33,12 +26,10 @@ class LibraryViewSet(ReadOnlyModelViewSet):
             qs = qs.filter(coverage__gte=coverage__gte)
 
         # Continue filtering by the keys inside the library model
-        return Library.objects.get_model_fields_query(qs, **query_params)
+        return Library.objects.get_by_keyword(qs, **query_params)
 
     @extend_schema(parameters=[
         LibrarySerializer
     ])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
-
-

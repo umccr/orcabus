@@ -32,9 +32,8 @@ class SampleManager(BaseManager):
 
 
 class Sample(BaseModel):
-    orcabus_id_prefix = 'smp'
+    orcabus_id_prefix = 'smp.'
     objects = SampleManager()
-    history = HistoricalRecords()
 
     sample_id = models.CharField(
         unique=True,
@@ -47,7 +46,5 @@ class Sample(BaseModel):
     )
     source = models.CharField(choices=Source.choices, blank=True, null=True)
 
-    def save(self, *args, **kwargs):
-        if not self.orcabus_id:
-            self.orcabus_id = self.orcabus_id_prefix + '.' + ulid.new().str
-        super().save(*args, **kwargs)
+    # history
+    history = HistoricalRecords()

@@ -1,9 +1,10 @@
-from rest_framework import serializers
-
 from app.models import Contact
+from .base import SerializersBase
 
 
-class ContactSerializer(serializers.ModelSerializer):
+class ContactSerializer(SerializersBase):
+    prefix = Contact.orcabus_id_prefix
+
     class Meta:
         model = Contact
         fields = "__all__"

@@ -5,3 +5,4 @@ from .sample import Sample
 from .subject import Subject
 from .contact import Contact
 from .project import Project
+from .individual import Individual

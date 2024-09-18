@@ -1,6 +1,5 @@
 import logging
 
-import ulid
 from django.db import models
 from simple_history.models import HistoricalRecords
 
@@ -56,9 +55,8 @@ class LibraryManager(BaseManager):
 
 
 class Library(BaseModel):
-    orcabus_id_prefix = 'lib'
+    orcabus_id_prefix = 'lib.'
     objects = LibraryManager()
-    history = HistoricalRecords()
 
     library_id = models.CharField(
         unique=True,
@@ -97,9 +95,7 @@ class Library(BaseModel):
     # Relationships
     sample = models.ForeignKey(Sample, on_delete=models.SET_NULL, blank=True, null=True)
     subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True)
-    project = models.ForeignKey(Project, on_delete=models.SET_NULL, blank=True, null=True)
+    project_set = models.ManyToManyField(Project, related_name='library_set', blank=True, null=True)
 
-    def save(self, *args, **kwargs):
-        if not self.orcabus_id:
-            self.orcabus_id = self.orcabus_id_prefix + '.' + ulid.new().str
-        super().save(*args, **kwargs)
+    # history
+    history = HistoricalRecords(m2m_fields=[project_set])

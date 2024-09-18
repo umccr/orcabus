@@ -1,12 +1,16 @@
-from app.models import Subject, Specimen, Library
-from app.tests.factories import LibraryFactory, SubjectFactory, SpecimenFactory
+from app.models import Subject, Sample, Library, Project, Contact, Individual
+from app.tests.factories import LibraryFactory, IndividualFactory, SubjectFactory, SampleFactory, \
+    ProjectFactory, ContactFactory
 
 
 def clear_all_data():
     """This function clear all existing models objcet"""
     Library.objects.all().delete()
-    Specimen.objects.all().delete()
+    Sample.objects.all().delete()
     Subject.objects.all().delete()
+    Project.objects.all().delete()
+    Contact.objects.all().delete()
+    Individual.objects.all().delete()
 
 
 def insert_mock_1():
@@ -16,12 +20,18 @@ def insert_mock_1():
     clear_all_data()
 
     library = LibraryFactory()
-    specimen = SpecimenFactory()
+    sample = SampleFactory()
     subject = SubjectFactory()
+    contact = ContactFactory()
+    project = ProjectFactory()
+    individual = IndividualFactory()
 
     # Linking
-    library.specimen = specimen
+    project.contact_set.add(contact)
+    library.sample = sample
+    library.subject = subject
+    library.project_set.add(project)
     library.save()
 
-    specimen.subject = subject
-    specimen.save()
+    subject.individual_set.add(individual)
+    subject.save()
