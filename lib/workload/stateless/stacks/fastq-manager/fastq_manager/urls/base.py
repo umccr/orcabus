@@ -4,7 +4,7 @@ from fastq_manager.routers import OptionalSlashDefaultRouter
 from fastq_manager.viewsets.fastq_pair import FastqPairViewSet
 from fastq_manager.settings.base import API_VERSION
 
-api_namespace = "fastq"
+api_namespace = "api"
 api_version = API_VERSION
 api_base = f"{api_namespace}/{api_version}/"
 
