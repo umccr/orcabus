@@ -29,6 +29,15 @@ conda create -n hello-manager python=3.12
 conda activate hello-manager
 ```
 
+### DB setup
+
+- Add database config to `../../../../../shared/init-db.sql` for centralised DB setup 
+```
+CREATE ROLE hello_manager;
+CREATE DATABASE hello_manager OWNER hello_manager;
+```
+
+
 ### Make
 
 - At app root, perform
@@ -109,17 +118,17 @@ python manage.py runserver_plus
 ```
 
 ```
-curl -s http://localhost:8000/hlo/v1/hello | jq
+curl -s http://localhost:8000/api/v1/hello | jq
 ```
 
 ```
-curl -s http://localhost:8000/hlo/v1/hello/1 | jq
+curl -s http://localhost:8000/api/v1/hello/1 | jq
 ```
 
 Or visit in browser:
-- http://localhost:8000/hlo/v1
-- http://localhost:8000/hlo/v1/hello
-- http://localhost:8000/hlo/v1/hello/1
+- http://localhost:8000/api/v1
+- http://localhost:8000/api/v1/hello
+- http://localhost:8000/api/v1/hello/1
 
 ### API Doc
 
