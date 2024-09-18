@@ -76,6 +76,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     # The data frame is to be the source of truth for the particular year
     # So we need to remove db records which are not in the data frame
     # Only doing this for library records and (dangling) sample/subject may be removed on a separate process
+    # Note: We do not remove many-to-many relationships if current df has changed
 
     # For the library_id we need craft the library_id prefix to match the year
     # E.g. year 2024, library_id prefix is 'L24' as what the Lab tracking sheet convention
