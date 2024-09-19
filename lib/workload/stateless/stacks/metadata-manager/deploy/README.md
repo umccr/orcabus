@@ -58,3 +58,35 @@ aws lambda invoke \
   --cli-binary-format raw-in-base64-out \
   res.json
 ```
+
+### CustomCsvLambda
+
+- Load tracking sheet data from csv presigned url
+
+To manually trigger the sync, the lambda ARN is stored in the SSM Parameter Store named
+`/orcabus/metadata-manager/load-custom-csv-lambda-arn`.
+
+To query in a local terminal
+
+```sh
+load_custom_csv_lambda_arn=$(aws ssm get-parameter --name '/orcabus/metadata-manager/load-custom-csv-lambda-arn' --with-decryption | jq -r .Parameter.Value)
+```
+
+The lambda handler will accept a json which only accepts a single key `url` which is the presigned url of the csv file.
+
+```json
+{
+  "url": "https://example.com/csv"
+}
+```
+
+Invoking lambda cmd:
+
+```sh
+aws lambda invoke \
+  --function-name load_custom_csv_lambda_arn \
+  --invocation-type Event \
+  --payload '{ "url": "https://the.url.csv" }' \
+  --cli-binary-format raw-in-base64-out \
+  res.json
+```

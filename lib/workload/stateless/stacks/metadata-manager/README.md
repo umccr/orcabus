@@ -61,7 +61,7 @@ on the model of the record.
 
 ## How things work
 
-### How Syncing The Data Works
+### How Tracking Sheet Syncing Works
 
 In the near future, we might introduce different ways to load data into the application. For the time being, we are
 loading data
@@ -99,6 +99,18 @@ Some important notes of the sync:
 5. The sync happens every night periodically. See `./deploy/README.md` for more info.
 
 Please refer to the [tracking-sheet-service](proc/service/tracking_sheet_srv.py) implementation.
+
+### Loading from external csv
+
+The Metadata Manager has the capability to import metadata from an external CSV file. This CSV file should follow the 
+same mapping structure as specified in the tracking sync process. The loading operation utilizes a presigned URL, which 
+is subsequently used to load the data into the Metadata Manager. Not all header should be present in the CSV file, but 
+the required fields are:
+
+- `library_id`
+- `subject_id`
+
+To trigger this operation, trigger from the lambda specified in `./deploy/README.md`.
 
 ### Audit Data
 
