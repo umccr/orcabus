@@ -95,7 +95,7 @@ class Library(BaseModel):
     # Relationships
     sample = models.ForeignKey(Sample, on_delete=models.SET_NULL, blank=True, null=True)
     subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True)
-    project_set = models.ManyToManyField(Project, related_name='library_set', blank=True, null=True)
+    project_set = models.ManyToManyField(Project, related_name='library_set', blank=True)
 
     # history
     history = HistoricalRecords(m2m_fields=[project_set])

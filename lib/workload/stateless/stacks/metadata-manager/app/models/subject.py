@@ -18,7 +18,7 @@ class Subject(BaseModel):
     )
 
     # Relationships
-    individual_set = models.ManyToManyField('Individual', related_name='subject_set', blank=True, )
+    individual_set = models.ManyToManyField('Individual', related_name='subject_set', blank=True)
 
     # history
     history = HistoricalRecords(m2m_fields=[individual_set])
