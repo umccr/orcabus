@@ -38,6 +38,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     logger.info(f"Start processing LabMetadata")
 
     # Used for statistics
+    invalid_data = []
     stats = {
         "library": {
             "create_count": 0,
@@ -149,17 +150,21 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
             if is_smp_created:
                 stats['sample']['create_count'] += 1
             if is_smp_updated:
-                stats['sample']['create_update'] += 1
+                stats['sample']['update_count'] += 1
 
             # ------------------------------
             # Contact
             # ------------------------------
-            contact, _is_ctc_created, _is_ctc_updated = Contact.objects.update_or_create_if_needed(
+            contact, is_ctc_created, is_ctc_updated = Contact.objects.update_or_create_if_needed(
                 search_key={"contact_id": record.get('project_owner')},
                 data={
                     "contact_id": record.get('project_owner'),
                 }
             )
+            if is_ctc_created:
+                stats['contact']['create_count'] += 1
+            if is_ctc_updated:
+                stats['contact']['update_count'] += 1
 
             # ------------------------------
             # Project: Upsert project with contact as part of the project
@@ -170,6 +175,11 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
                     "project_id": record.get('project_name'),
                 }
             )
+            if is_prj_created:
+                stats['project']['create_count'] += 1
+            if is_prj_updated:
+                stats['project']['update_count'] += 1
+
             # link project to its contact
             try:
                 project.contact_set.get(orcabus_id=contact.orcabus_id)
@@ -218,14 +228,19 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
 
         except Exception as e:
             if any(record.values()):
-                logger.warning(f"Invalid record ({e}): {json.dumps(record, indent=2)}")
                 stats['invalid_record_count'] += 1
+                invalid_data.append({
+                    "reason": e,
+                    "data": record
+                })
             continue
 
     # clean up history for django-simple-history model if any
     # Only clean for the past 15 minutes as this is what the maximum lambda cutoff
     clean_model_history(minutes=15)
 
+    logger.warning(f"Invalid record: {invalid_data}")
+    logger.info(f"Processed LabMetadata: {json.dumps(stats)}")
     return stats
 
 

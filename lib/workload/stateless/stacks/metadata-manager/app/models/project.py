@@ -29,7 +29,7 @@ class Project(BaseModel):
     )
 
     # Relationships
-    contact_set = models.ManyToManyField(Contact, related_name='project_set', blank=True, null=True)
+    contact_set = models.ManyToManyField(Contact, related_name='project_set', blank=True, )
 
     # history
     history = HistoricalRecords(m2m_fields=[contact_set])
