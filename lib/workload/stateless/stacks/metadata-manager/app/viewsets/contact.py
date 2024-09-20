@@ -1,17 +1,15 @@
 from drf_spectacular.utils import extend_schema
-from rest_framework import filters
 
 from app.models import Contact
-from app.serializers.contact import ContactSerializer
-from app.pagination import StandardResultsSetPagination
+from app.serializers.contact import ContactSerializer, ContactDetailSerializer
 
 from .base import BaseViewSet
 
 
 class ContactViewSet(BaseViewSet):
-    serializer_class = ContactSerializer
+    serializer_class = ContactDetailSerializer
     search_fields = Contact.get_base_fields()
-    queryset = Contact.objects.all()
+    queryset = Contact.objects.prefetch_related('project_set').all()
     orcabus_id_prefix = Contact.orcabus_id_prefix
 
     @extend_schema(parameters=[

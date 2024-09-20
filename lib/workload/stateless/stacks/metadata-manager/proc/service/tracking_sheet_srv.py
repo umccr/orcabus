@@ -2,6 +2,7 @@ import os
 import json
 
 import pandas as pd
+import numpy as np
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
@@ -11,7 +12,7 @@ from libumccr.aws import libssm
 import logging
 
 from app.models import Subject, Sample, Library, Project, Contact, Individual
-from app.models.library import Quality, LibraryType, Phenotype, WorkflowType, sanitize_library_coverage
+from app.models.library import Quality, LibraryType, Phenotype, WorkflowType
 from app.models.sample import Source
 from app.models.utils import get_value_from_human_readable_label
 from proc.service.utils import clean_model_history
@@ -204,6 +205,8 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
                     'coverage': sanitize_library_coverage(record.get('coverage')),
 
                     # relationships
+                    # Although we override the db_column to {MODEL}_orcabus_id, django will still default to {MODEL}_id
+                    # for foreign key id
                     'sample_id': sample.orcabus_id,
                     'subject_id': subject.orcabus_id,
                 }
@@ -237,7 +240,9 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     # Only clean for the past 15 minutes as this is what the maximum lambda cutoff
     clean_model_history(minutes=15)
 
-    logger.warning(f"Invalid record: {invalid_data}")
+    if len(invalid_data) > 0:
+        logger.warning(f"Invalid record: {invalid_data}")
+
     logger.info(f"Processed LabMetadata: {json.dumps(stats)}")
     return stats
 

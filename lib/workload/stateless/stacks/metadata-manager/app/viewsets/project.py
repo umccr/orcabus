@@ -1,13 +1,13 @@
 from drf_spectacular.utils import extend_schema
 
 from app.models import Project
-from app.serializers.project import ProjectSerializer
+from app.serializers.project import ProjectDetailSerializer, ProjectSerializer
 
 from .base import BaseViewSet
 
 
 class ProjectViewSet(BaseViewSet):
-    serializer_class = ProjectSerializer
+    serializer_class = ProjectDetailSerializer
     search_fields = Project.get_base_fields()
     queryset = Project.objects.prefetch_related("contact_set").all()
 

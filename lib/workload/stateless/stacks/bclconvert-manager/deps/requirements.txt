@@ -4,3 +4,4 @@ wrapica==2.27.1.post20240830140737
 xmltodict==0.13.0
 mypy_boto3_ssm>=1.16.0
 mypy_boto3_secretsmanager>=1.16.0
+more-itertools>=10.3.0

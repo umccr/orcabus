@@ -67,3 +67,16 @@ class StateModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = State
         fields = '__all__'
+
+class WorkflowRunCountByStatusSerializer(serializers.Serializer):
+    all = serializers.IntegerField()
+    succeeded = serializers.IntegerField()
+    aborted = serializers.IntegerField()
+    failed = serializers.IntegerField()
+    ongoing = serializers.IntegerField()
+
+    def update(self, instance, validated_data):
+        pass
+
+    def create(self, validated_data):
+        pass

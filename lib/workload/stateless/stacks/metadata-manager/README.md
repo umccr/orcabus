@@ -100,18 +100,6 @@ Some important notes of the sync:
 
 Please refer to the [tracking-sheet-service](proc/service/tracking_sheet_srv.py) implementation.
 
-### Loading from external csv
-
-The Metadata Manager has the capability to import metadata from an external CSV file. This CSV file should follow the 
-same mapping structure as specified in the tracking sync process. The loading operation utilizes a presigned URL, which 
-is subsequently used to load the data into the Metadata Manager. Not all header should be present in the CSV file, but 
-the required fields are:
-
-- `library_id`
-- `subject_id`
-
-To trigger this operation, trigger from the lambda specified in `./deploy/README.md`.
-
 ### Audit Data
 
 The application is configured with [django-simple-history](https://django-simple-history.readthedocs.io/en/latest/)

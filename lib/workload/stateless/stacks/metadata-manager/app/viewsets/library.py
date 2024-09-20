@@ -1,12 +1,12 @@
 from drf_spectacular.utils import extend_schema
 from app.models import Library
-from app.serializers.library import LibrarySerializer
+from app.serializers.library import LibrarySerializer, LibraryDetailSerializer
 
 from .base import BaseViewSet
 
 
 class LibraryViewSet(BaseViewSet):
-    serializer_class = LibrarySerializer
+    serializer_class = LibraryDetailSerializer
     search_fields = Library.get_base_fields()
     queryset = Library.objects.select_related('sample').select_related('subject').prefetch_related('project_set').all()
     orcabus_id_prefix = Library.orcabus_id_prefix
