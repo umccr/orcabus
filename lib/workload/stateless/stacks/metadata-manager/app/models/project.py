@@ -10,6 +10,16 @@ class ProjectManager(BaseManager):
     pass
 
 
+class ProjectContactLink(models.Model):
+    """
+    This is just a many-many link between Project and Contact. We need to create this model so we could override the
+    'db_column' field for the foreign keys. This make it less confusion between the 'project_id' and 'orcabus_id'
+    in the schema.
+    """
+    project = models.ForeignKey('Project', on_delete=models.CASCADE, db_column='project_orcabus_id')
+    contact = models.ForeignKey('Contact', on_delete=models.CASCADE, db_column='contact_orcabus_id')
+
+
 class Project(BaseModel):
     orcabus_id_prefix = 'prj.'
     objects = ProjectManager()
@@ -29,7 +39,8 @@ class Project(BaseModel):
     )
 
     # Relationships
-    contact_set = models.ManyToManyField(Contact, related_name='project_set', blank=True)
+    contact_set = models.ManyToManyField(Contact, through=ProjectContactLink, related_name='project_set',
+                                         blank=True)
 
     # history
     history = HistoricalRecords(m2m_fields=[contact_set])

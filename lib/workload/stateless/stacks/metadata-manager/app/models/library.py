@@ -54,6 +54,16 @@ class LibraryManager(BaseManager):
     pass
 
 
+class LibraryProjectLink(models.Model):
+    """
+    This is just a many-many link between Library and Project. We need to create this model so we could override the
+    'db_column' field for the foreign keys. This make it less confusion between the 'project_id' and 'orcabus_id'
+    in the schema.
+    """
+    library = models.ForeignKey('Library', on_delete=models.CASCADE, db_column='library_orcabus_id')
+    project = models.ForeignKey('Project', on_delete=models.CASCADE, db_column='project_orcabus_id')
+
+
 class Library(BaseModel):
     orcabus_id_prefix = 'lib.'
     objects = LibraryManager()
@@ -93,9 +103,12 @@ class Library(BaseModel):
     )
 
     # Relationships
-    sample = models.ForeignKey(Sample, on_delete=models.SET_NULL, blank=True, null=True)
-    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True)
-    project_set = models.ManyToManyField(Project, related_name='library_set', blank=True)
+    sample = models.ForeignKey(Sample, on_delete=models.SET_NULL, blank=True, null=True,
+                               db_column='sample_orcabus_id', related_query_name='sample_orcabus_id')
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True,
+                                db_column='subject_orcabus_id', related_query_name='subject_orcabus_id')
+    project_set = models.ManyToManyField(Project, through=LibraryProjectLink, related_name='library_set',
+                                         blank=True)
 
     # history
     history = HistoricalRecords(m2m_fields=[project_set])
