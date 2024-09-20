@@ -112,3 +112,16 @@ class Library(BaseModel):
 
     # history
     history = HistoricalRecords(m2m_fields=[project_set])
+
+
+def sanitize_library_coverage(value: str):
+    """
+    convert value that is valid in the tracking sheet to return a value that is recognizable by the Django Model
+    """
+    try:
+        # making coverage is float-able type
+        lib_coverage = float(value)
+        return f'{lib_coverage}'
+
+    except (ValueError, TypeError):
+        return None

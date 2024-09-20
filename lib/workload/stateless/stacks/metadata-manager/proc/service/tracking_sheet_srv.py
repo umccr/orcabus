@@ -1,9 +1,7 @@
 import os
-import re
 import json
 
 import pandas as pd
-import numpy as np
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
@@ -13,10 +11,10 @@ from libumccr.aws import libssm
 import logging
 
 from app.models import Subject, Sample, Library, Project, Contact, Individual
-from app.models.library import Quality, LibraryType, Phenotype, WorkflowType
+from app.models.library import Quality, LibraryType, Phenotype, WorkflowType, sanitize_library_coverage
 from app.models.sample import Source
 from app.models.utils import get_value_from_human_readable_label
-from proc.service.utils import clean_model_history
+from proc.service.utils import clean_model_history, sanitize_lab_metadata_df
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -206,8 +204,6 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
                     'coverage': sanitize_library_coverage(record.get('coverage')),
 
                     # relationships
-                    # Although we override the db_column to {MODEL}_orcabus_id, django will still default to {MODEL}_id
-                    # for foreign key id
                     'sample_id': sample.orcabus_id,
                     'subject_id': subject.orcabus_id,
                 }
@@ -241,9 +237,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     # Only clean for the past 15 minutes as this is what the maximum lambda cutoff
     clean_model_history(minutes=15)
 
-    if len(invalid_data) > 0:
-        logger.warning(f"Invalid record: {invalid_data}")
-
+    logger.warning(f"Invalid record: {invalid_data}")
     logger.info(f"Processed LabMetadata: {json.dumps(stats)}")
     return stats
 
@@ -265,74 +259,3 @@ def download_tracking_sheet(year: str) -> pd.DataFrame:
     df: pd.DataFrame = pd.concat(frames)
     return df
 
-
-def sanitize_lab_metadata_df(df: pd.DataFrame):
-    """
-    sanitize record by renaming columns, and clean df cells
-    """
-
-    df = clean_columns(df)
-    df = df.map(_clean_data_cell)
-
-    # dropping any rows that library_id == ''
-    df = df.drop(df[df.library_id.isnull()].index, errors='ignore')
-
-    # dropping column that has empty column heading
-    df = df.drop('', axis='columns', errors='ignore')
-
-    df = df.reset_index(drop=True)
-    return df
-
-
-def warn_drop_duplicated_library(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    log warning messages if duplicated library_id found
-    """
-    # some warning for duplicates
-    dup_lib_list = df[df.duplicated(subset=['library_id'], keep='last')]["library_id"].tolist()
-    if len(dup_lib_list) > 0:
-        logger.warning(f"data contain duplicate libraries: {', '.join(dup_lib_list)}")
-
-    return df.drop_duplicates(subset=['library_id'], keep='last')
-
-
-def clean_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    clean a dataframe of labmetadata from a tracking sheet to correspond to the django object model
-    we do this by editing the columns to match the django object
-    """
-    # remove unnamed
-    df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-
-    # simplify verbose column names
-    df = df.rename(columns={'Coverage (X)': 'coverage', "TruSeq Index, unless stated": "truseqindex"})
-
-    # convert PascalCase headers to snake_case and fix ID going to _i_d
-    pattern = re.compile(r'(?<!^)(?=[A-Z])')
-    df = df.rename(columns=lambda x: pattern.sub('_', x).lower().replace('_i_d', '_id'))
-
-    return df
-
-
-def _clean_data_cell(value):
-    if isinstance(value, str):
-        value = value.strip()
-
-    # python NaNs are != to themselves
-    if value == 'NA' or value == '_' or value == '-' or value == '' or value != value or value == np.nan:
-        value = None
-
-    return value
-
-
-def sanitize_library_coverage(value: str):
-    """
-    convert value that is valid in the tracking sheet to return a value that is recognizable by the Django Model
-    """
-    try:
-        # making coverage is float-able type
-        lib_coverage = float(value)
-        return f'{lib_coverage}'
-
-    except (ValueError, TypeError):
-        return None
