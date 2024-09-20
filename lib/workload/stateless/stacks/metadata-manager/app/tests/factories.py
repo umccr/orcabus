@@ -1,18 +1,19 @@
 import factory
 
-from app.models import Subject, Specimen, Library
+from app.models import Subject, Sample, Library, Project, Contact, Individual
 
 INDIVIDUAL_1 = {
-    "individual_id": "I001"
+    "individual_id": "SBJ001",
+    "source": "lab"
 }
 
 SUBJECT_1 = {
-    "subject_id": "SBJ001",
-    "externalId": "EXTSUBIDA"
+    "subject_id": "XS-0001",
 }
 
-SPECIMEN_1 = {
-    "specimen_id": "PRJ001",
+SAMPLE_1 = {
+    "sample_id": "PRJ001",
+    "external_sample_id": "EXT_SPM_ID_A",
     "source": "FFPE"
 }
 
@@ -28,6 +29,24 @@ LIBRARY_1 = {
     'project_name': 'test_project'
 }
 
+PROJECT_1 = {
+    'project_id': 'prj-01',
+    'name': 'test_project'
+}
+
+CONTACT_1 = {
+    'contact_id': 'doe-01',
+    'name': 'doe',
+}
+
+
+class IndividualFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Individual
+
+    individual_id = INDIVIDUAL_1['individual_id']
+    source = INDIVIDUAL_1['source']
+
 
 class SubjectFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -36,12 +55,13 @@ class SubjectFactory(factory.django.DjangoModelFactory):
     subject_id = SUBJECT_1['subject_id']
 
 
-class SpecimenFactory(factory.django.DjangoModelFactory):
+class SampleFactory(factory.django.DjangoModelFactory):
     class Meta:
-        model = Specimen
+        model = Sample
 
-    specimen_id = SPECIMEN_1['specimen_id']
-    source = SPECIMEN_1['source']
+    sample_id = SAMPLE_1['sample_id']
+    external_sample_id = SAMPLE_1['external_sample_id']
+    source = SAMPLE_1['source']
 
 
 class LibraryFactory(factory.django.DjangoModelFactory):
@@ -55,3 +75,19 @@ class LibraryFactory(factory.django.DjangoModelFactory):
     type = LIBRARY_1["type"]
     assay = LIBRARY_1["assay"]
     coverage = LIBRARY_1["coverage"]
+
+
+class ProjectFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Project
+
+    project_id = PROJECT_1['project_id']
+    name = PROJECT_1['name']
+
+
+class ContactFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Contact
+
+    contact_id = CONTACT_1['contact_id']
+    name = CONTACT_1['name']
