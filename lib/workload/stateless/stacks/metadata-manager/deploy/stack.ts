@@ -83,7 +83,7 @@ export class MetadataManagerStack extends Stack {
     // 1. To handle API calls
     // 2. To do migrations
     // 3. To sync db with external sources (e.g. metadata in gsheet)
-	  // 4. To load-db from external csv presigned url file
+    // 4. To load-db from external csv presigned url file
 
     // (1)
     new LambdaAPIConstruct(this, 'APILambda', {
@@ -111,6 +111,5 @@ export class MetadataManagerStack extends Stack {
       basicLambdaConfig: basicLambdaConfig,
       dbConnectionSecret: dbSecret,
     });
-
   }
 }
