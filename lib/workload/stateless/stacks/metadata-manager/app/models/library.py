@@ -104,9 +104,9 @@ class Library(BaseModel):
 
     # Relationships
     sample = models.ForeignKey(Sample, on_delete=models.SET_NULL, blank=True, null=True,
-                               db_column='sample_orcabus_id', related_query_name='sample_orcabus_id')
+                               db_column='sample_orcabus_id')
     subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True,
-                                db_column='subject_orcabus_id', related_query_name='subject_orcabus_id')
+                                db_column='subject_orcabus_id')
     project_set = models.ManyToManyField(Project, through=LibraryProjectLink, related_name='library_set',
                                          blank=True)
 
