@@ -67,18 +67,18 @@ def load_metadata_csv(df: pd.DataFrame):
             # ------------------------------
             idv = None
             individual_id = record.get('individual_id')
-            source = record.get('source')
+            idv_source = record.get('individual_id_source')
 
-            if individual_id and source:
+            if individual_id and idv_source:
 
                 idv, is_idv_created, is_idv_updated = Individual.objects.update_or_create_if_needed(
                     search_key={
                         "individual_id": individual_id,
-                        "source": source
+                        "source": idv_source
                     },
                     data={
                         "individual_id": individual_id,
-                        "source": source
+                        "source": idv_source
                     }
                 )
                 if is_idv_created:
@@ -124,7 +124,7 @@ def load_metadata_csv(df: pd.DataFrame):
                 sample, is_smp_created, is_smp_updated = Sample.objects.update_or_create_if_needed(
                     search_key={"sample_id": sample_id},
                     data={
-                        "sample_id": record.get('sample_id'),
+                        "sample_id": sample_id,
                         "external_sample_id": record.get('external_sample_id'),
                         "source": get_value_from_human_readable_label(Source.choices, record.get('source')),
                     }
@@ -142,9 +142,9 @@ def load_metadata_csv(df: pd.DataFrame):
 
             if contact_id:
                 contact, is_ctc_created, is_ctc_updated = Contact.objects.update_or_create_if_needed(
-                    search_key={"contact_id": record.get('project_owner')},
+                    search_key={"contact_id": contact_id},
                     data={
-                        "contact_id": record.get('project_owner'),
+                        "contact_id": contact_id,
                     }
                 )
                 if is_ctc_created:
@@ -160,9 +160,9 @@ def load_metadata_csv(df: pd.DataFrame):
             project_id = record.get('project_name')
             if project_id:
                 project, is_prj_created, is_prj_updated = Project.objects.update_or_create_if_needed(
-                    search_key={"project_id": record.get('project_name')},
+                    search_key={"project_id":project_id},
                     data={
-                        "project_id": record.get('project_name'),
+                        "project_id": project_id,
                     }
                 )
                 if is_prj_created:
