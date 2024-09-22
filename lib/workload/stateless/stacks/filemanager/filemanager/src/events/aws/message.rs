@@ -72,7 +72,7 @@ impl From<EventTypeData> for EventTypeDeleteMarker {
                     .is_some_and(|d| d.contains("Delete Marker Created")))
                 || e.contains("ObjectRemoved:DeleteMarkerCreated") =>
             {
-                Self::new(EventType::Created, true)
+                Self::new(EventType::Deleted, true)
             }
             // Regular deleted event.
             e if e.contains("Object Deleted") || e.contains("ObjectRemoved") => {
@@ -347,7 +347,7 @@ mod tests {
 
         assert_flat_s3_event(
             first_message,
-            &Created,
+            &Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
@@ -369,7 +369,7 @@ mod tests {
 
         assert_flat_s3_event(
             first_message,
-            &Created,
+            &Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),

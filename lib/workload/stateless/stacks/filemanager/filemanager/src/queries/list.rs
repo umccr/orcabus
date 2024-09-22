@@ -178,7 +178,7 @@ where
     ///     select distinct on (bucket, key, version_id) * from s3_object
     ///     order by bucket, key, version_id, sequencer desc
     /// ) as s3_object
-    /// where event_type = 'Created';
+    /// where event_type = 'Created' and is_delete_marker = false;
     /// ```
     ///
     /// This finds all distinct objects within a (bucket, key, version_id) grouping such that they
@@ -205,7 +205,8 @@ where
         QuerySelect::query(&mut self.select)
             .from_clear()
             .from_subquery(subquery, Alias::new("s3_object"))
-            .and_where(s3_object::Column::EventType.eq("Created"));
+            .and_where(s3_object::Column::EventType.eq("Created"))
+            .and_where(s3_object::Column::IsDeleteMarker.eq(false));
 
         self.trace_query("current_state");
 
