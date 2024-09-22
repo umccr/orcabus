@@ -379,20 +379,16 @@ def handler(event, context):
         tso500l_settings = deepcopy(V2_TSO500L_SETTINGS)
 
     # Set the tso500l data
-    tso500l_data = list(
-        map(
-            lambda bclconvert_data_row: {
-                "sample_id": bclconvert_data_row.get("sample_id"),
-                "sample_type": TSO500L_SAMPLE_TYPE,
-                "lane": bclconvert_data_row.get("lane"),
-                "index": bclconvert_data_row.get("index"),
-                "index2": bclconvert_data_row.get("index2"),
-                "i7_index_id": get_cttso_i7_index_id_from_index(bclconvert_data_row.get("index")),
-                "i5_index_id": get_cttso_i5_index_id_from_index(bclconvert_data_row.get("index2")),
-            },
-            bclconvert_data_rows
-        )
-    )
+    tso500l_data = [
+        {
+            "sample_id": bclconvert_data_rows[0].get("sample_id"),
+            "sample_type": TSO500L_SAMPLE_TYPE,
+            "index": bclconvert_data_rows[0].get("index"),
+            "index2": bclconvert_data_rows[0].get("index2"),
+            "i7_index_id": get_cttso_i7_index_id_from_index(bclconvert_data_rows[0].get("index")),
+            "i5_index_id": get_cttso_i5_index_id_from_index(bclconvert_data_rows[0].get("index2")),
+        }
+    ]
 
     return {
         "samplesheet": {

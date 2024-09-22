@@ -40,22 +40,21 @@ To query in a local terminal
 gsheet_sync_lambda_arn=$(aws ssm get-parameter --name '/orcabus/metadata-manager/sync-gsheet-lambda-arn' --with-decryption | jq -r .Parameter.Value)
 ```
 
-The lambda handler will accept an array of years from which sheet to run from the GSheet workbook. If no year is specified, it will run the current year.
+The lambda handler will accept a single year from which sheet to run from the GSheet workbook. If no year is specified, it will run the current year.
 
 ```json
 {
-  "year":["2024"]
+  "year": "2024"
 }
 ```
 
-Note that if you specify more than one year at a single invoke (e.g. `["2020", "2021"]`), there are high chances that lambda
-would timeout and the sync is not completed properly.
+Invoking lambda cmd:
 
 ```sh
 aws lambda invoke \
   --function-name $gsheet_sync_lambda_arn \
   --invocation-type Event \
-  --payload '{ "year": ["2024"] }' \
+  --payload '{ "year": "2024" }' \
   --cli-binary-format raw-in-base64-out \
   res.json
 ```

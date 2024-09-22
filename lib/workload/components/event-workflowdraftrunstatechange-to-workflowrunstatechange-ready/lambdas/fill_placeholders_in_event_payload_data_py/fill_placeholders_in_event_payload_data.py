@@ -243,35 +243,67 @@ def handler(event, context):
 # PRIMARY ANALYSIS TEST
 #########################
 
-if __name__ == '__main__':
-    import json
+## DEV
+# if __name__ == '__main__':
+#     import json
+#
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "portal_run_id": "20240530abcd1234",
+#                     "workflow_name": "bsshFastqCopy",
+#                     "workflow_version": "4.2.4",
+#                     "event_data_inputs": {
+#                         "instrumentRunId": "240229_7001234_1234_AHJLJLDS",
+#                     },
+#                     "engine_parameters": {
+#                         "outputUri": "icav2://development/primary_data/__instrument_run_id__/__portal_run_id__/",
+#                         "logsUri": "",
+#                         "cacheUri": ""
+#                     }
+#                 },
+#                 None
+#             ),
+#             indent=2
+#         )
+#     )
+#     # {
+#     #     "engine_parameters_updated": {
+#     #         "outputUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary_data/240229_7001234_1234_AHJLJLDS/20240530abcd1234/"
+#     #     }
+#     # }
 
-    print(
-        json.dumps(
-            handler(
-                {
-                    "portal_run_id": "20240530abcd1234",
-                    "workflow_name": "bsshFastqCopy",
-                    "workflow_version": "4.2.4",
-                    "event_data_inputs": {
-                        "instrumentRunId": "240229_7001234_1234_AHJLJLDS",
-                    },
-                    "engine_parameters": {
-                        "outputUri": "icav2://development/primary_data/__instrument_run_id__/__portal_run_id__/",
-                        "logsUri": "",
-                        "cacheUri": ""
-                    }
-                },
-                None
-            ),
-            indent=2
-        )
-    )
-    # {
-    #   "engine_parameters_updated": {
-    #     "outputUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/primary_data/240229_7001234_1234_AHJLJLDS/20240530abcd1234/"
-    #   }
-    # }
+## PROD
+# if __name__ == '__main__':
+#     import json
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "portal_run_id": "202409134661e8d7",
+#                     "workflow_version": "2024.05.24",
+#                     "workflow_name": "bsshFastqCopy",
+#                     "engine_parameters": {
+#                         "outputUri": "icav2://eba5c946-1677-441d-bbce-6a11baadecbb/primary/__instrument_run_id__/__portal_run_id__/"
+#                     },
+#                     "event_data_inputs": {
+#                         "bsshAnalysisId": "8569c8b4-83a7-46f9-bae1-c22025e86861",
+#                         "bsshProjectId": "9ec02c1f-53ba-47a5-854d-e6b53101adb7",
+#                         "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5"
+#                     }
+#                 },
+#                 None
+#             ),
+#             indent=2
+#         )
+#     )
+#
+#     {
+#         "engine_parameters_updated": {
+#             "outputUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/primary/240424_A01052_0193_BH7JMMDRX5/202409134661e8d7/"
+#         }
+#     }
 
 # #########################
 # # SECONDARY ANALYSIS TEST
@@ -290,8 +322,8 @@ if __name__ == '__main__':
 #                         "fastqListRows": ["foo", "bar"],
 #                     },
 #                     "engine_parameters": {
-#                         "outputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_data/__workflow_name__/__workflow_version__/__portal_run_id__/",
-#                         "logsUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_logs/__workflow_name__/__workflow_version__/__portal_run_id__/",
+#                         "outputUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/__workflow_name__/__workflow_version__/__portal_run_id__/",
+#                         "logsUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/analysis/__workflow_name__/__workflow_version__/__portal_run_id__/",
 #                     }
 #                 },
 #                 None
@@ -302,7 +334,7 @@ if __name__ == '__main__':
 #
 #     # {
 #     #   "engine_parameters_updated": {
-#     #     "outputUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_data/cttsov2/2-1-1/20240530abcd1234/",
-#     #     "logsUri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis_logs/cttsov2/2-1-1/20240530abcd1234/"
+#     #     "outputUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/2-1-1/20240530abcd1234/",
+#     #     "logsUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/2-1-1/20240530abcd1234/"
 #     #   }
 #     # }

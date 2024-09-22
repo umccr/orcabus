@@ -92,7 +92,7 @@ class State(OrcaBusBaseModel):
     id = models.BigAutoField(primary_key=True)
 
     # --- mandatory fields
-    workflow_run = models.ForeignKey(WorkflowRun, on_delete=models.CASCADE)
+    workflow_run = models.ForeignKey(WorkflowRun, related_name='states', on_delete=models.CASCADE)
     status = models.CharField(max_length=255)  # TODO: How and where to enforce conventions?
     timestamp = models.DateTimeField()
 
