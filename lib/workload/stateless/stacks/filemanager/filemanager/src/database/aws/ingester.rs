@@ -105,41 +105,17 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_object_created_delete_marker(pool: PgPool) {
-        let events: FlatS3EventMessages = FlatS3EventMessages::from(test_events_delete_marker())
-            .0
-            .into_iter()
-            .filter(|event| event.event_type == Created)
-            .collect();
+    async fn ingest_object_delete_marker(pool: PgPool) {
+        let events: FlatS3EventMessages = FlatS3EventMessages::from(test_events_delete_marker());
 
         let ingester = test_ingester(pool);
         ingester.ingest(S3(events.into())).await.unwrap();
 
         let s3_object_results = fetch_results(&ingester).await;
 
-        assert_eq!(s3_object_results.len(), 1);
-
-        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true, Created);
-        assert_row(
-            &s3_object_results[0],
-            message,
-            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
-            Some(Default::default()),
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_object_removed_delete_marker(pool: PgPool) {
-        let events = test_events_delete_marker();
-
-        let ingester = test_ingester(pool);
-        ingester.ingest(S3(events)).await.unwrap();
-
-        let s3_object_results = fetch_results(&ingester).await;
-
         assert_eq!(s3_object_results.len(), 2);
 
-        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true, Created);
+        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true, Deleted);
         assert_row(
             &s3_object_results[0],
             message,
