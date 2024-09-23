@@ -97,6 +97,7 @@ Some important notes of the sync:
    recent record is stored. For instance, if a SampleId appears twice with differing source values, only the values from
    the latter record will be retained.
 5. The sync happens every night periodically. See `./deploy/README.md` for more info.
+6. The sync will emit events to the event-bus when a library is being created/updated.
 
 Please refer to the [tracking-sheet-service](proc/service/tracking_sheet_srv.py) implementation.
 
