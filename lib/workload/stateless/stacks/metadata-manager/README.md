@@ -101,6 +101,33 @@ Some important notes of the sync:
 
 Please refer to the [tracking-sheet-service](proc/service/tracking_sheet_srv.py) implementation.
 
+### Custom CSV File Loader
+
+The application also supports loading data from a custom CSV file. The CSV file should have the following columns:
+
+| Sheet Header         | Table        | Field Name         |
+|----------------------|--------------|--------------------|
+| Individual_id        | `Individual` | individual_id      |
+| individual_id_source | `Individual` | subject_id         |
+| subject_id           | `Subject`    | subject_id         |
+| sample_id            | `Sample`     | sample_id          |
+| external_sample_id   | `Sample`     | external_sample_id |
+| source               | `Sample`     | source             |
+| library_id           | `Library`    | library_id         |
+| phenotype            | `Library`    | phenotype          |
+| workflow             | `Library`    | workflow           |
+| quality              | `Library`    | quality            |
+| type                 | `Library`    | type               |
+| coverage             | `Library`    | coverage           |
+| assay                | `Library`    | assay              |
+| project_name         | `Project`    | project_id         |
+| project_owner        | `Contact`    | contact_id         |
+
+The CSV file should be in a presigned URL format, where the loader will read and insert to the database.
+To trigger the loader please look at `./deploy/README.md` for more info.
+
+Please refer to the [load-csv-service](proc/service/load_csv_srv.py) implementation.
+
 ### Audit Data
 
 The application is configured with [django-simple-history](https://django-simple-history.readthedocs.io/en/latest/)
