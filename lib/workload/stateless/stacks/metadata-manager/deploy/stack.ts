@@ -30,6 +30,10 @@ export type MetadataManagerStackProps = {
    * API Gateway props
    */
   apiGatewayCognitoProps: ApiGatewayConstructProps;
+  /**
+   * API Gateway props
+   */
+  eventBusName: string;
 };
 
 export class MetadataManagerStack extends Stack {
@@ -104,12 +108,14 @@ export class MetadataManagerStack extends Stack {
       basicLambdaConfig: basicLambdaConfig,
       dbConnectionSecret: dbSecret,
       isDailySync: props.isDailySync,
+      eventBusName: props.eventBusName,
     });
 
     // (4)
     new LambdaLoadCustomCSVConstruct(this, 'CustomCsvLoaderLambda', {
       basicLambdaConfig: basicLambdaConfig,
       dbConnectionSecret: dbSecret,
+      eventBusName: props.eventBusName,
     });
   }
 }

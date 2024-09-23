@@ -16,7 +16,7 @@ from app.models.sample import Source
 from app.models.utils import get_value_from_human_readable_label
 from app.serializers import LibrarySerializer
 from proc.aws.event.event import MetadataStateChangeEvent
-from proc.service.utils import clean_model_history
+from proc.service.utils import clean_model_history, sanitize_lab_metadata_df
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -51,28 +51,23 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
         "sample": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
 
         },
         "subject": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
         },
         "individual": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
         },
         "project": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
         },
         "contact": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
         },
         'invalid_record_count': 0,
     }

@@ -94,11 +94,13 @@ RECORD_3 = {
 class TrackingSheetSrvUnitTests(TestCase):
 
     def setUp(self) -> None:
-        super(TrackingSheetSrvUnitTests, self).setUp()
-        libeb.dispatch_events = MagicMock()
+        super().setUp()
+        self._real_dispatch_events = libeb.dispatch_events
+        # libeb.dispatch_events = MagicMock()
 
     def tearDown(self) -> None:
-        super(TrackingSheetSrvUnitTests, self).tearDown()
+        libeb.dispatch_events = self._real_dispatch_events
+        super().tearDown()
 
     def test_persist_lab_metadata(self):
         """

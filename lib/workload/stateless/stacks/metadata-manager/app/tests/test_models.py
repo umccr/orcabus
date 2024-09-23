@@ -1,6 +1,6 @@
 import logging
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from django.test import TestCase
 
 from app.models import Subject, Sample, Library, Contact, Project, Individual
@@ -109,12 +109,13 @@ class ModelTestCase(TestCase):
         self.assertEqual(spc_two.source, new_spc_data['source'], "incorrect 'source' from new specimen id")
 
         # Test if no update called if no data has changed
-        Sample.objects.update_or_create = MagicMock(return_value=(None, False))
-        obj, is_created, is_updated = Sample.objects.update_or_create_if_needed(
-            {"sample_id": new_spc_data['sample_id']},
-            new_spc_data
-        )
-        Sample.objects.update_or_create.assert_not_called()
-        self.assertIsNotNone(obj, "object should not be None")
-        self.assertFalse(is_created, "object should not be created")
-        self.assertFalse(is_updated, "object should not be updated")
+        with patch.object(Sample.objects, 'update_or_create', return_value=(None, False)) as mock_update_or_create:
+            obj, is_created, is_updated = Sample.objects.update_or_create_if_needed(
+                {"sample_id": new_spc_data['sample_id']},
+                new_spc_data
+            )
+            mock_update_or_create.assert_not_called()
+            self.assertIsNotNone(obj, "object should not be None")
+            self.assertFalse(is_created, "object should not be created")
+            self.assertFalse(is_updated, "object should not be updated")
+

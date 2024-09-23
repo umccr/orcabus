@@ -76,7 +76,7 @@ insert-data:
 	@python manage.py insert_mock_data
 
 suite:
-	@python manage.py test --parallel
+	@python manage.py test
 
 # full mock suite test pipeline - install deps, bring up compose stack, run suite, bring down compose stack
 test: install up suite down

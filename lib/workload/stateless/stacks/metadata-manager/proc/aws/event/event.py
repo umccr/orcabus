@@ -14,12 +14,12 @@ class MetadataStateChangeEvent:
                  ref_id: str,
                  data: dict) -> None:
         self.event_bus_name = os.getenv('EVENT_BUS_NAME', '')
-        self.detail = {
+        self.detail = json.dumps({
             "action": action,
             "model": model,
             "ref_id": ref_id,
             "data": Marshaller.marshall(data)
-        }
+        })
 
     def __str__(self):
         return self.__dict__

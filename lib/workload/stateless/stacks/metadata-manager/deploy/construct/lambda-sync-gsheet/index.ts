@@ -4,7 +4,7 @@ import { Duration } from 'aws-cdk-lib';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
-import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
+import { Rule, Schedule, EventBus } from 'aws-cdk-lib/aws-events';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import {
   DockerImageFunction,
@@ -25,6 +25,10 @@ type LambdaProps = {
    * If the lambda should run daily sync
    */
   isDailySync: boolean;
+  /**
+   * The eventBusName to notify metadata state change
+   */
+  eventBusName: string;
 };
 
 export class LambdaSyncGsheetConstruct extends Construct {
@@ -41,6 +45,7 @@ export class LambdaSyncGsheetConstruct extends Construct {
         ...lambdaProps.basicLambdaConfig.environment,
         SSM_NAME_GDRIVE_ACCOUNT: this.GDRIVE_CRED_PARAM_NAME,
         SSM_NAME_TRACKING_SHEET_ID: this.GDRIVE_SHEET_ID_PARAM_NAME,
+        EVENT_BUS_NAME: lambdaProps.eventBusName,
       },
       securityGroups: lambdaProps.basicLambdaConfig.securityGroups,
       vpc: lambdaProps.basicLambdaConfig.vpc,
@@ -85,5 +90,9 @@ export class LambdaSyncGsheetConstruct extends Construct {
         targets: [gsheetSyncLambdaEventTarget],
       });
     }
+
+    // The lambda will need permission to put events to the event bus when metadata state change
+    const orcabusEventBus = EventBus.fromEventBusName(this, 'EventBus', lambdaProps.eventBusName);
+    orcabusEventBus.grantPutEventsTo(this.lambda);
   }
 }
