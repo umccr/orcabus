@@ -1,12 +1,12 @@
 import os
-from unittest.mock import MagicMock
-from typing import List
-
+import json
 import pandas as pd
 from libumccr.aws import libeb
-from django.test import TestCase
-from app.models import Library, Sample, Subject, Project, Contact, Individual
 
+from unittest.mock import MagicMock
+from django.test import TestCase
+
+from app.models import Library, Sample, Subject, Project, Contact, Individual
 from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata
 from .utils import check_put_event_entries_format, check_put_event_value, is_expected_event_in_output
 
@@ -347,7 +347,7 @@ class TrackingSheetSrvUnitTests(TestCase):
                                   )
         for event in expected_created_detail:
             self.assertTrue(
-                is_expected_event_in_output(self, expected=event, output=[i.get('Detail') for i in arg]))
+                is_expected_event_in_output(self, expected=event, output=[json.loads(i.get('Detail')) for i in arg]))
 
         """
         Test if record are UPDATE and event entries are correct
@@ -378,7 +378,8 @@ class TrackingSheetSrvUnitTests(TestCase):
                                   event_bus_name=TEST_EVENT_BUS_NAME
                                   )
         for event in expected_update_detail:
-            self.assertTrue(is_expected_event_in_output(self, expected=event, output=[i.get('Detail') for i in arg]))
+            self.assertTrue(
+                is_expected_event_in_output(self, expected=event, output=[json.loads(i.get('Detail')) for i in arg]))
 
         """
         Test if the record are DELETE and event entries are correct
@@ -405,5 +406,5 @@ class TrackingSheetSrvUnitTests(TestCase):
                                   event_bus_name=TEST_EVENT_BUS_NAME
                                   )
         for event in expected_delete_detail:
-            self.assertTrue(is_expected_event_in_output(self, expected=event, output=[i.get('Detail') for i in arg]))
-
+            self.assertTrue(
+                is_expected_event_in_output(self, expected=event, output=[json.loads(i.get('Detail')) for i in arg]))

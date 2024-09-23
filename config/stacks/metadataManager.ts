@@ -5,7 +5,7 @@ import {
   corsAllowOrigins,
   logsApiGatewayConfig,
   vpcProps,
-  eventBusName
+  eventBusName,
 } from '../constants';
 import { MetadataManagerStackProps } from '../../lib/workload/stateless/stacks/metadata-manager/deploy/stack';
 
