@@ -1,4 +1,4 @@
-from app.models import Library
+from app.models import Library, Sample, Subject
 from .base import SerializersBase
 from .project import ProjectSerializer
 from .sample import SampleSerializer
@@ -13,6 +13,13 @@ class LibrarySerializer(LibraryBaseSerializer):
     class Meta:
         model = Library
         exclude = ["project_set"]
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['sample'] = Sample.orcabus_id_prefix + representation['sample']
+        representation['subject'] = Subject.orcabus_id_prefix + representation['subject']
+        return representation
+
 
 
 class LibraryDetailSerializer(LibraryBaseSerializer):

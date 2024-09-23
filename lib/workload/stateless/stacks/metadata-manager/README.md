@@ -61,6 +61,42 @@ on the model of the record.
 
 ## How things work
 
+The metadata loader currently supports two Lambda functions: one for syncing from a tracking sheet and another for syncing from a custom CSV presigned URL. Upon a CREATE or UPDATE operation in the metadata library, the Lambda function will publish events to the `MainOrcabusEventBus` using the schema defined in [MetadataStateChange.schema.json](/docs/schemas/events/metadatamanager/MetadataStateChange.schema.json).
+
+The event data will adhere to the same schema as the OpenAPI schema without nested object.
+
+Example of the event emitted.
+
+```json
+{
+  "version": "0",
+  "id": "e7b8a2d4-3b6e-4f9b-9c1e-1a2b3c4d5e6f",
+  "detail-type": "MetadataStateChange",
+  "source": "orcabus.metadatamanager",
+  "account": "12345678",
+  "time": "2000-09-01T00:00:00Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "action": "CREATE",
+    "model": "LIBRARY",
+    "ref_id": "lib.123",
+    "data": {
+      "orcabus_id": "lib.123",
+      "phenotype": "tumor",
+      "workflow": "research",
+      "quality": "good",
+      "type": "ctTSO",
+      "assay": "ctTSO",
+      "coverage": 75.0,
+      "sample": "smp.123",
+      "subject": "sbj.123",
+    }
+  }
+}
+
+```
+
 ### How Syncing The Data Works
 
 In the near future, we might introduce different ways to load data into the application. For the time being, we are
@@ -97,7 +133,6 @@ Some important notes of the sync:
    recent record is stored. For instance, if a SampleId appears twice with differing source values, only the values from
    the latter record will be retained.
 5. The sync happens every night periodically. See `./deploy/README.md` for more info.
-6. The sync will emit events to the event-bus when a library is being created/updated.
 
 Please refer to the [tracking-sheet-service](proc/service/tracking_sheet_srv.py) implementation.
 

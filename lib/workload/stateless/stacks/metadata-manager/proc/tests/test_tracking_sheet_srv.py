@@ -96,7 +96,7 @@ class TrackingSheetSrvUnitTests(TestCase):
     def setUp(self) -> None:
         super().setUp()
         self._real_dispatch_events = libeb.dispatch_events
-        # libeb.dispatch_events = MagicMock()
+        libeb.dispatch_events = MagicMock()
 
     def tearDown(self) -> None:
         libeb.dispatch_events = self._real_dispatch_events

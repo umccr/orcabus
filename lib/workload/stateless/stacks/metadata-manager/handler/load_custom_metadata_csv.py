@@ -4,11 +4,10 @@ import logging
 
 from libumccr import libjson
 
-from proc.service.utils import sanitize_lab_metadata_df, warn_drop_duplicated_library
-
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings.base')
 django.setup()
 
+from proc.service.utils import sanitize_lab_metadata_df, warn_drop_duplicated_library
 from proc.service.load_csv_srv import load_metadata_csv, download_csv_to_pandas
 
 logger = logging.getLogger()

@@ -7,8 +7,8 @@ from libumccr import libjson
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings.base')
 django.setup()
 
-from proc.service.tracking_sheet_srv import download_tracking_sheet, sanitize_lab_metadata_df, persist_lab_metadata, \
-    warn_drop_duplicated_library
+from proc.service.utils import warn_drop_duplicated_library
+from proc.service.tracking_sheet_srv import download_tracking_sheet, sanitize_lab_metadata_df, persist_lab_metadata
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
