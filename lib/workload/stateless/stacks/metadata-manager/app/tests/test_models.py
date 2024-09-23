@@ -70,3 +70,51 @@ class ModelTestCase(TestCase):
         # find the linked contact
         cnt_one = prj_one.contact_set.get(contact_id=CONTACT_1['contact_id'])
         self.assertEqual(cnt_one.contact_id, CONTACT_1['contact_id'], "incorrect contact 'id' linked to project")
+
+    def test_upsert_method(self):
+        """
+        python manage.py test app.tests.test_models.MetadataTestCase.test_upsert_method
+        """
+
+        # Test function with updating existing record
+        updated_spc_data = {
+            "sample_id": SAMPLE_1['sample_id'],
+            "source": 'skin',
+        }
+        obj, is_created, is_updated = Sample.objects.update_or_create_if_needed(
+            {"sample_id": updated_spc_data["sample_id"]},
+            updated_spc_data
+        )
+        self.assertIsNotNone(obj, "object should not be None")
+        self.assertFalse(is_created, "object should NOT be created")
+        self.assertTrue(is_updated, "object should be updated")
+
+        smp_one = Sample.objects.get(sample_id=updated_spc_data["sample_id"])
+        self.assertEqual(smp_one.source, updated_spc_data['source'], "incorrect 'source' from updated specimen id")
+
+        # Test function with creating new record
+        new_spc_data = {
+            "sample_id": 'SMP002',
+            "source": 'RNA',
+        }
+        obj, is_created, is_updated = Sample.objects.update_or_create_if_needed(
+            {"sample_id": new_spc_data['sample_id']},
+            new_spc_data
+        )
+        self.assertIsNotNone(obj, "object should not be None")
+        self.assertTrue(is_created, "new object should be created")
+        self.assertFalse(is_updated, "new object should not be updated")
+        spc_two = Sample.objects.get(sample_id=new_spc_data['sample_id'])
+        self.assertEqual(spc_two.sample_id, new_spc_data["sample_id"], "incorrect specimen 'id'")
+        self.assertEqual(spc_two.source, new_spc_data['source'], "incorrect 'source' from new specimen id")
+
+        # Test if no update called if no data has changed
+        Sample.objects.update_or_create = MagicMock(return_value=(None, False))
+        obj, is_created, is_updated = Sample.objects.update_or_create_if_needed(
+            {"sample_id": new_spc_data['sample_id']},
+            new_spc_data
+        )
+        Sample.objects.update_or_create.assert_not_called()
+        self.assertIsNotNone(obj, "object should not be None")
+        self.assertFalse(is_created, "object should not be created")
+        self.assertFalse(is_updated, "object should not be updated")

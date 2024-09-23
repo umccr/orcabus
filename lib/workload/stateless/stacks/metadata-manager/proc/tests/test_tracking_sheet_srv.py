@@ -3,12 +3,12 @@ from unittest.mock import MagicMock
 from typing import List
 
 import pandas as pd
-
+from libumccr.aws import libeb
 from django.test import TestCase
 from app.models import Library, Sample, Subject, Project, Contact, Individual
 
 from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata
-from .utils import check_put_event_entries_format, check_put_event_value, is_detail_expected
+from .utils import check_put_event_entries_format, check_put_event_value, is_expected_event_in_output
 
 TEST_EVENT_BUS_NAME = "TEST_BUS"
 
@@ -323,7 +323,7 @@ class TrackingSheetSrvUnitTests(TestCase):
         """
         metadata_pd = pd.json_normalize([RECORD_1])
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        persist_lab_metadata(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         arg = mock_dispatch_events.call_args.args[0]
         expected_created_detail = [
@@ -334,22 +334,6 @@ class TrackingSheetSrvUnitTests(TestCase):
                 "data": {
                     "library_id": "L10001",
                 }
-            },
-            {
-                "action": "CREATE",
-                "model": "SPECIMEN",
-                "ref_id": "spc.ULID",
-                "data": {
-                    "specimen_id": "PRJ10001",
-                }
-            },
-            {
-                "action": "CREATE",
-                "model": "SUBJECT",
-                "ref_id": "lib.ULID",
-                "data": {
-                    "subject_id": "SBJ001",
-                }
             }
         ]
 
@@ -359,7 +343,9 @@ class TrackingSheetSrvUnitTests(TestCase):
                                   detail_type="MetadataStateChange",
                                   event_bus_name=TEST_EVENT_BUS_NAME
                                   )
-            self.assertTrue(is_detail_expected(self, detail=entry.get('Detail'), expected_list=expected_created_detail))
+        for event in expected_created_detail:
+            self.assertTrue(
+                is_expected_event_in_output(self, expected=event, output=[i.get('Detail') for i in arg]))
 
         """
         Test if record are UPDATE and event entries are correct
@@ -369,7 +355,7 @@ class TrackingSheetSrvUnitTests(TestCase):
         mock_dispatch_events.reset_mock()
         metadata_pd = pd.json_normalize([updated_record_1])
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        persist_lab_metadata(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         arg = mock_dispatch_events.call_args.args[0]
         expected_update_detail = [
@@ -389,14 +375,15 @@ class TrackingSheetSrvUnitTests(TestCase):
                                   detail_type="MetadataStateChange",
                                   event_bus_name=TEST_EVENT_BUS_NAME
                                   )
-            self.assertTrue(is_detail_expected(self, detail=entry.get('Detail'), expected_list=expected_update_detail))
+        for event in expected_update_detail:
+            self.assertTrue(is_expected_event_in_output(self, expected=event, output=[i.get('Detail') for i in arg]))
 
         """
         Test if the record are DELETE and event entries are correct
         """
         mock_dispatch_events.reset_mock()
         empty_pd = metadata_pd.drop(0)  # Remove the only one record data
-        persist_lab_metadata(empty_pd)
+        persist_lab_metadata(empty_pd, SHEET_YEAR)
 
         arg = mock_dispatch_events.call_args.args[0]
         expected_delete_detail = [
@@ -407,22 +394,6 @@ class TrackingSheetSrvUnitTests(TestCase):
                 "data": {
                     "library_id": "L10001",
                 }
-            },
-            {
-                "action": "DELETE",
-                "model": "SPECIMEN",
-                "ref_id": "spc.ULID",
-                "data": {
-                    "specimen_id": "PRJ10001",
-                }
-            },
-            {
-                "action": "DELETE",
-                "model": "SUBJECT",
-                "ref_id": "lib.ULID",
-                "data": {
-                    "subject_id": "SBJ001",
-                }
             }
         ]
         for entry in arg:
@@ -431,5 +402,6 @@ class TrackingSheetSrvUnitTests(TestCase):
                                   detail_type="MetadataStateChange",
                                   event_bus_name=TEST_EVENT_BUS_NAME
                                   )
-            self.assertTrue(is_detail_expected(self, detail=entry.get('Detail'), expected_list=expected_delete_detail))
+        for event in expected_delete_detail:
+            self.assertTrue(is_expected_event_in_output(self, expected=event, output=[i.get('Detail') for i in arg]))
 

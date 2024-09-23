@@ -5,7 +5,6 @@ import re  # noqa: F401
 import six
 from enum import Enum
 from proc.aws.event.schema.orcabus_metadatamanager.metadatastatechange.MetadataStateChange import MetadataStateChange  # noqa: F401,E501
-from proc.aws.event.schema.orcabus_metadatamanager.metadatastatechange.Object import Object  # noqa: F401,E501
 
 class Event(object):
 

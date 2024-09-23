@@ -7,8 +7,8 @@ import numpy as np
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
-from libumccr import libgdrive
-from libumccr.aws import libssm
+from libumccr import libgdrive, libjson
+from libumccr.aws import libssm, libeb
 
 import logging
 
@@ -16,6 +16,8 @@ from app.models import Subject, Sample, Library, Project, Contact, Individual
 from app.models.library import Quality, LibraryType, Phenotype, WorkflowType
 from app.models.sample import Source
 from app.models.utils import get_value_from_human_readable_label
+from app.serializers import LibrarySerializer
+from proc.aws.event.event import MetadataStateChangeEvent
 from proc.service.utils import clean_model_history
 
 logger = logging.getLogger()
@@ -97,7 +99,6 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
             data=lib_dict
         )
         event_bus_entries.append(event.get_put_event_entry())
-        library_deleted.append(lib)
 
     # this the where records are updated, inserted, linked based on library_id
     for record in df.to_dict('records'):
@@ -228,8 +229,24 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
 
             if is_lib_created:
                 stats['library']['create_count'] += 1
+                event = MetadataStateChangeEvent(
+                    action='CREATE',
+                    model='LIBRARY',
+                    ref_id=lib_dict.get('orcabus_id'),
+                    data=lib_dict
+                )
+                event_bus_entries.append(event.get_put_event_entry())
+
             if is_lib_updated:
                 stats['library']['update_count'] += 1
+
+                event = MetadataStateChangeEvent(
+                    action='UPDATE',
+                    model='LIBRARY',
+                    ref_id=lib_dict.get('orcabus_id'),
+                    data=lib_dict,
+                )
+                event_bus_entries.append(event.get_put_event_entry())
 
             # link library to its project
             try:
@@ -241,16 +258,6 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
                 # update/create in previous upsert method
                 if not is_lib_created and not is_lib_updated:
                     stats['library']['update_count'] += 1
-
-                spc_dict = SpecimenSerializer(specimen).data
-                event = MetadataStateChangeEvent(
-                    action='UPDATE',
-                    model='SPECIMEN',
-                    ref_id=spc_dict.get('orcabus_id'),
-                    data=spc_dict,
-                )
-                event_bus_entries.append(event.get_put_event_entry())
-                specimen_updated.append(specimen)
 
         except Exception as e:
             if any(record.values()):
@@ -267,6 +274,10 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
 
     if len(invalid_data) > 0:
         logger.warning(f"Invalid record: {invalid_data}")
+
+    if len(event_bus_entries) > 0:
+        logger.info(f'Dispatch event bridge entries: {libjson.dumps(event_bus_entries)}')
+        libeb.dispatch_events(event_bus_entries)
 
     logger.info(f"Processed LabMetadata: {json.dumps(stats)}")
     return stats

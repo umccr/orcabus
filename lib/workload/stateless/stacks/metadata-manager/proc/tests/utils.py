@@ -14,9 +14,9 @@ def check_put_event_value(self, entry: dict, source: str, detail_type: str, even
     self.assertEqual(entry['EventBusName'], event_bus_name)
 
 
-def is_detail_expected(self, detail: dict, expected_list: List[dict]) -> bool:
+def is_expected_event_in_output(self, expected: dict, output: List[dict]) -> bool:
     """
-    Check if the detail is in the expected format
+    Check if the expected event is in the output list
     """
 
     def is_subset_dict(subset_dict: dict, main_dict: dict):
@@ -25,16 +25,18 @@ def is_detail_expected(self, detail: dict, expected_list: List[dict]) -> bool:
                 return False
         return True
 
-    for expected in expected_list:
+    for o in output:
+
         try:
-            self.assertEqual(detail['action'], expected['action'])
-            self.assertEqual(detail['model'], expected['model'])
-            self.assertIn('ref_id', detail)
+            self.assertEqual(expected['action'], o['action'])
+            self.assertEqual(expected['model'], o['model'])
+            self.assertIn('ref_id', o)
 
-            # The expected is the bare minimum, so we need to check if the expected data is a subset of the actual data
-            self.assertTrue(is_subset_dict(main_dict=detail['data'], subset_dict=expected['data']))
-
+            # The expected is the bare minimum data, so we need to check if the expected data is a subset of the
+            # actual data
+            self.assertTrue(is_subset_dict(main_dict=o['data'], subset_dict=expected['data']))
             return True
         except AssertionError:
             continue
+
     return False
