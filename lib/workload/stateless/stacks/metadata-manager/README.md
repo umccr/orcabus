@@ -80,17 +80,18 @@ Example of the event emitted.
   "detail": {
     "action": "CREATE",
     "model": "LIBRARY",
-    "ref_id": "lib.123",
+    "refId": "lib.01J8GMF3XCHW9CV8ZFS8F1P1RF",
     "data": {
-      "orcabus_id": "lib.123",
-      "phenotype": "tumor",
+      "orcabusId": "lib.01J8GMF3XCHW9CV8ZFS8F1P1RF",
+      "libraryId": "L10001",
+      "phenotype": "normal",
       "workflow": "research",
       "quality": "good",
-      "type": "ctTSO",
+      "type": "WTS",
       "assay": "ctTSO",
-      "coverage": 75.0,
-      "sample": "smp.123",
-      "subject": "sbj.123",
+      "coverage": 120.0,
+      "sample": "smp.01J8GMF3WD6TD5Y491EEBARYBE",
+      "subject": "sbj.01J8GMF3VZRGYQG1GYDJC6E9MV"
     }
   }
 }

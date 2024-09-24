@@ -1,6 +1,8 @@
 import os
 import json
 from typing import Literal
+
+from app.serializers.utils import to_camel_case_key_dict
 from .schema.orcabus_metadatamanager.metadatastatechange import Marshaller
 
 
@@ -14,11 +16,12 @@ class MetadataStateChangeEvent:
                  ref_id: str,
                  data: dict) -> None:
         self.event_bus_name = os.getenv('EVENT_BUS_NAME', '')
+        # Below must be in camelCase as what we agreed (and written in docs) in API level
         self.detail = json.dumps({
             "action": action,
             "model": model,
-            "ref_id": ref_id,
-            "data": Marshaller.marshall(data)
+            "refId": ref_id,
+            "data": Marshaller.marshall(to_camel_case_key_dict(data))
         })
 
     def __str__(self):

@@ -320,9 +320,9 @@ class TrackingSheetSrvUnitTests(TestCase):
         mock_dispatch_events = MagicMock()
         libeb.dispatch_events = mock_dispatch_events
 
-        """
-        Test if event entries are in the correct format when CREATE new records
-        """
+        # ####
+        # Test if event entries are in the correct format when CREATE new records
+        # ####
         metadata_pd = pd.json_normalize([RECORD_1])
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
         persist_lab_metadata(metadata_pd, SHEET_YEAR)
@@ -332,9 +332,9 @@ class TrackingSheetSrvUnitTests(TestCase):
             {
                 "action": "CREATE",
                 "model": "LIBRARY",
-                "ref_id": "lib.ULID",
+                "refId": "lib.ULID",
                 "data": {
-                    "library_id": "L10001",
+                    "libraryId": "L10001",
                 }
             }
         ]
@@ -349,9 +349,9 @@ class TrackingSheetSrvUnitTests(TestCase):
             self.assertTrue(
                 is_expected_event_in_output(self, expected=event, output=[json.loads(i.get('Detail')) for i in arg]))
 
-        """
-        Test if record are UPDATE and event entries are correct
-        """
+        # ####
+        # Test if record are UPDATE and event entries are correct
+        # ####
         updated_record_1 = RECORD_1.copy()
         updated_record_1['Quality'] = 'poor'
         mock_dispatch_events.reset_mock()
@@ -364,9 +364,9 @@ class TrackingSheetSrvUnitTests(TestCase):
             {
                 "action": "UPDATE",
                 "model": "LIBRARY",
-                "ref_id": "lib.ULID",
+                "refId": "lib.ULID",
                 "data": {
-                    "library_id": "L10001",
+                    "libraryId": "L10001",
                 }
             },
         ]
@@ -380,10 +380,9 @@ class TrackingSheetSrvUnitTests(TestCase):
         for event in expected_update_detail:
             self.assertTrue(
                 is_expected_event_in_output(self, expected=event, output=[json.loads(i.get('Detail')) for i in arg]))
-
-        """
-        Test if the record are DELETE and event entries are correct
-        """
+        # ####
+        # Test if the record are DELETE and event entries are correct
+        # ####
         mock_dispatch_events.reset_mock()
         empty_pd = metadata_pd.drop(0)  # Remove the only one record data
         persist_lab_metadata(empty_pd, SHEET_YEAR)
@@ -393,12 +392,13 @@ class TrackingSheetSrvUnitTests(TestCase):
             {
                 "action": "DELETE",
                 "model": "LIBRARY",
-                "ref_id": "lib.ULID",
+                "refId": "lib.ULID",
                 "data": {
-                    "library_id": "L10001",
+                    "libraryId": "L10001",
                 }
             }
         ]
+
         for entry in arg:
             check_put_event_entries_format(self, entry)
             check_put_event_value(self, entry=entry, source="orcabus.metadatamanager",

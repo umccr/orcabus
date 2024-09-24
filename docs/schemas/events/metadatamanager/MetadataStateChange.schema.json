@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/WorkflowRunStateChange.schema.json",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/metadatamanager/MetadataStateChange.schema.json",
   "description": "EventBridge custom event schema for orcabus.metadatamanager@MetadataStateChange",
   "title": "AWSEvent",
   "type": "object",
@@ -55,9 +55,7 @@
         "model": {
           "type": "string",
           "enum": [
-            "LIBRARY",
-            "SPECIMEN",
-            "SUBJECT"
+            "LIBRARY"
           ]
         },
         "action": {

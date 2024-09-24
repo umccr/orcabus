@@ -30,7 +30,7 @@ def is_expected_event_in_output(self, expected: dict, output: List[dict]) -> boo
         try:
             self.assertEqual(expected['action'], o['action'])
             self.assertEqual(expected['model'], o['model'])
-            self.assertIn('ref_id', o)
+            self.assertIn('refId', o)
 
             # The expected is the bare minimum data, so we need to check if the expected data is a subset of the
             # actual data

@@ -83,7 +83,6 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     for lib in Library.objects.filter(library_id__startswith=library_prefix).exclude(
             library_id__in=df['library_id'].tolist()).iterator():
         stats['library']['delete_count'] += 1
-        lib.delete()
         lib_dict = LibrarySerializer(lib).data
         event = MetadataStateChangeEvent(
             action='DELETE',
@@ -92,6 +91,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
             data=lib_dict
         )
         event_bus_entries.append(event.get_put_event_entry())
+        lib.delete()
 
     # this the where records are updated, inserted, linked based on library_id
     for record in df.to_dict('records'):
