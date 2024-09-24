@@ -29,19 +29,26 @@ The event input is
 # Standard imports
 from pathlib import Path
 from typing import List
+from urllib.parse import urlunparse, urlparse
 import boto3
 from os import environ
 import typing
+import logging
 
 # Wrapica imports
+from wrapica.libica_models import ProjectData
 from wrapica.job import get_job
 from wrapica.project_data import (
-    convert_uri_to_project_data_obj, project_data_copy_batch_handler
+    convert_uri_to_project_data_obj, project_data_copy_batch_handler, delete_project_data
 )
 
 if typing.TYPE_CHECKING:
     from mypy_boto3_ssm import SSMClient
     from mypy_boto3_secretsmanager import SecretsManagerClient
+
+# Set logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Globals
 SUCCESS_STATES = [
@@ -63,6 +70,7 @@ MAX_JOB_ATTEMPT_COUNTER = 10
 DEFAULT_WAIT_TIME_SECONDS = 10
 DEFAULT_WAIT_TIME_SECONDS_EXT = 10
 
+# Globals
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
 
 
@@ -222,6 +230,64 @@ def handler(event, context):
 
     # Handle successful job
     if job_status is True:
+        # Confirm source uris have made it to the destination successfully
+        # Get dest folder
+        dest_project_folder_data_obj: ProjectData = convert_uri_to_project_data_obj(dest_uri)
+
+        # Iterate through each source uri
+        has_errors = False
+        for source_uri in source_uris:
+            # Get the source project data object
+            source_project_data_obj: ProjectData = convert_uri_to_project_data_obj(source_uri)
+
+            # Get the dest uri file name
+            dest_file_uri = str(
+                urlunparse(
+                    (
+                        urlparse(dest_uri).scheme,
+                        urlparse(dest_uri).netloc,
+                        str(Path(dest_project_folder_data_obj.data.details.path) / source_project_data_obj.data.details.name),
+                        None, None, None
+                    )
+                )
+            )
+            # Get the dest project data object
+            dest_project_data_file_obj = convert_uri_to_project_data_obj(
+                dest_file_uri
+            )
+
+            # Compare the source and dest project data objects etags
+            if source_project_data_obj.data.details.file_size_in_bytes != dest_project_data_file_obj.data.details.file_size_in_bytes:
+                # Set has errors to true
+                has_errors = True
+                logger.error("Data size mismatch between source and dest project data objects")
+                logger.error(f"Data {source_uri} was transferred to {dest_file_uri} but the file sizes do not match")
+                logger.error(f"Source file size: {source_project_data_obj.data.details.file_size_in_bytes}")
+                logger.error(f"Dest file size: {dest_project_data_file_obj.data.details.file_size_in_bytes}")
+                logger.error("Purging the dest uri file and starting again")
+                # Purge the dest uri file and start again
+                delete_project_data(
+                    project_id=dest_project_data_file_obj.project_id,
+                    data_id=dest_project_data_file_obj.data.id
+                )
+
+        # If we have errors, we need to rerun the job
+        if has_errors:
+            # Add this job id to the failed job list
+            failed_job_list.append(job_id)
+            return {
+                "dest_uri": dest_uri,
+                "source_uris": source_uris,
+                "job_id": submit_copy_job(
+                    dest_uri=dest_uri,
+                    source_uris=source_uris,
+                ),
+                "failed_job_list": failed_job_list,  # Empty list or list of failed jobs
+                "job_status": "RUNNING",
+                "wait_time_seconds": DEFAULT_WAIT_TIME_SECONDS
+            }
+
+        # If we don't have errors, we can return the job as successful
         return {
             "dest_uri": dest_uri,
             "source_uris": source_uris,
