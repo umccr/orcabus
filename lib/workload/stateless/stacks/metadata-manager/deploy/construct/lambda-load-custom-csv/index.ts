@@ -9,6 +9,7 @@ import {
   DockerImageFunctionProps,
   DockerImageCode,
 } from 'aws-cdk-lib/aws-lambda';
+import { EventBus } from 'aws-cdk-lib/aws-events';
 
 type LambdaProps = {
   /**
@@ -19,6 +20,10 @@ type LambdaProps = {
    * The secret for the db connection where the lambda will need access to
    */
   dbConnectionSecret: ISecret;
+  /**
+   * The eventBusName to notify metadata state change
+   */
+  eventBusName: string;
 };
 
 export class LambdaLoadCustomCSVConstruct extends Construct {
@@ -30,6 +35,8 @@ export class LambdaLoadCustomCSVConstruct extends Construct {
     this.lambda = new DockerImageFunction(this, 'LoadCustomCSVLambda', {
       environment: {
         ...lambdaProps.basicLambdaConfig.environment,
+
+        EVENT_BUS_NAME: lambdaProps.eventBusName,
       },
       securityGroups: lambdaProps.basicLambdaConfig.securityGroups,
       vpc: lambdaProps.basicLambdaConfig.vpc,
@@ -45,10 +52,14 @@ export class LambdaLoadCustomCSVConstruct extends Construct {
     lambdaProps.dbConnectionSecret.grantRead(this.lambda);
 
     // We need to store this lambda ARN somewhere so that we could refer when need to load this manually
-    const ssmParameter = new StringParameter(this, 'LoadCustomCSVLambdaArnParameterStore', {
+    new StringParameter(this, 'LoadCustomCSVLambdaArnParameterStore', {
       parameterName: '/orcabus/metadata-manager/load-custom-csv-lambda-arn',
       description: 'The ARN of the lambda that load metadata from a presigned URL CSV file',
       stringValue: this.lambda.functionArn,
     });
+
+    // The lambda will need permission to put events to the event bus when metadata state change
+    const orcabusEventBus = EventBus.fromEventBusName(this, 'EventBus', lambdaProps.eventBusName);
+    orcabusEventBus.grantPutEventsTo(this.lambda);
   }
 }

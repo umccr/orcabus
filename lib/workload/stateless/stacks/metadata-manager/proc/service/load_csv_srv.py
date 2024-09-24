@@ -9,6 +9,8 @@ from app.models.library import Quality, LibraryType, Phenotype, WorkflowType, sa
 from app.models.sample import Source
 from app.models.utils import get_value_from_human_readable_label
 from proc.service.utils import clean_model_history
+from app.serializers import LibrarySerializer
+from proc.aws.event.event import MetadataStateChangeEvent
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -24,6 +26,9 @@ def load_metadata_csv(df: pd.DataFrame):
 
     """
     logger.info(f"Start processing LabMetadata")
+
+    # Event entries for the event bus
+    event_bus_entries = list()
 
     # Used for statistics
     invalid_data = []
@@ -52,7 +57,6 @@ def load_metadata_csv(df: pd.DataFrame):
         "contact": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
         },
         'invalid_record_count': 0,
     }
@@ -201,10 +205,28 @@ def load_metadata_csv(df: pd.DataFrame):
                     'subject_id': subject.orcabus_id,
                 }
             )
+
+            lib_dict = LibrarySerializer(library).data
             if is_lib_created:
                 stats['library']['create_count'] += 1
+                event = MetadataStateChangeEvent(
+                    action='CREATE',
+                    model='LIBRARY',
+                    ref_id=lib_dict.get('orcabus_id'),
+                    data=lib_dict
+                )
+                event_bus_entries.append(event.get_put_event_entry())
+
             if is_lib_updated:
                 stats['library']['update_count'] += 1
+
+                event = MetadataStateChangeEvent(
+                    action='UPDATE',
+                    model='LIBRARY',
+                    ref_id=lib_dict.get('orcabus_id'),
+                    data=lib_dict,
+                )
+                event_bus_entries.append(event.get_put_event_entry())
 
             # link library to its project
             if project:

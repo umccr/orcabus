@@ -5,8 +5,8 @@ import pandas as pd
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
-from libumccr import libgdrive
-from libumccr.aws import libssm
+from libumccr import libgdrive, libjson
+from libumccr.aws import libssm, libeb
 
 import logging
 
@@ -14,6 +14,8 @@ from app.models import Subject, Sample, Library, Project, Contact, Individual
 from app.models.library import Quality, LibraryType, Phenotype, WorkflowType, sanitize_library_coverage
 from app.models.sample import Source
 from app.models.utils import get_value_from_human_readable_label
+from app.serializers import LibrarySerializer
+from proc.aws.event.event import MetadataStateChangeEvent
 from proc.service.utils import clean_model_history, sanitize_lab_metadata_df
 
 logger = logging.getLogger()
@@ -35,6 +37,9 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     """
     logger.info(f"Start processing LabMetadata")
 
+    # Event entries for the event bus
+    event_bus_entries = list()
+
     # Used for statistics
     invalid_data = []
     stats = {
@@ -46,28 +51,23 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
         "sample": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
 
         },
         "subject": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
         },
         "individual": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
         },
         "project": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
         },
         "contact": {
             "create_count": 0,
             "update_count": 0,
-            "delete_count": 0,
         },
         'invalid_record_count': 0,
     }
@@ -83,6 +83,14 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     for lib in Library.objects.filter(library_id__startswith=library_prefix).exclude(
             library_id__in=df['library_id'].tolist()).iterator():
         stats['library']['delete_count'] += 1
+        lib_dict = LibrarySerializer(lib).data
+        event = MetadataStateChangeEvent(
+            action='DELETE',
+            model='LIBRARY',
+            ref_id=lib_dict.get('orcabus_id'),
+            data=lib_dict
+        )
+        event_bus_entries.append(event.get_put_event_entry())
         lib.delete()
 
     # this the where records are updated, inserted, linked based on library_id
@@ -210,10 +218,28 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
                     'subject_id': subject.orcabus_id,
                 }
             )
+            lib_dict = LibrarySerializer(library).data
+
             if is_lib_created:
                 stats['library']['create_count'] += 1
+                event = MetadataStateChangeEvent(
+                    action='CREATE',
+                    model='LIBRARY',
+                    ref_id=lib_dict.get('orcabus_id'),
+                    data=lib_dict
+                )
+                event_bus_entries.append(event.get_put_event_entry())
+
             if is_lib_updated:
                 stats['library']['update_count'] += 1
+
+                event = MetadataStateChangeEvent(
+                    action='UPDATE',
+                    model='LIBRARY',
+                    ref_id=lib_dict.get('orcabus_id'),
+                    data=lib_dict,
+                )
+                event_bus_entries.append(event.get_put_event_entry())
 
             # link library to its project
             try:
@@ -241,6 +267,11 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
 
     if len(invalid_data) > 0:
         logger.warning(f"Invalid record: {invalid_data}")
+
+    if len(event_bus_entries) > 0:
+        logger.info(f'Dispatch event bridge entries: {libjson.dumps(event_bus_entries)}')
+        libeb.dispatch_events(event_bus_entries)
+
     logger.info(f"Processed LabMetadata: {json.dumps(stats)}")
     return stats
 

@@ -1,9 +1,16 @@
+import os
+import json
 import pandas as pd
+from libumccr.aws import libeb
 
+from unittest.mock import MagicMock
 from django.test import TestCase
-from app.models import Library, Sample, Subject, Project, Contact, Individual
 
+from app.models import Library, Sample, Subject, Project, Contact, Individual
 from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata
+from .utils import check_put_event_entries_format, check_put_event_value, is_expected_event_in_output
+
+TEST_EVENT_BUS_NAME = "TEST_BUS"
 
 SHEET_YEAR = "2010"
 
@@ -87,10 +94,13 @@ RECORD_3 = {
 class TrackingSheetSrvUnitTests(TestCase):
 
     def setUp(self) -> None:
-        super(TrackingSheetSrvUnitTests, self).setUp()
+        super().setUp()
+        self._real_dispatch_events = libeb.dispatch_events
+        libeb.dispatch_events = MagicMock()
 
     def tearDown(self) -> None:
-        super(TrackingSheetSrvUnitTests, self).tearDown()
+        libeb.dispatch_events = self._real_dispatch_events
+        super().tearDown()
 
     def test_persist_lab_metadata(self):
         """
@@ -300,3 +310,101 @@ class TrackingSheetSrvUnitTests(TestCase):
         spc = Sample.objects.get(sample_id=mock_record.get("SampleID"))
         self.assertIsNotNone(spc)
         self.assertEqual(spc.source, 'water', "incorrect value stored")
+
+    def test_eb_put_event(self) -> None:
+        """
+        python manage.py test proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_eb_put_event
+        """
+        os.environ['EVENT_BUS_NAME'] = TEST_EVENT_BUS_NAME
+
+        mock_dispatch_events = MagicMock()
+        libeb.dispatch_events = mock_dispatch_events
+
+        # ####
+        # Test if event entries are in the correct format when CREATE new records
+        # ####
+        metadata_pd = pd.json_normalize([RECORD_1])
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
+
+        arg = mock_dispatch_events.call_args.args[0]
+        expected_created_detail = [
+            {
+                "action": "CREATE",
+                "model": "LIBRARY",
+                "refId": "lib.ULID",
+                "data": {
+                    "libraryId": "L10001",
+                }
+            }
+        ]
+
+        for entry in arg:
+            check_put_event_entries_format(self, entry)
+            check_put_event_value(self, entry=entry, source="orcabus.metadatamanager",
+                                  detail_type="MetadataStateChange",
+                                  event_bus_name=TEST_EVENT_BUS_NAME
+                                  )
+        for event in expected_created_detail:
+            self.assertTrue(
+                is_expected_event_in_output(self, expected=event, output=[json.loads(i.get('Detail')) for i in arg]))
+
+        # ####
+        # Test if record are UPDATE and event entries are correct
+        # ####
+        updated_record_1 = RECORD_1.copy()
+        updated_record_1['Quality'] = 'poor'
+        mock_dispatch_events.reset_mock()
+        metadata_pd = pd.json_normalize([updated_record_1])
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
+
+        arg = mock_dispatch_events.call_args.args[0]
+        expected_update_detail = [
+            {
+                "action": "UPDATE",
+                "model": "LIBRARY",
+                "refId": "lib.ULID",
+                "data": {
+                    "libraryId": "L10001",
+                }
+            },
+        ]
+
+        for entry in arg:
+            check_put_event_entries_format(self, entry)
+            check_put_event_value(self, entry=entry, source="orcabus.metadatamanager",
+                                  detail_type="MetadataStateChange",
+                                  event_bus_name=TEST_EVENT_BUS_NAME
+                                  )
+        for event in expected_update_detail:
+            self.assertTrue(
+                is_expected_event_in_output(self, expected=event, output=[json.loads(i.get('Detail')) for i in arg]))
+        # ####
+        # Test if the record are DELETE and event entries are correct
+        # ####
+        mock_dispatch_events.reset_mock()
+        empty_pd = metadata_pd.drop(0)  # Remove the only one record data
+        persist_lab_metadata(empty_pd, SHEET_YEAR)
+
+        arg = mock_dispatch_events.call_args.args[0]
+        expected_delete_detail = [
+            {
+                "action": "DELETE",
+                "model": "LIBRARY",
+                "refId": "lib.ULID",
+                "data": {
+                    "libraryId": "L10001",
+                }
+            }
+        ]
+
+        for entry in arg:
+            check_put_event_entries_format(self, entry)
+            check_put_event_value(self, entry=entry, source="orcabus.metadatamanager",
+                                  detail_type="MetadataStateChange",
+                                  event_bus_name=TEST_EVENT_BUS_NAME
+                                  )
+        for event in expected_delete_detail:
+            self.assertTrue(
+                is_expected_event_in_output(self, expected=event, output=[json.loads(i.get('Detail')) for i in arg]))
