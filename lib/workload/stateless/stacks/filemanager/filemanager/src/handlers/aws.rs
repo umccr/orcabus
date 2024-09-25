@@ -217,7 +217,7 @@ pub(crate) mod tests {
     };
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::collecter::tests::{
-        expected_head_object, set_s3_client_expectations, set_sqs_client_expectations,
+        set_s3_client_expectations, set_sqs_client_expectations,
     };
     use crate::events::aws::inventory::tests::{
         csv_manifest_from_key_expectations, EXPECTED_LAST_MODIFIED_ONE,
@@ -252,7 +252,7 @@ pub(crate) mod tests {
     async fn test_ingest_event(pool: PgPool) {
         let mut s3_client = S3Client::default();
 
-        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
+        set_s3_client_expectations(&mut s3_client);
 
         let event = SqsEvent {
             records: vec![SqsMessage {
@@ -376,7 +376,7 @@ pub(crate) mod tests {
         let mut s3_client = S3Client::default();
 
         set_sqs_client_expectations(&mut sqs_client);
-        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
+        set_s3_client_expectations(&mut s3_client);
 
         f(sqs_client, s3_client).await;
 

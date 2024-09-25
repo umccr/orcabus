@@ -82,6 +82,7 @@ impl Entries {
 
         ActiveS3Object {
             s3_object_id: Set(UuidGenerator::generate()),
+            move_id: Set(Some(UuidGenerator::generate())),
             event_type: Set(event.clone()),
             bucket: Set((index / bucket_divisor).to_string()),
             key: Set((index / key_divisor).to_string()),

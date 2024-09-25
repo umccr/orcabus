@@ -37,6 +37,7 @@ pub struct Model {
     #[sea_orm(column_type = "Text", nullable)]
     pub deleted_sequencer: Option<String>,
     pub number_reordered: i64,
+    pub move_id: Option<Uuid>,
 }
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}

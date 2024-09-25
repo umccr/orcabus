@@ -487,6 +487,14 @@ impl FlatS3EventMessage {
         self
     }
 
+    /// Update the delete marker if not None.
+    pub fn update_delete_marker(mut self, delete_marker: Option<bool>) -> Self {
+        delete_marker
+            .into_iter()
+            .for_each(|is_delete_marker| self.is_delete_marker = is_delete_marker);
+        self
+    }
+
     /// Set the s3 object id.
     pub fn with_s3_object_id(mut self, s3_object_id: Uuid) -> Self {
         self.s3_object_id = s3_object_id;

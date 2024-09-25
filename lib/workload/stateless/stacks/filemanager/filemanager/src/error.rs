@@ -26,8 +26,8 @@ pub enum Error {
     ConfigError(String),
     #[error("credential generator error: `{0}`")]
     CredentialGeneratorError(String),
-    #[error("S3 inventory error: `{0}`")]
-    S3InventoryError(String),
+    #[error("S3 error: `{0}`")]
+    S3Error(String),
     #[error("{0}")]
     IoError(#[from] io::Error),
     #[error("numerical operation overflowed")]
