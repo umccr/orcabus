@@ -2,6 +2,8 @@ from django.db import models
 
 from enum import Enum
 from typing import List
+
+from workflow_manager.fields import OrcabusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.workflow_run import WorkflowRun
 from workflow_manager.models.payload import Payload
@@ -89,8 +91,7 @@ class State(OrcaBusBaseModel):
     class Meta:
         unique_together = ["workflow_run", "status", "timestamp"]
 
-    id = models.BigAutoField(primary_key=True)
-
+    orcabus_id = OrcabusIdField(prefix='stt', primary_key=True)
     # --- mandatory fields
     workflow_run = models.ForeignKey(WorkflowRun, on_delete=models.CASCADE)
     status = models.CharField(max_length=255)  # TODO: How and where to enforce conventions?

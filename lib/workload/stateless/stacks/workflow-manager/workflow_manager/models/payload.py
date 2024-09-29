@@ -1,6 +1,7 @@
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
+from workflow_manager.fields import OrcabusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 
 
@@ -9,7 +10,7 @@ class PayloadManager(OrcaBusBaseManager):
 
 
 class Payload(OrcaBusBaseModel):
-    id = models.BigAutoField(primary_key=True)
+    orcabus_id = OrcabusIdField(prefix='pld', primary_key=True)
 
     payload_ref_id = models.CharField(max_length=255, unique=True)
     version = models.CharField(max_length=255)

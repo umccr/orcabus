@@ -111,25 +111,24 @@ def _setup_requirements():
     # The contexts information available for analysis
 
     clinical_context = AnalysisContext(
-        orcabus_id="ctx.12345",
         context_id="C12345",
         name="accredited",
         description="Accredited by NATA",
         status="ACTIVE",
     )
+    print(clinical_context)
     clinical_context.save()
 
     research_context = AnalysisContext(
-        orcabus_id="ctx.23456",
         context_id="C23456",
         name="research",
         description="For research use",
         status="ACTIVE",
     )
+    print(research_context)
     research_context.save()
 
     internal_context = AnalysisContext(
-        orcabus_id="ctx.00001",
         context_id="C00001",
         name="internal",
         description="For internal use",

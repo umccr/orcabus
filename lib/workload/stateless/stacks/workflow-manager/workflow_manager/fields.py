@@ -1,6 +1,32 @@
 import hashlib
+import ulid
 
 from django.db import models
+
+
+def orcabus_id(prefix: str) -> str:
+    oid = f"{prefix}.{ulid.new()}"
+    return oid
+
+
+class OrcabusIdField(models.CharField):
+    description = "An OrcaBus internal ID composed of a 3 letter prefix followed by dot followed by a ULID"
+
+    def __init__(self, prefix, *args, **kwargs):
+        self.prefix = prefix
+        kwargs["max_length"] = 30  # prefix + . + ULID  =  3 + 1 + 26  =  30
+        kwargs['unique'] = True
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        if self.prefix is not None:
+            kwargs["prefix"] = self.prefix
+        return name, path, args, kwargs
+
+    def pre_save(self, instance, add):
+        setattr(instance, self.attname, orcabus_id(self.prefix))
+        return super().pre_save(instance, add)
 
 
 class HashField(models.CharField):

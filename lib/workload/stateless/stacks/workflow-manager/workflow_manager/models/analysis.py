@@ -1,6 +1,7 @@
 from django.db import models
 
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
+from workflow_manager.fields import OrcabusIdField
 from workflow_manager.models.analysis_context import AnalysisContext
 from workflow_manager.models.workflow import Workflow
 
@@ -13,7 +14,7 @@ class Analysis(OrcaBusBaseModel):
     class Meta:
         unique_together = ["analysis_name", "analysis_version"]
 
-    id = models.BigAutoField(primary_key=True)
+    orcabus_id = OrcabusIdField(prefix='ana', primary_key=True)
 
     analysis_name = models.CharField(max_length=255)
     analysis_version = models.CharField(max_length=255)

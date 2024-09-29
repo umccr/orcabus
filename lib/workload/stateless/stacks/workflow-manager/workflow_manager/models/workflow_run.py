@@ -1,5 +1,6 @@
 from django.db import models
 
+from workflow_manager.fields import OrcabusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.library import Library
 from workflow_manager.models.workflow import Workflow
@@ -11,8 +12,7 @@ class WorkflowRunManager(OrcaBusBaseManager):
 
 
 class WorkflowRun(OrcaBusBaseModel):
-    id = models.BigAutoField(primary_key=True)
-
+    orcabus_id = OrcabusIdField(prefix='wfr', primary_key=True)
     # --- mandatory fields
 
     portal_run_id = models.CharField(max_length=255, unique=True)

@@ -1,6 +1,7 @@
 from django.db import models
 
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
+from workflow_manager.fields import OrcabusIdField
 
 
 class AnalysisContextManager(OrcaBusBaseManager):
@@ -9,7 +10,7 @@ class AnalysisContextManager(OrcaBusBaseManager):
 
 class AnalysisContext(OrcaBusBaseModel):
 
-    orcabus_id = models.CharField(primary_key=True, max_length=255)
+    orcabus_id = OrcabusIdField(prefix='ctx', primary_key=True)
     context_id = models.CharField(max_length=255)
 
     name = models.CharField(max_length=255)
