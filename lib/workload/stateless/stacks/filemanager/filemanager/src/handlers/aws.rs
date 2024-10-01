@@ -39,7 +39,7 @@ pub async fn receive_and_ingest<'a>(
         .with_s3_client(s3_client)
         .with_sqs_client(sqs_client)
         .set_sqs_url(sqs_url)
-        .build_receive(env_config)
+        .build_receive(env_config, database_client)
         .await?
         .collect()
         .await?
@@ -74,7 +74,7 @@ pub async fn ingest_event(
 
     let events = CollecterBuilder::default()
         .with_s3_client(s3_client)
-        .build(events, env_config)
+        .build(events, env_config, &database_client)
         .await
         .collect()
         .await?

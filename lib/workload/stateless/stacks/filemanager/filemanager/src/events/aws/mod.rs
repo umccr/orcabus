@@ -14,6 +14,7 @@ use message::EventMessage;
 use crate::events::aws::message::{default_version_id, EventType};
 use crate::events::aws::EventType::{Created, Deleted, Other};
 use crate::uuid::UuidGenerator;
+use sea_orm::prelude::Json;
 
 pub mod collecter;
 pub mod inventory;
@@ -80,6 +81,7 @@ pub struct TransposedS3EventMessages {
     pub event_types: Vec<EventType>,
     pub is_delete_markers: Vec<bool>,
     pub move_ids: Vec<Option<Uuid>>,
+    pub attributes: Vec<Option<Json>>,
 }
 
 impl TransposedS3EventMessages {
@@ -101,6 +103,7 @@ impl TransposedS3EventMessages {
             event_types: Vec::with_capacity(capacity),
             is_delete_markers: Vec::with_capacity(capacity),
             move_ids: Vec::with_capacity(capacity),
+            attributes: Vec::with_capacity(capacity),
         }
     }
 
@@ -121,6 +124,7 @@ impl TransposedS3EventMessages {
             event_type,
             is_delete_marker,
             move_id,
+            attributes,
             ..
         } = message;
 
@@ -138,6 +142,7 @@ impl TransposedS3EventMessages {
         self.event_types.push(event_type);
         self.is_delete_markers.push(is_delete_marker);
         self.move_ids.push(move_id);
+        self.attributes.push(attributes);
     }
 }
 
@@ -175,7 +180,8 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
             messages.last_modified_dates,
             messages.event_types,
             messages.is_delete_markers,
-            messages.move_ids
+            messages.move_ids,
+            messages.attributes,
         )
         .map(
             |(
@@ -193,6 +199,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                 event_type,
                 is_delete_marker,
                 move_id,
+                attributes,
             )| {
                 FlatS3EventMessage {
                     s3_object_id,
@@ -209,6 +216,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                     event_type,
                     is_delete_marker,
                     move_id,
+                    attributes,
                     number_duplicate_events: 0,
                     number_reordered: 0,
                 }
@@ -351,7 +359,6 @@ impl FlatS3EventMessages {
     pub fn sort(self) -> Self {
         let mut messages = self.into_inner();
 
-        messages.sort();
         messages.sort_by(|a, b| {
             if let (Some(a_sequencer), Some(b_sequencer)) =
                 (a.sequencer.as_ref(), b.sequencer.as_ref())
@@ -427,7 +434,7 @@ impl FlatS3EventMessages {
 }
 
 /// A flattened AWS S3 record
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default, FromRow)]
+#[derive(Debug, Eq, PartialEq, Clone, Default, FromRow)]
 pub struct FlatS3EventMessage {
     pub s3_object_id: Uuid,
     pub sequencer: Option<String>,
@@ -443,6 +450,7 @@ pub struct FlatS3EventMessage {
     pub event_type: EventType,
     pub is_delete_marker: bool,
     pub move_id: Option<Uuid>,
+    pub attributes: Option<Json>,
     pub number_duplicate_events: i64,
     pub number_reordered: i64,
 }
@@ -500,14 +508,6 @@ impl FlatS3EventMessage {
         delete_marker
             .into_iter()
             .for_each(|is_delete_marker| self.is_delete_marker = is_delete_marker);
-        self
-    }
-
-    /// Update the delete marker if not None.
-    pub fn update_move_id(mut self, move_id: Option<Uuid>) -> Self {
-        move_id
-            .into_iter()
-            .for_each(|move_id| self.move_id = Some(move_id));
         self
     }
 
@@ -580,6 +580,18 @@ impl FlatS3EventMessage {
     /// Set the delete marker.
     pub fn with_is_delete_marker(mut self, is_delete_marker: bool) -> Self {
         self.is_delete_marker = is_delete_marker;
+        self
+    }
+
+    /// Set the move id.
+    pub fn with_move_id(mut self, move_id: Option<Uuid>) -> Self {
+        self.move_id = move_id;
+        self
+    }
+
+    /// Set the attributes.
+    pub fn with_attributes(mut self, attributes: Option<Json>) -> Self {
+        self.attributes = attributes;
         self
     }
 

@@ -529,6 +529,7 @@ impl From<Record> for FlatS3EventMessage {
             event_type: Created,
             is_delete_marker: is_delete_marker.unwrap_or_default(),
             move_id: None,
+            attributes: None,
             number_duplicate_events: 0,
             number_reordered: 0,
         }

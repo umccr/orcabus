@@ -5,6 +5,7 @@
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
+use crate::database;
 use crate::env::Config;
 use crate::error::Error::{S3Error, SQSError, SerdeError};
 use crate::error::{Error, Result};
@@ -12,6 +13,8 @@ use crate::events::aws::{
     EventType, FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages,
 };
 use crate::events::{Collect, EventSource, EventSourceType};
+use crate::queries::list::ListQueryBuilder;
+use crate::routes::filter::S3ObjectsFilter;
 use crate::uuid::UuidGenerator;
 use async_trait::async_trait;
 use aws_sdk_s3::error::BuildError;
@@ -61,11 +64,16 @@ impl CollecterBuilder {
     }
 
     /// Build a collector using the raw events.
-    pub async fn build(self, raw_events: FlatS3EventMessages, config: &Config) -> Collecter<'_> {
+    pub async fn build<'a>(
+        self,
+        raw_events: FlatS3EventMessages,
+        config: &'a Config,
+        client: &'a database::Client,
+    ) -> Collecter<'a> {
         if let Some(s3_client) = self.s3_client {
-            Collecter::new(s3_client, raw_events, config)
+            Collecter::new(s3_client, client, raw_events, config)
         } else {
-            Collecter::new(S3Client::with_defaults().await, raw_events, config)
+            Collecter::new(S3Client::with_defaults().await, client, raw_events, config)
         }
     }
 
@@ -98,20 +106,29 @@ impl CollecterBuilder {
     }
 
     /// Build a collector by manually calling receive to obtain the raw events.
-    pub async fn build_receive(mut self, config: &Config) -> Result<Collecter> {
+    pub async fn build_receive<'a>(
+        mut self,
+        config: &'a Config,
+        database_client: &'a database::Client,
+    ) -> Result<Collecter<'a>> {
         let url = self.sqs_url.take();
         let url = Config::value_or_else(url.as_deref(), config.sqs_url())?;
 
         let client = self.sqs_client.take();
         if let Some(sqs_client) = &client {
             Ok(self
-                .build(Self::receive(sqs_client, url).await?, config)
+                .build(
+                    Self::receive(sqs_client, url).await?,
+                    config,
+                    database_client,
+                )
                 .await)
         } else {
             Ok(self
                 .build(
                     Self::receive(&SQSClient::with_defaults().await, url).await?,
                     config,
+                    database_client,
                 )
                 .await)
         }
@@ -124,6 +141,7 @@ impl CollecterBuilder {
 #[derive(Debug)]
 pub struct Collecter<'a> {
     client: S3Client,
+    database_client: &'a database::Client,
     raw_events: FlatS3EventMessages,
     config: &'a Config,
     n_records: Option<usize>,
@@ -133,11 +151,13 @@ impl<'a> Collecter<'a> {
     /// Create a new collector.
     pub(crate) fn new(
         client: S3Client,
+        database_client: &'a database::Client,
         raw_events: FlatS3EventMessages,
         config: &'a Config,
     ) -> Self {
         Self {
             client,
+            database_client,
             raw_events,
             config,
             n_records: None,
@@ -145,8 +165,20 @@ impl<'a> Collecter<'a> {
     }
 
     /// Get the inner values.
-    pub fn into_inner(self) -> (S3Client, FlatS3EventMessages, &'a Config) {
-        (self.client, self.raw_events, self.config)
+    pub fn into_inner(
+        self,
+    ) -> (
+        S3Client,
+        &'a database::Client,
+        FlatS3EventMessages,
+        &'a Config,
+    ) {
+        (
+            self.client,
+            self.database_client,
+            self.raw_events,
+            self.config,
+        )
     }
 
     /// Converts an AWS datetime to a standard database format.
@@ -207,6 +239,7 @@ impl<'a> Collecter<'a> {
     pub async fn tagging(
         config: &Config,
         client: &S3Client,
+        database_client: &database::Client,
         mut event: FlatS3EventMessage,
     ) -> Result<FlatS3EventMessage> {
         let tagging = client
@@ -224,45 +257,76 @@ impl<'a> Collecter<'a> {
 
             let GetObjectTaggingOutput { mut tag_set, .. } = tagging;
 
-            // Add the tag to the object if it's not already there.
-            if !tag_set
-                .iter()
-                .any(|tag| tag.key == config.ingester_tag_name())
-            {
-                let tag = Tag::builder()
-                    .key(config.ingester_tag_name())
-                    .value(UuidGenerator::generate())
-                    .build()?;
-                tag_set.push(tag);
+            let tag = tag_set
+                .clone()
+                .into_iter()
+                .find(|tag| tag.key == config.ingester_tag_name());
 
-                // Try to push the tags to S3, only proceed if successful.
-                let result = client
-                    .put_object_tagging(
-                        &event.key,
-                        &event.bucket,
-                        Tagging::builder()
-                            .set_tag_set(Some(tag_set.clone()))
-                            .build()?,
-                    )
-                    .await;
+            match tag {
+                None => {
+                    let move_id = UuidGenerator::generate();
+                    let tag = Tag::builder()
+                        .key(config.ingester_tag_name())
+                        .value(move_id)
+                        .build()?;
+                    tag_set.push(tag);
 
-                if let Err(err) = result {
-                    warn!(
-                        "Error received from PutObjectTagging: {}",
-                        err.into_service_error()
-                    );
-                    return Ok(event);
+                    // Try to push the tags to S3, only proceed if successful.
+                    let result = client
+                        .put_object_tagging(
+                            &event.key,
+                            &event.bucket,
+                            Tagging::builder().set_tag_set(Some(tag_set)).build()?,
+                        )
+                        .await;
+
+                    if let Err(err) = result {
+                        warn!(
+                            "Error received from PutObjectTagging: {}",
+                            err.into_service_error()
+                        );
+                        return Ok(event);
+                    }
+
+                    return Ok(event.with_move_id(Some(move_id)));
+                }
+                Some(tag) => {
+                    let move_id = Uuid::from_str(tag.value());
+
+                    match move_id {
+                        Ok(move_id) => {
+                            let filter = S3ObjectsFilter {
+                                move_id: Some(move_id),
+                                ..Default::default()
+                            };
+                            let moved_object =
+                                ListQueryBuilder::new(database_client.connection_ref())
+                                    .filter_all(filter, true)?
+                                    .one()
+                                    .await
+                                    .ok()
+                                    .flatten();
+
+                            match moved_object {
+                                None => {
+                                    warn!("Object with move_id {} not found in database", move_id);
+                                    return Ok(event.with_move_id(Some(move_id)));
+                                }
+                                Some(moved_object) => {
+                                    event = event
+                                        .with_move_id(Some(move_id))
+                                        .with_attributes(moved_object.attributes);
+                                }
+                            }
+                        }
+                        Err(err) => {
+                            warn!("Failed parsing move_id from tag: {}", err);
+                            return Ok(event);
+                        }
+                    }
                 }
             }
-
-            let tag = tag_set
-                .iter()
-                .find(|value| value.key == config.ingester_tag_name())
-                .unwrap();
-            let move_id = Uuid::from_str(tag.value()).unwrap();
-
-            event = event.update_move_id(Some(move_id));
-        }
+        };
 
         Ok(event)
     }
@@ -271,6 +335,7 @@ impl<'a> Collecter<'a> {
     pub async fn update_events(
         config: &Config,
         client: &S3Client,
+        database_client: &database::Client,
         events: FlatS3EventMessages,
     ) -> Result<FlatS3EventMessages> {
         Ok(FlatS3EventMessages(
@@ -284,7 +349,7 @@ impl<'a> Collecter<'a> {
                 trace!(key = ?event.key, bucket = ?event.bucket, "updating event");
 
                 let event = Self::head(client, event).await?;
-                Self::tagging(config, client, event).await
+                Self::tagging(config, client, database_client, event).await
             }))
             .await
             .into_iter()
@@ -307,11 +372,11 @@ impl From<BuildError> for Error {
 #[async_trait]
 impl<'a> Collect for Collecter<'a> {
     async fn collect(mut self) -> Result<EventSource> {
-        let (client, events, config) = self.into_inner();
+        let (client, database_client, events, config) = self.into_inner();
 
         let events = events.sort_and_dedup();
 
-        let events = Self::update_events(config, &client, events).await?;
+        let events = Self::update_events(config, &client, database_client, events).await?;
         // Get only the known event types.
         let events = events.filter_known();
         let n_records = events.0.len();
@@ -334,6 +399,10 @@ impl<'a> Collect for Collecter<'a> {
 pub(crate) mod tests {
     use std::result;
 
+    use crate::events::aws::tests::{
+        expected_event_record_simple, expected_flat_events_simple, EXPECTED_SHA256,
+    };
+    use crate::events::aws::StorageClass::IntelligentTiering;
     use aws_sdk_s3::error::SdkError;
     use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingError;
     use aws_sdk_s3::operation::head_object::HeadObjectError;
@@ -348,11 +417,7 @@ pub(crate) mod tests {
     use aws_smithy_runtime_api::client::orchestrator::HttpResponse;
     use aws_smithy_runtime_api::client::result::ServiceError;
     use mockall::predicate::{eq, function};
-
-    use crate::events::aws::tests::{
-        expected_event_record_simple, expected_flat_events_simple, EXPECTED_SHA256,
-    };
-    use crate::events::aws::StorageClass::IntelligentTiering;
+    use sqlx::PgPool;
 
     use super::*;
 
@@ -377,8 +442,8 @@ pub(crate) mod tests {
         assert_eq!(events, expected);
     }
 
-    #[tokio::test]
-    async fn build_receive() {
+    #[sqlx::test]
+    async fn build_receive(pool: PgPool) {
         let mut sqs_client = SQSClient::default();
         let mut s3_client = S3Client::default();
 
@@ -389,7 +454,7 @@ pub(crate) mod tests {
             .with_sqs_client(sqs_client)
             .with_s3_client(s3_client)
             .with_sqs_url("url")
-            .build_receive(&Default::default())
+            .build_receive(&Default::default(), &database::Client::from_pool(pool))
             .await
             .unwrap()
             .collect()
@@ -411,10 +476,11 @@ pub(crate) mod tests {
         assert_eq!(result, Some(DateTime::<Utc>::default()));
     }
 
-    #[tokio::test]
-    async fn head() {
+    #[sqlx::test]
+    async fn head(pool: PgPool) {
         let config = Default::default();
-        let mut collecter = test_collecter(&config).await;
+        let client = database::Client::from_pool(pool);
+        let mut collecter = test_collecter(&config, &client).await;
 
         set_s3_head_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
 
@@ -435,10 +501,11 @@ pub(crate) mod tests {
         assert_eq!(result, expected);
     }
 
-    #[tokio::test]
-    async fn head_not_found() {
+    #[sqlx::test]
+    async fn head_not_found(pool: PgPool) {
         let config = Default::default();
-        let mut collecter = test_collecter(&config).await;
+        let client = database::Client::from_pool(pool);
+        let mut collecter = test_collecter(&config, &client).await;
 
         set_s3_head_expectations(
             &mut collecter.client,
@@ -455,16 +522,17 @@ pub(crate) mod tests {
         assert!(result.is_ok());
     }
 
-    #[tokio::test]
-    async fn update_events() {
+    #[sqlx::test]
+    async fn update_events(pool: PgPool) {
         let config = Default::default();
-        let mut collecter = test_collecter(&config).await;
+        let client = database::Client::from_pool(pool);
+        let mut collecter = test_collecter(&config, &client).await;
 
         let events = expected_flat_events_simple().sort_and_dedup();
 
         set_s3_client_expectations(&mut collecter.client);
 
-        let mut result = Collecter::update_events(&config, &collecter.client, events)
+        let mut result = Collecter::update_events(&config, &collecter.client, &client, events)
             .await
             .unwrap()
             .into_inner()
@@ -479,10 +547,11 @@ pub(crate) mod tests {
         assert_eq!(second.last_modified_date, None);
     }
 
-    #[tokio::test]
-    async fn collect() {
+    #[sqlx::test]
+    async fn collect(pool: PgPool) {
         let config = Default::default();
-        let mut collecter = test_collecter(&config).await;
+        let client = database::Client::from_pool(pool);
+        let mut collecter = test_collecter(&config, &client).await;
 
         set_s3_client_expectations(&mut collecter.client);
 
@@ -601,8 +670,16 @@ pub(crate) mod tests {
         )
     }
 
-    async fn test_collecter(config: &Config) -> Collecter<'_> {
-        Collecter::new(S3Client::default(), expected_flat_events_simple(), config)
+    async fn test_collecter<'a>(
+        config: &'a Config,
+        database_client: &'a database::Client,
+    ) -> Collecter<'a> {
+        Collecter::new(
+            S3Client::default(),
+            database_client,
+            expected_flat_events_simple(),
+            config,
+        )
     }
 
     fn expected_receive_message() -> ReceiveMessageOutput {

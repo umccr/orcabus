@@ -149,7 +149,8 @@ where
                 filter
                     .is_delete_marker
                     .map(|v| s3_object::Column::IsDeleteMarker.eq(v)),
-            );
+            )
+            .add_option(filter.move_id.map(|v| s3_object::Column::MoveId.eq(v)));
 
         if let Some(attributes) = filter.attributes {
             let json_conditions = Self::json_conditions(

@@ -75,6 +75,7 @@ pub(crate) mod tests {
     use sqlx::postgres::PgRow;
     use sqlx::{Executor, PgPool, Row};
     use tokio::time::Instant;
+    use uuid::Uuid;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
@@ -91,6 +92,7 @@ pub(crate) mod tests {
     };
     use crate::events::EventSourceType;
     use crate::events::EventSourceType::S3;
+    use crate::uuid::UuidGenerator;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {
@@ -102,6 +104,9 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 1);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_some());
         assert_created(&s3_object_results[0]);
     }
 
@@ -148,6 +153,9 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 1);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_some());
         assert_with(
             &s3_object_results[0],
             Some(i64::MAX),
@@ -184,6 +192,9 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 2);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_some());
         assert_eq!(
             1,
             s3_object_results[0].get::<i64, _>("number_duplicate_events")
@@ -288,6 +299,9 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 2);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_some());
         // Order should be different here.
         assert_ingest_events(
             &s3_object_results[1],
@@ -1065,7 +1079,9 @@ pub(crate) mod tests {
         assert_row(s3_object_results, message, sequencer, event_time);
     }
 
-    fn update_test_events(mut events: TransposedS3EventMessages) -> TransposedS3EventMessages {
+    pub(crate) fn update_test_events(
+        mut events: TransposedS3EventMessages,
+    ) -> TransposedS3EventMessages {
         let update_last_modified = |dates: &mut Vec<Option<DateTime<Utc>>>| {
             dates.iter_mut().for_each(|last_modified| {
                 *last_modified = Some(DateTime::default());
@@ -1081,10 +1097,16 @@ pub(crate) mod tests {
                 *sha256 = Some(EXPECTED_SHA256.to_string());
             });
         };
+        let update_move_ids = |move_ids: &mut Vec<Option<Uuid>>| {
+            move_ids.iter_mut().for_each(|move_id| {
+                *move_id = Some(UuidGenerator::generate());
+            });
+        };
 
         update_last_modified(&mut events.last_modified_dates);
         update_storage_class(&mut events.storage_classes);
         update_sha256(&mut events.sha256s);
+        update_move_ids(&mut events.move_ids);
 
         events
     }

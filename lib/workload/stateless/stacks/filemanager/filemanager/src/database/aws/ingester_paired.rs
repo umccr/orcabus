@@ -182,6 +182,7 @@ pub(crate) mod tests {
     use std::ops::Add;
 
     use crate::database::aws::ingester::tests::fetch_results;
+    use crate::database::aws::ingester::tests::update_test_events;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
     use crate::events::aws::message::default_version_id;
@@ -195,10 +196,9 @@ pub(crate) mod tests {
         EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_SHA256,
         EXPECTED_VERSION_ID,
     };
-    use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
+    use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages};
     use crate::events::EventSourceType;
     use crate::events::EventSourceType::S3Paired;
-    use crate::uuid::UuidGenerator;
     use chrono::{DateTime, Utc};
     use itertools::Itertools;
     use sqlx::postgres::PgRow;
@@ -530,7 +530,7 @@ pub(crate) mod tests {
         let mut events = vec![event];
         events.extend(expected_flat_events_simple().sort_and_dedup().into_inner());
 
-        let events = update_test_events(FlatS3EventMessages(events).into());
+        let events = update_test_events_paired(FlatS3EventMessages(events).into());
         // This also checks to make sure that the update duplicate constraint succeeds.
         ingester
             .ingest(EventSourceType::S3Paired(events))
@@ -700,7 +700,7 @@ pub(crate) mod tests {
         let mut events = vec![event];
         events.extend(expected_flat_events_simple().sort_and_dedup().into_inner());
 
-        let events = update_test_events(FlatS3EventMessages(events).into());
+        let events = update_test_events_paired(FlatS3EventMessages(events).into());
 
         ingester
             .ingest(EventSourceType::S3Paired(events))
@@ -1631,37 +1631,9 @@ pub(crate) mod tests {
         );
     }
 
-    fn update_test_events(mut events: Events) -> Events {
-        let update_last_modified = |dates: &mut Vec<Option<DateTime<Utc>>>| {
-            dates.iter_mut().for_each(|last_modified| {
-                *last_modified = Some(DateTime::default());
-            });
-        };
-        let update_storage_class = |classes: &mut Vec<Option<StorageClass>>| {
-            classes.iter_mut().for_each(|storage_class| {
-                *storage_class = Some(StorageClass::Standard);
-            });
-        };
-        let update_sha256 = |sha256s: &mut Vec<Option<String>>| {
-            sha256s.iter_mut().for_each(|sha256| {
-                *sha256 = Some(EXPECTED_SHA256.to_string());
-            });
-        };
-
-        update_last_modified(&mut events.object_created.last_modified_dates);
-        update_storage_class(&mut events.object_created.storage_classes);
-        update_sha256(&mut events.object_created.sha256s);
-        events
-            .object_created
-            .move_ids
-            .iter_mut()
-            .for_each(|move_id| {
-                *move_id = Some(UuidGenerator::generate());
-            });
-
-        update_last_modified(&mut events.object_deleted.last_modified_dates);
-        update_storage_class(&mut events.object_deleted.storage_classes);
-        update_sha256(&mut events.object_deleted.sha256s);
+    fn update_test_events_paired(mut events: Events) -> Events {
+        events.object_created = update_test_events(events.object_created);
+        events.object_deleted = update_test_events(events.object_deleted);
 
         events
     }
@@ -1680,11 +1652,11 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn test_events() -> Events {
-        update_test_events(expected_events_simple())
+        update_test_events_paired(expected_events_simple())
     }
 
     pub(crate) fn test_events_delete_marker() -> Events {
-        update_test_events(expected_events_simple_delete_marker())
+        update_test_events_paired(expected_events_simple_delete_marker())
     }
 
     pub(crate) fn test_created_events() -> Events {
