@@ -14,7 +14,7 @@ class SubjectViewSet(BaseViewSet):
     def get_queryset(self):
 
         qs = self.queryset
-        query_params = self.request.query_params.copy()
+        query_params = self.get_query_params()
 
         library_id = query_params.get("library_id", None)
         if library_id:

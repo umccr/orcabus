@@ -7,6 +7,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 
 class BaseViewSet(ReadOnlyModelViewSet, ABC):
+    lookup_value_regex = "[^/]+"  # This is to allow for special characters in the URL
     orcabus_id_prefix = ''
     ordering_fields = "__all__"
     ordering = ["-orcabus_id"]
@@ -24,3 +25,21 @@ class BaseViewSet(ReadOnlyModelViewSet, ABC):
         obj = get_object_or_404(self.queryset, pk=pk)
         serializer = self.serializer_class(obj)
         return Response(serializer.data)
+
+    def get_query_params(self):
+        """
+        Sanitize query params if needed
+        e.g. remove prefixes for each orcabus_id
+        """
+        query_params = self.request.query_params.copy()
+        orcabus_id = query_params.getlist("orcabus_id", None)
+        if orcabus_id:
+            id_list = []
+            for key in orcabus_id:
+                if key.startswith(self.orcabus_id_prefix):
+                    id_list.append(key[len(self.orcabus_id_prefix):])
+                else:
+                    id_list.append(key)
+            query_params.setlist('orcabus_id', id_list)
+
+        return query_params

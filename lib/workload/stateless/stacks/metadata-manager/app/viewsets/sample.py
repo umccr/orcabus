@@ -21,4 +21,5 @@ class SampleViewSet(BaseViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        return Sample.objects.get_by_keyword(**self.request.query_params)
+        query_params = self.get_query_params()
+        return Sample.objects.get_by_keyword(**query_params)
