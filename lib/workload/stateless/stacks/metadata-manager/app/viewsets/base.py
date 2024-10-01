@@ -32,7 +32,14 @@ class BaseViewSet(ReadOnlyModelViewSet, ABC):
         e.g. remove prefixes for each orcabus_id
         """
         query_params = self.request.query_params.copy()
-        orcabus_id = query_params.get("orcabus_id", None)
-        if orcabus_id and orcabus_id.startswith(self.orcabus_id_prefix):
-            query_params['orcabus_id'] = orcabus_id[len(self.orcabus_id_prefix):]
+        orcabus_id = query_params.getlist("orcabus_id", None)
+        if orcabus_id:
+            id_list = []
+            for key in orcabus_id:
+                if key.startswith(self.orcabus_id_prefix):
+                    id_list.append(key[len(self.orcabus_id_prefix):])
+                else:
+                    id_list.append(key)
+            query_params.setlist('orcabus_id', id_list)
+
         return query_params
