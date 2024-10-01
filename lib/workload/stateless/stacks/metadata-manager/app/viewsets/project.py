@@ -10,6 +10,7 @@ class ProjectViewSet(BaseViewSet):
     serializer_class = ProjectDetailSerializer
     search_fields = Project.get_base_fields()
     queryset = Project.objects.prefetch_related("contact_set").all()
+    orcabus_id_prefix = Project.orcabus_id_prefix
 
     @extend_schema(parameters=[
         ProjectSerializer
