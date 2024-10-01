@@ -191,16 +191,11 @@ impl<'a> Collecter<'a> {
     }
 
     /// Gets S3 metadata from HeadObject such as creation/archival timestamps and statuses.
-    pub async fn head(
-        client: &S3Client,
-        mut event: FlatS3EventMessage,
-    ) -> Result<FlatS3EventMessage> {
+    pub async fn head(client: &S3Client, event: FlatS3EventMessage) -> Result<FlatS3EventMessage> {
         let head = client
             .head_object(&event.key, &event.bucket)
-            .map_err(|err| {
-                let err = err.into_service_error();
+            .inspect_err(|err| {
                 warn!("Error received from HeadObject: {}", err);
-                err
             })
             .await
             .ok();
@@ -208,31 +203,31 @@ impl<'a> Collecter<'a> {
         // Race condition: it's possible that an object gets deleted so quickly that it
         // occurs before calling head/tagging. This means that there may be cases where the
         // storage class and other fields are not known, or object moves cannot be tracked.
-        if let Some(head) = head {
-            trace!(head = ?head, "received HeadObject output");
+        let Some(head) = head else {
+            return Ok(event);
+        };
 
-            let HeadObjectOutput {
-                storage_class,
-                last_modified,
-                content_length,
-                e_tag,
-                checksum_sha256,
-                delete_marker,
-                ..
-            } = head;
+        trace!(head = ?head, "received HeadObject output");
 
-            // S3 does not return a storage class for standard, which means this is the
-            // default. See https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_ResponseSyntax
-            event = event
-                .update_storage_class(StorageClass::from_aws(storage_class.unwrap_or(Standard)))
-                .update_last_modified_date(Self::convert_datetime(last_modified))
-                .update_size(content_length)
-                .update_e_tag(e_tag)
-                .update_sha256(checksum_sha256)
-                .update_delete_marker(delete_marker);
-        }
+        let HeadObjectOutput {
+            storage_class,
+            last_modified,
+            content_length,
+            e_tag,
+            checksum_sha256,
+            delete_marker,
+            ..
+        } = head;
 
-        Ok(event)
+        // S3 does not return a storage class for standard, which means this is the
+        // default. See https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_ResponseSyntax
+        Ok(event
+            .update_storage_class(StorageClass::from_aws(storage_class.unwrap_or(Standard)))
+            .update_last_modified_date(Self::convert_datetime(last_modified))
+            .update_size(content_length)
+            .update_e_tag(e_tag)
+            .update_sha256(checksum_sha256)
+            .update_delete_marker(delete_marker))
     }
 
     /// Gets S3 tags from objects.
@@ -240,95 +235,91 @@ impl<'a> Collecter<'a> {
         config: &Config,
         client: &S3Client,
         database_client: &database::Client,
-        mut event: FlatS3EventMessage,
+        event: FlatS3EventMessage,
     ) -> Result<FlatS3EventMessage> {
         let tagging = client
             .get_object_tagging(&event.key, &event.bucket)
-            .map_err(|err| {
-                let err = err.into_service_error();
+            .inspect_err(|err| {
                 warn!("Error received from GetObjectTagging: {}", err);
-                err
             })
             .await
             .ok();
 
-        if let Some(tagging) = tagging {
-            trace!(tagging = ?tagging, "received tagging output");
-
-            let GetObjectTaggingOutput { mut tag_set, .. } = tagging;
-
-            let tag = tag_set
-                .clone()
-                .into_iter()
-                .find(|tag| tag.key == config.ingester_tag_name());
-
-            match tag {
-                None => {
-                    let move_id = UuidGenerator::generate();
-                    let tag = Tag::builder()
-                        .key(config.ingester_tag_name())
-                        .value(move_id)
-                        .build()?;
-                    tag_set.push(tag);
-
-                    // Try to push the tags to S3, only proceed if successful.
-                    let result = client
-                        .put_object_tagging(
-                            &event.key,
-                            &event.bucket,
-                            Tagging::builder().set_tag_set(Some(tag_set)).build()?,
-                        )
-                        .await;
-
-                    if let Err(err) = result {
-                        warn!(
-                            "Error received from PutObjectTagging: {}",
-                            err.into_service_error()
-                        );
-                        return Ok(event);
-                    }
-
-                    return Ok(event.with_move_id(Some(move_id)));
-                }
-                Some(tag) => {
-                    let move_id = Uuid::from_str(tag.value());
-
-                    match move_id {
-                        Ok(move_id) => {
-                            let filter = S3ObjectsFilter {
-                                move_id: Some(move_id),
-                                ..Default::default()
-                            };
-                            let moved_object =
-                                ListQueryBuilder::new(database_client.connection_ref())
-                                    .filter_all(filter, true)?
-                                    .one()
-                                    .await
-                                    .ok()
-                                    .flatten();
-
-                            match moved_object {
-                                None => {
-                                    warn!("Object with move_id {} not found in database", move_id);
-                                    return Ok(event.with_move_id(Some(move_id)));
-                                }
-                                Some(moved_object) => {
-                                    event = event
-                                        .with_move_id(Some(move_id))
-                                        .with_attributes(moved_object.attributes);
-                                }
-                            }
-                        }
-                        Err(err) => {
-                            warn!("Failed parsing move_id from tag: {}", err);
-                            return Ok(event);
-                        }
-                    }
-                }
-            }
+        let Some(tagging) = tagging else {
+            return Ok(event);
         };
 
-        Ok(event)
+        trace!(tagging = ?tagging, "received tagging output");
+
+        let GetObjectTaggingOutput { mut tag_set, .. } = tagging;
+
+        // Check if the object contains the move_id tag.
+        let tag = tag_set
+            .clone()
+            .into_iter()
+            .find(|tag| tag.key == config.ingester_tag_name());
+
+        let Some(tag) = tag else {
+            // If it doesn't, then a new tag needs to be generated.
+            let move_id = UuidGenerator::generate();
+            let tag = Tag::builder()
+                .key(config.ingester_tag_name())
+                .value(move_id)
+                .build()?;
+            tag_set.push(tag);
+
+            // Try to push the tags to S3, only proceed if successful.
+            let result = client
+                .put_object_tagging(
+                    &event.key,
+                    &event.bucket,
+                    Tagging::builder().set_tag_set(Some(tag_set)).build()?,
+                )
+                .await
+                .inspect_err(|err| {
+                    warn!("Error received from PutObjectTagging: {}", err);
+                });
+
+            // Only add a move_id to the new record if the tagging was successful.
+            return if result.is_ok() {
+                Ok(event.with_move_id(Some(move_id)))
+            } else {
+                Ok(event)
+            };
+        };
+
+        // The object has a move_id tag. Grab the existing the tag, returning a new record without
+        // the move_id if the is not valid.
+        let move_id = Uuid::from_str(tag.value()).inspect_err(|err| {
+            warn!("Failed to parse move_id from tag: {}", err);
+        });
+        let Ok(move_id) = move_id else {
+            return Ok(event);
+        };
+
+        // From here, the new record must be a valid, moved object.
+        let event = event.with_move_id(Some(move_id));
+
+        // Get the attributes from the old record to update the new record with.
+        let filter = S3ObjectsFilter {
+            move_id: Some(move_id),
+            ..Default::default()
+        };
+        let moved_object = ListQueryBuilder::new(database_client.connection_ref())
+            .filter_all(filter, true)?
+            .one()
+            .await
+            .ok()
+            .flatten();
+
+        // Update the new record with the attributes if possible, or return the new record without
+        // the attributes if not possible.
+        if let Some(moved_object) = moved_object {
+            Ok(event.with_attributes(moved_object.attributes))
+        } else {
+            warn!("Object with move_id {} not found in database", move_id);
+            Ok(event)
+        }
     }
 
     /// Process events and add header and datetime fields.
