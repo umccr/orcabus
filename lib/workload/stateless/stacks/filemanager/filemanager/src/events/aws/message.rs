@@ -198,6 +198,7 @@ impl From<Record> for FlatS3EventMessage {
             sha256: None,
             event_type,
             is_delete_marker,
+            move_id: None,
             number_duplicate_events: 0,
             number_reordered: 0,
         }

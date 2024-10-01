@@ -53,6 +53,7 @@ impl Ingester {
         .bind(&events.sequencers)
         .bind(&events.is_delete_markers)
         .bind(&events.event_types)
+        .bind(&events.move_ids)
         .fetch_all(&mut *tx)
         .await?;
 

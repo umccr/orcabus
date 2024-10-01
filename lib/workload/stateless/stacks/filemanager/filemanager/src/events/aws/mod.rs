@@ -79,6 +79,7 @@ pub struct TransposedS3EventMessages {
     pub last_modified_dates: Vec<Option<DateTime<Utc>>>,
     pub event_types: Vec<EventType>,
     pub is_delete_markers: Vec<bool>,
+    pub move_ids: Vec<Option<Uuid>>,
 }
 
 impl TransposedS3EventMessages {
@@ -99,6 +100,7 @@ impl TransposedS3EventMessages {
             last_modified_dates: Vec::with_capacity(capacity),
             event_types: Vec::with_capacity(capacity),
             is_delete_markers: Vec::with_capacity(capacity),
+            move_ids: Vec::with_capacity(capacity),
         }
     }
 
@@ -118,6 +120,7 @@ impl TransposedS3EventMessages {
             last_modified_date,
             event_type,
             is_delete_marker,
+            move_id,
             ..
         } = message;
 
@@ -134,6 +137,7 @@ impl TransposedS3EventMessages {
         self.last_modified_dates.push(last_modified_date);
         self.event_types.push(event_type);
         self.is_delete_markers.push(is_delete_marker);
+        self.move_ids.push(move_id);
     }
 }
 
@@ -171,6 +175,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
             messages.last_modified_dates,
             messages.event_types,
             messages.is_delete_markers,
+            messages.move_ids
         )
         .map(
             |(
@@ -187,6 +192,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                 last_modified_date,
                 event_type,
                 is_delete_marker,
+                move_id,
             )| {
                 FlatS3EventMessage {
                     s3_object_id,
@@ -202,6 +208,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                     event_time,
                     event_type,
                     is_delete_marker,
+                    move_id,
                     number_duplicate_events: 0,
                     number_reordered: 0,
                 }
@@ -435,6 +442,7 @@ pub struct FlatS3EventMessage {
     pub event_time: Option<DateTime<Utc>>,
     pub event_type: EventType,
     pub is_delete_marker: bool,
+    pub move_id: Option<Uuid>,
     pub number_duplicate_events: i64,
     pub number_reordered: i64,
 }
@@ -492,6 +500,14 @@ impl FlatS3EventMessage {
         delete_marker
             .into_iter()
             .for_each(|is_delete_marker| self.is_delete_marker = is_delete_marker);
+        self
+    }
+
+    /// Update the delete marker if not None.
+    pub fn update_move_id(mut self, move_id: Option<Uuid>) -> Self {
+        move_id
+            .into_iter()
+            .for_each(|move_id| self.move_id = Some(move_id));
         self
     }
 

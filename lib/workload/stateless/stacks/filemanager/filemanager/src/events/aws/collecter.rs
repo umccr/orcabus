@@ -1,21 +1,6 @@
 //! Definition and implementation of the aws Collecter.
 //!
 
-use async_trait::async_trait;
-use aws_sdk_s3::error::BuildError;
-use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
-use aws_sdk_s3::operation::head_object::HeadObjectOutput;
-use aws_sdk_s3::primitives;
-use aws_sdk_s3::types::StorageClass::Standard;
-use aws_sdk_s3::types::{Tag, Tagging};
-use chrono::{DateTime, Utc};
-use futures::future::join_all;
-use futures::TryFutureExt;
-use mockall_double::double;
-use tracing::{trace, warn};
-
-#[double]
-use crate::clients::aws::s3::Client;
 #[double]
 use crate::clients::aws::s3::Client as S3Client;
 #[double]
@@ -28,6 +13,20 @@ use crate::events::aws::{
 };
 use crate::events::{Collect, EventSource, EventSourceType};
 use crate::uuid::UuidGenerator;
+use async_trait::async_trait;
+use aws_sdk_s3::error::BuildError;
+use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
+use aws_sdk_s3::operation::head_object::HeadObjectOutput;
+use aws_sdk_s3::primitives;
+use aws_sdk_s3::types::StorageClass::Standard;
+use aws_sdk_s3::types::{Tag, Tagging};
+use chrono::{DateTime, Utc};
+use futures::future::join_all;
+use futures::TryFutureExt;
+use mockall_double::double;
+use std::str::FromStr;
+use tracing::{trace, warn};
+use uuid::Uuid;
 
 /// Build an AWS collector struct.
 #[derive(Default, Debug)]
@@ -124,7 +123,7 @@ impl CollecterBuilder {
 /// records is None before any events have been processed.
 #[derive(Debug)]
 pub struct Collecter<'a> {
-    client: Client,
+    client: S3Client,
     raw_events: FlatS3EventMessages,
     config: &'a Config,
     n_records: Option<usize>,
@@ -132,7 +131,11 @@ pub struct Collecter<'a> {
 
 impl<'a> Collecter<'a> {
     /// Create a new collector.
-    pub(crate) fn new(client: Client, raw_events: FlatS3EventMessages, config: &'a Config) -> Self {
+    pub(crate) fn new(
+        client: S3Client,
+        raw_events: FlatS3EventMessages,
+        config: &'a Config,
+    ) -> Self {
         Self {
             client,
             raw_events,
@@ -142,7 +145,7 @@ impl<'a> Collecter<'a> {
     }
 
     /// Get the inner values.
-    pub fn into_inner(self) -> (Client, FlatS3EventMessages, &'a Config) {
+    pub fn into_inner(self) -> (S3Client, FlatS3EventMessages, &'a Config) {
         (self.client, self.raw_events, self.config)
     }
 
@@ -156,23 +159,55 @@ impl<'a> Collecter<'a> {
     }
 
     /// Gets S3 metadata from HeadObject such as creation/archival timestamps and statuses.
-    pub async fn head(client: &Client, key: &str, bucket: &str) -> Option<HeadObjectOutput> {
-        client
-            .head_object(key, bucket)
+    pub async fn head(
+        client: &S3Client,
+        mut event: FlatS3EventMessage,
+    ) -> Result<FlatS3EventMessage> {
+        let head = client
+            .head_object(&event.key, &event.bucket)
             .map_err(|err| {
                 let err = err.into_service_error();
                 warn!("Error received from HeadObject: {}", err);
                 err
             })
             .await
-            .ok()
+            .ok();
+
+        // Race condition: it's possible that an object gets deleted so quickly that it
+        // occurs before calling head/tagging. This means that there may be cases where the
+        // storage class and other fields are not known, or object moves cannot be tracked.
+        if let Some(head) = head {
+            trace!(head = ?head, "received HeadObject output");
+
+            let HeadObjectOutput {
+                storage_class,
+                last_modified,
+                content_length,
+                e_tag,
+                checksum_sha256,
+                delete_marker,
+                ..
+            } = head;
+
+            // S3 does not return a storage class for standard, which means this is the
+            // default. See https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_ResponseSyntax
+            event = event
+                .update_storage_class(StorageClass::from_aws(storage_class.unwrap_or(Standard)))
+                .update_last_modified_date(Self::convert_datetime(last_modified))
+                .update_size(content_length)
+                .update_e_tag(e_tag)
+                .update_sha256(checksum_sha256)
+                .update_delete_marker(delete_marker);
+        }
+
+        Ok(event)
     }
 
     /// Gets S3 tags from objects.
     pub async fn tagging(
         config: &Config,
-        client: &Client,
-        event: FlatS3EventMessage,
+        client: &S3Client,
+        mut event: FlatS3EventMessage,
     ) -> Result<FlatS3EventMessage> {
         let tagging = client
             .get_object_tagging(&event.key, &event.bucket)
@@ -185,15 +220,15 @@ impl<'a> Collecter<'a> {
             .ok();
 
         if let Some(tagging) = tagging {
-            trace!(tagging = ?tagging, "received GetObjectTagging output");
+            trace!(tagging = ?tagging, "received tagging output");
 
             let GetObjectTaggingOutput { mut tag_set, .. } = tagging;
 
+            // Add the tag to the object if it's not already there.
             if !tag_set
                 .iter()
                 .any(|tag| tag.key == config.ingester_tag_name())
             {
-                // Add the tag to the object if it's not already there.
                 let tag = Tag::builder()
                     .key(config.ingester_tag_name())
                     .value(UuidGenerator::generate())
@@ -205,15 +240,28 @@ impl<'a> Collecter<'a> {
                     .put_object_tagging(
                         &event.key,
                         &event.bucket,
-                        Tagging::builder().set_tag_set(Some(tag_set)).build()?,
+                        Tagging::builder()
+                            .set_tag_set(Some(tag_set.clone()))
+                            .build()?,
                     )
                     .await;
+
                 if let Err(err) = result {
-                    let err = err.into_service_error();
-                    warn!("Error received from PutObjectTagging: {}", err);
+                    warn!(
+                        "Error received from PutObjectTagging: {}",
+                        err.into_service_error()
+                    );
                     return Ok(event);
                 }
             }
+
+            let tag = tag_set
+                .iter()
+                .find(|value| value.key == config.ingester_tag_name())
+                .unwrap();
+            let move_id = Uuid::from_str(tag.value()).unwrap();
+
+            event = event.update_move_id(Some(move_id));
         }
 
         Ok(event)
@@ -222,11 +270,11 @@ impl<'a> Collecter<'a> {
     /// Process events and add header and datetime fields.
     pub async fn update_events(
         config: &Config,
-        client: &Client,
+        client: &S3Client,
         events: FlatS3EventMessages,
     ) -> Result<FlatS3EventMessages> {
         Ok(FlatS3EventMessages(
-            join_all(events.into_inner().into_iter().map(|mut event| async move {
+            join_all(events.into_inner().into_iter().map(|event| async move {
                 // No need to run this unnecessarily on removed events.
                 match event.event_type {
                     EventType::Deleted | EventType::Other => return Ok(event),
@@ -235,35 +283,7 @@ impl<'a> Collecter<'a> {
 
                 trace!(key = ?event.key, bucket = ?event.bucket, "updating event");
 
-                // Race condition: it's possible that an object gets deleted so quickly that it
-                // occurs before calling head/tagging. This means that there may be cases where the
-                // storage class and other fields are not known, or object moves cannot be tracked.
-                if let Some(head) = Self::head(client, &event.key, &event.bucket).await {
-                    trace!(head = ?head, "received HeadObject output");
-
-                    let HeadObjectOutput {
-                        storage_class,
-                        last_modified,
-                        content_length,
-                        e_tag,
-                        checksum_sha256,
-                        delete_marker,
-                        ..
-                    } = head;
-
-                    // S3 does not return a storage class for standard, which means this is the
-                    // default. See https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_ResponseSyntax
-                    event = event
-                        .update_storage_class(StorageClass::from_aws(
-                            storage_class.unwrap_or(Standard),
-                        ))
-                        .update_last_modified_date(Self::convert_datetime(last_modified))
-                        .update_size(content_length)
-                        .update_e_tag(e_tag)
-                        .update_sha256(checksum_sha256)
-                        .update_delete_marker(delete_marker);
-                }
-
+                let event = Self::head(client, event).await?;
                 Self::tagging(config, client, event).await
             }))
             .await
@@ -398,8 +418,21 @@ pub(crate) mod tests {
 
         set_s3_head_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
 
-        let result = Collecter::head(&collecter.client, "key", "bucket").await;
-        assert_eq!(result, Some(expected_head_object()));
+        let result = Collecter::head(
+            &collecter.client,
+            FlatS3EventMessage::new_with_generated_id()
+                .with_key("key".to_string())
+                .with_bucket("bucket".to_string()),
+        )
+        .await
+        .unwrap();
+        let expected = result
+            .clone()
+            .with_sha256(Some(EXPECTED_SHA256.to_string()))
+            .with_storage_class(Some(IntelligentTiering))
+            .with_last_modified_date(Some(Default::default()));
+
+        assert_eq!(result, expected);
     }
 
     #[tokio::test]
@@ -412,8 +445,14 @@ pub(crate) mod tests {
             vec![|| Err(expected_head_object_not_found())],
         );
 
-        let result = Collecter::head(&collecter.client, "key", "bucket").await;
-        assert!(result.is_none());
+        let result = Collecter::head(
+            &collecter.client,
+            FlatS3EventMessage::new_with_generated_id()
+                .with_key("key".to_string())
+                .with_bucket("bucket".to_string()),
+        )
+        .await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
@@ -465,7 +504,7 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn set_s3_head_expectations<F>(client: &mut Client, expectations: Vec<F>)
+    pub(crate) fn set_s3_head_expectations<F>(client: &mut S3Client, expectations: Vec<F>)
     where
         F: Fn() -> result::Result<HeadObjectOutput, SdkError<HeadObjectError>> + Send + 'static,
     {
@@ -480,7 +519,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn set_s3_tagging_expectations<F, T>(
-        client: &mut Client,
+        client: &mut S3Client,
         get_tagging_expectations: Vec<F>,
         put_tagging_expectations: Vec<T>,
     ) where
@@ -544,7 +583,7 @@ pub(crate) mod tests {
         PutObjectTaggingOutput::builder().build()
     }
 
-    pub(crate) fn set_s3_client_expectations(s3_client: &mut Client) {
+    pub(crate) fn set_s3_client_expectations(s3_client: &mut S3Client) {
         set_s3_head_expectations(s3_client, vec![|| Ok(expected_head_object())]);
         set_s3_tagging_expectations(
             s3_client,
@@ -563,7 +602,7 @@ pub(crate) mod tests {
     }
 
     async fn test_collecter(config: &Config) -> Collecter<'_> {
-        Collecter::new(Client::default(), expected_flat_events_simple(), config)
+        Collecter::new(S3Client::default(), expected_flat_events_simple(), config)
     }
 
     fn expected_receive_message() -> ReceiveMessageOutput {

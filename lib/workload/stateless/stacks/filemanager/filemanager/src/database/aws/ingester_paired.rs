@@ -104,6 +104,7 @@ impl IngesterPaired {
         .bind(&object_created.sequencers)
         .bind(&object_created.is_delete_markers)
         .bind(vec![Other; object_created.s3_object_ids.len()])
+        .bind(&object_created.move_ids)
         .fetch_all(&mut *tx)
         .await?;
 
@@ -124,6 +125,7 @@ impl IngesterPaired {
         .bind(&object_created.sequencers)
         .bind(&object_created.is_delete_markers)
         .bind(vec![Other; object_created.s3_object_ids.len()])
+        .bind(&object_created.move_ids)
         .fetch_all(&mut *tx)
         .await?;
 
@@ -179,12 +181,6 @@ impl IngesterPaired {
 pub(crate) mod tests {
     use std::ops::Add;
 
-    use chrono::{DateTime, Utc};
-    use itertools::Itertools;
-    use sqlx::postgres::PgRow;
-    use sqlx::{Executor, PgPool, Row};
-    use tokio::time::Instant;
-
     use crate::database::aws::ingester::tests::fetch_results;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::{Client, Ingest};
@@ -202,6 +198,13 @@ pub(crate) mod tests {
     use crate::events::aws::{Events, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
     use crate::events::EventSourceType;
     use crate::events::EventSourceType::S3Paired;
+    use crate::uuid::UuidGenerator;
+    use chrono::{DateTime, Utc};
+    use itertools::Itertools;
+    use sqlx::postgres::PgRow;
+    use sqlx::{Executor, PgPool, Row};
+    use tokio::time::Instant;
+    use uuid::Uuid;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {
@@ -213,6 +216,9 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 1);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_some());
         assert_created(&s3_object_results[0]);
     }
 
@@ -264,6 +270,9 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 1);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_some());
         assert_with(
             &s3_object_results[0],
             Some(i64::MAX),
@@ -301,6 +310,9 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 1);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_some());
         assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
     }
 
@@ -319,6 +331,9 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 1);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_some());
         assert_eq!(
             2,
             s3_object_results[0].get::<i64, _>("number_duplicate_events")
@@ -444,6 +459,9 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 1);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_some());
         assert_eq!(2, s3_object_results[0].get::<i64, _>("number_reordered"));
         assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
     }
@@ -1633,6 +1651,13 @@ pub(crate) mod tests {
         update_last_modified(&mut events.object_created.last_modified_dates);
         update_storage_class(&mut events.object_created.storage_classes);
         update_sha256(&mut events.object_created.sha256s);
+        events
+            .object_created
+            .move_ids
+            .iter_mut()
+            .for_each(|move_id| {
+                *move_id = Some(UuidGenerator::generate());
+            });
 
         update_last_modified(&mut events.object_deleted.last_modified_dates);
         update_storage_class(&mut events.object_deleted.storage_classes);

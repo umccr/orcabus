@@ -240,6 +240,7 @@ pub(crate) mod tests {
         .bind(vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()])
         .bind(vec![false])
         .bind(vec![event_type])
+        .bind(vec![UuidGenerator::generate()])
         .fetch_all(pool)
         .await
         .unwrap();

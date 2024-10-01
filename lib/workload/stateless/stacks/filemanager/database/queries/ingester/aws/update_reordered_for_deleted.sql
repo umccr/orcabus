@@ -98,6 +98,7 @@ select
     number_duplicate_events,
     size,
     is_delete_marker,
+    move_id,
     -- This is used to simplify re-constructing the FlatS3EventMessages in the Lambda. I.e. this update detected an
     -- out of order deleted event, so return a deleted event back.
     'Deleted'::event_type as "event_type"

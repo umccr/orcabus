@@ -34,6 +34,7 @@ select
     size,
     is_delete_marker,
     event_type,
+    move_id,
     0::bigint as "number_reordered"
 from input
 -- Grab the most recent object in each input group.
