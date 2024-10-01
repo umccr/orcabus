@@ -19,4 +19,5 @@ class IndividualViewSet(BaseViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        return Individual.objects.get_by_keyword(self.queryset, **self.request.query_params)
+        query_params = self.get_query_params()
+        return Individual.objects.get_by_keyword(self.queryset, **query_params)

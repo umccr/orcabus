@@ -13,7 +13,7 @@ class LibraryViewSet(BaseViewSet):
 
     def get_queryset(self):
         qs = self.queryset
-        query_params = self.request.query_params.copy()
+        query_params = self.get_query_params()
 
         coverage__lte = query_params.get("coverage__lte", None)
         if coverage__lte:
