@@ -19,7 +19,8 @@ with input as (
         $11::text[],
         $12::boolean[],
         $13::event_type[],
-        $14::uuid[]
+        $14::uuid[],
+        $15::jsonb[]
     ) as input (
         s3_object_id,
         bucket,
@@ -34,7 +35,8 @@ with input as (
         created_sequencer,
         is_delete_marker,
         event_type,
-        move_id
+        move_id,
+        attributes
     )
 ),
 -- Then, select the objects that need to be updated.

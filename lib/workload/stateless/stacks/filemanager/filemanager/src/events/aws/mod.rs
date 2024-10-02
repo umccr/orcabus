@@ -5,7 +5,6 @@ use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use chrono::{DateTime, Utc};
 use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use sqlx::FromRow;
 use uuid::Uuid;
 
@@ -23,7 +22,7 @@ pub mod message;
 /// A wrapper around AWS storage types with sqlx support.
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sqlx(type_name = "storage_class", no_pg_array)]
+#[sqlx(type_name = "storage_class")]
 pub enum StorageClass {
     DeepArchive,
     Glacier,
@@ -35,12 +34,6 @@ pub enum StorageClass {
     Snow,
     Standard,
     StandardIa,
-}
-
-impl PgHasArrayType for StorageClass {
-    fn array_type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("_storage_class")
-    }
 }
 
 impl StorageClass {

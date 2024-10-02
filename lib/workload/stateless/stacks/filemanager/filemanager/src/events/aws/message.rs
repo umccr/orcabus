@@ -3,25 +3,18 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 use crate::uuid::UuidGenerator;
 
 /// The type of S3 event.
 #[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
-#[sqlx(type_name = "event_type", no_pg_array)]
+#[sqlx(type_name = "event_type")]
 pub enum EventType {
     #[default]
     Created,
     Deleted,
     Other,
-}
-
-impl PgHasArrayType for EventType {
-    fn array_type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("_event_type")
-    }
 }
 
 /// Data for converting from S3 events to the internal filemanager event type.

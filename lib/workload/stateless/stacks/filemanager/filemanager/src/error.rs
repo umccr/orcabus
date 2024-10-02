@@ -4,7 +4,6 @@
 use std::{io, result};
 
 use sea_orm::{DbErr, RuntimeErr};
-use sqlx::migrate::MigrateError;
 use thiserror::Error;
 use url::ParseError;
 use uuid::Uuid;
@@ -16,8 +15,6 @@ pub type Result<T> = result::Result<T, Error>;
 pub enum Error {
     #[error("database error: `{0}`")]
     DatabaseError(DbErr),
-    #[error("SQL migrate error: `{0}`")]
-    MigrateError(String),
     #[error("SQS error: `{0}`")]
     SQSError(String),
     #[error("serde error: `{0}`")]
@@ -48,6 +45,9 @@ pub enum Error {
     PresignedUrlError(String),
     #[error("configuring API: `{0}`")]
     ApiConfigurationError(String),
+    #[cfg(feature = "migrate")]
+    #[error("SQL migrate error: `{0}`")]
+    MigrateError(String),
 }
 
 impl From<sqlx::Error> for Error {
@@ -59,12 +59,6 @@ impl From<sqlx::Error> for Error {
 impl From<DbErr> for Error {
     fn from(err: DbErr) -> Self {
         Self::DatabaseError(err)
-    }
-}
-
-impl From<MigrateError> for Error {
-    fn from(err: MigrateError) -> Self {
-        Self::DatabaseError(DbErr::Migration(err.to_string()))
     }
 }
 

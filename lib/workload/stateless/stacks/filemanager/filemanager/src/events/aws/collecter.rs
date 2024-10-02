@@ -390,10 +390,12 @@ impl<'a> Collect for Collecter<'a> {
 pub(crate) mod tests {
     use std::result;
 
+    use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::tests::{
         expected_event_record_simple, expected_flat_events_simple, EXPECTED_SHA256,
     };
     use crate::events::aws::StorageClass::IntelligentTiering;
+
     use aws_sdk_s3::error::SdkError;
     use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingError;
     use aws_sdk_s3::operation::head_object::HeadObjectError;
@@ -408,9 +410,15 @@ pub(crate) mod tests {
     use aws_smithy_runtime_api::client::orchestrator::HttpResponse;
     use aws_smithy_runtime_api::client::result::ServiceError;
     use mockall::predicate::{eq, function};
-    use sqlx::PgPool;
+    use sea_orm::prelude::Json;
+    use serde_json::json;
+    use sqlx::{PgPool, Row};
 
     use super::*;
+    use crate::database::{Client, Ingest};
+    use crate::events::aws::message::EventType::Created;
+    use crate::handlers::aws::tests::s3_object_results;
+    use crate::queries::EntriesBuilder;
 
     #[tokio::test]
     async fn receive() {
@@ -433,7 +441,7 @@ pub(crate) mod tests {
         assert_eq!(events, expected);
     }
 
-    #[sqlx::test]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn build_receive(pool: PgPool) {
         let mut sqs_client = SQSClient::default();
         let mut s3_client = S3Client::default();
@@ -467,10 +475,10 @@ pub(crate) mod tests {
         assert_eq!(result, Some(DateTime::<Utc>::default()));
     }
 
-    #[sqlx::test]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn head(pool: PgPool) {
         let config = Default::default();
-        let client = database::Client::from_pool(pool);
+        let client = Client::from_pool(pool);
         let mut collecter = test_collecter(&config, &client).await;
 
         set_s3_head_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
@@ -492,10 +500,10 @@ pub(crate) mod tests {
         assert_eq!(result, expected);
     }
 
-    #[sqlx::test]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn head_not_found(pool: PgPool) {
         let config = Default::default();
-        let client = database::Client::from_pool(pool);
+        let client = Client::from_pool(pool);
         let mut collecter = test_collecter(&config, &client).await;
 
         set_s3_head_expectations(
@@ -513,10 +521,10 @@ pub(crate) mod tests {
         assert!(result.is_ok());
     }
 
-    #[sqlx::test]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_events(pool: PgPool) {
         let config = Default::default();
-        let client = database::Client::from_pool(pool);
+        let client = Client::from_pool(pool);
         let mut collecter = test_collecter(&config, &client).await;
 
         let events = expected_flat_events_simple().sort_and_dedup();
@@ -538,10 +546,148 @@ pub(crate) mod tests {
         assert_eq!(second.last_modified_date, None);
     }
 
-    #[sqlx::test]
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn tagging_without_move(pool: PgPool) {
+        let config = Default::default();
+        let client = Client::from_pool(pool.clone());
+        let mut collecter = test_collecter(&config, &client).await;
+
+        collecter.raw_events =
+            FlatS3EventMessages(vec![FlatS3EventMessage::new_with_generated_id()
+                .with_event_type(Created)
+                .with_key("key".to_string())
+                .with_bucket("bucket".to_string())]);
+
+        set_s3_client_expectations(&mut collecter.client);
+
+        let mut result = collecter.collect().await.unwrap();
+        let EventSourceType::S3(events) = &mut result.event_type else {
+            panic!();
+        };
+        assert!(events.move_ids[0].is_some());
+
+        client.ingest(result.event_type).await.unwrap();
+
+        let s3_object_results = s3_object_results(&pool).await;
+        assert_eq!(s3_object_results.len(), 1);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_some());
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn tagging_with_move(pool: PgPool) {
+        let config = Default::default();
+        let client = Client::from_pool(pool.clone());
+        let mut collecter = test_collecter(&config, &client).await;
+
+        let move_id = UuidGenerator::generate();
+        EntriesBuilder::default()
+            .with_move_id(move_id)
+            .with_n(1)
+            .build(&client)
+            .await;
+
+        collecter.raw_events =
+            FlatS3EventMessages(vec![FlatS3EventMessage::new_with_generated_id()
+                .with_event_type(Created)
+                .with_key("key".to_string())
+                .with_bucket("bucket".to_string())]);
+
+        set_s3_head_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
+        set_s3_get_tagging_expectations(
+            &mut collecter.client,
+            vec![move || {
+                Ok(GetObjectTaggingOutput::builder()
+                    .set_tag_set(Some(vec![Tag::builder()
+                        .key("filemanager_id")
+                        .value(move_id.to_string())
+                        .build()
+                        .unwrap()]))
+                    .build()
+                    .unwrap())
+            }],
+        );
+
+        let mut result = collecter.collect().await.unwrap();
+        let EventSourceType::S3(events) = &mut result.event_type else {
+            panic!();
+        };
+        assert!(events.move_ids[0].is_some());
+
+        client.ingest(result.event_type).await.unwrap();
+
+        let s3_object_results = s3_object_results(&pool).await;
+        assert_eq!(s3_object_results.len(), 2);
+        assert_eq!(
+            s3_object_results[0].get::<Option<Uuid>, _>("move_id"),
+            Some(move_id)
+        );
+        assert_eq!(
+            s3_object_results[1].get::<Option<Uuid>, _>("move_id"),
+            Some(move_id)
+        );
+
+        let expected_attributes = json!({
+            "attributeId": "0",
+            "nestedId": {
+                "attributeId": "0"
+            }
+        });
+        assert_eq!(
+            s3_object_results[0].get::<Option<Json>, _>("attributes"),
+            Some(expected_attributes.clone())
+        );
+        assert_eq!(
+            s3_object_results[1].get::<Option<Json>, _>("attributes"),
+            Some(expected_attributes)
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn tagging_on_fail(pool: PgPool) {
+        let config = Default::default();
+        let client = Client::from_pool(pool.clone());
+        let mut collecter = test_collecter(&config, &client).await;
+
+        collecter.raw_events =
+            FlatS3EventMessages(vec![FlatS3EventMessage::new_with_generated_id()
+                .with_event_type(Created)
+                .with_key("key".to_string())
+                .with_bucket("bucket".to_string())]);
+
+        set_s3_head_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
+        set_s3_get_tagging_expectations(
+            &mut collecter.client,
+            vec![move || {
+                Err(SdkError::ServiceError(
+                    ServiceError::builder()
+                        .source(GetObjectTaggingError::unhandled("unhandled"))
+                        .raw(HttpResponse::new(404.try_into().unwrap(), SdkBody::empty()))
+                        .build(),
+                ))
+            }],
+        );
+
+        let mut result = collecter.collect().await.unwrap();
+        let EventSourceType::S3(events) = &mut result.event_type else {
+            panic!();
+        };
+        assert!(events.move_ids[0].is_none());
+
+        client.ingest(result.event_type).await.unwrap();
+
+        let s3_object_results = s3_object_results(&pool).await;
+        assert_eq!(s3_object_results.len(), 1);
+        assert!(s3_object_results[0]
+            .get::<Option<Uuid>, _>("move_id")
+            .is_none());
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn collect(pool: PgPool) {
         let config = Default::default();
-        let client = database::Client::from_pool(pool);
+        let client = Client::from_pool(pool);
         let mut collecter = test_collecter(&config, &client).await;
 
         set_s3_client_expectations(&mut collecter.client);
@@ -578,6 +724,24 @@ pub(crate) mod tests {
         }
     }
 
+    pub(crate) fn set_s3_get_tagging_expectations<F>(
+        client: &mut S3Client,
+        get_tagging_expectations: Vec<F>,
+    ) where
+        F: Fn() -> result::Result<GetObjectTaggingOutput, SdkError<GetObjectTaggingError>>
+            + Send
+            + 'static,
+    {
+        let get_tagging = client
+            .expect_get_object_tagging()
+            .with(eq("key"), eq("bucket"))
+            .times(get_tagging_expectations.len());
+
+        for expectation in get_tagging_expectations {
+            get_tagging.returning(move |_, _| expectation());
+        }
+    }
+
     pub(crate) fn set_s3_tagging_expectations<F, T>(
         client: &mut S3Client,
         get_tagging_expectations: Vec<F>,
@@ -590,14 +754,7 @@ pub(crate) mod tests {
             + Send
             + 'static,
     {
-        let get_tagging = client
-            .expect_get_object_tagging()
-            .with(eq("key"), eq("bucket"))
-            .times(get_tagging_expectations.len());
-
-        for expectation in get_tagging_expectations {
-            get_tagging.returning(move |_, _| expectation());
-        }
+        set_s3_get_tagging_expectations(client, get_tagging_expectations);
 
         let put_tagging = client
             .expect_put_object_tagging()
@@ -661,10 +818,7 @@ pub(crate) mod tests {
         )
     }
 
-    async fn test_collecter<'a>(
-        config: &'a Config,
-        database_client: &'a database::Client,
-    ) -> Collecter<'a> {
+    async fn test_collecter<'a>(config: &'a Config, database_client: &'a Client) -> Collecter<'a> {
         Collecter::new(
             S3Client::default(),
             database_client,

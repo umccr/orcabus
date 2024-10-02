@@ -105,6 +105,7 @@ impl IngesterPaired {
         .bind(&object_created.is_delete_markers)
         .bind(vec![Other; object_created.s3_object_ids.len()])
         .bind(&object_created.move_ids)
+        .bind(&object_created.attributes)
         .fetch_all(&mut *tx)
         .await?;
 
@@ -126,6 +127,7 @@ impl IngesterPaired {
         .bind(&object_created.is_delete_markers)
         .bind(vec![Other; object_created.s3_object_ids.len()])
         .bind(&object_created.move_ids)
+        .bind(&object_created.attributes)
         .fetch_all(&mut *tx)
         .await?;
 
