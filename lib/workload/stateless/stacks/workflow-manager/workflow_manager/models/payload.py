@@ -1,7 +1,6 @@
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
-from workflow_manager.fields import OrcabusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 
 
@@ -10,7 +9,7 @@ class PayloadManager(OrcaBusBaseManager):
 
 
 class Payload(OrcaBusBaseModel):
-    orcabus_id = OrcabusIdField(prefix='pld', primary_key=True)
+    orcabus_id_prefix = 'pld.'
 
     payload_ref_id = models.CharField(max_length=255, unique=True)
     version = models.CharField(max_length=255)
@@ -19,11 +18,11 @@ class Payload(OrcaBusBaseModel):
     objects = PayloadManager()
 
     def __str__(self):
-        return f"ID: {self.id}, payload_ref_id: {self.payload_ref_id}"
+        return f"ID: {self.orcabus_id}, payload_ref_id: {self.payload_ref_id}"
     
     def to_dict(self):
         return {
-            "id": self.id,
+            "orcabusId": self.orcabus_id,
             "payload_ref_id": self.payload_ref_id,
             "version": self.version,
             "data": self.data

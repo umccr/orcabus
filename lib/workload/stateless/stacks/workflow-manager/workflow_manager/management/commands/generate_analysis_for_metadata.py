@@ -111,8 +111,8 @@ def _setup_requirements():
     # The contexts information available for analysis
 
     clinical_context = AnalysisContext(
-        context_id="C12345",
         name="accredited",
+        usecase="analysis-selection",
         description="Accredited by NATA",
         status="ACTIVE",
     )
@@ -120,8 +120,8 @@ def _setup_requirements():
     clinical_context.save()
 
     research_context = AnalysisContext(
-        context_id="C23456",
         name="research",
+        usecase="analysis-selection",
         description="For research use",
         status="ACTIVE",
     )
@@ -129,8 +129,8 @@ def _setup_requirements():
     research_context.save()
 
     internal_context = AnalysisContext(
-        context_id="C00001",
         name="internal",
+        usecase="analysis-selection",
         description="For internal use",
         status="ACTIVE",
     )
@@ -240,12 +240,12 @@ def _setup_requirements():
     # Generate a Payload stub and some Libraries
 
     generic_payload = PayloadFactory()  # Payload content is not important for now
-    LibraryFactory(orcabus_id="lib.01J5M2JFE1JPYV62RYQEG99CP1", library_id="L000001"),
-    LibraryFactory(orcabus_id="lib.02J5M2JFE1JPYV62RYQEG99CP2", library_id="L000002"),
-    LibraryFactory(orcabus_id="lib.03J5M2JFE1JPYV62RYQEG99CP3", library_id="L000003"),
-    LibraryFactory(orcabus_id="lib.03J5M2JFE1JPYV62RYQEG99CP4", library_id="L000004"),
-    LibraryFactory(orcabus_id="lib.03J5M2JFE1JPYV62RYQEG99CP5", library_id="L000005"),
-    LibraryFactory(orcabus_id="lib.04J5M2JFE1JPYV62RYQEG99CP6", library_id="L000006")
+    LibraryFactory(orcabus_id="01J5M2JFE1JPYV62RYQEG99CP1", library_id="L000001"),
+    LibraryFactory(orcabus_id="02J5M2JFE1JPYV62RYQEG99CP2", library_id="L000002"),
+    LibraryFactory(orcabus_id="03J5M2JFE1JPYV62RYQEG99CP3", library_id="L000003"),
+    LibraryFactory(orcabus_id="03J5M2JFE1JPYV62RYQEG99CP4", library_id="L000004"),
+    LibraryFactory(orcabus_id="03J5M2JFE1JPYV62RYQEG99CP5", library_id="L000005"),
+    LibraryFactory(orcabus_id="04J5M2JFE1JPYV62RYQEG99CP6", library_id="L000006")
 
 
 def assign_analysis(libraries: List[dict]) -> List[AnalysisRun]:
@@ -278,7 +278,6 @@ def create_qc_analysis(libraries: List[dict]) -> List[AnalysisRun]:
         if lib['type'] in ['WGS', 'WTS']:
             # Create QC analysis
             analysis_run = AnalysisRun(
-                analysis_run_id=f"ar.{ulid.new().str}",
                 analysis_run_name=f"automated__{analysis_qc.analysis_name}__{lib_record.library_id}",
                 status="DRAFT",
                 approval_context=context_internal,  # FIXME: does this matter here? Internal?
@@ -324,7 +323,6 @@ def create_wgs_analysis(libraries: List[dict]) -> List[AnalysisRun]:
             analysis_run_name = f"automated__{analysis.analysis_name}__{context.name}__" + \
                                 f"{tumor_lib_record.library_id}__{normal_lib_record.library_id} "
             ar_wgs = AnalysisRun(
-                analysis_run_id=f"ar.{ulid.new().str}",
                 analysis_run_name=analysis_run_name,
                 status="DRAFT",
                 approval_context=context,
@@ -354,7 +352,6 @@ def create_cttso_analysis(libraries: List[dict]) -> List[AnalysisRun]:
             context: AnalysisContext = context_clinical if lib['workflow'] == 'clinical' else context_research
             analysis_run_name = f"automated__{analysis_cttso_qs.analysis_name}__{context.name}__{lib_record.library_id}"
             analysis_run = AnalysisRun(
-                analysis_run_id=f"ar.{ulid.new().str}",
                 analysis_run_name=analysis_run_name,
                 status="DRAFT",
                 approval_context=context,

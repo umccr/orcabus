@@ -1,9 +1,8 @@
 from django.db import models
 
-from workflow_manager.fields import OrcabusIdField
-from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.analysis import Analysis
 from workflow_manager.models.analysis_context import AnalysisContext
+from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.library import Library
 
 
@@ -12,9 +11,7 @@ class AnalysisRunManager(OrcaBusBaseManager):
 
 
 class AnalysisRun(OrcaBusBaseModel):
-    orcabus_id = OrcabusIdField(prefix='anr', primary_key=True)
-
-    analysis_run_id = models.CharField(max_length=255, unique=True)
+    orcabus_id_prefix = 'anr.'
 
     analysis_run_name = models.CharField(max_length=255)
     comment = models.CharField(max_length=255, null=True, blank=True)
@@ -30,11 +27,11 @@ class AnalysisRun(OrcaBusBaseModel):
     objects = AnalysisRunManager()
 
     def __str__(self):
-        return f"ID: {self.analysis_run_id}, analysis_run_name: {self.analysis_run_name}"
+        return f"ID: {self.orcabus_id}, analysis_run_name: {self.analysis_run_name}"
 
     def to_dict(self):
         return {
-            "analysis_run_id": self.analysis_run_id,
+            "orcabusId": self.orcabus_id,
             "analysis_run_name": self.analysis_run_name,
             "comment": self.comment,
             "approval_context": self.approval_context,
