@@ -1,8 +1,5 @@
 from app.models import Library, Sample, Subject
 from .base import SerializersBase
-from .project import ProjectSerializer
-from .sample import SampleSerializer
-from .subject import SubjectSerializer
 
 
 class LibraryBaseSerializer(SerializersBase):
@@ -21,8 +18,11 @@ class LibrarySerializer(LibraryBaseSerializer):
         return representation
 
 
-
 class LibraryDetailSerializer(LibraryBaseSerializer):
+    from .sample import SampleSerializer
+    from .project import ProjectSerializer
+    from .subject import SubjectSerializer
+
     project_set = ProjectSerializer(many=True, read_only=True)
 
     sample = SampleSerializer(read_only=True)
