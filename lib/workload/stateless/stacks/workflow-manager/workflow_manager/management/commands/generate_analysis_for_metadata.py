@@ -1,13 +1,12 @@
 from datetime import datetime, timezone
 from typing import List
-import ulid
 import uuid
 from collections import defaultdict
 from django.core.management import BaseCommand
 from django.db.models import QuerySet
 
 from workflow_manager.models import Workflow, WorkflowRun, Analysis, AnalysisContext, AnalysisRun, \
-                                    Library, LibraryAssociation
+                                    Library, LibraryAssociation, State, Status
 from workflow_manager.tests.factories import PayloadFactory, LibraryFactory
 
 # https://docs.djangoproject.com/en/5.0/howto/custom-management-commands/
@@ -98,6 +97,7 @@ class Command(BaseCommand):
         runs: List[AnalysisRun] = assign_analysis(libraries)
         print(runs)
 
+        # create WorkflowRun entries (DRAFT)
         prep_workflow_runs(libraries)
         print("Done")
 
@@ -413,6 +413,16 @@ def create_workflowrun_for_analysis(analysis_run: AnalysisRun):
                 association_date=datetime.now(timezone.utc),
                 status="ACTIVE",
             )
+        initial_state = State(
+            workflow_run=wr,
+            status=Status.DRAFT.convention,
+            timestamp=datetime.now(timezone.utc),
+            payload=PayloadFactory(
+                payload_ref_id=str(uuid.uuid4()),
+                data={"comment": f"Payload for initial state of wfr.{wr.orcabus_id}"}),
+            comment="Initial State"
+        )
+        initial_state.save()
 
 
 def create_portal_run_id() -> str:
