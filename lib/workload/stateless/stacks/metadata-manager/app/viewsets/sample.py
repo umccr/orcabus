@@ -1,15 +1,13 @@
 from drf_spectacular.utils import extend_schema
-from rest_framework import filters
 
 from app.models import Sample
-from app.serializers.sample import SampleSerializer
-from app.pagination import StandardResultsSetPagination
+from app.serializers.sample import SampleSerializer, SampleDetailSerializer
 
 from .base import BaseViewSet
 
 
 class SampleViewSet(BaseViewSet):
-    serializer_class = SampleSerializer
+    serializer_class = SampleDetailSerializer
     search_fields = Sample.get_base_fields()
     queryset = Sample.objects.all()
     orcabus_id_prefix = Sample.orcabus_id_prefix

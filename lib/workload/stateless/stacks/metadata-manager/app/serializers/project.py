@@ -14,8 +14,10 @@ class ProjectSerializer(ProjectBaseSerializer):
 
 class ProjectDetailSerializer(ProjectBaseSerializer):
     from .contact import ContactSerializer
+    from .library import LibrarySerializer
 
     contact_set = ContactSerializer(many=True, read_only=True)
+    library_set = LibrarySerializer(many=True, read_only=True)
 
     class Meta:
         model = Project
