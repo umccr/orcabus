@@ -18,5 +18,5 @@ class StateViewSet(BaseViewSet):
 
     def get_queryset(self):
         query_params = self.get_query_params()
-        # qs = State.objects.filter(workflow_run=self.kwargs["workflowrun_id"])
+        qs = State.objects.filter(workflow_run=self.kwargs["workflowrun_id"])
         return State.objects.get_by_keyword(qs, **query_params)
