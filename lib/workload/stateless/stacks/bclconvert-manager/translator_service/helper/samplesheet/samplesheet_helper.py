@@ -7,6 +7,7 @@ Reads in a v2 samplesheet object from a file
 from io import StringIO
 from typing import Dict
 
+from more_itertools import flatten
 # UMCCR Libraries
 from v2_samplesheet_maker.functions.v2_samplesheet_reader import v2_samplesheet_reader
 from wrapica.project_data import read_icav2_file_contents_to_string
@@ -19,12 +20,17 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def read_v2_samplesheet(project_id: str, data_id: str) -> Dict:
+def read_v2_samplesheet(
+        project_id: str,
+        samplesheet_data_id: str,
+        runinfo_data_id: str
+) -> Dict:
     """
     Given a v2 samplesheet path, read in the file as a v2 samplesheet (we first convert to json)
 
     :param project_id:
-    :param data_id:
+    :param samplesheet_data_id:
+    :param runinfo_data_id
 
     :return: A dictionary
 
@@ -90,12 +96,43 @@ def read_v2_samplesheet(project_id: str, data_id: str) -> Dict:
         ]
     }
     """
+    from ..runinfo import get_num_lanes_from_run_info
 
-    return v2_samplesheet_reader(
+    v2_samplesheet_dict = v2_samplesheet_reader(
         StringIO(
             read_icav2_file_contents_to_string(
                 project_id=project_id,
-                data_id=data_id
+                data_id=samplesheet_data_id
             )
         )
     )
+
+    # Get bclconvert data from the v2 samplesheet dict
+    # And confirm that the lane column is present
+    if 'lane' in v2_samplesheet_dict['bclconvert_data'][0].keys():
+        # Return the samplesheet as is
+        return v2_samplesheet_dict
+
+    # Otherwise we read the runinfo file
+    num_lanes = get_num_lanes_from_run_info(
+        project_id=project_id,
+        data_id=runinfo_data_id
+    )
+
+    # And now append the lane attribute to every
+    v2_samplesheet_dict['bclconvert_data'] = flatten(
+        map(
+            lambda bclconvert_data_row_iter: list(
+                map(
+                    lambda lane_iter: {
+                        **bclconvert_data_row_iter,
+                        **{"lane": lane_iter + 1}
+                    },
+                    range(num_lanes)
+                )
+            ),
+            v2_samplesheet_dict['bclconvert_data']
+        ),
+    )
+
+    return v2_samplesheet_dict

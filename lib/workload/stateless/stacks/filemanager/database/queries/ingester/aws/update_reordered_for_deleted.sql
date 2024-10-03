@@ -84,15 +84,15 @@ update as (
 -- Return the old values because these need to be reprocessed.
 select
     -- Note, this is the passed through value from the input in order to identify this event later.
-    input_id as "s3_object_id!",
+    input_id as "s3_object_id",
     bucket,
     key,
     deleted_date as event_time,
     last_modified_date,
     e_tag,
     sha256,
-    storage_class as "storage_class?: StorageClass",
-    version_id as "version_id!",
+    storage_class,
+    version_id,
     deleted_sequencer as sequencer,
     number_reordered,
     number_duplicate_events,
@@ -100,5 +100,5 @@ select
     is_delete_marker,
     -- This is used to simplify re-constructing the FlatS3EventMessages in the Lambda. I.e. this update detected an
     -- out of order deleted event, so return a deleted event back.
-    'Deleted' as "event_type!: EventType"
+    'Deleted'::event_type as "event_type"
 from objects_to_update;

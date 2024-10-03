@@ -11,8 +11,8 @@ is typically used when writing procedural macros (such as `#[derive(..)]` macros
 to generate helper code such as database entities or OpenAPI attributes that don't typically fit under procedural
 macro functionality.
 
-In general, code generation outputs in build scripts should go inside the `OUT_DIR` path set by Cargo when executing the
-`build.rs` script.
+This crate can be executed separately to Cargo using the `main.rs` binary, or it can be used as a `build.rs` scrip.t
+In general, code generation outputs in build scripts should go inside the `OUT_DIR` path set by Cargo.
 
 ## Project Layout
 

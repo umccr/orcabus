@@ -42,8 +42,11 @@ class WorkflowRun(OrcaBusBaseModel):
 
     def get_all_states(self):
         # retrieve all states (DB records rather than a queryset)
-        return list(self.state_set.all())  # TODO: ensure order by timestamp ?
+        return list(self.states.all())  # TODO: ensure order by timestamp ?
 
+    def get_latest_state(self):
+        # retrieve all related states and get the latest one
+        return self.states.order_by('-timestamp').first()
 
 class LibraryAssociationManager(OrcaBusBaseManager):
     pass

@@ -24,11 +24,6 @@ create type event_type as enum (
 create table s3_object (
     -- The s3 object id.
     s3_object_id uuid not null primary key,
-    -- This is initially deferred because we want to create an s3_object before an object to check for duplicates/order.
-    object_id uuid not null references object (object_id) deferrable initially deferred,
-    -- The public id for this object which can be referred to externally to filemanager. Note, there is no public id
-    -- on an `object` because objects can be merged which complicates having a permanent public id.
-    public_id uuid not null,
 
     -- General fields
     -- The kind of event of this s3_object.
@@ -40,9 +35,8 @@ create table s3_object (
     -- The version id of the object. A 'null' string is used to indicate no version id. This matches logic in AWS which
     -- also returns 'null' strings. See https://docs.aws.amazon.com/AmazonS3/latest/userguide/versioning-workflows.html
     version_id text not null default 'null',
-    -- When this object was created/deleted. For created objects, this is the date the object was created. For deleted
-    -- objects, this is the date the object was deleted.
-    date timestamptz default null,
+    -- When this object was created/deleted.
+    event_time timestamptz default null,
     -- The size of the object.
     size bigint default null,
     -- A base64 encoded SHA256 checksum of the object.
@@ -78,3 +72,10 @@ create table s3_object (
     number_reordered bigint not null default 0,
     constraint deleted_sequencer_unique unique (bucket, key, version_id, event_type, deleted_sequencer)
 );
+
+-- Create an index for ordering `s3_object`s in ascending order.
+create index sequencer_index on s3_object (sequencer);
+-- A gin index on attributes supported the `@?` operator and jsonpath queries.
+create index attributes_index on s3_object using gin (attributes jsonb_path_ops);
+-- An index on keys helps querying by prefix.
+create index key_index on s3_object (key text_pattern_ops);

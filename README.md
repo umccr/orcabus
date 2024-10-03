@@ -158,14 +158,14 @@ _Setting up baseline toolchain_
 
 ```
 docker --version
-Docker version 27.1.1, build 6312585
+Docker version 27.2.0, build 3ab4256
 
 node -v
-v20.16.0
+v20.17.0
 
 npm i -g yarn
 yarn -v
-4.4.0
+4.4.1
 ```
 
 Additionally, we expect the following common tools be installed and available in your system shell PATH. We provide [Brewfile](Brewfile) as an example. You may manage these common tools in any other way as see fit for your local setup.

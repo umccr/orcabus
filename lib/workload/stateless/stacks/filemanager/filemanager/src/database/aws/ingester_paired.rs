@@ -2,18 +2,16 @@
 //! pairs Created and Deleted events.
 //!
 
-use chrono::{DateTime, Utc};
-use sqlx::{query_file, query_file_as};
+use sqlx::{query, query_as};
 use tracing::{debug, trace};
 
 use crate::database::{Client, CredentialGenerator};
 use crate::env::Config;
 use crate::error::Result;
 use crate::events::aws::inventory::Inventory;
-use crate::events::aws::message::EventType;
 use crate::events::aws::message::EventType::Other;
 use crate::events::aws::{Events, TransposedS3EventMessages};
-use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
+use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 
 /// An ingester for S3 events.
 #[derive(Debug)]
@@ -90,82 +88,79 @@ impl IngesterPaired {
         let mut tx = self.client().pool().begin().await?;
 
         // First, try and update existing events to remove any un-ordered events.
-        let updated = query_file_as!(
-            FlatS3EventMessage,
-            "../database/queries/ingester/aws/update_reordered_for_created.sql",
-            &object_created.s3_object_ids,
-            &object_created.buckets,
-            &object_created.keys,
-            &object_created.event_times as &[Option<DateTime<Utc>>],
-            &object_created.sizes as &[Option<i64>],
-            &object_created.sha256s as &[Option<String>],
-            &object_created.last_modified_dates as &[Option<DateTime<Utc>>],
-            &object_created.e_tags as &[Option<String>],
-            &object_created.storage_classes as &[Option<StorageClass>],
-            &object_created.version_ids as &[String],
-            &object_created.sequencers as &[Option<String>],
-            &object_created.is_delete_markers as &[bool],
-            &vec![Other; object_created.s3_object_ids.len()] as &[EventType],
-        )
+        let updated = query_as::<_, FlatS3EventMessage>(include_str!(
+            "../../../../database/queries/ingester/aws/update_reordered_for_created.sql"
+        ))
+        .bind(&object_created.s3_object_ids)
+        .bind(&object_created.buckets)
+        .bind(&object_created.keys)
+        .bind(&object_created.event_times)
+        .bind(&object_created.sizes)
+        .bind(&object_created.sha256s)
+        .bind(&object_created.last_modified_dates)
+        .bind(&object_created.e_tags)
+        .bind(&object_created.storage_classes)
+        .bind(&object_created.version_ids)
+        .bind(&object_created.sequencers)
+        .bind(&object_created.is_delete_markers)
+        .bind(vec![Other; object_created.s3_object_ids.len()])
         .fetch_all(&mut *tx)
         .await?;
 
         let object_created = Self::reprocess_updated(object_created, updated);
-        query_file!(
-            "../database/queries/ingester/aws/insert_s3_created_objects.sql",
-            &object_created.s3_object_ids,
-            &object_created.buckets,
-            &object_created.keys,
-            &object_created.event_times as &[Option<DateTime<Utc>>],
-            &object_created.sizes as &[Option<i64>],
-            &object_created.sha256s as &[Option<String>],
-            &object_created.last_modified_dates as &[Option<DateTime<Utc>>],
-            &object_created.e_tags as &[Option<String>],
-            &object_created.storage_classes as &[Option<StorageClass>],
-            &object_created.version_ids,
-            &object_created.sequencers as &[Option<String>],
-            &object_created.is_delete_markers as &[bool],
-            &vec![Other; object_created.s3_object_ids.len()] as &[EventType],
-        )
+        query(include_str!(
+            "../../../../database/queries/ingester/aws/insert_s3_created_objects.sql"
+        ))
+        .bind(&object_created.s3_object_ids)
+        .bind(&object_created.buckets)
+        .bind(&object_created.keys)
+        .bind(&object_created.event_times)
+        .bind(&object_created.sizes)
+        .bind(&object_created.sha256s)
+        .bind(&object_created.last_modified_dates)
+        .bind(&object_created.e_tags)
+        .bind(&object_created.storage_classes)
+        .bind(&object_created.version_ids)
+        .bind(&object_created.sequencers)
+        .bind(&object_created.is_delete_markers)
+        .bind(vec![Other; object_created.s3_object_ids.len()])
         .fetch_all(&mut *tx)
         .await?;
 
         trace!(object_removed = ?object_deleted, "ingesting object removed events");
 
         // First, try and update existing events to remove any un-ordered events.
-        let updated = query_file_as!(
-            FlatS3EventMessage,
-            "../database/queries/ingester/aws/update_reordered_for_deleted.sql",
-            &object_deleted.s3_object_ids,
-            &object_deleted.buckets,
-            &object_deleted.keys,
-            &object_deleted.event_times as &[Option<DateTime<Utc>>],
-            &object_deleted.version_ids,
-            &object_deleted.sequencers as &[Option<String>],
-            &vec![Other; object_deleted.s3_object_ids.len()] as &[EventType],
-        )
+        let updated = query_as::<_, FlatS3EventMessage>(include_str!(
+            "../../../../database/queries/ingester/aws/update_reordered_for_deleted.sql"
+        ))
+        .bind(&object_deleted.s3_object_ids)
+        .bind(&object_deleted.buckets)
+        .bind(&object_deleted.keys)
+        .bind(&object_deleted.event_times)
+        .bind(&object_deleted.version_ids)
+        .bind(&object_deleted.sequencers)
+        .bind(vec![Other; object_deleted.s3_object_ids.len()])
         .fetch_all(&mut *tx)
         .await?;
 
         let object_deleted = Self::reprocess_updated(object_deleted, updated);
-        query_file!(
-            "../database/queries/ingester/aws/insert_s3_deleted_objects.sql",
-            &object_deleted.s3_object_ids,
-            &object_deleted.buckets,
-            &object_deleted.keys,
-            &object_deleted.event_times as &[Option<DateTime<Utc>>],
-            &object_deleted.sizes as &[Option<i64>],
-            &object_deleted.sha256s as &[Option<String>],
-            &object_deleted.last_modified_dates as &[Option<DateTime<Utc>>],
-            &object_deleted.e_tags as &[Option<String>],
-            &object_deleted.storage_classes as &[Option<StorageClass>],
-            &object_deleted.version_ids,
-            &object_deleted.sequencers as &[Option<String>],
-            // Fill this with 1 reorder, because if we get here then this must be a reordered event.
-            &vec![1; object_deleted.s3_object_ids.len()],
-            &object_deleted.is_delete_markers as &[bool],
-            &vec![Other; object_deleted.s3_object_ids.len()] as &[EventType],
-        )
+        query(include_str!(
+            "../../../../database/queries/ingester/aws/insert_s3_deleted_objects.sql"
+        ))
+        .bind(&object_deleted.s3_object_ids)
+        .bind(&object_deleted.buckets)
+        .bind(&object_deleted.keys)
+        .bind(&object_deleted.event_times)
+        .bind(&object_deleted.sizes)
+        .bind(&object_deleted.sha256s)
+        .bind(&object_deleted.last_modified_dates)
+        .bind(&object_deleted.e_tags)
+        .bind(&object_deleted.storage_classes)
+        .bind(&object_deleted.version_ids)
+        .bind(&object_deleted.sequencers)
+        .bind(vec![1; object_deleted.s3_object_ids.len()])
+        .bind(&object_deleted.is_delete_markers)
+        .bind(vec![Other; object_deleted.s3_object_ids.len()])
         .fetch_all(&mut *tx)
         .await?;
 

@@ -1,8 +1,6 @@
+use clap::Parser;
 use std::env::var;
 use std::path::{Path, PathBuf};
-
-use envy::from_env;
-use serde::Deserialize;
 
 use error::Result;
 
@@ -13,18 +11,53 @@ pub mod error;
 pub mod gen_entities;
 pub mod gen_openapi;
 
-/// Configuration environment variables for the build process.
-#[derive(Debug, Deserialize)]
+/// Run the filemanager-build tool to generate sea-orm entities. This always generates entities
+/// if a database url is defined, otherwise it skips generating entities if `--skip-if-no-database`
+/// is used, or errors if it is not.
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
 pub struct Config {
-    database_url: String,
-    out_dir: PathBuf,
+    /// Skip generating if no database URL is set. This allows assuming that any
+    /// checked-in code is up-to-date with the database and proceeding with the build.
+    #[arg(short, long, default_value_t = false, env)]
+    pub(crate) skip_if_no_database: bool,
+    /// The database URL to use for generating entities.
+    #[arg(short, long, default_value = "", env)]
+    pub(crate) database_url: String,
+    /// The output directory.
+    #[arg(short, long, env)]
+    pub(crate) out_dir: PathBuf,
 }
 
 impl Config {
     /// Load environment variables into a `Config` struct.
     #[track_caller]
     pub fn load() -> Result<Self> {
-        Ok(from_env::<Config>()?)
+        let args = Config::parse();
+
+        if !args.skip_if_no_database && args.database_url.is_empty() {
+            return Err(LoadingEnvironment(
+                "Missing database URL and not skipping entity generation".to_string(),
+            )
+            .into());
+        }
+
+        Ok(args)
+    }
+
+    /// Get whether to skip the generation if the database URL is empty.
+    pub fn skip_if_no_database(&self) -> bool {
+        self.skip_if_no_database && self.database_url.is_empty()
+    }
+
+    /// Get the database url.
+    pub fn database_url(&self) -> &str {
+        &self.database_url
+    }
+
+    /// Get the out dir.
+    pub fn out_dir(&self) -> &Path {
+        &self.out_dir
     }
 }
 

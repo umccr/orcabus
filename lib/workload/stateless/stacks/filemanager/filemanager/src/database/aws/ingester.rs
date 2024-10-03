@@ -1,15 +1,13 @@
 //! This module handles logic associated with event ingestion.
 //!
 
-use chrono::{DateTime, Utc};
-use sqlx::query_file;
+use sqlx::query;
 use tracing::debug;
 
 use crate::database::{Client, CredentialGenerator};
 use crate::env::Config;
 use crate::error::Result;
-use crate::events::aws::message::EventType;
-use crate::events::aws::{StorageClass, TransposedS3EventMessages};
+use crate::events::aws::TransposedS3EventMessages;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
@@ -39,22 +37,22 @@ impl Ingester {
                 s3_object_ids = ?events.s3_object_ids,
                 "inserting events into s3_object table"
         );
-        query_file!(
-            "../database/queries/ingester/aws/insert_s3_objects.sql",
-            &events.s3_object_ids,
-            &events.buckets,
-            &events.keys,
-            &events.event_times as &[Option<DateTime<Utc>>],
-            &events.sizes as &[Option<i64>],
-            &events.sha256s as &[Option<String>],
-            &events.last_modified_dates as &[Option<DateTime<Utc>>],
-            &events.e_tags as &[Option<String>],
-            &events.storage_classes as &[Option<StorageClass>],
-            &events.version_ids,
-            &events.sequencers as &[Option<String>],
-            &events.is_delete_markers as &[bool],
-            &events.event_types as &[EventType],
-        )
+        query(include_str!(
+            "../../../../database/queries/ingester/aws/insert_s3_objects.sql"
+        ))
+        .bind(&events.s3_object_ids)
+        .bind(&events.buckets)
+        .bind(&events.keys)
+        .bind(&events.event_times)
+        .bind(&events.sizes)
+        .bind(&events.sha256s)
+        .bind(&events.last_modified_dates)
+        .bind(&events.e_tags)
+        .bind(&events.storage_classes)
+        .bind(&events.version_ids)
+        .bind(&events.sequencers)
+        .bind(&events.is_delete_markers)
+        .bind(&events.event_types)
         .fetch_all(&mut *tx)
         .await?;
 

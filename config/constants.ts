@@ -1,4 +1,6 @@
+import { RemovalPolicy } from 'aws-cdk-lib';
 import { VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import path from 'path';
 
 export enum AppStage {
@@ -35,15 +37,35 @@ export const vpcProps: VpcLookupOptions = {
 };
 
 // upstream infra: cognito
-export const cognitoUserPoolIdParameterName = '/data_portal/client/cog_user_pool_id';
 export const cognitoPortalAppClientIdParameterName =
   '/data_portal/client/data2/cog_app_client_id_stage';
-export const cognitoStatusPageAppClientIdParameterName =
-  '/data_portal/status_page/cog_app_client_id_stage';
-export const cognitoApiGatewayProps = {
-  cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
-  cognitoPortalAppClientIdParameterName: cognitoPortalAppClientIdParameterName,
-  cognitoStatusPageAppClientIdParameterName: cognitoStatusPageAppClientIdParameterName,
+export const cognitoUserPoolIdParameterName = '/data_portal/client/cog_user_pool_id';
+export const logsApiGatewayConfig = {
+  [AppStage.BETA]: {
+    retention: RetentionDays.TWO_WEEKS,
+    removalPolicy: RemovalPolicy.DESTROY,
+  },
+  [AppStage.GAMMA]: {
+    retention: RetentionDays.TWO_WEEKS,
+    removalPolicy: RemovalPolicy.DESTROY,
+  },
+  [AppStage.PROD]: {
+    retention: RetentionDays.TWO_YEARS,
+    removalPolicy: RemovalPolicy.RETAIN,
+  },
+};
+export const corsAllowOrigins = {
+  [AppStage.BETA]: ['https://orcaui.dev.umccr.org'],
+  [AppStage.GAMMA]: ['https://orcaui.stg.umccr.org'],
+  [AppStage.PROD]: ['https://orcaui.prod.umccr.org', 'https://orcaui.umccr.org'],
+};
+export const cognitoApiGatewayConfig = {
+  region,
+  cognitoUserPoolIdParameterName,
+  cognitoClientIdParameterNameArray: [
+    cognitoPortalAppClientIdParameterName, // portal - TokenServiceStack
+    '/orcaui/cog_app_client_id_stage', // orcaui - https://github.com/umccr/orca-ui
+  ],
 };
 
 export const oncoanalyserBucket: Record<AppStage, string> = {
@@ -153,9 +175,6 @@ export const bclconvertInteropQcDynamoDbTableSSMArn = path.join(
 );
 
 // Stateless
-
-export const corsAllowOrigins = ['*'];
-
 export const bclconvertInteropQcIcav2PipelineWorkflowName = 'bclconvert-interop-qc';
 export const bclconvertInteropQcIcav2PipelineWorkflowTypeVersion = '1.3.1--1.21';
 export const bclconvertInteropQcIcav2ServiceVersion = '2024.07.01';

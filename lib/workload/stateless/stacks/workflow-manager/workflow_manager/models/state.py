@@ -97,7 +97,7 @@ class State(OrcaBusBaseModel):
     timestamp = models.DateTimeField()
     comment = models.CharField(max_length=255, null=True, blank=True)
 
-    workflow_run = models.ForeignKey(WorkflowRun, on_delete=models.CASCADE)
+    workflow_run = models.ForeignKey(WorkflowRun, related_name='states', on_delete=models.CASCADE)
     # Link to workflow run payload data
     payload = models.ForeignKey(Payload, null=True, blank=True, on_delete=models.SET_NULL)
 

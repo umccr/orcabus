@@ -9,7 +9,7 @@ use std::{fmt, io, result};
 use miette::{diagnostic, Diagnostic, NamedSource, SourceOffset};
 use thiserror::Error;
 
-use crate::error::ErrorKind::{IoError, LoadingEnvironment};
+use crate::error::ErrorKind::IoError;
 use crate::workspace_path;
 
 pub type Result<T> = result::Result<T, Error>;
@@ -40,13 +40,6 @@ pub struct Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.error_kind)
-    }
-}
-
-impl From<envy::Error> for Error {
-    #[track_caller]
-    fn from(error: envy::Error) -> Self {
-        Self::from(LoadingEnvironment(error.to_string()))
     }
 }
 

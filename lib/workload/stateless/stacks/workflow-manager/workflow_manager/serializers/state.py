@@ -6,6 +6,12 @@ class StateBaseSerializer(SerializersBase):
     prefix = State.orcabus_id_prefix
 
 
+class StateMinSerializer(StateBaseSerializer):
+    class Meta:
+        model = State
+        fields = ["orcabus_id", "status"]
+
+
 class StateSerializer(StateBaseSerializer):
     class Meta:
         model = State

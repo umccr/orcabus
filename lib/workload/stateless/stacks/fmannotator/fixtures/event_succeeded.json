@@ -1,0 +1,18 @@
+{
+  "version": "0",
+  "id": "ae02404d-9965-e3c7-2343-89cb5d46fedf",
+  "detail-type": "WorkflowRunStateChange",
+  "source": "orcabus.workflowmanager",
+  "account": "123456789012",
+  "time": "2024-09-02T00:00:01Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "portalRunId": "202409021221e6e6",
+    "workflowName": "wts",
+    "workflowRunName": "umccr--automated--wts--4-2-4--202409021221e6e6",
+    "workflowVersion": "4.2.4",
+    "timestamp": "2024-09-02T00:00:00Z",
+    "status": "SUCCEEDED"
+  }
+}

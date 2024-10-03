@@ -22,10 +22,6 @@ type LambdaProps = {
    * The props for api-gateway
    */
   apiGatewayConstructProps: ApiGatewayConstructProps;
-  /**
-   * Allowed CORS origins.
-   */
-  corsAllowOrigins?: string[];
 };
 
 export class LambdaAPIConstruct extends Construct {
@@ -54,7 +50,7 @@ export class LambdaAPIConstruct extends Construct {
     new HttpRoute(this, 'ApiLambdaHttpRoute', {
       httpApi: apiGW.httpApi,
       integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.GET),
     });
   }
 }
