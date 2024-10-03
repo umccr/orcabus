@@ -52,10 +52,8 @@ export class IngestFunction extends fn.Function {
       this.function.addEventSource(eventSource);
     });
     this.addPoliciesForBuckets(props.buckets, [
-      's3:GetObjectTagging',
-      's3:GetObjectVersionTagging',
-      's3:PutObjectTagging',
-      's3:PutObjectVersionTagging',
+      ...fn.Function.getObjectActions(),
+      ...fn.Function.objectTaggingActions(),
     ]);
   }
 }

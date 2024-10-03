@@ -25,6 +25,6 @@ export class ApiFunction extends fn.Function {
       ...props,
     });
 
-    this.addPoliciesForBuckets(props.buckets);
+    this.addPoliciesForBuckets(props.buckets, fn.Function.getObjectActions());
   }
 }

@@ -159,7 +159,7 @@ impl Inventory {
     async fn get_object_bytes<K: AsRef<str>>(&self, key: K, bucket: K) -> Result<Vec<u8>> {
         Ok(self
             .client
-            .get_object(key.as_ref(), bucket.as_ref())
+            .get_object(key.as_ref(), bucket.as_ref(), default_version_id().as_ref())
             .await
             .map_err(|err| S3Error(err.to_string()))?
             .body
@@ -668,9 +668,13 @@ pub(crate) mod tests {
 
         client
             .expect_get_object()
-            .with(eq("manifest.checksum"), eq(MANIFEST_BUCKET))
+            .with(
+                eq("manifest.checksum"),
+                eq(MANIFEST_BUCKET),
+                eq(default_version_id()),
+            )
             .once()
-            .returning(move |_, _| {
+            .returning(move |_, _, _| {
                 Ok(GetObjectOutput::builder()
                     .body(ByteStream::from(checksum.clone()))
                     .build())
@@ -863,9 +867,13 @@ pub(crate) mod tests {
     fn set_client_manifest_expectations(s3_client: &mut Client, data: Vec<u8>) {
         s3_client
             .expect_get_object()
-            .with(eq("manifest.json"), eq(MANIFEST_BUCKET))
+            .with(
+                eq("manifest.json"),
+                eq(MANIFEST_BUCKET),
+                eq(default_version_id()),
+            )
             .once()
-            .returning(move |_, _| {
+            .returning(move |_, _, _| {
                 Ok(GetObjectOutput::builder()
                     .body(ByteStream::from(data.clone()))
                     .build())
@@ -924,9 +932,10 @@ pub(crate) mod tests {
             .with(
                 eq(format!("{}{}", MANIFEST_KEY, ending)),
                 eq(MANIFEST_BUCKET),
+                eq(default_version_id()),
             )
             .once()
-            .returning(move |_, _| {
+            .returning(move |_, _, _| {
                 Ok(GetObjectOutput::builder()
                     .body(ByteStream::from(data.clone()))
                     .build())

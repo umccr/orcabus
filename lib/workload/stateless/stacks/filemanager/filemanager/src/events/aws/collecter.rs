@@ -193,7 +193,7 @@ impl<'a> Collecter<'a> {
     /// Gets S3 metadata from HeadObject such as creation/archival timestamps and statuses.
     pub async fn head(client: &S3Client, event: FlatS3EventMessage) -> Result<FlatS3EventMessage> {
         let head = client
-            .head_object(&event.key, &event.bucket)
+            .head_object(&event.key, &event.bucket, &event.version_id)
             .inspect_err(|err| {
                 warn!("Error received from HeadObject: {}", err);
             })
@@ -238,7 +238,7 @@ impl<'a> Collecter<'a> {
         event: FlatS3EventMessage,
     ) -> Result<FlatS3EventMessage> {
         let tagging = client
-            .get_object_tagging(&event.key, &event.bucket)
+            .get_object_tagging(&event.key, &event.bucket, &event.version_id)
             .inspect_err(|err| {
                 warn!("Error received from GetObjectTagging: {}", err);
             })
@@ -273,6 +273,7 @@ impl<'a> Collecter<'a> {
                 .put_object_tagging(
                     &event.key,
                     &event.bucket,
+                    &event.version_id,
                     Tagging::builder().set_tag_set(Some(tag_set)).build()?,
                 )
                 .await
@@ -393,6 +394,7 @@ pub(crate) mod tests {
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::tests::{
         expected_event_record_simple, expected_flat_events_simple, EXPECTED_SHA256,
+        EXPECTED_VERSION_ID,
     };
     use crate::events::aws::StorageClass::IntelligentTiering;
 
@@ -416,6 +418,7 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::database::{Client, Ingest};
+    use crate::events::aws::message::default_version_id;
     use crate::events::aws::message::EventType::Created;
     use crate::handlers::aws::tests::s3_object_results;
     use crate::queries::EntriesBuilder;
@@ -453,7 +456,7 @@ pub(crate) mod tests {
             .with_sqs_client(sqs_client)
             .with_s3_client(s3_client)
             .with_sqs_url("url")
-            .build_receive(&Default::default(), &database::Client::from_pool(pool))
+            .build_receive(&Default::default(), &Client::from_pool(pool))
             .await
             .unwrap()
             .collect()
@@ -481,13 +484,15 @@ pub(crate) mod tests {
         let client = Client::from_pool(pool);
         let mut collecter = test_collecter(&config, &client).await;
 
-        set_s3_head_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
+        set_s3_head_expectations(
+            &mut collecter.client,
+            vec![|| Ok(expected_head_object())],
+            default_version_id(),
+        );
 
         let result = Collecter::head(
             &collecter.client,
-            FlatS3EventMessage::new_with_generated_id()
-                .with_key("key".to_string())
-                .with_bucket("bucket".to_string()),
+            expected_s3_event_message().with_version_id(default_version_id()),
         )
         .await
         .unwrap();
@@ -509,13 +514,12 @@ pub(crate) mod tests {
         set_s3_head_expectations(
             &mut collecter.client,
             vec![|| Err(expected_head_object_not_found())],
+            default_version_id(),
         );
 
         let result = Collecter::head(
             &collecter.client,
-            FlatS3EventMessage::new_with_generated_id()
-                .with_key("key".to_string())
-                .with_bucket("bucket".to_string()),
+            expected_s3_event_message().with_version_id(default_version_id()),
         )
         .await;
         assert!(result.is_ok());
@@ -552,11 +556,9 @@ pub(crate) mod tests {
         let client = Client::from_pool(pool.clone());
         let mut collecter = test_collecter(&config, &client).await;
 
-        collecter.raw_events =
-            FlatS3EventMessages(vec![FlatS3EventMessage::new_with_generated_id()
-                .with_event_type(Created)
-                .with_key("key".to_string())
-                .with_bucket("bucket".to_string())]);
+        collecter.raw_events = FlatS3EventMessages(vec![
+            expected_s3_event_message().with_version_id(EXPECTED_VERSION_ID.to_string())
+        ]);
 
         set_s3_client_expectations(&mut collecter.client);
 
@@ -588,13 +590,15 @@ pub(crate) mod tests {
             .build(&client)
             .await;
 
-        collecter.raw_events =
-            FlatS3EventMessages(vec![FlatS3EventMessage::new_with_generated_id()
-                .with_event_type(Created)
-                .with_key("key".to_string())
-                .with_bucket("bucket".to_string())]);
+        collecter.raw_events = FlatS3EventMessages(vec![
+            expected_s3_event_message().with_version_id(default_version_id())
+        ]);
 
-        set_s3_head_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
+        set_s3_head_expectations(
+            &mut collecter.client,
+            vec![|| Ok(expected_head_object())],
+            default_version_id(),
+        );
         set_s3_get_tagging_expectations(
             &mut collecter.client,
             vec![move || {
@@ -607,6 +611,7 @@ pub(crate) mod tests {
                     .build()
                     .unwrap())
             }],
+            default_version_id(),
         );
 
         let mut result = collecter.collect().await.unwrap();
@@ -650,13 +655,15 @@ pub(crate) mod tests {
         let client = Client::from_pool(pool.clone());
         let mut collecter = test_collecter(&config, &client).await;
 
-        collecter.raw_events =
-            FlatS3EventMessages(vec![FlatS3EventMessage::new_with_generated_id()
-                .with_event_type(Created)
-                .with_key("key".to_string())
-                .with_bucket("bucket".to_string())]);
+        collecter.raw_events = FlatS3EventMessages(vec![
+            expected_s3_event_message().with_version_id(default_version_id())
+        ]);
 
-        set_s3_head_expectations(&mut collecter.client, vec![|| Ok(expected_head_object())]);
+        set_s3_head_expectations(
+            &mut collecter.client,
+            vec![|| Ok(expected_head_object())],
+            default_version_id(),
+        );
         set_s3_get_tagging_expectations(
             &mut collecter.client,
             vec![move || {
@@ -667,6 +674,7 @@ pub(crate) mod tests {
                         .build(),
                 ))
             }],
+            default_version_id(),
         );
 
         let mut result = collecter.collect().await.unwrap();
@@ -697,6 +705,13 @@ pub(crate) mod tests {
         assert_collected_events(result);
     }
 
+    fn expected_s3_event_message() -> FlatS3EventMessage {
+        FlatS3EventMessage::new_with_generated_id()
+            .with_event_type(Created)
+            .with_key("key".to_string())
+            .with_bucket("bucket".to_string())
+    }
+
     pub(crate) fn assert_collected_events(result: EventSourceType) {
         match result {
             EventSourceType::S3(events) => {
@@ -710,23 +725,27 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn set_s3_head_expectations<F>(client: &mut S3Client, expectations: Vec<F>)
-    where
+    pub(crate) fn set_s3_head_expectations<F>(
+        client: &mut S3Client,
+        expectations: Vec<F>,
+        version_id: String,
+    ) where
         F: Fn() -> result::Result<HeadObjectOutput, SdkError<HeadObjectError>> + Send + 'static,
     {
         let client = client
             .expect_head_object()
-            .with(eq("key"), eq("bucket"))
+            .with(eq("key"), eq("bucket"), eq(version_id))
             .times(expectations.len());
 
         for expectation in expectations {
-            client.returning(move |_, _| expectation());
+            client.returning(move |_, _, _| expectation());
         }
     }
 
     pub(crate) fn set_s3_get_tagging_expectations<F>(
         client: &mut S3Client,
         get_tagging_expectations: Vec<F>,
+        version_id: String,
     ) where
         F: Fn() -> result::Result<GetObjectTaggingOutput, SdkError<GetObjectTaggingError>>
             + Send
@@ -734,11 +753,11 @@ pub(crate) mod tests {
     {
         let get_tagging = client
             .expect_get_object_tagging()
-            .with(eq("key"), eq("bucket"))
+            .with(eq("key"), eq("bucket"), eq(version_id))
             .times(get_tagging_expectations.len());
 
         for expectation in get_tagging_expectations {
-            get_tagging.returning(move |_, _| expectation());
+            get_tagging.returning(move |_, _, _| expectation());
         }
     }
 
@@ -746,6 +765,7 @@ pub(crate) mod tests {
         client: &mut S3Client,
         get_tagging_expectations: Vec<F>,
         put_tagging_expectations: Vec<T>,
+        version_id: String,
     ) where
         F: Fn() -> result::Result<GetObjectTaggingOutput, SdkError<GetObjectTaggingError>>
             + Send
@@ -754,19 +774,20 @@ pub(crate) mod tests {
             + Send
             + 'static,
     {
-        set_s3_get_tagging_expectations(client, get_tagging_expectations);
+        set_s3_get_tagging_expectations(client, get_tagging_expectations, version_id.to_string());
 
         let put_tagging = client
             .expect_put_object_tagging()
             .with(
                 eq("key"),
                 eq("bucket"),
+                eq(version_id),
                 function(|t: &Tagging| t.tag_set().first().unwrap().key == "ingest_id"),
             )
             .times(put_tagging_expectations.len());
 
         for expectation in put_tagging_expectations {
-            put_tagging.returning(move |_, _, _| expectation());
+            put_tagging.returning(move |_, _, _, _| expectation());
         }
     }
 
@@ -801,11 +822,16 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn set_s3_client_expectations(s3_client: &mut S3Client) {
-        set_s3_head_expectations(s3_client, vec![|| Ok(expected_head_object())]);
+        set_s3_head_expectations(
+            s3_client,
+            vec![|| Ok(expected_head_object())],
+            EXPECTED_VERSION_ID.to_string(),
+        );
         set_s3_tagging_expectations(
             s3_client,
             vec![|| Ok(expected_get_object_tagging())],
             vec![|| Ok(expected_put_object_tagging())],
+            EXPECTED_VERSION_ID.to_string(),
         );
     }
 
