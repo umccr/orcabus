@@ -41,12 +41,12 @@ impl Entries {
         shuffle: bool,
         bucket_divisor: usize,
         key_divisor: usize,
-        move_id: Option<Uuid>,
+        ingest_id: Option<Uuid>,
     ) -> Vec<S3Object> {
         let mut output = vec![];
 
         let mut entries: Vec<_> = (0..n)
-            .map(|index| Self::generate_entry(index, bucket_divisor, key_divisor, move_id))
+            .map(|index| Self::generate_entry(index, bucket_divisor, key_divisor, ingest_id))
             .collect();
 
         if shuffle {
@@ -71,7 +71,7 @@ impl Entries {
         index: usize,
         bucket_divisor: usize,
         key_divisor: usize,
-        move_id: Option<Uuid>,
+        ingest_id: Option<Uuid>,
     ) -> ActiveS3Object {
         let event = Self::event_type(index);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
@@ -84,7 +84,7 @@ impl Entries {
 
         ActiveS3Object {
             s3_object_id: Set(UuidGenerator::generate()),
-            move_id: Set(Some(move_id.unwrap_or_else(UuidGenerator::generate))),
+            ingest_id: Set(Some(ingest_id.unwrap_or_else(UuidGenerator::generate))),
             event_type: Set(event.clone()),
             bucket: Set((index / bucket_divisor).to_string()),
             key: Set((index / key_divisor).to_string()),
@@ -129,7 +129,7 @@ pub struct EntriesBuilder {
     bucket_divisor: usize,
     key_divisor: usize,
     shuffle: bool,
-    move_id: Option<Uuid>,
+    ingest_id: Option<Uuid>,
 }
 
 impl EntriesBuilder {
@@ -158,8 +158,8 @@ impl EntriesBuilder {
     }
 
     /// Set whether to shuffle.
-    pub fn with_move_id(mut self, move_id: Uuid) -> Self {
-        self.move_id = Some(move_id);
+    pub fn with_ingest_id(mut self, ingest_id: Uuid) -> Self {
+        self.ingest_id = Some(ingest_id);
         self
     }
 
@@ -171,7 +171,7 @@ impl EntriesBuilder {
             self.shuffle,
             self.bucket_divisor,
             self.key_divisor,
-            self.move_id,
+            self.ingest_id,
         )
         .await;
 
@@ -189,7 +189,7 @@ impl Default for EntriesBuilder {
             bucket_divisor: 2,
             key_divisor: 1,
             shuffle: false,
-            move_id: None,
+            ingest_id: None,
         }
     }
 }

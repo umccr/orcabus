@@ -253,7 +253,7 @@ impl<'a> Collecter<'a> {
 
         let GetObjectTaggingOutput { mut tag_set, .. } = tagging;
 
-        // Check if the object contains the move_id tag.
+        // Check if the object contains the ingest_id tag.
         let tag = tag_set
             .clone()
             .into_iter()
@@ -261,10 +261,10 @@ impl<'a> Collecter<'a> {
 
         let Some(tag) = tag else {
             // If it doesn't, then a new tag needs to be generated.
-            let move_id = UuidGenerator::generate();
+            let ingest_id = UuidGenerator::generate();
             let tag = Tag::builder()
                 .key(config.ingester_tag_name())
-                .value(move_id)
+                .value(ingest_id)
                 .build()?;
             tag_set.push(tag);
 
@@ -280,29 +280,29 @@ impl<'a> Collecter<'a> {
                     warn!("Error received from PutObjectTagging: {}", err);
                 });
 
-            // Only add a move_id to the new record if the tagging was successful.
+            // Only add a ingest_id to the new record if the tagging was successful.
             return if result.is_ok() {
-                Ok(event.with_move_id(Some(move_id)))
+                Ok(event.with_ingest_id(Some(ingest_id)))
             } else {
                 Ok(event)
             };
         };
 
-        // The object has a move_id tag. Grab the existing the tag, returning a new record without
-        // the move_id if the is not valid.
-        let move_id = Uuid::from_str(tag.value()).inspect_err(|err| {
-            warn!("Failed to parse move_id from tag: {}", err);
+        // The object has a ingest_id tag. Grab the existing the tag, returning a new record without
+        // the ingest_id if the is not valid.
+        let ingest_id = Uuid::from_str(tag.value()).inspect_err(|err| {
+            warn!("Failed to parse ingest_id from tag: {}", err);
         });
-        let Ok(move_id) = move_id else {
+        let Ok(ingest_id) = ingest_id else {
             return Ok(event);
         };
 
         // From here, the new record must be a valid, moved object.
-        let event = event.with_move_id(Some(move_id));
+        let event = event.with_ingest_id(Some(ingest_id));
 
         // Get the attributes from the old record to update the new record with.
         let filter = S3ObjectsFilter {
-            move_id: Some(move_id),
+            ingest_id: Some(ingest_id),
             ..Default::default()
         };
         let moved_object = ListQueryBuilder::new(database_client.connection_ref())
@@ -317,7 +317,7 @@ impl<'a> Collecter<'a> {
         if let Some(moved_object) = moved_object {
             Ok(event.with_attributes(moved_object.attributes))
         } else {
-            warn!("Object with move_id {} not found in database", move_id);
+            warn!("Object with ingest_id {} not found in database", ingest_id);
             Ok(event)
         }
     }
@@ -564,14 +564,14 @@ pub(crate) mod tests {
         let EventSourceType::S3(events) = &mut result.event_type else {
             panic!();
         };
-        assert!(events.move_ids[0].is_some());
+        assert!(events.ingest_ids[0].is_some());
 
         client.ingest(result.event_type).await.unwrap();
 
         let s3_object_results = s3_object_results(&pool).await;
         assert_eq!(s3_object_results.len(), 1);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_some());
     }
 
@@ -581,9 +581,9 @@ pub(crate) mod tests {
         let client = Client::from_pool(pool.clone());
         let mut collecter = test_collecter(&config, &client).await;
 
-        let move_id = UuidGenerator::generate();
+        let ingest_id = UuidGenerator::generate();
         EntriesBuilder::default()
-            .with_move_id(move_id)
+            .with_ingest_id(ingest_id)
             .with_n(1)
             .build(&client)
             .await;
@@ -600,8 +600,8 @@ pub(crate) mod tests {
             vec![move || {
                 Ok(GetObjectTaggingOutput::builder()
                     .set_tag_set(Some(vec![Tag::builder()
-                        .key("filemanager_id")
-                        .value(move_id.to_string())
+                        .key("ingest_id")
+                        .value(ingest_id.to_string())
                         .build()
                         .unwrap()]))
                     .build()
@@ -613,19 +613,19 @@ pub(crate) mod tests {
         let EventSourceType::S3(events) = &mut result.event_type else {
             panic!();
         };
-        assert!(events.move_ids[0].is_some());
+        assert!(events.ingest_ids[0].is_some());
 
         client.ingest(result.event_type).await.unwrap();
 
         let s3_object_results = s3_object_results(&pool).await;
         assert_eq!(s3_object_results.len(), 2);
         assert_eq!(
-            s3_object_results[0].get::<Option<Uuid>, _>("move_id"),
-            Some(move_id)
+            s3_object_results[0].get::<Option<Uuid>, _>("ingest_id"),
+            Some(ingest_id)
         );
         assert_eq!(
-            s3_object_results[1].get::<Option<Uuid>, _>("move_id"),
-            Some(move_id)
+            s3_object_results[1].get::<Option<Uuid>, _>("ingest_id"),
+            Some(ingest_id)
         );
 
         let expected_attributes = json!({
@@ -673,14 +673,14 @@ pub(crate) mod tests {
         let EventSourceType::S3(events) = &mut result.event_type else {
             panic!();
         };
-        assert!(events.move_ids[0].is_none());
+        assert!(events.ingest_ids[0].is_none());
 
         client.ingest(result.event_type).await.unwrap();
 
         let s3_object_results = s3_object_results(&pool).await;
         assert_eq!(s3_object_results.len(), 1);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_none());
     }
 
@@ -761,7 +761,7 @@ pub(crate) mod tests {
             .with(
                 eq("key"),
                 eq("bucket"),
-                function(|t: &Tagging| t.tag_set().first().unwrap().key == "filemanager_id"),
+                function(|t: &Tagging| t.tag_set().first().unwrap().key == "ingest_id"),
             )
             .times(put_tagging_expectations.len());
 

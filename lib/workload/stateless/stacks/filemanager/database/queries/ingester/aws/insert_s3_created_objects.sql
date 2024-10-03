@@ -13,7 +13,7 @@ insert into s3_object (
     sequencer,
     is_delete_marker,
     event_type,
-    move_id,
+    ingest_id,
     attributes
 )
 values (

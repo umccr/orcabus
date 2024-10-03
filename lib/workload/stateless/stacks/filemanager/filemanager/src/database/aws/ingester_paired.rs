@@ -104,7 +104,7 @@ impl IngesterPaired {
         .bind(&object_created.sequencers)
         .bind(&object_created.is_delete_markers)
         .bind(vec![Other; object_created.s3_object_ids.len()])
-        .bind(&object_created.move_ids)
+        .bind(&object_created.ingest_ids)
         .bind(&object_created.attributes)
         .fetch_all(&mut *tx)
         .await?;
@@ -126,7 +126,7 @@ impl IngesterPaired {
         .bind(&object_created.sequencers)
         .bind(&object_created.is_delete_markers)
         .bind(vec![Other; object_created.s3_object_ids.len()])
-        .bind(&object_created.move_ids)
+        .bind(&object_created.ingest_ids)
         .bind(&object_created.attributes)
         .fetch_all(&mut *tx)
         .await?;
@@ -219,7 +219,7 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 1);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_some());
         assert_created(&s3_object_results[0]);
     }
@@ -273,7 +273,7 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 1);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_some());
         assert_with(
             &s3_object_results[0],
@@ -313,7 +313,7 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 1);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_some());
         assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);
     }
@@ -334,7 +334,7 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 1);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_some());
         assert_eq!(
             2,
@@ -462,7 +462,7 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 1);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_some());
         assert_eq!(2, s3_object_results[0].get::<i64, _>("number_reordered"));
         assert_ingest_events(&s3_object_results[0], EXPECTED_VERSION_ID);

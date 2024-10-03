@@ -57,7 +57,7 @@ impl Default for Config {
             sqs_url: None,
             paired_ingest_mode: false,
             ingester_track_moves: true,
-            ingester_tag_name: "filemanager_id".to_string(),
+            ingester_tag_name: "ingest_id".to_string(),
             api_links_url: None,
             api_presign_limit: None,
             api_presign_expiry: None,

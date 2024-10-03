@@ -165,11 +165,11 @@ export class Function extends Construct {
   /**
    * Add policies for 's3:List*' and 's3:Get*' on the buckets to this function's role.
    */
-  addPoliciesForBuckets(buckets: string[]) {
+  addPoliciesForBuckets(buckets: string[], additionalActions?: string[]) {
     buckets.map((bucket) => {
       this.addToPolicy(
         new PolicyStatement({
-          actions: ['s3:ListBucket', 's3:GetObject'],
+          actions: [...['s3:ListBucket', 's3:GetObject'], ...(additionalActions ?? [])],
           resources: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
         })
       );

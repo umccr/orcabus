@@ -53,7 +53,7 @@ impl Ingester {
         .bind(&events.sequencers)
         .bind(&events.is_delete_markers)
         .bind(&events.event_types)
-        .bind(&events.move_ids)
+        .bind(&events.ingest_ids)
         .bind(&events.attributes)
         .fetch_all(&mut *tx)
         .await?;
@@ -106,7 +106,7 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 1);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_some());
         assert_created(&s3_object_results[0]);
     }
@@ -155,7 +155,7 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 1);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_some());
         assert_with(
             &s3_object_results[0],
@@ -194,7 +194,7 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 2);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_some());
         assert_eq!(
             1,
@@ -301,7 +301,7 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 2);
         assert!(s3_object_results[0]
-            .get::<Option<Uuid>, _>("move_id")
+            .get::<Option<Uuid>, _>("ingest_id")
             .is_some());
         // Order should be different here.
         assert_ingest_events(
@@ -1098,16 +1098,16 @@ pub(crate) mod tests {
                 *sha256 = Some(EXPECTED_SHA256.to_string());
             });
         };
-        let update_move_ids = |move_ids: &mut Vec<Option<Uuid>>| {
-            move_ids.iter_mut().for_each(|move_id| {
-                *move_id = Some(UuidGenerator::generate());
+        let update_ingest_ids = |ingest_ids: &mut Vec<Option<Uuid>>| {
+            ingest_ids.iter_mut().for_each(|ingest_id| {
+                *ingest_id = Some(UuidGenerator::generate());
             });
         };
 
         update_last_modified(&mut events.last_modified_dates);
         update_storage_class(&mut events.storage_classes);
         update_sha256(&mut events.sha256s);
-        update_move_ids(&mut events.move_ids);
+        update_ingest_ids(&mut events.ingest_ids);
 
         events
     }

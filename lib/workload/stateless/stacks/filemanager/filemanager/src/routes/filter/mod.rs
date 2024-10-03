@@ -68,8 +68,8 @@ pub struct S3ObjectsFilter {
     /// Query by the object delete marker.
     pub(crate) is_delete_marker: Option<bool>,
     #[param(required = false)]
-    /// Query by the object delete marker.
-    pub(crate) move_id: Option<Uuid>,
+    /// Query by the ingest id that objects get tagged with.
+    pub(crate) ingest_id: Option<Uuid>,
     #[param(required = false)]
     /// Query by JSON attributes. Supports nested syntax to access inner
     /// fields, e.g. `attributes[attribute_id]=...`. This only deserializes
