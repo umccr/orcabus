@@ -1,3 +1,4 @@
+import random
 from datetime import datetime, timezone
 from typing import List
 import uuid
@@ -423,6 +424,45 @@ def create_workflowrun_for_analysis(analysis_run: AnalysisRun):
             comment="Initial State"
         )
         initial_state.save()
+        # add randomly additional states to simulate a state history
+        if random.random() < 0.8:  # ~80%
+            # create a READY state
+            ready_state = State(
+                workflow_run=wr,
+                status=Status.READY.convention,
+                timestamp=datetime.now(timezone.utc),
+                payload=PayloadFactory(
+                    payload_ref_id=str(uuid.uuid4()),
+                    data={"comment": f"Payload for READY state of wfr.{wr.orcabus_id}"}),
+                comment="READY State"
+            )
+            ready_state.save()
+            # randomly create another state
+            if random.random() < 0.7:  # ~70%
+                # create a RUNNING state
+                ready_state = State(
+                    workflow_run=wr,
+                    status=Status.RUNNING.convention,
+                    timestamp=datetime.now(timezone.utc),
+                    payload=PayloadFactory(
+                        payload_ref_id=str(uuid.uuid4()),
+                        data={"comment": f"Payload for RUNNING state of wfr.{wr.orcabus_id}"}),
+                    comment="RUNNING State"
+                )
+                ready_state.save()
+                # randomly create another state
+                if random.random() < 0.6:  # ~60%
+                    # create a terminal state
+                    ready_state = State(
+                        workflow_run=wr,
+                        status=random.choice([Status.SUCCEEDED.convention, Status.FAILED.convention]),
+                        timestamp=datetime.now(timezone.utc),
+                        payload=PayloadFactory(
+                            payload_ref_id=str(uuid.uuid4()),
+                            data={"comment": f"Payload for terminal state of wfr.{wr.orcabus_id}"}),
+                        comment="Terminal State"
+                    )
+                    ready_state.save()
 
 
 def create_portal_run_id() -> str:
