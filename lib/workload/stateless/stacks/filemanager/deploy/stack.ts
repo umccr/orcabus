@@ -7,7 +7,7 @@ import { Vpc, SecurityGroup, VpcLookupOptions, IVpc, ISecurityGroup } from 'aws-
 import { Arn, Stack, StackProps } from 'aws-cdk-lib';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { ProviderFunction } from '../../../../components/provider-function';
-import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../../components/api-gateway';
+import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import { IQueue, Queue } from 'aws-cdk-lib/aws-sqs';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -27,12 +27,8 @@ export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & 
   vpcProps: VpcLookupOptions;
   migrateDatabase?: boolean;
   securityGroupName: string;
-  cognitoUserPoolIdParameterName: string;
-  cognitoPortalAppClientIdParameterName: string;
-  cognitoStatusPageAppClientIdParameterName: string;
-  apiGwLogsConfig: ApiGwLogsConfig;
   fileManagerIngestRoleName: string;
-  corsAllowOrigins?: string[];
+  apiGatewayCognitoProps: ApiGatewayConstructProps;
 };
 
 /**
@@ -48,6 +44,7 @@ export class Filemanager extends Stack {
   private readonly host: string;
   private readonly securityGroup: ISecurityGroup;
   private readonly queue: IQueue;
+  readonly domainName: string;
 
   constructor(scope: Construct, id: string, props: FilemanagerProps) {
     super(scope, id, props);
@@ -93,8 +90,9 @@ export class Filemanager extends Stack {
     );
 
     this.createIngestFunction(props);
-    this.createApiFunction(props);
     this.createInventoryFunction(props);
+
+    this.domainName = this.createApiFunction(props);
   }
 
   private createIngestRole(name: string) {
@@ -130,9 +128,9 @@ export class Filemanager extends Stack {
   }
 
   /**
-   * Query function and API Gateway fronting the function.
+   * Query function and API Gateway fronting the function. Returns the configured domain name.
    */
-  private createApiFunction(props: FilemanagerProps) {
+  private createApiFunction(props: FilemanagerProps): string {
     let apiLambda = new ApiFunction(this, 'ApiFunction', {
       vpc: this.vpc,
       host: this.host,
@@ -141,20 +139,29 @@ export class Filemanager extends Stack {
       ...props,
     });
 
-    const ApiGateway = new ApiGatewayConstruct(this, 'ApiGateway', {
-      region: this.region,
-      apiName: 'FileManager',
-      customDomainNamePrefix: 'file',
-      ...props,
-    });
-    const httpApi = ApiGateway.httpApi;
+    const apiGateway = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
+    const httpApi = apiGateway.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiLambda.function);
 
-    new HttpRoute(this, 'HttpRoute', {
+    new HttpRoute(this, 'GetHttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.GET),
     });
+
+    new HttpRoute(this, 'PatchHttpRoute', {
+      httpApi: httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.PATCH),
+    });
+
+    new HttpRoute(this, 'PostHttpRoute', {
+      httpApi: httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.POST),
+    });
+
+    return apiGateway.domainName;
   }
 }

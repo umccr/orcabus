@@ -43,9 +43,11 @@ docker-api: docker-postgres
 	@docker compose -p "$(DOCKER_PROJECT_NAME)" up api
 
 ## Build related commands
-build: docker-postgres
+entity: docker-postgres
+	@cargo run -p filemanager-build -- --out-dir filemanager/src/database/entities
+build: docker-postgres entity
 	@cargo build --all-features --all-targets
-watch: docker-postgres
+watch: docker-postgres entity
 	@cargo watch -w *.toml -w *.rs
 test: docker-postgres
 	@cargo test --all-features --all-targets
@@ -55,7 +57,7 @@ lint:
 	@cargo fmt --check
 lint-fix:
 	@cargo fmt
-clippy: docker-postgres
+clippy: docker-postgres entity
 	@cargo clippy --all-targets --all-features
 check: lint clippy
 check-fix: lint-fix clippy

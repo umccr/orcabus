@@ -21,15 +21,28 @@ export interface ApiGwLogsConfig {
 }
 
 export interface ApiGatewayConstructProps {
+  /**
+   * The AWS region.
+   */
   region: string;
-  apiName: string | undefined;
-  cognitoUserPoolIdParameterName: string;
-  cognitoPortalAppClientIdParameterName: string;
-  cognitoStatusPageAppClientIdParameterName: string;
+  /**
+   * The name of the API.
+   */
+  apiName: string;
   /**
    * The prefix for the custom domain name
    */
   customDomainNamePrefix: string;
+  /**
+   *The cognito user pool id parameter name.
+   */
+  cognitoUserPoolIdParameterName: string;
+  /**
+   * The parameter name for the cognito client id in array.
+   * In order API Gateway to validate the JWT token, it needs to know the client id which usually
+   * stored in SSM Parameter. This will accept multiple parameter name in an array.
+   */
+  cognitoClientIdParameterNameArray: string[];
   /**
    * The configuration for aws cloudwatch logs
    */
@@ -37,11 +50,12 @@ export interface ApiGatewayConstructProps {
   /**
    * Allowed CORS origins.
    */
-  corsAllowOrigins?: string[];
+  corsAllowOrigins: string[];
 }
 
 export class ApiGatewayConstruct extends Construct {
   private readonly _httpApi: HttpApi;
+  private readonly _domainName: string;
 
   constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
     super(scope, id);
@@ -54,16 +68,24 @@ export class ApiGatewayConstruct extends Construct {
     );
     const hostedZoneId = StringParameter.valueForStringParameter(this, '/hosted_zone/umccr/id');
 
-    const domainName = `${props.customDomainNamePrefix}.${hostedDomainName}`;
+    this._domainName = `${props.customDomainNamePrefix}.${hostedDomainName}`;
     const apiGWDomainName = new DomainName(this, 'UmccrDomainName', {
-      domainName: `${props.customDomainNamePrefix}.${hostedDomainName}`,
+      domainName: this.domainName,
       certificate: Certificate.fromCertificateArn(this, 'cert', umccrAcmArn),
     });
 
     this._httpApi = new HttpApi(this, 'HttpApi', {
       apiName: 'OrcaBusAPI-' + props.apiName,
       corsPreflight: {
-        allowHeaders: ['Authorization'],
+        allowHeaders: [
+          'content-type',
+          'content-disposition',
+          'authorization',
+          'x-amz-date',
+          'x-api-key',
+          'x-amz-security-token',
+          'x-amz-user-agent',
+        ],
         allowMethods: [
           CorsHttpMethod.GET,
           CorsHttpMethod.HEAD,
@@ -85,7 +107,7 @@ export class ApiGatewayConstruct extends Construct {
         hostedZoneId,
         zoneName: hostedDomainName,
       }),
-      recordName: domainName,
+      recordName: this.domainName,
       target: RecordTarget.fromAlias(
         new ApiGatewayv2DomainProperties(
           apiGWDomainName.regionalDomainName,
@@ -143,10 +165,6 @@ export class ApiGatewayConstruct extends Construct {
      * FIXME One fine day in future when we have proper Cognito AAI setup.
      *  For the moment, we leverage Portal and established Cognito infrastructure.
      *  See https://github.com/umccr/orcabus/issues/102
-     *
-     * UI clients:
-     *  https://portal.[dev|stg|prod].umccr.org
-     *  https://status.[dev|stg|prod].umccr.org
      */
 
     const userPoolIdParam: IStringParameter = aws_ssm.StringParameter.fromStringParameterName(
@@ -154,27 +172,29 @@ export class ApiGatewayConstruct extends Construct {
       'CognitoUserPoolIdParameter',
       props.cognitoUserPoolIdParameterName
     );
-    const portalClientIdParam: IStringParameter = aws_ssm.StringParameter.fromStringParameterName(
-      this,
-      'CognitoPortalClientIdParameter',
-      props.cognitoPortalAppClientIdParameterName
+
+    const clientIdParamsArray: IStringParameter[] = props.cognitoClientIdParameterNameArray.map(
+      (name) =>
+        aws_ssm.StringParameter.fromStringParameterName(
+          this,
+          `CognitoClientId${name}Parameter`,
+          name
+        )
     );
-    const statusPageClientIdParam: IStringParameter =
-      aws_ssm.StringParameter.fromStringParameterName(
-        this,
-        'CognitoStatusPageClientIdParameter',
-        props.cognitoStatusPageAppClientIdParameterName
-      );
 
     const issuer =
       'https://cognito-idp.' + props.region + '.amazonaws.com/' + userPoolIdParam.stringValue;
 
     return new HttpJwtAuthorizer('PortalAuthorizer', issuer, {
-      jwtAudience: [portalClientIdParam.stringValue, statusPageClientIdParam.stringValue],
+      jwtAudience: clientIdParamsArray.map((param) => param.stringValue),
     });
   }
 
   get httpApi(): HttpApi {
     return this._httpApi;
+  }
+
+  get domainName(): string {
+    return this._domainName;
   }
 }

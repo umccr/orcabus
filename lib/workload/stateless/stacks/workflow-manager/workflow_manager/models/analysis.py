@@ -13,7 +13,7 @@ class Analysis(OrcaBusBaseModel):
     class Meta:
         unique_together = ["analysis_name", "analysis_version"]
 
-    id = models.BigAutoField(primary_key=True)
+    orcabus_id_prefix = 'ana.'
 
     analysis_name = models.CharField(max_length=255)
     analysis_version = models.CharField(max_length=255)
@@ -27,13 +27,13 @@ class Analysis(OrcaBusBaseModel):
     objects = AnalysisManager()
 
     def __str__(self):
-        return f"ID: {self.id}, analysis_name: {self.analysis_name}, analysis_version: {self.analysis_version}"
+        return f"ID: {self.orcabus_id}, analysis_name: {self.analysis_name}, analysis_version: {self.analysis_version}"
 
     def to_dict(self):
         return {
-            "id": self.id,
-            "analysis_name": self.analysis_name,
-            "analysis_version": self.analysis_version,
+            "orcabusId": self.orcabus_id,
+            "analysisName": self.analysis_name,
+            "analysisVersion": self.analysis_version,
             "description": self.description,
             "status": self.status
         }

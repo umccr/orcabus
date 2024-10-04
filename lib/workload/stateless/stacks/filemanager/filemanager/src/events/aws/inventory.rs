@@ -1,10 +1,6 @@
 //! Handles S3 Inventory reports and converts them to events that can be ingested.
 //!
 
-use std::hash::{Hash, Hasher};
-use std::io::{BufReader, Cursor, Read};
-use std::result;
-
 use arrow::array::RecordBatch;
 use arrow::error::ArrowError;
 use arrow_json::ArrayWriter;
@@ -24,6 +20,9 @@ use parquet::errors::ParquetError;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::from_slice;
 use serde_with::{serde_as, DisplayFromStr};
+use std::hash::{Hash, Hasher};
+use std::io::{BufReader, Cursor, Read};
+use std::result;
 
 #[double]
 use crate::clients::aws::s3::Client;

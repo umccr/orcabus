@@ -1,6 +1,28 @@
 import hashlib
+import ulid
 
 from django.db import models
+from django.core.validators import RegexValidator
+
+orcabus_id_validator = RegexValidator(
+                regex=r'[\w]{26}$',
+                message='ULID is expected to be 26 characters long',
+                code='invalid_orcabus_id'
+            )
+
+
+class OrcabusIdField(models.CharField):
+    description = "An OrcaBus internal ID (ULID)"
+
+    def __init__(self, prefix, *args, **kwargs):
+        kwargs["max_length"] = 26  # ULID length
+        kwargs['unique'] = True
+        kwargs['editable'] = False
+        kwargs['blank'] = False
+        kwargs['null'] = False
+        kwargs['default'] = ulid.new
+        kwargs['validators'] = [orcabus_id_validator]
+        super().__init__(*args, **kwargs)
 
 
 class HashField(models.CharField):

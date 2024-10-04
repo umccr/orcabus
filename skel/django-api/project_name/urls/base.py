@@ -4,9 +4,8 @@ from {{project_name}}.routers import OptionalSlashDefaultRouter
 from {{project_name}}.viewsets.helloworld import HelloWorldViewSet
 from {{project_name}}.settings.base import API_VERSION
 
-api_namespace = "hlo"
 api_version = API_VERSION
-api_base = f"{api_namespace}/{api_version}/"
+api_base = f"api/{api_version}/"
 
 router = OptionalSlashDefaultRouter()
 router.register(r"hello", HelloWorldViewSet, basename="hello")

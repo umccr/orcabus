@@ -1,9 +1,9 @@
 from django.db import models
 
+from workflow_manager.models.analysis_run import AnalysisRun
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.library import Library
 from workflow_manager.models.workflow import Workflow
-from workflow_manager.models.analysis_run import AnalysisRun
 
 
 class WorkflowRunManager(OrcaBusBaseManager):
@@ -11,20 +11,13 @@ class WorkflowRunManager(OrcaBusBaseManager):
 
 
 class WorkflowRun(OrcaBusBaseModel):
-    id = models.BigAutoField(primary_key=True)
-
-    # --- mandatory fields
+    orcabus_id_prefix = 'wfr.'
 
     portal_run_id = models.CharField(max_length=255, unique=True)
 
-    # --- optional fields
-
-    # ID of the external service
     execution_id = models.CharField(max_length=255, null=True, blank=True)
     workflow_run_name = models.CharField(max_length=255, null=True, blank=True)
     comment = models.CharField(max_length=255, null=True, blank=True)
-
-    # --- FK link to value objects
 
     # Relationships
     workflow = models.ForeignKey(Workflow, null=True, blank=True, on_delete=models.SET_NULL)
@@ -34,12 +27,12 @@ class WorkflowRun(OrcaBusBaseModel):
     objects = WorkflowRunManager()
 
     def __str__(self):
-        return f"ID: {self.id}, portal_run_id: {self.portal_run_id}, workflow_run_name: {self.workflow_run_name}, " \
-               f"workflow: {self.workflow.workflow_name} "
+        return f"ID: {self.orcabus_id}, portal_run_id: {self.portal_run_id}, workflow_run_name: {self.workflow_run_name}, " \
+               f"workflowRun: {self.workflow.workflow_name} "
 
     def to_dict(self):
         return {
-            "id": self.id,
+            "orcabusId": self.orcabus_id,
             "portal_run_id": self.portal_run_id,
             "execution_id": self.execution_id,
             "workflow_run_name": self.workflow_run_name,
@@ -49,8 +42,11 @@ class WorkflowRun(OrcaBusBaseModel):
 
     def get_all_states(self):
         # retrieve all states (DB records rather than a queryset)
-        return list(self.state_set.all())  # TODO: ensure order by timestamp ?
+        return list(self.states.all())  # TODO: ensure order by timestamp ?
 
+    def get_latest_state(self):
+        # retrieve all related states and get the latest one
+        return self.states.order_by('-timestamp').first()
 
 class LibraryAssociationManager(OrcaBusBaseManager):
     pass

@@ -8,7 +8,7 @@ import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-a
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { ApiGatewayConstruct, ApiGwLogsConfig } from '../../../../components/api-gateway';
+import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
 
@@ -16,11 +16,7 @@ export interface SequenceRunManagerStackProps {
   lambdaSecurityGroupName: string;
   vpcProps: VpcLookupOptions;
   mainBusName: string;
-  cognitoUserPoolIdParameterName: string;
-  cognitoPortalAppClientIdParameterName: string;
-  cognitoStatusPageAppClientIdParameterName: string;
-  apiGwLogsConfig: ApiGwLogsConfig;
-  corsAllowOrigins?: string[];
+  apiGatewayCognitoProps: ApiGatewayConstructProps;
 }
 
 export class SequenceRunManagerStack extends Stack {
@@ -116,20 +112,15 @@ export class SequenceRunManagerStack extends Stack {
       timeout: Duration.seconds(28),
     });
 
-    const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', {
-      region: this.region,
-      apiName: 'SequenceRunManager',
-      customDomainNamePrefix: 'sequence',
-      ...props,
-    });
+    const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
     const httpApi = srmApi.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
 
-    new HttpRoute(this, 'HttpRoute', {
+    new HttpRoute(this, 'GetHttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.ANY),
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.GET),
     });
   }
 

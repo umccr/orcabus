@@ -1,5 +1,6 @@
 import os
 import re
+import json
 from typing import List
 
 import pandas as pd
@@ -25,12 +26,14 @@ SSM_NAME_GDRIVE_ACCOUNT = os.getenv('SSM_NAME_GDRIVE_ACCOUNT', '')
 
 
 @transaction.atomic
-def persist_lab_metadata(df: pd.DataFrame):
+def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     """
     Persist metadata records from a pandas dataframe into the db
 
-    :param df: dataframe to persist
-    :return: result statistics - count of LabMetadata rows created
+    Args:
+        df (pd.DataFrame): The source of truth for the metadata in this particular year
+        sheet_year (type): The year for the metadata df supplied
+
     """
     logger.info(f"Start processing LabMetadata")
 
@@ -47,18 +50,17 @@ def persist_lab_metadata(df: pd.DataFrame):
 
     rows_invalid = list()
 
-    # If the df do not contain to what has existed in the db, it will be deleted
-    for lib in Library.objects.exclude(library_id__in=df['library_id'].tolist()).iterator():
+    # The data frame is to be the source of truth for the particular year
+    # So we need to remove db records which are not in the data frame
+    # Only doing this for library records and (dangling) specimen/subject may be removed on a separate process
+
+    # For the library_id we need craft the library_id prefix to match the year
+    # E.g. year 2024, library_id prefix is 'L24' as what the Lab tracking sheet convention
+    library_prefix = f'L{sheet_year[-2:]}'
+    for lib in Library.objects.filter(library_id__startswith=library_prefix).exclude(
+            library_id__in=df['library_id'].tolist()).iterator():
         library_deleted.append(lib)
         lib.delete()
-
-    for spc in Specimen.objects.exclude(specimen_id__in=df['sample_id'].tolist()).iterator():
-        specimen_deleted.append(spc)
-        spc.delete()
-
-    for sbj in Subject.objects.exclude(subject_id__in=df['subject_id'].tolist()).iterator():
-        subject_deleted.append(sbj)
-        sbj.delete()
 
     # Update: 12/07/2024. 'Subject' -> 'Specimen' is now ONE to Many, therefore the process of unliking the many to
     # many is not needed. The following code is commented for future reference when the 'Individual' concept is
@@ -98,20 +100,20 @@ def persist_lab_metadata(df: pd.DataFrame):
     for record in df.to_dict('records'):
         try:
             # 1. update or create all data in the model from the given record
-            subject, is_sub_created = Subject.objects.update_or_create(
-                subject_id=record.get('subject_id'),
-                defaults={
+            subject, is_sub_created, is_sub_updated = Subject.objects.update_or_create_if_needed(
+                search_key={"subject_id": record.get('subject_id')},
+                data={
                     "subject_id": record.get('subject_id')
                 }
             )
             if is_sub_created:
                 subject_created.append(subject)
-            else:
+            if is_sub_updated:
                 subject_updated.append(subject)
 
-            specimen, is_spc_created = Specimen.objects.update_or_create(
-                specimen_id=record.get('sample_id'),
-                defaults={
+            specimen, is_spc_created, is_spc_updated = Specimen.objects.update_or_create_if_needed(
+                search_key={"specimen_id": record.get('sample_id')},
+                data={
                     "specimen_id": record.get('sample_id'),
                     "source": get_value_from_human_readable_label(Source.choices, record.get('source')),
                     'subject_id': subject.orcabus_id
@@ -119,11 +121,12 @@ def persist_lab_metadata(df: pd.DataFrame):
             )
             if is_spc_created:
                 specimen_created.append(specimen)
-            else:
+            if is_spc_updated:
                 specimen_updated.append(specimen)
-            library, is_lib_created = Library.objects.update_or_create(
-                library_id=record.get('library_id'),
-                defaults={
+
+            library, is_lib_created, is_lib_updated = Library.objects.update_or_create_if_needed(
+                search_key={"library_id": record.get('library_id')},
+                data={
                     'library_id': record.get('library_id'),
                     'phenotype': get_value_from_human_readable_label(Phenotype.choices, record.get('phenotype')),
                     'workflow': get_value_from_human_readable_label(WorkflowType.choices, record.get('workflow')),
@@ -138,7 +141,7 @@ def persist_lab_metadata(df: pd.DataFrame):
             )
             if is_lib_created:
                 library_created.append(library)
-            else:
+            if is_lib_updated:
                 library_updated.append(library)
 
             # 2. linking or updating model to each other based on the record (update if it does not match)
@@ -155,10 +158,11 @@ def persist_lab_metadata(df: pd.DataFrame):
 
         except Exception as e:
             if any(record.values()):  # silent off blank row
-                logger.warning(f"Invalid record: {libjson.dumps(record)} Exception: {e}")
+                logger.warning(f"Invalid record ({e}): {json.dumps(record, indent=2)}")
                 rows_invalid.append(record)
             continue
 
+    # clean up history for django-simple-history model if any
     clean_model_history()
 
     return {
@@ -183,7 +187,7 @@ def persist_lab_metadata(df: pd.DataFrame):
     }
 
 
-def download_tracking_sheet(year_array: List[int]) -> pd.DataFrame:
+def download_tracking_sheet(year: str) -> pd.DataFrame:
     """
     Download the full original metadata from Google tracking sheet
     """
@@ -191,17 +195,11 @@ def download_tracking_sheet(year_array: List[int]) -> pd.DataFrame:
     account_info = libssm.get_secret(SSM_NAME_GDRIVE_ACCOUNT)
 
     frames = []
-    for i in year_array:
-        year_str = str(i)
-        logger.info(f"Downloading {year_str} sheet")
-        sheet_df = libgdrive.download_sheet(account_info, sheet_id, year_str)
-        sheet_df = sanitize_lab_metadata_df(sheet_df)
+    logger.info(f"Downloading {year} sheet")
+    sheet_df = libgdrive.download_sheet(account_info, sheet_id, year)
+    sheet_df = sanitize_lab_metadata_df(sheet_df)
 
-        # the year might be in the future therefore it does not exist
-        if sheet_df.empty:
-            break
-
-        frames.append(sheet_df)
+    frames.append(sheet_df)
 
     df: pd.DataFrame = pd.concat(frames)
     return df

@@ -66,11 +66,11 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         lib_ids = [
             {
                 "libraryId": library_ids[0],
-                "orcabusId": "lib.01J5M2J44HFJ9424G7074NKTGN"
+                "orcabusId": "01J5M2J44HFJ9424G7074NKTGN"
             },
             {
                 "libraryId": library_ids[1],
-                "orcabusId": "lib.01J5M2JFE1JPYV62RYQEG99CP5"
+                "orcabusId": "01J5M2JFE1JPYV62RYQEG99CP5"
             }
         ]
 
@@ -129,11 +129,11 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         lib_ids = [
             {
                 "libraryId": library_ids[0],
-                "orcabusId": "lib.01J5M2J44HFJ9424G7074NKTGN"
+                "orcabusId": "01J5M2J44HFJ9424G7074NKTGN"
             },
             {
                 "libraryId": library_ids[1],
-                "orcabusId": "lib.01J5M2JFE1JPYV62RYQEG99CP5"
+                "orcabusId": "01J5M2JFE1JPYV62RYQEG99CP5"
             }
         ]
         for lib_id in lib_ids:

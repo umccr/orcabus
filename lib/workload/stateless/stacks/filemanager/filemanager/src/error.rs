@@ -3,7 +3,7 @@
 
 use std::{io, result};
 
-use sea_orm::{sqlx_error_to_query_err, DbErr};
+use sea_orm::{DbErr, RuntimeErr};
 use sqlx::migrate::MigrateError;
 use thiserror::Error;
 use url::ParseError;
@@ -52,7 +52,7 @@ pub enum Error {
 
 impl From<sqlx::Error> for Error {
     fn from(err: sqlx::Error) -> Self {
-        Self::DatabaseError(sqlx_error_to_query_err(err))
+        Self::DatabaseError(DbErr::Query(RuntimeErr::SqlxError(err)))
     }
 }
 

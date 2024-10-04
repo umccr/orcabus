@@ -57,6 +57,7 @@ import {
   RnasumIcav2PipelineManagerStack,
   RnasumIcav2PipelineManagerStackProps,
 } from './stacks/rnasum-pipeline-manager/deploy';
+import { FMAnnotator, FMAnnotatorConfigurableProps } from './stacks/fmannotator/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -76,6 +77,7 @@ export interface StatelessStackCollectionProps {
   bclConvertManagerStackProps: BclConvertManagerStackProps;
   workflowManagerStackProps: WorkflowManagerStackProps;
   stackyMcStackFaceProps: GlueStackProps;
+  fmAnnotatorProps: FMAnnotatorConfigurableProps;
 }
 
 export class StatelessStackCollection {
@@ -97,6 +99,7 @@ export class StatelessStackCollection {
   readonly bclConvertManagerStack: Stack;
   readonly workflowManagerStack: Stack;
   readonly stackyMcStackFaceStack: Stack;
+  readonly fmAnnotator: Stack;
 
   constructor(
     scope: Construct,
@@ -113,10 +116,11 @@ export class StatelessStackCollection {
       ...statelessConfiguration.dataSchemaStackProps,
     });
 
-    this.fileManagerStack = new Filemanager(scope, 'FileManagerStack', {
+    const fileManagerStack = new Filemanager(scope, 'FileManagerStack', {
       ...this.createTemplateProps(env, 'FileManagerStack'),
       ...statelessConfiguration.fileManagerStackProps,
     });
+    this.fileManagerStack = fileManagerStack;
 
     this.metadataManagerStack = new MetadataManagerStack(scope, 'MetadataManagerStack', {
       ...this.createTemplateProps(env, 'MetadataManagerStack'),
@@ -222,6 +226,12 @@ export class StatelessStackCollection {
     this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
       ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
       ...statelessConfiguration.stackyMcStackFaceProps,
+    });
+
+    this.fmAnnotator = new FMAnnotator(scope, 'FMAnnotatorStack', {
+      ...this.createTemplateProps(env, 'FMAnnotatorStack'),
+      ...statelessConfiguration.fmAnnotatorProps,
+      domainName: fileManagerStack.domainName,
     });
   }
 

@@ -30,10 +30,10 @@ class Command(BaseCommand):
         # Common components: payload and libraries
         generic_payload = PayloadFactory()  # Payload content is not important for now
         libraries = [
-            LibraryFactory(orcabus_id="lib.01J5M2JFE1JPYV62RYQEG99CP1", library_id="L000001"),
-            LibraryFactory(orcabus_id="lib.02J5M2JFE1JPYV62RYQEG99CP2", library_id="L000002"),
-            LibraryFactory(orcabus_id="lib.03J5M2JFE1JPYV62RYQEG99CP3", library_id="L000003"),
-            LibraryFactory(orcabus_id="lib.04J5M2JFE1JPYV62RYQEG99CP4", library_id="L000004")
+            LibraryFactory(orcabus_id="01J5M2JFE1JPYV62RYQEG99CP1", library_id="L000001"),
+            LibraryFactory(orcabus_id="02J5M2JFE1JPYV62RYQEG99CP2", library_id="L000002"),
+            LibraryFactory(orcabus_id="03J5M2JFE1JPYV62RYQEG99CP3", library_id="L000003"),
+            LibraryFactory(orcabus_id="04J5M2JFE1JPYV62RYQEG99CP4", library_id="L000004")
         ]
 
         # First case: a primary workflow with two executions linked to 4 libraries

@@ -1,13 +1,13 @@
+import random
 from datetime import datetime, timezone
 from typing import List
-import ulid
 import uuid
 from collections import defaultdict
 from django.core.management import BaseCommand
 from django.db.models import QuerySet
 
 from workflow_manager.models import Workflow, WorkflowRun, Analysis, AnalysisContext, AnalysisRun, \
-                                    Library, LibraryAssociation
+                                    Library, LibraryAssociation, State, Status
 from workflow_manager.tests.factories import PayloadFactory, LibraryFactory
 
 # https://docs.djangoproject.com/en/5.0/howto/custom-management-commands/
@@ -98,6 +98,7 @@ class Command(BaseCommand):
         runs: List[AnalysisRun] = assign_analysis(libraries)
         print(runs)
 
+        # create WorkflowRun entries (DRAFT)
         prep_workflow_runs(libraries)
         print("Done")
 
@@ -111,27 +112,26 @@ def _setup_requirements():
     # The contexts information available for analysis
 
     clinical_context = AnalysisContext(
-        orcabus_id="ctx.12345",
-        context_id="C12345",
         name="accredited",
+        usecase="analysis-selection",
         description="Accredited by NATA",
         status="ACTIVE",
     )
+    print(clinical_context)
     clinical_context.save()
 
     research_context = AnalysisContext(
-        orcabus_id="ctx.23456",
-        context_id="C23456",
         name="research",
+        usecase="analysis-selection",
         description="For research use",
         status="ACTIVE",
     )
+    print(research_context)
     research_context.save()
 
     internal_context = AnalysisContext(
-        orcabus_id="ctx.00001",
-        context_id="C00001",
         name="internal",
+        usecase="analysis-selection",
         description="For internal use",
         status="ACTIVE",
     )
@@ -241,12 +241,12 @@ def _setup_requirements():
     # Generate a Payload stub and some Libraries
 
     generic_payload = PayloadFactory()  # Payload content is not important for now
-    LibraryFactory(orcabus_id="lib.01J5M2JFE1JPYV62RYQEG99CP1", library_id="L000001"),
-    LibraryFactory(orcabus_id="lib.02J5M2JFE1JPYV62RYQEG99CP2", library_id="L000002"),
-    LibraryFactory(orcabus_id="lib.03J5M2JFE1JPYV62RYQEG99CP3", library_id="L000003"),
-    LibraryFactory(orcabus_id="lib.03J5M2JFE1JPYV62RYQEG99CP4", library_id="L000004"),
-    LibraryFactory(orcabus_id="lib.03J5M2JFE1JPYV62RYQEG99CP5", library_id="L000005"),
-    LibraryFactory(orcabus_id="lib.04J5M2JFE1JPYV62RYQEG99CP6", library_id="L000006")
+    LibraryFactory(orcabus_id="01J5M2JFE1JPYV62RYQEG99CP1", library_id="L000001"),
+    LibraryFactory(orcabus_id="02J5M2JFE1JPYV62RYQEG99CP2", library_id="L000002"),
+    LibraryFactory(orcabus_id="03J5M2JFE1JPYV62RYQEG99CP3", library_id="L000003"),
+    LibraryFactory(orcabus_id="03J5M2JFE1JPYV62RYQEG99CP4", library_id="L000004"),
+    LibraryFactory(orcabus_id="03J5M2JFE1JPYV62RYQEG99CP5", library_id="L000005"),
+    LibraryFactory(orcabus_id="04J5M2JFE1JPYV62RYQEG99CP6", library_id="L000006")
 
 
 def assign_analysis(libraries: List[dict]) -> List[AnalysisRun]:
@@ -279,7 +279,6 @@ def create_qc_analysis(libraries: List[dict]) -> List[AnalysisRun]:
         if lib['type'] in ['WGS', 'WTS']:
             # Create QC analysis
             analysis_run = AnalysisRun(
-                analysis_run_id=f"ar.{ulid.new().str}",
                 analysis_run_name=f"automated__{analysis_qc.analysis_name}__{lib_record.library_id}",
                 status="DRAFT",
                 approval_context=context_internal,  # FIXME: does this matter here? Internal?
@@ -325,7 +324,6 @@ def create_wgs_analysis(libraries: List[dict]) -> List[AnalysisRun]:
             analysis_run_name = f"automated__{analysis.analysis_name}__{context.name}__" + \
                                 f"{tumor_lib_record.library_id}__{normal_lib_record.library_id} "
             ar_wgs = AnalysisRun(
-                analysis_run_id=f"ar.{ulid.new().str}",
                 analysis_run_name=analysis_run_name,
                 status="DRAFT",
                 approval_context=context,
@@ -355,7 +353,6 @@ def create_cttso_analysis(libraries: List[dict]) -> List[AnalysisRun]:
             context: AnalysisContext = context_clinical if lib['workflow'] == 'clinical' else context_research
             analysis_run_name = f"automated__{analysis_cttso_qs.analysis_name}__{context.name}__{lib_record.library_id}"
             analysis_run = AnalysisRun(
-                analysis_run_id=f"ar.{ulid.new().str}",
                 analysis_run_name=analysis_run_name,
                 status="DRAFT",
                 approval_context=context,
@@ -417,6 +414,55 @@ def create_workflowrun_for_analysis(analysis_run: AnalysisRun):
                 association_date=datetime.now(timezone.utc),
                 status="ACTIVE",
             )
+        initial_state = State(
+            workflow_run=wr,
+            status=Status.DRAFT.convention,
+            timestamp=datetime.now(timezone.utc),
+            payload=PayloadFactory(
+                payload_ref_id=str(uuid.uuid4()),
+                data={"comment": f"Payload for initial state of wfr.{wr.orcabus_id}"}),
+            comment="Initial State"
+        )
+        initial_state.save()
+        # add randomly additional states to simulate a state history
+        if random.random() < 0.8:  # ~80%
+            # create a READY state
+            ready_state = State(
+                workflow_run=wr,
+                status=Status.READY.convention,
+                timestamp=datetime.now(timezone.utc),
+                payload=PayloadFactory(
+                    payload_ref_id=str(uuid.uuid4()),
+                    data={"comment": f"Payload for READY state of wfr.{wr.orcabus_id}"}),
+                comment="READY State"
+            )
+            ready_state.save()
+            # randomly create another state
+            if random.random() < 0.7:  # ~70%
+                # create a RUNNING state
+                ready_state = State(
+                    workflow_run=wr,
+                    status=Status.RUNNING.convention,
+                    timestamp=datetime.now(timezone.utc),
+                    payload=PayloadFactory(
+                        payload_ref_id=str(uuid.uuid4()),
+                        data={"comment": f"Payload for RUNNING state of wfr.{wr.orcabus_id}"}),
+                    comment="RUNNING State"
+                )
+                ready_state.save()
+                # randomly create another state
+                if random.random() < 0.6:  # ~60%
+                    # create a terminal state
+                    ready_state = State(
+                        workflow_run=wr,
+                        status=random.choice([Status.SUCCEEDED.convention, Status.FAILED.convention]),
+                        timestamp=datetime.now(timezone.utc),
+                        payload=PayloadFactory(
+                            payload_ref_id=str(uuid.uuid4()),
+                            data={"comment": f"Payload for terminal state of wfr.{wr.orcabus_id}"}),
+                        comment="Terminal State"
+                    )
+                    ready_state.save()
 
 
 def create_portal_run_id() -> str:

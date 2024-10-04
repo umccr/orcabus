@@ -100,3 +100,12 @@ def get_run_id_from_run_info(project_id: str, data_id: str) -> str:
     """
     return read_runinfo_xml(project_id, data_id)['RunInfo']['Run']['@Id']
 
+
+def get_num_lanes_from_run_info(project_id: str, data_id: str) -> int:
+    """
+    Get the number of lanes in a run info object
+    :param project_id:
+    :param data_id:
+    :return:
+    """
+    return int(read_runinfo_xml(project_id, data_id)['RunInfo']['Run']['FlowcellLayout']['@LaneCount'])
