@@ -52,7 +52,6 @@ import {
   getPierianDxPipelineManagerStackProps,
   getPierianDxPipelineTableStackProps,
 } from './stacks/pierianDxPipelineManager';
-import { PieriandxPipelineManagerStack } from '../lib/workload/stateless/stacks/pieriandx-pipeline-manager/deploy';
 
 interface EnvironmentConfig {
   name: string;

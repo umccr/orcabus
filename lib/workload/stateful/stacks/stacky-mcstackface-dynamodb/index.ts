@@ -3,7 +3,6 @@ import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { DynamodbPartitionedPipelineConstruct } from '../../../components/dynamodb-partitioned-table';
 import * as cdk from 'aws-cdk-lib';
-import { mockPierianDxGlueTableName } from '../../../../../config/constants';
 
 export interface StackyStatefulTablesConfig {
   dynamodbInstrumentRunManagerTableName: string;

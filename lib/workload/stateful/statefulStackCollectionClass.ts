@@ -49,7 +49,6 @@ import {
   PierianDxPipelineTable,
   PierianDxPipelineTableStackProps,
 } from './stacks/pieriandx-pipeline-dynamo-db/deploy';
-import { getPierianDxPipelineTableStackProps } from '../../../config/stacks/pierianDxPipelineManager';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;

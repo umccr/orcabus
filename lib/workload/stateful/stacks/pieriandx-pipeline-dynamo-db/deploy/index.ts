@@ -13,14 +13,10 @@ export class PierianDxPipelineTable extends cdk.Stack {
     super(scope, id, props);
 
     /*
-        Initialise dynamodb table, where portal_run_id is the primary sort key
-        */
-    const dynamodb_table = new DynamodbPartitionedPipelineConstruct(
-      this,
-      'pieriandx_pipeline_table',
-      {
-        tableName: props.dynamodbTableName,
-      }
-    );
+    Initialise dynamodb table, where portal_run_id is the primary sort key
+    */
+    new DynamodbPartitionedPipelineConstruct(this, 'pieriandx_pipeline_table', {
+      tableName: props.dynamodbTableName,
+    });
   }
 }
