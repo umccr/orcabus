@@ -3,8 +3,7 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
-import { BsshFastqCopyManagerDraftMakerConstruct } from './part_1/bclconvert-succeeded-to-bssh-fastq-copy-draft';
-import { BsshFastqCopyManagerDraftToReadyMakerConstruct } from './part_2/bssh-fastq-copy-manager-draft-to-ready';
+import { BsshFastqCopyManagerReadyMakerConstruct } from './part_1/bclconvert-succeeded-to-bssh-fastq-copy';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -12,9 +11,13 @@ To triggering the bsshFastqCopyManager
 */
 
 export interface BclconvertToBsshFastqCopyEventHandlerConstructProps {
+  /* Event Bus */
   eventBusObj: events.IEventBus;
-  inputMakerTableObj: dynamodb.ITableV2;
+
+  /* SSM Parameter */
   bsshOutputFastqCopyUriSsmParameterObj: ssm.IStringParameter;
+
+  /* Secrets */
   icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
@@ -39,36 +42,16 @@ export class BclconvertToBsshFastqCopyEventHandlerConstruct extends Construct {
       * Subscribes to the BCLConvertManagerEventHandler Stack outputs and creates the input for the BSSHFastqCopyManager
       * Generates the portal run id and submits a draft event
     */
-    const bclconvertToBsshFastqCopyDraftMaker = new BsshFastqCopyManagerDraftMakerConstruct(
+    const bclconvertToBsshFastqCopyDraftMaker = new BsshFastqCopyManagerReadyMakerConstruct(
       this,
       'bclconvert_to_bssh_fastq_copy_draft_maker',
       {
+        /* Event Bus handler */
         eventBusObj: props.eventBusObj,
-        tableObj: props.inputMakerTableObj,
-      }
-    );
-
-    /*
-    Part 2
-
-    Input Event Source: `orcabus.bclconvertmanagerinputeventglue`
-    Input Event DetailType: `WorkflowDraftRunStateChange`
-    Input Event status: `draft`
-
-    Output Event source: `orcabus.bclconvertmanagerinputeventglue`
-    Output Event DetailType: `WorkflowDraftRunStateChange`
-    Output Event status: `ready`
-
-    * Pushes an event payload of the input for the BsshFastqCopyManagerReadyEventSubmitter
-    */
-    const bsshFastqCopyManagerInputMaker = new BsshFastqCopyManagerDraftToReadyMakerConstruct(
-      this,
-      'bssh_fastq_copy_input_maker',
-      {
-        eventBusObj: props.eventBusObj,
-        outputUriSsmParameterObj: props.bsshOutputFastqCopyUriSsmParameterObj,
-        tableObj: props.inputMakerTableObj,
+        /* ICAv2 Secret */
         icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+        /* Output URI SSM Configuration Obj */
+        outputUriSsmParameterObj: props.bsshOutputFastqCopyUriSsmParameterObj,
       }
     );
   }

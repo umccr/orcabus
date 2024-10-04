@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { DynamodbPartitionedPipelineConstruct } from '../../../components/dynamodb-partitioned-table';
 import * as cdk from 'aws-cdk-lib';
+import { mockPierianDxGlueTableName } from '../../../../../config/constants';
 
 export interface StackyStatefulTablesConfig {
   dynamodbInstrumentRunManagerTableName: string;
@@ -14,6 +15,7 @@ export interface StackyStatefulTablesConfig {
   dynamodbWtsGlueTableName: string;
   dynamodbUmccriseGlueTableName: string;
   dynamodbRnasumGlueTableName: string;
+  dynamodbPieriandxGlueTableName: string;
   removalPolicy?: RemovalPolicy;
 }
 
@@ -29,6 +31,7 @@ export class StackyStatefulTablesStack extends Stack {
   public readonly wtsGlueTable: dynamodb.ITableV2;
   public readonly umccriseGlueTable: dynamodb.ITableV2;
   public readonly rnasumGlueTable: dynamodb.ITableV2;
+  public readonly pieriandxGlueTable: dynamodb.ITableV2;
   constructor(scope: Construct, id: string, props: StackProps & StackyStatefulTablesStackProps) {
     super(scope, id, props);
 
@@ -113,6 +116,14 @@ export class StackyStatefulTablesStack extends Stack {
     */
     this.rnasumGlueTable = new DynamodbPartitionedPipelineConstruct(this, 'rnasumGlueTable', {
       tableName: props.dynamodbRnasumGlueTableName,
+      removalPolicy: props.removalPolicy,
+    }).tableObj;
+
+    /*
+    Initialise dynamodb table for the pieriandx glue service
+    */
+    this.pieriandxGlueTable = new DynamodbPartitionedPipelineConstruct(this, 'pieriandxGlueTable', {
+      tableName: props.dynamodbPieriandxGlueTableName,
       removalPolicy: props.removalPolicy,
     }).tableObj;
   }

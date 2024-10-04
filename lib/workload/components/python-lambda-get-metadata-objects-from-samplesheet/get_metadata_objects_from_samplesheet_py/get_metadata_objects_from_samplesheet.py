@@ -8,10 +8,8 @@ Get Library Objects from samplesheet
 import logging
 from typing import List, Dict
 
-import pandas as pd
-
 # Layer imports
-from metadata_tools import get_all_libraries, get_all_specimens, get_all_subjects
+from metadata_tools import get_all_libraries
 
 # Logger
 logger = logging.getLogger()
@@ -34,93 +32,6 @@ def get_library_objs(library_id_list: List[str]) -> List[Dict]:
     )
 
 
-def get_specimen_objs(specimen_id_list: List[int]) -> List[Dict]:
-    """
-    Get all specimen objects by doing a bulk download + filter rather than query 1-1
-    :param specimen_id_list:
-    :return:
-    """
-    specimen_df = pd.DataFrame(
-        filter(
-            lambda specimen_obj_iter: specimen_obj_iter['orcabusId'] in specimen_id_list,
-            get_all_specimens()
-        )
-    )
-
-    return (
-        specimen_df.drop_duplicates().
-        sort_values(by='orcabusId').
-        to_dict(orient='records')
-    )
-
-
-def get_specimen_objs_by_library_obj_list(library_obj_list: List[Dict]) -> List[Dict]:
-    """
-    Get specimen objects by library object list
-    :param library_obj_list:
-    :return:
-    """
-    specimen_id_list = list(
-        map(
-            lambda library_obj_iter: library_obj_iter['specimen'],
-            library_obj_list
-        )
-    )
-
-    # Get the specimens as a dataframe
-    specimens_df = pd.DataFrame(get_specimen_objs(specimen_id_list))
-
-    return specimens_df.to_dict(orient='records')
-
-
-def get_subject_objs_by_specimen_obj_list(specimen_obj_list: List[Dict]) -> List[Dict]:
-    """
-    Get all subjects by a specimen object list
-    :param specimen_obj_list:
-    :return:
-    """
-    # Convert to dataframe to we can coerce columns subjects -> subject
-    specimens_df = pd.DataFrame(specimen_obj_list)
-
-    # Since we're merging onto the subject df, we want to rename id to
-    # specimen (since the specimen id column is also called specimen in the library dataframe
-    # We will also only keep specimen, and subject columns since these are the key linker between the
-    # subject and library databases
-    specimens_df.rename(
-        columns={
-            "orcabusId": "specimen"
-        },
-        inplace=True
-    )
-    specimens_df = specimens_df[["specimen", "subject"]]
-
-    # Get all subjects
-    all_subjects_list_dict = get_all_subjects()
-    all_subjects_df = pd.DataFrame(all_subjects_list_dict)
-
-    # Merge specimens and subjects df
-    filtered_subjects_df = pd.merge(
-        all_subjects_df,
-        specimens_df,
-        left_on="orcabusId",
-        right_on="subject",
-        how='inner'
-    )
-
-    subject_id_list = filtered_subjects_df["subjectId"].tolist()
-
-    return (
-        pd.DataFrame(
-            filter(
-                lambda subject_iter: subject_iter['subjectId'] in subject_id_list,
-                all_subjects_list_dict
-            )
-        ).drop_duplicates().
-        sort_values(by='orcabusId').
-        to_dict(orient='records')
-    )
-
-
 def handler(event, context):
     """
     Given a samplesheet dictionary, collect the sample_id attributes as library ids.
@@ -131,11 +42,13 @@ def handler(event, context):
     :return:
     """
 
+    # Get the samplesheet dictionary
     if "samplesheet" not in event.keys():
         logger.error("Could not get samplesheet")
         raise KeyError
     samplesheet_dict = event["samplesheet"]
 
+    # Get the bclconvert_data from the samplesheet
     if "bclconvert_data" not in samplesheet_dict.keys():
         logger.error("Could not get bclconvert_data from samplesheet")
         raise KeyError
@@ -146,7 +59,7 @@ def handler(event, context):
         set(
             list(
                 map(
-                    lambda bclconvert_data_row_iter: bclconvert_data_row_iter.get("sample_id"),
+                    lambda bclconvert_data_row_iter_: bclconvert_data_row_iter_.get("sample_id"),
                     bclconvert_data
                 )
             )
@@ -156,22 +69,19 @@ def handler(event, context):
     # Get library objects
     library_obj_list = get_library_objs(library_id_list)
 
-    # Get specimen objects
-    specimen_obj_list = get_specimen_objs_by_library_obj_list(library_obj_list)
-
-    # Get subject objects
-    subject_obj_list = get_subject_objs_by_specimen_obj_list(specimen_obj_list)
-
     # Get all libraries from the database
     return {
-        "library_obj_list": library_obj_list,
-        "specimen_obj_list": specimen_obj_list,
-        "subject_obj_list": subject_obj_list
+        "library_obj_list": library_obj_list
     }
 
 
 # if __name__ == "__main__":
 #     import json
+#     from os import environ
+#     environ['AWS_PROFILE'] = 'umccr-development'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
+#     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
 #     print(
 #         json.dumps(
 #             handler(
@@ -718,611 +628,816 @@ def handler(event, context):
 #     # {
 #     #   "library_obj_list": [
 #     #     {
-#     #       "orcabusId": "lib.01J5S9C4VMJ6PZ8GJ2G189AMXX",
+#     #       "orcabusId": "lib.01J8ES4MPZ5B201R50K42XXM4M",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4EBXK08WDWB97BSCX1C9",
+#     #           "projectId": "PO",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4MPHSX7MRCTTFWJBYTT7",
+#     #         "sampleId": "MDX210402",
+#     #         "externalSampleId": "ZUHR111121",
+#     #         "source": "plasma-serum"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4MNXJSDRR406DAXFZP2N",
+#     #         "subjectId": "PM3045106"
+#     #       },
 #     #       "libraryId": "L2400102",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "research",
 #     #       "quality": "borderline",
 #     #       "type": "WGS",
 #     #       "assay": "ctTSO",
-#     #       "coverage": 50.0,
-#     #       "projectOwner": "VCCC",
-#     #       "projectName": "PO",
-#     #       "specimen": "spc.01J5S9C4V269YTNA17TTP6NF76"
+#     #       "coverage": 50.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CBG0NF8QBNVKM6ESCD60",
+#     #       "orcabusId": "lib.01J8ES4XNYFP38JMDV7GMV0V3V",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4XMWD0DH7MDRNER5TZS1",
+#     #           "projectId": "Testing",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4XMDW0FV1YMWHSZZQ4TX",
+#     #         "sampleId": "PTC_SCMM1pc2",
+#     #         "externalSampleId": "SSq-CompMM-1pc-10646259ilm",
+#     #         "source": "cfDNA"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4XKHKNQ1NF8EKKACZ032",
+#     #         "subjectId": "CMM1pc-10646259ilm"
+#     #       },
 #     #       "libraryId": "L2400159",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "manual",
 #     #       "quality": "good",
 #     #       "type": "ctDNA",
 #     #       "assay": "ctTSOv2",
-#     #       "coverage": 38.6,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Testing",
-#     #       "specimen": "spc.01J5S9CBFDVZX7ZT3Y6TH28SY4"
+#     #       "coverage": 38.6
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CBHP6NSB42RVFAP9PGJP",
+#     #       "orcabusId": "lib.01J8ES4XQG3MPBW94TTVT4STVG",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4XMWD0DH7MDRNER5TZS1",
+#     #           "projectId": "Testing",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4XQ071BF3WZN111SNJ2B",
+#     #         "sampleId": "PTC_SCMM1pc3",
+#     #         "externalSampleId": "SSq-CompMM-1pc-10646259ilm",
+#     #         "source": "cfDNA"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4XKHKNQ1NF8EKKACZ032",
+#     #         "subjectId": "CMM1pc-10646259ilm"
+#     #       },
 #     #       "libraryId": "L2400160",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "manual",
 #     #       "quality": "good",
 #     #       "type": "ctDNA",
 #     #       "assay": "ctTSOv2",
-#     #       "coverage": 38.6,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Testing",
-#     #       "specimen": "spc.01J5S9CBH4V5B56CEJ5Q1XQKQ9"
+#     #       "coverage": 38.6
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CBKCATYSFY40BRX6WJWX",
+#     #       "orcabusId": "lib.01J8ES4XSS97XNRS8DH0B1RJRG",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4XMWD0DH7MDRNER5TZS1",
+#     #           "projectId": "Testing",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4XRG9NB38N03688M2CCB",
+#     #         "sampleId": "PTC_SCMM1pc4",
+#     #         "externalSampleId": "SSq-CompMM-1pc-10646259ilm",
+#     #         "source": "cfDNA"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4XKHKNQ1NF8EKKACZ032",
+#     #         "subjectId": "CMM1pc-10646259ilm"
+#     #       },
 #     #       "libraryId": "L2400161",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "manual",
 #     #       "quality": "good",
 #     #       "type": "ctDNA",
 #     #       "assay": "ctTSOv2",
-#     #       "coverage": 38.6,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Testing",
-#     #       "specimen": "spc.01J5S9CBJTBJB72KJ74VSCHKJF"
+#     #       "coverage": 38.6
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CBN6EAXW4AXG7TQ1H6NC",
+#     #       "orcabusId": "lib.01J8ES4XXF6NMEJMM5M4GWS6KH",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4XMWD0DH7MDRNER5TZS1",
+#     #           "projectId": "Testing",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4XWXFANT7P0T3AFXA85G",
+#     #         "sampleId": "PTC_SCMM01pc20",
+#     #         "externalSampleId": "SSq-CompMM-0.1pc-10624819 - 20ng",
+#     #         "source": "cfDNA"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4XW2TXGEJBQWCVMRZRTS",
+#     #         "subjectId": "CMM0.1pc-10624819"
+#     #       },
 #     #       "libraryId": "L2400162",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "manual",
 #     #       "quality": "good",
 #     #       "type": "ctDNA",
 #     #       "assay": "ctTSOv2",
-#     #       "coverage": 38.6,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Testing",
-#     #       "specimen": "spc.01J5S9CBMKTX5KN1XMPN479R2M"
+#     #       "coverage": 38.6
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CBQFX8V1QRW7KAV3MD1W",
+#     #       "orcabusId": "lib.01J8ES4XZD7T2VRPVQ1GSVZ11X",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4XMWD0DH7MDRNER5TZS1",
+#     #           "projectId": "Testing",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4XYTSVQVRSBA9M26NSZY",
+#     #         "sampleId": "PTC_SCMM01pc15",
+#     #         "externalSampleId": "SSq-CompMM-0.1pc-10624819 - 15ng",
+#     #         "source": "cfDNA"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4XW2TXGEJBQWCVMRZRTS",
+#     #         "subjectId": "CMM0.1pc-10624819"
+#     #       },
 #     #       "libraryId": "L2400163",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "manual",
 #     #       "quality": "good",
 #     #       "type": "ctDNA",
 #     #       "assay": "ctTSOv2",
-#     #       "coverage": 38.6,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Testing",
-#     #       "specimen": "spc.01J5S9CBPSPN6S3TQCVJZF0XFE"
+#     #       "coverage": 38.6
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CBS64DNTHK6CE850CCNZ",
+#     #       "orcabusId": "lib.01J8ES4Y1AKAHYD9EW0TW4FBCP",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4XMWD0DH7MDRNER5TZS1",
+#     #           "projectId": "Testing",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4Y0V0ZBKAE91TDSY0BBB",
+#     #         "sampleId": "PTC_SCMM01pc10",
+#     #         "externalSampleId": "SSq-CompMM-0.1pc-10624819 - 10ng",
+#     #         "source": "cfDNA"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4XW2TXGEJBQWCVMRZRTS",
+#     #         "subjectId": "CMM0.1pc-10624819"
+#     #       },
 #     #       "libraryId": "L2400164",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "manual",
 #     #       "quality": "good",
 #     #       "type": "ctDNA",
 #     #       "assay": "ctTSOv2",
-#     #       "coverage": 38.6,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Testing",
-#     #       "specimen": "spc.01J5S9CBRM3Y6PPF6E5NWZA7HG"
+#     #       "coverage": 38.6
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CBTZRYQNTGAHPC2T601D",
+#     #       "orcabusId": "lib.01J8ES4Y3ZKRX3C5JAHA5NBXV1",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4XMWD0DH7MDRNER5TZS1",
+#     #           "projectId": "Testing",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4Y37JTPEEJSED9BXH8N2",
+#     #         "sampleId": "PTC_SCMM01pc5",
+#     #         "externalSampleId": "SSq-CompMM-0.1pc-10624819 - 5ng",
+#     #         "source": "cfDNA"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4XW2TXGEJBQWCVMRZRTS",
+#     #         "subjectId": "CMM0.1pc-10624819"
+#     #       },
 #     #       "libraryId": "L2400165",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "manual",
 #     #       "quality": "good",
 #     #       "type": "ctDNA",
 #     #       "assay": "ctTSOv2",
-#     #       "coverage": 38.6,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Testing",
-#     #       "specimen": "spc.01J5S9CBTACFBNJKE8C523B0A7"
+#     #       "coverage": 38.6
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CBX10204CK7EKGTH9TMB",
+#     #       "orcabusId": "lib.01J8ES4Y5D52202JVBXHJ9Q9WF",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4XMWD0DH7MDRNER5TZS1",
+#     #           "projectId": "Testing",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4Y4XK1WX4WCPD6XY8KNM",
+#     #         "sampleId": "NTC_v2ctTSO240207",
+#     #         "externalSampleId": "negative control",
+#     #         "source": "water"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4DFMNF0SX6P8P8Y9J6K1",
+#     #         "subjectId": "negative control"
+#     #       },
 #     #       "libraryId": "L2400166",
 #     #       "phenotype": "negative-control",
 #     #       "workflow": "manual",
 #     #       "quality": "good",
 #     #       "type": "ctDNA",
 #     #       "assay": "ctTSOv2",
-#     #       "coverage": 0.1,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Testing",
-#     #       "specimen": "spc.01J5S9CBWCGKQMG5S3ZSWA2ATE"
+#     #       "coverage": 0.1
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CDF8HHG5PJE3ECJMKMY7",
+#     #       "orcabusId": "lib.01J8ES4ZDRQAP2BN3SDYYV5PKW",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4ZAWHH3FKYA2CFHSMZ4B",
+#     #           "projectId": "CAVATAK",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4ZDAFRK3K3PY33F8XS0W",
+#     #         "sampleId": "PRJ240169",
+#     #         "externalSampleId": "AUS-006-DRW_C1D1PRE",
+#     #         "source": "blood"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4ZCKNW6QKP006SYNZ5RA",
+#     #         "subjectId": "AUS-006-DRW"
+#     #       },
 #     #       "libraryId": "L2400191",
 #     #       "phenotype": "normal",
 #     #       "workflow": "research",
 #     #       "quality": "good",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 40.0,
-#     #       "projectOwner": "TJohn",
-#     #       "projectName": "CAVATAK",
-#     #       "specimen": "spc.01J5S9CDEH0ATXYAK52KW807R4"
+#     #       "coverage": 40.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CDQSSAG1WYCRWMD82Z1S",
+#     #       "orcabusId": "lib.01J8ES4ZMY0G1H9MDN7K2TH9Y6",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4ZAWHH3FKYA2CFHSMZ4B",
+#     #           "projectId": "CAVATAK",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4ZMETZP255WMFC8TSCYT",
+#     #         "sampleId": "PRJ240180",
+#     #         "externalSampleId": "AUS-006-DRW_Day0",
+#     #         "source": "tissue"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4ZCKNW6QKP006SYNZ5RA",
+#     #         "subjectId": "AUS-006-DRW"
+#     #       },
 #     #       "libraryId": "L2400195",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "research",
 #     #       "quality": "good",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 80.0,
-#     #       "projectOwner": "TJohn",
-#     #       "projectName": "CAVATAK",
-#     #       "specimen": "spc.01J5S9CDQ0V9T98EGRPQJAP11S"
+#     #       "coverage": 80.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CDSJ2BGEYM8FTXGKVGV8",
+#     #       "orcabusId": "lib.01J8ES4ZP88X2E17X5X1FRMTPK",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4ZAWHH3FKYA2CFHSMZ4B",
+#     #           "projectId": "CAVATAK",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4ZNT47EM37QKMT12JPPJ",
+#     #         "sampleId": "PRJ240181",
+#     #         "externalSampleId": "AUS-006-DRW_Day33",
+#     #         "source": "tissue"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4ZCKNW6QKP006SYNZ5RA",
+#     #         "subjectId": "AUS-006-DRW"
+#     #       },
 #     #       "libraryId": "L2400196",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "research",
 #     #       "quality": "good",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 80.0,
-#     #       "projectOwner": "TJohn",
-#     #       "projectName": "CAVATAK",
-#     #       "specimen": "spc.01J5S9CDRZMMR9S784BYSMVWCT"
+#     #       "coverage": 80.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CDVEHDZHZR3BZTQ7WNJQ",
+#     #       "orcabusId": "lib.01J8ES4ZST489C712CG3R9NQSQ",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4ZAWHH3FKYA2CFHSMZ4B",
+#     #           "projectId": "CAVATAK",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4ZQ76H8P0Q7S618F3BMA",
+#     #         "sampleId": "PRJ240182",
+#     #         "externalSampleId": "AUS-007-JMA_Day0",
+#     #         "source": "tissue"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4ZEQ3FVD6DDVEG8MW60Q",
+#     #         "subjectId": "AUS-007-JMA"
+#     #       },
 #     #       "libraryId": "L2400197",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "research",
 #     #       "quality": "good",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 80.0,
-#     #       "projectOwner": "TJohn",
-#     #       "projectName": "CAVATAK",
-#     #       "specimen": "spc.01J5S9CDTSHGYMMJHE3SXEB2JG"
+#     #       "coverage": 80.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CDXCR7Q5K6A8VJRSMM4Q",
+#     #       "orcabusId": "lib.01J8ES4ZVWA2CGBHJVKAS3Y0G9",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4ZAWHH3FKYA2CFHSMZ4B",
+#     #           "projectId": "CAVATAK",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4ZVAR9NQM55Z2TXCDY9V",
+#     #         "sampleId": "PRJ240183",
+#     #         "externalSampleId": "AUS-007-JMA_Day15",
+#     #         "source": "tissue"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4ZEQ3FVD6DDVEG8MW60Q",
+#     #         "subjectId": "AUS-007-JMA"
+#     #       },
 #     #       "libraryId": "L2400198",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "research",
 #     #       "quality": "good",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 80.0,
-#     #       "projectOwner": "TJohn",
-#     #       "projectName": "CAVATAK",
-#     #       "specimen": "spc.01J5S9CDWHAYG4RRG75GYZEK25"
+#     #       "coverage": 80.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CFX5P69S4KZRQGDFKV1N",
+#     #       "orcabusId": "lib.01J8ES51V0RSVT6C7WQR72QQED",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4EZAA5YMHX82664GJQB3",
+#     #           "projectId": "CUP",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES51T84KVVVSEPYQFGW0EV",
+#     #         "sampleId": "PRJ240199",
+#     #         "externalSampleId": "DNA188239",
+#     #         "source": "FFPE"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES51S87R4EJ61QJ0DMDYWZ",
+#     #         "subjectId": "SN_PMC-141"
+#     #       },
 #     #       "libraryId": "L2400231",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "clinical",
 #     #       "quality": "poor",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 100.0,
-#     #       "projectOwner": "Tothill",
-#     #       "projectName": "CUP",
-#     #       "specimen": "spc.01J5S9CFWAQTGK4MZB3HM5NVBC"
+#     #       "coverage": 100.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CGCAKQWHD9RBM9VXENY9",
+#     #       "orcabusId": "lib.01J8ES52889Q8826P5SH9HDPP0",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4EZAA5YMHX82664GJQB3",
+#     #           "projectId": "CUP",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES527QKB5Y5RVZWZ8HQX0H",
+#     #         "sampleId": "PRJ240643",
+#     #         "externalSampleId": "DNA188378",
+#     #         "source": "blood"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES51S87R4EJ61QJ0DMDYWZ",
+#     #         "subjectId": "SN_PMC-141"
+#     #       },
 #     #       "libraryId": "L2400238",
 #     #       "phenotype": "normal",
 #     #       "workflow": "clinical",
 #     #       "quality": "good",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 40.0,
-#     #       "projectOwner": "Tothill",
-#     #       "projectName": "CUP",
-#     #       "specimen": "spc.01J5S9CGBQCSQCS7XR3T89A82F"
+#     #       "coverage": 40.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CGEM1DHRQP72EP09B2TA",
+#     #       "orcabusId": "lib.01J8ES52ANMRT3B7Y96T1Y3RY8",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4EZAA5YMHX82664GJQB3",
+#     #           "projectId": "CUP",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES52A5QX0GQ6RB78Z8DGYQ",
+#     #         "sampleId": "PRJ240646",
+#     #         "externalSampleId": "DNA189922",
+#     #         "source": "blood"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES529GSPBV64SESK9SWD76",
+#     #         "subjectId": "SN_PMC-145"
+#     #       },
 #     #       "libraryId": "L2400239",
 #     #       "phenotype": "normal",
 #     #       "workflow": "clinical",
 #     #       "quality": "good",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 40.0,
-#     #       "projectOwner": "Tothill",
-#     #       "projectName": "CUP",
-#     #       "specimen": "spc.01J5S9CGE05BJCJ20M2KP4QWWB"
+#     #       "coverage": 40.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CGG9N9GH5879SY6A6BJB",
+#     #       "orcabusId": "lib.01J8ES52C3N585BGGY4VNXHC83",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4EZAA5YMHX82664GJQB3",
+#     #           "projectId": "CUP",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES52BM8BVS3PX47E6FM7D5",
+#     #         "sampleId": "PRJ240647",
+#     #         "externalSampleId": "DNA189848",
+#     #         "source": "FFPE"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES529GSPBV64SESK9SWD76",
+#     #         "subjectId": "SN_PMC-145"
+#     #       },
 #     #       "libraryId": "L2400240",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "clinical",
 #     #       "quality": "poor",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 100.0,
-#     #       "projectOwner": "Tothill",
-#     #       "projectName": "CUP",
-#     #       "specimen": "spc.01J5S9CGFQM3BQKADX8TWQ4ZH5"
+#     #       "coverage": 100.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CGJ6G09YQ9KFHPSXMMVD",
+#     #       "orcabusId": "lib.01J8ES52DHAPZM6FZ0VZK89PRT",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4FC6DVW20AR33FBX2SA8",
+#     #           "projectId": "Control",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES52D076FQM5K8128AQ593",
+#     #         "sampleId": "NTC_TSqN240226",
+#     #         "externalSampleId": "NTC_TSqN240226",
+#     #         "source": "water"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4DFMNF0SX6P8P8Y9J6K1",
+#     #         "subjectId": "negative control"
+#     #       },
 #     #       "libraryId": "L2400241",
 #     #       "phenotype": "negative-control",
 #     #       "workflow": "control",
 #     #       "quality": "good",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 0.1,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Control",
-#     #       "specimen": "spc.01J5S9CGHK1G7YXD7C4FCXXS52"
+#     #       "coverage": 0.1
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CGKWDN7STKZKQM3KH9XR",
+#     #       "orcabusId": "lib.01J8ES52F2ZHRXQY1AT1N1F81F",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4FC6DVW20AR33FBX2SA8",
+#     #           "projectId": "Control",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES52EEX67YRYAJS3F5GMJ5",
+#     #         "sampleId": "PTC_TSqN240226",
+#     #         "externalSampleId": "NA24385-3",
+#     #         "source": "cell-line"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4DRJ31Z2H1GJQZGVDXZR",
+#     #         "subjectId": "NA24385"
+#     #       },
 #     #       "libraryId": "L2400242",
 #     #       "phenotype": "normal",
 #     #       "workflow": "control",
 #     #       "quality": "good",
 #     #       "type": "WGS",
 #     #       "assay": "TsqNano",
-#     #       "coverage": 15.0,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Control",
-#     #       "specimen": "spc.01J5S9CGKAT4GHZ1VJFHVV15AD"
+#     #       "coverage": 15.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CH2SQ0P1SF7WAT5H4DSE",
+#     #       "orcabusId": "lib.01J8ES52XYMVGRB1Q458THNG4T",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4FC6DVW20AR33FBX2SA8",
+#     #           "projectId": "Control",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES52XE661E8V8XTWD02QCK",
+#     #         "sampleId": "PTC_NebRNA240226",
+#     #         "externalSampleId": "Colo829",
+#     #         "source": "cell-line"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4GNVGZSJVTHGVKS9VW7F",
+#     #         "subjectId": "Colo829"
+#     #       },
 #     #       "libraryId": "L2400249",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "control",
 #     #       "quality": "good",
 #     #       "type": "WTS",
 #     #       "assay": "NebRNA",
-#     #       "coverage": 1.0,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Control",
-#     #       "specimen": "spc.01J5S9CH267XEJP5GMZK31MJWS"
+#     #       "coverage": 1.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CH4CYPA4SP05H8KRX4W9",
+#     #       "orcabusId": "lib.01J8ES52Z2KTVVKZ2ZGVQ6YC10",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4FH3XMPZQNDJ9J000BXX",
+#     #           "projectId": "BPOP-retro",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES4FP9WTFBDNGKVG3D9BD4",
+#     #         "sampleId": "PRJ240003",
+#     #         "externalSampleId": "3-23BCRL057T",
+#     #         "source": "tissue"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4FNJ2FCAK0RJST0428X0",
+#     #         "subjectId": "23BCRL057T"
+#     #       },
 #     #       "libraryId": "L2400250",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "research",
 #     #       "quality": "good",
 #     #       "type": "WTS",
 #     #       "assay": "NebRNA",
-#     #       "coverage": 6.0,
-#     #       "projectOwner": "Whittle",
-#     #       "projectName": "BPOP-retro",
-#     #       "specimen": "spc.01J5S9C0QC2TBZD7XA26D7WGTW"
+#     #       "coverage": 6.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CH65E4EE5QJEJ1C60GGG",
+#     #       "orcabusId": "lib.01J8ES530H895X4WA3NQ6CY2QV",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4FH3XMPZQNDJ9J000BXX",
+#     #           "projectId": "BPOP-retro",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES530355YNZ3VHQQQ204PF",
+#     #         "sampleId": "PRJ240561",
+#     #         "externalSampleId": "4-218-004_Bx",
+#     #         "source": "tissue"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES51WC4GV5YDJNTMAK2YY1",
+#     #         "subjectId": "218-004"
+#     #       },
 #     #       "libraryId": "L2400251",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "research",
 #     #       "quality": "good",
 #     #       "type": "WTS",
 #     #       "assay": "NebRNA",
-#     #       "coverage": 6.0,
-#     #       "projectOwner": "Whittle",
-#     #       "projectName": "BPOP-retro",
-#     #       "specimen": "spc.01J5S9CH5KXY3VMB9M9J2RCR7B"
+#     #       "coverage": 6.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CH7TGZMV39Z59WJ8H5GP",
+#     #       "orcabusId": "lib.01J8ES5320EWBNNYDGXF2SYJBD",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4FH3XMPZQNDJ9J000BXX",
+#     #           "projectId": "BPOP-retro",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES531H420JM9MG5R4AE1AZ",
+#     #         "sampleId": "PRJ240562",
+#     #         "externalSampleId": "5-218-004_04",
+#     #         "source": "tissue"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES51WC4GV5YDJNTMAK2YY1",
+#     #         "subjectId": "218-004"
+#     #       },
 #     #       "libraryId": "L2400252",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "research",
 #     #       "quality": "good",
 #     #       "type": "WTS",
 #     #       "assay": "NebRNA",
-#     #       "coverage": 6.0,
-#     #       "projectOwner": "Whittle",
-#     #       "projectName": "BPOP-retro",
-#     #       "specimen": "spc.01J5S9CH774HEZFEVWWP2XADK1"
+#     #       "coverage": 6.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CH9TGMT2TJGBZX5VXHJY",
+#     #       "orcabusId": "lib.01J8ES533DJZZNPP9MXYR5TRC0",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4FH3XMPZQNDJ9J000BXX",
+#     #           "projectId": "BPOP-retro",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES532ZBHWY3DWY0DWQ223R",
+#     #         "sampleId": "PRJ240566",
+#     #         "externalSampleId": "9-218-007_Bx",
+#     #         "source": "tissue"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES522WN7YPZS1Z9NGSPNDA",
+#     #         "subjectId": "218-007"
+#     #       },
 #     #       "libraryId": "L2400253",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "research",
 #     #       "quality": "good",
 #     #       "type": "WTS",
 #     #       "assay": "NebRNA",
-#     #       "coverage": 6.0,
-#     #       "projectOwner": "Whittle",
-#     #       "projectName": "BPOP-retro",
-#     #       "specimen": "spc.01J5S9CH98MQ2B1G2BQFEY0XZH"
+#     #       "coverage": 6.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CHBGAP2XSN4TG8SAMRYY",
+#     #       "orcabusId": "lib.01J8ES534XGBFYDVYV8ZG6SYS0",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4FH3XMPZQNDJ9J000BXX",
+#     #           "projectId": "BPOP-retro",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES534BX7B89X5EKSCFRDDZ",
+#     #         "sampleId": "PRJ240567",
+#     #         "externalSampleId": "10-218-007_04",
+#     #         "source": "tissue"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES522WN7YPZS1Z9NGSPNDA",
+#     #         "subjectId": "218-007"
+#     #       },
 #     #       "libraryId": "L2400254",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "research",
 #     #       "quality": "borderline",
 #     #       "type": "WTS",
 #     #       "assay": "NebRNA",
-#     #       "coverage": 6.0,
-#     #       "projectOwner": "Whittle",
-#     #       "projectName": "BPOP-retro",
-#     #       "specimen": "spc.01J5S9CHAX3XKJE5XE4VQWYN5H"
+#     #       "coverage": 6.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CHE4ERQ4H209DH397W8A",
+#     #       "orcabusId": "lib.01J8ES536AB5A5PBJ8S45SZP7Q",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4EZAA5YMHX82664GJQB3",
+#     #           "projectId": "CUP",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES535VGG93023KWAFMWGH4",
+#     #         "sampleId": "PRJ240200",
+#     #         "externalSampleId": "RNA036747",
+#     #         "source": "FFPE"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES51S87R4EJ61QJ0DMDYWZ",
+#     #         "subjectId": "SN_PMC-141"
+#     #       },
 #     #       "libraryId": "L2400255",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "clinical",
 #     #       "quality": "very-poor",
 #     #       "type": "WTS",
 #     #       "assay": "NebRNA",
-#     #       "coverage": 6.0,
-#     #       "projectOwner": "Tothill",
-#     #       "projectName": "CUP",
-#     #       "specimen": "spc.01J5S9CHDGRNK70B043K887RP2"
+#     #       "coverage": 6.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CHFXPDGYQ8TXHRWQR3PY",
+#     #       "orcabusId": "lib.01J8ES537S0W1AX9PQPST13GM9",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4EZAA5YMHX82664GJQB3",
+#     #           "projectId": "CUP",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES5379C40K08YG3JDMZJN7",
+#     #         "sampleId": "PRJ240648",
+#     #         "externalSampleId": "RNA037080",
+#     #         "source": "FFPE"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES529GSPBV64SESK9SWD76",
+#     #         "subjectId": "SN_PMC-145"
+#     #       },
 #     #       "libraryId": "L2400256",
 #     #       "phenotype": "tumor",
 #     #       "workflow": "clinical",
 #     #       "quality": "very-poor",
 #     #       "type": "WTS",
 #     #       "assay": "NebRNA",
-#     #       "coverage": 6.0,
-#     #       "projectOwner": "Tothill",
-#     #       "projectName": "CUP",
-#     #       "specimen": "spc.01J5S9CHFAPXYKK49FAGVF5CQF"
+#     #       "coverage": 6.0
 #     #     },
 #     #     {
-#     #       "orcabusId": "lib.01J5S9CHHNGFJN73NPRQMSYGN9",
+#     #       "orcabusId": "lib.01J8ES5395KETT9T2NJSVNDKNP",
+#     #       "projectSet": [
+#     #         {
+#     #           "orcabusId": "prj.01J8ES4FC6DVW20AR33FBX2SA8",
+#     #           "projectId": "Control",
+#     #           "name": null,
+#     #           "description": null
+#     #         }
+#     #       ],
+#     #       "sample": {
+#     #         "orcabusId": "smp.01J8ES538PFF6MQQ35PTC00JAY",
+#     #         "sampleId": "NTC_NebRNA240226",
+#     #         "externalSampleId": "NTC_NebRNA240226",
+#     #         "source": "water"
+#     #       },
+#     #       "subject": {
+#     #         "orcabusId": "sbj.01J8ES4DFMNF0SX6P8P8Y9J6K1",
+#     #         "subjectId": "negative control"
+#     #       },
 #     #       "libraryId": "L2400257",
 #     #       "phenotype": "negative-control",
 #     #       "workflow": "control",
 #     #       "quality": "good",
 #     #       "type": "WTS",
 #     #       "assay": "NebRNA",
-#     #       "coverage": 0.1,
-#     #       "projectOwner": "UMCCR",
-#     #       "projectName": "Control",
-#     #       "specimen": "spc.01J5S9CHH24VFM443RD8Q8X4B3"
-#     #     }
-#     #   ],
-#     #   "specimen_obj_list": [
-#     #     {
-#     #       "orcabusId": "spc.01J5S9C0QC2TBZD7XA26D7WGTW",
-#     #       "specimenId": "PRJ240003",
-#     #       "source": "tissue",
-#     #       "subject": "sbj.01J5S9C0PVB4QNVGK4Q1WSYEGV"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9C4V269YTNA17TTP6NF76",
-#     #       "specimenId": "MDX210402",
-#     #       "source": "plasma-serum",
-#     #       "subject": "sbj.01J5S9C4TE1GCWA1QGNCWHB1Y9"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CBFDVZX7ZT3Y6TH28SY4",
-#     #       "specimenId": "PTC_SCMM1pc2",
-#     #       "source": "cfDNA",
-#     #       "subject": "sbj.01J5S9CBEQ3DM8XDV2G2ZQJDXB"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CBH4V5B56CEJ5Q1XQKQ9",
-#     #       "specimenId": "PTC_SCMM1pc3",
-#     #       "source": "cfDNA",
-#     #       "subject": "sbj.01J5S9CBEQ3DM8XDV2G2ZQJDXB"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CBJTBJB72KJ74VSCHKJF",
-#     #       "specimenId": "PTC_SCMM1pc4",
-#     #       "source": "cfDNA",
-#     #       "subject": "sbj.01J5S9CBEQ3DM8XDV2G2ZQJDXB"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CBMKTX5KN1XMPN479R2M",
-#     #       "specimenId": "PTC_SCMM01pc20",
-#     #       "source": "cfDNA",
-#     #       "subject": "sbj.01J5S9CBM3AT89QTXD7PT0BKA0"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CBPSPN6S3TQCVJZF0XFE",
-#     #       "specimenId": "PTC_SCMM01pc15",
-#     #       "source": "cfDNA",
-#     #       "subject": "sbj.01J5S9CBM3AT89QTXD7PT0BKA0"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CBRM3Y6PPF6E5NWZA7HG",
-#     #       "specimenId": "PTC_SCMM01pc10",
-#     #       "source": "cfDNA",
-#     #       "subject": "sbj.01J5S9CBM3AT89QTXD7PT0BKA0"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CBTACFBNJKE8C523B0A7",
-#     #       "specimenId": "PTC_SCMM01pc5",
-#     #       "source": "cfDNA",
-#     #       "subject": "sbj.01J5S9CBM3AT89QTXD7PT0BKA0"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CBWCGKQMG5S3ZSWA2ATE",
-#     #       "specimenId": "NTC_v2ctTSO240207",
-#     #       "source": "water",
-#     #       "subject": "sbj.01J5S9BYKC1RH7DY68GF1JNSR6"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CDEH0ATXYAK52KW807R4",
-#     #       "specimenId": "PRJ240169",
-#     #       "source": "blood",
-#     #       "subject": "sbj.01J5S9CDDP20JX8V63ZKMPBJQS"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CDQ0V9T98EGRPQJAP11S",
-#     #       "specimenId": "PRJ240180",
-#     #       "source": "tissue",
-#     #       "subject": "sbj.01J5S9CDDP20JX8V63ZKMPBJQS"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CDRZMMR9S784BYSMVWCT",
-#     #       "specimenId": "PRJ240181",
-#     #       "source": "tissue",
-#     #       "subject": "sbj.01J5S9CDDP20JX8V63ZKMPBJQS"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CDTSHGYMMJHE3SXEB2JG",
-#     #       "specimenId": "PRJ240182",
-#     #       "source": "tissue",
-#     #       "subject": "sbj.01J5S9CDG7B0KA8YEDK876VVDP"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CDWHAYG4RRG75GYZEK25",
-#     #       "specimenId": "PRJ240183",
-#     #       "source": "tissue",
-#     #       "subject": "sbj.01J5S9CDG7B0KA8YEDK876VVDP"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CFWAQTGK4MZB3HM5NVBC",
-#     #       "specimenId": "PRJ240199",
-#     #       "source": "FFPE",
-#     #       "subject": "sbj.01J5S9CFVJ9GVEHZK6CD9WAAV5"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CGBQCSQCS7XR3T89A82F",
-#     #       "specimenId": "PRJ240643",
-#     #       "source": "blood",
-#     #       "subject": "sbj.01J5S9CFVJ9GVEHZK6CD9WAAV5"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CGE05BJCJ20M2KP4QWWB",
-#     #       "specimenId": "PRJ240646",
-#     #       "source": "blood",
-#     #       "subject": "sbj.01J5S9CGDGTF5VZJSSE4ADBNJ3"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CGFQM3BQKADX8TWQ4ZH5",
-#     #       "specimenId": "PRJ240647",
-#     #       "source": "FFPE",
-#     #       "subject": "sbj.01J5S9CGDGTF5VZJSSE4ADBNJ3"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CGHK1G7YXD7C4FCXXS52",
-#     #       "specimenId": "NTC_TSqN240226",
-#     #       "source": "water",
-#     #       "subject": "sbj.01J5S9BYKC1RH7DY68GF1JNSR6"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CGKAT4GHZ1VJFHVV15AD",
-#     #       "specimenId": "PTC_TSqN240226",
-#     #       "source": "cell-line",
-#     #       "subject": "sbj.01J5S9BYVWZDS8AW7A94CDQBXK"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CH267XEJP5GMZK31MJWS",
-#     #       "specimenId": "PTC_NebRNA240226",
-#     #       "source": "cell-line",
-#     #       "subject": "sbj.01J5S9C1S3XV8PNB78XYJ1EQM1"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CH5KXY3VMB9M9J2RCR7B",
-#     #       "specimenId": "PRJ240561",
-#     #       "source": "tissue",
-#     #       "subject": "sbj.01J5S9CFY1BV2Z0SGKYNF1VHQN"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CH774HEZFEVWWP2XADK1",
-#     #       "specimenId": "PRJ240562",
-#     #       "source": "tissue",
-#     #       "subject": "sbj.01J5S9CFY1BV2Z0SGKYNF1VHQN"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CH98MQ2B1G2BQFEY0XZH",
-#     #       "specimenId": "PRJ240566",
-#     #       "source": "tissue",
-#     #       "subject": "sbj.01J5S9CG5GEWYBK0065C49HT23"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CHAX3XKJE5XE4VQWYN5H",
-#     #       "specimenId": "PRJ240567",
-#     #       "source": "tissue",
-#     #       "subject": "sbj.01J5S9CG5GEWYBK0065C49HT23"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CHDGRNK70B043K887RP2",
-#     #       "specimenId": "PRJ240200",
-#     #       "source": "FFPE",
-#     #       "subject": "sbj.01J5S9CFVJ9GVEHZK6CD9WAAV5"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CHFAPXYKK49FAGVF5CQF",
-#     #       "specimenId": "PRJ240648",
-#     #       "source": "FFPE",
-#     #       "subject": "sbj.01J5S9CGDGTF5VZJSSE4ADBNJ3"
-#     #     },
-#     #     {
-#     #       "orcabusId": "spc.01J5S9CHH24VFM443RD8Q8X4B3",
-#     #       "specimenId": "NTC_NebRNA240226",
-#     #       "source": "water",
-#     #       "subject": "sbj.01J5S9BYKC1RH7DY68GF1JNSR6"
-#     #     }
-#     #   ],
-#     #   "subject_obj_list": [
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9BYKC1RH7DY68GF1JNSR6",
-#     #       "subjectId": "SBJ00006"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9BYVWZDS8AW7A94CDQBXK",
-#     #       "subjectId": "SBJ00005"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9C0PVB4QNVGK4Q1WSYEGV",
-#     #       "subjectId": "SBJ04488"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9C1S3XV8PNB78XYJ1EQM1",
-#     #       "subjectId": "SBJ00029"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9C4TE1GCWA1QGNCWHB1Y9",
-#     #       "subjectId": "SBJ01143"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9CBEQ3DM8XDV2G2ZQJDXB",
-#     #       "subjectId": "SBJ04407"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9CBM3AT89QTXD7PT0BKA0",
-#     #       "subjectId": "SBJ04648"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9CDDP20JX8V63ZKMPBJQS",
-#     #       "subjectId": "SBJ04653"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9CDG7B0KA8YEDK876VVDP",
-#     #       "subjectId": "SBJ04654"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9CFVJ9GVEHZK6CD9WAAV5",
-#     #       "subjectId": "SBJ04659"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9CFY1BV2Z0SGKYNF1VHQN",
-#     #       "subjectId": "SBJ04660"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9CG5GEWYBK0065C49HT23",
-#     #       "subjectId": "SBJ04661"
-#     #     },
-#     #     {
-#     #       "orcabusId": "sbj.01J5S9CGDGTF5VZJSSE4ADBNJ3",
-#     #       "subjectId": "SBJ04662"
+#     #       "coverage": 0.1
 #     #     }
 #     #   ]
 #     # }

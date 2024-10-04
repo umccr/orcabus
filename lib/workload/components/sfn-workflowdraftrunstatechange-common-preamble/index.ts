@@ -17,9 +17,6 @@ import { Duration } from 'aws-cdk-lib';
 export interface WorkflowRunStateChangeInternalInputMakerProps {
   /* Object name prefixes */
   stateMachinePrefix: string;
-  /* Table configs */
-  tableObj: dynamodb.ITableV2;
-  portalRunTablePartitionName: string;
   /* Workflow metadata constants */
   workflowName: string;
   workflowVersion: string;
@@ -79,9 +76,6 @@ export class WorkflowDraftRunStateChangeCommonPreambleConstruct extends Construc
           portalRunIdLambda.currentVersion.functionArn,
         __generate_workflow_run_name_lambda_function_arn__:
           workflowRunNameLambda.currentVersion.functionArn,
-        /* Table configurations */
-        __table_name__: props.tableObj.tableName,
-        __portal_run_partition_name__: props.portalRunTablePartitionName,
         /* Workflow name */
         __workflow_name__: props.workflowName,
         __workflow_version__: props.workflowVersion,
@@ -95,8 +89,5 @@ export class WorkflowDraftRunStateChangeCommonPreambleConstruct extends Construc
     [workflowRunNameLambda, portalRunIdLambda].forEach((lambdaObj) => {
       lambdaObj.currentVersion.grantInvoke(<iam.IRole>this.stepFunctionObj.role);
     });
-
-    /* Allow step function to write to table */
-    props.tableObj.grantReadWriteData(<iam.IRole>this.stepFunctionObj.role);
   }
 }

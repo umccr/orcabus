@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from typing import Union, Dict, List
 
+from .globals import LIBRARY_ENDPOINT
 from .requests_helpers import get_request_response_results
 
 
@@ -10,20 +11,31 @@ def get_library_from_library_id(library_id: Union[int | str]) -> Dict:
     :param library_id:
     :return:
     """
-    endpoint = "api/v1/library"
-
     # Get library id
-    if isinstance(library_id, str):
-        # We have an internal id, convert to int
-        params = {
-            "library_id": library_id
-        }
-    else:
-        endpoint = f"{endpoint}/{library_id}"
-        params = {}
+    # We have an internal id, convert to int
+    params = {
+        "library_id": library_id
+    }
 
     # Get library
-    return get_request_response_results(endpoint, params)[0]
+    return get_request_response_results(LIBRARY_ENDPOINT, params)[0]
+
+
+def get_library_from_library_orcabus_id(library_orcabus_id: Union[int | str]) -> Dict:
+    """
+    Get library from the library id
+    :param library_orcabus_id:
+    :return:
+    """
+    # Get library id
+    # We have an internal id, convert to int
+    params = {
+        "orcabus_id": library_orcabus_id
+    }
+
+    # Get library
+    return get_request_response_results(LIBRARY_ENDPOINT, params)[0]
+
 
 
 def get_subject_from_library_id(library_id: Union[int | str]) -> Dict:
@@ -32,20 +44,10 @@ def get_subject_from_library_id(library_id: Union[int | str]) -> Dict:
     :param library_id:
     :return:
     """
-    from .specimen_helpers import get_specimen_from_specimen_id
     from .subject_helpers import get_subject_from_subject_id
 
-    # Get the specimen linked to this library id
-    specimen_id = get_library_from_library_id(library_id)["specimen"]
-
-    specimen_obj = get_specimen_from_specimen_id(specimen_id)
-
-    if "subjects" in specimen_obj.keys() and len(specimen_obj["subjects"]) > 0:
-        subject_id = specimen_obj["subjects"][0]
-    elif "subject" in specimen_obj.keys():
-        subject_id = specimen_obj["subject"]
-    else:
-        raise KeyError(f"Subject not found for library id: {library_id}")
+    # Get the subject linked to this library id
+    subject_id = get_library_from_library_id(library_id)["subject"]['subjectId']
 
     return get_subject_from_subject_id(subject_id)
 
@@ -121,6 +123,4 @@ def get_all_libraries() -> List[Dict]:
     Collect all libraries from the database
     :return:
     """
-    endpoint = "api/v1/library"
-
-    return get_request_response_results(endpoint)
+    return get_request_response_results(LIBRARY_ENDPOINT)
