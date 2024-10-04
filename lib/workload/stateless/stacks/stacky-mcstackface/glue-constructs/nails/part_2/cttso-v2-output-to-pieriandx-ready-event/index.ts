@@ -157,7 +157,7 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
     /*
     Handle lambda permissions
     */
-    props.redcapLambdaObj.grantInvoke(getDataFromRedCapPyLambdaObj.currentVersion);
+    props.redcapLambdaObj.latestVersion.grantInvoke(getDataFromRedCapPyLambdaObj.currentVersion);
     getDataFromRedCapPyLambdaObj.addEnvironment(
       'REDCAP_LAMBDA_FUNCTION_NAME',
       props.redcapLambdaObj.functionName
