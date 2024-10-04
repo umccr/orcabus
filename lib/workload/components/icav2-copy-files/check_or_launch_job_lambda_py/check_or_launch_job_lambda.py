@@ -246,7 +246,7 @@ def handler(event, context):
                     (
                         urlparse(dest_uri).scheme,
                         urlparse(dest_uri).netloc,
-                        str(Path(dest_project_folder_data_obj.data.details.path) / source_project_data_obj.data.details.name),
+                        str(Path(urlparse(dest_uri).path) / source_project_data_obj.data.details.name),
                         None, None, None
                     )
                 )
@@ -300,40 +300,37 @@ def handler(event, context):
 
 # if __name__ == "__main__":
 #     import json
-#     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = 'ICAv2JWTKey-umccr-prod-service-trial'
+#     environ['AWS_PROFILE'] = 'umccr-production'
+#     environ['AWS_DEFAULT_REGION'] = 'ap-southeast-2'
+#     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = 'ICAv2JWTKey-umccr-prod-service-production'
 #     print(
 #         json.dumps(
 #             handler(
 #                 event={
-#                     "job_attempt_counter": 1,
-#                     "job_id": "d80ea8f4-b2a4-4b5f-840f-2426584d0495",
-#                     "failed_jobs_list": [],
-#                     "dest_uri": "icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/2023/231116_A01052_0172_BHVLM5DSX7/3661659/20240307135959/InterOp/",
-#                     "source_uris": [
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/AlignmentMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/EmpiricalPhasingMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/CorrectedIntMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/BasecallingMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/ErrorMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/ExtendedTileMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/OpticalModelMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/QMetricsByLaneOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/ExtractionMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/PFGridMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/ImageMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/TileMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/QMetrics2030Out.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/FWHMGridMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/QMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/EventMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/RegistrationMetricsOut.bin",
-#                         "icav2://b23fb516-d852-4985-adcc-831c12e8cd22/ilmn-runs/bssh_aps2-sh-prod_3661659/InterOp/IndexMetricsOut.bin"
-#                     ],
-#                     "job_status": None,
-#                     "wait_time_seconds": 10
-#                 },
+#                 "job_status": "RUNNING",
+#                 "wait_time_seconds": 20,
+#                 "job_id": "bdfb0a4d-bcae-4670-b51f-9417d23e777a",
+#                 "dest_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/primary/240926_A01052_0232_AHW7LHDSXC/20240928f63332ac/Samples/Lane_4/LPRJ241305/",
+#                 "source_uris": [
+#                   "icav2://9ec02c1f-53ba-47a5-854d-e6b53101adb7/ilmn-analyses/240926_A01052_0232_AHW7LHDSXC_f5e33a_03217c-BclConvert v4_2_7-792cba71-52fa-42b3-85a0-c6593f199353/output/Samples/Lane_4/LPRJ241305/LPRJ241305_S41_L004_R1_001.fastq.gz",
+#                   "icav2://9ec02c1f-53ba-47a5-854d-e6b53101adb7/ilmn-analyses/240926_A01052_0232_AHW7LHDSXC_f5e33a_03217c-BclConvert v4_2_7-792cba71-52fa-42b3-85a0-c6593f199353/output/Samples/Lane_4/LPRJ241305/LPRJ241305_S41_L004_R2_001.fastq.gz"
+#                 ],
+#                 "failed_job_list": []
+#               },
 #                 context=None
-#             )
+#             ),
+#             indent=4
 #         )
 #     )
-
+#
+# # {
+# #     "dest_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/primary/240926_A01052_0232_AHW7LHDSXC/20240928f63332ac/Samples/Lane_4/LPRJ241305/",
+# #     "source_uris": [
+# #         "icav2://9ec02c1f-53ba-47a5-854d-e6b53101adb7/ilmn-analyses/240926_A01052_0232_AHW7LHDSXC_f5e33a_03217c-BclConvert v4_2_7-792cba71-52fa-42b3-85a0-c6593f199353/output/Samples/Lane_4/LPRJ241305/LPRJ241305_S41_L004_R1_001.fastq.gz",
+# #         "icav2://9ec02c1f-53ba-47a5-854d-e6b53101adb7/ilmn-analyses/240926_A01052_0232_AHW7LHDSXC_f5e33a_03217c-BclConvert v4_2_7-792cba71-52fa-42b3-85a0-c6593f199353/output/Samples/Lane_4/LPRJ241305/LPRJ241305_S41_L004_R2_001.fastq.gz"
+# #     ],
+# #     "job_id": "bdfb0a4d-bcae-4670-b51f-9417d23e777a",
+# #     "failed_job_list": [],
+# #     "job_status": "SUCCEEDED",
+# #     "wait_time_seconds": 10
+# # }
