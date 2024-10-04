@@ -1,13 +1,13 @@
 //! Routing logic for query filtering.
 //!
 
+use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
+use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
 use sea_orm::prelude::{DateTimeWithTimeZone, Json};
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 use utoipa::IntoParams;
-
-use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
-use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
+use uuid::Uuid;
 
 pub mod wildcard;
 
@@ -67,6 +67,9 @@ pub struct S3ObjectsFilter {
     #[param(required = false)]
     /// Query by the object delete marker.
     pub(crate) is_delete_marker: Option<bool>,
+    #[param(required = false)]
+    /// Query by the ingest id that objects get tagged with.
+    pub(crate) ingest_id: Option<Uuid>,
     #[param(required = false)]
     /// Query by JSON attributes. Supports nested syntax to access inner
     /// fields, e.g. `attributes[attribute_id]=...`. This only deserializes

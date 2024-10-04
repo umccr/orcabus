@@ -6,10 +6,13 @@ use std::result;
 use aws_sdk_s3 as s3;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
+use aws_sdk_s3::operation::get_object_tagging::{GetObjectTaggingError, GetObjectTaggingOutput};
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::operation::list_buckets::{ListBucketsError, ListBucketsOutput};
+use aws_sdk_s3::operation::put_object_tagging::{PutObjectTaggingError, PutObjectTaggingOutput};
 use aws_sdk_s3::presigning::{PresignedRequest, PresigningConfig};
 use aws_sdk_s3::types::ChecksumMode::Enabled;
+use aws_sdk_s3::types::Tagging;
 use chrono::Duration;
 use mockall::automock;
 
@@ -66,6 +69,36 @@ impl Client {
             .checksum_mode(Enabled)
             .key(key)
             .bucket(bucket)
+            .send()
+            .await
+    }
+
+    /// Execute the `GetObjectTagging` operation.
+    pub async fn get_object_tagging(
+        &self,
+        key: &str,
+        bucket: &str,
+    ) -> Result<GetObjectTaggingOutput, GetObjectTaggingError> {
+        self.inner
+            .get_object_tagging()
+            .key(key)
+            .bucket(bucket)
+            .send()
+            .await
+    }
+
+    /// Execute the `PutObjectTagging` operation.
+    pub async fn put_object_tagging(
+        &self,
+        key: &str,
+        bucket: &str,
+        tagging: Tagging,
+    ) -> Result<PutObjectTaggingOutput, PutObjectTaggingError> {
+        self.inner
+            .put_object_tagging()
+            .key(key)
+            .bucket(bucket)
+            .tagging(tagging)
             .send()
             .await
     }

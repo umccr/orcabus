@@ -26,7 +26,7 @@ use std::result;
 
 #[double]
 use crate::clients::aws::s3::Client;
-use crate::error::Error::S3InventoryError;
+use crate::error::Error::S3Error;
 use crate::error::{Error, Result};
 use crate::events::aws::message::{default_version_id, quote_e_tag, EventType::Created};
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
@@ -69,7 +69,7 @@ impl Inventory {
         let mut inventory_bytes = vec![];
         MultiGzDecoder::new(BufReader::new(body))
             .read_to_end(&mut inventory_bytes)
-            .map_err(|err| S3InventoryError(format!("decompressing CSV: {}", err)))?;
+            .map_err(|err| S3Error(format!("decompressing CSV: {}", err)))?;
 
         // AWS seems to return extra newlines at the end of the CSV, so we remove these
         let inventory_bytes = Self::trim_whitespace(inventory_bytes.as_slice());
@@ -132,9 +132,8 @@ impl Inventory {
         // https://github.com/Swoorup/arrow-convert
         // This is should be similar to arrow2_convert::TryIntoArrow in the above performance graph,
         // as it is a port of arrow2_convert with arrow-rs as the dependency.
-        from_slice::<Vec<Record>>(buf.as_slice()).map_err(|err| {
-            S3InventoryError(format!("failed to deserialize json from arrow: {}", err))
-        })
+        from_slice::<Vec<Record>>(buf.as_slice())
+            .map_err(|err| S3Error(format!("failed to deserialize json from arrow: {}", err)))
     }
 
     /// Parse a parquet manifest file into records.
@@ -162,11 +161,11 @@ impl Inventory {
             .client
             .get_object(key.as_ref(), bucket.as_ref())
             .await
-            .map_err(|err| S3InventoryError(err.to_string()))?
+            .map_err(|err| S3Error(err.to_string()))?
             .body
             .collect()
             .await
-            .map_err(|err| S3InventoryError(err.to_string()))?
+            .map_err(|err| S3Error(err.to_string()))?
             .to_vec())
     }
 
@@ -174,10 +173,10 @@ impl Inventory {
     fn verify_md5<T: AsRef<[u8]>>(data: T, verify_with: T) -> Result<()> {
         if md5::compute(data).0
             != hex::decode(&verify_with)
-                .map_err(|err| S3InventoryError(format!("decoding hex string: {}", err)))?
+                .map_err(|err| S3Error(format!("decoding hex string: {}", err)))?
                 .as_slice()
         {
-            return Err(S3InventoryError(
+            return Err(S3Error(
                 "mismatched MD5 checksums in inventory manifest".to_string(),
             ));
         }
@@ -232,9 +231,7 @@ impl Inventory {
             InventoryFormat::Csv => self.parse_csv(schema, body.as_slice()).await,
             InventoryFormat::Parquet => self.parse_parquet(body).await,
             InventoryFormat::Orc => self.parse_orc(body).await,
-            _ => Err(S3InventoryError(
-                "unsupported manifest file type".to_string(),
-            )),
+            _ => Err(S3Error("unsupported manifest file type".to_string())),
         }
     }
 
@@ -246,9 +243,7 @@ impl Inventory {
             // Proper arn, parse out the bucket.
             Ok(arn) => {
                 if arn.service != Service::S3.into() {
-                    return Err(S3InventoryError(
-                        "destination bucket ARN is not S3".to_string(),
-                    ));
+                    return Err(S3Error("destination bucket ARN is not S3".to_string()));
                 }
                 arn.resource.to_string()
             }
@@ -286,25 +281,25 @@ impl Inventory {
 
 impl From<csv::Error> for Error {
     fn from(error: csv::Error) -> Self {
-        S3InventoryError(error.to_string())
+        S3Error(error.to_string())
     }
 }
 
 impl From<ParquetError> for Error {
     fn from(error: ParquetError) -> Self {
-        S3InventoryError(error.to_string())
+        S3Error(error.to_string())
     }
 }
 
 impl From<ArrowError> for Error {
     fn from(error: ArrowError) -> Self {
-        S3InventoryError(error.to_string())
+        S3Error(error.to_string())
     }
 }
 
 impl From<OrcError> for Error {
     fn from(error: OrcError) -> Self {
-        S3InventoryError(error.to_string())
+        S3Error(error.to_string())
     }
 }
 
@@ -533,6 +528,8 @@ impl From<Record> for FlatS3EventMessage {
             // Anything in an inventory report is always a created event.
             event_type: Created,
             is_delete_marker: is_delete_marker.unwrap_or_default(),
+            ingest_id: None,
+            attributes: None,
             number_duplicate_events: 0,
             number_reordered: 0,
         }

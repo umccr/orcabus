@@ -16,6 +16,7 @@ use crate::error::Result;
 /// Configuration environment variables for filemanager.
 #[serde_as]
 #[derive(Debug, Clone, Deserialize, Eq, PartialEq)]
+#[serde(default)]
 pub struct Config {
     pub(crate) database_url: Option<String>,
     pub(crate) pgpassword: Option<String>,
@@ -24,8 +25,12 @@ pub struct Config {
     pub(crate) pguser: Option<String>,
     #[serde(rename = "filemanager_sqs_url")]
     pub(crate) sqs_url: Option<String>,
-    #[serde(default, rename = "filemanager_paired_ingest_mode")]
+    #[serde(rename = "filemanager_paired_ingest_mode")]
     pub(crate) paired_ingest_mode: bool,
+    #[serde(rename = "filemanager_ingester_track_moves")]
+    pub(crate) ingester_track_moves: bool,
+    #[serde(rename = "filemanager_ingester_tag_name")]
+    pub(crate) ingester_tag_name: String,
     #[serde(default, rename = "filemanager_api_links_url")]
     pub(crate) api_links_url: Option<Url>,
     #[serde(rename = "filemanager_api_presign_limit")]
@@ -35,15 +40,9 @@ pub struct Config {
     pub(crate) api_presign_expiry: Option<Duration>,
     #[serde(rename = "filemanager_api_cors_allow_origins")]
     pub(crate) api_cors_allow_origins: Option<Vec<String>>,
-    #[serde(
-        default = "default_allow_methods",
-        rename = "filemanager_api_cors_allow_methods"
-    )]
+    #[serde(rename = "filemanager_api_cors_allow_methods")]
     pub(crate) api_cors_allow_methods: Vec<String>,
-    #[serde(
-        default = "default_allow_headers",
-        rename = "filemanager_api_cors_allow_headers"
-    )]
+    #[serde(rename = "filemanager_api_cors_allow_headers")]
     pub(crate) api_cors_allow_headers: Vec<String>,
 }
 
@@ -57,28 +56,22 @@ impl Default for Config {
             pguser: None,
             sqs_url: None,
             paired_ingest_mode: false,
+            ingester_track_moves: true,
+            ingester_tag_name: "ingest_id".to_string(),
             api_links_url: None,
             api_presign_limit: None,
             api_presign_expiry: None,
             api_cors_allow_origins: None,
-            api_cors_allow_methods: default_allow_methods(),
-            api_cors_allow_headers: default_allow_headers(),
+            api_cors_allow_methods: vec![
+                Method::GET.to_string(),
+                Method::HEAD.to_string(),
+                Method::OPTIONS.to_string(),
+                Method::POST.to_string(),
+                Method::PATCH.to_string(),
+            ],
+            api_cors_allow_headers: vec![AUTHORIZATION.to_string()],
         }
     }
-}
-
-fn default_allow_methods() -> Vec<String> {
-    vec![
-        Method::GET.to_string(),
-        Method::HEAD.to_string(),
-        Method::OPTIONS.to_string(),
-        Method::POST.to_string(),
-        Method::PATCH.to_string(),
-    ]
-}
-
-fn default_allow_headers() -> Vec<String> {
-    vec![AUTHORIZATION.to_string()]
 }
 
 impl Config {
@@ -131,6 +124,16 @@ impl Config {
     /// Get the paired ingest mode.
     pub fn paired_ingest_mode(&self) -> bool {
         self.paired_ingest_mode
+    }
+
+    /// Whether the ingester should track moves.
+    pub fn ingester_track_moves(&self) -> bool {
+        self.ingester_track_moves
+    }
+
+    /// Get the ingester tag name.
+    pub fn ingester_tag_name(&self) -> &str {
+        &self.ingester_tag_name
     }
 
     /// Get the presigned size limit.
@@ -192,6 +195,8 @@ mod tests {
             ("PGUSER", "user"),
             ("FILEMANAGER_SQS_URL", "url"),
             ("FILEMANAGER_PAIRED_INGEST_MODE", "true"),
+            ("FILEMANAGER_INGESTER_TRACK_MOVES", "false"),
+            ("FILEMANAGER_INGESTER_TAG_NAME", "tag"),
             ("FILEMANAGER_API_LINKS_URL", "https://localhost:8000"),
             ("FILEMANAGER_API_PRESIGN_LIMIT", "123"),
             ("FILEMANAGER_API_PRESIGN_EXPIRY", "60"),
@@ -217,6 +222,8 @@ mod tests {
                 pguser: Some("user".to_string()),
                 sqs_url: Some("url".to_string()),
                 paired_ingest_mode: true,
+                ingester_track_moves: false,
+                ingester_tag_name: "tag".to_string(),
                 api_links_url: Some("https://localhost:8000".parse().unwrap()),
                 api_presign_limit: Some(123),
                 api_presign_expiry: Some(Duration::seconds(60)),
