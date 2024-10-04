@@ -165,15 +165,34 @@ export class Function extends Construct {
   /**
    * Add policies for 's3:List*' and 's3:Get*' on the buckets to this function's role.
    */
-  addPoliciesForBuckets(buckets: string[], additionalActions?: string[]) {
+  addPoliciesForBuckets(buckets: string[], actions: string[]) {
     buckets.map((bucket) => {
       this.addToPolicy(
         new PolicyStatement({
-          actions: [...['s3:ListBucket', 's3:GetObject'], ...(additionalActions ?? [])],
+          actions,
           resources: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
         })
       );
     });
+  }
+
+  /**
+   * Get policy actions for fetching objects.
+   */
+  static getObjectActions(): string[] {
+    return ['s3:ListBucket', 's3:GetObject', 's3:GetObjectVersion'];
+  }
+
+  /**
+   * Get policy actions for using object tags.
+   */
+  static objectTaggingActions(): string[] {
+    return [
+      's3:GetObjectTagging',
+      's3:GetObjectVersionTagging',
+      's3:PutObjectTagging',
+      's3:PutObjectVersionTagging',
+    ];
   }
 
   /**
