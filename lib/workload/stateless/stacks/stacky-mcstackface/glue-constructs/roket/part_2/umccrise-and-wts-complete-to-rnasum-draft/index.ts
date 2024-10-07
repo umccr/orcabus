@@ -193,7 +193,7 @@ export class UmccriseAndWtsCompleteToRnasumReadyConstruct extends Construct {
 
     // allow the step function to invoke the lambdas
     [generateEventDataLambdaObj, collectOrcaBusIdLambdaObj].forEach((lambda) => {
-      lambda.grantInvoke(umccriseAndWtsCompleteToDraftSfn);
+      lambda.currentVersion.grantInvoke(umccriseAndWtsCompleteToDraftSfn);
     });
 
     /* Allow step function to call nested state machine */
