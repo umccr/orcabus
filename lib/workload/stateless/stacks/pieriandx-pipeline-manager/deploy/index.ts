@@ -286,7 +286,7 @@ export class PieriandxPipelineManagerStack extends cdk.Stack {
       getInformaticsjobAndReportStatusLambdaObj,
     ].forEach((lambdaFunction) => {
       // Give the lambda permission to access the pieriandx apis
-      pieriandxTokenCollectionLambdaObj.grantInvoke(lambdaFunction);
+      pieriandxTokenCollectionLambdaObj.latestVersion.grantInvoke(lambdaFunction);
     });
 
     /*
