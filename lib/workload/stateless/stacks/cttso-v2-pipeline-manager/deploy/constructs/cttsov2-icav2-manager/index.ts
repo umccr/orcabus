@@ -124,7 +124,9 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     );
 
     // Allow the check num running sfns lambda to list the number of running icav2 copy file sfns running
-    props.icav2CopyFilesStateMachineObj.grantRead(props.checkNumRunningSfnsLambdaObj);
+    props.icav2CopyFilesStateMachineObj.grantRead(
+      props.checkNumRunningSfnsLambdaObj.currentVersion
+    );
 
     /*
         Part 2: Configure the lambdas and outputs step function
