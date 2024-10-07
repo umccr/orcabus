@@ -4,7 +4,8 @@
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
-    Alias, Asterisk, BinOper, ColumnRef, IntoColumnRef, PostgresQueryBuilder, Query, SimpleExpr,
+    Alias, Asterisk, BinOper, ColumnRef, ConditionExpression, IntoColumnRef, PostgresQueryBuilder,
+    Query, SimpleExpr,
 };
 use sea_orm::Order::{Asc, Desc};
 use sea_orm::{
@@ -69,6 +70,22 @@ where
         Ok(self)
     }
 
+    /// Join a series expressions with an or statement.
+    pub fn join_or<T: Into<ConditionExpression>>(
+        conditions: impl Iterator<Item = Result<T>>,
+    ) -> Result<Option<Condition>> {
+        let mut or_condition = Condition::any();
+        for condition in conditions {
+            or_condition = or_condition.add(condition?);
+        }
+
+        if or_condition.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(or_condition))
+        }
+    }
+
     /// Create a condition to filter a query.
     pub fn filter_condition(filter: S3ObjectsFilter, case_sensitive: bool) -> Result<Condition> {
         let mut condition = Condition::all()
@@ -77,80 +94,74 @@ where
                     .event_type
                     .map(|v| s3_object::Column::EventType.eq(v)),
             )
-            .add_option(
+            .add_option(Self::join_or(filter.bucket.into_iter().map(|v| {
+                Self::filter_operation(
+                    Expr::col(s3_object::Column::Bucket),
+                    WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
+                )
+            }))?)
+            .add_option(Self::join_or(filter.key.into_iter().map(|v| {
+                Self::filter_operation(
+                    Expr::col(s3_object::Column::Key),
+                    WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
+                )
+            }))?)
+            .add_option(Self::join_or(filter.version_id.into_iter().map(|v| {
+                Self::filter_operation(
+                    Expr::col(s3_object::Column::VersionId),
+                    WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
+                )
+            }))?)
+            .add_option(Self::join_or(filter.event_time.into_iter().map(|v| {
+                Self::filter_operation(Expr::col(s3_object::Column::EventTime), v, case_sensitive)
+            }))?)
+            .add_option(Self::join_or(
                 filter
-                    .bucket
-                    .map(|v| {
-                        Self::filter_operation(
-                            Expr::col(s3_object::Column::Bucket),
-                            WildcardEither::Wildcard::<String>(v),
-                            case_sensitive,
-                        )
-                    })
-                    .transpose()?,
-            )
-            .add_option(
+                    .size
+                    .into_iter()
+                    .map(|v| Ok(s3_object::Column::Size.eq(v))),
+            )?)
+            .add_option(Self::join_or(
                 filter
-                    .key
-                    .map(|v| {
-                        Self::filter_operation(
-                            Expr::col(s3_object::Column::Key),
-                            WildcardEither::Wildcard::<String>(v),
-                            case_sensitive,
-                        )
-                    })
-                    .transpose()?,
-            )
-            .add_option(
+                    .sha256
+                    .into_iter()
+                    .map(|v| Ok(s3_object::Column::Sha256.eq(v))),
+            )?)
+            .add_option(Self::join_or(filter.last_modified_date.into_iter().map(
+                |v| {
+                    Self::filter_operation(
+                        Expr::col(s3_object::Column::LastModifiedDate),
+                        v,
+                        case_sensitive,
+                    )
+                },
+            ))?)
+            .add_option(Self::join_or(
                 filter
-                    .version_id
-                    .map(|v| {
-                        Self::filter_operation(
-                            Expr::col(s3_object::Column::VersionId),
-                            WildcardEither::Wildcard::<String>(v),
-                            case_sensitive,
-                        )
-                    })
-                    .transpose()?,
-            )
-            .add_option(
-                filter
-                    .event_time
-                    .map(|v| {
-                        Self::filter_operation(
-                            Expr::col(s3_object::Column::EventTime),
-                            v,
-                            case_sensitive,
-                        )
-                    })
-                    .transpose()?,
-            )
-            .add_option(filter.size.map(|v| s3_object::Column::Size.eq(v)))
-            .add_option(filter.sha256.map(|v| s3_object::Column::Sha256.eq(v)))
-            .add_option(
-                filter
-                    .last_modified_date
-                    .map(|v| {
-                        Self::filter_operation(
-                            Expr::col(s3_object::Column::LastModifiedDate),
-                            v,
-                            case_sensitive,
-                        )
-                    })
-                    .transpose()?,
-            )
-            .add_option(filter.e_tag.map(|v| s3_object::Column::ETag.eq(v)))
-            .add_option(
+                    .e_tag
+                    .into_iter()
+                    .map(|v| Ok(s3_object::Column::ETag.eq(v))),
+            )?)
+            .add_option(Self::join_or(
                 filter
                     .storage_class
-                    .map(|v| s3_object::Column::StorageClass.eq(v)),
-            )
+                    .into_iter()
+                    .map(|v| Ok(s3_object::Column::StorageClass.eq(v))),
+            )?)
             .add_option(
                 filter
                     .is_delete_marker
                     .map(|v| s3_object::Column::IsDeleteMarker.eq(v)),
             )
-            .add_option(filter.ingest_id.map(|v| s3_object::Column::IngestId.eq(v)));
+            .add_option(Self::join_or(
+                filter
+                    .ingest_id
+                    .into_iter()
+                    .map(|v| Ok(s3_object::Column::IngestId.eq(v))),
+            )?);
 
         if let Some(attributes) = filter.attributes {
             let json_conditions = Self::json_conditions(
@@ -562,7 +573,7 @@ pub(crate) mod tests {
             .current_state()
             .filter_all(
                 S3ObjectsFilter {
-                    size: Some(14),
+                    size: vec![14],
                     ..Default::default()
                 },
                 true,
@@ -575,7 +586,7 @@ pub(crate) mod tests {
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .filter_all(
                 S3ObjectsFilter {
-                    size: Some(4),
+                    size: vec![4],
                     ..Default::default()
                 },
                 true,
@@ -635,8 +646,8 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                bucket: Some(Wildcard::new("0".to_string())),
-                key: Some(Wildcard::new("1".to_string())),
+                bucket: vec![Wildcard::new("0".to_string())],
+                key: vec![Wildcard::new("1".to_string())],
                 ..Default::default()
             },
             true,
@@ -701,7 +712,7 @@ pub(crate) mod tests {
                 attributes: Some(json!({
                     "attributeId": "1"
                 })),
-                key: Some(Wildcard::new("2".to_string())),
+                key: vec![Wildcard::new("2".to_string())],
                 ..Default::default()
             },
             true,
@@ -715,7 +726,7 @@ pub(crate) mod tests {
                 attributes: Some(json!({
                     "attributeId": "3"
                 })),
-                key: Some(Wildcard::new("3".to_string())),
+                key: vec![Wildcard::new("3".to_string())],
                 ..Default::default()
             },
             true,
@@ -839,9 +850,9 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                event_time: Some(WildcardEither::Wildcard(Wildcard::new(
+                event_time: vec![WildcardEither::Wildcard(Wildcard::new(
                     "1970-01-0*".to_string(),
-                ))),
+                ))],
                 ..Default::default()
             },
             true,
@@ -863,7 +874,7 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                bucket: Some(Wildcard::new("0*".to_string())),
+                bucket: vec![Wildcard::new("0*".to_string())],
                 ..Default::default()
             },
             false,

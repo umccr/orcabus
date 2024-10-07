@@ -303,7 +303,7 @@ impl<'a> Collecter<'a> {
 
         // Get the attributes from the old record to update the new record with.
         let filter = S3ObjectsFilter {
-            ingest_id: Some(ingest_id),
+            ingest_id: vec![ingest_id],
             ..Default::default()
         };
         let moved_object = ListQueryBuilder::new(database_client.connection_ref())

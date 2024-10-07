@@ -870,6 +870,8 @@ pub(crate) mod tests {
             .unwrap()
             .to_vec();
 
+        println!("{}", String::from_utf8(bytes.clone()).unwrap());
+
         (status, from_slice::<T>(bytes.as_slice()).unwrap())
     }
 
