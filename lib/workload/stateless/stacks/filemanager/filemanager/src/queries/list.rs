@@ -368,19 +368,19 @@ where
     /// json object. However,  it is implemented fully here in case it is useful for JSON-based rules.
     fn construct_json_path(
         acc: &mut Vec<String>,
-        current: &mut String,
+        current: String,
         json: JsonValue,
         case_sensitive: bool,
     ) -> Result<()> {
-        let mut traverse_expr = |current: &mut String, traverse, next| {
+        let mut traverse_expr = |mut current: String, traverse, next| {
             current.push_str(&format!(".{traverse}"));
             Self::construct_json_path(acc, current, next, case_sensitive)
         };
-        let add_eq_condition = |acc: &mut Vec<String>, current: &mut String, v| {
+        let add_eq_condition = |acc: &mut Vec<String>, mut current: String, v| {
             current.push_str(&format!(" ? (@ == {v})"));
             acc.push(current.to_string());
         };
-        let add_like_condition = |acc: &mut Vec<String>, current: &mut String, v| {
+        let add_like_condition = |acc: &mut Vec<String>, mut current: String, v| {
             if !case_sensitive {
                 current.push_str(&format!(" ? (@ like_regex \"{v}\" flag \"i\")"));
             } else {
@@ -420,13 +420,13 @@ where
             // Arrays traverse with an index.
             JsonValue::Array(array) => {
                 for (i, v) in array.into_iter().enumerate() {
-                    traverse_expr(current, i.to_string(), v)?;
+                    traverse_expr(current.to_string(), i.to_string(), v)?;
                 }
             }
             // Objects traverse with a key.
             JsonValue::Object(o) => {
                 for (k, v) in o.into_iter() {
-                    traverse_expr(current, k.to_string(), v)?;
+                    traverse_expr(current.to_string(), k.to_string(), v)?;
                 }
             }
         }
@@ -442,8 +442,8 @@ where
     ) -> Result<Vec<SimpleExpr>> {
         let mut conditions = vec![];
 
-        let mut acc = "$".to_string();
-        Self::construct_json_path(&mut conditions, &mut acc, json, case_sensitive)?;
+        let current = "$".to_string();
+        Self::construct_json_path(&mut conditions, current, json, case_sensitive)?;
 
         Ok(conditions
             .into_iter()
@@ -475,6 +475,7 @@ pub(crate) mod tests {
     use sea_orm::DatabaseConnection;
     use serde_json::json;
     use sqlx::PgPool;
+    use std::ops::Deref;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
@@ -990,13 +991,7 @@ pub(crate) mod tests {
             )
             .unwrap();
         assert_eq!(conditions.len(), 1);
-
-        let operation = conditions[0].clone();
-        assert!(matches!(
-            operation,
-            SimpleExpr::Binary(_, BinOper::Custom("@?"), _)
-        ));
-        assert_json_path(operation, "$.attributeId ? (@ == \"1\")");
+        assert_json_path(&conditions[0], "$.attributeId ? (@ == \"1\")");
 
         let conditions =
             ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
@@ -1006,13 +1001,7 @@ pub(crate) mod tests {
             )
             .unwrap();
         assert_eq!(conditions.len(), 1);
-
-        let operation = conditions[0].clone();
-        assert!(matches!(
-            operation,
-            SimpleExpr::Binary(_, BinOper::Custom("@?"), _)
-        ));
-        assert_json_path(operation, "$.attributeId ? (@ like_regex \"a.*\")");
+        assert_json_path(&conditions[0], "$.attributeId ? (@ like_regex \"a.*\")");
 
         let conditions =
             ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
@@ -1022,25 +1011,52 @@ pub(crate) mod tests {
             )
             .unwrap();
         assert_eq!(conditions.len(), 1);
-
-        let operation = conditions[0].clone();
-        assert!(matches!(
-            operation,
-            SimpleExpr::Binary(_, BinOper::Custom("@?"), _)
-        ));
         assert_json_path(
-            operation,
+            &conditions[0],
             "$.attributeId ? (@ like_regex \"a.*\" flag \"i\")",
         );
+
+        let conditions =
+            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
+                s3_object::Column::Attributes.into_column_ref(),
+                json!({ "attributeId": { "nested": "1" } }),
+                true,
+            )
+            .unwrap();
+        assert_eq!(conditions.len(), 1);
+        assert_json_path(&conditions[0], "$.attributeId.nested ? (@ == \"1\")");
+
+        let conditions =
+            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
+                s3_object::Column::Attributes.into_column_ref(),
+                json!({ "attributeId": "1", "anotherId": "2" }),
+                true,
+            )
+            .unwrap();
+        assert_eq!(conditions.len(), 2);
+        assert_json_path(&conditions[0], "$.attributeId ? (@ == \"1\")");
+        assert_json_path(&conditions[1], "$.anotherId ? (@ == \"2\")");
+
+        let conditions =
+            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
+                s3_object::Column::Attributes.into_column_ref(),
+                json!(["1", "2"]),
+                true,
+            )
+            .unwrap();
+        assert_eq!(conditions.len(), 2);
+        assert_json_path(&conditions[0], "$.0 ? (@ == \"1\")");
+        assert_json_path(&conditions[1], "$.1 ? (@ == \"2\")");
     }
 
-    fn assert_json_path(operation: SimpleExpr, value: &str) {
+    fn assert_json_path(operation: &SimpleExpr, value: &str) {
+        assert!(matches!(operation, Binary(_, BinOper::Custom("@?"), _)));
         if let Binary(_, _, result) = operation {
             assert_eq!(
-                Expr::val(value)
+                &Expr::val(value)
                     .cast_as(Alias::new("jsonpath"))
                     .into_simple_expr(),
-                *result
+                result.deref()
             );
         }
     }

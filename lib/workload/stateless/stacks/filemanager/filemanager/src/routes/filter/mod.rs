@@ -113,7 +113,7 @@ mod tests {
     fn deserialize_empty_params() {
         let params: S3ObjectsFilter = serde_qs::from_str("").unwrap();
 
-        assert_eq!(params, Default::default(),);
+        assert_eq!(params, Default::default());
     }
 
     #[test]
