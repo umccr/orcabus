@@ -4,8 +4,8 @@
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
-    Alias, Asterisk, BinOper, ColumnRef, ConditionExpression, IntoColumnRef, PostgresQueryBuilder,
-    Query, SimpleExpr,
+    Alias, Asterisk, BinOper, ColumnRef, ConditionExpression, IntoColumnRef, IntoCondition,
+    PostgresQueryBuilder, Query, SimpleExpr,
 };
 use sea_orm::Order::{Asc, Desc};
 use sea_orm::{
@@ -16,7 +16,7 @@ use tracing::trace;
 use url::Url;
 
 use crate::database::entities::s3_object;
-use crate::error::Error::OverflowError;
+use crate::error::Error::{OverflowError, QueryError};
 use crate::error::{Error, Result};
 use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
 use crate::routes::filter::S3ObjectsFilter;
@@ -164,15 +164,12 @@ where
             )?);
 
         if let Some(attributes) = filter.attributes {
-            let json_conditions = Self::json_conditions(
+            let json_condition = JsonPathBuilder::json_condition(
                 s3_object::Column::Attributes.into_column_ref(),
                 attributes,
                 case_sensitive,
             )?;
-
-            for json_condition in json_conditions {
-                condition = condition.add(json_condition);
-            }
+            condition = condition.add(json_condition)
         }
 
         Ok(condition)
@@ -362,100 +359,6 @@ where
         }
     }
 
-    /// A recursive function to convert a json value to postgres ->> statements. This traverses the
-    /// JSON tree and appends a list of conditions to `acc`. In practice, this should never
-    /// produce more than one condition if using serde_qs because serde_qs should only parse one nested
-    /// json object. However,  it is implemented fully here in case it is useful for JSON-based rules.
-    fn construct_json_path(
-        acc: &mut Vec<String>,
-        current: String,
-        json: JsonValue,
-        case_sensitive: bool,
-    ) -> Result<()> {
-        let mut traverse_expr = |mut current: String, traverse, next| {
-            current.push_str(&format!(".{traverse}"));
-            Self::construct_json_path(acc, current, next, case_sensitive)
-        };
-        let add_eq_condition = |acc: &mut Vec<String>, mut current: String, v| {
-            current.push_str(&format!(" ? (@ == {v})"));
-            acc.push(current.to_string());
-        };
-        let add_like_condition = |acc: &mut Vec<String>, mut current: String, v| {
-            if !case_sensitive {
-                current.push_str(&format!(" ? (@ like_regex \"{v}\" flag \"i\")"));
-            } else {
-                current.push_str(&format!(" ? (@ like_regex \"{v}\")"));
-            }
-            acc.push(current.to_string());
-        };
-
-        match json {
-            // Primitive types are compared for equality.
-            v @ JsonValue::Null => add_eq_condition(acc, current, v.to_string()),
-            JsonValue::Bool(v) => add_eq_condition(acc, current, v.to_string()),
-            JsonValue::Number(v) => {
-                if let Some(n) = v.as_f64() {
-                    add_eq_condition(acc, current, n.to_string());
-                } else if let Some(n) = v.as_i64() {
-                    add_eq_condition(acc, current, n.to_string());
-                } else if let Some(n) = v.as_u64() {
-                    add_eq_condition(acc, current, n.to_string());
-                }
-            }
-            // Strings are compared as wildcards.
-            JsonValue::String(v) => {
-                let wildcard = Wildcard::new(v);
-                if wildcard.contains_wildcard() {
-                    let like_regex = wildcard.to_like_regex()?;
-                    add_like_condition(acc, current, like_regex);
-                } else {
-                    // Extra quotes needed for JSON strings.
-                    add_eq_condition(
-                        acc,
-                        current,
-                        format!("\"{}\"", wildcard.to_eq_expression()?),
-                    );
-                }
-            }
-            // Arrays traverse with an index.
-            JsonValue::Array(array) => {
-                for (i, v) in array.into_iter().enumerate() {
-                    traverse_expr(current.to_string(), i.to_string(), v)?;
-                }
-            }
-            // Objects traverse with a key.
-            JsonValue::Object(o) => {
-                for (k, v) in o.into_iter() {
-                    traverse_expr(current.to_string(), k.to_string(), v)?;
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Create a series of json conditions by traversing the JSON tree.
-    pub fn json_conditions(
-        col: ColumnRef,
-        json: JsonValue,
-        case_sensitive: bool,
-    ) -> Result<Vec<SimpleExpr>> {
-        let mut conditions = vec![];
-
-        let current = "$".to_string();
-        Self::construct_json_path(&mut conditions, current, json, case_sensitive)?;
-
-        Ok(conditions
-            .into_iter()
-            .map(|cond| {
-                let cond = Expr::val(cond).cast_as(Alias::new("jsonpath"));
-                Expr::col(col.clone())
-                    .into_simple_expr()
-                    .binary(BinOper::Custom("@?"), cond)
-            })
-            .collect())
-    }
-
     /// Trace the current query.
     pub fn trace_query(&self, message: &str) {
         trace!(
@@ -465,17 +368,121 @@ where
     }
 }
 
+/// Helper struct to build JSON path conditions.
+#[derive(Debug)]
+pub struct JsonPathBuilder;
+
+const MAX_JSON_PATH_DEPTH: usize = 10;
+
+impl JsonPathBuilder {
+    /// A recursive function to convert a json value to postgres ->> statements. This traverses the
+    /// JSON tree and appends a list of conditions to `acc`. In practice, this should never
+    /// produce more than one condition if using serde_qs because serde_qs should only parse one nested
+    /// json object. However,  it is implemented fully here in case it is useful for JSON-based rules.
+    fn construct_json_path(
+        col: ColumnRef,
+        current: String,
+        json: JsonValue,
+        case_sensitive: bool,
+        depth: usize,
+    ) -> Result<Condition> {
+        if depth > MAX_JSON_PATH_DEPTH {
+            return Err(QueryError("maximum JSON path depth exceeded".to_string()));
+        }
+
+        let traverse_expr = |mut current: String, traverse, next| {
+            current.push_str(&format!(".{traverse}"));
+            Self::construct_json_path(col.clone(), current, next, case_sensitive, depth + 1)
+        };
+        let add_eq_condition = |mut current: String, v| {
+            current.push_str(&format!(" ? (@ == {v})"));
+            current
+        };
+        let add_like_condition = |mut current: String, v| {
+            if !case_sensitive {
+                current.push_str(&format!(" ? (@ like_regex \"{v}\" flag \"i\")"));
+            } else {
+                current.push_str(&format!(" ? (@ like_regex \"{v}\")"));
+            }
+            current
+        };
+        let make_simple_expr = |current: String| {
+            let cond = Expr::val(current).cast_as(Alias::new("jsonpath"));
+            Expr::col(col.clone())
+                .into_simple_expr()
+                .binary(BinOper::Custom("@?"), cond)
+                .into_condition()
+        };
+
+        let result = match json {
+            // Primitive types are compared for equality.
+            v @ JsonValue::Null => make_simple_expr(add_eq_condition(current, v.to_string())),
+            JsonValue::Bool(v) => make_simple_expr(add_eq_condition(current, v.to_string())),
+            JsonValue::Number(v) => {
+                if let Some(n) = v.as_f64() {
+                    make_simple_expr(add_eq_condition(current, n.to_string()))
+                } else if let Some(n) = v.as_i64() {
+                    make_simple_expr(add_eq_condition(current, n.to_string()))
+                } else if let Some(n) = v.as_u64() {
+                    make_simple_expr(add_eq_condition(current, n.to_string()))
+                } else {
+                    return Err(QueryError("invalid JSON number type".to_string()));
+                }
+            }
+            // Strings are compared as wildcards.
+            JsonValue::String(v) => {
+                let wildcard = Wildcard::new(v);
+                if wildcard.contains_wildcard() {
+                    let like_regex = wildcard.to_like_regex()?;
+                    make_simple_expr(add_like_condition(current, like_regex))
+                } else {
+                    // Extra quotes needed for JSON strings.
+                    make_simple_expr(add_eq_condition(
+                        current,
+                        format!("\"{}\"", wildcard.to_eq_expression()?),
+                    ))
+                }
+            }
+            // Arrays traverse with an index.
+            JsonValue::Array(array) => {
+                let mut any = Condition::any();
+                for (i, v) in array.into_iter().enumerate() {
+                    any = any.add(traverse_expr(current.to_string(), i.to_string(), v)?);
+                }
+                any
+            }
+            // Objects traverse with a key.
+            JsonValue::Object(object) => {
+                let mut all = Condition::all();
+                for (k, v) in object.into_iter() {
+                    all = all.add(traverse_expr(current.to_string(), k.to_string(), v)?);
+                }
+                all
+            }
+        };
+
+        Ok(result)
+    }
+
+    /// Create a series of json conditions by traversing the JSON tree.
+    pub fn json_condition(
+        col: ColumnRef,
+        json: JsonValue,
+        case_sensitive: bool,
+    ) -> Result<Condition> {
+        Self::construct_json_path(col, "$".to_string(), json, case_sensitive, 0)
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use sea_orm::prelude::Json;
     use sea_orm::sea_query::extension::postgres::PgBinOper;
     use sea_orm::sea_query::types::BinOper;
     use sea_orm::sea_query::IntoColumnRef;
-    use sea_orm::sea_query::SimpleExpr::Binary;
     use sea_orm::DatabaseConnection;
     use serde_json::json;
     use sqlx::PgPool;
-    use std::ops::Deref;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
@@ -983,82 +990,71 @@ pub(crate) mod tests {
 
     #[test]
     fn apply_json_condition() {
-        let conditions =
-            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-                s3_object::Column::Attributes.into_column_ref(),
-                json!({ "attributeId": "1" }),
-                true,
-            )
-            .unwrap();
-        assert_eq!(conditions.len(), 1);
-        assert_json_path(&conditions[0], "$.attributeId ? (@ == \"1\")");
+        let conditions = JsonPathBuilder::json_condition(
+            s3_object::Column::Attributes.into_column_ref(),
+            json!({ "attributeId": "1" }),
+            true,
+        )
+        .unwrap();
+        assert!(condition_to_string(conditions)
+            .contains(r#""attributes" @? CAST(E'$.attributeId ? (@ == \"1\")"#));
 
-        let conditions =
-            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-                s3_object::Column::Attributes.into_column_ref(),
-                json!({ "attributeId": "a*" }),
-                true,
-            )
-            .unwrap();
-        assert_eq!(conditions.len(), 1);
-        assert_json_path(&conditions[0], "$.attributeId ? (@ like_regex \"a.*\")");
+        let conditions = JsonPathBuilder::json_condition(
+            s3_object::Column::Attributes.into_column_ref(),
+            json!({ "attributeId": "a*" }),
+            true,
+        )
+        .unwrap();
+        assert!(condition_to_string(conditions)
+            .contains(r#""attributes" @? CAST(E'$.attributeId ? (@ like_regex \"a.*\")"#));
 
-        let conditions =
-            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-                s3_object::Column::Attributes.into_column_ref(),
-                json!({ "attributeId": "a*" }),
-                false,
-            )
-            .unwrap();
-        assert_eq!(conditions.len(), 1);
-        assert_json_path(
-            &conditions[0],
-            "$.attributeId ? (@ like_regex \"a.*\" flag \"i\")",
-        );
+        let conditions = JsonPathBuilder::json_condition(
+            s3_object::Column::Attributes.into_column_ref(),
+            json!({ "attributeId": "a*" }),
+            false,
+        )
+        .unwrap();
+        assert!(condition_to_string(conditions).contains(
+            r#""attributes" @? CAST(E'$.attributeId ? (@ like_regex \"a.*\" flag \"i\")"#
+        ));
 
-        let conditions =
-            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-                s3_object::Column::Attributes.into_column_ref(),
-                json!({ "attributeId": { "nested": "1" } }),
-                true,
-            )
-            .unwrap();
-        assert_eq!(conditions.len(), 1);
-        assert_json_path(&conditions[0], "$.attributeId.nested ? (@ == \"1\")");
+        let conditions = JsonPathBuilder::json_condition(
+            s3_object::Column::Attributes.into_column_ref(),
+            json!({ "attributeId": { "nested": "1" } }),
+            true,
+        )
+        .unwrap();
+        assert!(condition_to_string(conditions)
+            .contains(r#""attributes" @? CAST(E'$.attributeId.nested ? (@ == \"1\")"#));
 
-        let conditions =
-            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-                s3_object::Column::Attributes.into_column_ref(),
-                json!({ "attributeId": "1", "anotherId": "2" }),
-                true,
-            )
-            .unwrap();
-        assert_eq!(conditions.len(), 2);
-        assert_json_path(&conditions[0], "$.attributeId ? (@ == \"1\")");
-        assert_json_path(&conditions[1], "$.anotherId ? (@ == \"2\")");
+        let conditions = JsonPathBuilder::json_condition(
+            s3_object::Column::Attributes.into_column_ref(),
+            json!({ "attributeId": "1", "anotherId": "2" }),
+            true,
+        )
+        .unwrap();
+        let query = condition_to_string(conditions);
+        assert!(query.contains(r#""attributes" @? CAST(E'$.attributeId ? (@ == \"1\")"#));
+        assert!(query.contains(r#"AND"#));
+        assert!(query.contains(r#""attributes" @? CAST(E'$.anotherId ? (@ == \"2\")"#));
 
-        let conditions =
-            ListQueryBuilder::<DatabaseConnection, s3_object::Entity>::json_conditions(
-                s3_object::Column::Attributes.into_column_ref(),
-                json!(["1", "2"]),
-                true,
-            )
-            .unwrap();
-        assert_eq!(conditions.len(), 2);
-        assert_json_path(&conditions[0], "$.0 ? (@ == \"1\")");
-        assert_json_path(&conditions[1], "$.1 ? (@ == \"2\")");
+        let conditions = JsonPathBuilder::json_condition(
+            s3_object::Column::Attributes.into_column_ref(),
+            json!({"attributeId": ["1", "2"]}),
+            true,
+        )
+        .unwrap();
+        let query = condition_to_string(conditions);
+        assert!(query.contains(r#""attributes" @? CAST(E'$.attributeId.0 ? (@ == \"1\")"#));
+        assert!(query.contains(r#"OR"#));
+        assert!(query.contains(r#""attributes" @? CAST(E'$.attributeId.1 ? (@ == \"2\")"#));
     }
 
-    fn assert_json_path(operation: &SimpleExpr, value: &str) {
-        assert!(matches!(operation, Binary(_, BinOper::Custom("@?"), _)));
-        if let Binary(_, _, result) = operation {
-            assert_eq!(
-                &Expr::val(value)
-                    .cast_as(Alias::new("jsonpath"))
-                    .into_simple_expr(),
-                result.deref()
-            );
-        }
+    fn condition_to_string(condition: Condition) -> String {
+        s3_object::Entity::find()
+            .filter(condition)
+            .as_query()
+            .to_string(PostgresQueryBuilder::default())
     }
 
     pub(crate) fn filter_event_type(
