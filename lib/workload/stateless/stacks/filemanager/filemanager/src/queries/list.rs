@@ -390,14 +390,19 @@ impl JsonPathBuilder {
             return Err(QueryError("maximum JSON path depth exceeded".to_string()));
         }
 
-        let traverse_expr = |mut current: String, traverse, next| {
-            current.push_str(&format!(".{traverse}"));
+        // Traverses array and object expressions.
+        let traverse_expr = |mut current: String, traverse, next, is_key_traversal| {
+            if is_key_traversal {
+                current.push_str(&format!(".{traverse}"));
+            }
             Self::construct_json_path(col.clone(), current, next, case_sensitive, depth + 1)
         };
+        // Creates an equality condition.
         let add_eq_condition = |mut current: String, v| {
             current.push_str(&format!(" ? (@ == {v})"));
             current
         };
+        // Creates a like_regex condition.
         let add_like_condition = |mut current: String, v| {
             if !case_sensitive {
                 current.push_str(&format!(" ? (@ like_regex \"{v}\" flag \"i\")"));
@@ -406,6 +411,7 @@ impl JsonPathBuilder {
             }
             current
         };
+        // Converts a string into a simple expression.
         let make_simple_expr = |current: String| {
             let cond = Expr::val(current).cast_as(Alias::new("jsonpath"));
             Expr::col(col.clone())
@@ -447,7 +453,7 @@ impl JsonPathBuilder {
             JsonValue::Array(array) => {
                 let mut any = Condition::any();
                 for (i, v) in array.into_iter().enumerate() {
-                    any = any.add(traverse_expr(current.to_string(), i.to_string(), v)?);
+                    any = any.add(traverse_expr(current.to_string(), i.to_string(), v, false)?);
                 }
                 any
             }
@@ -455,7 +461,7 @@ impl JsonPathBuilder {
             JsonValue::Object(object) => {
                 let mut all = Condition::all();
                 for (k, v) in object.into_iter() {
-                    all = all.add(traverse_expr(current.to_string(), k.to_string(), v)?);
+                    all = all.add(traverse_expr(current.to_string(), k.to_string(), v, true)?);
                 }
                 all
             }
@@ -643,7 +649,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_list_s3_multiple_filters(pool: PgPool) {
+    async fn test_list_s3_multiple_and_filters(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -662,6 +668,30 @@ pub(crate) mod tests {
         )
         .await;
         assert_eq!(result, vec![entries[1].clone()]);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_multiple_or_filters(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await
+            .s3_objects;
+
+        let result = filter_all_s3_from(
+            &client,
+            S3ObjectsFilter {
+                key: vec![
+                    Wildcard::new("0".to_string()),
+                    Wildcard::new("1".to_string()),
+                ],
+                ..Default::default()
+            },
+            true,
+        )
+        .await;
+        assert_eq!(result, vec![entries[0].clone(), entries[1].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -741,6 +771,35 @@ pub(crate) mod tests {
         )
         .await;
         assert_eq!(result, vec![entries[3].clone()]);
+
+        let result = filter_all_s3_from(
+            &client,
+            S3ObjectsFilter {
+                attributes: Some(json!({
+                    "attributeId": "0",
+                    "nestedId": {
+                        "attributeId": "0"
+                    }
+                })),
+                ..Default::default()
+            },
+            true,
+        )
+        .await;
+        assert_eq!(result, vec![entries[0].clone()]);
+
+        let result = filter_all_s3_from(
+            &client,
+            S3ObjectsFilter {
+                attributes: Some(json!({
+                    "attributeId": ["0", "1"],
+                })),
+                ..Default::default()
+            },
+            true,
+        )
+        .await;
+        assert_eq!(result, vec![entries[0].clone(), entries[1].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -1045,16 +1104,16 @@ pub(crate) mod tests {
         )
         .unwrap();
         let query = condition_to_string(conditions);
-        assert!(query.contains(r#""attributes" @? CAST(E'$.attributeId.0 ? (@ == \"1\")"#));
+        assert!(query.contains(r#""attributes" @? CAST(E'$.attributeId ? (@ == \"1\")"#));
         assert!(query.contains(r#"OR"#));
-        assert!(query.contains(r#""attributes" @? CAST(E'$.attributeId.1 ? (@ == \"2\")"#));
+        assert!(query.contains(r#""attributes" @? CAST(E'$.attributeId ? (@ == \"2\")"#));
     }
 
     fn condition_to_string(condition: Condition) -> String {
         s3_object::Entity::find()
             .filter(condition)
             .as_query()
-            .to_string(PostgresQueryBuilder::default())
+            .to_string(PostgresQueryBuilder)
     }
 
     pub(crate) fn filter_event_type(
