@@ -149,9 +149,8 @@ or `bucket2`:
 curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3?bucket[]=bucket1&bucket[]=bucket2" | jq
 ```
 
-Note that the extra `[]` is required in the query parameters to specify multiple keys with the same name. Multiple keys
-are also supported on attributes. For example, the following finds records where the `portalRunId` is either `20240521aecb782`
-or `20240521aecb783`:
+Multiple keys are also supported on attributes. For example, the following finds records where the `portalRunId` is
+either `20240521aecb782` or `20240521aecb783`:
  
 ```sh
 curl --get -H "Authorization: Bearer $TOKEN" \
@@ -159,6 +158,10 @@ curl --get -H "Authorization: Bearer $TOKEN" \
 --data-urlencode "attributes[portalRunId][]=20240521aecb783" \
 "https://file.dev.umccr.org/api/v1/s3" | jq
 ```
+
+Note that the extra `[]` is required in the query parameters to specify multiple keys with the same name. Specifying
+multiple of the same key without `[]` results in an error. It is also an error to specify some keys with `[]` and some
+without for keys with the same name.
 
 ## Updating records
 
