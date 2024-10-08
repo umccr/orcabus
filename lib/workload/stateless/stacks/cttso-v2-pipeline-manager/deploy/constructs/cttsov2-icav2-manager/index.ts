@@ -124,8 +124,22 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     );
 
     // Allow the check num running sfns lambda to list the number of running icav2 copy file sfns running
+    /*
+    // FIXME: this is the ideal setup but not approved by cdk nag, since we
+    // FIXME: are granting the lambda permissions to all versions of the step function
     props.icav2CopyFilesStateMachineObj.grantRead(
       props.checkNumRunningSfnsLambdaObj.currentVersion
+    );
+    */
+    props.checkNumRunningSfnsLambdaObj.currentVersion.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: [
+          'states:ListActivities',
+          'states:DescribeStateMachine',
+          'states:DescribeActivity',
+        ],
+        resources: [props.icav2CopyFilesStateMachineObj.stateMachineArn],
+      })
     );
 
     /*
