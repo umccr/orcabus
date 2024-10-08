@@ -59,28 +59,11 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "Save Portal Run ID To Input Maker DB",
+      "Next": "Wait 1 Second",
       "ResultPath": "$.generate_workflow_run_name_step",
       "ResultSelector": {
         "workflow_run_name.$": "$.Payload.workflow_run_name"
       }
-    },
-    "Save Portal Run ID To Input Maker DB": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:putItem",
-      "Parameters": {
-        "TableName": "${__table_name__}",
-        "Item": {
-          "id.$": "$.generate_portal_run_id_step.portal_run_id",
-          "id_type": "${__portal_run_partition_name__}",
-          "workflow_name": "${__workflow_name__}",
-          "workflow_version": "${__workflow_version__}",
-          "workflow_run_name.$": "$.generate_workflow_run_name_step.workflow_run_name",
-          "status": "DRAFT"
-        }
-      },
-      "Next": "Wait 1 Second",
-      "ResultPath": null
     },
     "Wait 1 Second": {
       "Type": "Wait",

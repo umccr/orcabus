@@ -1,0 +1,277 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Get all current running jobs",
+  "States": {
+    "Get all current running jobs": {
+      "Type": "Task",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "ExpressionAttributeValues": {
+          ":id_type": {
+            "S": "running_jobs"
+          }
+        },
+        "ExpressionAttributeNames": {
+          "#id_type": "id_type"
+        },
+        "FilterExpression": "#id_type = :id_type"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:dynamodb:scan",
+      "ResultPath": "$.get_current_running_jobs_step",
+      "Next": "Check items not empty"
+    },
+    "Check items not empty": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_current_running_jobs_step.Items",
+          "IsPresent": true,
+          "Comment": "Items list exists",
+          "Next": "Get num of running jobs"
+        }
+      ],
+      "Default": "Pass"
+    },
+    "Get num of running jobs": {
+      "Type": "Pass",
+      "Next": "Check items list is more than 0",
+      "Parameters": {
+        "num_jobs.$": "States.ArrayLength($.get_current_running_jobs_step.Items)"
+      },
+      "ResultPath": "$.get_num_jobs_step"
+    },
+    "Check items list is more than 0": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_num_jobs_step.num_jobs",
+          "NumericGreaterThan": 0,
+          "Next": "Iterate running jobs partition",
+          "Comment": "At least one job running"
+        }
+      ],
+      "Default": "Pass"
+    },
+    "Iterate running jobs partition": {
+      "Type": "Map",
+      "ItemsPath": "$.get_current_running_jobs_step.Items",
+      "ItemSelector": {
+        "job_db_item.$": "$$.Map.Item.Value"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Get Current Job Status",
+        "States": {
+          "Get Current Job Status": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "${__get_current_job_status_lambda_function_arn__}",
+              "Payload": {
+                "current_job_status.$": "$.job_db_item.job_status.S",
+                "current_report_status.$": "$.job_db_item.report_status.S",
+                "case_id.$": "States.StringToJson($.job_db_item.case_id.N)",
+                "informaticsjob_id.$": "States.StringToJson($.job_db_item.informaticsjob_id.N)",
+                "report_id.$": "States.StringToJson($.job_db_item.report_id.N)"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2
+              }
+            ],
+            "ResultSelector": {
+              "job_status.$": "$.Payload.job_status",
+              "job_status_bool.$": "$.Payload.job_status_bool",
+              "report_id.$": "$.Payload.report_id",
+              "report_status.$": "$.Payload.report_status",
+              "report_status_bool.$": "$.Payload.report_status_bool",
+              "expression_attribute_values_dict.$": "$.Payload.expression_attribute_values_dict",
+              "update_expression_str.$": "$.Payload.update_expression_str",
+              "job_status_changed.$": "$.Payload.job_status_changed"
+            },
+            "ResultPath": "$.get_current_status_step",
+            "Next": "Job Status Changed"
+          },
+          "Job Status Changed": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Variable": "$.get_current_status_step.job_status_changed",
+                "BooleanEquals": true,
+                "Next": "Update Changes",
+                "Comment": "The job status has changed"
+              }
+            ],
+            "Default": "No Change"
+          },
+          "Update Changes": {
+            "Type": "Parallel",
+            "Branches": [
+              {
+                "StartAt": "Update portal run id job status",
+                "States": {
+                  "Update portal run id job status": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:updateItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Key": {
+                        "id.$": "$.job_db_item.id.S",
+                        "id_type": "portal_run_id"
+                      },
+                      "UpdateExpression.$": "$.get_current_status_step.update_expression_str",
+                      "ExpressionAttributeValues.$": "$.get_current_status_step.expression_attribute_values_dict"
+                    },
+                    "End": true
+                  }
+                }
+              },
+              {
+                "StartAt": "Is Report Status Terminal",
+                "States": {
+                  "Is Report Status Terminal": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$.get_current_status_step.report_status_bool",
+                        "IsBoolean": true,
+                        "Next": "Delete Row from Running Jobs Partition",
+                        "Comment": "Report Status Terminal"
+                      }
+                    ],
+                    "Default": "Update running jobs partition row"
+                  },
+                  "Update running jobs partition row": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:updateItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Key": {
+                        "id.$": "$.job_db_item.id.S",
+                        "id_type": "running_jobs"
+                      },
+                      "UpdateExpression.$": "$.get_current_status_step.update_expression_str",
+                      "ExpressionAttributeValues.$": "$.get_current_status_step.expression_attribute_values_dict"
+                    },
+                    "End": true
+                  },
+                  "Delete Row from Running Jobs Partition": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:deleteItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Key": {
+                        "id.$": "$.job_db_item.id.S",
+                        "id_type": "running_jobs"
+                      }
+                    },
+                    "End": true
+                  }
+                }
+              }
+            ],
+            "ResultPath": null,
+            "Next": "Get Portal Run ID Row Partition"
+          },
+          "Get Portal Run ID Row Partition": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "$.job_db_item.id.S",
+                "id_type": "portal_run_id"
+              }
+            },
+            "ResultPath": "$.get_portal_run_db_step",
+            "Next": "Generate Data Payload"
+          },
+          "Generate Data Payload": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "${__generate_data_payload_lambda_function_arn__}",
+              "Payload": {
+                "inputs.$": "States.StringToJson($.get_portal_run_db_step.Item.event_inputs.S)",
+                "engine_parameters.$": "States.StringToJson($.get_portal_run_db_step.Item.engine_parameters.S)",
+                "tags.$": "States.StringToJson($.get_portal_run_db_step.Item.tags.S)",
+                "report_status.$": "$.get_portal_run_db_step.Item.report_status.S",
+                "case_id.$": "$.get_portal_run_db_step.Item.case_id.N",
+                "job_id.$": "$.get_portal_run_db_step.Item.informaticsjob_id.N",
+                "case_accession_number.$": "$.get_portal_run_db_step.Item.case_accession_number.S",
+                "report_id.$": "$.get_portal_run_db_step.Item.report_id.N",
+                "pieriandx_base_url": "https://app.uat.pieriandx.com/cgw-api/v2.0.0",
+                "sample_name.$": "$.get_portal_run_db_step.Item.sample_name.S"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2
+              }
+            ],
+            "Next": "Push event of Informatics Job Change",
+            "ResultPath": "$.get_data_payload_step",
+            "ResultSelector": {
+              "data_payload.$": "$.Payload.data_payload"
+            }
+          },
+          "Push event of Informatics Job Change": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents",
+            "Parameters": {
+              "Entries": [
+                {
+                  "DetailType": "${__event_detail_type__}",
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "${__event_source__}",
+                  "Detail": {
+                    "portalRunId.$": "$.get_portal_run_db_step.Item.id.S",
+                    "timestamp.$": "$$.State.EnteredTime",
+                    "status.$": "$.get_portal_run_db_step.Item.workflow_status.S",
+                    "workflowName": "${__workflow_name__}",
+                    "workflowVersion": "${__workflow_version__}",
+                    "workflowRunName.$": "$.get_portal_run_db_step.Item.workflow_run_name.S",
+                    "linkedLibraries.$": "States.StringToJson($.get_portal_run_db_step.Item.linkedLibraries.S)",
+                    "payload": {
+                      "version": "${__payload_version__}",
+                      "data.$": "$.get_data_payload_step.data_payload"
+                    }
+                  }
+                }
+              ]
+            },
+            "End": true
+          },
+          "No Change": {
+            "Type": "Pass",
+            "End": true
+          }
+        }
+      },
+      "End": true
+    },
+    "Pass": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}

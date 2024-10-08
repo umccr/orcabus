@@ -4,6 +4,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as cdk from 'aws-cdk-lib';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { showerGlueHandlerConstruct } from './clag';
 import { BclconvertToBsshFastqCopyEventHandlerConstruct } from './elmer';
 import { BsshFastqCopyToBclconvertInteropQcConstruct } from './gorilla';
@@ -13,6 +14,7 @@ import { TnGlueHandlerConstruct } from './loctite';
 import { WtsGlueHandlerConstruct } from './mod-podge';
 import { UmccriseGlueHandlerConstruct } from './pva';
 import { RnasumGlueHandlerConstruct } from './roket';
+import { PieriandxGlueHandlerConstruct } from './nails/';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -22,6 +24,7 @@ To triggering the bsshFastqCopyManager
 export interface GlueConstructProps {
   /* Event Bus */
   eventBusObj: events.IEventBus;
+
   /* Tables */
   instrumentRunTableObj: dynamodb.ITableV2;
   inputMakerTableObj: dynamodb.ITableV2;
@@ -32,14 +35,23 @@ export interface GlueConstructProps {
   wtsGlueTableObj: dynamodb.ITableV2;
   umccriseGlueTableObj: dynamodb.ITableV2;
   rnasumGlueTableObj: dynamodb.ITableV2;
-  /* SSM Parameters */
+  pieriandxGlueTableObj: dynamodb.ITableV2;
+
+  /* Standard SSM Parameters */
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
-  bsshOutputFastqCopyOutputUriSsmParameterObj: ssm.IStringParameter;
   analysisOutputUriSsmParameterObj: ssm.IStringParameter;
   analysisCacheUriSsmParameterObj: ssm.IStringParameter;
   analysisLogsUriSsmParameterObj: ssm.IStringParameter;
-  /* Secrests */
+
+  /* Secrets */
   icav2AccessTokenSecretObj: secretsManager.ISecret;
+
+  /* BSSH SSM Parameters */
+  bsshOutputFastqCopyOutputUriSsmParameterObj: ssm.IStringParameter;
+
+  /* PierianDX SSM Parameters */
+  pieriandxProjectInfoSsmParameterObj: ssm.IStringParameter;
+  redcapLambdaObj: lambda.IFunction;
 }
 
 export class GlueConstruct extends Construct {
@@ -62,8 +74,6 @@ export class GlueConstruct extends Construct {
     const elmer = new BclconvertToBsshFastqCopyEventHandlerConstruct(this, 'elmer', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
-      /* Tables */
-      inputMakerTableObj: props.inputMakerTableObj,
       /* SSM Parameters */
       bsshOutputFastqCopyUriSsmParameterObj: props.bsshOutputFastqCopyOutputUriSsmParameterObj,
       /* Secrets */
@@ -76,8 +86,6 @@ export class GlueConstruct extends Construct {
     const gorilla = new BsshFastqCopyToBclconvertInteropQcConstruct(this, 'gorilla', {
       /* Event Objects */
       eventBusObj: props.eventBusObj,
-      /* Table Objects */
-      inputMakerTableObj: props.inputMakerTableObj,
       /* SSM Parameter Ojbects */
       analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
       analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
@@ -93,7 +101,6 @@ export class GlueConstruct extends Construct {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
       /* Tables */
-      inputMakerTableObj: props.inputMakerTableObj,
       cttsov2GlueTableObj: props.cttsov2GlueTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
@@ -111,7 +118,6 @@ export class GlueConstruct extends Construct {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
       /* Tables */
-      inputMakerTableObj: props.inputMakerTableObj,
       wgtsQcGlueTableObj: props.wgtsQcGlueTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
@@ -129,7 +135,6 @@ export class GlueConstruct extends Construct {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
       /* Tables */
-      inputMakerTableObj: props.inputMakerTableObj,
       tnGlueTableObj: props.tnGlueTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
@@ -147,7 +152,6 @@ export class GlueConstruct extends Construct {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
       /* Tables */
-      inputMakerTableObj: props.inputMakerTableObj,
       wtsGlueTableObj: props.wtsGlueTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
@@ -159,13 +163,30 @@ export class GlueConstruct extends Construct {
     });
 
     /*
-    Part H: Plumber-up the UMCCRise Execution Service to the shower services
+    Part H: Plumber-up the cttsov2 to pieriandx services
+    */
+    const nails = new PieriandxGlueHandlerConstruct(this, 'nails', {
+      /* Event Bus */
+      eventBusObj: props.eventBusObj,
+
+      /* Tables */
+      pieriandxGlueTableObj: props.pieriandxGlueTableObj,
+
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+
+      /* Extras */
+      pieriandxProjectInfoSsmParameterObj: props.pieriandxProjectInfoSsmParameterObj,
+      redcapLambdaObj: props.redcapLambdaObj,
+    });
+
+    /*
+    Part I: Plumber-up the UMCCRise Execution Service to the shower services
     */
     const pva = new UmccriseGlueHandlerConstruct(this, 'pva', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
       /* Tables */
-      inputMakerTableObj: props.inputMakerTableObj,
       umccriseGlueTableObj: props.umccriseGlueTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
@@ -177,13 +198,12 @@ export class GlueConstruct extends Construct {
     });
 
     /*
-    Part I: Plumber-up the RNASum Exection Service to the shower services
+    Part J: Plumber-up the RNASum Execution Service to the shower services
     */
     const roket = new RnasumGlueHandlerConstruct(this, 'roket', {
       /* Event Bus */
       eventBusObj: props.eventBusObj,
       /* Tables */
-      inputMakerTableObj: props.inputMakerTableObj,
       rnasumGlueTableObj: props.rnasumGlueTableObj,
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
@@ -199,6 +219,7 @@ export class GlueConstruct extends Construct {
 export interface GlueStackConfig {
   /* Event Bus */
   eventBusName: string;
+
   /* Tables */
   instrumentRunTableName: string;
   inputMakerTableName: string;
@@ -209,14 +230,25 @@ export interface GlueStackConfig {
   wtsGlueTableName: string;
   umccriseGlueTableName: string;
   rnasumGlueTableName: string;
+  pieriandxGlueTableName: string;
+
   /* SSM Parameters */
   icav2ProjectIdSsmParameterName: string;
-  bsshOutputFastqCopyUriSsmParameterName: string;
   analysisCacheUriSsmParameterName: string;
   analysisOutputUriSsmParameterName: string;
   analysisLogsUriSsmParameterName: string;
+
   /* Secrets */
   icav2AccessTokenSecretName: string;
+
+  /* BSSH SSM Parameters */
+  bsshOutputFastqCopyUriSsmParameterName: string;
+
+  /* PierianDX SSM Parameters */
+  pieriandxProjectInfoSsmParameterPath: string;
+
+  /* PierianDX External Functions */
+  redcapLambdaFunctionName: string;
 }
 
 export type GlueStackProps = GlueStackConfig & cdk.StackProps;
@@ -226,17 +258,17 @@ export class GlueStack extends cdk.Stack {
     super(scope, id, props);
 
     /*
-        Part 0: Get the inputs as objects
-        */
+    Part 0: Get the inputs as objects
+    */
 
     /*
-        Get the event bus
-        */
+    Get the event bus
+    */
     const eventBusObj = events.EventBus.fromEventBusName(this, 'eventBusObj', props.eventBusName);
 
     /*
-        Get the tables
-        */
+    Get the tables
+    */
     const workflowManagerTableObj = dynamodb.Table.fromTableName(
       this,
       'workflowManagerTableObj',
@@ -282,6 +314,11 @@ export class GlueStack extends cdk.Stack {
       'rnasumGlueTableObj',
       props.rnasumGlueTableName
     );
+    const pieriandxGlueTableObj = dynamodb.Table.fromTableName(
+      this,
+      'pieriandxGlueTableObj',
+      props.pieriandxGlueTableName
+    );
 
     /*
     Get the SSM Parameters
@@ -290,11 +327,6 @@ export class GlueStack extends cdk.Stack {
       this,
       'icav2ProjectIdSsmParameterObj',
       props.icav2ProjectIdSsmParameterName
-    );
-    const bsshOutputFastqCopyUriSsmParameterObj = ssm.StringParameter.fromStringParameterName(
-      this,
-      'bsshOutputFastqCopyUriPrefixSsmParameterObj',
-      props.bsshOutputFastqCopyUriSsmParameterName
     );
 
     const analysisCacheUriSsmParameterObj = ssm.StringParameter.fromStringParameterName(
@@ -315,12 +347,39 @@ export class GlueStack extends cdk.Stack {
     );
 
     /*
-        Secrets
-        */
+    Secrets
+    */
     const icav2AccessTokenSecretObj = secretsManager.Secret.fromSecretNameV2(
       this,
       'icav2AccessTokenSecretObj',
       props.icav2AccessTokenSecretName
+    );
+
+    /*
+    BSSH SSM Parameters
+    */
+    const bsshOutputFastqCopyUriSsmParameterObj = ssm.StringParameter.fromStringParameterName(
+      this,
+      'bsshOutputFastqCopyUriPrefixSsmParameterObj',
+      props.bsshOutputFastqCopyUriSsmParameterName
+    );
+
+    /*
+    PierianDx SSM Parameters
+    */
+    const pieriandxProjectInfoSsmParameterObj = ssm.StringParameter.fromStringParameterName(
+      this,
+      'pieriandxProjectInfoSsmParameterObj',
+      props.pieriandxProjectInfoSsmParameterPath
+    );
+
+    /*
+    PierianDx External Functions
+    */
+    const redcapLambdaObj = lambda.Function.fromFunctionName(
+      this,
+      'redcapLambdaObj',
+      props.redcapLambdaFunctionName
     );
 
     /*
@@ -329,6 +388,7 @@ export class GlueStack extends cdk.Stack {
     new GlueConstruct(this, 'stacky_glue', {
       /* Event stuff */
       eventBusObj: eventBusObj,
+
       /* Tables */
       workflowManagerTableObj: workflowManagerTableObj,
       inputMakerTableObj: inputMakerTableObj,
@@ -339,14 +399,25 @@ export class GlueStack extends cdk.Stack {
       wtsGlueTableObj: wtsGlueTableObj,
       umccriseGlueTableObj: umccriseGlueTableObj,
       rnasumGlueTableObj: rnasumGlueTableObj,
+      pieriandxGlueTableObj: pieriandxGlueTableObj,
+
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: icav2ProjectIdSsmParameterObj,
-      bsshOutputFastqCopyOutputUriSsmParameterObj: bsshOutputFastqCopyUriSsmParameterObj,
       analysisOutputUriSsmParameterObj: analysisOutputUriSsmParameterObj,
       analysisCacheUriSsmParameterObj: analysisCacheUriSsmParameterObj,
       analysisLogsUriSsmParameterObj: analysisLogsUriSsmParameterObj,
+
       /* Secrets */
       icav2AccessTokenSecretObj: icav2AccessTokenSecretObj,
+
+      /* BSSH SSM Parameters */
+      bsshOutputFastqCopyOutputUriSsmParameterObj: bsshOutputFastqCopyUriSsmParameterObj,
+
+      /* PierianDx SSM Parameters */
+      pieriandxProjectInfoSsmParameterObj: pieriandxProjectInfoSsmParameterObj,
+
+      /* PierianDx External Functions */
+      redcapLambdaObj: redcapLambdaObj,
     });
   }
 }

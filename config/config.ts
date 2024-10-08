@@ -48,6 +48,10 @@ import {
   getRnasumIcav2PipelineTableStackProps,
 } from './stacks/rnasumPipelineManager';
 import { getFmAnnotatorProps } from './stacks/fmAnnotator';
+import {
+  getPierianDxPipelineManagerStackProps,
+  getPierianDxPipelineTableStackProps,
+} from './stacks/pierianDxPipelineManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -83,6 +87,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       rnasumIcav2PipelineTableStackProps: getRnasumIcav2PipelineTableStackProps(),
       BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
       stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
+      pierianDxPipelineTableStackProps: getPierianDxPipelineTableStackProps(),
     },
     statelessConfig: {
       metadataManagerStackProps: getMetadataManagerStackProps(stage),
@@ -98,6 +103,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       wtsIcav2PipelineManagerStackProps: getWtsIcav2PipelineManagerStackProps(stage),
       umccriseIcav2PipelineManagerStackProps: getUmccriseIcav2PipelineManagerStackProps(stage),
       rnasumIcav2PipelineManagerStackProps: getRnasumIcav2PipelineManagerStackProps(stage),
+      pieriandxPipelineManagerStackProps: getPierianDxPipelineManagerStackProps(stage),
       eventSchemaStackProps: getEventSchemaStackProps(),
       dataSchemaStackProps: getDataSchemaStackProps(),
       bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),

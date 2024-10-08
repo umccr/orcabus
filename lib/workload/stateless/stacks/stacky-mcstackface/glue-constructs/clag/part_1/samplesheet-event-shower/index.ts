@@ -20,7 +20,7 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
     prefix: 'clag-new-ss-event-shower',
     // Tables
     tablePartition: {
-      samplesheetByInstrumentRun: 'samplesheet_by_instrument_run',
+      instrumentRun: 'instrument_run',
       subject: 'subject',
       library: 'library',
       project: 'project',
@@ -149,8 +149,8 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
         __table_name__: props.tableObj.tableName,
         __subject_table_partition_name__: this.newSamplesheetEventShowerMap.tablePartition.subject,
         __library_table_partition_name__: this.newSamplesheetEventShowerMap.tablePartition.library,
-        __samplesheet_table_partition_name__:
-          this.newSamplesheetEventShowerMap.tablePartition.samplesheetByInstrumentRun,
+        __instrument_run_table_partition_name__:
+          this.newSamplesheetEventShowerMap.tablePartition.instrumentRun,
         __project_table_partition_name__: this.newSamplesheetEventShowerMap.tablePartition.project,
 
         // Lambdas

@@ -36,8 +36,10 @@ interface Cttsov2Icav2PipelineManagerConstructProps {
   /* Extras */
   // Lambdas
   // SFN Input Lambdas
-  uploadSamplesheetToCacheDirLambdaObj: PythonFunction; // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir_py'
-  generateCopyManifestDictLambdaObj: PythonFunction; // __dirname + '/../../../lambdas/generate_copy_manifest_dict_py'
+  uploadSamplesheetToCacheDirLambdaObj: PythonFunction;
+  generateCopyManifestDictLambdaObj: PythonFunction;
+  checkNumRunningSfnsLambdaObj: PythonFunction;
+  getRandomNumberLambdaObj: PythonFunction;
   // SFN Output lambdas
   deleteCacheUriLambdaObj: PythonFunction;
   setOutputJsonLambdaObj: PythonFunction;
@@ -60,7 +62,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     );
 
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
-    const configure_inputs_sfn = new sfn.StateMachine(
+    const configureInputsSfn = new sfn.StateMachine(
       this,
       'cttso_v2_launch_step_functions_state_machine',
       {
@@ -74,6 +76,10 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
             props.generateCopyManifestDictLambdaObj.currentVersion.functionArn,
           __upload_samplesheet_to_cache_dir__:
             props.uploadSamplesheetToCacheDirLambdaObj.currentVersion.functionArn,
+          __get_variable_number_of_seconds_lambda_function_arn__:
+            props.getRandomNumberLambdaObj.currentVersion.functionArn,
+          __check_number_of_copy_jobs_running_lambda_function_arn__:
+            props.checkNumRunningSfnsLambdaObj.currentVersion.functionArn,
           /* Subfunction state machines */
           __copy_icav2_files_state_machine_arn__:
             props.icav2CopyFilesStateMachineObj.stateMachineArn,
@@ -84,18 +90,21 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     );
 
     // Grant lambda invoke permissions to the state machine
-    [props.generateCopyManifestDictLambdaObj, props.uploadSamplesheetToCacheDirLambdaObj].forEach(
-      (lambda_obj) => {
-        lambda_obj.currentVersion.grantInvoke(<iam.IRole>configure_inputs_sfn.role);
-      }
-    );
+    [
+      props.generateCopyManifestDictLambdaObj,
+      props.uploadSamplesheetToCacheDirLambdaObj,
+      props.getRandomNumberLambdaObj,
+      props.checkNumRunningSfnsLambdaObj,
+    ].forEach((lambda_obj) => {
+      lambda_obj.currentVersion.grantInvoke(configureInputsSfn);
+    });
 
     // Allow state machine to read/write to dynamodb table
-    props.dynamodbTableObj.grantReadWriteData(configure_inputs_sfn.role);
+    props.dynamodbTableObj.grantReadWriteData(configureInputsSfn);
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
-    configure_inputs_sfn.addToRolePolicy(
+    configureInputsSfn.addToRolePolicy(
       new iam.PolicyStatement({
         resources: [
           `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
@@ -105,14 +114,40 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     );
 
     // Add state machine execution permissions to stateMachine role
-    props.icav2CopyFilesStateMachineObj.grantStartExecution(configure_inputs_sfn.role);
+    props.icav2CopyFilesStateMachineObj.grantStartExecution(configureInputsSfn);
+
+    // Update checkNumRunningSfnsLambdaObj env var to include the state machine arn of
+    // the icav2 copy files sfn
+    props.checkNumRunningSfnsLambdaObj.addEnvironment(
+      'SFN_ARN',
+      props.icav2CopyFilesStateMachineObj.stateMachineArn
+    );
+
+    // Allow the check num running sfns lambda to list the number of running icav2 copy file sfns running
+    /*
+    // FIXME: this is the ideal setup but not approved by cdk nag, since we
+    // FIXME: are granting the lambda permissions to all versions of the step function
+    props.icav2CopyFilesStateMachineObj.grantRead(
+      props.checkNumRunningSfnsLambdaObj.currentVersion
+    );
+    */
+    props.checkNumRunningSfnsLambdaObj.currentVersion.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: [
+          'states:ListActivities',
+          'states:DescribeStateMachine',
+          'states:DescribeActivity',
+        ],
+        resources: [props.icav2CopyFilesStateMachineObj.stateMachineArn],
+      })
+    );
 
     /*
         Part 2: Configure the lambdas and outputs step function
         Quite a bit more complicated than regular ICAv2 workflow setup since we need to
         1. Generate the outputs json from a nextflow pipeline (which doesn't have a json outputs endpoint)
         2. Delete the cache fastqs we generated in the configure inputs json step function
-        */
+    */
 
     // Add icav2 secrets permissions to lambdas
     [
@@ -122,10 +157,10 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       props.compressVcfLambdaObj,
       props.checkSuccessSampleLambdaObj,
     ].forEach((lambda_obj) => {
-      props.icav2AccessTokenSecretObj.grantRead(<iam.Role>lambda_obj.currentVersion.role);
+      props.icav2AccessTokenSecretObj.grantRead(lambda_obj.currentVersion);
     });
 
-    const configure_outputs_sfn = new sfn.StateMachine(this, 'sfn_configure_outputs_json', {
+    const configureOutputsSfn = new sfn.StateMachine(this, 'sfn_configure_outputs_json', {
       stateMachineName: `${props.stateMachinePrefix}-configure-outputs-json`,
       // defintiontemplate
       definitionBody: DefinitionBody.fromFile(props.generateOutputJsonSfnTemplatePath),
@@ -147,7 +182,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     });
 
     // Allow the state machine to read/write to dynamodb table
-    props.dynamodbTableObj.grantReadWriteData(configure_outputs_sfn.role);
+    props.dynamodbTableObj.grantReadWriteData(configureOutputsSfn);
 
     // Allow the state machine to invoke the lambdas
     [
@@ -157,7 +192,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       props.compressVcfLambdaObj,
       props.checkSuccessSampleLambdaObj,
     ].forEach((lambda_obj) => {
-      lambda_obj.currentVersion.grantInvoke(<iam.IRole>configure_outputs_sfn.role);
+      lambda_obj.currentVersion.grantInvoke(configureOutputsSfn);
     });
 
     /* Add ICAv2 WfmworkflowRunStateChange wrapper around launch state machine */
@@ -179,7 +214,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       internalEventSource: props.internalEventSource, // What we push back to the orcabus
       /* State machines to run (underneath) */
       /* The inputs generation statemachine */
-      generateInputsJsonSfn: configure_inputs_sfn,
+      generateInputsJsonSfn: configureInputsSfn,
       /* Internal workflowRunStateChange event details */
       workflowName: props.workflowType,
       workflowVersion: props.workflowVersion,
@@ -188,7 +223,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
 
     // Create statemachine for handling any state changes of the pipeline
     // Generate state machine for handling the external ICAv2 event
-    const handle_external_icav2_event_sfn = new Icav2AnalysisEventHandlerConstruct(
+    const handleExternalIcav2EventSfn = new Icav2AnalysisEventHandlerConstruct(
       this,
       'handle_interop_qc_ready_event',
       {
@@ -198,7 +233,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
         eventBusName: props.eventBusObj.eventBusName,
         icaEventPipeName: props.icaEventPipeName,
         internalEventSource: props.internalEventSource,
-        generateOutputsJsonSfn: configure_outputs_sfn,
+        generateOutputsJsonSfn: configureOutputsSfn,
         workflowName: props.workflowType,
         workflowVersion: props.workflowVersion,
         serviceVersion: props.serviceVersion,
