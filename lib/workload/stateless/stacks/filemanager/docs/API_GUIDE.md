@@ -139,6 +139,30 @@ curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "attributes[portal
 "https://file.dev.umccr.org/api/v1/s3" | jq
 ```
 
+## Multiple keys
+
+The API supports querying using multiple keys with the same name. This represents an `or` condition in the SQL query, where
+records are fetched if any of the keys match. For example, the following finds records where the bucket is either `bucket1`
+or `bucket2`:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3?bucket[]=bucket1&bucket[]=bucket2" | jq
+```
+
+Multiple keys are also supported on attributes. For example, the following finds records where the `portalRunId` is
+either `20240521aecb782` or `20240521aecb783`:
+ 
+```sh
+curl --get -H "Authorization: Bearer $TOKEN" \
+--data-urlencode "attributes[portalRunId][]=20240521aecb782" \
+--data-urlencode "attributes[portalRunId][]=20240521aecb783" \
+"https://file.dev.umccr.org/api/v1/s3" | jq
+```
+
+Note that the extra `[]` is required in the query parameters to specify multiple keys with the same name. Specifying
+multiple of the same key without `[]` results in an error. It is also an error to specify some keys with `[]` and some
+without for keys with the same name.
+
 ## Updating records
 
 As part of allowing filemanager to link and query on attributes, attributes can be updated using PATCH requests.
@@ -202,7 +226,7 @@ curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/pre
 There are some missing features in the query API which are planned, namely:
 
 * There is no way to compare values with `>`, `>=`, `<`, `<=`.
-* There is no way to express `and` or `or` conditions in the API.
+* There is no way to express `and` or `or` conditions in the API (except for multiple keys representing `or` conditions).
 
 There are also some feature missing for attribute linking. For example, there is no way
 to capture matching wildcard groups which can later be used in the JSON patch body.

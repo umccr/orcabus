@@ -580,7 +580,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_multiple_filters(pool: PgPool) {
+    async fn list_s3_multiple_and_filters(pool: PgPool) {
         let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -591,6 +591,23 @@ pub(crate) mod tests {
         let result: ListResponse<S3> = response_from_get(state, "/s3?bucket=1&key=2").await;
         assert_eq!(result.results(), vec![entries[2].clone()]);
         assert_eq!(result.pagination().count, 1);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_multiple_or_filters(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await
+            .s3_objects;
+
+        let result: ListResponse<S3> = response_from_get(state, "/s3?key[]=3&key[]=4").await;
+        assert_eq!(
+            result.results(),
+            vec![entries[3].clone(), entries[4].clone()]
+        );
+        assert_eq!(result.pagination().count, 2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -660,9 +677,28 @@ pub(crate) mod tests {
         assert_eq!(result.pagination().count, 0);
 
         let result: ListResponse<S3> =
-            response_from_get(state, "/s3?attributes[attributeId]=1&key=1").await;
+            response_from_get(state.clone(), "/s3?attributes[attributeId]=1&key=1").await;
         assert_eq!(result.results(), vec![entries[1].clone()]);
         assert_eq!(result.pagination().count, 1);
+
+        let result: ListResponse<S3> = response_from_get(
+            state.clone(),
+            "/s3?attributes[attributeId]=1&attributes[nestedId][attributeId]=1",
+        )
+        .await;
+        assert_eq!(result.results(), vec![entries[1].clone()]);
+        assert_eq!(result.pagination().count, 1);
+
+        let result: ListResponse<S3> = response_from_get(
+            state.clone(),
+            "/s3?attributes[attributeId][]=1&attributes[attributeId][]=2",
+        )
+        .await;
+        assert_eq!(
+            result.results(),
+            vec![entries[1].clone(), entries[2].clone()]
+        );
+        assert_eq!(result.pagination().count, 2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -869,6 +905,8 @@ pub(crate) mod tests {
             .await
             .unwrap()
             .to_vec();
+
+        println!("{}", String::from_utf8(bytes.clone()).unwrap());
 
         (status, from_slice::<T>(bytes.as_slice()).unwrap())
     }

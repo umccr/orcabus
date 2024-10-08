@@ -491,9 +491,9 @@ pub(crate) mod tests {
             .current_state()
             .filter_all(
                 S3ObjectsFilter {
-                    event_time: Some(WildcardEither::Wildcard(Wildcard::new(
+                    event_time: vec![WildcardEither::Wildcard(Wildcard::new(
                         "1970-01-0*".to_string(),
-                    ))),
+                    ))],
                     ..Default::default()
                 },
                 true,

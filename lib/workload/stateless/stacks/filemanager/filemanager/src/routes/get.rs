@@ -90,9 +90,9 @@ pub async fn presign_s3_by_id(
     let current = ListQueryBuilder::<_, s3_object::Entity>::new(&txn)
         .filter_all(
             S3ObjectsFilter {
-                bucket: Some(Wildcard::new(response.bucket.to_string())),
-                key: Some(Wildcard::new(response.key.to_string())),
-                version_id: Some(Wildcard::new(response.version_id.to_string())),
+                bucket: vec![Wildcard::new(response.bucket.to_string())],
+                key: vec![Wildcard::new(response.key.to_string())],
+                version_id: vec![Wildcard::new(response.version_id.to_string())],
                 ..Default::default()
             },
             true,
