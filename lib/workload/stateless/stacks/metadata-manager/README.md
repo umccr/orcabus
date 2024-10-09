@@ -104,22 +104,24 @@ In the near future, we might introduce different ways to load data into the appl
 loading data
 from the Google tracking sheet and mapping it to its respective model as follows.
 
-| Sheet Header      | Table        | Field Name         |
-|-------------------|--------------|--------------------|
-| SubjectID         | `Individual` | individual_id      |
-| ExternalSubjectID | `Subject`    | subject_id         |
-| SampleID          | `Sample`     | sample_id          |
-| ExternalSampleID  | `Sample`     | external_sample_id |
-| Source            | `Sample`     | source             |
-| LibraryID         | `Library`    | library_id         |
-| Phenotype         | `Library`    | phenotype          |
-| Workflow          | `Library`    | workflow           |
-| Quality           | `Library`    | quality            |
-| Type              | `Library`    | type               |
-| Coverage (X)      | `Library`    | coverage           |
-| Assay             | `Library`    | assay              |
-| ProjectName       | `Project`    | project_id         |
-| ProjectOwner      | `Contact`    | contact_id         |
+| Sheet Header       | Table        | Field Name         |
+|--------------------|--------------|--------------------|
+| *SubjectID         | `Individual` | individual_id      |
+| *ExternalSubjectID | `Subject`    | subject_id         |
+| *SampleID          | `Sample`     | sample_id          |
+| ExternalSampleID   | `Sample`     | external_sample_id |
+| Source             | `Sample`     | source             |
+| *LibraryID         | `Library`    | library_id         |
+| Phenotype          | `Library`    | phenotype          |
+| Workflow           | `Library`    | workflow           |
+| Quality            | `Library`    | quality            |
+| Type               | `Library`    | type               |
+| Coverage (X)       | `Library`    | coverage           |
+| Assay              | `Library`    | assay              |
+| *ProjectName       | `Project`    | project_id         |
+| *ProjectOwner      | `Contact`    | contact_id         |
+
+All asterisked (*) header are required fields to process a record.
 
 Some important notes of the sync:
 
@@ -144,12 +146,12 @@ The application also supports loading data from a custom CSV file. The CSV file 
 | Sheet Header         | Table        | Field Name         |
 |----------------------|--------------|--------------------|
 | Individual_id        | `Individual` | individual_id      |
-| individual_id_source | `Individual` | subject_id         |
-| subject_id           | `Subject`    | subject_id         |
+| individual_id_source | `Individual` | source             |
+| *subject_id          | `Subject`    | subject_id         |
 | sample_id            | `Sample`     | sample_id          |
 | external_sample_id   | `Sample`     | external_sample_id |
 | source               | `Sample`     | source             |
-| library_id           | `Library`    | library_id         |
+| *library_id          | `Library`    | library_id         |
 | phenotype            | `Library`    | phenotype          |
 | workflow             | `Library`    | workflow           |
 | quality              | `Library`    | quality            |
@@ -158,6 +160,8 @@ The application also supports loading data from a custom CSV file. The CSV file 
 | assay                | `Library`    | assay              |
 | project_name         | `Project`    | project_id         |
 | project_owner        | `Contact`    | contact_id         |
+
+All asterisked (*) header are required fields to process a record.
 
 The CSV file should be in a presigned URL format, where the loader will read and insert to the database.
 To trigger the loader please look at `./deploy/README.md` for more info.

@@ -3,6 +3,8 @@ import logging
 import pandas as pd
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from libumccr import libjson
+from libumccr.aws import libeb
 
 from app.models import Subject, Sample, Library, Project, Contact, Individual
 from app.models.library import Quality, LibraryType, Phenotype, WorkflowType, sanitize_library_coverage
@@ -17,12 +19,13 @@ logger.setLevel(logging.INFO)
 
 
 @transaction.atomic
-def load_metadata_csv(df: pd.DataFrame):
+def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True):
     """
     Persist metadata records from a pandas dataframe into the db. No record deletion is performed in this method.
 
     Args:
         df (pd.DataFrame): The source of truth for the metadata in this particular year
+        is_emit_eb_events: Emit event bridge events for update/create (only for library records for now)
 
     """
     logger.info(f"Start processing LabMetadata")
@@ -253,7 +256,13 @@ def load_metadata_csv(df: pd.DataFrame):
     # Only clean for the past 15 minutes as this is what the maximum lambda cutoff
     clean_model_history(minutes=15)
 
-    logger.warning(f"Invalid record: {invalid_data}")
+    if len(invalid_data) > 0:
+        logger.warning(f"Invalid record: {invalid_data}")
+
+    if len(event_bus_entries) > 0 and is_emit_eb_events:
+        logger.info(f'Dispatch event bridge entries: {libjson.dumps(event_bus_entries)}')
+        libeb.dispatch_events(event_bus_entries)
+
     logger.info(f"Processed LabMetadata: {json.dumps(stats)}")
     return stats
 
@@ -263,3 +272,18 @@ def download_csv_to_pandas(url: str) -> pd.DataFrame:
     Download csv file from a given url and return it as a pandas dataframe
     """
     return pd.read_csv(url)
+
+
+def drop_incomplete_csv_records(df: pd.DataFrame):
+    """
+    For custom csv, we are dropping records when found empty on any of these columns defined below.
+
+    CSV header: subject_id, library_id
+    """
+
+    # The fields are sanitized to camel_case in the sanitize_lab_metadata_df
+    df = df.drop(df[df.library_id.isnull()].index, errors='ignore')
+    df = df.drop(df[df.subject_id.isnull()].index, errors='ignore')
+
+    df = df.reset_index(drop=True)
+    return df
