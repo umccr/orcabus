@@ -70,6 +70,7 @@ services:
       # Container database address for running server inside a docker container.
       - DATABASE_URL=postgresql://orcabus:orcabus@db:5432/filemanager
       - RUST_LOG=debug
+      - RUST_BACKTRACE=1
       - FILEMANAGER_API_CORS_ALLOW_ORIGINS=${FILEMANAGER_API_CORS_ALLOW_ORIGINS:-http://localhost:3000}
       - FILEMANAGER_API_CORS_ALLOW_HEADERS=${FILEMANAGER_API_CORS_ALLOW_HEADERS:-accept,authorization,content-type,user-agent,x-csrftoken,x-requested-with,x-amz-security-token,x-amz-date,content-disposition}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-access_key_id}
@@ -84,7 +85,7 @@ services:
     depends_on:
       - db
     healthcheck:
-      test: "curl http://localhost:8000/api/v1/s3_objects/count"
+      test: "curl http://localhost:8000/api/v1/s3/count"
       start_period: 30s
       interval: 10s
       timeout: 2s
