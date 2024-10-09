@@ -3,19 +3,25 @@ services:
     build: database
     restart: always
     environment:
-      - POSTGRES_DB=filemanager
+      - POSTGRES_DB=${POSTGRES_DB:-filemanager}
       - POSTGRES_USER=filemanager
       - POSTGRES_PASSWORD=filemanager
       - PGPORT=4321
     ports:
       - "${FILEMANAGER_DATABASE_HOST}:${FILEMANAGER_DATABASE_PORT}:4321"
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d orcabus -U orcabus']
+      interval: 10s
+      timeout: 60s
+      retries: 5
+      start_period: 90s
   api:
     build:
       context: .
     environment:
       # Container database address for running server inside a docker container.
-      - DATABASE_URL=postgresql://filemanager:filemanager@postgres:4321/filemanager
-      - RUST_LOG=debug
+      - DATABASE_URL=${DATABASE_URL:-postgresql://filemanager:filemanager@postgres:4321/filemanager}
+      - RUST_LOG=trace
       - FILEMANAGER_API_CORS_ALLOW_ORIGINS=${FILEMANAGER_API_CORS_ALLOW_ORIGINS:-http://localhost:3000}
       - FILEMANAGER_API_CORS_ALLOW_HEADERS=${FILEMANAGER_API_CORS_ALLOW_HEADERS:-accept,authorization,content-type,user-agent,x-csrftoken,x-requested-with,x-amz-security-token,x-amz-date,content-disposition}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-access_key_id}
@@ -25,4 +31,11 @@ services:
     ports:
       - '${API_PORT}:8000'
     restart: always
-
+    depends_on:
+      - postgres
+    healthcheck:
+      test: "curl http://localhost:8000/api/v1/s3/count"
+      start_period: 30s
+      interval: 10s
+      timeout: 2s
+      retries: 5

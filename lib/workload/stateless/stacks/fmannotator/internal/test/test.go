@@ -5,21 +5,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/go-connections/nat"
 	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/testcontainers/testcontainers-go/modules/compose"
 	"github.com/umccr/orcabus/lib/workload/stateless/stacks/fmannotator/schema/orcabus_workflowmanager/workflowrunstatechange"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -33,63 +29,11 @@ type S3Object struct {
 	StorageClass sql.NullString `db:"storage_class"`
 }
 
-func setupService(t *testing.T, buildContext string, port nat.Port, wait wait.Strategy, env map[string]string) (string, nat.Port) {
-	ctx := context.Background()
-
-	args := make(map[string]*string)
-	for k, v := range env {
-		args[k] = &v
-	}
-
-	containerName := strings.ReplaceAll(strings.Trim(buildContext, "./"), "/", "_")
-	req := testcontainers.ContainerRequest{
-		FromDockerfile: testcontainers.FromDockerfile{
-			Context:       buildContext,
-			Repo:          containerName,
-			Tag:           containerName,
-			BuildArgs:     args,
-			KeepImage:     true,
-			PrintBuildLog: true,
-			BuildOptionsModifier: func(options *types.ImageBuildOptions) {
-				options.ExtraHosts = []string{"host.docker.internal:host-gateway"}
-			},
-		},
-		ExposedPorts: []string{port.Port()},
-		Env:          env,
-		WaitingFor:   wait,
-		Name:         containerName,
-		HostConfigModifier: func(config *container.HostConfig) {
-			config.ExtraHosts = []string{"host.docker.internal:host-gateway"}
-		},
-	}
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-		Reuse:            true,
-	})
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		require.NoError(t, container.Terminate(ctx))
-	})
-
-	ip, err := container.Host(ctx)
-	require.NoError(t, err)
-	port, err = container.MappedPort(ctx, port)
-	require.NoError(t, err)
-
-	fmt.Printf("setup `%v` at `%v:%v`\n", containerName, ip, port.Port())
-
-	return ip, port
-}
-
 func SetupFileManager(t *testing.T) *sql.DB {
-	// This has to be such a large timeout because FM needs to compile/build with access to a Postgres database. If
-	// the timeout is too low, before the FM compilation connects to the database, testcontainers will kill the postgres
-	// container as there are no connections to it.
-	// This is another good reason to remove the requirement to compile with a database, as most software doesn't
-	// expect this to be the case.
 	t.Setenv("TESTCONTAINERS_RYUK_CONNECTION_TIMEOUT", "10m")
 	t.Setenv("TESTCONTAINERS_RYUK_RECONNECTION_TIMEOUT", "5m")
+
+	ctx := context.Background()
 
 	// This works around an issue in test containers which requires the presence of a config.json file.
 	dir := t.TempDir()
@@ -97,31 +41,58 @@ func SetupFileManager(t *testing.T) *sql.DB {
 	require.NoError(t, err)
 	t.Setenv("DOCKER_CONFIG", dir)
 
-	// Database
 	testDatabaseName := fmt.Sprintf("filemanager_test_%v", strings.ReplaceAll(uuid.New().String(), "-", "_"))
-	databaseIp, port := setupService(t, "../filemanager/database", "4321", wait.ForLog("database system is ready to accept connections").
-		WithOccurrence(2),
-		map[string]string{
-			"POSTGRES_DB":       testDatabaseName,
-			"POSTGRES_USER":     "filemanager",
-			"POSTGRES_PASSWORD": "filemanager", // pragma: allowlist secret
-			"PGPORT":            "4321",
-		})
 
-	// API
-	intPort, err := strconv.Atoi(port.Port())
+	dockerCompose, err := compose.NewDockerComposeWith(compose.WithStackFiles("../filemanager/compose.yml"), compose.StackIdentifier("filemanager"))
+	stack := dockerCompose.WithEnv(map[string]string{
+		"POSTGRES_DB": testDatabaseName,
+		"API_PORT":    "8000",
+	})
 	require.NoError(t, err)
 
-	databaseFmt := "postgresql://filemanager:filemanager@%v:%v/%v?sslmode=disable" // pragma: allowlist secret
-	databaseUrl := fmt.Sprintf(databaseFmt, "host.docker.internal", intPort, testDatabaseName)
-	ip, port := setupService(t, "../filemanager", "8000", wait.ForHTTP("/api/v1/s3/count"),
-		map[string]string{
-			"DATABASE_URL": databaseUrl,
-		})
+	t.Cleanup(func() {
+		ctx := context.Background()
+		for _, service := range stack.Services() {
+			container, err := stack.ServiceContainer(ctx, service)
+			if err != nil {
+				t.Logf("failed to get container for service %q: %v", service, err)
+				continue
+			}
+			logs, err := container.Logs(ctx)
+			if err != nil {
+				t.Logf("failed to get logs for service %q: %v", service, err)
+				continue
+			}
+			buf, err := io.ReadAll(logs)
+			if err != nil {
+				t.Logf("failed to read logs for service %q: %v", service, err)
+				continue
+			}
+			t.Logf("[%s]\n%s", service, string(buf))
+		}
+
+		require.NoError(t, stack.Down(ctx))
+	})
+
+	require.NoError(t, stack.Up(ctx, compose.Wait(true)))
+
+	database, err := stack.ServiceContainer(ctx, "postgres")
+
+	require.NoError(t, err)
+	ip, err := database.Host(ctx)
+	require.NoError(t, err)
+	port, err := database.MappedPort(ctx, "4321")
+	require.NoError(t, err)
+	databaseEndpoint := fmt.Sprintf("postgresql://filemanager:filemanager@%v:%v/%v?sslmode=disable", ip, port.Port(), testDatabaseName)
+
+	api, err := stack.ServiceContainer(ctx, "api")
+	require.NoError(t, err)
+	ip, err = api.Host(ctx)
+	require.NoError(t, err)
+	port, err = api.MappedPort(ctx, "8000")
+	require.NoError(t, err)
 
 	fmEndpoint := fmt.Sprintf("http://%v:%v", ip, port.Port())
-	databaseEndpoint := fmt.Sprintf(databaseFmt, databaseIp, intPort, testDatabaseName)
-
 	t.Setenv("FMANNOTATOR_FILE_MANAGER_ENDPOINT", fmEndpoint)
 	t.Setenv("FMANNOTATOR_FILE_MANAGER_SECRET_NAME", "secret")
 
