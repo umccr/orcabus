@@ -40,11 +40,14 @@ To query in a local terminal
 gsheet_sync_lambda_arn=$(aws ssm get-parameter --name '/orcabus/metadata-manager/sync-gsheet-lambda-arn' --with-decryption | jq -r .Parameter.Value)
 ```
 
-The lambda handler will accept a single year from which sheet to run from the GSheet workbook. If no year is specified, it will run the current year.
+The lambda handler accepts a json with two parameters: 
+- `year` - a single year from which to run the sheet from the GSheet workbook. Default is the current year.
+- `is_emit_eb_events` - determines whether or not to emit events. Default is `true`.
 
 ```json
 {
-  "year": "2024"
+  "year": "2024",
+  "is_emit_eb_events": false
 }
 ```
 
@@ -72,11 +75,14 @@ To query in a local terminal
 load_custom_csv_lambda_arn=$(aws ssm get-parameter --name '/orcabus/metadata-manager/load-custom-csv-lambda-arn' --with-decryption | jq -r .Parameter.Value)
 ```
 
-The lambda handler will accept a json which only accepts a single key `url` which is the presigned url of the csv file.
+The lambda handler accepts a json with two parameters: 
+- `url` - a presigned url of the csv file
+- `is_emit_eb_events` - determines whether or not to emit events. Default is `true`.
 
 ```json
 {
-  "url": "https://example.com/csv"
+  "url": "https://example.com/csv",
+  "is_emit_eb_events": false
 }
 ```
 

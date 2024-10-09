@@ -26,13 +26,14 @@ SSM_NAME_GDRIVE_ACCOUNT = os.getenv('SSM_NAME_GDRIVE_ACCOUNT', '')
 
 
 @transaction.atomic
-def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
+def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: bool = True):
     """
     Persist metadata records from a pandas dataframe into the db
 
     Args:
         df (pd.DataFrame): The source of truth for the metadata in this particular year
         sheet_year (type): The year for the metadata df supplied
+        is_emit_eb_events: Emit event bridge events for update/create (only for library records for now)
 
     """
     logger.info(f"Start processing LabMetadata")
@@ -268,7 +269,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str):
     if len(invalid_data) > 0:
         logger.warning(f"Invalid record: {invalid_data}")
 
-    if len(event_bus_entries) > 0:
+    if len(event_bus_entries) > 0 and is_emit_eb_events:
         logger.info(f'Dispatch event bridge entries: {libjson.dumps(event_bus_entries)}')
         libeb.dispatch_events(event_bus_entries)
 
@@ -293,3 +294,21 @@ def download_tracking_sheet(year: str) -> pd.DataFrame:
     df: pd.DataFrame = pd.concat(frames)
     return df
 
+
+def drop_incomplete_tracking_sheet_records(df: pd.DataFrame):
+    """
+    For loading from the tracking sheet, we are dropping record that is found empty on any of these fields defined below
+
+    Tracking sheet header: ExternalSubjectID, SubjectID, SampleID, LibraryID, ProjectOwner, ProjectName
+    """
+
+    # The fields are sanitized to camel_case in the sanitize_lab_metadata_df
+    df = df.drop(df[df.library_id.isnull()].index, errors='ignore')
+    df = df.drop(df[df.external_subject_id.isnull()].index, errors='ignore')
+    df = df.drop(df[df.subject_id.isnull()].index, errors='ignore')
+    df = df.drop(df[df.sample_id.isnull()].index, errors='ignore')
+    df = df.drop(df[df.project_owner.isnull()].index, errors='ignore')
+    df = df.drop(df[df.project_name.isnull()].index, errors='ignore')
+
+    df = df.reset_index(drop=True)
+    return df
