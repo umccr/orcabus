@@ -7,6 +7,36 @@ from workflow_manager.models import Analysis, AnalysisRun, AnalysisContext, Libr
 # TODO: get list of libraries (+ required metadata) from list of library IDs
 # TODO: switch pairing based on subject to pairing based on Case (creating a case is someone else's responsibility)
 
+def handler(event, context):
+    """
+    Given a set of libraries (e.g. sequenced together) try to assign analysis.
+
+    - retrieve metadata for libraries
+    - assign analysis based on preconfigured rules
+        - QC for (all?) FASTQ pairs
+        - cttso for single FASTQ pairs that are: ctTSO, DNA, tumor
+        - wgts for the same subject
+            - wgs: tumor / normal DNA libraries (possibly topups)
+            - wts: tumor RNA
+            - wgts: results of wgs + wts
+
+
+
+    Define separate mechanism to handle analysis that are outside the scope of a "Case".
+
+
+    """
+    pass
+
+
+def get_library_details(library_ids: List[str]):
+    """
+    Retrieve metadata for each library that is needed to make decisions on how to analyse it.
+    NOTE: the local library model could be extended to store this data
+    """
+    pass
+
+
 def assign_analysis(libraries: List[dict]) -> List[AnalysisRun]:
     analysis_runs: List[AnalysisRun] = []
 
