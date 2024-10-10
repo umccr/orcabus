@@ -22,3 +22,4 @@ serverless-wsgi==3.0.4
 # for sequencerunstatechange package
 six==1.16.0
 regex==2024.7.24
+ulid-py==1.1.0

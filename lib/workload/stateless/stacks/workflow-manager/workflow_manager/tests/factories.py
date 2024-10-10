@@ -19,7 +19,7 @@ class TestConstant(Enum):
     },
     library = {
         "library_id": "L000001",
-        "orcabus_id": "lib.01J5M2J44HFJ9424G7074NKTGN"
+        "orcabus_id": "01J5M2J44HFJ9424G7074NKTGN"
     }
 
 
@@ -31,7 +31,6 @@ class WorkflowFactory(factory.django.DjangoModelFactory):
     workflow_version = "1.0"
     execution_engine_pipeline_id = str(uuid.uuid4())
     execution_engine = "ICAv2"
-    approval_state = "NATA"
 
 
 class PayloadFactory(factory.django.DjangoModelFactory):

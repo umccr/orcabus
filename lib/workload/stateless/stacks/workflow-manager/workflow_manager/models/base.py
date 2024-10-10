@@ -1,9 +1,11 @@
 import logging
 import operator
+import ulid
 from functools import reduce
 from typing import List
 
 from django.core.exceptions import FieldError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import Q, ManyToManyField, ForeignKey, ForeignObject, OneToOneField, ForeignObjectRel, \
     ManyToOneRel, ManyToManyRel, OneToOneRel, QuerySet
@@ -13,17 +15,30 @@ from workflow_manager.pagination import PaginationConstant
 
 logger = logging.getLogger(__name__)
 
+orcabus_id_validator = RegexValidator(
+                regex=r'^[\w]{26}$',
+                message='ULID is expected to be 26 characters long',
+                code='invalid_orcabus_id'
+            )
 
 class OrcaBusBaseManager(models.Manager):
-    def get_by_keyword(self, **kwargs) -> QuerySet:
-        qs: QuerySet = super().get_queryset()
+
+    def get_by_keyword(self, qs=None, **kwargs) -> QuerySet:
+        if qs is None:
+            qs = super().get_queryset()
         return self.get_model_fields_query(qs, **kwargs)
 
     @staticmethod
     def reduce_multi_values_qor(key: str, values: List[str]):
-        if isinstance(values, (str, int, float,)):
+        if not isinstance(
+                values,
+                list,
+        ):
             values = [values]
-        return reduce(operator.or_, (Q(**{"%s__iexact" % key: value}) for value in values))
+        return reduce(
+            operator.or_, (Q(**{"%s__iexact" % key: value})
+                           for value in values)
+        )
 
     def get_model_fields_query(self, qs: QuerySet, **kwargs) -> QuerySet:
 
@@ -31,14 +46,16 @@ class OrcaBusBaseManager(models.Manager):
             for param in params:
                 kwargs.pop(param) if param in kwargs.keys() else None
 
-        exclude_params([
-            api_settings.SEARCH_PARAM,
-            api_settings.ORDERING_PARAM,
-            PaginationConstant.PAGE,
-            PaginationConstant.ROWS_PER_PAGE,
-            "sortCol",
-            "sortAsc",
-        ])
+        exclude_params(
+            [
+                api_settings.SEARCH_PARAM,
+                api_settings.ORDERING_PARAM,
+                PaginationConstant.PAGE,
+                PaginationConstant.ROWS_PER_PAGE,
+                "sortCol",
+                "sortAsc",
+            ]
+        )
 
         query_string = None
 
@@ -62,6 +79,22 @@ class OrcaBusBaseManager(models.Manager):
 class OrcaBusBaseModel(models.Model):
     class Meta:
         abstract = True
+
+    orcabus_id = models.CharField(
+        primary_key=True,
+        unique=True,
+        editable=False,
+        blank=False,
+        null=False,
+        validators=[orcabus_id_validator]
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.orcabus_id:
+            self.orcabus_id = ulid.new().str
+        self.full_clean()  # make sure we are validating
+        return super(OrcaBusBaseModel, self).save(*args, **kwargs)
+
 
     @classmethod
     def get_fields(cls):

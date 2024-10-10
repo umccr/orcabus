@@ -65,7 +65,6 @@ def handler(event, context):
             workflow_version=srv_wrsc.workflowVersion,
             execution_engine="Unknown",
             execution_engine_pipeline_id="Unknown",
-            approval_state="RESEARCH",
         )
         logger.info("Persisting Workflow record.")
         workflow.save()
