@@ -3,6 +3,7 @@ import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import * as fn from './function';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { DatabaseProps } from './function';
+import { FILEMANAGER_SERVICE_NAME } from '../../stack';
 
 /**
  * Props for controlling access to buckets.
@@ -35,7 +36,14 @@ export type IngestFunctionProps = fn.FunctionPropsConfigurable & DatabaseProps &
  */
 export class IngestFunction extends fn.Function {
   constructor(scope: Construct, id: string, props: IngestFunctionProps) {
-    super(scope, id, { package: 'filemanager-ingest-lambda', ...props });
+    super(scope, id, {
+      package: 'filemanager-ingest-lambda',
+      environment: {
+        FILEMANAGER_INGESTER_TAG_NAME: 'umccr-org:OrcaBusFileManagerIngestId',
+        ...props.environment,
+      },
+      ...props,
+    });
 
     this.addAwsManagedPolicy('service-role/AWSLambdaSQSQueueExecutionRole');
 
@@ -43,6 +51,9 @@ export class IngestFunction extends fn.Function {
       const eventSource = new SqsEventSource(source);
       this.function.addEventSource(eventSource);
     });
-    this.addPoliciesForBuckets(props.buckets);
+    this.addPoliciesForBuckets(props.buckets, [
+      ...fn.Function.getObjectActions(),
+      ...fn.Function.objectTaggingActions(),
+    ]);
   }
 }

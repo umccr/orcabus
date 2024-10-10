@@ -39,7 +39,7 @@ pub async fn receive_and_ingest<'a>(
         .with_s3_client(s3_client)
         .with_sqs_client(sqs_client)
         .set_sqs_url(sqs_url)
-        .build_receive(env_config)
+        .build_receive(env_config, database_client)
         .await?
         .collect()
         .await?
@@ -74,7 +74,7 @@ pub async fn ingest_event(
 
     let events = CollecterBuilder::default()
         .with_s3_client(s3_client)
-        .build(events, env_config)
+        .build(events, env_config, &database_client)
         .await
         .collect()
         .await?
@@ -211,13 +211,14 @@ pub(crate) mod tests {
     use sqlx::postgres::PgRow;
     use sqlx::PgPool;
 
+    use super::*;
     use crate::database::aws::ingester::tests::{
         assert_row, expected_message, fetch_results, remove_version_ids, replace_sequencers,
         test_events, test_ingester,
     };
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::collecter::tests::{
-        expected_head_object, set_s3_client_expectations, set_sqs_client_expectations,
+        set_s3_client_expectations, set_sqs_client_expectations,
     };
     use crate::events::aws::inventory::tests::{
         csv_manifest_from_key_expectations, EXPECTED_LAST_MODIFIED_ONE,
@@ -233,8 +234,6 @@ pub(crate) mod tests {
     };
     use crate::events::aws::FlatS3EventMessage;
     use crate::events::EventSourceType::S3;
-
-    use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_receive_and_ingest(pool: PgPool) {
@@ -252,7 +251,7 @@ pub(crate) mod tests {
     async fn test_ingest_event(pool: PgPool) {
         let mut s3_client = S3Client::default();
 
-        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
+        set_s3_client_expectations(&mut s3_client);
 
         let event = SqsEvent {
             records: vec![SqsMessage {
@@ -376,7 +375,7 @@ pub(crate) mod tests {
         let mut s3_client = S3Client::default();
 
         set_sqs_client_expectations(&mut sqs_client);
-        set_s3_client_expectations(&mut s3_client, vec![|| Ok(expected_head_object())]);
+        set_s3_client_expectations(&mut s3_client);
 
         f(sqs_client, s3_client).await;
 
@@ -528,7 +527,7 @@ pub(crate) mod tests {
         assert_row(row, message, Some("".to_string()), None);
     }
 
-    async fn s3_object_results(pool: &PgPool) -> Vec<PgRow> {
+    pub(crate) async fn s3_object_results(pool: &PgPool) -> Vec<PgRow> {
         sqlx::query("select * from s3_object order by sequencer, key")
             .fetch_all(pool)
             .await

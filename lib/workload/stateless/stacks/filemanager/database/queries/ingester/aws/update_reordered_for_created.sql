@@ -18,7 +18,9 @@ with input as (
         $10::text[],
         $11::text[],
         $12::boolean[],
-        $13::event_type[]
+        $13::event_type[],
+        $14::uuid[],
+        $15::jsonb[]
     ) as input (
         s3_object_id,
         bucket,
@@ -32,7 +34,9 @@ with input as (
         version_id,
         created_sequencer,
         is_delete_marker,
-        event_type
+        event_type,
+        ingest_id,
+        attributes
     )
 ),
 -- Then, select the objects that need to be updated.
@@ -51,7 +55,8 @@ current_objects as (
         input.e_tag as input_e_tag,
         input.storage_class as input_storage_class,
         input.is_delete_marker as input_is_delete_marker,
-        input.event_type as input_event_type
+        input.event_type as input_event_type,
+        input.ingest_id as input_ingest_id
     from s3_object
     -- Grab the relevant values to update with.
     join input on
@@ -100,6 +105,7 @@ update as (
         is_delete_marker = objects_to_update.input_is_delete_marker,
         storage_class = objects_to_update.input_storage_class,
         event_type = objects_to_update.input_event_type,
+        ingest_id = objects_to_update.input_ingest_id,
         number_reordered = s3_object.number_reordered +
             -- Note the asymmetry between this and the reorder for deleted query.
             case when objects_to_update.deleted_sequencer is not null or objects_to_update.sequencer is not null then
@@ -127,6 +133,8 @@ select
     number_duplicate_events,
     size,
     is_delete_marker,
+    ingest_id,
+    attributes,
     -- This is used to simplify re-constructing the FlatS3EventMessages in the Lambda. I.e. this update detected an
     -- out of order created event, so return a created event back.
     'Created'::event_type as "event_type"

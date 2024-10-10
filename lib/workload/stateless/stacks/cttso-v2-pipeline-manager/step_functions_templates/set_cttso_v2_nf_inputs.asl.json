@@ -104,13 +104,85 @@
                   "BackoffRate": 2
                 }
               ],
-              "Next": "Copy Fastq Files to Cache Directory",
+              "Next": "Get Variable number of seconds",
               "Comment": "Generate a copy manifest object, ready to parse into the icav2 copy batch utility step function\n\nWe expect the following inputs:\n\n* cache_path\n* project_id\n* sample_id\n* fastq_list_rows\n\nAnd we expect the following outputs:\n\n* manifest",
               "ResultSelector": {
                 "dest_uri.$": "$.Payload.dest_uri",
                 "source_uris.$": "$.Payload.source_uris"
               },
               "ResultPath": "$.generate_copy_manifest_dict_step"
+            },
+            "Get Variable number of seconds": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__get_variable_number_of_seconds_lambda_function_arn__}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultSelector": {
+                "num_seconds.$": "$.Payload.random_number"
+              },
+              "ResultPath": "$.get_variable_seconds_step",
+              "Next": "Wait a variable amount of time"
+            },
+            "Wait a variable amount of time": {
+              "Type": "Wait",
+              "SecondsPath": "$.get_variable_seconds_step.num_seconds",
+              "Next": "Check Running Copy Fastq Job Number"
+            },
+            "Check Running Copy Fastq Job Number": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__check_number_of_copy_jobs_running_lambda_function_arn__}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultSelector": {
+                "run_copy_job_step_bool.$": "$.Payload.run_copy_job_step_bool"
+              },
+              "ResultPath": "$.run_copy_job_step",
+              "Next": "Allowed to run"
+            },
+            "Allowed to run": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.run_copy_job_step.run_copy_job_step_bool",
+                  "BooleanEquals": false,
+                  "Next": "Wait A Minute",
+                  "Comment": "Too Many jobs running already"
+                }
+              ],
+              "Default": "Copy Fastq Files to Cache Directory"
+            },
+            "Wait A Minute": {
+              "Type": "Wait",
+              "Seconds": 60,
+              "Next": "Check Running Copy Fastq Job Number"
             },
             "Copy Fastq Files to Cache Directory": {
               "Type": "Task",

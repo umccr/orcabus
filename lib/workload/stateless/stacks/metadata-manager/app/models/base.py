@@ -20,16 +20,15 @@ from django.db.models import (
     QuerySet,
 )
 from rest_framework.settings import api_settings
-from simple_history.models import HistoricalRecords
-
 from app.pagination import PaginationConstant
 
 logger = logging.getLogger(__name__)
 
 
 class BaseManager(models.Manager):
-    def get_by_keyword(self, **kwargs) -> QuerySet:
-        qs: QuerySet = super().get_queryset()
+    def get_by_keyword(self, qs=None, **kwargs) -> QuerySet:
+        if qs is None:
+            qs = super().get_queryset()
         return self.get_model_fields_query(qs, **kwargs)
 
     @staticmethod
@@ -119,15 +118,18 @@ class BaseModel(models.Model):
         null=False,
         validators=[
             RegexValidator(
-                regex=r'^[\w]{3}\.[\w]{26}$',
-                message='orcabus_id must start with a 3-character prefix, followed by a dot separator and a ULID',
+                regex=r'[\w]{26}$',
+                message='ULID is expected to be 26 characters long',
                 code='invalid_orcabus_id'
             )]
 
     )
 
     def save(self, *args, **kwargs):
+        if not self.orcabus_id:
+            self.orcabus_id = ulid.new().str
         self.full_clean()
+
         return super(BaseModel, self).save(*args, **kwargs)
 
     @classmethod

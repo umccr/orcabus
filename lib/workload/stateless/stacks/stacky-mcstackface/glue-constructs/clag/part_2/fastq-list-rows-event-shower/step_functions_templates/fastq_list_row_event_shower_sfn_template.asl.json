@@ -78,20 +78,20 @@
                 "TableName": "${__table_name__}",
                 "Key": {
                   "id.$": "$.inputs.payload.data.outputs.instrumentRunId",
-                  "id_type": "${__samplesheet_table_partition_name__}"
+                  "id_type": "${__instrument_run_table_partition_name__}"
                 }
               },
               "ResultSelector": {
-                "library_ids.$": "$.Item.library_ids_set.SS"
+                "library_orcabus_ids.$": "$.Item.library_set.SS"
               },
               "ResultPath": "$.get_libraries_step",
               "Next": "Get Library Objects Map"
             },
             "Get Library Objects Map": {
               "Type": "Map",
-              "ItemsPath": "$.get_libraries_step.library_ids",
+              "ItemsPath": "$.get_libraries_step.library_orcabus_ids",
               "ItemSelector": {
-                "library_id.$": "$$.Map.Item.Value"
+                "library_orcabus_id.$": "$$.Map.Item.Value"
               },
               "ItemProcessor": {
                 "ProcessorConfig": {
@@ -105,17 +105,12 @@
                     "Parameters": {
                       "TableName": "${__table_name__}",
                       "Key": {
-                        "id.$": "$.library_id",
+                        "id.$": "$.library_orcabus_id",
                         "id_type": "${__library_table_partition_name__}"
                       }
                     },
                     "ResultSelector": {
-                      "library_obj": {
-                        "library_id.$": "$.Item.library_id.S",
-                        "orcabus_id.$": "$.Item.orcabus_id.S",
-                        "project_name.$": "$.Item.project_name.S",
-                        "project_owner.$": "$.Item.project_owner.S"
-                      }
+                      "library_obj.$": "States.StringToJson($.Item.library_obj.S)"
                     },
                     "End": true
                   }
@@ -127,11 +122,75 @@
               "End": true
             }
           }
+        },
+        {
+          "StartAt": "Get Projects in Instrument Run",
+          "States": {
+            "Get Projects in Instrument Run": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:getItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.inputs.payload.data.outputs.instrumentRunId",
+                  "id_type": "${__instrument_run_table_partition_name__}"
+                }
+              },
+              "ResultSelector": {
+                "project_orcabus_ids.$": "$.Item.project_set.SS"
+              },
+              "ResultPath": "$.get_projects_step",
+              "Next": "Get Project Objects Map"
+            },
+            "Get Project Objects Map": {
+              "Type": "Map",
+              "ItemsPath": "$.get_projects_step.project_orcabus_ids",
+              "ItemSelector": {
+                "project_orcabus_id.$": "$$.Map.Item.Value"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Get Project",
+                "States": {
+                  "Get Project": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:getItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Key": {
+                        "id.$": "$.project_orcabus_id",
+                        "id_type": "${__project_table_partition_name__}"
+                      }
+                    },
+                    "ResultSelector": {
+                      "project_obj.$": "States.StringToJson($.Item.project_obj.S)",
+                      "library_orcabus_ids_set.$": "$.Item.library_set.SS"
+                    },
+                    "Next": "Append library set to project object"
+                  },
+                  "Append library set to project object": {
+                    "Type": "Pass",
+                    "End": true,
+                    "Parameters": {
+                      "project_obj.$": "States.JsonMerge($.project_obj, States.StringToJson(States.Format('\\{\"librarySet\":{}\\}', $.library_orcabus_ids_set)), false)"
+                    }
+                  }
+                }
+              },
+              "ResultSelector": {
+                "project_objects_list.$": "$.[*].project_obj"
+              },
+              "End": true
+            }
+          }
         }
       ],
       "ResultSelector": {
         "fastq_list_rows.$": "$.[0].decompress_fastq_list_rows_step.fastq_list_rows",
-        "library_objects_list.$": "$.[1].library_objects_list"
+        "library_objects_list.$": "$.[1].library_objects_list",
+        "project_objects_list.$": "$.[2].project_objects_list"
       },
       "ResultPath": "$.get_inputs_step"
     },
@@ -143,6 +202,7 @@
         "Payload": {
           "fastq_list_rows.$": "$.get_inputs_step.fastq_list_rows",
           "library_objs.$": "$.get_inputs_step.library_objects_list",
+          "project_objs.$": "$.get_inputs_step.project_objects_list",
           "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId"
         }
       },

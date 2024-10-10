@@ -152,6 +152,7 @@ pub trait Migrate {
 #[cfg(test)]
 pub(crate) mod tests {
     use chrono::{DateTime, Utc};
+    use sea_orm::prelude::Json;
     use sqlx::{query, PgPool, Row};
 
     use crate::database::aws::migration::tests::MIGRATOR;
@@ -240,6 +241,8 @@ pub(crate) mod tests {
         .bind(vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()])
         .bind(vec![false])
         .bind(vec![event_type])
+        .bind(vec![UuidGenerator::generate()])
+        .bind(vec![None::<Json>])
         .fetch_all(pool)
         .await
         .unwrap();

@@ -1,0 +1,390 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "inputs.$": "$"
+      },
+      "Next": "Get Library Info from DB"
+    },
+    "Get Library Info from DB": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.inputs.linkedLibraries[0].orcabusId",
+          "id_type": "${__library_table_partition_name__}"
+        }
+      },
+      "ResultPath": "$.get_library_info_from_db_step",
+      "Next": "Is Library In DataBase"
+    },
+    "Is Library In DataBase": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_library_info_from_db_step.Item",
+          "IsPresent": true,
+          "Next": "Generate Portal Run ID"
+        }
+      ],
+      "Default": "Pass"
+    },
+    "Generate Portal Run ID": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_portal_run_id_lambda_function_arn__}",
+        "Payload": {}
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "portal_run_id.$": "$.Payload.portal_run_id"
+      },
+      "ResultPath": "$.generate_portal_run_id_step",
+      "Next": "Generate Case Accession Number"
+    },
+    "Generate Case Accession Number": {
+      "Type": "Pass",
+      "Parameters": {
+        "case_accession_number.$": "States.Format('{}__V2__{}', $.get_library_info_from_db_step.Item.library_id.S, $.generate_portal_run_id_step.portal_run_id)"
+      },
+      "ResultPath": "$.generate_case_accession_number_step",
+      "Next": "Get Project Info and Project Data Files"
+    },
+    "Get Project Info and Project Data Files": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Get PierianDx Project Pathway mapping",
+          "States": {
+            "Get PierianDx Project Pathway mapping": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "Payload": {
+                  "project_id.$": "$.get_library_info_from_db_step.Item.project_id.S"
+                },
+                "FunctionName": "${__get_pieriandx_project_pathway_mapping_lambda_function_arn__}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultSelector": {
+                "project_info.$": "$.Payload.project_info"
+              },
+              "ResultPath": "$.get_pieriandx_project_pathway_mapping_step",
+              "Next": "Get RedCap Information"
+            },
+            "Get RedCap Information": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Get sample redcap info",
+                  "States": {
+                    "Get sample redcap info": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "Payload": {
+                          "library_id.$": "$.get_library_info_from_db_step.Item.library_id.S"
+                        },
+                        "FunctionName": "${__get_sample_redcap_info_lambda_function_arn__}"
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "redcap_data.$": "$.Payload.redcap_data",
+                        "in_redcap.$": "$.Payload.in_redcap"
+                      },
+                      "ResultPath": "$.get_sample_redcap_info_step",
+                      "Next": "Has Default Disease Code OR In Redcap"
+                    },
+                    "Has Default Disease Code OR In Redcap": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "And": [
+                            {
+                              "Variable": "$.get_sample_redcap_info_step.in_redcap",
+                              "BooleanEquals": false
+                            },
+                            {
+                              "Variable": "$.get_pieriandx_project_pathway_mapping_step.project_info.default_snomed_disease_code",
+                              "IsNull": true
+                            }
+                          ],
+                          "Next": "Fail"
+                        }
+                      ],
+                      "Default": "Option Placeholder 1"
+                    },
+                    "Fail": {
+                      "Type": "Fail"
+                    },
+                    "Option Placeholder 1": {
+                      "Type": "Pass",
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Parallel Placeholder 1",
+                  "States": {
+                    "Parallel Placeholder 1": {
+                      "Type": "Pass",
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "ResultSelector": {
+                "redcap_data.$": "$[0].get_sample_redcap_info_step.redcap_data",
+                "in_redcap.$": "$[0].get_sample_redcap_info_step.in_redcap"
+              },
+              "ResultPath": "$.get_redcap_info_step",
+              "Next": "Generate Case Metadata"
+            },
+            "Generate Case Metadata": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Is Identified Sample",
+                  "States": {
+                    "Is Identified Sample": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Variable": "$.get_pieriandx_project_pathway_mapping_step.project_info.is_identified",
+                          "StringEquals": "identified",
+                          "Next": "Generate Identified Case Metadata"
+                        }
+                      ],
+                      "Default": "Generate DeIdentified case metadata"
+                    },
+                    "Generate Identified Case Metadata": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__get_identified_case_metadata_lambda_function_arn__}",
+                        "Payload": {
+                          "case_accession_number.$": "$.generate_case_accession_number_step.case_accession_number",
+                          "external_sample_id.$": "$.get_library_info_from_db_step.Item.external_sample_id.S",
+                          "external_subject_id.$": "$.get_library_info_from_db_step.Item.external_subject_id.S",
+                          "sample_type.$": "$.get_pieriandx_project_pathway_mapping_step.project_info.sample_type",
+                          "specimen_label": "${__specimen_label__}",
+                          "specimen_code": "${__specimen_code__}",
+                          "redcap_dict.$": "$.get_redcap_info_step.redcap_data",
+                          "default_disease_code.$": "$.get_pieriandx_project_pathway_mapping_step.project_info.default_snomed_disease_code"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "case_metadata.$": "$.Payload.case_metadata"
+                      },
+                      "ResultPath": "$.get_case_metadata_step",
+                      "End": true
+                    },
+                    "Generate DeIdentified case metadata": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__get_deidentified_case_metadata_lambda_function_arn__}",
+                        "Payload": {
+                          "case_accession_number.$": "$.generate_case_accession_number_step.case_accession_number",
+                          "external_sample_id.$": "$.get_library_info_from_db_step.Item.external_sample_id.S",
+                          "external_subject_id.$": "$.get_library_info_from_db_step.Item.external_subject_id.S",
+                          "sample_type.$": "$.get_pieriandx_project_pathway_mapping_step.project_info.sample_type",
+                          "project_id.$": "$.get_library_info_from_db_step.Item.project_id.S",
+                          "specimen_label": "${__specimen_label__}",
+                          "specimen_code": "${__specimen_code__}",
+                          "redcap_dict.$": "$.get_redcap_info_step.redcap_data",
+                          "default_disease_code.$": "$.get_pieriandx_project_pathway_mapping_step.project_info.default_snomed_disease_code"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "case_metadata.$": "$.Payload.case_metadata"
+                      },
+                      "ResultPath": "$.get_case_metadata_step",
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Parallel Placeholder 2",
+                  "States": {
+                    "Parallel Placeholder 2": {
+                      "Type": "Pass",
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "ResultSelector": {
+                "case_metadata.$": "$[0].get_case_metadata_step.case_metadata"
+              },
+              "ResultPath": "$.get_case_metadata_step",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Project Data Files",
+          "States": {
+            "Get Project Data Files": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "Payload": {
+                  "output_uri.$": "$.inputs.payload.data.engineParameters.outputUri",
+                  "sample_id.$": "$.inputs.payload.data.inputs.sampleId"
+                },
+                "FunctionName": "${__get_project_data_files_lambda_function_arn__}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultSelector": {
+                "project_data_files.$": "$.Payload.data_files"
+              },
+              "ResultPath": "$.get_project_data_files_step",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultSelector": {
+        "case_metadata.$": "$[0].get_case_metadata_step.case_metadata",
+        "project_info.$": "$[0].get_pieriandx_project_pathway_mapping_step.project_info",
+        "project_data_files.$": "$[1].get_project_data_files_step.project_data_files",
+        "in_redcap.$": "$[0].get_redcap_info_step.in_redcap"
+      },
+      "ResultPath": "$.get_project_info_and_project_data_files_step",
+      "Next": "Push PierianDx Ready Event"
+    },
+    "Push PierianDx Ready Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "portalRunId.$": "$.generate_portal_run_id_step.portal_run_id",
+              "status": "${__event_status__}",
+              "workflowName": "${__workflow_name__}",
+              "workflowVersion": "${__workflow_version__}",
+              "workflowRunName.$": "States.Format('${__workflow_name__}--${__workflow_version_sub__}--{}', $.generate_portal_run_id_step.portal_run_id)",
+              "timestamp.$": "$$.State.EnteredTime",
+              "linkedLibraries": [
+                {
+                  "libraryId.$": "$.get_library_info_from_db_step.Item.library_id.S",
+                  "orcabusId.$": "$.get_library_info_from_db_step.Item.id.S"
+                }
+              ],
+              "payload": {
+                "version": "${__event_version__}",
+                "data": {
+                  "inputs": {
+                    "instrumentRunId.$": "$.get_library_info_from_db_step.Item.instrument_run_id.S",
+                    "panelVersion.$": "$.get_project_info_and_project_data_files_step.project_info.panel",
+                    "caseMetadata.$": "$.get_project_info_and_project_data_files_step.case_metadata",
+                    "dataFiles.$": "$.get_project_info_and_project_data_files_step.project_data_files"
+                  },
+                  "engineParameters": {},
+                  "tags": {
+                    "projectId.$": "$.get_library_info_from_db_step.Item.project_id.S",
+                    "libraryId.$": "$.get_library_info_from_db_step.Item.library_id.S",
+                    "instrumentRunId.$": "$.get_library_info_from_db_step.Item.instrument_run_id.S",
+                    "isIdentified.$": "$.get_project_info_and_project_data_files_step.case_metadata.isIdentified",
+                    "metadataFromRedCap.$": "$.get_project_info_and_project_data_files_step.in_redcap",
+                    "sampleType.$": "$.get_project_info_and_project_data_files_step.case_metadata.sampleType",
+                    "panelVersion.$": "$.get_project_info_and_project_data_files_step.project_info.panel"
+                  }
+                }
+              }
+            },
+            "DetailType": "${__event_detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}"
+          }
+        ]
+      },
+      "End": true
+    },
+    "Pass": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}

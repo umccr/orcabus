@@ -8,39 +8,50 @@ Helper functions for a subject
 # Standard imports
 from typing import List, Union, Dict
 
+from .globals import SUBJECT_ENDPOINT
 # Local imports
 from .requests_helpers import get_request_response_results
 
 
-def get_subject_from_subject_id(subject_id: Union[str, int]) -> Dict:
+def get_subject_from_subject_id(subject_id: str) -> Dict:
     """
     Get subject from the subject id
     :param subject_id:
     :return:
     """
-    endpoint = "api/v1/subject"
-
-    # Get subject id
-    if isinstance(subject_id, str):
-        # We have an internal id, convert to int
-        params = {
-            "subject_id": subject_id
-        }
-    else:
-        endpoint = f"{endpoint}/{subject_id}"
-        params = {}
+    # We have an internal id, convert to int
+    params = {
+        "subject_id": subject_id
+    }
 
     # Get subject
-    return get_request_response_results(endpoint, params)[0]
+    return get_request_response_results(SUBJECT_ENDPOINT, params)[0]
 
 
-def list_specimens_in_subject(subject_id: Union[str, int]) -> List[Dict]:
+
+def get_subject_from_subject_orcabus_id(subject_orcabus_id: str) -> Dict:
     """
-    Given a subject id, list the specimens in the subject
+    Get subject from the subject id
+    :param subject_orcabus_id:
+    :return:
+    """
+    # Get subject id
+    # We have an internal id, convert to int
+    params = {
+        "orcabus_id": subject_orcabus_id
+    }
+
+    # Get subject
+    return get_request_response_results(SUBJECT_ENDPOINT, params)[0]
+
+
+def list_samples_in_subject(subject_id: Union[str, int]) -> List[Dict]:
+    """
+    Given a subject id, list the samples in the subject
     :param subject_id:
     :return:
     """
-    from metadata_tools import get_all_specimens
+    from metadata_tools import get_all_samples
 
     # Get ID For Subject
     subject = get_subject_from_subject_id(subject_id)
@@ -48,10 +59,12 @@ def list_specimens_in_subject(subject_id: Union[str, int]) -> List[Dict]:
     # Get the subject
     return list(
         filter(
-            lambda specimen_iter:
-            subject.get("id") == specimen_iter.get("subjects")[0] if "subjects" in specimen_iter.keys()
-            else specimen_iter.get("subject") == subject.get("id"),
-            get_all_specimens()
+            lambda sample_iter:
+            subject.get("id") == sample_iter.get("subjects")[0]
+            if "subjects" in sample_iter.keys()
+            else
+            sample_iter.get("subject") == subject.get("id"),
+            get_all_samples()
         )
     )
 
@@ -62,14 +75,14 @@ def list_libraries_in_subject(subject_id: str) -> List[Dict]:
     :param subject_id:
     :return:
     """
-    from .specimen_helpers import list_libraries_in_specimen
+    from .sample_helpers import list_libraries_in_sample
 
     library_list = []
 
-    specimens_list = list_specimens_in_subject(subject_id)
+    samples_list = list_samples_in_subject(subject_id)
 
-    for specimen_iter in specimens_list:
-        library_list.extend(list_libraries_in_specimen(specimen_iter.get("id")))
+    for sample_iter in samples_list:
+        library_list.extend(list_libraries_in_sample(sample_iter.get("id")))
 
     return library_list
 
@@ -79,7 +92,4 @@ def get_all_subjects() -> List[Dict]:
     Get all subjects
     :return:
     """
-
-    endpoint = "api/v1/subject"
-
-    return get_request_response_results(endpoint)
+    return get_request_response_results(SUBJECT_ENDPOINT)

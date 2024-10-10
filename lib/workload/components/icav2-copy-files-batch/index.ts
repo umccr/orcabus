@@ -24,7 +24,7 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     super(scope, id);
 
     // Manifest inverter lambda
-    const manifest_inverter_lambda = new PythonFunction(this, 'manifest_inverter_lambda', {
+    const manifestInverterLambda = new PythonFunction(this, 'manifest_inverter_lambda', {
       entry: path.join(__dirname, 'manifest_handler_lambda_py'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
@@ -48,13 +48,13 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
       ),
       // Definition Substitutions
       definitionSubstitutions: {
-        __manifest_inverter_lambda_arn__: manifest_inverter_lambda.currentVersion.functionArn,
+        __manifest_inverter_lambda_arn__: manifestInverterLambda.currentVersion.functionArn,
         __copy_single_job_state_machine_arn__: this.icav2CopyFilesSfnObj.stateMachineArn,
       },
     });
 
     // Add execution permissions to stateMachine role
-    manifest_inverter_lambda.currentVersion.grantInvoke(this.icav2CopyFilesBatchSfnObj.role);
+    manifestInverterLambda.currentVersion.grantInvoke(this.icav2CopyFilesBatchSfnObj.role);
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr

@@ -76,7 +76,8 @@ class WorkflowRunViewSet(BaseViewSet):
             result_set = result_set.filter(
                 ~Q(states__status="FAILED") &
                 ~Q(states__status="ABORTED") &
-                ~Q(states__status="SUCCEEDED")
+                ~Q(states__status="SUCCEEDED") &
+                ~Q(states__status="RESOLVED")
             )
         
         if status:
@@ -115,12 +116,29 @@ class WorkflowRunViewSet(BaseViewSet):
         result_set = result_set.filter(
             ~Q(states__status="FAILED") &
             ~Q(states__status="ABORTED") &
-            ~Q(states__status="SUCCEEDED")
+            ~Q(states__status="SUCCEEDED") &
+            ~Q(states__status="RESOLVED")
         )
         pagw_qs = self.paginate_queryset(result_set)
         serializer = self.get_serializer(pagw_qs, many=True)
         return self.get_paginated_response(serializer.data)
-    
+
+    @action(detail=False, methods=['GET'])
+    def unresolved(self, request):
+        # Get all books marked as favorite
+        print(request)
+        print(self.request.query_params)
+        ordering = self.request.query_params.get('ordering', '-id')
+
+        result_set = WorkflowRun.objects.get_by_keyword(states__status="FAILED").order_by(ordering)
+
+        result_set = result_set.filter(
+            ~Q(states__status="RESOLVED")
+        )
+        pagw_qs = self.paginate_queryset(result_set)
+        serializer = self.get_serializer(pagw_qs, many=True)
+        return self.get_paginated_response(serializer.data)
+
     @extend_schema(operation_id='/api/v1/workflow_run/count_by_status/', responses=WorkflowRunCountByStatusSerializer)
     @action(detail=False, methods=['GET'])
     def count_by_status(self, request):

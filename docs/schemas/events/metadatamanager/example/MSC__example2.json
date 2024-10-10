@@ -1,0 +1,27 @@
+{
+  "version": "0",
+  "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "MetadataStateChange",
+  "source": "orcabus.metadatamanager",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "action": "DELETE",
+    "model": "LIBRARY",
+    "refId": "lib.01J8GNBB7YK8RCVFGXSBV4ZKST",
+    "data": {
+      "orcabusId": "lib.01J8GNBB7YK8RCVFGXSBV4ZKST",
+      "libraryId": "L10001",
+      "phenotype": "normal",
+      "workflow": "research",
+      "quality": "poor",
+      "type": "WTS",
+      "assay": "ctTSO",
+      "coverage": 120.0,
+      "sample": "smp.01J8GNBB67HGG3G17QA5QP98TE",
+      "subject": "sbj.01J8GNBB59GR0KMTNR0BT3F31V"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "Initialise Library ID",
+      "Parameters": {
+        "inputs.$": "$",
+        "input_payload_data.$": "$.payload.data"
+      }
+    },
+    "Initialise Library ID": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id": {
+            "S.$": "$.input_payload_data.library.orcabusId"
+          },
+          "id_type": {
+            "S": "${__library_partition_name__}"
+          },
+          "library_id": {
+            "S.$": "$.input_payload_data.library.libraryId"
+          },
+          "library_obj": {
+            "S.$": "States.JsonToString($.input_payload_data.library)"
+          },
+          "project_id": {
+            "S.$": "$.input_payload_data.projectSet[0].projectId"
+          },
+          "external_sample_id": {
+            "S.$": "$.input_payload_data.sample.externalSampleId"
+          },
+          "external_subject_id": {
+            "S.$": "$.input_payload_data.subject.subjectId"
+          },
+          "instrument_run_id": {
+            "S.$": "$.input_payload_data.instrumentRunId"
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

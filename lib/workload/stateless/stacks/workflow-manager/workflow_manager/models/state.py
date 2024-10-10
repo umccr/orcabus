@@ -13,8 +13,9 @@ class Status(Enum):
     READY = "READY", ['READY']
     RUNNING = "RUNNING", ['RUNNING', 'IN_PROGRESS']
     SUCCEEDED = "SUCCEEDED", ['SUCCEEDED', 'SUCCESS']
-    FAILED = "FAILED", ['FAILED', 'FAILURE']
+    FAILED = "FAILED", ['FAILED', 'FAILURE', 'FAIL']
     ABORTED = "ABORTED", ['ABORTED', 'CANCELLED', 'CANCELED']
+    RESOLVED = "RESOLVED", ['RESOLVED']
 
     def __init__(self, convention: str, aliases: List[str]):
         self.convention = convention
@@ -58,28 +59,25 @@ class Status(Enum):
     def is_draft(status: str) -> bool:
         # enforce upper case convention
         status = status.upper()
-        if status in Status.DRAFT.aliases:
-            return True
-        else:
-            return False
+        return status in Status.DRAFT.aliases
 
     @staticmethod
     def is_running(status: str) -> bool:
         # enforce upper case convention
         status = status.upper()
-        if status in Status.RUNNING.aliases:
-            return True
-        else:
-            return False
+        return status in Status.RUNNING.aliases
 
     @staticmethod
     def is_ready(status: str) -> bool:
         # enforce upper case convention
         status = status.upper()
-        if status in Status.READY.aliases:
-            return True
-        else:
-            return False
+        return status in Status.READY.aliases
+
+    @staticmethod
+    def is_resolved(status: str) -> bool:
+        # enforce upper case convention
+        status = status.upper()
+        return status in Status.RESOLVED.aliases
 
 
 class StateManager(OrcaBusBaseManager):

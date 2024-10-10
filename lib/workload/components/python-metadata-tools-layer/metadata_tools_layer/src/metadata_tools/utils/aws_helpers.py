@@ -6,8 +6,6 @@ import boto3
 import json
 from os import environ
 
-# Locals
-
 # Type hinting
 if typing.TYPE_CHECKING:
     from mypy_boto3_secretsmanager import SecretsManagerClient

@@ -3,25 +3,18 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 use crate::uuid::UuidGenerator;
 
 /// The type of S3 event.
 #[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
-#[sqlx(type_name = "event_type", no_pg_array)]
+#[sqlx(type_name = "event_type")]
 pub enum EventType {
     #[default]
     Created,
     Deleted,
     Other,
-}
-
-impl PgHasArrayType for EventType {
-    fn array_type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("_event_type")
-    }
 }
 
 /// Data for converting from S3 events to the internal filemanager event type.
@@ -72,7 +65,7 @@ impl From<EventTypeData> for EventTypeDeleteMarker {
                     .is_some_and(|d| d.contains("Delete Marker Created")))
                 || e.contains("ObjectRemoved:DeleteMarkerCreated") =>
             {
-                Self::new(EventType::Created, true)
+                Self::new(EventType::Deleted, true)
             }
             // Regular deleted event.
             e if e.contains("Object Deleted") || e.contains("ObjectRemoved") => {
@@ -198,6 +191,8 @@ impl From<Record> for FlatS3EventMessage {
             sha256: None,
             event_type,
             is_delete_marker,
+            ingest_id: None,
+            attributes: None,
             number_duplicate_events: 0,
             number_reordered: 0,
         }
@@ -347,7 +342,7 @@ mod tests {
 
         assert_flat_s3_event(
             first_message,
-            &Created,
+            &Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
@@ -369,7 +364,7 @@ mod tests {
 
         assert_flat_s3_event(
             first_message,
-            &Created,
+            &Deleted,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),

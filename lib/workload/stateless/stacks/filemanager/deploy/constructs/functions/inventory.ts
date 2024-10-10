@@ -34,6 +34,9 @@ export class InventoryFunction extends fn.Function {
       functionName: INVENTORY_FUNCTION_NAME,
     });
 
-    this.addPoliciesForBuckets(props.buckets);
+    this.addPoliciesForBuckets(props.buckets, [
+      ...fn.Function.getObjectActions(),
+      ...fn.Function.objectTaggingActions(),
+    ]);
   }
 }
