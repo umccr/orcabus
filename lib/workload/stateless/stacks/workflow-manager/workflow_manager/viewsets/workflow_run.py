@@ -123,7 +123,7 @@ class WorkflowRunViewSet(BaseViewSet):
     @action(detail=False, methods=['GET'])
     def unresolved(self, request):
         # Get all books marked as favorite
-        ordering = self.request.query_params.get('ordering', '-id')
+        ordering = self.request.query_params.get('ordering', '-orcabus_id')
 
         result_set = WorkflowRun.objects.get_by_keyword(states__status="FAILED").order_by(ordering)
 
