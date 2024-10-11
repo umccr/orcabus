@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// / A parameterized test case.
 type TestCase struct {
 	event       string
 	portalRunId string

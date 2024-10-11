@@ -5,7 +5,9 @@ go 1.22
 require (
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/aws-secretsmanager-caching-go v1.2.0
+	github.com/docker/go-connections v0.5.0
 	github.com/go-testfixtures/testfixtures/v3 v3.10.0
+	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/lib/pq v1.10.9
@@ -62,7 +64,6 @@ require (
 	github.com/docker/docker v27.1.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect
 	github.com/docker/go v1.5.1-1.0.20160303222718-d30aec9fd63c // indirect
-	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203 // indirect
@@ -87,7 +88,6 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
