@@ -19,14 +19,9 @@ class BaseViewSet(ReadOnlyModelViewSet, ABC):
         Since we have custom orcabus_id prefix for each model, we need to remove the prefix before retrieving it.
         """
         pk = self.kwargs.get('pk')
-        print("DEBUG: pk")
-        print(pk)
         if pk and pk.startswith(self.orcabus_id_prefix):
             pk = pk[len(self.orcabus_id_prefix):]
 
-        print("DEBUG: self.queryset")
-        print(self.queryset)
-        print(self.get_queryset())
         obj = get_object_or_404(self.get_queryset(), pk=pk)
         serializer = self.serializer_class(obj)
         return Response(serializer.data)

@@ -102,12 +102,9 @@ class WorkflowRunViewSet(BaseViewSet):
     def ongoing(self, request):
         self.serializer_class = WorkflowRunSerializer  # use simple view for record listing
         # Get all books marked as favorite
-        print(request)
-        print(self.request.query_params)
         ordering = self.request.query_params.get('ordering', '-orcabus_id')
 
         if "status" in self.request.query_params.keys():
-            print("found status!")
             status = self.request.query_params.get('status')
             result_set = WorkflowRun.objects.get_by_keyword(states__status=status).order_by(ordering)
         else:
@@ -126,8 +123,6 @@ class WorkflowRunViewSet(BaseViewSet):
     @action(detail=False, methods=['GET'])
     def unresolved(self, request):
         # Get all books marked as favorite
-        print(request)
-        print(self.request.query_params)
         ordering = self.request.query_params.get('ordering', '-id')
 
         result_set = WorkflowRun.objects.get_by_keyword(states__status="FAILED").order_by(ordering)

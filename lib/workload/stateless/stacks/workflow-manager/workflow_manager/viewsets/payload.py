@@ -18,6 +18,4 @@ class PayloadViewSet(BaseViewSet):
 
     def get_queryset(self):
         query_params = self.get_query_params()
-        print("DEBUG: query_params")
-        print(query_params)
         return Payload.objects.get_by_keyword(self.queryset, **query_params)

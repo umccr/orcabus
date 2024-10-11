@@ -242,7 +242,5 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         t1 = s1.timestamp
         t2 = s2.timestamp
         delta = t1 - t2  # = 2 days
-        print(f"delta sec: {abs(delta.total_seconds())}")
         window = timedelta(hours=1)
-        print(f"window sec: {window.total_seconds()}")
         self.assertTrue(delta > window, "delta > 1h")
