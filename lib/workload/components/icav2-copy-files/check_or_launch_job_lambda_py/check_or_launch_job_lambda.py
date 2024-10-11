@@ -193,9 +193,11 @@ def handler(event, context):
             "dest_uri": dest_uri,
             "source_uris": source_uris,
             "job_id": job_id,
-            "failed_job_list": failed_job_list,  # Empty list or list of failed jobs
+            # Empty list or list of failed jobs
+            "failed_job_list": failed_job_list,
             "job_status": "RUNNING",
-            "wait_time_seconds": wait_time_seconds + DEFAULT_WAIT_TIME_SECONDS_EXT # Wait a bit longer (an extra 10 seconds)
+            # Wait a bit longer (an extra 10 seconds)
+            "wait_time_seconds": wait_time_seconds + DEFAULT_WAIT_TIME_SECONDS_EXT
         }
 
     # Handle a failed job

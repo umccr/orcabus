@@ -5,9 +5,11 @@ from libumccr.aws import libeb
 
 from unittest.mock import MagicMock
 from django.test import TestCase
+from django.core.exceptions import ObjectDoesNotExist
 
 from app.models import Library, Sample, Subject, Project, Contact, Individual
-from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata
+from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata, \
+    drop_incomplete_tracking_sheet_records
 from .utils import check_put_event_entries_format, check_put_event_value, is_expected_event_in_output
 
 TEST_EVENT_BUS_NAME = "TEST_BUS"
@@ -292,6 +294,32 @@ class TrackingSheetSrvUnitTests(TestCase):
         deleted_lib = Library.objects.filter(library_id__in=[RECORD_1.get('LibraryID'), RECORD_2.get('LibraryID')])
         self.assertEqual(deleted_lib.count(), 0, 'these library query should all be deleted')
         self.assertEqual(result.get("library").get("delete_count"), 2, "2 library should be deleted")
+
+
+    def test_skip_incomplete_records(self) -> None:
+        """
+        python manage.py test \
+        proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_skip_incomplete_records
+        """
+
+        mock_record = RECORD_1.copy()
+        mock_record['SubjectID'] = ''
+        mock_sheet_data = [mock_record]
+
+        metadata_pd = pd.json_normalize(mock_sheet_data)
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        metadata_pd = drop_incomplete_tracking_sheet_records(metadata_pd)
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
+
+        def is_library_exists(library_id):
+            try:
+                Library.objects.get(library_id=library_id)
+                return True
+            except ObjectDoesNotExist:
+                return False
+
+        self.assertFalse(is_library_exists(RECORD_1.get("LibraryID")), "library should not be created")
+
 
     def test_save_choice_from_human_readable_label(self) -> None:
         """

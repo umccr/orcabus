@@ -1,0 +1,114 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "move_inputs",
+  "States": {
+    "move_inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      },
+      "Next": "get_case_creation_object"
+    },
+    "get_case_creation_object": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.workflow_inputs.portal_run_id",
+          "id_type": "portal_run_id"
+        }
+      },
+      "ResultPath": "$.get_case_creation_object_step",
+      "ResultSelector": {
+        "portal_run_id.$": "$.Item.id.S",
+        "case_creation_obj.$": "States.StringToJson($.Item.case_creation_obj.S)"
+      },
+      "Next": "generate_case"
+    },
+    "generate_case": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload": {
+          "case_creation_obj.$": "$.get_case_creation_object_step.case_creation_obj"
+        },
+        "FunctionName": "${__generate_case_lambda_function_arn__}"
+      },
+      "TimeoutSeconds": 30,
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "update_database",
+      "ResultPath": "$.generate_case_step",
+      "ResultSelector": {
+        "case_id.$": "$.Payload.id"
+      }
+    },
+    "update_database": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "add_case_id_partition_key",
+          "States": {
+            "add_case_id_partition_key": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "id.$": "$.generate_case_step.case_id",
+                  "id_type": "case_id",
+                  "portal_run_id": {
+                    "S.$": "$.workflow_inputs.portal_run_id"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "update_portal_run_id_partition_key_with_case_id",
+          "States": {
+            "update_portal_run_id_partition_key_with_case_id": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.workflow_inputs.portal_run_id",
+                  "id_type": "portal_run_id"
+                },
+                "UpdateExpression": "SET case_id = :case_id",
+                "ExpressionAttributeValues": {
+                  ":case_id": {
+                    "N.$": "$.generate_case_step.case_id"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "wait_one_second"
+    },
+    "wait_one_second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "End": true,
+      "Comment": "Wait for database to sync"
+    }
+  }
+}

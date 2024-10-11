@@ -1,17 +1,6 @@
 //! Route logic for list API calls.
 //!
 
-use crate::database::entities::s3_object;
-use crate::database::entities::s3_object::Model as S3;
-use crate::error::Error::MissingHostHeader;
-use crate::error::Result;
-use crate::queries::list::ListQueryBuilder;
-use crate::routes::error::{ErrorStatusCode, QsQuery, Query};
-use crate::routes::filter::{AttributesOnlyFilter, S3ObjectsFilter};
-use crate::routes::header::HeaderParser;
-use crate::routes::pagination::{ListResponse, Pagination};
-use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
-use crate::routes::AppState;
 use axum::extract::{Request, State};
 use axum::http::header::{CONTENT_ENCODING, CONTENT_TYPE, HOST};
 use axum::routing::get;
@@ -25,6 +14,18 @@ use std::collections::HashSet;
 use std::marker::PhantomData;
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::database::entities::s3_object;
+use crate::database::entities::s3_object::Model as S3;
+use crate::error::Error::MissingHostHeader;
+use crate::error::Result;
+use crate::queries::list::ListQueryBuilder;
+use crate::routes::error::{ErrorStatusCode, QsQuery, Query};
+use crate::routes::filter::{AttributesOnlyFilter, S3ObjectsFilter};
+use crate::routes::header::HeaderParser;
+use crate::routes::pagination::{ListResponse, Pagination};
+use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
+use crate::routes::AppState;
 
 /// The return value for count operations showing the number of records in the database.
 #[derive(Debug, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
@@ -618,7 +619,7 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn list_s3_multiple_filters(pool: PgPool) {
+    async fn list_s3_multiple_and_filters(pool: PgPool) {
         let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -630,6 +631,24 @@ pub(crate) mod tests {
             response_from_get(state, "/s3?currentState=false&bucket=1&key=2").await;
         assert_eq!(result.results(), vec![entries[2].clone()]);
         assert_eq!(result.pagination().count, 1);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_multiple_or_filters(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await
+            .s3_objects;
+
+        let result: ListResponse<S3> =
+            response_from_get(state, "/s3?currentState=false&key[]=3&key[]=4").await;
+        assert_eq!(
+            result.results(),
+            vec![entries[3].clone(), entries[4].clone()]
+        );
+        assert_eq!(result.pagination().count, 2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -721,12 +740,31 @@ pub(crate) mod tests {
         assert_eq!(result.pagination().count, 0);
 
         let result: ListResponse<S3> = response_from_get(
-            state,
+            state.clone(),
             "/s3?currentState=false&attributes[attributeId]=1&key=1",
         )
         .await;
         assert_eq!(result.results(), vec![entries[1].clone()]);
         assert_eq!(result.pagination().count, 1);
+
+        let result: ListResponse<S3> = response_from_get(
+            state.clone(),
+            "/s3?currentState=false&attributes[attributeId]=1&attributes[nestedId][attributeId]=1",
+        )
+        .await;
+        assert_eq!(result.results(), vec![entries[1].clone()]);
+        assert_eq!(result.pagination().count, 1);
+
+        let result: ListResponse<S3> = response_from_get(
+            state.clone(),
+            "/s3?currentState=false&attributes[attributeId][]=1&attributes[attributeId][]=2",
+        )
+        .await;
+        assert_eq!(
+            result.results(),
+            vec![entries[1].clone(), entries[2].clone()]
+        );
+        assert_eq!(result.pagination().count, 2);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -952,6 +990,8 @@ pub(crate) mod tests {
             .await
             .unwrap()
             .to_vec();
+
+        println!("{}", String::from_utf8(bytes.clone()).unwrap());
 
         (status, from_slice::<T>(bytes.as_slice()).unwrap())
     }

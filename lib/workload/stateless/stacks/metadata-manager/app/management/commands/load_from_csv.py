@@ -14,6 +14,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         event = {
             "url": "SOME_URL",
+            "is_emit_eb_events": False
         }
 
         print(f"Trigger lambda handler for sync tracking sheet. Event {libjson.dumps(event)}")

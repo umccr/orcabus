@@ -3,9 +3,7 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
-import { BsshFastqCopyManagerDraftMakerConstruct } from '../elmer/part_1/bclconvert-succeeded-to-bssh-fastq-copy-draft';
 import { BclconvertInteropQcDraftMakerConstruct } from './part_1/bclconvert-interop-qc-draft-event-maker';
-import { BclconvertInteropQcDraftToReadyMakerConstruct } from './part_2/bclconvert-interop-qc-input-maker';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -15,8 +13,6 @@ To triggering the bsshFastqCopyManager
 export interface BsshFastqCopyToBclconvertInteropQcConstructProps {
   /* Event Objects */
   eventBusObj: events.IEventBus;
-  /* Table Objects */
-  inputMakerTableObj: dynamodb.ITableV2;
   /* SSM Parameter Ojbects */
   analysisLogsUriSsmParameterObj: ssm.IStringParameter;
   analysisOutputUriSsmParameterObj: ssm.IStringParameter;
@@ -42,7 +38,7 @@ export class BsshFastqCopyToBclconvertInteropQcConstruct extends Construct {
 
     Output Event source: `orcabus.bclconvertinteropqcinputeventglue`
     Output Event DetailType: `WorkflowRunStateChange`
-    Output Event status: `complete`
+    Output Event status: `READY`
 
     * The BCLConvertInteropQCInputMaker Construct
       * Subscribes to the BSSHFastqCopyManagerEventHandler Construct outputs and creates the input for the BCLConvertInteropQC
@@ -53,22 +49,15 @@ export class BsshFastqCopyToBclconvertInteropQcConstruct extends Construct {
         this,
         'bssh_fastq_copy_complete_to_bclconvert_interop_qc_draft_maker',
         {
+          /* Event Bus */
           eventBusObj: props.eventBusObj,
-          tableObj: props.inputMakerTableObj,
+          /* SSM Parameter Objects */
+          logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+          outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+          icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+          /* Secrets Manager */
+          icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
         }
       );
-
-    const bclconvertInteropqcInputMaker = new BclconvertInteropQcDraftToReadyMakerConstruct(
-      this,
-      'bclconvert_interopqc_input_maker',
-      {
-        logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-        outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
-        eventBusObj: props.eventBusObj,
-        tableObj: props.inputMakerTableObj,
-        icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
-        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-      }
-    );
   }
 }

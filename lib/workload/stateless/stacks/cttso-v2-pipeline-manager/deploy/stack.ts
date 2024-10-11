@@ -22,8 +22,8 @@ export interface Cttsov2Icav2PipelineManagerConfig {
   eventBusName: string;
   icaEventPipeName: string;
   /*
-      Event handling
-      */
+  Event handling
+  */
   workflowType: string;
   workflowVersion: string;
   serviceVersion: string;
@@ -31,8 +31,8 @@ export interface Cttsov2Icav2PipelineManagerConfig {
   internalEventSource: string;
   detailType: string;
   /*
-      Names for statemachines
-      */
+  Names for statemachines
+  */
   stateMachinePrefix: string;
 }
 
@@ -44,31 +44,31 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
     super(scope, id, props);
 
     // Get dynamodb table for construct
-    const dynamodb_table_obj = dynamodb.TableV2.fromTableName(
+    const dynamodbTableObj = dynamodb.TableV2.fromTableName(
       this,
       'dynamodb_table',
       props.dynamodbTableName
     );
 
     // Get ICAv2 Access token secret object for construct
-    const icav2_access_token_secret_obj = secretsManager.Secret.fromSecretNameV2(
+    const icav2AccessTokenSecretObj = secretsManager.Secret.fromSecretNameV2(
       this,
       'icav2_secrets_object',
       props.icav2TokenSecretId
     );
 
     // Get the copy batch state machine name
-    const icav2_copy_files_state_machine_obj = new ICAv2CopyFilesConstruct(
+    const icav2CopyFilesStateMachineObj = new ICAv2CopyFilesConstruct(
       this,
       'icav2_copy_files_state_machine_obj',
       {
-        icav2JwtSecretParameterObj: icav2_access_token_secret_obj,
+        icav2JwtSecretParameterObj: icav2AccessTokenSecretObj,
         stateMachineName: `${props.stateMachinePrefix}-icav2-copy-files-sfn`,
       }
     );
 
     // Set ssm parameter object list
-    const pipeline_id_ssm_obj_list = ssm.StringParameter.fromStringParameterName(
+    const pipelineIdSsmObjList = ssm.StringParameter.fromStringParameterName(
       this,
       props.pipelineIdSsmPath,
       props.pipelineIdSsmPath
@@ -79,16 +79,18 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
 
     /*
         Build lambdas
-        */
+    */
+
     /*
         Part 1: Set up the lambdas needed for the input json generation state machine
         Quite a bit more complicated than regular ICAv2 workflow setup since we need to
         1. Convert the samplesheet from json into csv format
         2. Upload the samplesheet to icav2
         3. Copy fastqs into a particular directory setup type
-        */
+        4. Regulate how many fastqs are copied at a time given ICAv2 cannot limit this itself and falls over
+    */
 
-    const generate_copy_manifest_dict_lambda_obj = new PythonFunction(
+    const generateCopyManifestDictLambdaObj = new PythonFunction(
       this,
       'generate_copy_manifest_dict_lambda_python_function',
       {
@@ -100,13 +102,13 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         memorySize: 1024,
         timeout: Duration.seconds(60),
         environment: {
-          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
+          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
         },
       }
     );
 
     // upload_samplesheet_to_cache_dir_py lambda
-    const upload_samplesheet_to_cache_dir_lambda_obj = new PythonFunction(
+    const uploadSamplesheetToCacheDirLambdaObj = new PythonFunction(
       this,
       'upload_samplesheet_to_cache_dir_lambda_python_function',
       {
@@ -118,17 +120,43 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         memorySize: 1024,
         timeout: Duration.seconds(60),
         environment: {
-          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
+          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
         },
       }
     );
 
+    const getRandomNumberLambdaObj = new PythonFunction(
+      this,
+      'get_random_number_lambda_python_function',
+      {
+        entry: path.join(__dirname, '../lambdas/get_random_number_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'get_random_number.py',
+        handler: 'handler',
+      }
+    );
+
+    // We need to add SFN_ARN to the env var list once we have it
+    // We also need to update the permissions to allow this function to list executions
+    const checkNumRunningSfns = new PythonFunction(
+      this,
+      'check_num_running_sfns_lambda_python_function',
+      {
+        entry: path.join(__dirname, '../lambdas/check_num_running_sfns_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'check_num_running_sfns.py',
+        handler: 'handler',
+      }
+    );
+
     /*
-        Part 2: Build lambdas for output json generation
-        */
+    Part 2: Build lambdas for output json generation
+    */
 
     // Delete the cache uri directory lambda
-    const delete_cache_uri_lambda_function = new PythonFunction(
+    const deleteCacheUriLambdaFunction = new PythonFunction(
       this,
       'delete_cache_uri_lambda_python_function',
       {
@@ -140,13 +168,13 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         memorySize: 1024,
         timeout: Duration.seconds(60),
         environment: {
-          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
+          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
         },
       }
     );
 
     // Set the output json lambda
-    const set_output_json_lambda_function = new PythonFunction(
+    const setOutputJsonLambdaFunction = new PythonFunction(
       this,
       'set_output_json_lambda_python_function',
       {
@@ -158,13 +186,13 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         memorySize: 1024,
         timeout: Duration.seconds(60),
         environment: {
-          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
+          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
         },
       }
     );
 
     // Get vcfs
-    const get_vcfs_lambda_function = new PythonFunction(this, 'get_vcfs_lambda_python_function', {
+    const getVcfsLambdaFunction = new PythonFunction(this, 'get_vcfs_lambda_python_function', {
       entry: path.join(__dirname, '../lambdas/find_all_vcf_files_py'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
@@ -173,13 +201,13 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       memorySize: 1024,
       timeout: Duration.seconds(60),
       environment: {
-        ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
+        ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
       },
     });
 
     // Compress vcf
     const architecture = lambda.Architecture.ARM_64;
-    const compress_vcf_lambda_function = new DockerImageFunction(this, 'compress_vcf_lambda', {
+    const compressVcfLambdaFunction = new DockerImageFunction(this, 'compress_vcf_lambda', {
       description: 'Compress Vcfs',
       code: DockerImageCode.fromImageAsset(path.join(__dirname, '../lambdas/compress_icav2_vcf'), {
         file: 'Dockerfile',
@@ -193,43 +221,41 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       memorySize: 2048, // Don't want pandas to kill the lambda
       architecture: architecture,
       environment: {
-        ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
+        ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
       },
     });
 
     // Check success lambda
-    const check_success_lambda_function = new PythonFunction(
-      this,
-      'check_success_lambda_function',
-      {
-        entry: path.join(__dirname, '../lambdas/check_success_py'),
-        runtime: lambda.Runtime.PYTHON_3_12,
-        architecture: lambda.Architecture.ARM_64,
-        index: 'check_success.py',
-        handler: 'handler',
-        memorySize: 1024,
-        timeout: Duration.seconds(60),
-        environment: {
-          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2_access_token_secret_obj.secretName,
-        },
-      }
-    );
+    const checkSuccessLambdaFunction = new PythonFunction(this, 'check_success_lambda_function', {
+      entry: path.join(__dirname, '../lambdas/check_success_py'),
+      runtime: lambda.Runtime.PYTHON_3_12,
+      architecture: lambda.Architecture.ARM_64,
+      index: 'check_success.py',
+      handler: 'handler',
+      memorySize: 1024,
+      timeout: Duration.seconds(60),
+      environment: {
+        ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
+      },
+    });
 
     // Create the state machine to launch the nextflow workflow on ICAv2
-    const cttso_v2_launch_state_machine = new Cttsov2Icav2PipelineManagerConstruct(this, id, {
+    const cttsov2LaunchStateMachine = new Cttsov2Icav2PipelineManagerConstruct(this, id, {
       /* Stack Objects */
-      dynamodbTableObj: dynamodb_table_obj,
-      icav2AccessTokenSecretObj: icav2_access_token_secret_obj,
-      icav2CopyFilesStateMachineObj: icav2_copy_files_state_machine_obj.icav2CopyFilesSfnObj,
-      pipelineIdSsmObj: pipeline_id_ssm_obj_list,
+      dynamodbTableObj: dynamodbTableObj,
+      icav2AccessTokenSecretObj: icav2AccessTokenSecretObj,
+      icav2CopyFilesStateMachineObj: icav2CopyFilesStateMachineObj.icav2CopyFilesSfnObj,
+      pipelineIdSsmObj: pipelineIdSsmObjList,
       /* Lambdas paths */
-      uploadSamplesheetToCacheDirLambdaObj: upload_samplesheet_to_cache_dir_lambda_obj, // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir_py'
-      generateCopyManifestDictLambdaObj: generate_copy_manifest_dict_lambda_obj, // __dirname + '/../../../lambdas/generate_copy_manifest_dict_py'
-      deleteCacheUriLambdaObj: delete_cache_uri_lambda_function,
-      setOutputJsonLambdaObj: set_output_json_lambda_function,
-      getVcfsLambdaObj: get_vcfs_lambda_function,
-      compressVcfLambdaObj: compress_vcf_lambda_function,
-      checkSuccessSampleLambdaObj: check_success_lambda_function,
+      uploadSamplesheetToCacheDirLambdaObj: uploadSamplesheetToCacheDirLambdaObj, // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir_py'
+      generateCopyManifestDictLambdaObj: generateCopyManifestDictLambdaObj, // __dirname + '/../../../lambdas/generate_copy_manifest_dict_py'
+      getRandomNumberLambdaObj: getRandomNumberLambdaObj,
+      checkNumRunningSfnsLambdaObj: checkNumRunningSfns,
+      deleteCacheUriLambdaObj: deleteCacheUriLambdaFunction,
+      setOutputJsonLambdaObj: setOutputJsonLambdaFunction,
+      getVcfsLambdaObj: getVcfsLambdaFunction,
+      compressVcfLambdaObj: compressVcfLambdaFunction,
+      checkSuccessSampleLambdaObj: checkSuccessLambdaFunction,
       /* Step function templates */
       generateInputJsonSfnTemplatePath: path.join(
         __dirname,

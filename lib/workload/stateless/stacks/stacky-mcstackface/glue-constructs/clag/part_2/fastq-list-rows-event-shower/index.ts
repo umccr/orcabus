@@ -30,7 +30,7 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
     // Tables
     tablePartition: {
       fastqListRowsByInstrumentRun: 'fastqlistrows_by_instrument_run',
-      samplesheetByInstrumentRun: 'samplesheet_by_instrument_run',
+      instrumentRun: 'instrument_run',
       subject: 'subject',
       library: 'library',
       project: 'project',
@@ -143,8 +143,10 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
           this.newFastqListRowsEventShowerMap.tablePartition.fastqListRowsByInstrumentRun,
         __library_table_partition_name__:
           this.newFastqListRowsEventShowerMap.tablePartition.library,
-        __samplesheet_table_partition_name__:
-          this.newFastqListRowsEventShowerMap.tablePartition.samplesheetByInstrumentRun,
+        __instrument_run_table_partition_name__:
+          this.newFastqListRowsEventShowerMap.tablePartition.instrumentRun,
+        __project_table_partition_name__:
+          this.newFastqListRowsEventShowerMap.tablePartition.project,
 
         /* Lambda functions */
         __decompress_fastq_list_rows_lambda_function_arn__:
