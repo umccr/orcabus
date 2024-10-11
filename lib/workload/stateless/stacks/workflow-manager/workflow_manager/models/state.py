@@ -104,16 +104,6 @@ class State(OrcaBusBaseModel):
     def __str__(self):
         return f"ID: {self.orcabus_id}, status: {self.status}"
 
-    def to_dict(self):
-        return {
-            "orcabusId": self.orcabus_id,
-            "workflow_run_id": self.workflow_run.orcabus_id,
-            "status": self.status,
-            "timestamp": str(self.timestamp),
-            "comment": self.comment,
-            "payload": self.payload.to_dict() if (self.payload is not None) else None,
-        }
-
     def is_terminal(self) -> bool:
         return Status.is_terminal(str(self.status))
 

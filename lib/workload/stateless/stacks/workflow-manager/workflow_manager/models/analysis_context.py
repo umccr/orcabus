@@ -22,12 +22,3 @@ class AnalysisContext(OrcaBusBaseModel):
 
     def __str__(self):
         return f"ID: {self.orcabus_id}, name: {self.name}, usecase: {self.usecase}"
-
-    def to_dict(self):
-        return {
-            "orcabus_id": self.orcabus_id,
-            "name": self.name,
-            "usecase": self.usecase,
-            "status": self.status,
-            "description": self.description
-        }
