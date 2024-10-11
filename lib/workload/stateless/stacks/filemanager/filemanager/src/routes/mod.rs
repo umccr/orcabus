@@ -1,6 +1,7 @@
 //! This module handles API routing.
 //!
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use axum::http::header::InvalidHeaderName;
@@ -43,6 +44,7 @@ pub struct AppState {
     config: Arc<Config>,
     s3_client: Arc<s3::Client>,
     use_tls_links: bool,
+    params_field_names: Arc<HashSet<String>>,
 }
 
 impl AppState {
@@ -58,6 +60,7 @@ impl AppState {
             config,
             s3_client,
             use_tls_links,
+            params_field_names: Arc::new(attributes_s3_field_names()),
         }
     }
 
@@ -69,6 +72,12 @@ impl AppState {
             Arc::new(s3::Client::with_defaults().await),
             false,
         )
+    }
+
+    /// Modify the field names for parameters.
+    pub fn with_params_field_names(mut self, params_field_names: Arc<HashSet<String>>) -> Self {
+        self.params_field_names = params_field_names;
+        self
     }
 
     /// Modify the config.
