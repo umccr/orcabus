@@ -84,7 +84,7 @@ services:
     depends_on:
       - db
     healthcheck:
-      test: "curl http://localhost:8000/api/v1/s3_objects/count"
+      test: "curl http://localhost:8000/api/v1/s3/count"
       start_period: 30s
       interval: 10s
       timeout: 2s

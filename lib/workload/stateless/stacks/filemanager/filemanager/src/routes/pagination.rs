@@ -242,17 +242,17 @@ mod tests {
             .s3_objects;
 
         let result: ListResponse<S3Object> =
-            response_from_get(state.clone(), "/s3?page=2&rowsPerPage=2").await;
+            response_from_get(state.clone(), "/s3?currentState=false&page=2&rowsPerPage=2").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 Some(
-                    "http://example.com/s3?rowsPerPage=2&page=1"
+                    "http://example.com/s3?currentState=false&rowsPerPage=2&page=1"
                         .parse()
                         .unwrap()
                 ),
                 Some(
-                    "http://example.com/s3?rowsPerPage=2&page=3"
+                    "http://example.com/s3?currentState=false&rowsPerPage=2&page=3"
                         .parse()
                         .unwrap()
                 )
@@ -262,13 +262,13 @@ mod tests {
         assert_eq!(result.results(), &entries[2..4]);
 
         let result: ListResponse<S3Object> =
-            response_from_get(state.clone(), "/s3?rowsPerPage=2&page=1").await;
+            response_from_get(state.clone(), "/s3?currentState=false&rowsPerPage=2&page=1").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 None,
                 Some(
-                    "http://example.com/s3?rowsPerPage=2&page=2"
+                    "http://example.com/s3?currentState=false&rowsPerPage=2&page=2"
                         .parse()
                         .unwrap()
                 )
@@ -278,12 +278,12 @@ mod tests {
         assert_eq!(result.results(), &entries[0..2]);
 
         let result: ListResponse<S3Object> =
-            response_from_get(state.clone(), "/s3?page=5&rowsPerPage=2").await;
+            response_from_get(state.clone(), "/s3?currentState=false&page=5&rowsPerPage=2").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 Some(
-                    "http://example.com/s3?rowsPerPage=2&page=4"
+                    "http://example.com/s3?currentState=false&rowsPerPage=2&page=4"
                         .parse()
                         .unwrap()
                 ),
@@ -295,7 +295,7 @@ mod tests {
 
         let (status_code, _) = response_from::<ErrorResponse>(
             state,
-            "/s3?page=0&rowsPerPage=2",
+            "/s3?currentState=false&page=0&rowsPerPage=2",
             Method::GET,
             Body::empty(),
         )
@@ -313,10 +313,18 @@ mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<S3Object> = response_from_get(state.clone(), "/s3?page=1").await;
+        let result: ListResponse<S3Object> =
+            response_from_get(state.clone(), "/s3?currentState=false&page=1").await;
         assert_eq!(
             result.links(),
-            &Links::new(None, Some("http://example.com/s3?page=2".parse().unwrap()))
+            &Links::new(
+                None,
+                Some(
+                    "http://example.com/s3?currentState=false&page=2"
+                        .parse()
+                        .unwrap()
+                )
+            )
         );
         assert_eq!(result.pagination().count, 1001);
         assert_eq!(result.results(), &entries[0..1000]);
@@ -331,18 +339,21 @@ mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<S3Object> =
-            response_from_get(state.clone(), "/s3?some_parameter=123&page=2&rowsPerPage=2").await;
+        let result: ListResponse<S3Object> = response_from_get(
+            state.clone(),
+            "/s3?currentState=false&some_parameter=123&page=2&rowsPerPage=2",
+        )
+        .await;
         assert_eq!(
             result.links(),
             &Links::new(
                 Some(
-                    "http://example.com/s3?some_parameter=123&rowsPerPage=2&page=1"
+                    "http://example.com/s3?currentState=false&some_parameter=123&rowsPerPage=2&page=1"
                         .parse()
                         .unwrap()
                 ),
                 Some(
-                    "http://example.com/s3?some_parameter=123&rowsPerPage=2&page=3"
+                    "http://example.com/s3?currentState=false&some_parameter=123&rowsPerPage=2&page=3"
                         .parse()
                         .unwrap()
                 )
@@ -361,19 +372,22 @@ mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<S3Object> =
-            response_from_get(state.clone(), "/s3?page=1&rowsPerPage=20").await;
+        let result: ListResponse<S3Object> = response_from_get(
+            state.clone(),
+            "/s3?currentState=false&page=1&rowsPerPage=20",
+        )
+        .await;
         assert_eq!(result.links(), &Links::new(None, None));
         assert_eq!(result.pagination().count, 10);
         assert_eq!(result.results(), entries);
 
         let result: ListResponse<S3Object> =
-            response_from_get(state, "/s3?rowsPerPage=1&page=21").await;
+            response_from_get(state, "/s3?currentState=false&rowsPerPage=1&page=21").await;
         assert_eq!(
             result.links(),
             &Links::new(
                 Some(
-                    "http://example.com/s3?rowsPerPage=1&page=20"
+                    "http://example.com/s3?currentState=false&rowsPerPage=1&page=20"
                         .parse()
                         .unwrap()
                 ),
@@ -394,7 +408,8 @@ mod tests {
             .await
             .s3_objects;
 
-        let result: ListResponse<S3Object> = response_from_get(state, "/s3?rowsPerPage=0").await;
+        let result: ListResponse<S3Object> =
+            response_from_get(state, "/s3?currentState=false&rowsPerPage=0").await;
         assert_eq!(result.links(), &Links::new(None, None));
         assert_eq!(result.pagination().count, 10);
         assert_eq!(result.results(), entries);
