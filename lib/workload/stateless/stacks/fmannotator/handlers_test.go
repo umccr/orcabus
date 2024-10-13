@@ -2,6 +2,7 @@ package fmannotator
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/require"
@@ -26,6 +27,7 @@ func successCase(location *time.Location) TestCase {
 			EventTime:    sql.NullTime{Time: time.Date(2024, 9, 2, 0, 0, 0, 0, location), Valid: true},
 			Size:         sql.NullInt64{Int64: 5, Valid: true},
 			StorageClass: sql.NullString{String: "Standard", Valid: true},
+			Attributes:   json.RawMessage(`{"portalRunId": "202409021221e6e6"}`),
 		},
 		{
 			EventType:    "Deleted",
@@ -34,6 +36,7 @@ func successCase(location *time.Location) TestCase {
 			EventTime:    sql.NullTime{Time: time.Date(2024, 9, 3, 0, 0, 0, 0, location), Valid: true},
 			Size:         sql.NullInt64{},
 			StorageClass: sql.NullString{},
+			Attributes:   json.RawMessage(`{"portalRunId": "202409021221e6e6"}`),
 		},
 		{
 			EventType:    "Created",
@@ -42,6 +45,7 @@ func successCase(location *time.Location) TestCase {
 			EventTime:    sql.NullTime{Time: time.Date(2024, 9, 4, 0, 0, 0, 0, location), Valid: true},
 			Size:         sql.NullInt64{Int64: 10, Valid: true},
 			StorageClass: sql.NullString{String: "Standard", Valid: true},
+			Attributes:   json.RawMessage(`{"portalRunId": "202409021221e6e6"}`),
 		},
 	}}
 }
@@ -55,6 +59,7 @@ func failCase(location *time.Location) TestCase {
 			EventTime:    sql.NullTime{Time: time.Date(2024, 9, 5, 0, 0, 0, 0, location), Valid: true},
 			Size:         sql.NullInt64{Int64: 3, Valid: true},
 			StorageClass: sql.NullString{String: "Standard", Valid: true},
+			Attributes:   json.RawMessage(`{"portalRunId": "202409021221e6c6"}`),
 		},
 		{
 			EventType:    "Deleted",
@@ -63,6 +68,7 @@ func failCase(location *time.Location) TestCase {
 			EventTime:    sql.NullTime{Time: time.Date(2024, 9, 6, 0, 0, 0, 0, location), Valid: true},
 			Size:         sql.NullInt64{},
 			StorageClass: sql.NullString{},
+			Attributes:   json.RawMessage(`{"portalRunId": "202409021221e6c6"}`),
 		},
 	}}
 }

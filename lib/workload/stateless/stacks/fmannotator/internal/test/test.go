@@ -22,12 +22,13 @@ import (
 
 // S3Object Represents a mock S3Object.
 type S3Object struct {
-	EventType    string         `db:"event_type"`
-	Bucket       string         `db:"bucket"`
-	Key          string         `db:"key"`
-	EventTime    sql.NullTime   `db:"event_time"`
-	Size         sql.NullInt64  `db:"size"`
-	StorageClass sql.NullString `db:"storage_class"`
+	EventType    string          `db:"event_type"`
+	Bucket       string          `db:"bucket"`
+	Key          string          `db:"key"`
+	EventTime    sql.NullTime    `db:"event_time"`
+	Size         sql.NullInt64   `db:"size"`
+	StorageClass sql.NullString  `db:"storage_class"`
+	Attributes   json.RawMessage `db:"attributes"`
 }
 
 // SetupFileManager Setup the filemanager for testing.
