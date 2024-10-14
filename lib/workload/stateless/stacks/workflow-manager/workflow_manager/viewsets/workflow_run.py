@@ -122,6 +122,7 @@ class WorkflowRunViewSet(BaseViewSet):
 
     @action(detail=False, methods=['GET'])
     def unresolved(self, request):
+        self.serializer_class = WorkflowRunSerializer  # use simple view for record listing
         # Get all books marked as favorite
         ordering = self.request.query_params.get('ordering', '-orcabus_id')
 
