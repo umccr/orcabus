@@ -16,11 +16,25 @@ import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import path from 'path';
 import { LambdaB64GzTranslatorConstruct } from '../../../../../../../components/python-lambda-b64gz-translator';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
+import {
+  Architecture,
+  DockerImageCode,
+  DockerImageFunction,
+  Runtime,
+} from 'aws-cdk-lib/aws-lambda';
+import { Duration } from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 
 export interface NewFastqListRowsEventShowerConstructProps {
-  tableObj: dynamodb.ITableV2;
+  /* Event Bus */
   eventBusObj: events.IEventBus;
+
+  /* Tables */
+  tableObj: dynamodb.ITableV2;
+
+  /* Secrets */
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class NewFastqListRowsEventShowerConstruct extends Construct {
@@ -34,6 +48,7 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
       subject: 'subject',
       library: 'library',
       project: 'project',
+      fastqListRow: 'fastq_list_row',
     },
     // Set Event Triggers
     triggerSource: 'orcabus.workflowmanager',
@@ -60,7 +75,6 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
 
   constructor(scope: Construct, id: string, props: NewFastqListRowsEventShowerConstructProps) {
     super(scope, id);
-
     /*
     Part 1: Build the lambdas
     */
@@ -72,6 +86,14 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
         functionNamePrefix: this.newFastqListRowsEventShowerMap.prefix,
       }
     ).lambdaObj;
+
+    const cleanupFastqListRowLambda = new PythonFunction(this, 'cleanup_fastq_list_rows_lambda', {
+      entry: path.join(__dirname, 'lambdas', 'clean_up_fastq_list_rows_py'),
+      index: 'clean_up_fastq_list_rows.py',
+      handler: 'handler',
+      runtime: Runtime.PYTHON_3_12,
+      architecture: Architecture.ARM_64,
+    });
 
     // Generate Data Objects
     // Translate the libraryrunstatechange event
@@ -86,6 +108,66 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
         architecture: Architecture.ARM_64,
       }
     );
+
+    // Add the demux stats
+    const generateDemuxStatsLambda = new PythonFunction(this, 'generate_demux_stats_py', {
+      entry: path.join(__dirname, 'lambdas', 'get_demultiplex_stats_py'),
+      index: 'get_demultiplex_stats.py',
+      handler: 'handler',
+      runtime: Runtime.PYTHON_3_12,
+      architecture: Architecture.ARM_64,
+      memorySize: 1024, // Don't want pandas to kill the lambda
+      environment: {
+        ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
+      },
+      timeout: Duration.seconds(300),
+    });
+
+    // Give fastqc stats lambda permission to access the secret
+    props.icav2AccessTokenSecretObj.grantRead(generateDemuxStatsLambda.currentVersion);
+
+    // Get the fastqc stats
+    const architecture = lambda.Architecture.ARM_64;
+    const getFastqcStats = new DockerImageFunction(this, 'get_fastqc_stats', {
+      description: 'Get Fastqc stats from first 1 million reads',
+      code: DockerImageCode.fromImageAsset(path.join(__dirname, 'lambdas/get_fastqc_stats'), {
+        file: 'Dockerfile',
+        buildArgs: {
+          platform: architecture.dockerPlatform,
+        },
+      }),
+      // Pulling data from icav2 can take time
+      timeout: Duration.seconds(180), // Maximum length of lambda duration is 15 minutes
+      retryAttempts: 0, // Never perform a retry if it fails
+      memorySize: 2048, // Don't want pandas to kill the lambda
+      architecture: architecture,
+      environment: {
+        ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
+      },
+    });
+
+    // Give fastqc stats lambda permission to access the secret
+    props.icav2AccessTokenSecretObj.grantRead(getFastqcStats.currentVersion);
+
+    // Get the sequali stats
+    const getSequaliStatsLambdaObj = new DockerImageFunction(this, 'get_sequali_stats', {
+      description: 'Get the sequali stats from first 1 million reads',
+      code: DockerImageCode.fromImageAsset(path.join(__dirname, 'lambdas/get_sequali_stats'), {
+        file: 'Dockerfile',
+        buildArgs: {
+          platform: architecture.dockerPlatform,
+        },
+      }),
+      memorySize: 2048, // Don't want pandas to kill the lambda
+      timeout: Duration.seconds(300),
+      architecture: Architecture.ARM_64,
+      environment: {
+        ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
+      },
+    });
+
+    // Give the lambda permission to access the secret
+    props.icav2AccessTokenSecretObj.grantRead(getSequaliStatsLambdaObj.currentVersion);
 
     /*
     Part 2: Build state machine
@@ -147,12 +229,21 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
           this.newFastqListRowsEventShowerMap.tablePartition.instrumentRun,
         __project_table_partition_name__:
           this.newFastqListRowsEventShowerMap.tablePartition.project,
+        __fastq_list_row_table_partition_name__:
+          this.newFastqListRowsEventShowerMap.tablePartition.fastqListRow,
 
         /* Lambda functions */
         __decompress_fastq_list_rows_lambda_function_arn__:
           decompressFastqListRowLambda.currentVersion.functionArn,
+        __clean_up_fastq_list_rows_lambda_function_arn__:
+          cleanupFastqListRowLambda.currentVersion.functionArn,
         __generate_event_maps_lambda_function_arn__:
           generateEventDataObjsLambda.currentVersion.functionArn,
+        __get_read_counts_per_rgid_lambda_function_arn__:
+          generateDemuxStatsLambda.currentVersion.functionArn,
+        __get_fastqc_stats_lambda_function_arn__: getFastqcStats.currentVersion.functionArn,
+        __get_sequali_stats_lambda_function_arn__:
+          getSequaliStatsLambdaObj.currentVersion.functionArn,
       },
     });
 
@@ -163,7 +254,14 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
     props.tableObj.grantReadWriteData(this.stateMachineObj);
 
     /* Allow state machine to invoke lambda */
-    [decompressFastqListRowLambda, generateEventDataObjsLambda].forEach((lambda) => {
+    [
+      decompressFastqListRowLambda,
+      generateEventDataObjsLambda,
+      generateDemuxStatsLambda,
+      getFastqcStats,
+      getSequaliStatsLambdaObj,
+      cleanupFastqListRowLambda,
+    ].forEach((lambda) => {
       lambda.currentVersion.grantInvoke(this.stateMachineObj.role);
     });
 
