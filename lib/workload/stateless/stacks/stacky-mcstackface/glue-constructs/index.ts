@@ -66,6 +66,8 @@ export class GlueConstruct extends Construct {
       eventBusObj: props.eventBusObj,
       /* Tables */
       instrumentRunTableObj: props.instrumentRunTableObj,
+      /* Secrets */
+      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
     });
 
     /*
