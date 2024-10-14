@@ -19,21 +19,21 @@ pub mod collecter;
 pub mod inventory;
 pub mod message;
 
-/// A wrapper around AWS storage types with sqlx support.
+/// AWS storage types.
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[sqlx(type_name = "storage_class")]
 pub enum StorageClass {
-    DeepArchive,
-    Glacier,
-    GlacierIr,
+    StandardIa,
     IntelligentTiering,
     OnezoneIa,
+    Glacier,
+    GlacierIr,
+    DeepArchive,
     Outposts,
     ReducedRedundancy,
     Snow,
     Standard,
-    StandardIa,
 }
 
 impl StorageClass {

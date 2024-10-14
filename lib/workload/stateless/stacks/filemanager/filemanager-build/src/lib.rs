@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use std::env::var;
 use std::path::{Path, PathBuf};
 
@@ -10,23 +10,53 @@ use crate::error::ErrorKind::LoadingEnvironment;
 pub mod error;
 pub mod gen_entities;
 pub mod gen_openapi;
+pub mod schema;
 
-/// Run the filemanager-build tool to generate sea-orm entities. This always generates entities
+/// Run the filemanager-build tool to generate sea-orm entities or generate JSON schemas. This always generates entities
 /// if a database url is defined, otherwise it skips generating entities if `--skip-if-no-database`
 /// is used, or errors if it is not.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Config {
-    /// Skip generating if no database URL is set. This allows assuming that any
-    /// checked-in code is up-to-date with the database and proceeding with the build.
-    #[arg(short, long, default_value_t = false, env)]
-    pub(crate) skip_if_no_database: bool,
-    /// The database URL to use for generating entities.
-    #[arg(short, long, default_value = "", env)]
-    pub(crate) database_url: String,
-    /// The output directory.
-    #[arg(short, long, env)]
-    pub(crate) out_dir: PathBuf,
+    /// The filemanager-build subcommands.
+    #[command(subcommand)]
+    pub(crate) sub_commands: SubCommands,
+}
+
+impl Config {
+    /// Get the subcommands.
+    pub fn into_inner(self) -> SubCommands {
+        self.sub_commands
+    }
+}
+
+/// The filemanager-build subcommands.
+#[derive(Subcommand, Debug, Clone)]
+pub enum SubCommands {
+    /// Generate sea-orm entities. This always generates entities if a database url is defined,
+    /// otherwise it skips generating entities if `--skip-if-no-database` is used, or errors if it
+    /// is not.
+    Entities {
+        /// Skip generating if no database URL is set. This allows assuming that any
+        /// checked-in code is up-to-date with the database and proceeding with the build.
+        #[arg(short, long, default_value_t = false, env)]
+        skip_if_no_database: bool,
+        /// The database URL to use for generating entities.
+        #[arg(short, long, default_value = "", env)]
+        database_url: String,
+        /// The output directory.
+        #[arg(short, long, env)]
+        out_dir: PathBuf,
+    },
+    /// Generate the JSON schemas that filemanager can consume.
+    Schemas {
+        /// The output file.
+        #[arg(short, long, env)]
+        out_file: PathBuf,
+        /// Whether to generate schema examples.
+        #[arg(short, long, default_value_t = true, env)]
+        examples: bool,
+    },
 }
 
 impl Config {
@@ -35,30 +65,37 @@ impl Config {
     pub fn load() -> Result<Self> {
         let args = Config::parse();
 
-        if !args.skip_if_no_database && args.database_url.is_empty() {
-            return Err(LoadingEnvironment(
-                "Missing database URL and not skipping entity generation".to_string(),
-            )
-            .into());
+        if let SubCommands::Entities {
+            skip_if_no_database,
+            database_url,
+            ..
+        } = &args.sub_commands
+        {
+            if !skip_if_no_database && database_url.is_empty() {
+                return Err(LoadingEnvironment(
+                    "Missing database URL and not skipping entity generation".to_string(),
+                )
+                .into());
+            }
         }
 
         Ok(args)
     }
 
-    /// Get whether to skip the generation if the database URL is empty.
-    pub fn skip_if_no_database(&self) -> bool {
-        self.skip_if_no_database && self.database_url.is_empty()
-    }
-
-    /// Get the database url.
-    pub fn database_url(&self) -> &str {
-        &self.database_url
-    }
-
-    /// Get the out dir.
-    pub fn out_dir(&self) -> &Path {
-        &self.out_dir
-    }
+    // /// Get whether to skip the generation if the database URL is empty.
+    // pub fn skip_if_no_database(&self) -> bool {
+    //     self.skip_if_no_database && self.database_url.is_empty()
+    // }
+    //
+    // /// Get the database url.
+    // pub fn database_url(&self) -> &str {
+    //     &self.database_url
+    // }
+    //
+    // /// Get the out dir.
+    // pub fn out_dir(&self) -> &Path {
+    //     &self.out_dir
+    // }
 }
 
 /// Get the path of the workspace.

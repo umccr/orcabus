@@ -36,15 +36,14 @@ struct Args {
     /// Apply migrations before starting the server.
     #[arg(short, long, default_value_t = false, env)]
     migrate: bool,
-    /// Mock testing data for the API to use. Records are generated incrementally
-    /// with integers as buckets and keys.
+    /// Subcommands for the filemanager CLI.
     #[command(subcommand)]
-    mock_data: Option<MockData>,
+    mock_data: Option<SubCommands>,
 }
 
 /// Mock data into the filemanager database.
 #[derive(Subcommand, Debug)]
-pub enum MockData {
+pub enum SubCommands {
     /// Mock data into the filemanager database. Note that this should only be run once on the same
     /// postgres database to avoid duplicate key errors.
     Mock {
@@ -100,7 +99,7 @@ async fn main() -> Result<()> {
             .await?;
     }
 
-    if let Some(MockData::Mock {
+    if let Some(SubCommands::Mock {
         n_records,
         bucket_divisor,
         key_divisor,
