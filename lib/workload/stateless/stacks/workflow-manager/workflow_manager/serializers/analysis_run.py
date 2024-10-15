@@ -14,10 +14,10 @@ class AnalysisRunSerializer(AnalysisRunBaseSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['analysis'] = Analysis.orcabus_id_prefix + representation['analysis']
-        if representation['project_context']:
-            representation['project_context'] = AnalysisContext.orcabus_id_prefix + representation['project_context']
-        if representation['approval_context']:
-            representation['approval_context'] = AnalysisContext.orcabus_id_prefix + representation['approval_context']
+        if representation['storage_context']:
+            representation['storage_context'] = AnalysisContext.orcabus_id_prefix + representation['storage_context']
+        if representation['compute_context']:
+            representation['compute_context'] = AnalysisContext.orcabus_id_prefix + representation['compute_context']
         return representation
 
 
@@ -28,8 +28,8 @@ class AnalysisRunDetailSerializer(AnalysisRunBaseSerializer):
 
     libraries = LibrarySerializer(many=True, read_only=True)
     analysis = AnalysisSerializer(read_only=True)
-    approval_context = AnalysisContextSerializer(read_only=True)
-    project_context = AnalysisContextSerializer(read_only=True)
+    storage_context = AnalysisContextSerializer(read_only=True)
+    compute_context = AnalysisContextSerializer(read_only=True)
 
     class Meta:
         model = AnalysisRun

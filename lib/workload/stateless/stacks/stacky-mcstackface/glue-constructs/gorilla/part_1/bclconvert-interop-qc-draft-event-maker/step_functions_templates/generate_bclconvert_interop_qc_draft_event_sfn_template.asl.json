@@ -16,49 +16,36 @@
         "StateMachineArn": "${__sfn_preamble_state_machine_arn__}",
         "Input": {}
       },
-      "Next": "Push Draft Event",
-      "ResultPath": "$.get_sfn_preamble_outputs_step",
       "ResultSelector": {
         "portal_run_id.$": "$.Output.portal_run_id",
         "workflow_run_name.$": "$.Output.workflow_run_name"
-      }
+      },
+      "ResultPath": "$.get_sfn_preamble_outputs_step",
+      "Next": "Launch Ready Event"
     },
-    "Push Draft Event": {
+    "Launch Ready Event": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::events:putEvents",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
       "Parameters": {
-        "Entries": [
-          {
-            "EventBusName": "${__event_bus_name__}",
-            "Source": "${__event_source__}",
-            "DetailType": "${__detail_type__}",
-            "Detail": {
-              "portalRunId.$": "$.get_sfn_preamble_outputs_step.portal_run_id",
-              "timestamp.$": "$$.State.EnteredTime",
-              "status": "DRAFT",
-              "workflowName": "${__workflow_name__}",
-              "workflowVersion": "${__workflow_version__}",
-              "workflowRunName.$": "$.get_sfn_preamble_outputs_step.workflow_run_name",
-              "linkedLibraries.$": "$.inputs.linkedLibraries",
-              "payload": {
-                "version": "${__payload_version__}",
-                "data": {
-                  "inputs": {
-                    "bclconvertReportDirectory.$": "States.Format('{}Reports/', $.inputs.payload.data.outputs.outputUri)",
-                    "interopDirectory.$": "States.Format('{}InterOp/', $.inputs.payload.data.outputs.outputUri)",
-                    "instrumentRunId.$": "$.inputs.payload.data.outputs.instrumentRunId"
-                  },
-                  "tags": {
-                    "instrumentRunId.$": "$.inputs.payload.data.outputs.instrumentRunId"
-                  }
-                }
-              }
+        "StateMachineArn": "${__launch_ready_event_sfn_arn__}",
+        "Input": {
+          "StatePayload": {
+            "portal_run_id.$": "$.get_workflow_inputs_step.portal_run_id",
+            "workflow_run_name.$": "$.get_workflow_inputs_step.workflow_run_name",
+            "linked_libraries.$": "$.get_workflow_inputs_step.linked_libraries_list",
+            "data_inputs": {
+              "bclconvertReportDirectory.$": "States.Format('{}Reports/', $.inputs.payload.data.outputs.outputUri)",
+              "interopDirectory.$": "States.Format('{}InterOp/', $.inputs.payload.data.outputs.outputUri)",
+              "instrumentRunId.$": "$.inputs.payload.data.outputs.instrumentRunId"
+            },
+            "data_tags": {
+              "instrumentRunId.$": "$.inputs.payload.data.outputs.instrumentRunId"
             }
           }
-        ]
+        }
       },
-      "End": true,
-      "ResultPath": null
+      "ResultPath": null,
+      "End": true
     }
   }
 }

@@ -45,6 +45,10 @@ import {
   RnasumIcav2PipelineTable,
   RnasumIcav2PipelineTableStackProps,
 } from './stacks/rnasum-pipeline-dynamo-db/deploy/stack';
+import {
+  PierianDxPipelineTable,
+  PierianDxPipelineTableStackProps,
+} from './stacks/pieriandx-pipeline-dynamo-db/deploy';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -61,6 +65,7 @@ export interface StatefulStackCollectionProps {
   rnasumIcav2PipelineTableStackProps: RnasumIcav2PipelineTableStackProps;
   BclConvertTableStackProps: BclConvertTableStackProps;
   stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
+  pierianDxPipelineTableStackProps: PierianDxPipelineTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -80,6 +85,7 @@ export class StatefulStackCollection {
   readonly rnasumIcav2PipelineTableStack: Stack;
   readonly BclConvertTableStack: Stack;
   readonly stackyStatefulTablesStack: Stack;
+  readonly pierianDxPipelineTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -178,12 +184,22 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'BclConvertTableStack'),
       ...statefulConfiguration.BclConvertTableStackProps,
     });
+
     this.stackyStatefulTablesStack = new StackyStatefulTablesStack(
       scope,
       'StackyStatefulTablesStack',
       {
         ...this.createTemplateProps(env, 'StackyStatefulTablesStack'),
         ...statefulConfiguration.stackyStatefulTablesStackProps,
+      }
+    );
+
+    this.pierianDxPipelineTableStack = new PierianDxPipelineTable(
+      scope,
+      'PierianDxPipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'PierianDxPipelineTableStack'),
+        ...statefulConfiguration.pierianDxPipelineTableStackProps,
       }
     );
   }

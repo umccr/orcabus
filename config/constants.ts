@@ -291,7 +291,7 @@ External resources required by the wgtsqc Stack
 // Deployed under dev/stg/prod
 export const wgtsQcIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wgts_qc_4.2.4_pipeline_id'; // 03689516-b7f8-4dca-bba9-8405b85fae45
 
-export const wgtsQcIcav2PipelineWorkflowType = 'wgtsQc';
+export const wgtsQcIcav2PipelineWorkflowType = 'wgts-qc';
 export const wgtsQcIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const wgtsQcIcav2ServiceVersion = '2024.07.01';
 
@@ -324,7 +324,7 @@ TN Stateless stack
 
 // Deployed under dev/stg/prod
 export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 0f5575bc-6cf8-4a90-a80e-05088aae8ed7
-export const tnIcav2PipelineWorkflowType = 'tumor_normal';
+export const tnIcav2PipelineWorkflowType = 'tumor-normal';
 export const tnIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const tnIcav2ServiceVersion = '2024.07.01';
 export const tnIcav2ReadyEventSource = 'orcabus.workflowmanager';
@@ -500,6 +500,183 @@ export const rnasumIcav2EventDetailType = 'WorkflowRunStateChange';
 export const rnasumStateMachinePrefix = 'rnasumSfn';
 export const rnasumDefaultDatasetVersion = 'PANCAN';
 
+/*
+Ora Compression Stateless Stack
+*/
+
+// Deployed in dev
+// export const oraCompressionTarSSMParameterPath = '/icav2/umccr-prod/ora_compression_tar_uri'; // icav2://reference-data/dragen-ora/v2/ora_reference_v2.tar.gz
+
+/*
+PierianDx Stateful and Stateless stacks
+*/
+export const pieriandxPrefix = 'pieriandx';
+export const pieriandxTriggerLaunchSource = 'orcabus.workflowmanager';
+export const pieriandxWorkflowName = 'pieriandx';
+export const pieriandxWorkflowVersion = '2.1';
+export const pieriandxDetailType = 'WorkflowRunStateChange';
+export const pieriandxEventSource = 'orcabus.pieriandx';
+export const pieriandxPayloadVersion = '2024.10.01';
+export const pieriandxDynamodbTable = 'PierianDxPipelineDynamoDbTable';
+
+/*
+[
+    {
+        "panelName": "main",
+        "panelId": "tso500_DRAGEN_ctDNA_v2_1_Universityofmelbourne"  // pragma: allowlist secret
+    },
+    {
+        "panelName": "subpanel",
+        "panelId": "tso500_DRAGEN_ctDNA_v2_1_subpanel_Universityofmelbourne"  // pragma: allowlist secret
+    }
+]
+
+*/
+export const pieriandxDefaultPanelName = 'main';
+export const pieriandxPanelMapSsmParameterPath = '/umccr/orcabus/stateful/pieriandx/panel_map';
+
+/*
+[
+    {
+        "dagName": "cromwell_tso500_ctdna_workflow_1.0.4",
+        "dagDescription": "tso500_ctdna_workflow"
+    }
+]
+*/
+export const pieriandxDefaultDagName = 'cromwell_tso500_ctdna_workflow_1.0.4';
+export const pieriandxDagSsmParameterPath = '/umccr/orcabus/stateful/pieriandx/dag_map';
+
+/*
+"s3://pdx-cgwxfer-test/melbournetest" // development
+"s3://pdx-cgwxfer-test/melbournetest" // staging
+"s3://pdx-cgwxfer/melbourne" // production
+*/
+export const pieriandxS3SequencerRunRootSsmParameterPath =
+  '/umccr/orcabus/pieriandx/s3_sequencer_run_root';
+
+/*
+"services@umccr.org"  // development
+"services@umccr.org"  // staging
+"services@umccr.org"  // production
+*/
+export const pieriandxUserEmailSsmParameterPath = '/umccr/orcabus/pieriandx/user_email';
+
+/*
+"melbournetest"  // development
+"melbournetest"  // staging
+"melbourne" //  production
+*/
+export const pieriandxInstitutionSsmParameterPath = '/umccr/orcabus/pieriandx/institution';
+
+/*
+"https://app.uat.pieriandx.com/cgw-api/v2.0.0"  // development
+"https://app.uat.pieriandx.com/cgw-api/v2.0.0"  // staging
+"https://app.pieriandx.com/cgw-api/v2.0.0" //  production
+*/
+export const pieriandxBaseUrlSsmParameterPath = '/umccr/orcabus/pieriandx/base_url';
+
+// Constant for all environments
+export const pieriandxAuthTokeSsmParameterPath = 'collectPierianDxAccessToken';
+
+// Secret name for PierianDx S3 credentials (test bucket for dev and staging, prod bucket for prod)
+export const pieriandxS3CredentialsSecretsManagerId = 'PierianDx/S3Credentials'; // pragma: allowlist secret
+
+/*
+[
+  {
+    "project_id": "PO",
+    "panel": "subpanel",
+    "sample_type": "patientcare",
+    "is_identified": "identified",
+    "default_snomed_disease_code": null
+  },
+  {
+    "project_id": "COUMN",
+    "panel": "subpanel",
+    "sample_type": "patientcare",
+    "is_identified": "identified",
+    "default_snomed_disease_code": null
+  },
+  {
+    "project_id": "CUP",
+    "panel": "main",
+    "sample_type": "patientcare",
+    "is_identified": "identified",
+    "default_snomed_disease_code": 285645000
+  },
+  {
+    "project_id": "PPGL",
+    "panel": "main",
+    "sample_type": "patientcare",
+    "is_identified": "identified",
+    "default_snomed_disease_code": null
+  },
+  {
+    "project_id": "MESO",
+    "panel": "subpanel",
+    "sample_type": "patientcare",
+    "is_identified": "identified",
+    "default_snomed_disease_code": null
+  },
+  {
+    "project_id": "OCEANiC",
+    "panel": "subpanel",
+    "sample_type": "patientcare",
+    "is_identified": "deidentified",
+    "default_snomed_disease_code": null
+  },
+  {
+    "project_id": "SOLACE2",
+    "panel": "main",
+    "sample_type": "patientcare",
+    "is_identified": "deidentified",
+    "default_snomed_disease_code": 55342001
+  },
+  {
+    "project_id": "IMPARP",
+    "panel": "main",
+    "sample_type": "patientcare",
+    "is_identified": "deidentified",
+    "default_snomed_disease_code": 55342001
+  },
+  {
+    "project_id": "Control",
+    "panel": "main",
+    "sample_type": "validation",
+    "is_identified": "deidentified",
+    "default_snomed_disease_code": 55342001
+  },
+  {
+    "project_id": "QAP",
+    "panel": "subpanel",
+    "sample_type": "patientcare",
+    "is_identified": "identified",
+    "default_snomed_disease_code": null
+  },
+  {
+    "project_id": "iPredict2",
+    "panel": "subpanel",
+    "sample_type": "patientcare",
+    "is_identified": "identified",
+    "default_snomed_disease_code":null
+  },
+  {
+    "project_id": "*",
+    "panel": "main",
+    "sample_type": "patientcare",
+    "is_identified": "deidentified",
+    "default_snomed_disease_code": 55342001
+  }
+]
+*/
+export const pieriandxProjectInfoSsmParameterPath = '/umccr/orcabus/pieriandx/project_info';
+
+export const redcapLambdaFunctionName: Record<AppStage, string> = {
+  [AppStage.BETA]: 'redcap-apis-dev-lambda-function',
+  [AppStage.GAMMA]: 'redcap-apis-stg-lambda-function',
+  [AppStage.PROD]: 'redcap-apis-prod-lambda-function',
+};
+
 // Mock Stack
 export const mockEventBusName = eventBusName;
 export const mockInstrumentRunTableName = 'stacky-instrument-run-table';
@@ -510,6 +687,7 @@ export const mockTnGlueTableName = 'stacky-tn-glue-table';
 export const mockWtsGlueTableName = 'stacky-wts-glue-table';
 export const mockUmccriseGlueTableName = 'stacky-umccrise-glue-table';
 export const mockRnasumGlueTableName = 'stacky-rnasum-glue-table';
+export const mockPierianDxGlueTableName = 'stacky-pieriandx-glue-table';
 export const mockWorkflowManagerTableName = 'stacky-workflow-manager-table';
 
 // {

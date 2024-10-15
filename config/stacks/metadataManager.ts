@@ -5,6 +5,7 @@ import {
   corsAllowOrigins,
   logsApiGatewayConfig,
   vpcProps,
+  eventBusName,
 } from '../constants';
 import { MetadataManagerStackProps } from '../../lib/workload/stateless/stacks/metadata-manager/deploy/stack';
 
@@ -15,6 +16,7 @@ export const getMetadataManagerStackProps = (stage: AppStage): MetadataManagerSt
     vpcProps,
     isDailySync: isDailySync,
     lambdaSecurityGroupName: computeSecurityGroupName,
+    eventBusName: eventBusName,
     apiGatewayCognitoProps: {
       ...cognitoApiGatewayConfig,
       corsAllowOrigins: corsAllowOrigins[stage],

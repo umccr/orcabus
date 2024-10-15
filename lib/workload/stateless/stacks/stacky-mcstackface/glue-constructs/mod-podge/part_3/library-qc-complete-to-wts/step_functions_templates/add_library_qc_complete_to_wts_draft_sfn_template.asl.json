@@ -1,0 +1,172 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "payload_data.$": "$.payload.data"
+      },
+      "Next": "Get Library Item"
+    },
+    "Get Library Item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.payload_data.library.orcabusId",
+          "id_type": "${__library_partition_name__}"
+        }
+      },
+      "ResultPath": "$.get_library_item_step",
+      "Next": "Library Item In DataBase"
+    },
+    "Library Item In DataBase": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_library_item_step.Item",
+          "IsPresent": true,
+          "Comment": "Library Item In DataBase",
+          "Next": "Collect Parameters"
+        }
+      ],
+      "Default": "Not a WTS library"
+    },
+    "Collect Parameters": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Get Tumor Fastq List Row Ids",
+          "States": {
+            "Get Tumor Fastq List Row Ids": {
+              "Type": "Map",
+              "ItemsPath": "$.get_library_item_step.Item.fastq_list_row_id_set.SS",
+              "ItemSelector": {
+                "fastq_list_row_id.$": "$$.Map.Item.Value"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Get Tumor Fastq List Row Item",
+                "States": {
+                  "Get Tumor Fastq List Row Item": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:getItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Key": {
+                        "id.$": "$.fastq_list_row_id",
+                        "id_type": "${__fastq_list_row_partition_name__}"
+                      }
+                    },
+                    "ResultSelector": {
+                      "fastq_list_row_id.$": "$.Item.id.S",
+                      "fastq_list_row_obj.$": "States.StringToJson($.Item.fastq_list_row_json.S)"
+                    },
+                    "ResultPath": "$.get_tumor_fastq_list_row_obj",
+                    "End": true
+                  }
+                }
+              },
+              "ResultSelector": {
+                "tumor_fastq_list_rows.$": "$.[*].get_tumor_fastq_list_row_obj.fastq_list_row_obj",
+                "tumor_fastq_list_row_ids.$": "$.[*].get_tumor_fastq_list_row_obj.fastq_list_row_id"
+              },
+              "ResultPath": "$.get_tumor_fastq_list_rows",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Portal Run Id and Workflow Run Name",
+          "States": {
+            "Get Portal Run Id and Workflow Run Name": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "${__sfn_preamble_state_machine_arn__}",
+                "Input": {}
+              },
+              "End": true,
+              "ResultSelector": {
+                "portal_run_id.$": "$.Output.portal_run_id",
+                "workflow_run_name.$": "$.Output.workflow_run_name"
+              },
+              "ResultPath": "$.get_portal_and_run_name_step"
+            }
+          }
+        }
+      ],
+      "Next": "Generate Draft Event Payload",
+      "ResultSelector": {
+        "tumor_fastq_list_rows.$": "$.[0].get_tumor_fastq_list_rows.tumor_fastq_list_rows",
+        "tumor_fastq_list_row_ids.$": "$.[0].get_tumor_fastq_list_rows.tumor_fastq_list_row_ids",
+        "portal_run_id.$": "$.[1].get_portal_and_run_name_step.portal_run_id",
+        "workflow_run_name.$": "$.[1].get_portal_and_run_name_step.workflow_run_name"
+      },
+      "ResultPath": "$.get_parameters_step"
+    },
+    "Generate Draft Event Payload": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_draft_event_payload_lambda_function_arn__}",
+        "Payload": {
+          "tumor_library_id.$": "$.payload_data.library.libraryId",
+          "tumor_fastq_list_rows.$": "$.get_parameters_step.tumor_fastq_list_rows",
+          "tumor_fastq_list_row_ids.$": "$.get_parameters_step.tumor_fastq_list_row_ids",
+          "subject_id.$": "$.get_library_item_step.Item.subject_id.S"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.generate_draft_event_payload_data_step",
+      "Next": "Push WTS Ready Event",
+      "ResultSelector": {
+        "input_event_data.$": "$.Payload.input_event_data",
+        "event_tags.$": "$.Payload.event_tags"
+      }
+    },
+    "Push WTS Ready Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__launch_ready_event_sfn_arn__}",
+        "Input": {
+          "StatePayload": {
+            "portal_run_id.$": "$.get_parameters_step.portal_run_id",
+            "workflow_run_name.$": "$.get_parameters_step.workflow_run_name",
+            "linked_libraries": [
+              {
+                "libraryId.$": "$.get_library_item_step.Item.library_id.S",
+                "orcabusId.$": "$.get_library_item_step.Item.id.S"
+              }
+            ],
+            "data_inputs.$": "$.generate_draft_event_payload_data_step.input_event_data",
+            "data_tags.$": "$.generate_draft_event_payload_data_step.event_tags"
+          }
+        }
+      },
+      "ResultPath": null,
+      "End": true
+    },
+    "Not a WTS library": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}

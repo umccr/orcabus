@@ -284,12 +284,14 @@ def handler(event, context):
 
 # Failed workflow
 # if __name__ == "__main__":
+#     environ['AWS_PROFILE'] = 'umccr-production'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
 #     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-production"
 #     print(
 #         json.dumps(
 #             handler(
 #                 {
-#                     "output_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202409156f4e1c52/"
+#                     "output_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/20240922130c78be/"
 #                 },
 #                 None
 #             ),
@@ -299,10 +301,10 @@ def handler(event, context):
 #
 #     # {
 #     #     "success": false,
-#     #     "message": "Workflow failed at 'DragenCaller' step"
+#     #     "message": "Workflow failed at 'FastqValidation' step"
 #     # }
 
-# Passing workflow
+# # Passing workflow
 # if __name__ == "__main__":
 #     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-production"
 #     print(

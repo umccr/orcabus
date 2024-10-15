@@ -15,7 +15,7 @@ class BaseManagerTestCase(TestCase):
 
     def test_reduce_multi_values_qor(self):
         """
-        python manage.py tests app.tests.test_base.BaseManagerTestCase.test_reduce_multi_values_qor
+        python manage.py test app.tests.test_base.BaseManagerTestCase.test_reduce_multi_values_qor
         """
         q = BaseManager.reduce_multi_values_qor(
             "subject_id", ["SBJ000001", "SBJ000002"]
@@ -27,7 +27,7 @@ class BaseManagerTestCase(TestCase):
 
     def test_reduce_multi_values_qor_auto_pack(self):
         """
-        python manage.py tests app.tests.test_base.BaseManagerTestCase.test_reduce_multi_values_qor_auto_pack
+        python manage.py test app.tests.test_base.BaseManagerTestCase.test_reduce_multi_values_qor_auto_pack
         """
         q = BaseManager.reduce_multi_values_qor("subject_id", "SBJ000001")
         logger.info(q)
@@ -37,7 +37,7 @@ class BaseManagerTestCase(TestCase):
 
     def test_base_model_must_abstract(self):
         """
-        python manage.py tests app.tests.test_base.BaseManagerTestCase.test_base_model_must_abstract
+        python manage.py test app.tests.test_base.BaseManagerTestCase.test_base_model_must_abstract
         """
         try:
             BaseModel()

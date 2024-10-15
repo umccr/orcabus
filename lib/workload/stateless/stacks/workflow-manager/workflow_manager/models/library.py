@@ -18,9 +18,3 @@ class Library(OrcaBusBaseModel):
 
     def __str__(self):
         return f"ID: {self.orcabus_id}, library_id: {self.library_id}"
-    
-    def to_dict(self):
-        return {
-            "orcabusId": self.orcabus_id,
-            "libraryId": self.library_id
-        }

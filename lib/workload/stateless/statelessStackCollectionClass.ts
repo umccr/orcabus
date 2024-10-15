@@ -58,6 +58,10 @@ import {
   RnasumIcav2PipelineManagerStackProps,
 } from './stacks/rnasum-pipeline-manager/deploy';
 import { FMAnnotator, FMAnnotatorConfigurableProps } from './stacks/fmannotator/deploy/stack';
+import {
+  PieriandxPipelineManagerStack,
+  PierianDxPipelineManagerStackProps,
+} from './stacks/pieriandx-pipeline-manager/deploy';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -72,6 +76,7 @@ export interface StatelessStackCollectionProps {
   wtsIcav2PipelineManagerStackProps: WtsIcav2PipelineManagerStackProps;
   umccriseIcav2PipelineManagerStackProps: UmccriseIcav2PipelineManagerStackProps;
   rnasumIcav2PipelineManagerStackProps: RnasumIcav2PipelineManagerStackProps;
+  pieriandxPipelineManagerStackProps: PierianDxPipelineManagerStackProps;
   eventSchemaStackProps: SchemaStackProps;
   dataSchemaStackProps: SchemaStackProps;
   bclConvertManagerStackProps: BclConvertManagerStackProps;
@@ -94,6 +99,7 @@ export class StatelessStackCollection {
   readonly wtsIcav2PipelineManagerStack: Stack;
   readonly umccriseIcav2PipelineManagerStack: Stack;
   readonly rnasumIcav2PipelineManagerStack: Stack;
+  readonly pieriandxPipelineManagerStack: Stack;
   readonly eventSchemaStack: Stack;
   readonly dataSchemaStack: Stack;
   readonly bclConvertManagerStack: Stack;
@@ -211,6 +217,15 @@ export class StatelessStackCollection {
       {
         ...this.createTemplateProps(env, 'RnasumIcav2PipelineManagerStack'),
         ...statelessConfiguration.rnasumIcav2PipelineManagerStackProps,
+      }
+    );
+
+    this.pieriandxPipelineManagerStack = new PieriandxPipelineManagerStack(
+      scope,
+      'PieriandxPipelineManagerStack',
+      {
+        ...this.createTemplateProps(env, 'PieriandxPipelineManagerStack'),
+        ...statelessConfiguration.pieriandxPipelineManagerStackProps,
       }
     );
 

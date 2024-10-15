@@ -11,6 +11,7 @@ import { LambdaMigrationConstruct } from './construct/lambda-migration';
 import { LambdaAPIConstruct } from './construct/lambda-api';
 import { ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
+import { LambdaLoadCustomCSVConstruct } from './construct/lambda-load-custom-csv';
 
 export type MetadataManagerStackProps = {
   /**
@@ -29,6 +30,10 @@ export type MetadataManagerStackProps = {
    * API Gateway props
    */
   apiGatewayCognitoProps: ApiGatewayConstructProps;
+  /**
+   * API Gateway props
+   */
+  eventBusName: string;
 };
 
 export class MetadataManagerStack extends Stack {
@@ -82,6 +87,7 @@ export class MetadataManagerStack extends Stack {
     // 1. To handle API calls
     // 2. To do migrations
     // 3. To sync db with external sources (e.g. metadata in gsheet)
+    // 4. To load-db from external csv presigned url file
 
     // (1)
     new LambdaAPIConstruct(this, 'APILambda', {
@@ -102,6 +108,14 @@ export class MetadataManagerStack extends Stack {
       basicLambdaConfig: basicLambdaConfig,
       dbConnectionSecret: dbSecret,
       isDailySync: props.isDailySync,
+      eventBusName: props.eventBusName,
+    });
+
+    // (4)
+    new LambdaLoadCustomCSVConstruct(this, 'CustomCsvLoaderLambda', {
+      basicLambdaConfig: basicLambdaConfig,
+      dbConnectionSecret: dbSecret,
+      eventBusName: props.eventBusName,
     });
   }
 }

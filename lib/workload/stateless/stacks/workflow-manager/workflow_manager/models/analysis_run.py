@@ -17,10 +17,10 @@ class AnalysisRun(OrcaBusBaseModel):
     comment = models.CharField(max_length=255, null=True, blank=True)
     status = models.CharField(max_length=255, null=True, blank=True)
 
-    approval_context = models.ForeignKey(AnalysisContext, null=True, blank=True, on_delete=models.SET_NULL,
-                                         related_name="approval_context")
-    project_context = models.ForeignKey(AnalysisContext, null=True, blank=True, on_delete=models.SET_NULL,
-                                        related_name="project_context")
+    compute_context = models.ForeignKey(AnalysisContext, null=True, blank=True, on_delete=models.SET_NULL,
+                                         related_name="compute_context")
+    storage_context = models.ForeignKey(AnalysisContext, null=True, blank=True, on_delete=models.SET_NULL,
+                                        related_name="storage_context")
     analysis = models.ForeignKey(Analysis, null=True, blank=True, on_delete=models.SET_NULL)
     libraries = models.ManyToManyField(Library)
 
@@ -28,12 +28,3 @@ class AnalysisRun(OrcaBusBaseModel):
 
     def __str__(self):
         return f"ID: {self.orcabus_id}, analysis_run_name: {self.analysis_run_name}"
-
-    def to_dict(self):
-        return {
-            "orcabusId": self.orcabus_id,
-            "analysis_run_name": self.analysis_run_name,
-            "comment": self.comment,
-            "approval_context": self.approval_context,
-            "project_context": self.project_context
-        }

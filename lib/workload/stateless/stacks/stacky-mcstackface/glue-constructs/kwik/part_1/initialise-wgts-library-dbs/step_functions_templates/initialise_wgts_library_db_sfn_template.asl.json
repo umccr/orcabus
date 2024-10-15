@@ -1,0 +1,139 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "Get FastqListRowID From BCLConvert Outputs",
+      "Parameters": {
+        "inputs.$": "$",
+        "input_payload_data.$": "$.payload.data"
+      }
+    },
+    "Get FastqListRowID From BCLConvert Outputs": {
+      "Type": "Map",
+      "ItemsPath": "$.input_payload_data.bclconvertDataRows",
+      "ItemSelector": {
+        "bclconvert_data_row.$": "$$.Map.Item.Value",
+        "index.$": "$$.Map.Item.Index",
+        "fastq_list_row_objs.$": "$.input_payload_data.fastqListRows",
+        "instrument_run_id.$": "$.input_payload_data.instrumentRunId",
+        "library_id.$": "$.input_payload_data.library.libraryId",
+        "library_orcabus_id.$": "$.input_payload_data.library.orcabusId"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Set Fastq List Row",
+        "States": {
+          "Set Fastq List Row": {
+            "Type": "Pass",
+            "Parameters": {
+              "fastq_list_row_id.$": "States.ArrayGetItem($.fastq_list_row_objs[*].fastqListRowRgid, $.index)"
+            },
+            "ResultPath": "$.get_fastq_list_row_id_step",
+            "Next": "Set Map Outputs"
+          },
+          "Set Map Outputs": {
+            "Type": "Pass",
+            "Parameters": {
+              "fastq_list_row_id.$": "$.get_fastq_list_row_id_step.fastq_list_row_id"
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "Add DataBase Inputs",
+      "ResultPath": "$.bclconvert_and_fastq_list_row_id_inputs"
+    },
+    "Add DataBase Inputs": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Initialise Library ID",
+          "States": {
+            "Initialise Library ID": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "id": {
+                    "S.$": "$.input_payload_data.library.orcabusId"
+                  },
+                  "id_type": {
+                    "S": "${__library_partition_name__}"
+                  },
+                  "library_id": {
+                    "S.$": "$.input_payload_data.library.libraryId"
+                  },
+                  "sample_type": {
+                    "S.$": "$.input_payload_data.library.type"
+                  },
+                  "fastq_list_row_id_set": {
+                    "SS.$": "$.bclconvert_and_fastq_list_row_id_inputs[*].fastq_list_row_id"
+                  },
+                  "instrument_run_id": {
+                    "S.$": "$.input_payload_data.instrumentRunId"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "For each FastqListRowID",
+          "States": {
+            "For each FastqListRowID": {
+              "Type": "Map",
+              "ItemsPath": "$.bclconvert_and_fastq_list_row_id_inputs",
+              "ItemSelector": {
+                "fastq_list_row_id.$": "$$.Map.Item.Value.fastq_list_row_id",
+                "library_id.$": "$.input_payload_data.library.libraryId",
+                "library_orcabus_id.$": "$.input_payload_data.library.orcabusId",
+                "instrument_run_id.$": "$.input_payload_data.instrumentRunId"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Initialise Fastq List Row",
+                "States": {
+                  "Initialise Fastq List Row": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:putItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Item": {
+                        "id": {
+                          "S.$": "$.fastq_list_row_id"
+                        },
+                        "id_type": {
+                          "S": "${__fastq_list_row_partition_name__}"
+                        },
+                        "library_id": {
+                          "S.$": "$.library_id"
+                        },
+                        "library_orcabus_id": {
+                          "S.$": "$.library_orcabus_id"
+                        },
+                        "instrument_run_id": {
+                          "S.$": "$.instrument_run_id"
+                        }
+                      }
+                    },
+                    "End": true
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "End": true
+    }
+  }
+}

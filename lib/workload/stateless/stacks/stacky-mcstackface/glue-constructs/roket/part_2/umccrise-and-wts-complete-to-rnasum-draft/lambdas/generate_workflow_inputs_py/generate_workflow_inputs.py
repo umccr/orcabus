@@ -35,6 +35,7 @@ def handler(event, context):
     wts_tumor_fastq_list_row_ids = event['wts_tumor_fastq_list_row_ids']
     wgs_tumor_fastq_list_row_ids = event['wgs_tumor_fastq_list_row_ids']
     wgs_normal_fastq_list_row_ids = event['wgs_normal_fastq_list_row_ids']
+    individual_id = event['individual_id']
     subject_id = event['subject_id']
 
     # Outputs
@@ -43,11 +44,12 @@ def handler(event, context):
         "dragenTranscriptomeUri": dragen_wts_output_uri,
         "umccriseUri": umccrise_output_uri,
         "wtsTumorLibraryId": wts_tumor_library_id,
-        "subjectId": subject_id
+        "subjectId": individual_id
     }
 
     event_tags = {
         "subjectId": subject_id,
+        "individualId": individual_id,
         "wtsTumorLibraryId": wts_tumor_library_id,
         "wgsTumorLibraryId": wgs_tumor_library_id,
         "wgsNormalLibraryId": wgs_normal_library_id,

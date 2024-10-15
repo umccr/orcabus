@@ -19,11 +19,3 @@ class Payload(OrcaBusBaseModel):
 
     def __str__(self):
         return f"ID: {self.orcabus_id}, payload_ref_id: {self.payload_ref_id}"
-    
-    def to_dict(self):
-        return {
-            "orcabusId": self.orcabus_id,
-            "payload_ref_id": self.payload_ref_id,
-            "version": self.version,
-            "data": self.data
-        }

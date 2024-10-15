@@ -588,7 +588,7 @@ To decode these see the headers below
 
 ## Lambdas in this directory
 
-All lambdas run on python 3.11 or higher.
+All lambdas run on python 3.12 or higher.
 
 ### Process BCLConvert Output
 

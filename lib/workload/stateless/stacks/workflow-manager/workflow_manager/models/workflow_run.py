@@ -30,16 +30,6 @@ class WorkflowRun(OrcaBusBaseModel):
         return f"ID: {self.orcabus_id}, portal_run_id: {self.portal_run_id}, workflow_run_name: {self.workflow_run_name}, " \
                f"workflowRun: {self.workflow.workflow_name} "
 
-    def to_dict(self):
-        return {
-            "orcabusId": self.orcabus_id,
-            "portal_run_id": self.portal_run_id,
-            "execution_id": self.execution_id,
-            "workflow_run_name": self.workflow_run_name,
-            "comment": self.comment,
-            "workflow": self.workflow.to_dict() if (self.workflow is not None) else None
-        }
-
     def get_all_states(self):
         # retrieve all states (DB records rather than a queryset)
         return list(self.states.all())  # TODO: ensure order by timestamp ?

@@ -13,6 +13,7 @@ STATUS_START = "READY"
 STATUS_RUNNING = "RUNNING"
 STATUS_END = "SUCCEEDED"
 STATUS_FAIL = "FAILED"
+STATUS_RESOLVED = "RESOLVED"
 
 
 # https://docs.djangoproject.com/en/5.0/howto/custom-management-commands/
@@ -117,7 +118,7 @@ class Command(BaseCommand):
             portal_run_id="2346",
             workflow=wf_qc
         )
-        for i, state in enumerate([STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_END]):
+        for i, state in enumerate([STATUS_DRAFT, STATUS_START, STATUS_RUNNING, STATUS_FAIL, STATUS_RESOLVED]):
             StateFactory(workflow_run=wfr_qc_2, status=state, payload=generic_payload, timestamp=make_aware(datetime.now() + timedelta(hours=i)))
         LibraryAssociation.objects.create(
             workflow_run=wfr_qc_2,

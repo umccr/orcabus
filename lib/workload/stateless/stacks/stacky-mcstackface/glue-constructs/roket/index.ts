@@ -3,9 +3,9 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
-import { RnasumInitialiseSubjectDbRowConstruct } from './part_1/initialise-rnasum-subject-dbs';
-import { UmccriseAndWtsCompleteToRnasumDraftDraftConstruct } from './part_2/umccrise-and-wts-complete-to-rnasum-draft';
-import { RnasumInputMakerConstruct } from './part_3/rnasum-draft-to-ready';
+import { UmccriseAndWtsCompleteToRnasumReadyConstruct } from './part_2/umccrise-and-wts-complete-to-rnasum-draft';
+import { TnInitialiseLibraryAndFastqListRowConstruct } from '../loctite/part_1/initialise-tn-library-dbs';
+import { RnasumInitialiseLibraryConstruct } from './part_1/initialise-rnasum-library-dbs';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting wgts qc analyses
@@ -16,7 +16,6 @@ export interface umccriseGlueHandlerConstructProps {
   eventBusObj: events.IEventBus;
   /* Tables */
   rnasumGlueTableObj: dynamodb.ITableV2;
-  inputMakerTableObj: dynamodb.ITableV2;
   /* SSM Parameters */
   analysisOutputUriSsmParameterObj: ssm.IStringParameter;
   analysisLogsUriSsmParameterObj: ssm.IStringParameter;
@@ -32,16 +31,16 @@ export class RnasumGlueHandlerConstruct extends Construct {
 
     /*
     Part 1
-
     Input Event Source: `orcabus.instrumentrunmanager`
     Input Event DetailType: `SamplesheetMetadataUnion`
-    Input Event status: `SubjectInSamplesheet`
+    Input Event status: `LibraryInSamplesheet`
 
-    * Initialise rnasum instrument db construct
+    * Initialise rnasum library and fastq list row constructs
     */
-    const rnasum_initialise_subject = new RnasumInitialiseSubjectDbRowConstruct(
+
+    const rnasumInitialiseLibraryAndFastqListRow = new RnasumInitialiseLibraryConstruct(
       this,
-      'rnasum_initialise_subject',
+      'rnasum_initialise_library_and_fastq_list_row',
       {
         eventBusObj: props.eventBusObj,
         tableObj: props.rnasumGlueTableObj,
@@ -57,52 +56,29 @@ export class RnasumGlueHandlerConstruct extends Construct {
 
     Output Event source: `orcabus.umccriseinputeventglue`
     Output Event DetailType: `WorkflowDraftRunStateChange`
-    Output Event status: `draft`
+    Output Event status: `ready`
 
     * Populate the fastq list row attributes for the rgid for this workflow
     */
-
-    const umccrise_and_wts_to_rnasum_draft = new UmccriseAndWtsCompleteToRnasumDraftDraftConstruct(
+    const umccriseAndWtsToRnasumDraft = new UmccriseAndWtsCompleteToRnasumReadyConstruct(
       this,
       'umccrise_and_wts_to_rnasum_draft',
       {
+        /* Events */
         eventBusObj: props.eventBusObj,
+
+        /* Tables */
         tableObj: props.rnasumGlueTableObj,
-        workflowsTableObj: props.inputMakerTableObj,
+
+        /* SSM Parameters */
+        outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+        cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+        logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+        icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+
+        /* Secrets */
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
       }
     );
-
-    /*
-    Part 3
-
-    Input Event source: `orcabus.rnasuminputeventglue`
-    Input Event DetailType: `WorkflowDraftRunStateChange`
-    Input Event status: `draft`
-
-    Output Event source: `orcabus.rnasuminputeventglue`
-    Output Event DetailType: `WorkflowRunStateChange`
-    Output Event status: `ready`
-
-    * The rnasumInputMaker, subscribes to the rnasum input event glue (itself) and generates a ready event for the rnasumReadySfn
-      * However, in order to be 'READY' we need to use a few more variables such as
-        * icaLogsUri,
-        * analysisOutputUri
-        * cacheUri
-        * projectId
-        * userReference
-    */
-    const rnasumInputMaker = new RnasumInputMakerConstruct(this, 'rnasum_input_maker_construct', {
-      /* Event bus */
-      eventBusObj: props.eventBusObj,
-      /* Tables */
-      inputMakerTableObj: props.inputMakerTableObj,
-      /* SSM Param objects */
-      icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
-      outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
-      cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
-      logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-      /* Secrets Manager */
-      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-    });
   }
 }

@@ -28,7 +28,7 @@ export class ICAv2CopyFilesConstruct extends Construct {
       index: 'check_or_launch_job_lambda.py',
       handler: 'handler',
       memorySize: 1024,
-      timeout: Duration.seconds(300),
+      timeout: Duration.seconds(900),
       environment: {
         ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2JwtSecretParameterObj.secretName,
       },

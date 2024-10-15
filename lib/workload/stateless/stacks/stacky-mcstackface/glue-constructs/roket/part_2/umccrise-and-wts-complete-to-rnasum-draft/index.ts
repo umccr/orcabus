@@ -4,18 +4,22 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import path from 'path';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../../../../components/sfn-workflowdraftrunstatechange-common-preamble';
+import { GetMetadataLambdaConstruct } from '../../../../../../../components/python-lambda-metadata-mapper';
+import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
 
 /*
 Part 4
 
 Input Event Source: `orcabus.workflowmanager`
 Input Event DetailType: `WorkflowRunStateChange`
-Input Event WorkflowName: tumor_normal
+Input Event WorkflowName: tumor-normal
 Input Event status: `succeeded`
 
 Output Event Source: `orcabus.inputeventglue`
@@ -27,16 +31,23 @@ Output Event status: `draft`
  pipeline
 */
 
-export interface UmccriseAndWtsCompleteToRnasumDraftDraftConstructProps {
+export interface UmccriseAndWtsCompleteToRnasumReadyConstructProps {
+  /* Event bus */
   eventBusObj: events.IEventBus;
+  /* Table */
   tableObj: dynamodb.ITableV2;
-  workflowsTableObj: dynamodb.ITableV2;
+  /* SSM Parameters */
+  outputUriSsmParameterObj: ssm.IStringParameter;
+  icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
+  logsUriSsmParameterObj: ssm.IStringParameter;
+  cacheUriSsmParameterObj: ssm.IStringParameter;
+  /* Secrets */
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
-export class UmccriseAndWtsCompleteToRnasumDraftDraftConstruct extends Construct {
+export class UmccriseAndWtsCompleteToRnasumReadyConstruct extends Construct {
   public readonly RnasumDraftMap = {
-    prefix: 'roket-umccrise-wts-complete-to-rnasum-draft',
-    portalRunPartitionName: 'portal_run',
+    prefix: 'roket-umccrise-or-wts-to-rnasum-draft',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
     triggerWorkflowName: {
@@ -47,11 +58,10 @@ export class UmccriseAndWtsCompleteToRnasumDraftDraftConstruct extends Construct
     wtsWorkflowName: 'wts',
     triggerDetailType: 'WorkflowRunStateChange',
     tablePartitions: {
+      library: 'library',
       subject: 'subject',
     },
     outputSource: 'orcabus.rnasuminputeventglue',
-    outputDetailType: 'WorkflowDraftRunStateChange',
-    outputStatus: 'DRAFT',
     payloadVersion: '2024.07.23',
     workflowName: 'rnasum',
     workflowVersion: '4.2.4',
@@ -60,7 +70,7 @@ export class UmccriseAndWtsCompleteToRnasumDraftDraftConstruct extends Construct
   constructor(
     scope: Construct,
     id: string,
-    props: UmccriseAndWtsCompleteToRnasumDraftDraftConstructProps
+    props: UmccriseAndWtsCompleteToRnasumReadyConstructProps
   ) {
     super(scope, id);
 
@@ -77,18 +87,59 @@ export class UmccriseAndWtsCompleteToRnasumDraftDraftConstruct extends Construct
       memorySize: 1024,
     });
 
+    // Generate the lambda to collect the orcabus id from the subject id
+    const collectOrcaBusIdLambdaObj = new GetMetadataLambdaConstruct(
+      this,
+      'get_orcabus_id_from_subject_id',
+      {
+        functionNamePrefix: this.RnasumDraftMap.prefix,
+      }
+    ).lambdaObj;
+
+    // Add CONTEXT, FROM_ID and RETURN_STR environment variables to the lambda
+    collectOrcaBusIdLambdaObj.addEnvironment('CONTEXT', 'subject');
+    collectOrcaBusIdLambdaObj.addEnvironment('FROM_ID', '');
+    collectOrcaBusIdLambdaObj.addEnvironment('RETURN_STR', '');
+
     /*
     Part 1: Generate the preamble (sfn to generate the portal run id and the workflow run name)
     */
-    const sfn_preamble = new WorkflowDraftRunStateChangeCommonPreambleConstruct(
+    const sfnPreamble = new WorkflowDraftRunStateChangeCommonPreambleConstruct(
       this,
       `${this.RnasumDraftMap.prefix}_sfn_preamble`,
       {
-        portalRunTablePartitionName: this.RnasumDraftMap.portalRunPartitionName,
         stateMachinePrefix: this.RnasumDraftMap.prefix,
-        tableObj: props.workflowsTableObj,
         workflowName: this.RnasumDraftMap.workflowName,
         workflowVersion: this.RnasumDraftMap.workflowVersion,
+      }
+    ).stepFunctionObj;
+
+    /*
+    Part 2: Build the engine parameters sfn
+    */
+    const engineParameterAndReadyEventMakerSfn = new GenerateWorkflowRunStateChangeReadyConstruct(
+      this,
+      'fastqlistrow_complete_to_wgtsqc_ready_submitter',
+      {
+        /* Event Placeholders */
+        eventBusObj: props.eventBusObj,
+        outputSource: this.RnasumDraftMap.outputSource,
+        payloadVersion: this.RnasumDraftMap.payloadVersion,
+        workflowName: this.RnasumDraftMap.workflowName,
+        workflowVersion: this.RnasumDraftMap.workflowVersion,
+
+        /* SSM Parameters */
+        outputUriSsmParameterObj: props.outputUriSsmParameterObj,
+        icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+        logsUriSsmParameterObj: props.logsUriSsmParameterObj,
+        cacheUriSsmParameterObj: props.cacheUriSsmParameterObj,
+
+        /* Secrets */
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+
+        /* Prefixes */
+        lambdaPrefix: this.RnasumDraftMap.prefix,
+        stateMachinePrefix: this.RnasumDraftMap.prefix,
       }
     ).stepFunctionObj;
 
@@ -108,23 +159,17 @@ export class UmccriseAndWtsCompleteToRnasumDraftDraftConstruct extends Construct
           )
         ),
         definitionSubstitutions: {
-          /* Events */
-          __event_bus_name__: props.eventBusObj.eventBusName,
-          __event_source__: this.RnasumDraftMap.outputSource,
-          __detail_type__: this.RnasumDraftMap.outputDetailType,
-          __output_status__: this.RnasumDraftMap.outputStatus,
-          __payload_version__: this.RnasumDraftMap.payloadVersion,
-          __workflow_name__: this.RnasumDraftMap.workflowName,
-          __workflow_version__: this.RnasumDraftMap.workflowVersion,
-
           /* Lambdas */
           __generate_workflow_inputs_lambda_function_arn__:
             generateEventDataLambdaObj.currentVersion.functionArn,
+          __get_orcabus_id_from_subject_id_lambda_function_arn__:
+            collectOrcaBusIdLambdaObj.currentVersion.functionArn,
 
           /* Tables */
           __table_name__: props.tableObj.tableName,
 
           /* Table partitions */
+          __library_table_partition_name__: this.RnasumDraftMap.tablePartitions.library,
           __subject_table_partition_name__: this.RnasumDraftMap.tablePartitions.subject,
 
           /* Statuses */
@@ -134,7 +179,8 @@ export class UmccriseAndWtsCompleteToRnasumDraftDraftConstruct extends Construct
           __wts_workflow_name__: this.RnasumDraftMap.wtsWorkflowName,
 
           // State Machines
-          __sfn_preamble_state_machine_arn__: sfn_preamble.stateMachineArn,
+          __sfn_preamble_state_machine_arn__: sfnPreamble.stateMachineArn,
+          __launch_ready_event_sfn_arn__: engineParameterAndReadyEventMakerSfn.stateMachineArn,
         },
       }
     );
@@ -145,11 +191,10 @@ export class UmccriseAndWtsCompleteToRnasumDraftDraftConstruct extends Construct
     // access the dynamodb table
     props.tableObj.grantReadWriteData(umccriseAndWtsCompleteToDraftSfn);
 
-    // allow the step function to submit events
-    props.eventBusObj.grantPutEventsTo(umccriseAndWtsCompleteToDraftSfn);
-
     // allow the step function to invoke the lambdas
-    generateEventDataLambdaObj.currentVersion.grantInvoke(umccriseAndWtsCompleteToDraftSfn);
+    [generateEventDataLambdaObj, collectOrcaBusIdLambdaObj].forEach((lambda) => {
+      lambda.currentVersion.grantInvoke(umccriseAndWtsCompleteToDraftSfn);
+    });
 
     /* Allow step function to call nested state machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
@@ -163,7 +208,8 @@ export class UmccriseAndWtsCompleteToRnasumDraftDraftConstruct extends Construct
       })
     );
     // Allow the state machine to be able to invoke the preamble sfn
-    sfn_preamble.grantStartExecution(umccriseAndWtsCompleteToDraftSfn);
+    sfnPreamble.grantStartExecution(umccriseAndWtsCompleteToDraftSfn);
+    engineParameterAndReadyEventMakerSfn.grantStartExecution(umccriseAndWtsCompleteToDraftSfn);
 
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn

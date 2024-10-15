@@ -1,0 +1,158 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Next": "Get Workflow Inputs",
+      "Parameters": {
+        "inputs.$": "$"
+      }
+    },
+    "Get Workflow Inputs": {
+      "Type": "Parallel",
+      "Next": "Launch Ready Event",
+      "Branches": [
+        {
+          "StartAt": "Get Portal Run ID and Workflow Run Name",
+          "States": {
+            "Get Portal Run ID and Workflow Run Name": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "${__sfn_preamble_state_machine_arn__}",
+                "Input": {}
+              },
+              "ResultPath": "$.get_sfn_preamble_outputs_step",
+              "ResultSelector": {
+                "portal_run_id.$": "$.Output.portal_run_id",
+                "workflow_run_name.$": "$.Output.workflow_run_name"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Decompress SampleSheet",
+          "States": {
+            "Decompress SampleSheet": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__decompression_samplesheet_lambda_function_arn__}",
+                "Payload": {
+                  "input.$": "$.inputs.payload.data.samplesheetB64gz",
+                  "decompress": true
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Get all libraries from samplesheet",
+              "ResultPath": "$.decompress_samplesheet_step",
+              "ResultSelector": {
+                "samplesheet_json.$": "$.Payload.decompressed_dict"
+              }
+            },
+            "Get all libraries from samplesheet": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__get_libraries_from_samplesheet_lambda_function_arn__}",
+                "Payload": {
+                  "samplesheet.$": "$.decompress_samplesheet_step.samplesheet_json"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultPath": "$.get_libraries_step",
+              "ResultSelector": {
+                "library_obj_list.$": "$.Payload.library_obj_list"
+              },
+              "Next": "Get Linked Libraries from Library List Obj"
+            },
+            "Get Linked Libraries from Library List Obj": {
+              "Type": "Map",
+              "ItemsPath": "$.get_libraries_step.library_obj_list",
+              "ItemSelector": {
+                "library_obj.$": "$$.Map.Item.Value"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Get Linked Library from library list object",
+                "States": {
+                  "Get Linked Library from library list object": {
+                    "Type": "Pass",
+                    "Parameters": {
+                      "orcabusId.$": "$.library_obj.orcabusId",
+                      "libraryId.$": "$.library_obj.libraryId"
+                    },
+                    "End": true
+                  }
+                }
+              },
+              "ResultSelector": {
+                "linked_libraries_list.$": "$"
+              },
+              "ResultPath": "$.get_linked_libraries_step",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultSelector": {
+        "portal_run_id.$": "$.[0].get_sfn_preamble_outputs_step.portal_run_id",
+        "workflow_run_name.$": "$.[0].get_sfn_preamble_outputs_step.workflow_run_name",
+        "linked_libraries_list.$": "$.[1].get_linked_libraries_step.linked_libraries_list"
+      },
+      "ResultPath": "$.get_workflow_inputs_step"
+    },
+    "Launch Ready Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__launch_ready_event_sfn_arn__}",
+        "Input": {
+          "StatePayload": {
+            "portal_run_id.$": "$.get_workflow_inputs_step.portal_run_id",
+            "workflow_run_name.$": "$.get_workflow_inputs_step.workflow_run_name",
+            "linked_libraries.$": "$.get_workflow_inputs_step.linked_libraries_list",
+            "data_inputs": {
+              "instrumentRunId.$": "$.inputs.payload.data.instrumentRunId",
+              "bsshProjectId.$": "$.inputs.payload.data.projectId",
+              "bsshAnalysisId.$": "$.inputs.payload.data.analysisId"
+            },
+            "data_tags": {
+              "instrumentRunId.$": "$.inputs.payload.data.instrumentRunId"
+            }
+          }
+        }
+      },
+      "ResultPath": null,
+      "End": true
+    }
+  }
+}

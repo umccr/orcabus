@@ -13,8 +13,9 @@ class Status(Enum):
     READY = "READY", ['READY']
     RUNNING = "RUNNING", ['RUNNING', 'IN_PROGRESS']
     SUCCEEDED = "SUCCEEDED", ['SUCCEEDED', 'SUCCESS']
-    FAILED = "FAILED", ['FAILED', 'FAILURE']
+    FAILED = "FAILED", ['FAILED', 'FAILURE', 'FAIL']
     ABORTED = "ABORTED", ['ABORTED', 'CANCELLED', 'CANCELED']
+    RESOLVED = "RESOLVED", ['RESOLVED']
 
     def __init__(self, convention: str, aliases: List[str]):
         self.convention = convention
@@ -58,28 +59,25 @@ class Status(Enum):
     def is_draft(status: str) -> bool:
         # enforce upper case convention
         status = status.upper()
-        if status in Status.DRAFT.aliases:
-            return True
-        else:
-            return False
+        return status in Status.DRAFT.aliases
 
     @staticmethod
     def is_running(status: str) -> bool:
         # enforce upper case convention
         status = status.upper()
-        if status in Status.RUNNING.aliases:
-            return True
-        else:
-            return False
+        return status in Status.RUNNING.aliases
 
     @staticmethod
     def is_ready(status: str) -> bool:
         # enforce upper case convention
         status = status.upper()
-        if status in Status.READY.aliases:
-            return True
-        else:
-            return False
+        return status in Status.READY.aliases
+
+    @staticmethod
+    def is_resolved(status: str) -> bool:
+        # enforce upper case convention
+        status = status.upper()
+        return status in Status.RESOLVED.aliases
 
 
 class StateManager(OrcaBusBaseManager):
@@ -105,16 +103,6 @@ class State(OrcaBusBaseModel):
 
     def __str__(self):
         return f"ID: {self.orcabus_id}, status: {self.status}"
-
-    def to_dict(self):
-        return {
-            "orcabusId": self.orcabus_id,
-            "workflow_run_id": self.workflow_run.orcabus_id,
-            "status": self.status,
-            "timestamp": str(self.timestamp),
-            "comment": self.comment,
-            "payload": self.payload.to_dict() if (self.payload is not None) else None,
-        }
 
     def is_terminal(self) -> bool:
         return Status.is_terminal(str(self.status))

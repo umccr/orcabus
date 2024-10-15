@@ -16,20 +16,18 @@ import {
   mockWtsGlueTableName,
   mockUmccriseGlueTableName,
   mockRnasumGlueTableName,
+  mockPierianDxGlueTableName,
+  pieriandxProjectInfoSsmParameterPath,
+  redcapLambdaFunctionName,
 } from '../constants';
 import { GlueStackConfig } from '../../lib/workload/stateless/stacks/stacky-mcstackface/glue-constructs';
 import { StackyStatefulTablesConfig } from '../../lib/workload/stateful/stacks/stacky-mcstackface-dynamodb';
 
 export const getGlueStackProps = (stage: AppStage): GlueStackConfig => {
   return {
-    /* SSM Parameters */
-    bsshOutputFastqCopyUriSsmParameterName: mockPrimaryOutputUriSsmParameterName,
-    analysisCacheUriSsmParameterName: mockAnalysisCacheUriSsmParameterName,
-    analysisOutputUriSsmParameterName: mockAnalysisOutputUriSsmParameterName,
-    icav2ProjectIdSsmParameterName: mockIcav2ProjectIdSsmParameterName,
-    analysisLogsUriSsmParameterName: mockAnalysisLogsUriSsmParameterName,
     /* Events */
     eventBusName: mockEventBusName,
+
     /* Tables */
     inputMakerTableName: mockInputMakerTableName,
     instrumentRunTableName: mockInstrumentRunTableName,
@@ -40,8 +38,23 @@ export const getGlueStackProps = (stage: AppStage): GlueStackConfig => {
     wtsGlueTableName: mockWtsGlueTableName,
     umccriseGlueTableName: mockUmccriseGlueTableName,
     rnasumGlueTableName: mockRnasumGlueTableName,
+    pieriandxGlueTableName: mockPierianDxGlueTableName,
+
+    /* SSM Parameters */
+    analysisCacheUriSsmParameterName: mockAnalysisCacheUriSsmParameterName,
+    analysisOutputUriSsmParameterName: mockAnalysisOutputUriSsmParameterName,
+    icav2ProjectIdSsmParameterName: mockIcav2ProjectIdSsmParameterName,
+    analysisLogsUriSsmParameterName: mockAnalysisLogsUriSsmParameterName,
+
     /* Secrets */
     icav2AccessTokenSecretName: icav2AccessTokenSecretName[stage],
+
+    /* BSSH SSM Parameters */
+    bsshOutputFastqCopyUriSsmParameterName: mockPrimaryOutputUriSsmParameterName,
+
+    /* PierianDx SSM Parameters */
+    pieriandxProjectInfoSsmParameterPath: pieriandxProjectInfoSsmParameterPath,
+    redcapLambdaFunctionName: redcapLambdaFunctionName[stage],
   };
 };
 
@@ -56,5 +69,6 @@ export const getStatefulGlueStackProps = (): StackyStatefulTablesConfig => {
     dynamodbWtsGlueTableName: mockWtsGlueTableName,
     dynamodbUmccriseGlueTableName: mockUmccriseGlueTableName,
     dynamodbRnasumGlueTableName: mockRnasumGlueTableName,
+    dynamodbPieriandxGlueTableName: mockPierianDxGlueTableName,
   };
 };

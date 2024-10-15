@@ -3,6 +3,11 @@
 
 use std::ops::Add;
 
+use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
+use crate::database::entities::s3_object::Model as S3Object;
+use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
+use crate::database::Client;
+use crate::uuid::UuidGenerator;
 use chrono::{DateTime, Days};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
@@ -10,12 +15,7 @@ use sea_orm::Set;
 use sea_orm::{ActiveModelTrait, TryIntoModel};
 use serde_json::json;
 use strum::EnumCount;
-
-use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
-use crate::database::entities::s3_object::Model as S3Object;
-use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
-use crate::database::Client;
-use crate::uuid::UuidGenerator;
+use uuid::Uuid;
 
 pub mod get;
 pub mod list;
@@ -41,11 +41,12 @@ impl Entries {
         shuffle: bool,
         bucket_divisor: usize,
         key_divisor: usize,
+        ingest_id: Option<Uuid>,
     ) -> Vec<S3Object> {
         let mut output = vec![];
 
         let mut entries: Vec<_> = (0..n)
-            .map(|index| Self::generate_entry(index, bucket_divisor, key_divisor))
+            .map(|index| Self::generate_entry(index, bucket_divisor, key_divisor, ingest_id))
             .collect();
 
         if shuffle {
@@ -70,6 +71,7 @@ impl Entries {
         index: usize,
         bucket_divisor: usize,
         key_divisor: usize,
+        ingest_id: Option<Uuid>,
     ) -> ActiveS3Object {
         let event = Self::event_type(index);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
@@ -82,6 +84,7 @@ impl Entries {
 
         ActiveS3Object {
             s3_object_id: Set(UuidGenerator::generate()),
+            ingest_id: Set(Some(ingest_id.unwrap_or_else(UuidGenerator::generate))),
             event_type: Set(event.clone()),
             bucket: Set((index / bucket_divisor).to_string()),
             key: Set((index / key_divisor).to_string()),
@@ -126,6 +129,7 @@ pub struct EntriesBuilder {
     bucket_divisor: usize,
     key_divisor: usize,
     shuffle: bool,
+    ingest_id: Option<Uuid>,
 }
 
 impl EntriesBuilder {
@@ -153,6 +157,12 @@ impl EntriesBuilder {
         self
     }
 
+    /// Set whether to shuffle.
+    pub fn with_ingest_id(mut self, ingest_id: Uuid) -> Self {
+        self.ingest_id = Some(ingest_id);
+        self
+    }
+
     /// Build the entries and initialize the database.
     pub async fn build(self, client: &Client) -> Entries {
         let mut entries = Entries::initialize_database(
@@ -161,6 +171,7 @@ impl EntriesBuilder {
             self.shuffle,
             self.bucket_divisor,
             self.key_divisor,
+            self.ingest_id,
         )
         .await;
 
@@ -178,6 +189,7 @@ impl Default for EntriesBuilder {
             bucket_divisor: 2,
             key_divisor: 1,
             shuffle: false,
+            ingest_id: None,
         }
     }
 }

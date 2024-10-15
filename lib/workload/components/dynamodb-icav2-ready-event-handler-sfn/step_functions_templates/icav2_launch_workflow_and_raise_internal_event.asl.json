@@ -24,20 +24,34 @@
           }
         }
       },
-      "Next": "Is Portal Run ID in Database",
+      "Next": "Is Portal Run ID + Analysis ID in Database",
       "ResultPath": "$.portal_run_id_in_db_step",
       "ResultSelector": {
         "db_response.$": "$"
       }
     },
-    "Is Portal Run ID in Database": {
+    "Is Portal Run ID + Analysis ID in Database": {
       "Type": "Choice",
       "Choices": [
         {
-          "Not": {
-            "Variable": "$.portal_run_id_in_db_step.db_response.Item",
-            "IsPresent": true
-          },
+          "Or": [
+            {
+              "Not": {
+                "Variable": "$.portal_run_id_in_db_step.db_response.Item",
+                "IsPresent": true
+              }
+            },
+            {
+              "Not": {
+                "Variable": "$.portal_run_id_in_db_step.db_response.Item.analysis_id",
+                "IsPresent": true
+              }
+            },
+            {
+              "Variable": "$.portal_run_id_in_db_step.db_response.Item.analysis_id.S",
+              "StringEquals": ""
+            }
+          ],
           "Next": "Add Technical Tags"
         }
       ],

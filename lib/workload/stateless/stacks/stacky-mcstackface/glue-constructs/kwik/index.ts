@@ -3,13 +3,11 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
-import { WgtsQcInitialiseInstrumentRunDbRowConstruct } from './part_1/initialise-wgts-instrument-run-db';
-import { WgtsQcInitialiseLibraryAndFastqListRowConstruct } from './part_2/initialise-wgts-library-dbs';
-import { WgtsQcPopulateFastqListRowConstruct } from './part_3/populate-fastq-list-row-dbs';
-import { WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct } from './part_4/fastq-list-rows-shower-complete-to-wgts-qc-draft';
-import { WgtsQcInputMakerConstruct } from './part_5/wgts-qc-draft-to-ready';
-import { FastqListRowQcCompleteConstruct } from './part_6/push-fastq-list-row-qc-complete-event';
-import { WgtsQcLibraryQcCompleteConstruct } from './part_7/library-qc-complete-event';
+import { WgtsQcInitialiseLibraryAndFastqListRowConstruct } from './part_1/initialise-wgts-library-dbs';
+import { WgtsQcPopulateFastqListRowConstruct } from './part_2/populate-fastq-list-row-dbs';
+import { WgtsQcFastqListRowShowerCompleteToWorkflowReadyConstruct } from './part_3/fastq-list-rows-shower-complete-to-wgts-qc';
+import { FastqListRowQcCompleteConstruct } from './part_4/push-fastq-list-row-qc-complete-event';
+import { WgtsQcLibraryQcCompleteConstruct } from './part_5/library-qc-complete-event';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting wgts qc analyses
@@ -20,7 +18,6 @@ export interface wgtsQcGlueHandlerConstructProps {
   eventBusObj: events.IEventBus;
   /* Tables */
   wgtsQcGlueTableObj: dynamodb.ITableV2;
-  inputMakerTableObj: dynamodb.ITableV2;
   /* SSM Parameters */
   analysisOutputUriSsmParameterObj: ssm.IStringParameter;
   analysisLogsUriSsmParameterObj: ssm.IStringParameter;
@@ -36,24 +33,6 @@ export class WgtsQcGlueHandlerConstruct extends Construct {
 
     /*
     Part 1
-    Input Event Source: `orcabus.instrumentrunmanager`
-    Input Event DetailType: `SamplesheetShowerStateChange`
-    Input Event status: `SamplesheetRegisteredEventShowerStarting`
-
-    * Initialise wgts qc instrument db construct
-    */
-    const wgts_qc_initialise_instrument_run_db_row =
-      new WgtsQcInitialiseInstrumentRunDbRowConstruct(
-        this,
-        'initialise_wgts_qc_instrument_run_db_row',
-        {
-          eventBusObj: props.eventBusObj,
-          tableObj: props.wgtsQcGlueTableObj,
-        }
-      );
-
-    /*
-    Part 2
 
     Input Event Source: `orcabus.instrumentrunmanager`
     Input Event DetailType: `SamplesheetMetadataUnion`
@@ -72,7 +51,7 @@ export class WgtsQcGlueHandlerConstruct extends Construct {
       );
 
     /*
-    Part 3
+    Part 2
 
     Input Event Source: `orcabus.instrumentrunmanager`
     Input Event DetailType: `FastqListRowStateChange`
@@ -90,7 +69,7 @@ export class WgtsQcGlueHandlerConstruct extends Construct {
     );
 
     /*
-    Part 4
+    Part 3
 
     Input Event Source: `orcabus.instrumentrunmanager`
     Input Event DetailType: `FastqListRowStateChange`
@@ -98,52 +77,35 @@ export class WgtsQcGlueHandlerConstruct extends Construct {
 
     Output Event source: `orcabus.wgtsqcinputeventglue`
     Output Event DetailType: `WorkflowDraftRunStateChange`
-    Output Event status: `draft`
+    Output Event status: `READY`
 
     * Trigger wgts qc events collecting all wgts qc libraries in the run
 
     */
     const fastq_list_row_shower_complete_to_workflow_draft =
-      new WgtsQcFastqListRowShowerCompleteToWorkflowDraftConstruct(
+      new WgtsQcFastqListRowShowerCompleteToWorkflowReadyConstruct(
         this,
         'fastq_list_row_shower_complete_to_workflow_draft',
         {
-          workflowsTableObj: props.inputMakerTableObj,
+          /* Events */
           eventBusObj: props.eventBusObj,
+
+          /* Tables */
           wgtsQcGlueTableObj: props.wgtsQcGlueTableObj,
+
+          /* SSM Parameters */
+          cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+          icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+          logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+          outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+
+          /* Secrets */
+          icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
         }
       );
 
     /*
-    Part 5
-    Input Event source: `orcabus.wgtsqcinputeventglue`
-    Input Event DetailType: `WorkflowDraftRunStateChange`
-    Input Event status: `draft`
-
-    Output Event source: `orcabus.wgtsqcinputeventglue`
-    Output Event DetailType: `WorkflowRunStateChange`
-    Output Event status: `ready`
-    */
-    const fastqListRowsToWgtsQcInputMaker = new WgtsQcInputMakerConstruct(
-      this,
-      'fastq_list_rows_to_wgts_qc_input_maker',
-      {
-        /* Event bus */
-        eventBusObj: props.eventBusObj,
-        /* Tables */
-        inputMakerTableObj: props.inputMakerTableObj,
-        /* SSM Param objects */
-        icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
-        outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
-        cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
-        logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-        /* Secrets */
-        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-      }
-    );
-
-    /*
-    Part 6
+    Part 4
 
     Input Event Source: `orcabus.workflowmanager`
     Input Event DetailType: `WorkflowRunStateChange`
@@ -168,7 +130,7 @@ export class WgtsQcGlueHandlerConstruct extends Construct {
     );
 
     /*
-    Part 7
+    Part 5
 
     Input Event Source: `orcabus.wgtsqcinputeventglue`
     Input Event DetailType: `FastqListRowStateChange`

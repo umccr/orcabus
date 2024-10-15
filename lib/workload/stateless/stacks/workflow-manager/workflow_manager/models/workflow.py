@@ -27,13 +27,3 @@ class Workflow(OrcaBusBaseModel):
 
     def __str__(self):
         return f"ID: {self.orcabus_id}, workflow_name: {self.workflow_name}, workflow_version: {self.workflow_version}"
-    
-    def to_dict(self):
-        return {
-            "orcabusId": self.orcabus_id,
-            "workflow_name": self.workflow_name,
-            "workflow_version": self.workflow_version,
-            "execution_engine": self.execution_engine,
-            "execution_engine_pipeline_id": self.execution_engine_pipeline_id,
-            # "approval_state": self.approval_state
-        }

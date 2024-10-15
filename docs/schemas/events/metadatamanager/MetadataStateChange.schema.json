@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/metadatamanager/MetadataStateChange.schema.json",
+  "description": "EventBridge custom event schema for orcabus.metadatamanager@MetadataStateChange",
+  "title": "AWSEvent",
+  "type": "object",
+  "required": [
+    "detail-type",
+    "detail",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "enum": ["orcabus.metadatamanager"]
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "version": {
+      "type": "string"
+    },
+    "account": {
+      "type": "string"
+    },
+    "detail-type": {
+      "enum": ["MetadataStateChange"]
+    },
+    "detail": {
+      "$ref": "#/definitions/MetadataStateChange"
+    }
+  },
+  "definitions": {
+    "MetadataStateChange": {
+      "type": "object",
+      "required": [
+        "model",
+        "action",
+        "data",
+        "refId"
+      ],
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": [
+            "LIBRARY"
+          ]
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "CREATE",
+            "UPDATE",
+            "DELETE"
+          ]
+        },
+        "refId": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

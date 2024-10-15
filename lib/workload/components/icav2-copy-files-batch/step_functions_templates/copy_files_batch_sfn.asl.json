@@ -39,6 +39,8 @@
     },
     "Process Manifest": {
       "Type": "Map",
+      "ItemsPath": "$.manifest_inverted_step.manifest_inverted",
+      "MaxConcurrency": 5,
       "Iterator": {
         "StartAt": "Copy Single Job State Machine",
         "States": {
@@ -63,7 +65,6 @@
           }
         }
       },
-      "ItemsPath": "$.manifest_inverted_step.manifest_inverted",
       "ResultPath": "$.job_list_with_attempt_counter",
       "Next": "Succeed"
     },

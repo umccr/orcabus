@@ -37,6 +37,11 @@ pub async fn generate_openapi(out_dir: &Path) -> Result<()> {
     let model_ident: Ident = parse_quote! { Model };
     for path in read_dir(out_dir)? {
         let path = path?.path();
+
+        if path.extension() != Some("rs".as_ref()) {
+            continue;
+        }
+
         let content = read_to_string(&path)?;
 
         let mut tokens = parse_file(&content).map_err(|err| OpenAPIGeneration(err.to_string()))?;

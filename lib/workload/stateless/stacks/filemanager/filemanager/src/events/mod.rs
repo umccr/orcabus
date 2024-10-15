@@ -16,7 +16,7 @@ pub trait Collect {
 }
 
 /// The event source with a type and the number of (potentially duplicate) records contained.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EventSource {
     event_type: EventSourceType,
     n_records: usize,
@@ -39,7 +39,7 @@ impl EventSource {
 
 /// The type of event.
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum EventSourceType {
     S3(TransposedS3EventMessages),

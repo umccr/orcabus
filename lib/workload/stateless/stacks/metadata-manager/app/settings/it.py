@@ -18,5 +18,3 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', 5432),
     }
 }
-
-DATABASES = {"default": db_conn_cfg}

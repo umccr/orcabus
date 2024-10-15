@@ -112,30 +112,52 @@ def _setup_requirements():
     # The contexts information available for analysis
 
     clinical_context = AnalysisContext(
-        name="accredited",
-        usecase="analysis-selection",
-        description="Accredited by NATA",
+        name="clinical",
+        usecase="approval",
+        description="Approved for clinical workloads",
         status="ACTIVE",
     )
-    print(clinical_context)
     clinical_context.save()
 
-    research_context = AnalysisContext(
-        name="research",
-        usecase="analysis-selection",
-        description="For research use",
+    clinical_compute_context = AnalysisContext(
+        name="clinical",
+        usecase="compute-env",
+        description="Clinical compute environment",
         status="ACTIVE",
     )
-    print(research_context)
-    research_context.save()
+    clinical_compute_context.save()
 
-    internal_context = AnalysisContext(
-        name="internal",
-        usecase="analysis-selection",
-        description="For internal use",
+    research_compute_context = AnalysisContext(
+        name="research",
+        usecase="compute-env",
+        description="Research compute environment",
         status="ACTIVE",
     )
-    internal_context.save()
+    research_compute_context.save()
+
+    clinical_storage_context = AnalysisContext(
+        name="clinical",
+        usecase="storage-env",
+        description="Clinical storage environment",
+        status="ACTIVE",
+    )
+    clinical_storage_context.save()
+
+    research_storage_context = AnalysisContext(
+        name="research",
+        usecase="storage-env",
+        description="Research storage environment",
+        status="ACTIVE",
+    )
+    research_storage_context.save()
+
+    temp_storage_context = AnalysisContext(
+        name="temp",
+        usecase="storage-env",
+        description="For internal use, short term storage",
+        status="ACTIVE",
+    )
+    temp_storage_context.save()
 
     # ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
     # The workflows that are available to be run
@@ -157,8 +179,8 @@ def _setup_requirements():
     wgs_workflow.save()
 
     cttsov2_workflow = Workflow(
-        workflow_name="cttsov2",
-        workflow_version="1.0",
+        workflow_name="cttso",
+        workflow_version="2.0",
         execution_engine="ICAv2",
         execution_engine_pipeline_id="ica.pipeline.23456",
     )
@@ -198,8 +220,7 @@ def _setup_requirements():
         status="ACTIVE",
     )
     qc_assessment.save()
-    qc_assessment.contexts.add(clinical_context)
-    qc_assessment.contexts.add(research_context)
+    qc_assessment.contexts.add(temp_storage_context)
     qc_assessment.workflows.add(qc_workflow)
 
     wgs_clinical_analysis = Analysis(
@@ -210,7 +231,7 @@ def _setup_requirements():
     )
     wgs_clinical_analysis.save()
     wgs_clinical_analysis.contexts.add(clinical_context)
-    wgs_clinical_analysis.contexts.add(research_context)
+    wgs_clinical_analysis.contexts.add(clinical_context)
     wgs_clinical_analysis.workflows.add(wgs_workflow)
     wgs_clinical_analysis.workflows.add(umccrise_workflow)
 
@@ -221,26 +242,24 @@ def _setup_requirements():
         status="ACTIVE",
     )
     wgs_research_analysis.save()
-    wgs_research_analysis.contexts.add(research_context)
     wgs_research_analysis.workflows.add(wgs_workflow)
     wgs_research_analysis.workflows.add(oa_wgs_workflow)
     wgs_research_analysis.workflows.add(sash_workflow)
 
-    cttso_research_analysis = Analysis(
-        analysis_name="ctTSO500",
-        analysis_version="1.0",
+    cttso_analysis = Analysis(
+        analysis_name="ctTSO",
+        analysis_version="2.0",
         description="Analysis for ctTSO samples",
         status="ACTIVE",
     )
-    cttso_research_analysis.save()
-    cttso_research_analysis.contexts.add(research_context)
-    cttso_research_analysis.contexts.add(clinical_context)
-    cttso_research_analysis.workflows.add(cttsov2_workflow)
+    cttso_analysis.save()
+    cttso_analysis.contexts.add(clinical_context)
+    cttso_analysis.contexts.add(clinical_context)
+    cttso_analysis.workflows.add(cttsov2_workflow)
 
     # ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
     # Generate a Payload stub and some Libraries
 
-    generic_payload = PayloadFactory()  # Payload content is not important for now
     LibraryFactory(orcabus_id="01J5M2JFE1JPYV62RYQEG99CP1", library_id="L000001"),
     LibraryFactory(orcabus_id="02J5M2JFE1JPYV62RYQEG99CP2", library_id="L000002"),
     LibraryFactory(orcabus_id="03J5M2JFE1JPYV62RYQEG99CP3", library_id="L000003"),
@@ -268,7 +287,11 @@ def assign_analysis(libraries: List[dict]) -> List[AnalysisRun]:
 
 def create_qc_analysis(libraries: List[dict]) -> List[AnalysisRun]:
     analysis_runs: List[AnalysisRun] = []
-    context_internal = AnalysisContext.objects.get_by_keyword(name="internal").first()  # FIXME
+    # this is meant to only generate temporary results, we assign it with a temp storage context
+    # and it does not have to run on a controlled compute env, so we run it on the research compute
+    research_compute_context = AnalysisContext.objects.get_by_keyword(name="research", usecase="compute-env").first()
+    temp_storage_context = AnalysisContext.objects.get_by_keyword(name="temp", usecase="storage-env").first()
+
     analysis_qc_qs = Analysis.objects.get_by_keyword(analysis_name='QC_Assessment')
     analysis_qc = analysis_qc_qs.first()  # FIXME: assume there are more than one and select by latest version, etc
 
@@ -281,7 +304,8 @@ def create_qc_analysis(libraries: List[dict]) -> List[AnalysisRun]:
             analysis_run = AnalysisRun(
                 analysis_run_name=f"automated__{analysis_qc.analysis_name}__{lib_record.library_id}",
                 status="DRAFT",
-                approval_context=context_internal,  # FIXME: does this matter here? Internal?
+                compute_context=research_compute_context,
+                storage_context=temp_storage_context,
                 analysis=analysis_qc
             )
             analysis_run.save()
@@ -293,10 +317,19 @@ def create_qc_analysis(libraries: List[dict]) -> List[AnalysisRun]:
 
 def create_wgs_analysis(libraries: List[dict]) -> List[AnalysisRun]:
     analysis_runs: List[AnalysisRun] = []
-    context_clinical = AnalysisContext.objects.get_by_keyword(name="accredited").first()  # FIXME
-    context_research = AnalysisContext.objects.get_by_keyword(name="research").first()  # FIXME
-    analysis_wgs_clinical: Analysis = Analysis.objects.filter(analysis_name='WGS', contexts=context_clinical).first()  # FIXME
-    analysis_wgs_research: Analysis = Analysis.objects.filter(analysis_name='WGS', contexts=context_research, analysis_version='2.0').first()  # FIXME
+
+    # prepare the available compute and storage contexts, to be chosen depending on the actual workload
+    clinical_compute_context = AnalysisContext.objects.get_by_keyword(name="clinical", usecase="compute-env").first()
+    clinical_storage_context = AnalysisContext.objects.get_by_keyword(name="clinical", usecase="storage-env").first()
+    research_compute_context = AnalysisContext.objects.get_by_keyword(name="research", usecase="compute-env").first()
+    research_storage_context = AnalysisContext.objects.get_by_keyword(name="research", usecase="storage-env").first()
+    clinical_context = AnalysisContext.objects.get_by_keyword(name="clinical", usecase="approval").first()
+
+    # Find the approved analysis for a wgs workload
+    # NOTE: for clinical workloads the analysis has to be approved for clinical use,
+    #       for research all are allowed and we choose the "latest" version
+    analysis_wgs_clinical: Analysis = Analysis.objects.filter(analysis_name='WGS', contexts=clinical_context).first()
+    analysis_wgs_research: Analysis = Analysis.objects.filter(analysis_name='WGS', analysis_version='2.0').first()
 
     # FIXME: better pairing algorithm!
     pairing = defaultdict(lambda: defaultdict(list))
@@ -318,15 +351,19 @@ def create_wgs_analysis(libraries: List[dict]) -> List[AnalysisRun]:
                 print("Not a valid pairing.")
                 break
 
+            # assign the compute and storage contexts based on the metadata annotation ('workflow') for now
             workflow = pairing[sbj]['tumor'][0]['workflow']
-            context = context_clinical if workflow == 'clinical' else context_research
+            compute_context = clinical_compute_context if workflow == 'clinical' else research_compute_context
+            storage_context = clinical_storage_context if workflow == 'clinical' else research_storage_context
             analysis = analysis_wgs_clinical if workflow == 'clinical' else analysis_wgs_research
-            analysis_run_name = f"automated__{analysis.analysis_name}__{context.name}__" + \
+
+            analysis_run_name = f"automated__{analysis.analysis_name}__{workflow}__" + \
                                 f"{tumor_lib_record.library_id}__{normal_lib_record.library_id} "
             ar_wgs = AnalysisRun(
                 analysis_run_name=analysis_run_name,
                 status="DRAFT",
-                approval_context=context,
+                compute_context=compute_context,
+                storage_context=storage_context,
                 analysis=analysis
             )
             ar_wgs.save()
@@ -341,21 +378,31 @@ def create_wgs_analysis(libraries: List[dict]) -> List[AnalysisRun]:
 
 def create_cttso_analysis(libraries: List[dict]) -> List[AnalysisRun]:
     analysis_runs: List[AnalysisRun] = []
-    context_clinical = AnalysisContext.objects.get_by_keyword(name="accredited").first()  # FIXME
-    context_research = AnalysisContext.objects.get_by_keyword(name="research").first()  # FIXME
-    analysis_cttso_qs = Analysis.objects.get_by_keyword(analysis_name='ctTSO500').first()  # FIXME: allow for multiple
+
+    # prepare the available compute and storage contexts, to be chosen depending on the actual workload
+    clinical_compute_context = AnalysisContext.objects.get_by_keyword(name="clinical", usecase="compute-env").first()
+    clinical_storage_context = AnalysisContext.objects.get_by_keyword(name="clinical", usecase="storage-env").first()
+    research_compute_context = AnalysisContext.objects.get_by_keyword(name="research", usecase="compute-env").first()
+    research_storage_context = AnalysisContext.objects.get_by_keyword(name="research", usecase="storage-env").first()
+
+    # Find the approved analysis for a ctTSO workload
+    # NOTE: for now we only have one ctTSO analysis
+    analysis_cttso_qs = Analysis.objects.get_by_keyword(analysis_name='ctTSO').first()
 
     for lib in libraries:
         lib_record: Library = Library.objects.get(library_id=lib['library_id'])
 
         # handle QC
         if lib['type'] in ['ctDNA'] and lib['assay'] in ['ctTSOv2']:
-            context: AnalysisContext = context_clinical if lib['workflow'] == 'clinical' else context_research
-            analysis_run_name = f"automated__{analysis_cttso_qs.analysis_name}__{context.name}__{lib_record.library_id}"
+            workflow = lib['workflow']
+            compute_context = clinical_compute_context if workflow == 'clinical' else research_compute_context
+            storage_context = clinical_storage_context if workflow == 'clinical' else research_storage_context
+            analysis_run_name = f"automated__{analysis_cttso_qs.analysis_name}__{workflow}__{lib_record.library_id}"
             analysis_run = AnalysisRun(
                 analysis_run_name=analysis_run_name,
                 status="DRAFT",
-                approval_context=context,
+                compute_context=compute_context,
+                storage_context=storage_context,
                 analysis=analysis_cttso_qs
             )
             analysis_run.save()

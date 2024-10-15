@@ -81,7 +81,7 @@
               ],
               "ResultSelector": {
                 "workflow_success.$": "$.Payload.success",
-                "error_message.$": "$.Payload.error_message"
+                "error_message.$": "$.Payload.message"
               },
               "ResultPath": "$.check_successful_analysis_step",
               "Next": "Is successful analysis"

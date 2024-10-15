@@ -7,19 +7,121 @@
       "Parameters": {
         "workflow_inputs.$": "$"
       },
-      "Next": "Get Subject ID from Tags"
+      "Next": "Scan Libraries for subject"
     },
-    "Get Subject ID from Tags": {
+    "Scan Libraries for subject": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:dynamodb:scan",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "ExpressionAttributeValues": {
+          ":subject_id": {
+            "S.$": "$.workflow_inputs.payload.data.tags.subjectId"
+          },
+          ":id_type": {
+            "S": "${__library_table_partition_name__}"
+          }
+        },
+        "ExpressionAttributeNames": {
+          "#subject_id": "subject_id",
+          "#id_type": "id_type"
+        },
+        "FilterExpression": "#subject_id = :subject_id AND #id_type = :id_type"
+      },
+
+      "ResultPath": "$.scan_libraries_step",
+      "Next": "Subject In Library DB"
+    },
+    "Subject In Library DB": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.scan_libraries_step.Items",
+          "IsPresent": false,
+          "Next": "Success (1)"
+        }
+      ],
+      "Default": "Get Subject Orcabus Id from Subject Id in tags",
+      "Comment": "Subject Does not exist in db"
+    },
+    "Success (1)": {
+      "Type": "Succeed"
+    },
+    "Get Subject Orcabus Id from Subject Id in tags": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__get_orcabus_id_from_subject_id_lambda_function_arn__}",
+        "Payload": {
+          "value.$": "$.workflow_inputs.payload.data.tags.subjectId"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "subject_orcabus_id.$": "$.Payload.orcabus_id"
+      },
+      "ResultPath": "$.get_subject_orcabus_id_step",
+      "Next": "Get Subject Orcabus ID"
+    },
+    "Get Subject Orcabus ID": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.workflow_inputs.payload.data.tags.subjectId",
+          "id.$": "$.get_subject_orcabus_id_step.subject_orcabus_id",
           "id_type": "${__subject_table_partition_name__}"
         }
       },
       "ResultPath": "$.get_subject_id_step",
+      "Next": "Is Subject Item Initialised"
+    },
+    "Is Subject Item Initialised": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_subject_id_step.Item",
+          "IsPresent": false,
+          "Next": "Initialise Subject",
+          "Comment": "Subject Needs Initialising"
+        }
+      ],
+      "Default": "Update DB"
+    },
+    "Initialise Subject": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.get_subject_orcabus_id_step.subject_orcabus_id",
+          "id_type": "${__subject_table_partition_name__}",
+          "individual_id": {
+            "S.$": "$.workflow_inputs.payload.data.tags.individualId"
+          },
+          "subject_id": {
+            "S.$": "$.workflow_inputs.payload.data.tags.subjectId"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "Wait For DB Sync"
+    },
+    "Wait For DB Sync": {
+      "Type": "Wait",
+      "Seconds": 1,
       "Next": "Update DB"
     },
     "Update DB": {
@@ -47,7 +149,7 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id.$": "$.workflow_inputs.payload.data.tags.subjectId",
+                  "id.$": "$.get_subject_orcabus_id_step.subject_orcabus_id",
                   "id_type": "${__subject_table_partition_name__}"
                 },
                 "UpdateExpression": "SET wts_workflow_status = :wts_workflow_status, wts_tumor_library_id = :wts_tumor_library_id, wts_tumor_fastq_list_row_ids = :wts_tumor_fastq_list_row_ids, arriba_output_uri = :arriba_output_uri, dragen_wts_output_uri = :dragen_wts_output_uri",
@@ -78,7 +180,7 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id.$": "$.workflow_inputs.payload.data.tags.subjectId",
+                  "id.$": "$.get_subject_orcabus_id_step.subject_orcabus_id",
                   "id_type": "${__subject_table_partition_name__}"
                 },
                 "UpdateExpression": "SET umccrise_workflow_status = :umccrise_workflow_status, umccrise_tumor_library_id = :umccrise_tumor_library_id, umccrise_normal_library_id = :umccrise_normal_library_id, umccrise_output_uri = :umccrise_output_uri, umccrise_tumor_fastq_list_row_ids = :umccrise_tumor_fastq_list_row_ids, umccrise_normal_fastq_list_row_ids = :umccrise_normal_fastq_list_row_ids",
@@ -150,7 +252,7 @@
               "Parameters": {
                 "TableName": "${__table_name__}",
                 "Key": {
-                  "id.$": "$.workflow_inputs.payload.data.tags.subjectId",
+                  "id.$": "$.get_subject_orcabus_id_step.subject_orcabus_id",
                   "id_type": "${__subject_table_partition_name__}"
                 },
                 "UpdateExpression": "ADD linked_libraries_set :linked_libraries_set",
@@ -161,6 +263,11 @@
                 }
               },
               "ResultPath": null,
+              "Next": "Wait For Linked Library DB Sync"
+            },
+            "Wait For Linked Library DB Sync": {
+              "Type": "Wait",
+              "Seconds": 1,
               "End": true
             }
           }
@@ -174,7 +281,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.workflow_inputs.payload.data.tags.subjectId",
+          "id.$": "$.get_subject_orcabus_id_step.subject_orcabus_id",
           "id_type": "${__subject_table_partition_name__}"
         }
       },
@@ -210,7 +317,7 @@
     },
     "Get workflow inputs": {
       "Type": "Parallel",
-      "Next": "Generate RNASum Draft Event",
+      "Next": "Generate RNASum Ready Event",
       "Branches": [
         {
           "StartAt": "Generate workflow inputs",
@@ -230,7 +337,8 @@
                   "wts_tumor_fastq_list_row_ids.$": "States.StringToJson($.get_subject_item_step.Item.wts_tumor_fastq_list_row_ids.S)",
                   "wgs_tumor_fastq_list_row_ids.$": "States.StringToJson($.get_subject_item_step.Item.umccrise_tumor_fastq_list_row_ids.S)",
                   "wgs_normal_fastq_list_row_ids.$": "States.StringToJson($.get_subject_item_step.Item.umccrise_normal_fastq_list_row_ids.S)",
-                  "subject_id.$": "$.get_subject_item_step.Item.id.S"
+                  "subject_id.$": "$.get_subject_item_step.Item.subject_id.S",
+                  "individual_id.$": "$.get_subject_item_step.Item.individual_id.S"
                 }
               },
               "Retry": [
@@ -313,34 +421,22 @@
       },
       "ResultPath": "$.get_parameters_step"
     },
-    "Generate RNASum Draft Event": {
+    "Generate RNASum Ready Event": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::events:putEvents",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
       "Parameters": {
-        "Entries": [
-          {
-            "EventBusName": "${__event_bus_name__}",
-            "Source": "${__event_source__}",
-            "DetailType": "${__detail_type__}",
-            "Detail": {
-              "portalRunId.$": "$.get_parameters_step.portal_run_id",
-              "timestamp.$": "$$.State.EnteredTime",
-              "status": "${__output_status__}",
-              "workflowName": "${__workflow_name__}",
-              "workflowVersion": "${__workflow_version__}",
-              "workflowRunName.$": "$.get_parameters_step.workflow_run_name",
-              "linkedLibraries.$": "$.get_parameters_step.linked_libraries",
-              "payload": {
-                "version": "${__payload_version__}",
-                "data": {
-                  "inputs.$": "$.get_parameters_step.input_event_data",
-                  "tags.$": "$.get_parameters_step.event_tags"
-                }
-              }
-            }
+        "StateMachineArn": "${__launch_ready_event_sfn_arn__}",
+        "Input": {
+          "StatePayload": {
+            "portal_run_id.$": "$.get_parameters_step.portal_run_id",
+            "workflow_run_name.$": "$.get_parameters_step.workflow_run_name",
+            "linked_libraries.$": "$.get_parameters_step.linked_libraries",
+            "data_inputs.$": "$.get_parameters_step.input_event_data",
+            "data_tags.$": "$.get_parameters_step.event_tags"
           }
-        ]
+        }
       },
+      "ResultPath": null,
       "End": true
     },
     "Success": {

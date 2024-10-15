@@ -1,0 +1,80 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "move inputs",
+  "States": {
+    "move inputs": {
+      "Type": "Pass",
+      "Next": "Get Workflow Run Engine Parameters",
+      "Parameters": {
+        "input_event_detail_draft.$": "$.StatePayload"
+      }
+    },
+    "Get Workflow Run Engine Parameters": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__engine_parameters_maker_state_machine_arn__}",
+        "Input": {
+          "portal_run_id.$": "$.input_event_detail_draft.portal_run_id",
+          "workflow_name": "${__workflow_name__}",
+          "workflow_version": "${__workflow_version__}",
+          "event_data_inputs.$": "$.input_event_detail_draft.data_inputs",
+          "ssm_parameters_list": [
+            {
+              "engine_parameter_key": "outputUri",
+              "ssm_name": "${__output_uri_ssm_parameter_name__}"
+            },
+            {
+              "engine_parameter_key": "logsUri",
+              "ssm_name": "${__logs_uri_ssm_parameter_name__}"
+            },
+            {
+              "engine_parameter_key": "cacheUri",
+              "ssm_name": "${__cache_uri_ssm_parameter_name__}"
+            },
+            {
+              "engine_parameter_key": "projectId",
+              "ssm_name": "${__project_id_ssm_parameter_name__}"
+            }
+          ]
+        }
+      },
+      "Next": "EventBridge PutEvents",
+      "ResultPath": "$.set_workflow_run_engine_parameters",
+      "ResultSelector": {
+        "engine_parameters.$": "$.Output.engine_parameters"
+      }
+    },
+    "EventBridge PutEvents": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Source": "${__event_output_source__}",
+            "EventBusName": "${__event_bus_name__}",
+            "DetailType": "${__detail_type__}",
+            "Detail": {
+              "portalRunId.$": "$.input_event_detail_draft.portal_run_id",
+              "timestamp.$": "$$.State.EnteredTime",
+              "status": "${__ready_status__}",
+              "workflowName": "${__workflow_name__}",
+              "workflowVersion": "${__workflow_version__}",
+              "workflowRunName.$": "$.input_event_detail_draft.workflow_run_name",
+              "linkedLibraries.$": "$.input_event_detail_draft.linked_libraries",
+              "payload": {
+                "version": "${__payload_version__}",
+                "data": {
+                  "inputs.$": "$.input_event_detail_draft.data_inputs",
+                  "engineParameters.$": "$.set_workflow_run_engine_parameters.engine_parameters",
+                  "tags.$": "$.input_event_detail_draft.data_tags"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}

@@ -28,12 +28,3 @@ class Analysis(OrcaBusBaseModel):
 
     def __str__(self):
         return f"ID: {self.orcabus_id}, analysis_name: {self.analysis_name}, analysis_version: {self.analysis_version}"
-
-    def to_dict(self):
-        return {
-            "orcabusId": self.orcabus_id,
-            "analysisName": self.analysis_name,
-            "analysisVersion": self.analysis_version,
-            "description": self.description,
-            "status": self.status
-        }

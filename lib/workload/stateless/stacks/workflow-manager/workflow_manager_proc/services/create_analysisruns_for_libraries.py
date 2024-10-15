@@ -3,7 +3,10 @@ from typing import List
 
 from workflow_manager.models import Analysis, AnalysisRun, AnalysisContext, Library
 from workflow_manager_proc.utils import metadata_utils
+import logging
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 # TODO: get list of libraries (+ required metadata) from list of library IDs
 # TODO: switch pairing based on subject to pairing based on Case (creating a case is someone else's responsibility)
@@ -135,7 +138,7 @@ def create_wgs_analysis(libraries: List[dict]) -> List[AnalysisRun]:
                 normal_lib_record: Library = Library.objects.get(library_id=pairing[sbj]['normal'][0]['library_id'])
 
             if not tumor_lib_record or not normal_lib_record:
-                print("Not a valid pairing.")
+                logger.info("Not a valid pairing.")
                 break
 
             workflow = pairing[sbj]['tumor'][0]['workflow']
@@ -154,7 +157,7 @@ def create_wgs_analysis(libraries: List[dict]) -> List[AnalysisRun]:
             ar_wgs.libraries.add(normal_lib_record)
             analysis_runs.append(ar_wgs)
         else:
-            print(f"No pairing for {sbj}.")
+            logger.info(f"No pairing for {sbj}.")
 
     return analysis_runs
 

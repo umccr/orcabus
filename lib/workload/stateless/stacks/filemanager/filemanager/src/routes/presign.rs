@@ -7,6 +7,7 @@ use url::Url;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::clients::aws::s3;
+use crate::clients::aws::s3::ResponseHeaders;
 use crate::database::entities::s3_object;
 use crate::env::Config;
 use crate::error::Error::PresignedUrlError;
@@ -86,6 +87,7 @@ impl<'a> PresignedUrlBuilder<'a> {
         &self,
         key: &str,
         bucket: &str,
+        version_id: &str,
         response_content_disposition: ContentDisposition,
         response_content_type: Option<String>,
         response_content_encoding: Option<String>,
@@ -111,9 +113,12 @@ impl<'a> PresignedUrlBuilder<'a> {
                 .presign_url(
                     key,
                     bucket,
-                    content_disposition,
-                    response_content_type,
-                    response_content_encoding,
+                    version_id,
+                    ResponseHeaders::new(
+                        content_disposition.to_string(),
+                        response_content_type,
+                        response_content_encoding,
+                    ),
                     self.config
                         .api_presign_expiry()
                         .unwrap_or(DEFAULT_PRESIGN_EXPIRY),
@@ -141,6 +146,7 @@ impl<'a> PresignedUrlBuilder<'a> {
             .presign_url(
                 &model.key,
                 &model.bucket,
+                &model.version_id,
                 response_content_disposition,
                 response_content_type,
                 response_content_encoding,
@@ -160,6 +166,7 @@ pub(crate) mod tests {
 
     use crate::clients::aws::s3;
     use crate::env::Config;
+    use crate::events::aws::message::default_version_id;
     use crate::routes::list::tests::mock_get_object;
 
     use super::*;
@@ -175,7 +182,14 @@ pub(crate) mod tests {
 
         let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(None);
         let url = builder
-            .presign_url("0", "1", ContentDisposition::Inline, None, None)
+            .presign_url(
+                "0",
+                "1",
+                &default_version_id(),
+                ContentDisposition::Inline,
+                None,
+                None,
+            )
             .await
             .unwrap()
             .unwrap();
@@ -187,7 +201,14 @@ pub(crate) mod tests {
 
         let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(Some(2));
         let url = builder
-            .presign_url("0", "1", ContentDisposition::Inline, None, None)
+            .presign_url(
+                "0",
+                "1",
+                &default_version_id(),
+                ContentDisposition::Inline,
+                None,
+                None,
+            )
             .await
             .unwrap()
             .unwrap();
@@ -212,6 +233,7 @@ pub(crate) mod tests {
             .presign_url(
                 "0",
                 "1",
+                &default_version_id(),
                 ContentDisposition::Inline,
                 Some("application/json".to_string()),
                 Some("gzip".to_string()),
@@ -236,7 +258,14 @@ pub(crate) mod tests {
 
         let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(None);
         let url = builder
-            .presign_url("0", "1", ContentDisposition::Attachment, None, None)
+            .presign_url(
+                "0",
+                "1",
+                &default_version_id(),
+                ContentDisposition::Attachment,
+                None,
+                None,
+            )
             .await
             .unwrap()
             .unwrap();
@@ -261,7 +290,14 @@ pub(crate) mod tests {
 
         let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(Some(2));
         let url = builder
-            .presign_url("0", "1", ContentDisposition::Inline, None, None)
+            .presign_url(
+                "0",
+                "1",
+                &default_version_id(),
+                ContentDisposition::Inline,
+                None,
+                None,
+            )
             .await
             .unwrap();
 
@@ -282,7 +318,14 @@ pub(crate) mod tests {
 
         let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(Some(2));
         let url = builder
-            .presign_url("0", "1", ContentDisposition::Inline, None, None)
+            .presign_url(
+                "0",
+                "1",
+                &default_version_id(),
+                ContentDisposition::Inline,
+                None,
+                None,
+            )
             .await
             .unwrap()
             .unwrap();

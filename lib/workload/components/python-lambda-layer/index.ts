@@ -29,7 +29,10 @@ export class PythonLambdaLayerConstruct extends Construct {
             return [];
           },
           afterBundling(inputDir: string, outputDir: string): string[] {
-            return [`python -m pip install ${inputDir} -t ${outputDir}`];
+            return [
+              `python -m pip install ${inputDir} -t ${outputDir}`,
+              `find ${outputDir} -name 'pandas' -exec rm -rf {}/tests/ \\;`,
+            ];
           },
         },
       },

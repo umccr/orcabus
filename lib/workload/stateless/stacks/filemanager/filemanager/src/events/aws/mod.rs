@@ -5,7 +5,6 @@ use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use chrono::{DateTime, Utc};
 use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use sqlx::FromRow;
 use uuid::Uuid;
 
@@ -14,6 +13,7 @@ use message::EventMessage;
 use crate::events::aws::message::{default_version_id, EventType};
 use crate::events::aws::EventType::{Created, Deleted, Other};
 use crate::uuid::UuidGenerator;
+use sea_orm::prelude::Json;
 
 pub mod collecter;
 pub mod inventory;
@@ -22,7 +22,7 @@ pub mod message;
 /// A wrapper around AWS storage types with sqlx support.
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sqlx(type_name = "storage_class", no_pg_array)]
+#[sqlx(type_name = "storage_class")]
 pub enum StorageClass {
     DeepArchive,
     Glacier,
@@ -34,12 +34,6 @@ pub enum StorageClass {
     Snow,
     Standard,
     StandardIa,
-}
-
-impl PgHasArrayType for StorageClass {
-    fn array_type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("_storage_class")
-    }
 }
 
 impl StorageClass {
@@ -79,6 +73,8 @@ pub struct TransposedS3EventMessages {
     pub last_modified_dates: Vec<Option<DateTime<Utc>>>,
     pub event_types: Vec<EventType>,
     pub is_delete_markers: Vec<bool>,
+    pub ingest_ids: Vec<Option<Uuid>>,
+    pub attributes: Vec<Option<Json>>,
 }
 
 impl TransposedS3EventMessages {
@@ -99,6 +95,8 @@ impl TransposedS3EventMessages {
             last_modified_dates: Vec::with_capacity(capacity),
             event_types: Vec::with_capacity(capacity),
             is_delete_markers: Vec::with_capacity(capacity),
+            ingest_ids: Vec::with_capacity(capacity),
+            attributes: Vec::with_capacity(capacity),
         }
     }
 
@@ -118,6 +116,8 @@ impl TransposedS3EventMessages {
             last_modified_date,
             event_type,
             is_delete_marker,
+            ingest_id,
+            attributes,
             ..
         } = message;
 
@@ -134,6 +134,8 @@ impl TransposedS3EventMessages {
         self.last_modified_dates.push(last_modified_date);
         self.event_types.push(event_type);
         self.is_delete_markers.push(is_delete_marker);
+        self.ingest_ids.push(ingest_id);
+        self.attributes.push(attributes);
     }
 }
 
@@ -171,6 +173,8 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
             messages.last_modified_dates,
             messages.event_types,
             messages.is_delete_markers,
+            messages.ingest_ids,
+            messages.attributes,
         )
         .map(
             |(
@@ -187,6 +191,8 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                 last_modified_date,
                 event_type,
                 is_delete_marker,
+                ingest_id,
+                attributes,
             )| {
                 FlatS3EventMessage {
                     s3_object_id,
@@ -202,6 +208,8 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                     event_time,
                     event_type,
                     is_delete_marker,
+                    ingest_id,
+                    attributes,
                     number_duplicate_events: 0,
                     number_reordered: 0,
                 }
@@ -344,7 +352,6 @@ impl FlatS3EventMessages {
     pub fn sort(self) -> Self {
         let mut messages = self.into_inner();
 
-        messages.sort();
         messages.sort_by(|a, b| {
             if let (Some(a_sequencer), Some(b_sequencer)) =
                 (a.sequencer.as_ref(), b.sequencer.as_ref())
@@ -420,7 +427,7 @@ impl FlatS3EventMessages {
 }
 
 /// A flattened AWS S3 record
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Default, FromRow)]
+#[derive(Debug, Eq, PartialEq, Clone, Default, FromRow)]
 pub struct FlatS3EventMessage {
     pub s3_object_id: Uuid,
     pub sequencer: Option<String>,
@@ -435,6 +442,8 @@ pub struct FlatS3EventMessage {
     pub event_time: Option<DateTime<Utc>>,
     pub event_type: EventType,
     pub is_delete_marker: bool,
+    pub ingest_id: Option<Uuid>,
+    pub attributes: Option<Json>,
     pub number_duplicate_events: i64,
     pub number_reordered: i64,
 }
@@ -484,6 +493,14 @@ impl FlatS3EventMessage {
         sha256
             .into_iter()
             .for_each(|sha256| self.sha256 = Some(sha256));
+        self
+    }
+
+    /// Update the delete marker if not None.
+    pub fn update_delete_marker(mut self, delete_marker: Option<bool>) -> Self {
+        delete_marker
+            .into_iter()
+            .for_each(|is_delete_marker| self.is_delete_marker = is_delete_marker);
         self
     }
 
@@ -556,6 +573,18 @@ impl FlatS3EventMessage {
     /// Set the delete marker.
     pub fn with_is_delete_marker(mut self, is_delete_marker: bool) -> Self {
         self.is_delete_marker = is_delete_marker;
+        self
+    }
+
+    /// Set the move id.
+    pub fn with_ingest_id(mut self, ingest_id: Option<Uuid>) -> Self {
+        self.ingest_id = ingest_id;
+        self
+    }
+
+    /// Set the attributes.
+    pub fn with_attributes(mut self, attributes: Option<Json>) -> Self {
+        self.attributes = attributes;
         self
     }
 
