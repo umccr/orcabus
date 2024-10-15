@@ -1,3 +1,6 @@
 /*
-We initialise the libraries
+We initialise the wts libraries and wgs libraries for oncoanalyser
+
+We also initialise the fastq list rows for the wts libraries since
+wts workflows will start from fastq
 */
