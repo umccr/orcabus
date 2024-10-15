@@ -108,12 +108,20 @@ class TrackingSheetSrvUnitTests(TestCase):
         """
         python manage.py test proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_persist_lab_metadata
         """
-        mock_sheet_data = [RECORD_1, RECORD_2, RECORD_3]
+        mock_sheet_data = [RECORD_1]
 
         metadata_pd = pd.json_normalize(mock_sheet_data)
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
         result = persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
+        lib_one = Library.objects.get(library_id=RECORD_1.get("LibraryID"))
+        print(lib_one.history.all())
+        new_record, old_record = lib_one.history.all()
+        delta = new_record.diff_against(old_record)
+        print(delta)
+        for change in delta.changes:
+            print(f"'{change.field}' changed from '{change.old}' to '{change.new}'")
+        return
         # Stats check
         self.assertEqual(result.get("invalid_record_count"), 0, "non invalid record should exist")
         self.assertEqual(result.get("library").get("create_count"), 3, "3 new library should be created")

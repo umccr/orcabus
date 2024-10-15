@@ -30,8 +30,8 @@ def insert_mock_1():
     project.contact_set.add(contact)
     library.sample = sample
     library.subject = subject
-    library.project_set.add(project)
     library.save()
+    library.project_set.add(project)
 
     subject.individual_set.add(individual)
     subject.save()
