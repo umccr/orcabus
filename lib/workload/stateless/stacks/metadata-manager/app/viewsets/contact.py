@@ -1,7 +1,8 @@
 from drf_spectacular.utils import extend_schema
+from rest_framework.decorators import action
 
 from app.models import Contact
-from app.serializers.contact import ContactSerializer, ContactDetailSerializer
+from app.serializers.contact import ContactSerializer, ContactDetailSerializer, ContactHistorySerializer
 
 from .base import BaseViewSet
 
@@ -21,3 +22,8 @@ class ContactViewSet(BaseViewSet):
     def get_queryset(self):
         query_params = self.get_query_params()
         return Contact.objects.get_by_keyword(**query_params)
+
+    @extend_schema(responses=ContactHistorySerializer(many=True))
+    @action(detail=True, methods=['get'], url_name='history', url_path='history')
+    def retrieve_history(self, request, *args, **kwargs):
+        return super().retrieve_history(ContactHistorySerializer)

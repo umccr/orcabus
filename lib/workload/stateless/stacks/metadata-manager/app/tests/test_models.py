@@ -2,6 +2,7 @@ import logging
 
 from unittest.mock import  patch
 
+from django.core import serializers
 from django.test import TestCase
 
 from app.models import Subject, Sample, Library, Contact, Project, Individual

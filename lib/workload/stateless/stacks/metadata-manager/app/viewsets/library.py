@@ -1,6 +1,8 @@
 from drf_spectacular.utils import extend_schema
+from rest_framework.decorators import action
+
 from app.models import Library
-from app.serializers.library import LibrarySerializer, LibraryDetailSerializer
+from app.serializers.library import LibrarySerializer, LibraryDetailSerializer, LibraryHistorySerializer
 
 from .base import BaseViewSet
 
@@ -33,3 +35,8 @@ class LibraryViewSet(BaseViewSet):
     ])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
+    @extend_schema(responses=LibraryHistorySerializer(many=True))
+    @action(detail=True, methods=['get'], url_name='history', url_path='history')
+    def retrieve_history(self, request, *args, **kwargs):
+        return super().retrieve_history(LibraryHistorySerializer)

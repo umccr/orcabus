@@ -1,5 +1,7 @@
+from rest_framework import serializers
+
 from .base import SerializersBase
-from app.models import Project
+from app.models import Project, Contact
 
 
 class ProjectBaseSerializer(SerializersBase):
@@ -22,3 +24,20 @@ class ProjectDetailSerializer(ProjectBaseSerializer):
     class Meta:
         model = Project
         fields = "__all__"
+
+
+class ProjectHistorySerializer(ProjectBaseSerializer):
+    class ContactOrcabusIdSet(serializers.RelatedField):
+
+        def to_internal_value(self, data):
+            return None
+
+        def to_representation(self, value):
+            return Contact.orcabus_id_prefix + value.contact.orcabus_id
+
+    class Meta:
+        model = Project.history.model
+        fields = "__all__"
+
+    contact_set = ContactOrcabusIdSet(many=True, read_only=True)
+

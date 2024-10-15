@@ -16,7 +16,7 @@ class Command(BaseCommand):
 
         metadata_pd = pd.json_normalize(mock_sheet_data)
         metadata_pd = sanitize_lab_metadata_df(metadata_pd)
-        result = persist_lab_metadata(metadata_pd, SHEET_YEAR)
+        result = persist_lab_metadata(metadata_pd, SHEET_YEAR, is_emit_eb_events=False)
 
         print(json.dumps(result, indent=4))
         print("insert mock data completed")
