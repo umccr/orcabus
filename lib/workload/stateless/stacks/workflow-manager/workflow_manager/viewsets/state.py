@@ -1,22 +1,85 @@
-from rest_framework import filters
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework import filters, mixins, status
+from rest_framework.viewsets import GenericViewSet
+from rest_framework.response import Response
 
-from workflow_manager.models import State
+from django.utils import timezone
+
+from workflow_manager.models import State, WorkflowRun
 from workflow_manager.pagination import StandardResultsSetPagination
 from workflow_manager.serializers import StateModelSerializer
 
 
-class StateViewSet(ReadOnlyModelViewSet):
+class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin, GenericViewSet):
+    queryset = State.objects.all()
     serializer_class = StateModelSerializer
-    pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = '__all__'
     ordering = ['-id']
     search_fields = State.get_base_fields()
-
+    http_method_names = ['get', 'post', 'patch']
+    
     def get_queryset(self):
         qs = State.objects.filter(workflow_run=self.kwargs["workflowrun_id"])
         qs = State.objects.get_model_fields_query(qs, **self.request.query_params)
         return qs
 
+    
+    def create(self, request, *args, **kwargs):
+        workflow_run_id = self.kwargs.get("workflowrun_id")
+        workflow_run = WorkflowRun.objects.get(id=workflow_run_id)
+
+        # Check if the workflow run has a "Failed" or "Aborted" state
+        latest_state = workflow_run.get_latest_state()
+        if latest_state.status not in ["FAILED", "ABORTED"]:
+            return Response({"detail": "Can only create 'Resolved' state for workflow runs with 'Failed' or 'Aborted' states."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if the new state is "Resolved"
+        if request.data.get('status', '').upper() != "RESOLVED":
+            return Response({"detail": "Can only create 'Resolved' state."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        
+        print(request.data, "request.data", workflow_run_id, "workflow_run_id", latest_state.status, "latest_state.status")
+        # Prepare data for serializer
+        data = request.data.copy()
+        data['timestamp'] = timezone.now()
+        data['workflow_run'] = workflow_run_id
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        serializer.save(workflow_run_id=self.kwargs["workflowrun_id"], status="RESOLVED")
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        # Check if the state being updated is "Resolved"
+        if instance.status != "RESOLVED":
+            return Response({"detail": "Can only update 'Resolved' state records."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if only the comment field is being updated
+        if set(request.data.keys()) != {'comment'}:
+            return Response({"detail": "Only the comment field can be updated."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
+
+    def perform_update(self, serializer):
+        serializer.save(status="RESOLVED")
 

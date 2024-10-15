@@ -6,4 +6,5 @@ from .workflow_run import WorkflowRun, LibraryAssociation
 from .library import Library
 from .state import State
 from .state import Status
+from .workflow_run_comment import WorkflowRunComment
 from .utils import WorkflowRunUtil

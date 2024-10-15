@@ -87,7 +87,7 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
                 Q(libraries__library_id__icontains=search_params) |
                 Q(libraries__orcabus_id__icontains=search_params) |
                 Q(workflow__workflow_name__icontains=search_params)
-            )
+            ).distinct()
             
         return result_set
 
@@ -158,8 +158,13 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
             states__status="FAILED"
         ).count()
         
+        resolved_count = annotate_queryset.filter(
+            states__timestamp=F('latest_state_time'),
+            states__status="RESOLVED"
+        ).count()
+        
         ongoing_count = base_queryset.filter(
-            ~Q(states__status="FAILED") &
+            ~Q(states__status="FAILED") &# resolved is a subset of failed
             ~Q(states__status="ABORTED") &
             ~Q(states__status="SUCCEEDED")
         ).count()
@@ -169,5 +174,6 @@ class WorkflowRunViewSet(ReadOnlyModelViewSet):
             'succeeded': succeeded_count,
             'aborted': aborted_count,
             'failed': failed_count,
-            'ongoing': ongoing_count
+            'resolved': resolved_count,
+            'ongoing': ongoing_count,
         }, status=200)

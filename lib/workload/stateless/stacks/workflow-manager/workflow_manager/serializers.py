@@ -1,6 +1,5 @@
 from rest_framework import serializers
-
-from workflow_manager.models import Workflow, WorkflowRun, Payload, Library, State
+from workflow_manager.models import Workflow, WorkflowRun, Payload, Library, State, WorkflowRunComment
 
 
 READ_ONLY_SERIALIZER = "READ ONLY SERIALIZER"
@@ -61,8 +60,6 @@ class PayloadModelSerializer(serializers.ModelSerializer):
         model = Payload
         fields = '__all__'
 
-
-
 class StateModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = State
@@ -73,10 +70,10 @@ class WorkflowRunCountByStatusSerializer(serializers.Serializer):
     succeeded = serializers.IntegerField()
     aborted = serializers.IntegerField()
     failed = serializers.IntegerField()
+    resolved = serializers.IntegerField()
     ongoing = serializers.IntegerField()
 
-    def update(self, instance, validated_data):
-        pass
-
-    def create(self, validated_data):
-        pass
+class WorkflowRunCommentModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkflowRunComment
+        fields = '__all__'
