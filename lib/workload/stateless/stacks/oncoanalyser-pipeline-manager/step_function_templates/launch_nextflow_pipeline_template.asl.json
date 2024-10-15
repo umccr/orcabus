@@ -67,16 +67,9 @@
           "ResourceRequirements.$": "$.get_batch_submission_step.overrides.resource_requirements",
           "Command.$": "$.get_batch_submission_step.overrides.command"
         },
-        "Tags": {
-          "Tag": "$.get_batch_submission_step.tags"
-        },
+        "Tags.$": "$.get_batch_submission_step.tags",
         "PropagateTags": true,
-        "Parameters": {
-          "portal_run_id.$": "$.workflow_inputs.portalRunId",
-          "workflow": "$.get_batch_submission_step.workflow",
-          "version": "${__workflow_version__}",
-          "output.$": "$.get_batch_submission_step.output"
-        }
+        "Parameters.$": "$.get_batch_submission_step.parameters"
       },
       "Next": "Put Submitted event",
       "ResultPath": null
