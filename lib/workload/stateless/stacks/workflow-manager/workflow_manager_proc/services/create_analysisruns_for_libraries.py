@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import List
 
 from workflow_manager.models import Analysis, AnalysisRun, AnalysisContext, Library
+from workflow_manager_proc.utils import metadata_utils
 
 
 # TODO: get list of libraries (+ required metadata) from list of library IDs
@@ -33,8 +34,39 @@ def get_library_details(library_ids: List[str]):
     """
     Retrieve metadata for each library that is needed to make decisions on how to analyse it.
     NOTE: the local library model could be extended to store this data
+
+    Metadata records have the form:
+    {
+        "orcabusId": "lib.01J9T9C2ZJHE9EP3X50H7R4G4F",
+        "projectSet": [
+            {
+                "orcabusId": "prj.01J9T68SYN4KQBCX39MKH8A00R",
+                "projectId": "COUMN",
+                "name": None,
+                "description": None,
+            }
+        ],
+        "sample": {
+            "orcabusId": "smp.01J9T9C2YW53TSRFT5ZT91B684",
+            "sampleId": "PRJ241640",
+            "externalSampleId": "PGL29",
+            "source": "blood",
+        },
+        "subject": {
+            "orcabusId": "sbj.01J9T97D5N8B468ZEQE1PH9RT7",
+            "subjectId": "PPGL29",
+        },
+        "libraryId": "L2401461",
+        "phenotype": "normal",
+        "workflow": "clinical",
+        "quality": "good",
+        "type": "WGS",
+        "assay": "TsqNano",
+        "coverage": 40.0,
+    }
     """
-    pass
+    lib_records = metadata_utils.get_libraries(library_ids)
+    return lib_records
 
 
 def assign_analysis(libraries: List[dict]) -> List[AnalysisRun]:
