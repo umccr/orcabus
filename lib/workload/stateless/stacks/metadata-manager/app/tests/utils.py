@@ -4,7 +4,7 @@ from app.tests.factories import LibraryFactory, IndividualFactory, SubjectFactor
 
 
 def clear_all_data():
-    """This function clear all existing models objcet"""
+    """This function clear all existing models object"""
     Library.objects.all().delete()
     Sample.objects.all().delete()
     Subject.objects.all().delete()
@@ -30,8 +30,8 @@ def insert_mock_1():
     project.contact_set.add(contact)
     library.sample = sample
     library.subject = subject
-    library.project_set.add(project)
     library.save()
+    library.project_set.add(project)
 
     subject.individual_set.add(individual)
     subject.save()

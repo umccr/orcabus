@@ -1,7 +1,8 @@
 from drf_spectacular.utils import extend_schema
+from rest_framework.decorators import action
 
 from app.models import Project
-from app.serializers.project import ProjectDetailSerializer, ProjectSerializer
+from app.serializers.project import ProjectDetailSerializer, ProjectSerializer, ProjectHistorySerializer
 
 from .base import BaseViewSet
 
@@ -21,3 +22,8 @@ class ProjectViewSet(BaseViewSet):
     def get_queryset(self):
         query_params = self.get_query_params()
         return Project.objects.get_by_keyword(self.queryset, **query_params)
+
+    @extend_schema(responses=ProjectHistorySerializer(many=True), description="Retrieve the history of this model")
+    @action(detail=True, methods=['get'], url_name='history', url_path='history')
+    def retrieve_history(self, request, *args, **kwargs):
+        return super().retrieve_history(ProjectHistorySerializer)

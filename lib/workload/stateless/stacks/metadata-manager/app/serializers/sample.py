@@ -20,3 +20,10 @@ class SampleDetailSerializer(SampleBaseSerializer):
         fields = '__all__'
 
     library_set = LibrarySerializer(many=True, read_only=True)
+
+
+class SampleHistorySerializer(SampleBaseSerializer):
+
+    class Meta:
+        model = Sample.history.model
+        fields = "__all__"
