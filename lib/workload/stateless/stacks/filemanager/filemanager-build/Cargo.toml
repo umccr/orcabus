@@ -14,13 +14,18 @@ dotenvy = "0.15"
 sea-orm-cli = { version = "1.1.0-rc.1", default-features = false, features = ["cli", "codegen", "runtime-tokio-rustls"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "process"] }
 miette = { version = "7", features = ["fancy"] }
+
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_with = "3"
 
 quote = "1"
 syn = { version = "2", features = ["full", "extra-traits", "parsing", "visit-mut"] }
 prettyplease = "0.2"
 heck = "0.5"
 schemars = { version = "0.8", features = ["chrono", "uuid1"] }
-uuid = { version = "1", features = ["serde"] }
+uuid = { version = "1", features = ["v7", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+jsonschema = "0.23"

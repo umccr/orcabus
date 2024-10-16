@@ -10,7 +10,8 @@ use crate::error::ErrorKind::LoadingEnvironment;
 pub mod error;
 pub mod gen_entities;
 pub mod gen_openapi;
-pub mod schema;
+pub mod gen_schema;
+pub mod types;
 
 /// Run the filemanager-build tool to generate sea-orm entities or generate JSON schemas. This always generates entities
 /// if a database url is defined, otherwise it skips generating entities if `--skip-if-no-database`
@@ -50,9 +51,9 @@ pub enum SubCommands {
     },
     /// Generate the JSON schemas that filemanager can consume.
     Schemas {
-        /// The output file.
+        /// The output directory.
         #[arg(short, long, env)]
-        out_file: PathBuf,
+        out_dir: PathBuf,
         /// Whether to generate schema examples.
         #[arg(short, long, default_value_t = true, env)]
         examples: bool,

@@ -1,6 +1,6 @@
 use filemanager_build::gen_entities::generate_entities;
 use filemanager_build::gen_openapi::generate_openapi;
-use filemanager_build::schema::generate_schemas;
+use filemanager_build::gen_schema::write_schema;
 use filemanager_build::{Config, SubCommands};
 use miette::Result;
 
@@ -22,8 +22,8 @@ async fn main() -> Result<()> {
                 println!("Skipping entity generation as no database url is defined, nothing to do.")
             }
         }
-        SubCommands::Schemas { out_file, .. } => {
-            generate_schemas(&out_file).await?;
+        SubCommands::Schemas { out_dir, .. } => {
+            write_schema(&out_dir).await?;
         }
     }
 
