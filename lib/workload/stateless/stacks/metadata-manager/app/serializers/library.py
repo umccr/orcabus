@@ -43,7 +43,7 @@ class LibraryDetailSerializer(LibraryBaseSerializer):
 class LibraryHistorySerializer(LibrarySerializer):
     class ProjectOrcabusIdSet(serializers.RelatedField):
         def to_internal_value(self, data):
-            return None
+            raise NotImplementedError()
 
         def to_representation(self, value):
             return Project.orcabus_id_prefix + value.project.orcabus_id

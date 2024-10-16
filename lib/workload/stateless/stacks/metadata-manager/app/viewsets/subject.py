@@ -48,7 +48,7 @@ class SubjectViewSet(BaseViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    @extend_schema(responses=SubjectHistorySerializer(many=True))
+    @extend_schema(responses=SubjectHistorySerializer(many=True), description="Retrieve the history of this model")
     @action(detail=True, methods=['get'], url_name='history', url_path='history')
     def retrieve_history(self, request, *args, **kwargs):
         return super().retrieve_history(SubjectHistorySerializer)

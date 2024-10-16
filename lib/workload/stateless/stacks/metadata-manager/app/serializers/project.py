@@ -30,7 +30,7 @@ class ProjectHistorySerializer(ProjectBaseSerializer):
     class ContactOrcabusIdSet(serializers.RelatedField):
 
         def to_internal_value(self, data):
-            return None
+            raise NotImplementedError()
 
         def to_representation(self, value):
             return Contact.orcabus_id_prefix + value.contact.orcabus_id

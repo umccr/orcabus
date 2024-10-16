@@ -31,7 +31,7 @@ class SubjectDetailSerializer(SubjectBaseSerializer):
 class SubjectHistorySerializer(SubjectBaseSerializer):
     class IndividualOrcabusIdSet(serializers.RelatedField):
         def to_internal_value(self, data):
-            return None
+            raise NotImplementedError()
 
         def to_representation(self, value):
             return Individual.orcabus_id_prefix + value.individual.orcabus_id

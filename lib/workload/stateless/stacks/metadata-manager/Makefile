@@ -78,5 +78,9 @@ insert-data:
 suite:
 	@python manage.py test --parallel
 
+coverage:
+	@coverage run manage.py test
+	@coverage report -m
+
 # full mock suite test pipeline - install deps, bring up compose stack, run suite, bring down compose stack
 test: install up suite down

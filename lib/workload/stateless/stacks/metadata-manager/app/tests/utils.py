@@ -4,7 +4,7 @@ from app.tests.factories import LibraryFactory, IndividualFactory, SubjectFactor
 
 
 def clear_all_data():
-    """This function clear all existing models objcet"""
+    """This function clear all existing models object"""
     Library.objects.all().delete()
     Sample.objects.all().delete()
     Subject.objects.all().delete()

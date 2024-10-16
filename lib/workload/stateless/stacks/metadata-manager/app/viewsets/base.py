@@ -52,13 +52,13 @@ class BaseViewSet(ReadOnlyModelViewSet, ABC):
         To use this as API routes, you need to call it from the child class and put the appropriate decorator.
 
         e.g.
-        @extend_schema(responses=LibraryHistorySerializer(many=True))
+        @extend_schema(responses=LibraryHistorySerializer(many=True), description="Retrieve the history of this model")
         @action(detail=True, methods=['get'], url_name='history', url_path='history')
         def retrieve_history(self, request, *args, **kwargs):
             return super().retrieve_history(LibraryHistorySerializer)
 
         Args:
-            history_serializer (serializers.Serializer, optional): The serializer for the history data.
+            history_serializer (serializers.Serializer): The serializer for the history data.
 
         Returns:
             Response: A Response with the paginated, serialized history data.
