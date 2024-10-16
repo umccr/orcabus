@@ -39,6 +39,10 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
             return Response({"detail": "Can only create 'Resolved' state."},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        # comment is required when status is "Resolved"
+        if not request.data.get('comment'):
+            return Response({"detail": "Comment is required when status is 'Resolved'."},
+                            status=status.HTTP_400_BAD_REQUEST)
         
         print(request.data, "request.data", workflow_run_id, "workflow_run_id", latest_state.status, "latest_state.status")
         # Prepare data for serializer
