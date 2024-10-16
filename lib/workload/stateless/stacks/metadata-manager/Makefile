@@ -72,7 +72,7 @@ makemigrations:
 migrate:
 	@python manage.py migrate
 
-insert-data:
+mock: reset-db migrate
 	@python manage.py insert_mock_data
 
 suite:
