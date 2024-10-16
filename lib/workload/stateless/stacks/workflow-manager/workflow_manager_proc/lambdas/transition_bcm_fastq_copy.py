@@ -6,11 +6,15 @@ django.setup()
 from workflow_manager.models.workflow_run import WorkflowRun
 import workflow_manager_proc.domain.executionservice.workflowrunstatechange as srv
 import workflow_manager_proc.domain.workflowmanager.workflowrunstatechange as wfm
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
     """event will be a workflowmanager.WorkflowRunStateChange event"""
-    print(f"Processing {event}, {context}")
+    logger.info(f"Processing {event}, {context}")
     
     input_event: wfm.AWSEvent = wfm.Marshaller.unmarshall(event, wfm.AWSEvent)
     input_wrsc: wfm.WorkflowRunStateChange = input_event.detail

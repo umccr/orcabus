@@ -9,7 +9,7 @@ class PayloadManager(OrcaBusBaseManager):
 
 
 class Payload(OrcaBusBaseModel):
-    id = models.BigAutoField(primary_key=True)
+    orcabus_id_prefix = 'pld.'
 
     payload_ref_id = models.CharField(max_length=255, unique=True)
     version = models.CharField(max_length=255)
@@ -18,12 +18,4 @@ class Payload(OrcaBusBaseModel):
     objects = PayloadManager()
 
     def __str__(self):
-        return f"ID: {self.id}, payload_ref_id: {self.payload_ref_id}"
-    
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "payload_ref_id": self.payload_ref_id,
-            "version": self.version,
-            "data": self.data
-        }
+        return f"ID: {self.orcabus_id}, payload_ref_id: {self.payload_ref_id}"
