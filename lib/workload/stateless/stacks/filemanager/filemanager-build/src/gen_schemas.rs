@@ -6,7 +6,7 @@ use crate::error::Result;
 use crate::types::FileStateChange;
 use crate::types::{Detail, FileStateChangeType, StorageClass, Transition};
 use chrono::Utc;
-use schemars::schema_for;
+use schemars::gen::{SchemaGenerator, SchemaSettings};
 use serde::Serialize;
 use serde_json::to_string_pretty;
 use std::fs::File;
@@ -33,7 +33,11 @@ pub async fn write_schemas(out_dir: &Path) -> Result<()> {
 
 /// Generate the JSON schemas.
 pub async fn generate_file_schema() -> Result<String> {
-    to_json_string(&schema_for!(FileStateChange)).await
+    let mut settings = SchemaSettings::default();
+    settings.meta_schema = Some("http://json-schema.org/draft-04/schema#".to_string());
+    let schema = SchemaGenerator::new(settings).into_root_schema_for::<FileStateChange>();
+
+    to_json_string(&schema).await
 }
 
 /// Generate an example schema for an expiration rule.
@@ -100,7 +104,7 @@ async fn to_json_string<T: ?Sized + Serialize>(value: &T) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jsonschema::is_valid;
+    use jsonschema::draft4::is_valid;
     use serde_json::from_str;
 
     #[tokio::test]

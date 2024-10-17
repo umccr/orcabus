@@ -50,7 +50,7 @@ export const getEventSchemaStackProps = (): SchemaStackProps => {
         ),
       },
       {
-        schemaType: 'JSONSchemaDraft7',
+        ...defaultProps,
         schemaName: 'orcabus.filemanager@FileStateChange',
         schemaDescription: 'Change of state for an object in the file manager',
         schemaLocation: path.join(__dirname, docBase + '/filemanager/FileStateChange.schema.json'),
