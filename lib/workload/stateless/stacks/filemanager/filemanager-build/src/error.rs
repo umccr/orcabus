@@ -21,6 +21,8 @@ pub enum ErrorKind {
     EntityGeneration(String),
     #[error("Error generating OpenAPI definitions: {0}")]
     OpenAPIGeneration(String),
+    #[error("Error generating JSON schemas: {0}")]
+    SchemaGeneration(String),
     #[error("Missing or incorrect environment variables: {0}")]
     LoadingEnvironment(String),
     #[error("io error: {0}")]

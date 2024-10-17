@@ -44,7 +44,9 @@ docker-api: docker-postgres
 
 ## Build related commands
 entity: docker-postgres
-	@cargo run -p filemanager-build -- --out-dir filemanager/src/database/entities
+	@cargo run -p filemanager-build -- entities --out-dir filemanager/src/database/entities
+schema:
+	@cargo run -p filemanager-build -- schemas --out-dir $(shell git rev-parse --show-toplevel)/docs/schemas/events/filemanager
 build: docker-postgres entity
 	@cargo build --all-features --all-targets
 watch: docker-postgres entity

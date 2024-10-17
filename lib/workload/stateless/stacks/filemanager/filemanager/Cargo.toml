@@ -49,7 +49,7 @@ json-patch = "2"
 # General
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1"
-uuid = { version = "1", features = ["v7"] }
+uuid = { version = "1", features = ["serde", "v7"] }
 mockall = "0.13"
 mockall_double = "0.3"
 itertools = "0.13"
@@ -87,9 +87,3 @@ aws-sdk-s3 = { version = "1", features = ["test-util"] }
 
 # The migrate feature is required to run sqlx tests
 filemanager = { path = ".", features = ["migrate"] }
-
-[build-dependencies]
-filemanager-build = { path = "../filemanager-build" }
-miette = { version = "7", features = ["fancy"] }
-tokio = { version = "1", features = ["macros"] }
-dotenvy = "0.15"
