@@ -10,7 +10,7 @@ use crate::error::ErrorKind::LoadingEnvironment;
 pub mod error;
 pub mod gen_entities;
 pub mod gen_openapi;
-pub mod gen_schema;
+pub mod gen_schemas;
 pub mod types;
 
 /// Run the filemanager-build tool to generate sea-orm entities or generate JSON schemas. This always generates entities

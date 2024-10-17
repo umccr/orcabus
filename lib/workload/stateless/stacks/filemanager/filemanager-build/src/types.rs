@@ -8,12 +8,10 @@ use uuid::Uuid;
 /// A filemanager object state change event.
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, JsonSchema, Default)]
-#[serde(rename_all = "kebab-case", default)]
+#[serde(rename_all = "kebab-case")]
 pub struct FileStateChange {
     /// The type of the event.
     pub(crate) detail_type: FileStateChangeType,
-    /// The detail of the event.
-    pub(crate) detail: Detail,
     /// The source of the event.
     pub(crate) source: String,
     /// The version of the event.
@@ -28,6 +26,8 @@ pub struct FileStateChange {
     pub(crate) region: Option<String>,
     /// The resources of the event.
     pub(crate) resources: Option<Vec<String>>,
+    /// The detail of the event.
+    pub(crate) detail: Detail,
 }
 
 /// The type of S3 object state change event.

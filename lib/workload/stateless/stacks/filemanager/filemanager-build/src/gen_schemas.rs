@@ -9,19 +9,30 @@ use chrono::Utc;
 use schemars::schema_for;
 use serde::Serialize;
 use serde_json::to_string_pretty;
+use std::fs::File;
+use std::io::Write;
 use std::path::Path;
-use tokio::fs::write;
+use tokio::fs::create_dir_all;
 use uuid::Uuid;
 
-/// Write the schema to the out directory.
-pub async fn write_schema(out_dir: &Path) -> Result<()> {
-    let schema = generate_schema().await?;
+/// Write the schema and examples to the out directory.
+pub async fn write_schemas(out_dir: &Path) -> Result<()> {
+    create_dir_all(out_dir.join("example")).await?;
 
-    Ok(write(out_dir.join("schema.json"), schema).await?)
+    let mut example_one = File::create(out_dir.join("example/FSC__example1.json"))?;
+    writeln!(example_one, "{}", generate_example_one().await?)?;
+
+    let mut example_two = File::create(out_dir.join("example/FSC__example2.json"))?;
+    writeln!(example_two, "{}", generate_example_two().await?)?;
+
+    let mut schema = File::create(out_dir.join("FileStateChange.schema.json"))?;
+    writeln!(schema, "{}", generate_file_schema().await?)?;
+
+    Ok(())
 }
 
 /// Generate the JSON schemas.
-pub async fn generate_schema() -> Result<String> {
+pub async fn generate_file_schema() -> Result<String> {
     to_json_string(&schema_for!(FileStateChange)).await
 }
 
@@ -94,7 +105,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_schemas() {
-        let schema = from_str(&generate_schema().await.unwrap()).unwrap();
+        let schema = from_str(&generate_file_schema().await.unwrap()).unwrap();
 
         let example_one = from_str(&generate_example_one().await.unwrap()).unwrap();
         assert!(is_valid(&schema, &example_one));

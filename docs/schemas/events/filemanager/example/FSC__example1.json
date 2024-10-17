@@ -1,0 +1,15 @@
+{
+  "detail-type": "FileStateChange",
+  "source": "orcabus.filemanager",
+  "version": "0",
+  "id": "019297c6-0547-7391-a24c-207a529aa1a2",
+  "account": "123456789012",
+  "time": "2024-10-16T23:59:50.087257150Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "expiration": 30,
+    "object-size-greater-than": 1024,
+    "keep-on-move": true
+  }
+}

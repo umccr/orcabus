@@ -1,0 +1,25 @@
+{
+  "detail-type": "FileStateChange",
+  "source": "orcabus.filemanager",
+  "version": "0",
+  "id": "019297c6-0547-7391-a24c-2084299a77f1",
+  "account": "123456789012",
+  "time": "2024-10-16T23:59:50.087370946Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "prefix": "key_prefix/",
+    "transitions": [
+      {
+        "storage-class": "STANDARD_IA",
+        "days": 30
+      },
+      {
+        "storage-class": "GLACIER",
+        "days": 90
+      }
+    ],
+    "expiration": 365,
+    "object-size-less-than": 1024
+  }
+}

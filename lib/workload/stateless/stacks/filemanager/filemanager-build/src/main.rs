@@ -1,6 +1,6 @@
 use filemanager_build::gen_entities::generate_entities;
 use filemanager_build::gen_openapi::generate_openapi;
-use filemanager_build::gen_schema::write_schema;
+use filemanager_build::gen_schemas::write_schemas;
 use filemanager_build::{Config, SubCommands};
 use miette::Result;
 
@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
             }
         }
         SubCommands::Schemas { out_dir, .. } => {
-            write_schema(&out_dir).await?;
+            write_schemas(&out_dir).await?;
         }
     }
 

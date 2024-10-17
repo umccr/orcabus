@@ -1,0 +1,179 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FileStateChange",
+  "description": "A filemanager object state change event.",
+  "type": "object",
+  "required": [
+    "detail",
+    "detail-type",
+    "source"
+  ],
+  "properties": {
+    "account": {
+      "description": "The account ID of the event.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "detail": {
+      "description": "The detail of the event.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Detail"
+        }
+      ]
+    },
+    "detail-type": {
+      "description": "The type of the event.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/FileStateChange"
+        }
+      ]
+    },
+    "id": {
+      "description": "The ID of the event.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "region": {
+      "description": "The region the event was generated in.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "resources": {
+      "description": "The resources of the event.",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "description": "The source of the event.",
+      "type": "string"
+    },
+    "time": {
+      "description": "The time the event was generated.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "version": {
+      "description": "The version of the event.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "definitions": {
+    "Detail": {
+      "description": "The detail of an S3 object state change event.",
+      "type": "object",
+      "properties": {
+        "expiration": {
+          "description": "The number of days to wait before expiring the object. Performs no expiry by default.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "keep-on-move": {
+          "description": "Whether to keep the expiry rule when the object is moved. By default, the rule is removed when an object is moved.",
+          "type": "boolean"
+        },
+        "object-size-greater-than": {
+          "description": "Apply the transition to objects that are greater than the specified size. Applies to objects of any size by default.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "object-size-less-than": {
+          "description": "Apply the transition to objects that are less than the specified size. Applies to objects of any size by default.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 1.0
+        },
+        "prefix": {
+          "description": "The key name prefix to apply this transition to. Applies to all objects by default.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "transitions": {
+          "description": "A set of transitions to apply. Performs no transition by default.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/Transition"
+          }
+        }
+      }
+    },
+    "FileStateChange": {
+      "description": "The type of S3 object state change event.",
+      "type": "string",
+      "enum": [
+        "FileStateChange"
+      ]
+    },
+    "StorageClass": {
+      "description": "AWS storage types.",
+      "type": "string",
+      "enum": [
+        "STANDARD_IA",
+        "INTELLIGENT_TIERING",
+        "ONEZONE_IA",
+        "GLACIER",
+        "GLACIER_IR",
+        "DEEP_ARCHIVE"
+      ]
+    },
+    "Transition": {
+      "description": "An S3 storage class transition.",
+      "type": "object",
+      "required": [
+        "days",
+        "storage-class"
+      ],
+      "properties": {
+        "days": {
+          "description": "The number of days to wait before transitioning the object.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "storage-class": {
+          "description": "The storage class to transition to.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/StorageClass"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
