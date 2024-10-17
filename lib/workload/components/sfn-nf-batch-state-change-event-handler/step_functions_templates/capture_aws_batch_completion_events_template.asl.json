@@ -144,7 +144,7 @@
           {
             "EventBusName": "${__event_bus_name__}",
             "Source": "${__event_output_source__}",
-            "DetailType": "${__detail_type__}",
+            "DetailType": "${__event_detail_type__}",
             "Detail": {
               "portalRunId.$": "$.workflow_inputs.parameters.portal_run_id",
               "timestamp.$": "$$.State.EnteredTime",
@@ -176,7 +176,7 @@
           {
             "EventBusName": "${__event_bus_name__}",
             "Source": "${__event_output_source__}",
-            "DetailType": "${__detail_type__}",
+            "DetailType": "${__event_detail_type__}",
             "Detail": {
               "portalRunId.$": "$.workflow_inputs.parameters.portal_run_id",
               "timestamp.$": "$$.State.EnteredTime",
@@ -186,7 +186,7 @@
               "workflowVersion": "${__workflow_version__}",
               "workflowRunName.$": "$.get_portal_run_id_from_db_step.Item.workflow_run_name.S",
               "payload": {
-                "version": "${__payload_version__}",
+                "version": "${__event_detail_version__}",
                 "data": {
                   "inputs.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.ready_event_inputs.S)",
                   "engineParameters.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.engine_parameters.S)",

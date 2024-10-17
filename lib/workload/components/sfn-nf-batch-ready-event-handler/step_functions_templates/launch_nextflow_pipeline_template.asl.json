@@ -27,7 +27,7 @@
             "S.$": "States.JsonToString($.workflow_inputs.payload.data.tags)"
           },
           "status": {
-            "S": "${__status__}"
+            "S": "${__event_status__}"
           },
           "workflow_name": {
             "S.$": "$.workflow_inputs.workflowName"
@@ -49,7 +49,19 @@
     "Wait for DB Update 1": {
       "Type": "Wait",
       "Seconds": 1,
-      "Next": "Generate Batch Submission Job"
+      "Next": "Get Default Pipeline Version"
+    },
+    "Get Default Pipeline Version": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "__pipeline_version_ssm_path__"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+      "Next": "Generate Batch Submission Job",
+      "ResultPath": "$.get_default_pipeline_version_step",
+      "ResultSelector": {
+        "default_pipeline_version.$": "$.Parameter.String"
+      }
     },
     "Generate Batch Submission Job": {
       "Type": "Task",
@@ -57,10 +69,9 @@
       "Parameters": {
         "FunctionName": "${__generate_payload_lambda_function_arn__}",
         "Payload": {
-          "portal_run_id.$": "$.workflow_inputs.portalRunId",
-          "workflow_name.$": "$.workflow_inputs.workflowName",
-          "workflow_run_name.$": "$.workflow_inputs.workflowRunName",
-          "data.$": "$.workflow_inputs.payload.data"
+          "inputs.$": "$.workflow_inputs.payload.data.inputs",
+          "engine_parameters.$": "$.workflow_inputs.payload.data.engineParameters",
+          "default_pipeline_version.$": "$.get_default_pipeline_version_step.default_pipeline_version"
         }
       },
       "Retry": [
