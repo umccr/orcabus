@@ -1,9 +1,8 @@
 from rest_framework import serializers
 
 from workflow_manager.serializers.base import SerializersBase
-from workflow_manager.models import WorkflowRun, Workflow, AnalysisRun
+from workflow_manager.models import WorkflowRun, AnalysisRun
 from workflow_manager.serializers.state import StateSerializer, StateMinSerializer
-
 
 class WorkflowRunBaseSerializer(SerializersBase):
     prefix = WorkflowRun.orcabus_id_prefix
@@ -18,13 +17,16 @@ class WorkflowRunBaseSerializer(SerializersBase):
 
 
 class WorkflowRunSerializer(WorkflowRunBaseSerializer):
+    from .workflow import WorkflowMinSerializer
+    
+    workflow = WorkflowMinSerializer(read_only=True)
     class Meta:
         model = WorkflowRun
         exclude = ["libraries"]
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation['workflow'] = Workflow.orcabus_id_prefix + representation['workflow']
+        # representation['workflow'] = Workflow.orcabus_id_prefix + representation['workflow']
         if representation['analysis_run']:
             representation['analysis_run'] = AnalysisRun.orcabus_id_prefix + representation['analysis_run']
         return representation
@@ -55,6 +57,7 @@ class WorkflowRunCountByStatusSerializer(serializers.Serializer):
     succeeded = serializers.IntegerField()
     aborted = serializers.IntegerField()
     failed = serializers.IntegerField()
+    resolved = serializers.IntegerField()
     ongoing = serializers.IntegerField()
 
     def update(self, instance, validated_data):

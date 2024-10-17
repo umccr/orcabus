@@ -9,7 +9,7 @@ class WorkflowBaseSerializer(SerializersBase):
 class WorkflowMinSerializer(WorkflowBaseSerializer):
     class Meta:
         model = Workflow
-        fields = ["orcabus_id", "workflow_name"]
+        fields = ["orcabus_id", "workflow_name", "workflow_version"]
 
 
 class WorkflowSerializer(WorkflowBaseSerializer):

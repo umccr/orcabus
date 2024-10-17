@@ -25,7 +25,7 @@ router.register(r"payload", PayloadViewSet, basename="payload")
 
 # may no longer need this as it's currently included in the detail response for an individual WorkflowRun record
 router.register(
-    "workflowrun/(?P<workflowrun_id>[^/.]+)/state",
+    "workflowrun/(?P<wfr_orcabus_id>[^/.]+)/state",
     StateViewSet,
     basename="workflowrun-state",
 )
