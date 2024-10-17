@@ -74,14 +74,19 @@ import json
 
 # Globals
 ANALYSIS_TYPE_TO_WORKFLOW_MAPPER = {
-    "DNA": "oncoanalyser_dna",
-    "RNA": "oncoanalyser_rna",
-    "DNA/RNA": "oncoanalyser_dna_rna"
+    "DNA": "oncoanalyser-dna",
+    "RNA": "oncoanalyser-rna",
+    "DNA/RNA": "oncoanalyser-dna-rna"
 }
 
 NEXTFLOW_TAGS = {
     "Stack": "NextflowStack",
     "SubStack": "OncoanalyserStack",
+}
+
+ENGINE_PARAMETERS_MAPPER = {
+    "output_uri": "output_results_dir",
+    "cache_uri": "output_scratch_dir",
 }
 
 
@@ -110,6 +115,9 @@ def handler(event, context):
     # Merge the tags
     tags.update(NEXTFLOW_TAGS)
 
+    # Add the portal run id as a tag
+    tags['PortalRunId'] = engine_parameters.get("portal_run_id")
+
     # Convert inputs and engine_parameters to snake case
     inputs = dict(map(
         lambda kv: (camel_case_to_snake_case(kv[0]), kv[1]),
@@ -119,6 +127,17 @@ def handler(event, context):
         lambda kv: (camel_case_to_snake_case(kv[0]), kv[1]),
         engine_parameters.items()
     ))
+
+    # Map engineparameters from wrsc to oncoanalyser
+    engine_parameters = dict(map(
+        lambda kv: (
+            (ENGINE_PARAMETERS_MAPPER.get(kv[0], kv[0]), kv[1])
+            if kv[0] in ENGINE_PARAMETERS_MAPPER
+            else kv
+        ),
+        engine_parameters.items()
+    ))
+
 
     # Pop the pipeline version from engine_parameters
     pipeline_version = engine_parameters.pop('pipeline_version', None)

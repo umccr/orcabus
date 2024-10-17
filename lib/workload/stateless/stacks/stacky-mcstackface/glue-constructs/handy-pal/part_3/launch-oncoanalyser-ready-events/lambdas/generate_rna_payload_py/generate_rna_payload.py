@@ -50,11 +50,22 @@ def handler(event, context) -> Dict:
             "analysisType": ANALYSIS_TYPE,
             "subjectId": subject_id,
             "tumorRnaSampleId": tumor_library_id,
-            "tumorRnaFastqUriList": flatten(list(map(lambda fastq_list_row_iter_: [fastq_list_row_iter_.get("read1FileUri"), fastq_list_row_iter_.get("read2FileUri")], tumor_fastq_list_rows))),
+            "tumorRnaFastqUriList": flatten(
+                list(
+                    map(
+                        lambda fastq_list_row_iter_: [
+                            fastq_list_row_iter_.get("read1FileUri"),
+                            fastq_list_row_iter_.get("read2FileUri")
+                        ],
+                        tumor_fastq_list_rows
+                    )                )
+
+            ),
         },
         "event_tags": {
             "subjectId": subject_id,
-            "tumorLibraryId": tumor_library_id,
-            "tumorFastqListRowIds": tumor_fastq_list_row_ids,
+            "individualId": individual_id,
+            "libraryId": tumor_library_id,
+            "fastqListRowIds": tumor_fastq_list_row_ids,
         }
     }

@@ -1,0 +1,207 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      },
+      "Next": "Has Portal Run ID"
+    },
+    "Has Portal Run ID": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.workflow_inputs.parameters.portal_run_id",
+          "IsPresent": true,
+          "Next": "Get Portal Run ID from db",
+          "Comment": "Portal Run ID in parameters"
+        }
+      ],
+      "Default": "Not our batch job"
+    },
+    "Get Portal Run ID from db": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.workflow_inputs.parameters.portal_run_id",
+          "id_type": "${__portal_run_table_partition_name__}"
+        }
+      },
+      "ResultPath": "$.get_portal_run_id_from_db_step",
+      "Next": "Portal Run ID In DB"
+    },
+    "Portal Run ID In DB": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_portal_run_id_from_db_step.Item",
+          "IsPresent": true,
+          "Next": "Update status",
+          "Comment": "Portal Run ID in DB"
+        }
+      ],
+      "Default": "Not our batch job"
+    },
+    "Update status": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.workflow_inputs.parameters.portal_run_id",
+          "id_type": "${__portal_run_table_partition_name__}"
+        },
+        "UpdateExpression": "SET status = :status",
+        "ExpressionAttributeValues": {
+          ":status": {
+            "S": "$.workflow_inputs.status"
+          }
+        }
+      },
+      "Next": "Is Terminal Status"
+    },
+    "Is Terminal Status": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Or": [
+            {
+              "Variable": "$.workflow_inputs.status",
+              "StringEquals": "SUCCEEDED"
+            },
+            {
+              "Variable": "$.workflow_inputs.status",
+              "StringEquals": "FAILED"
+            }
+          ],
+          "Comment": "Is one of SUCCEEDED or FAILED attribute",
+          "Next": "Generate outputs"
+        }
+      ],
+      "Default": "Update Status event"
+    },
+    "Generate outputs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "${__generate_outputs_lambda_function_arn__}",
+        "Payload": {
+          "portal_run_id.$": "$.workflow_inputs.parameters.portal_run_id",
+          "tags.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.tags.S)",
+          "engine_parameters.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.engine_parameters.S)"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "outputs.$": "$.Payload.outputs"
+      },
+      "ResultPath": "$.generate_outputs_step",
+      "Next": "DynamoDB UpdateItem with outputs"
+    },
+    "DynamoDB UpdateItem with outputs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.workflow_inputs.parameters.portal_run_id",
+          "id_type": "${__portal_run_table_partition_name__}"
+        },
+        "UpdateExpression": "SET status = :status",
+        "ExpressionAttributeValues": {
+          ":status": {
+            "S.$": "$.workflow_inputs.status"
+          },
+          ":outputs": {
+            "S.$": "States.JsonToString($.generate_outputs_step.outputs)"
+          }
+        }
+      },
+      "Next": "Put Terminal Event"
+    },
+    "Put Terminal Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_output_source__}",
+            "DetailType": "${__detail_type__}",
+            "Detail": {
+              "portalRunId.$": "$.workflow_inputs.parameters.portal_run_id",
+              "timestamp.$": "$$.State.EnteredTime",
+              "status": "$.workflow_inputs.status",
+              "linkedLibraries.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.linked_libraries.S)",
+              "workflowName": "${__workflow_name__}",
+              "workflowVersion": "${__workflow_version__}",
+              "workflowRunName.$": "$.get_portal_run_id_from_db_step.Item.workflow_run_name.S",
+              "payload": {
+                "version": "${__payload_version__}",
+                "data": {
+                  "inputs.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.ready_event_inputs.S)",
+                  "engineParameters.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.engine_parameters.S)",
+                  "tags.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.tags.S)",
+                  "outputs.$": "$.generate_outputs_step.outputs"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "End": true
+    },
+    "Update Status event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_output_source__}",
+            "DetailType": "${__detail_type__}",
+            "Detail": {
+              "portalRunId.$": "$.workflow_inputs.parameters.portal_run_id",
+              "timestamp.$": "$$.State.EnteredTime",
+              "status": "$.workflow_inputs.status",
+              "linkedLibraries.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.linked_libraries.S)",
+              "workflowName": "${__workflow_name__}",
+              "workflowVersion": "${__workflow_version__}",
+              "workflowRunName.$": "$.get_portal_run_id_from_db_step.Item.workflow_run_name.S",
+              "payload": {
+                "version": "${__payload_version__}",
+                "data": {
+                  "inputs.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.ready_event_inputs.S)",
+                  "engineParameters.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.engine_parameters.S)",
+                  "tags.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.tags.S)"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "End": true
+    },
+    "Not our batch job": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}

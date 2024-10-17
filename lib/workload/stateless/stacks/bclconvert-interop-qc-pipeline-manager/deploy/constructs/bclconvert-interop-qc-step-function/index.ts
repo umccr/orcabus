@@ -6,8 +6,8 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { Icav2AnalysisEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-handle-event-change-sfn';
-import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-ready-event-handler-sfn';
+import { Icav2AnalysisEventHandlerConstruct } from '../../../../../../components/sfn-icav2-state-change-event-handler';
+import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../../../components/sfn-icav2-ready-event-handler';
 import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
 
