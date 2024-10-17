@@ -16,10 +16,39 @@
         "TableName": "${__table_name__}",
         "Item": {
           "id.$": "$.workflow_inputs.portalRunId",
-          "id_type": "${__portal_run_table_partition_name__}"
+          "id_type": "${__portal_run_table_partition_name__}",
+          "ready_event_inputs": {
+            "S.$": "States.JsonToString($.workflow_inputs.payload.data.inputs)"
+          },
+          "ready_event_engine_parameters": {
+            "S.$": "States.JsonToString($.workflow_inputs.payload.data.engineParameters)"
+          },
+          "tags": {
+            "S.$": "States.JsonToString($.workflow_inputs.payload.data.tags)"
+          },
+          "status": {
+            "S": "${__status__}"
+          },
+          "workflow_name": {
+            "S.$": "$.workflow_inputs.workflowName"
+          },
+          "workflow_version": {
+            "S.$": "$.workflow_inputs.workflowVersion"
+          },
+          "workflow_run_name": {
+            "S.$": "$.workflow_inputs.workflowRunName"
+          },
+          "linked_libraries": {
+            "S.$": "States.JsonToString($.workflow_inputs.linkedLibraries)"
+          }
         }
       },
       "ResultPath": null,
+      "Next": "Wait for DB Update 1"
+    },
+    "Wait for DB Update 1": {
+      "Type": "Wait",
+      "Seconds": 1,
       "Next": "Generate Batch Submission Job"
     },
     "Generate Batch Submission Job": {
@@ -48,10 +77,9 @@
         }
       ],
       "ResultSelector": {
-        "event_data.$": "$.Payload.event_data",
-        "workflow.$": "$.Payload.workflow",
         "overrides.$": "$.Payload.overrides",
-        "output.$": "$.Payload.output"
+        "parameters.$": "$.Payload.parameters",
+        "tags.$": "$.Payload.tags"
       },
       "ResultPath": "$.get_batch_submission_step",
       "Next": "Submit Oncoanalyser Job"
@@ -71,8 +99,43 @@
         "PropagateTags": true,
         "Parameters.$": "$.get_batch_submission_step.parameters"
       },
-      "Next": "Put Submitted event",
+      "ResultSelector": {
+        "jobId.$": "$.Output.jobId"
+      },
+      "ResultPath": "$.submit_oncoanalyser_job_step",
+      "Next": "Append Job Id to Engine Parameters"
+    },
+    "Append Job Id to Engine Parameters": {
+      "Type": "Pass",
+      "Next": "Update engine parameters in db",
+      "Parameters": {
+        "engine_parameters.$": "States.JsonMerge($.workflow_inputs.payload.data.engineParameters, $.submit_oncoanalyser_job_step,false)"
+      },
+      "ResultPath": "$.merge_engine_parameters_step"
+    },
+    "Update engine parameters in db": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.workflow_inputs.portalRunId",
+          "id_type": "${__portal_run_table_partition_name__}"
+        },
+        "UpdateExpression": "SET engine_parameters = :engine_parameters",
+        "ExpressionAttributeValues": {
+          ":engine_parameters": {
+            "S.$": "States.StringToJson($.merge_engine_parameters_step.engine_parameters)"
+          }
+        }
+      },
+      "Next": "Wait For DB Update 2",
       "ResultPath": null
+    },
+    "Wait For DB Update 2": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "Put Submitted event"
     },
     "Put Submitted event": {
       "Type": "Task",
@@ -91,7 +154,11 @@
               "timestamp.$": "$$.State.EnteredTime",
               "payload": {
                 "version": "${__event_detail_version__}",
-                "data.$": "$.get_batch_submission_step.event_data"
+                "data": {
+                  "inputs.$": "$.workflow_inputs.payload.data.inputs",
+                  "engineParameters.$": "$.merge_engine_parameters_step.engine_parameters",
+                  "tags.$": "$.workflow_inputs.payload.data.tags"
+                }
               }
             }
           }
