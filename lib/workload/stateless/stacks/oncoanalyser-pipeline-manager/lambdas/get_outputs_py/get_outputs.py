@@ -10,9 +10,12 @@ For oncoanalyser-rna:
     * Extend the outputUri from the engineParameters with the tumorSampleId
 """
 
+# Imports
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 
+
+# Functions
 def extend_url(url, path_ext: str) -> str:
     """
     Extend the url path with the path_ext
@@ -31,6 +34,7 @@ def extend_url(url, path_ext: str) -> str:
             )
         )
     )
+
 
 def handler(event, context):
     """

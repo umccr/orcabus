@@ -140,7 +140,7 @@ def handler(event, context):
 
 
     # Pop the pipeline version from engine_parameters
-    pipeline_version = engine_parameters.pop('pipeline_version', None)
+    pipeline_version = engine_parameters.pop('pipeline_version', event.get('default_pipeline_version'))
 
     # Generate the payload
     return {
