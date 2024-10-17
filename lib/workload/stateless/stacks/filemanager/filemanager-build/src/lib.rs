@@ -82,21 +82,6 @@ impl Config {
 
         Ok(args)
     }
-
-    // /// Get whether to skip the generation if the database URL is empty.
-    // pub fn skip_if_no_database(&self) -> bool {
-    //     self.skip_if_no_database && self.database_url.is_empty()
-    // }
-    //
-    // /// Get the database url.
-    // pub fn database_url(&self) -> &str {
-    //     &self.database_url
-    // }
-    //
-    // /// Get the out dir.
-    // pub fn out_dir(&self) -> &Path {
-    //     &self.out_dir
-    // }
 }
 
 /// Get the path of the workspace.
