@@ -14,57 +14,318 @@
       "Next": "Generate Event Maps",
       "Branches": [
         {
-          "StartAt": "Decompress fastq list rows",
+          "StartAt": "Pre-steps to Rapid QC",
           "States": {
-            "Decompress fastq list rows": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${__decompress_fastq_list_rows_lambda_function_arn__}",
-                "Payload": {
-                  "decompress": true,
-                  "input.$": "$.inputs.payload.data.outputs.fastqListRowsB64gz"
-                }
-              },
-              "Retry": [
+            "Pre-steps to Rapid QC": {
+              "Type": "Parallel",
+              "Next": "Wait For DB Update",
+              "Branches": [
                 {
-                  "ErrorEquals": [
-                    "Lambda.ServiceException",
-                    "Lambda.AWSLambdaException",
-                    "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException"
-                  ],
-                  "IntervalSeconds": 1,
-                  "MaxAttempts": 3,
-                  "BackoffRate": 2
-                }
-              ],
-              "ResultPath": "$.decompress_fastq_list_rows_step",
-              "ResultSelector": {
-                "fastq_list_rows.$": "$.Payload.decompressed_dict"
-              },
-              "Next": "Add fastq list rows to instrument run id (Instrument DB)"
-            },
-            "Add fastq list rows to instrument run id (Instrument DB)": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::dynamodb:putItem",
-              "Parameters": {
-                "TableName": "${__table_name__}",
-                "Item": {
-                  "id.$": "$.inputs.payload.data.outputs.instrumentRunId",
-                  "id_type": "${__fastq_list_rows_table_partition_name__}",
-                  "fastq_list_rows": {
-                    "S.$": "States.JsonToString($.decompress_fastq_list_rows_step.fastq_list_rows)"
+                  "StartAt": "Decompress fastq list rows",
+                  "States": {
+                    "Decompress fastq list rows": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__decompress_fastq_list_rows_lambda_function_arn__}",
+                        "Payload": {
+                          "decompress": true,
+                          "input.$": "$.inputs.payload.data.outputs.fastqListRowsB64gz"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "fastq_list_rows.$": "$.Payload.decompressed_dict"
+                      },
+                      "ResultPath": "$.decompress_fastq_list_rows_step",
+                      "Next": "Clean up fastq list rows"
+                    },
+                    "Clean up fastq list rows": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__clean_up_fastq_list_rows_lambda_function_arn__}",
+                        "Payload": {
+                          "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId",
+                          "fastq_list_rows.$": "$.decompress_fastq_list_rows_step.fastq_list_rows"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "fastq_list_rows.$": "$.Payload.fastq_list_rows"
+                      },
+                      "ResultPath": "$.clean_fastq_list_rows_step",
+                      "Next": "Add fastq list rows to instrument run id (Instrument DB)"
+                    },
+                    "Add fastq list rows to instrument run id (Instrument DB)": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::dynamodb:putItem",
+                      "Parameters": {
+                        "TableName": "${__table_name__}",
+                        "Item": {
+                          "id.$": "$.inputs.payload.data.outputs.instrumentRunId",
+                          "id_type": "${__fastq_list_rows_table_partition_name__}",
+                          "fastq_list_rows": {
+                            "S.$": "States.JsonToString($.clean_fastq_list_rows_step.fastq_list_rows)"
+                          }
+                        }
+                      },
+                      "ResultPath": null,
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Get Read Counts Per RGID",
+                  "States": {
+                    "Get Read Counts Per RGID": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__get_read_counts_per_rgid_lambda_function_arn__}",
+                        "Payload": {
+                          "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId",
+                          "demux_uri.$": "States.Format('{}Reports/Demultiplex_Stats.csv', $.inputs.payload.data.outputs.outputUri)"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2
+                        }
+                      ],
+                      "ResultSelector": {
+                        "read_count_by_fastq_list_row.$": "$.Payload.read_count_by_fastq_list_row"
+                      },
+                      "End": true
+                    }
                   }
                 }
+              ],
+              "ResultSelector": {
+                "fastq_list_rows.$": "$.[0].clean_fastq_list_rows_step.fastq_list_rows",
+                "read_count_by_fastq_list_row.$": "$.[1].read_count_by_fastq_list_row"
               },
-              "ResultPath": null,
-              "Next": "Wait For DB Update"
+              "ResultPath": "$.pre_steps_to_rapid_qc_steps"
             },
             "Wait For DB Update": {
               "Type": "Wait",
               "Seconds": 1,
-              "End": true
+              "Next": "Iterate over fastq list rows"
+            },
+            "Iterate over fastq list rows": {
+              "Type": "Map",
+              "ItemsPath": "$.pre_steps_to_rapid_qc_steps.fastq_list_rows",
+              "ItemSelector": {
+                "fastq_list_row.$": "$$.Map.Item.Value",
+                "read_count_by_fastq_list_row.$": "$.pre_steps_to_rapid_qc_steps.read_count_by_fastq_list_row"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Get Read Counts",
+                "States": {
+                  "Get Read Counts": {
+                    "Type": "Pass",
+                    "Next": "Get Rapid QC",
+                    "Parameters": {
+                      "read_count_by_fastq_list_row.$": "States.ArrayGetItem($.read_count_by_fastq_list_row[?(@.fastqListRowRgid==$.fastq_list_row.rgid)].numReads, 0)"
+                    },
+                    "ResultPath": "$.get_read_count_step"
+                  },
+                  "Get Rapid QC": {
+                    "Type": "Parallel",
+                    "Branches": [
+                      {
+                        "StartAt": "Get fastqc stats",
+                        "States": {
+                          "Get fastqc stats": {
+                            "Type": "Parallel",
+                            "Branches": [
+                              {
+                                "StartAt": "Get shallow fastqc stats R1",
+                                "States": {
+                                  "Get shallow fastqc stats R1": {
+                                    "Type": "Task",
+                                    "Resource": "arn:aws:states:::lambda:invoke",
+                                    "Parameters": {
+                                      "FunctionName": "${__get_fastqc_stats_lambda_function_arn__}",
+                                      "Payload": {
+                                        "read_count.$": "$.get_read_count_step.read_count_by_fastq_list_row",
+                                        "fastq_uri.$": "$.fastq_list_row.read1FileUri"
+                                      }
+                                    },
+                                    "Retry": [
+                                      {
+                                        "ErrorEquals": [
+                                          "Lambda.ServiceException",
+                                          "Lambda.AWSLambdaException",
+                                          "Lambda.SdkClientException",
+                                          "Lambda.TooManyRequestsException"
+                                        ],
+                                        "IntervalSeconds": 1,
+                                        "MaxAttempts": 3,
+                                        "BackoffRate": 2
+                                      }
+                                    ],
+                                    "ResultSelector": {
+                                      "fastqc_output.$": "$.Payload.fastqc_output"
+                                    },
+                                    "ResultPath": "$.fastqc_stats_step_r1",
+                                    "End": true
+                                  }
+                                }
+                              },
+                              {
+                                "StartAt": "Get shallow fastqc stats R2",
+                                "States": {
+                                  "Get shallow fastqc stats R2": {
+                                    "Type": "Task",
+                                    "Resource": "arn:aws:states:::lambda:invoke",
+                                    "Parameters": {
+                                      "FunctionName": "${__get_fastqc_stats_lambda_function_arn__}",
+                                      "Payload": {
+                                        "read_count.$": "$.get_read_count_step.read_count_by_fastq_list_row",
+                                        "fastq_uri.$": "$.fastq_list_row.read2FileUri"
+                                      }
+                                    },
+                                    "Retry": [
+                                      {
+                                        "ErrorEquals": [
+                                          "Lambda.ServiceException",
+                                          "Lambda.AWSLambdaException",
+                                          "Lambda.SdkClientException",
+                                          "Lambda.TooManyRequestsException"
+                                        ],
+                                        "IntervalSeconds": 1,
+                                        "MaxAttempts": 3,
+                                        "BackoffRate": 2
+                                      }
+                                    ],
+                                    "ResultSelector": {
+                                      "fastqc_output.$": "$.Payload.fastqc_output"
+                                    },
+                                    "ResultPath": "$.fastqc_stats_step_r2",
+                                    "End": true
+                                  }
+                                }
+                              }
+                            ],
+                            "ResultSelector": {
+                              "fastqc_stats_r1.$": "$.[0].fastqc_stats_step_r1.fastqc_output",
+                              "fastqc_stats_r2.$": "$.[1].fastqc_stats_step_r2.fastqc_output"
+                            },
+                            "End": true
+                          }
+                        }
+                      },
+                      {
+                        "StartAt": "Get Sequali Stats",
+                        "States": {
+                          "Get Sequali Stats": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Parameters": {
+                              "FunctionName": "${__get_sequali_stats_lambda_function_arn__}",
+                              "Payload": {
+                                "read1_fastq_uri.$": "$.fastq_list_row.read1FileUri",
+                                "read2_fastq_uri.$": "$.fastq_list_row.read2FileUri",
+                                "read_count.$": "$.get_read_count_step.read_count_by_fastq_list_row"
+                              }
+                            },
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "Lambda.ServiceException",
+                                  "Lambda.AWSLambdaException",
+                                  "Lambda.SdkClientException",
+                                  "Lambda.TooManyRequestsException"
+                                ],
+                                "IntervalSeconds": 1,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2
+                              }
+                            ],
+                            "ResultSelector": {
+                              "sequali_rapid_summary.$": "$.Payload.sequali_rapid_summary"
+                            },
+                            "End": true
+                          }
+                        }
+                      }
+                    ],
+                    "ResultSelector": {
+                      "fastqc_stats_r1.$": "$.[0].fastqc_stats_r1",
+                      "fastqc_stats_r2.$": "$.[0].fastqc_stats_r2",
+                      "sequali_rapid_summary.$": "$.[1].sequali_rapid_summary"
+                    },
+                    "ResultPath": "$.get_rapid_qc_step",
+                    "Next": "Add Fastq List Row to DB"
+                  },
+                  "Add Fastq List Row to DB": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:putItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Item": {
+                        "id.$": "$.fastq_list_row.rgid",
+                        "id_type": "${__fastq_list_row_table_partition_name__}",
+                        "fastqc_rapid_stats_r1": {
+                          "S.$": "States.JsonToString($.get_rapid_qc_step.fastqc_stats_r1)"
+                        },
+                        "fastqc_rapid_stats_r2": {
+                          "S.$": "States.JsonToString($.get_rapid_qc_step.fastqc_stats_r2)"
+                        },
+                        "sequali_rapid_summary": {
+                          "S.$": "States.JsonToString($.get_rapid_qc_step.sequali_rapid_summary)"
+                        },
+                        "read_count": {
+                          "N.$": "States.Format('{}', $.get_read_count_step.read_count_by_fastq_list_row)"
+                        }
+                      }
+                    },
+                    "End": true,
+                    "ResultPath": null
+                  }
+                }
+              },
+              "ResultSelector": {
+                "summary_stats.$": "$.[*].summarise_outputs_step.summary_obj"
+              },
+              "End": true,
+              "ResultPath": null
             }
           }
         },
@@ -188,7 +449,7 @@
         }
       ],
       "ResultSelector": {
-        "fastq_list_rows.$": "$.[0].decompress_fastq_list_rows_step.fastq_list_rows",
+        "fastq_list_rows.$": "$.[0].pre_steps_to_rapid_qc_steps.fastq_list_rows",
         "library_objects_list.$": "$.[1].library_objects_list",
         "project_objects_list.$": "$.[2].project_objects_list"
       },
@@ -297,8 +558,45 @@
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Generate FastqListRow Added Event",
+        "StartAt": "Get FastqListRow Added Event",
         "States": {
+          "Get FastqListRow Added Event": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "$.fastq_list_row_event_data.fastqListRow.rgid",
+                "id_type": "${__fastq_list_row_table_partition_name__}"
+              }
+            },
+            "Next": "QC As Event Object",
+            "ResultPath": "$.get_qc_stats_from_db_step"
+          },
+          "QC As Event Object": {
+            "Type": "Pass",
+            "Next": "Merge QC With Event Data",
+            "Parameters": {
+              "qc": {
+                "fastqQcRapidSummary": {
+                  "r1.$": "States.StringToJson($.get_qc_stats_from_db_step.Item.fastqc_rapid_stats_r1.S)",
+                  "r2.$": "States.StringToJson($.get_qc_stats_from_db_step.Item.fastqc_rapid_stats_r2.S)"
+                },
+                "sequaliRapidSummary.$": "States.StringToJson($.get_qc_stats_from_db_step.Item.sequali_rapid_summary.S)",
+                "demuxSummary": {
+                  "readCount.$": "$.get_qc_stats_from_db_step.Item.read_count.N"
+                }
+              }
+            },
+            "ResultPath": "$.get_qc_as_event_object_step"
+          },
+          "Merge QC With Event Data": {
+            "Type": "Pass",
+            "Next": "Generate FastqListRow Added Event",
+            "Parameters": {
+              "fastq_list_row_event_data.$": "States.JsonMerge($.fastq_list_row_event_data, $.get_qc_as_event_object_step, false)"
+            }
+          },
           "Generate FastqListRow Added Event": {
             "Type": "Task",
             "Resource": "arn:aws:states:::events:putEvents",
