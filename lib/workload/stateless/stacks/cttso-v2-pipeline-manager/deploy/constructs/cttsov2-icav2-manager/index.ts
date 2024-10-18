@@ -137,6 +137,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
           'states:ListActivities',
           'states:DescribeStateMachine',
           'states:DescribeActivity',
+          'states:ListExecutions',
         ],
         resources: [props.icav2CopyFilesStateMachineObj.stateMachineArn],
       })
