@@ -231,7 +231,7 @@ def handler(event, context):
     # If both the job status and report status are true, then the workflow status is complete
     elif JOB_STATUS_BOOL[job_status] is True and REPORT_STATUS_BOOL[report_status] is True:
         expression_attribute_values_dict[":workflow_status"] = {
-            "S": "COMPLETE"
+            "S": "SUCCEEDED"
         }
         update_expression_str = f"{update_expression_str}, workflow_status = :workflow_status"
 
@@ -294,7 +294,7 @@ def handler(event, context):
 # #       "BOOL": true
 # #     },
 # #     ":workflow_status": {
-# #       "S": "COMPLETE"
+# #       "S": "SUCCEEDED"
 # #     }
 # #   },
 # #   "update_expression_str": "SET job_status = :job_status, report_status = :report_status, job_status_bool = :job_status_bool, report_status_bool = :report_status_bool, workflow_status = :workflow_status"
