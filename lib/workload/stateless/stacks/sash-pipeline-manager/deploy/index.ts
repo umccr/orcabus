@@ -18,9 +18,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct } from '../../../../components/sfn-nf-batch-ready-event-handler';
 import * as batch from 'aws-cdk-lib/aws-batch';
 import { WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct } from '../../../../components/sfn-nf-batch-state-change-event-handler';
-import * as events_targets from 'aws-cdk-lib/aws-events-targets';
 
-export interface OncoanalyserNfPipelineManagerConfig {
+export interface SashNfPipelineManagerConfig {
   /* Nf Pipeline analysis essentials */
   pipelineVersionSsmPath: string; // List of parameters the workflow session state machine will need access to
   /* Table to store analysis metadata */
@@ -30,7 +29,7 @@ export interface OncoanalyserNfPipelineManagerConfig {
   /*
   Event handling
   */
-  workflowTypePrefix: string;
+  workflowType: string;
   workflowVersion: string;
   serviceVersion: string;
   triggerLaunchSource: string;
@@ -47,17 +46,15 @@ export interface OncoanalyserNfPipelineManagerConfig {
   stateMachinePrefix: string;
 }
 
-export type OncoanalyserNfPipelineManagerStackProps = OncoanalyserNfPipelineManagerConfig &
-  cdk.StackProps;
+export type SashNfPipelineManagerStackProps = SashNfPipelineManagerConfig & cdk.StackProps;
 
-export class OncoanalyserNfPipelineManagerStack extends cdk.Stack {
+export class SashNfPipelineManagerStack extends cdk.Stack {
   private readonly dynamodbTableObj: dynamodb.ITableV2;
   private readonly eventBusObj: events.IEventBus;
   private readonly pipelineVersionSsmObj: ssm.IStringParameter;
-  private readonly prefix = 'oncoanalyser';
-  private readonly triggerLaunchStatus = 'READY';
+  private readonly prefix = 'sash';
 
-  constructor(scope: Construct, id: string, props: OncoanalyserNfPipelineManagerStackProps) {
+  constructor(scope: Construct, id: string, props: SashNfPipelineManagerStackProps) {
     super(scope, id, props);
 
     // Get dynamodb table for construct
@@ -101,24 +98,10 @@ export class OncoanalyserNfPipelineManagerStack extends cdk.Stack {
       memorySize: 1024,
     });
 
-    /* Our own rules for the batch ready event */
-    const rule = new events.Rule(this, 'rule', {
-      eventBus: this.eventBusObj,
-      ruleName: `${props.stateMachinePrefix}-ready-rule`,
-      eventPattern: {
-        source: [props.triggerLaunchSource],
-        detailType: [props.detailType],
-        detail: {
-          status: [this.triggerLaunchStatus],
-          workflowName: [{ prefix: { 'equals-ignore-case': props.workflowTypePrefix } }],
-        },
-      },
-    });
-
     // Create the step function to launch the ready event
     const nfBatchReadyConstruct = new WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct(
       this,
-      'oncoanalyser_batch_ready_event_handler',
+      'sash_batch_ready_event_handler',
       {
         /* Names of table to write to */
         tableObj: this.dynamodbTableObj, // Name of the table to get / update / query
@@ -145,9 +128,8 @@ export class OncoanalyserNfPipelineManagerStack extends cdk.Stack {
         // The job definition to run
         batchJobDefinitionObj: batchJobDefinition,
 
-        /* Make our own rule */
-        addRule: false,
-        targetRule: rule,
+        /* Internal workflowRunStateChange event details */
+        workflowName: props.workflowType,
       }
     );
 
@@ -171,7 +153,7 @@ export class OncoanalyserNfPipelineManagerStack extends cdk.Stack {
 
     const nfStateChangeSfn = new WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct(
       this,
-      'oncoanalyser_batch_state_change_event_handler',
+      'sash_batch_state_change_event_handler',
       {
         /* Names of table to write to */
         tableObj: this.dynamodbTableObj, // Name of the table to get / update / query

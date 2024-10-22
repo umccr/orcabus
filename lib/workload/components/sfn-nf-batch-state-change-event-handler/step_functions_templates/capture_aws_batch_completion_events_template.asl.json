@@ -150,8 +150,8 @@
               "timestamp.$": "$$.State.EnteredTime",
               "status": "$.workflow_inputs.status",
               "linkedLibraries.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.linked_libraries.S)",
-              "workflowName": "${__workflow_name__}",
-              "workflowVersion": "${__workflow_version__}",
+              "workflowName.$": "$.get_portal_run_id_from_db_step.Item.workflow_name.S",
+              "workflowVersion.$": "$.get_portal_run_id_from_db_step.Item.workflow_version.S",
               "workflowRunName.$": "$.get_portal_run_id_from_db_step.Item.workflow_run_name.S",
               "payload": {
                 "version": "${__payload_version__}",
@@ -182,8 +182,8 @@
               "timestamp.$": "$$.State.EnteredTime",
               "status": "$.workflow_inputs.status",
               "linkedLibraries.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.linked_libraries.S)",
-              "workflowName": "${__workflow_name__}",
-              "workflowVersion": "${__workflow_version__}",
+              "workflowName.$": "$.get_portal_run_id_from_db_step.Item.workflow_name.S",
+              "workflowVersion.$": "$.get_portal_run_id_from_db_step.Item.workflow_version.S",
               "workflowRunName.$": "$.get_portal_run_id_from_db_step.Item.workflow_run_name.S",
               "payload": {
                 "version": "${__event_detail_version__}",

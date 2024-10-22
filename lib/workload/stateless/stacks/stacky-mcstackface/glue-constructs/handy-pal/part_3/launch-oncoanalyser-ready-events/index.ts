@@ -51,11 +51,8 @@ export interface OncoanalyserDnaOrRnaReadyConstructProps {
   tableObj: dynamodb.ITableV2;
   /* SSM Parameters */
   outputUriSsmParameterObj: ssm.IStringParameter;
-  icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
   logsUriSsmParameterObj: ssm.IStringParameter;
   cacheUriSsmParameterObj: ssm.IStringParameter;
-  /* Secrets */
-  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
@@ -63,28 +60,28 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     outputSource: 'orcabus.oncoanalyserglue',
     payloadVersion: '2024.07.23',
     tablePartitionName: {
-      library: "library",
-      fastqListRow: "fastq_list_Row"
-    }
-  }
+      library: 'library',
+      fastqListRow: 'fastq_list_Row',
+    },
+  };
 
   public readonly DnaOnlyMap = {
-    prefix: 'handypal-tn-complete-to-oncoanalyser-dna',
+    prefix: 'handypal-tn-to-oa-wgts-dna',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'SUCCEEDED',
     triggerWorkflowName: 'tumor-normal',
     triggerDetailType: 'WorkflowRunStateChange',
-    workflowName: 'oncoanalyser-dna',
+    workflowName: 'oncoanalyser-wgts-dna',
     workflowVersion: '1.0.0',
   };
 
   public readonly RnaOnlyMap = {
-    prefix: 'handypal-libraryqc-complete-to-oncoanalyser-rna',
+    prefix: 'handypal-libraryqc-to-oa-rna',
     triggerSource: 'orcabus.wgtsqcinputeventglue',
     triggerStatus: 'QC_COMPLETE',
     triggerDetailType: 'LibraryStateChange',
     sampleType: 'wts',
-    workflowName: 'oncoanalyser-rna',
+    workflowName: 'rnadna',
     workflowVersion: '1.0.0',
   };
 
@@ -100,7 +97,6 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     Part 2: Build the RNA stack
     */
     this.build_rna_object(props);
-
   }
 
   // Create a function here to build the dna object
@@ -109,10 +105,10 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     Part 1 Build the lambdas
     */
     const generateDnaEventLambdaObj = new PythonFunction(this, 'generate_dna_payload_py', {
-      entry: path.join(__dirname, 'lambdas', 'generate_draft_event_payload_py'),
+      entry: path.join(__dirname, 'lambdas', 'generate_dna_payload_py'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
-      index: 'generate_draft_event_payload.py',
+      index: 'generate_dna_payload.py',
       handler: 'handler',
       memorySize: 1024,
     });
@@ -132,7 +128,7 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     */
     const engineParameterAndReadyEventMakerSfn = new GenerateWorkflowRunStateChangeReadyConstruct(
       this,
-      'fastqlistrow_complete_to_wgtsqc_ready_submitter',
+      'tn_complete_to_oa_dna_ready_submitter',
       {
         /* Event Placeholders */
         eventBusObj: props.eventBusObj,
@@ -145,9 +141,6 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
         outputUriSsmParameterObj: props.outputUriSsmParameterObj,
         logsUriSsmParameterObj: props.logsUriSsmParameterObj,
         cacheUriSsmParameterObj: props.cacheUriSsmParameterObj,
-
-        /* Secrets */
-        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
 
         /* Prefixes */
         lambdaPrefix: this.DnaOnlyMap.prefix,
@@ -244,16 +237,16 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     Part 1: Build the lambdas
     */
     // Generate event data lambda object
-    const generateEventDataLambdaObj = new PythonFunction(this, 'generate_draft_event_payload_py', {
-      entry: path.join(__dirname, 'lambdas', 'generate_draft_event_payload_py'),
+    const generateEventDataLambdaObj = new PythonFunction(this, 'generate_rna_payload_py', {
+      entry: path.join(__dirname, 'lambdas', 'generate_rna_payload_py'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
-      index: 'generate_draft_event_payload.py',
+      index: 'generate_rna_payload.py',
       handler: 'handler',
       memorySize: 1024,
     });
 
-   const collectOrcaBusIdLambdaObj = new GetMetadataLambdaConstruct(
+    const collectOrcaBusIdLambdaObj = new GetMetadataLambdaConstruct(
       this,
       'get_orcabus_id_from_subject_id',
       {
@@ -284,7 +277,7 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     */
     const engineParameterAndReadyEventMakerSfn = new GenerateWorkflowRunStateChangeReadyConstruct(
       this,
-      'fastqlistrow_complete_to_wgtsqc_ready_submitter',
+      'fastqlistrow_complete_to_oa_rna_ready_submitter',
       {
         /* Event Placeholders */
         eventBusObj: props.eventBusObj,
@@ -295,12 +288,8 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
 
         /* SSM Parameters */
         outputUriSsmParameterObj: props.outputUriSsmParameterObj,
-        icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
         logsUriSsmParameterObj: props.logsUriSsmParameterObj,
         cacheUriSsmParameterObj: props.cacheUriSsmParameterObj,
-
-        /* Secrets */
-        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
 
         /* Prefixes */
         lambdaPrefix: this.RnaOnlyMap.prefix,
@@ -333,13 +322,13 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
           /* Tables */
           __table_name__: props.tableObj.tableName,
           __library_partition_name__: this.OncoanalyserReadyMap.tablePartitionName.library,
-          __fastq_list_row_partition_name__: this.OncoanalyserReadyMap.tablePartitionName.fastqListRow,
+          __fastq_list_row_partition_name__:
+            this.OncoanalyserReadyMap.tablePartitionName.fastqListRow,
           __sample_type__: this.RnaOnlyMap.sampleType,
 
           /* State Machines */
           __sfn_preamble_state_machine_arn__: sfnPreamble.stateMachineArn,
           __launch_ready_event_sfn_arn__: engineParameterAndReadyEventMakerSfn.stateMachineArn,
-
         },
       }
     );
@@ -351,10 +340,7 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     props.tableObj.grantReadWriteData(qcCompleteToDraftSfn);
 
     // allow the step function to invoke the lambdas
-    [
-      generateEventDataLambdaObj,
-      collectOrcaBusIdLambdaObj
-    ].forEach((lambdaObj) => {
+    [generateEventDataLambdaObj, collectOrcaBusIdLambdaObj].forEach((lambdaObj) => {
       lambdaObj.currentVersion.grantInvoke(qcCompleteToDraftSfn);
     });
 
@@ -394,7 +380,5 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
         input: events.RuleTargetInput.fromEventPath('$.detail'),
       })
     );
-
   }
-
 }

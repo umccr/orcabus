@@ -24,9 +24,9 @@ export interface OncoanalyserBothInitialiseLibraryAndFastqListRowConstructProps 
   eventBusObj: events.IEventBus;
 }
 
-export class OncoanalyserInitialiseLibraryAndFastqListRowConstruct extends Construct {
+export class OncoanalyserBothInitialiseLibraryAndFastqListRowConstruct extends Construct {
   public readonly OncoanalyserInitialiseLibraryAndFastqListRowMap = {
-    prefix: 'handypal-make-library-and-fqlr-row',
+    prefix: 'trex-make-library-and-fqlr-row',
     tablePartition: {
       subject: 'subject',
       library: 'library',

@@ -41,19 +41,26 @@ export interface WfmWorkflowStateChangeNfBatchReadyEventHandlerConstructProps {
   batchJobDefinitionObj: batch.IJobDefinition; // The job definition to run
 
   /* Internal workflowRunStateChange event details */
-  workflowName: string;
-  workflowVersion: string;
+  workflowName?: string; // Required if addRule is true
+
+  /*
+  Custom addRule flag to allow for the addition of an event rule to the state machine
+  Default is true
+  */
+  addRule?: boolean;
+  targetRule?: events.Rule;
 }
 
 export class WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct extends Construct {
   public readonly stateMachineObj: sfn.StateMachine;
   private readonly globals = {
+    defaultAddRule: true,
     eventTriggerStatus: 'READY',
     eventSubmissionStatus: 'SUBMITTED',
     portalRunTablePartitionName: 'portal_run_id',
     eventDetailType: 'WorkflowRunStateChange',
-    serviceVersion: '2024.10.17'
-  }
+    serviceVersion: '2024.10.17',
+  };
 
   constructor(
     scope: Construct,
@@ -66,10 +73,7 @@ export class WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct extends Con
     this.stateMachineObj = new sfn.StateMachine(this, 'state_machine', {
       stateMachineName: `${props.stateMachinePrefix}-wfm-nf-ready-batch-submit-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(
-        path.join(
-          __dirname,
-          'step_functions_templates/launch_nextflow_pipeline_template.asl.json'
-        )
+        path.join(__dirname, 'step_functions_templates/launch_nextflow_pipeline_template.asl.json')
       ),
       definitionSubstitutions: {
         /* Table object */
@@ -85,11 +89,9 @@ export class WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct extends Con
         /* Batch details */
         __job_queue_name__: props.batchJobQueueObj.jobQueueName,
         __job_definition_arn__: props.batchJobDefinitionObj.jobDefinitionArn,
-        /* Put event details */
-        __workflow_type__: props.workflowName,
-        __workflow_version__: props.workflowVersion,
         /* Lambdas */
-        __generate_payload_lambda_function_arn__: props.generateBatchInputsLambdaObj.currentVersion.functionArn,
+        __generate_payload_lambda_function_arn__:
+          props.generateBatchInputsLambdaObj.currentVersion.functionArn,
         /* SSM Parameter paths */
         __pipeline_version_ssm_path__: props.pipelineVersionSsmObj.parameterName,
       },
@@ -105,22 +107,52 @@ export class WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct extends Con
     props.tableObj.grantReadWriteData(this.stateMachineObj);
 
     /* Grant the state machine the ability to submit batch jobs to the job queue */
-    this.stateMachineObj.role.addToPrincipalPolicy(
-      new iam.PolicyStatement({
-        actions: [
-          "batch:SubmitJob",
-        ],
-        resources: [
-          props.batchJobDefinitionObj.jobDefinitionArn,
-          props.batchJobQueueObj.jobQueueArn
-        ],
-      })
-    );
+    // https://stackoverflow.com/a/76962105/6946787
+    const submitJobPolicy = new iam.Policy(this, 'submitJobPolicy', {
+      statements: [
+        new iam.PolicyStatement({
+          actions: ['batch:SubmitJob'],
+          resources: [
+            props.batchJobDefinitionObj.jobDefinitionArn,
+            props.batchJobQueueObj.jobQueueArn,
+          ],
+        }),
+      ],
+    });
 
-    // Create a rule for this state machine
+    //Attach the new policy to the state machine
+    submitJobPolicy.attachToRole(this.stateMachineObj.role);
+
+    /* Grant the state machine the ability to submit events to the event bus */
+    props.eventBusObj.grantPutEventsTo(this.stateMachineObj);
+
+    // Create a rule for this state machine if the addRule flag is set to true or null
+    if (props.addRule === true || (props.addRule === null && this.globals.defaultAddRule)) {
+      this.addRule(props);
+    }
+
+    if (props.targetRule !== null && props.targetRule !== undefined) {
+      /* Use the target rule provided */
+      /* Add rule as a target to the state machine */
+      props.targetRule.addTarget(
+        new events_targets.SfnStateMachine(this.stateMachineObj, {
+          input: events.RuleTargetInput.fromEventPath('$.detail'),
+        })
+      );
+    }
+  }
+
+  addRule(props: WfmWorkflowStateChangeNfBatchReadyEventHandlerConstructProps) {
+    /*
+    Confirm that the property workflowName is not null
+    */
+    if (props.workflowName === null) {
+      throw new Error('Workflow name must be provided when addRule is true');
+    }
+
     const rule = new events.Rule(this, 'rule', {
       eventBus: props.eventBusObj,
-      ruleName: `${props.stateMachinePrefix}-rule`,
+      ruleName: `${props.stateMachinePrefix}-ready-rule`,
       eventPattern: {
         source: [props.triggerLaunchSource],
         detailType: [props.detailType],
@@ -137,8 +169,5 @@ export class WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct extends Con
         input: events.RuleTargetInput.fromEventPath('$.detail'),
       })
     );
-
-    /* Grant the state machine the ability to submit events to the event bus */
-    props.eventBusObj.grantPutEventsTo(this.stateMachineObj);
   }
 }

@@ -8,6 +8,7 @@ import { WgtsQcPopulateFastqListRowConstruct } from './part_2/populate-fastq-lis
 import { WgtsQcFastqListRowShowerCompleteToWorkflowReadyConstruct } from './part_3/fastq-list-rows-shower-complete-to-wgts-qc';
 import { FastqListRowQcCompleteConstruct } from './part_4/push-fastq-list-row-qc-complete-event';
 import { WgtsQcLibraryQcCompleteConstruct } from './part_5/library-qc-complete-event';
+import { NestedStack } from 'aws-cdk-lib/core';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting wgts qc analyses
@@ -27,7 +28,7 @@ export interface wgtsQcGlueHandlerConstructProps {
   icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
-export class WgtsQcGlueHandlerConstruct extends Construct {
+export class WgtsQcGlueHandlerConstruct extends NestedStack {
   constructor(scope: Construct, id: string, props: wgtsQcGlueHandlerConstructProps) {
     super(scope, id);
 

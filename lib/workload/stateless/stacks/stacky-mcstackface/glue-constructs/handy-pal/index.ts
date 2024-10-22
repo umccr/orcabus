@@ -13,8 +13,9 @@ import { Construct } from 'constructs';
 import { OncoanalyserInitialiseLibraryAndFastqListRowConstruct } from './part_1/initialise-wts-and-wgs-libraries';
 import { OncoanalyserPopulateFastqListRowConstruct } from './part_2/populate-fastq-list-rows';
 import { OncoanalyserDnaOrRnaReadyConstruct } from './part_3/launch-oncoanalyser-ready-events';
+import { NestedStack } from 'aws-cdk-lib/core';
 
-export interface oncoanalyserGlueHandlerConstructProps {
+export interface OncoanalyserGlueHandlerConstructProps {
   /* General */
   eventBusObj: events.IEventBus;
   /* Tables */
@@ -23,13 +24,10 @@ export interface oncoanalyserGlueHandlerConstructProps {
   analysisOutputUriSsmParameterObj: ssm.IStringParameter;
   analysisLogsUriSsmParameterObj: ssm.IStringParameter;
   analysisCacheUriSsmParameterObj: ssm.IStringParameter;
-  icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
-  /* Secrets */
-  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
-export class oncoanalyserGlueHandlerConstruct extends Construct {
-  constructor(scope: Construct, id: string, props: oncoanalyserGlueHandlerConstructProps) {
+export class OncoanalyserGlueHandlerConstruct extends NestedStack {
+  constructor(scope: Construct, id: string, props: OncoanalyserGlueHandlerConstructProps) {
     super(scope, id);
 
     /*
@@ -83,23 +81,19 @@ export class oncoanalyserGlueHandlerConstruct extends Construct {
         * Trigger oncoanalyser events collecting all oncoanalyser in the run
 
         */
-    const oncoanalyser_dna_or_rna_ready =
-      new OncoanalyserDnaOrRnaReadyConstruct(
-        this,
-        'fastq_list_row_shower_complete_to_workflow_draft',
-        {
-          /* Events */
-          eventBusObj: props.eventBusObj,
-          /* Tables */
-          tableObj: props.oncoanalyserGlueTableObj,
-          /* SSM Param objects */
-          icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
-          outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
-          cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
-          logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-          /* Secrets */
-          icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-        }
-      );
+    const oncoanalyser_dna_or_rna_ready = new OncoanalyserDnaOrRnaReadyConstruct(
+      this,
+      'fastq_list_row_shower_complete_to_workflow_draft',
+      {
+        /* Events */
+        eventBusObj: props.eventBusObj,
+        /* Tables */
+        tableObj: props.oncoanalyserGlueTableObj,
+        /* SSM Param objects */
+        outputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+        cacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+        logsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+      }
+    );
   }
 }

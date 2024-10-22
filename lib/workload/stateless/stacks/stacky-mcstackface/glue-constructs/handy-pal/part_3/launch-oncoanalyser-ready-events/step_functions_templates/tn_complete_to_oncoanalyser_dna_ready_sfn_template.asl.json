@@ -69,7 +69,8 @@
           "normal_library_id.$": "$.payload_data.tags.normalLibraryId",
           "tumor_fastq_list_row_ids.$": "$.payload_data.tags.tumorFastqListRowIds",
           "normal_fastq_list_row_ids.$": "$.payload_data.tags.normalFastqListRowIds",
-          "dragen_somatic_output_s3_uri.$": "$.payload_data.outputs.dragenSomaticOutputUri"
+          "dragen_somatic_output_s3_uri.$": "$.payload_data.outputs.dragenSomaticOutputUri",
+          "dragen_germline_output_s3_uri.$": "$.payload_data.outputs.dragenGermlineOutputUri"
         }
       },
       "Retry": [

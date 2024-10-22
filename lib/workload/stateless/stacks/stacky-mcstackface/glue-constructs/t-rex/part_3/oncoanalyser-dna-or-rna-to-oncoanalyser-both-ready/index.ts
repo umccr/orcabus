@@ -20,8 +20,9 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../../../../components/sfn-workflowdraftrunstatechange-common-preamble';
 import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
+import { GetMetadataLambdaConstruct } from '../../../../../../../components/python-lambda-metadata-mapper';
 
-export interface OncoanalyserDnaToSashReadyConstructProps {
+export interface OncoanalyserDnaRnaReadyConstructProps {
   /* Events */
   eventBusObj: events.IEventBus;
   /* Tables */
@@ -32,46 +33,78 @@ export interface OncoanalyserDnaToSashReadyConstructProps {
   cacheUriSsmParameterObj: ssm.IStringParameter;
 }
 
-export class OncoanalyserDnaToSashReadyConstruct extends Construct {
-  public readonly SashReadyMap = {
-    prefix: 'trex-oncodna-complete-to-sash',
+export class OncoanalyserDnaRnaReadyConstruct extends Construct {
+  public readonly OncoanalyserDnaRnaReadyMap = {
+    prefix: 'trex-oncoanalyser-wgts-dna-rna',
     triggerSource: 'orcabus.workflowmanager',
     triggerStatus: 'succeeded',
-    triggerWorkflowName: 'oncoanalyser-wgts-dna',
+    triggerWorkflowNames: {
+      DNA: 'oncoanalyser-wgts-dna',
+      RNA: 'rnadna',
+    },
     triggerDetailType: 'WorkflowRunStateChange',
-    outputSource: 'orcabus.sashinputeventglue',
+    outputSource: 'orcabus.oncoanalyserinputeventglue',
     payloadVersion: '2024.07.23',
-    workflowName: 'sash',
+    workflowName: 'oncoanalyser-both',
     workflowVersion: '1.0.0',
     tablePartitionName: 'library',
   };
 
-  constructor(scope: Construct, id: string, props: OncoanalyserDnaToSashReadyConstructProps) {
+  constructor(scope: Construct, id: string, props: OncoanalyserDnaRnaReadyConstructProps) {
     super(scope, id);
 
     /*
     Part 1: Build the lambdas
     */
     // Generate event data lambda object
-    const generateEventDataLambdaObj = new PythonFunction(this, 'generate_sash_payload_py', {
-      entry: path.join(__dirname, 'lambdas', 'generate_sash_payload_py'),
-      runtime: lambda.Runtime.PYTHON_3_12,
-      architecture: lambda.Architecture.ARM_64,
-      index: 'generate_sash_payload.py',
-      handler: 'handler',
-      memorySize: 1024,
-    });
+    const generateEventDataLambdaObj = new PythonFunction(
+      this,
+      'get_oncoanalyser_dna_rna_payload_py',
+      {
+        entry: path.join(__dirname, 'lambdas', 'get_oncoanalyser_dna_rna_payload_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'get_oncoanalyser_dna_rna_payload.py',
+        handler: 'handler',
+        memorySize: 1024,
+      }
+    );
+
+    const getComplementLibraryPairLambdaObj = new PythonFunction(
+      this,
+      'get_complement_library_pair_lambdaobj',
+      {
+        entry: path.join(__dirname, 'lambdas', 'get_oncoanalyser_dna_rna_payload_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'get_oncoanalyser_dna_rna_payload.py',
+        handler: 'handler',
+        memorySize: 1024,
+      }
+    );
+    const collectOrcaBusObjFromSubjectIdLambdaObj = new GetMetadataLambdaConstruct(
+      this,
+      'get_orcabus_id_from_subject_id',
+      {
+        functionNamePrefix: this.OncoanalyserDnaRnaReadyMap.prefix,
+      }
+    ).lambdaObj;
+
+    // Add CONTEXT, FROM_ID and RETURN_STR environment variables to the lambda
+    collectOrcaBusObjFromSubjectIdLambdaObj.addEnvironment('CONTEXT', 'subject');
+    collectOrcaBusObjFromSubjectIdLambdaObj.addEnvironment('FROM_ID', '');
+    collectOrcaBusObjFromSubjectIdLambdaObj.addEnvironment('RETURN_OBJ', '');
 
     /*
     Part 1: Generate the preamble (sfn to generate the portal run id and the workflow run name)
     */
     const sfnPreamble = new WorkflowDraftRunStateChangeCommonPreambleConstruct(
       this,
-      `${this.SashReadyMap.prefix}_sfn_preamble`,
+      `${this.OncoanalyserDnaRnaReadyMap.prefix}_sfn_preamble`,
       {
-        stateMachinePrefix: this.SashReadyMap.prefix,
-        workflowName: this.SashReadyMap.workflowName,
-        workflowVersion: this.SashReadyMap.workflowVersion,
+        stateMachinePrefix: this.OncoanalyserDnaRnaReadyMap.prefix,
+        workflowName: this.OncoanalyserDnaRnaReadyMap.workflowName,
+        workflowVersion: this.OncoanalyserDnaRnaReadyMap.workflowVersion,
       }
     ).stepFunctionObj;
 
@@ -80,14 +113,14 @@ export class OncoanalyserDnaToSashReadyConstruct extends Construct {
     */
     const engineParameterAndReadyEventMakerSfn = new GenerateWorkflowRunStateChangeReadyConstruct(
       this,
-      'fastqlistrow_complete_to_wgtsqc_ready_submitter',
+      'tn_complete_to_oa_dna_ready_submitter',
       {
         /* Event Placeholders */
         eventBusObj: props.eventBusObj,
-        outputSource: this.SashReadyMap.outputSource,
-        payloadVersion: this.SashReadyMap.payloadVersion,
-        workflowName: this.SashReadyMap.workflowName,
-        workflowVersion: this.SashReadyMap.workflowVersion,
+        outputSource: this.OncoanalyserDnaRnaReadyMap.outputSource,
+        payloadVersion: this.OncoanalyserDnaRnaReadyMap.payloadVersion,
+        workflowName: this.OncoanalyserDnaRnaReadyMap.workflowName,
+        workflowVersion: this.OncoanalyserDnaRnaReadyMap.workflowVersion,
 
         /* SSM Parameters */
         outputUriSsmParameterObj: props.outputUriSsmParameterObj,
@@ -95,8 +128,8 @@ export class OncoanalyserDnaToSashReadyConstruct extends Construct {
         cacheUriSsmParameterObj: props.cacheUriSsmParameterObj,
 
         /* Prefixes */
-        lambdaPrefix: this.SashReadyMap.prefix,
-        stateMachinePrefix: this.SashReadyMap.prefix,
+        lambdaPrefix: this.OncoanalyserDnaRnaReadyMap.prefix,
+        stateMachinePrefix: this.OncoanalyserDnaRnaReadyMap.prefix,
       }
     ).stepFunctionObj;
 
@@ -107,28 +140,35 @@ export class OncoanalyserDnaToSashReadyConstruct extends Construct {
       this,
       'oncoanalyser_dna_complete_draft_sfn',
       {
-        stateMachineName: `${this.SashReadyMap.prefix}-sfn`,
+        stateMachineName: `${this.OncoanalyserDnaRnaReadyMap.prefix}-sfn`,
         definitionBody: sfn.DefinitionBody.fromFile(
           path.join(
             __dirname,
             'step_functions_templates',
-            'oncoanalyser_dna_complete_to_sash_ready_sfn_template.asl.json'
+            'oncoanalyser_dna_or_rna_complete_to_oncoanalyser_both_ready_sfn_template.asl.json'
           )
         ),
         definitionSubstitutions: {
           /* Lambdas */
-          __generate_sash_payload_lambda_function_arn__:
+          __generate_draft_event_payload_lambda_function_arn__:
             generateEventDataLambdaObj.currentVersion.functionArn,
+          __get_complement_library_pair_lambda_function_arn__:
+            getComplementLibraryPairLambdaObj.currentVersion.functionArn,
+          __get_orcabus_obj_from_subject_id_lambda_function_arn__:
+            collectOrcaBusObjFromSubjectIdLambdaObj.currentVersion.functionArn,
 
           /* Tables */
           __table_name__: props.tableObj.tableName,
 
           /* Table Partitions */
-          __library_partition_name__: this.SashReadyMap.tablePartitionName,
+          __library_partition_name__: this.OncoanalyserDnaRnaReadyMap.tablePartitionName,
 
           // State Machines
           __sfn_preamble_state_machine_arn__: sfnPreamble.stateMachineArn,
           __launch_ready_event_sfn_arn__: engineParameterAndReadyEventMakerSfn.stateMachineArn,
+
+          /* Miscell */
+          __rna_workflow_run_name__: this.OncoanalyserDnaRnaReadyMap.triggerWorkflowNames.RNA,
         },
       }
     );
@@ -140,7 +180,13 @@ export class OncoanalyserDnaToSashReadyConstruct extends Construct {
     props.tableObj.grantReadWriteData(dnaCompleteToDraftSfn);
 
     // allow the step function to invoke the lambdas
-    generateEventDataLambdaObj.currentVersion.grantInvoke(dnaCompleteToDraftSfn);
+    [
+      generateEventDataLambdaObj,
+      getComplementLibraryPairLambdaObj,
+      collectOrcaBusObjFromSubjectIdLambdaObj,
+    ].forEach((lambdaObj) => {
+      lambdaObj.currentVersion.grantInvoke(dnaCompleteToDraftSfn);
+    });
 
     /* Allow step function to call nested state machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
@@ -161,16 +207,19 @@ export class OncoanalyserDnaToSashReadyConstruct extends Construct {
     Part 3: Subscribe to the event bus and trigger the internal sfn
     */
     const rule = new events.Rule(this, 'oncoanalyser_dna_complete_to_sash_ready_rule', {
-      ruleName: `stacky-${this.SashReadyMap.prefix}-rule`,
+      ruleName: `stacky-${this.OncoanalyserDnaRnaReadyMap.prefix}-rule`,
       eventBus: props.eventBusObj,
       eventPattern: {
-        source: [this.SashReadyMap.triggerSource],
-        detailType: [this.SashReadyMap.triggerDetailType],
+        source: [this.OncoanalyserDnaRnaReadyMap.triggerSource],
+        detailType: [this.OncoanalyserDnaRnaReadyMap.triggerDetailType],
         detail: {
-          status: [{ 'equals-ignore-case': this.SashReadyMap.triggerStatus }],
+          status: [{ 'equals-ignore-case': this.OncoanalyserDnaRnaReadyMap.triggerStatus }],
           workflowName: [
             {
-              'equals-ignore-case': this.SashReadyMap.triggerWorkflowName,
+              'equals-ignore-case': this.OncoanalyserDnaRnaReadyMap.triggerWorkflowNames.DNA,
+            },
+            {
+              'equals-ignore-case': this.OncoanalyserDnaRnaReadyMap.triggerWorkflowNames.RNA,
             },
           ],
         },

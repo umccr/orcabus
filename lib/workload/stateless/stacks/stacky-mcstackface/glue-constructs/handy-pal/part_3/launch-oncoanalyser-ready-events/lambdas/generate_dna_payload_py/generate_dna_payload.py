@@ -78,6 +78,7 @@ def handler(event, context) -> Dict:
     tumor_library_id = event['tumor_library_id']
     normal_library_id = event['normal_library_id']
     dragen_somatic_output_s3_uri = event['dragen_somatic_output_s3_uri']
+    dragen_germline_output_s3_uri = event['dragen_germline_output_s3_uri']
 
     subject_id = event['subject_id']
     individual_id = event['individual_id']
@@ -104,5 +105,7 @@ def handler(event, context) -> Dict:
             "normalLibraryId": normal_library_id,
             "tumorFastqListRowIds": tumor_fastq_list_row_ids,
             "normalFastqListRowIds": normal_fastq_list_row_ids,
+            "dragenSomaticOutputS3Uri": dragen_somatic_output_s3_uri,
+            "dragenGermlineOutputS3Uri": dragen_germline_output_s3_uri,
         }
     }

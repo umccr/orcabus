@@ -33,10 +33,6 @@ export interface WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstructPr
 
   /* Batch details */
   batchJobDefinitionObj: batch.IJobDefinition; // The job definition to run
-
-  /* Internal workflowRunStateChange event details */
-  workflowName: string;
-  workflowVersion: string;
 }
 
 export class WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct extends Construct {
@@ -46,8 +42,8 @@ export class WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct exten
     eventStatus: 'SUBMITTED',
     portalRunTablePartitionName: 'portal_run_id',
     eventDetailType: 'WorkflowRunStateChange',
-    serviceVersion: '2024.10.17'
-  }
+    serviceVersion: '2024.10.17',
+  };
 
   constructor(
     scope: Construct,
@@ -84,11 +80,9 @@ export class WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct exten
         __event_detail_version__: this.globals.serviceVersion,
         __event_source__: props.internalEventSource,
         __event_status__: this.globals.eventStatus,
-        /* Workflow details */
-        __workflow_name__: props.workflowName,
-        __workflow_version__: props.workflowVersion,
         /* Lambdas */
-        __generate_outputs_lambda_function_arn__: props.generateBatchOutputsLambdaObj.currentVersion.functionArn,
+        __generate_outputs_lambda_function_arn__:
+          props.generateBatchOutputsLambdaObj.currentVersion.functionArn,
       },
     });
 
@@ -101,7 +95,7 @@ export class WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct exten
     // Create a rule for this state machine
     const rule = new events.Rule(this, 'rule', {
       eventBus: defaultEventBus,
-      ruleName: `${props.stateMachinePrefix}-rule`,
+      ruleName: `${props.stateMachinePrefix}-wrsc-rule`,
       eventPattern: {
         source: [props.triggerLaunchSource],
         detailType: [props.detailType],

@@ -5,7 +5,7 @@
     "Move Inputs": {
       "Type": "Pass",
       "Parameters": {
-        "payload_data.$": "$.payload.data"
+        "workflow_inputs.$": "$"
       },
       "Next": "Tumor Library in DB"
     },
@@ -15,16 +15,20 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.payload_data.library.orcabusId",
+          "id.$": "States.ArrayGetItem($.workflow_inputs.linked_libraries[?(@.libraryId==$.workflow_inputs.payload.data.tags.tumorLibraryId)].orcabusId, 0)",
           "id_type": "${__library_partition_name__}"
         }
       },
+      "ResultPath": "$.get_tumor_library_db_step",
       "Next": "Check Tumor Library In DB"
     },
     "Check Tumor Library In DB": {
       "Type": "Choice",
       "Choices": [
         {
+          "Variable": "$.get_tumor_library_db_step.Item",
+          "IsPresent": true,
+          "Comment": "Library In Database",
           "Next": "Get Workflow Parameters"
         }
       ],
@@ -40,12 +44,16 @@
             "Generate Sash Payload": {
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
-              "OutputPath": "$.Payload",
               "Parameters": {
+                "FunctionName": "${__generate_sash_payload_lambda_function_arn__}",
                 "Payload": {
-                  "dragen_somatic_dir.$": "",
-                  "dragen_germline_dir.$": "",
-                  "oncoanalyser_dir.$": ""
+                  "tumor_library_id.$": "$.workflow_inputs.payload.data.tags.tumorLibraryId",
+                  "normal_library_id.$": "$.workflow_inputs.payload.data.tags.normalLibraryId",
+                  "subject_id.$": "$.workflow_inputs.payload.data.tags.subjectId",
+                  "individual_id.$": "$.workflow_inputs.payload.data.tags.individualId",
+                  "dragen_somatic_output_s3_uri.$": "$.workflow_inputs.payload.data.tags.dragenSomaticOutputS3Uri",
+                  "dragen_germline_output_s3_uri.$": "$.workflow_inputs.payload.data.tags.dragenGermlineOutputS3Uri",
+                  "oncoanalyser_dna_s3_uri.$": "$.workflow_inputs.payload.data.outputs.dnaOncoanalyserAnalysisUri"
                 }
               },
               "Retry": [
@@ -61,6 +69,10 @@
                   "BackoffRate": 2
                 }
               ],
+              "ResultSelector": {
+                "input_event_data.$": "$.Payload.input_event_data",
+                "event_tags.$": "$.Payload.event_tags"
+              },
               "End": true
             }
           }
@@ -72,26 +84,40 @@
               "Type": "Task",
               "Resource": "arn:aws:states:::states:startExecution.sync:2",
               "Parameters": {
-                "StateMachineArn": "arn:aws:states:REGION:ACCOUNT_ID:stateMachine:STATE_MACHINE_NAME",
-                "Input": {
-                  "StatePayload": "Hello from Step Functions!",
-                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
-                }
+                "StateMachineArn": "${__sfn_preamble_state_machine_arn__}",
+                "Input": {}
+              },
+              "ResultPath": "$.get_sfn_preamble_outputs_step",
+              "ResultSelector": {
+                "portal_run_id.$": "$.Output.portal_run_id",
+                "workflow_run_name.$": "$.Output.workflow_run_name"
               },
               "End": true
             }
           }
         }
-      ]
+      ],
+      "ResultSelector": {
+        "input_event_data.$": "$.[0].input_event_data",
+        "event_tags.$": "$.[0].event_tags",
+        "portal_run_id.$": "$.[1].portal_run_id",
+        "workflow_run_name.$": "$.[1].workflow_run_name"
+      },
+      "ResultPath": "$.get_parameters_step"
     },
     "Generate Sash Ready Event": {
       "Type": "Task",
       "Resource": "arn:aws:states:::states:startExecution.sync:2",
       "Parameters": {
-        "StateMachineArn": "arn:aws:states:REGION:ACCOUNT_ID:stateMachine:STATE_MACHINE_NAME",
+        "StateMachineArn": "${__launch_ready_event_sfn_arn__}",
         "Input": {
-          "StatePayload": "Hello from Step Functions!",
-          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+          "StatePayload": {
+            "portal_run_id.$": "$.get_parameters_step.portal_run_id",
+            "workflow_run_name.$": "$.get_parameters_step.workflow_run_name",
+            "linked_libraries": "$.workflow_inputs.linkedLibraries",
+            "data_inputs.$": "$.get_parameters_step.input_event_data",
+            "data_tags.$": "$.get_parameters_step.event_tags"
+          }
         }
       },
       "End": true

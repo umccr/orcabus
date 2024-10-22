@@ -3,10 +3,10 @@
 """
 Given the engine parameters and inputs, use these to collect the output uris
 
-For oncoanalyser-dna:
+For oncoanalyser-wgts-dna:
     * Extend the outputUri from the engineParameters with the tumorSampleId and normalSampleId
 
-For oncoanalyser-rna:
+For rnadna:
     * Extend the outputUri from the engineParameters with the tumorSampleId
 """
 
@@ -54,21 +54,30 @@ def handler(event, context):
         return {}
 
     # If the output uri is set, then we need to extend the output uri with the tumor and normal sample ids
-    if workflow_name == "oncoanalyser-dna":
+    if workflow_name == "oncoanalyser-wgts-dna":
 
         # Get the tumor and normal sample ids
         tumor_sample_id = inputs.get('tumorDnaSampleId')
         normal_sample_id = inputs.get('normalDnaSampleId')
         return {
             "outputs": {
-                "dnaOncoanalyserAnalysisUri": extend_url(output_uri, f'{tumor_sample_id}/{normal_sample_id}') + '/'
+                "dnaOncoanalyserAnalysisUri": extend_url(output_uri, f'{tumor_sample_id}_{normal_sample_id}') + '/'
             }
         }
-    elif workflow_name == "oncoanalyser-rna":
+    elif workflow_name == "rnadna":
         tumor_sample_id = inputs.get('tumorRnaSampleId')
         return {
             "outputs": {
                 "rnaOncoanalyserAnalysisUri": extend_url(output_uri, f'{tumor_sample_id}') + '/'
+            }
+        }
+    elif workflow_name == "oncoanalyser-wgts-dna-rna":
+        tumor_dna_sample_id = inputs.get('tumorDnaSampleId')
+        normal_dna_sample_id = inputs.get('normalDnaSampleId')
+        tumor_rna_sample_id = inputs.get('tumorRnaSampleId')
+        return {
+            "outputs": {
+                "oncoanalyserAnalysisUri": extend_url(output_uri, f'{tumor_dna_sample_id}_{normal_dna_sample_id}_{tumor_rna_sample_id}') + '/'
             }
         }
     else:

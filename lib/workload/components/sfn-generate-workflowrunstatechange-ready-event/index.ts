@@ -32,7 +32,7 @@ export interface WorkflowRunStateChangeInternalInputMakerProps {
   cacheUriSsmParameterObj?: ssm.IStringParameter;
   icav2ProjectIdSsmParameterObj?: ssm.IStringParameter;
   /* Secrets */
-  icav2AccessTokenSecretObj: secretsManager.ISecret;
+  icav2AccessTokenSecretObj?: secretsManager.ISecret;
 }
 
 export class GenerateWorkflowRunStateChangeReadyConstruct extends Construct {
@@ -57,17 +57,26 @@ export class GenerateWorkflowRunStateChangeReadyConstruct extends Construct {
         index: 'fill_placeholders_in_event_payload_data.py',
         runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
-        environment: {
-          ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
-        },
         timeout: Duration.seconds(60),
       }
     );
 
-    // Add permissions for the lambda to read from secrets manager
-    props.icav2AccessTokenSecretObj.grantRead(
-      fillPlaceholdersInEventPayloadDataLambdaObj.currentVersion
-    );
+    /*
+   For ICAv2 workflows only
+   */
+    if (props.icav2AccessTokenSecretObj !== undefined) {
+      /*
+      Add the secret to the lambda environment
+      */
+      fillPlaceholdersInEventPayloadDataLambdaObj.addEnvironment(
+        'ICAV2_ACCESS_TOKEN_SECRET_ID',
+        props.icav2AccessTokenSecretObj.secretName
+      );
+      // Add permissions for the lambda to read from secrets manager
+      props.icav2AccessTokenSecretObj.grantRead(
+        fillPlaceholdersInEventPayloadDataLambdaObj.currentVersion
+      );
+    }
 
     /* Flatten Object list py */
     const flattenObjectListLambdaObj = new PythonLambdaFlattenListOfObjectsConstruct(

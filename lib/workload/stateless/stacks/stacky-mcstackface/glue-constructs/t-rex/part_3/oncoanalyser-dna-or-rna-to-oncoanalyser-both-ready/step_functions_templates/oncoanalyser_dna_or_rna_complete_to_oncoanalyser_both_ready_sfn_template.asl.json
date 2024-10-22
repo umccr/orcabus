@@ -64,7 +64,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.workflow_inputs.payload.data.library.orcabusId",
+          "id.$": "$.get_library_item_step.Item.id.S",
           "id_type": "${__library_partition_name__}"
         },
         "UpdateExpression": "SET outputs = :outputs, analysis_complete = :analysis_complete",
@@ -189,8 +189,8 @@
         "FunctionName": "${__get_complement_library_pair_lambda_function_arn__}",
         "Payload": {
           "library_obj": {
-            "orcabus_id.$": "$.workflow_inputs.payload.data.library.orcabusId",
-            "library_id.$": "$.workflow_inputs.payload.data.library.libraryId",
+            "orcabus_id.$": "$.get_library_item_step.Item.id.S",
+            "library_id.$": "$.get_library_item_step.Item.library_id.S",
             "phenotype.$": "$.get_library_item_step.Item.phenotype.S",
             "workflow.$": "$.get_library_item_step.Item.workflow.S",
             "type.$": "$.get_library_item_step.Item.type.S",
@@ -277,7 +277,7 @@
                         }
                       },
                       "ResultSelector": {
-                          "outputs.$": "States.StringToJson($.Item.outputs.S)"
+                        "outputs.$": "States.StringToJson($.Item.outputs.S)"
                       },
                       "End": true
                     }

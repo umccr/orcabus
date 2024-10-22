@@ -97,7 +97,7 @@
     },
     "Submit Oncoanalyser Job": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::batch:submitJob.sync",
+      "Resource": "arn:aws:states:::batch:submitJob",
       "Parameters": {
         "JobName": "$.workflow_inputs.workflowRunName",
         "JobDefinition": "${__job_definition_arn__}",

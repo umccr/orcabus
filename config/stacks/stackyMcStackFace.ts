@@ -19,6 +19,8 @@ import {
   mockPierianDxGlueTableName,
   pieriandxProjectInfoSsmParameterPath,
   redcapLambdaFunctionName,
+  mockOncoanalyserGlueTableName,
+  mockOncoanalyserBothSashGlueTableName,
 } from '../constants';
 import { GlueStackConfig } from '../../lib/workload/stateless/stacks/stacky-mcstackface/glue-constructs';
 import { StackyStatefulTablesConfig } from '../../lib/workload/stateful/stacks/stacky-mcstackface-dynamodb';
@@ -39,6 +41,8 @@ export const getGlueStackProps = (stage: AppStage): GlueStackConfig => {
     umccriseGlueTableName: mockUmccriseGlueTableName,
     rnasumGlueTableName: mockRnasumGlueTableName,
     pieriandxGlueTableName: mockPierianDxGlueTableName,
+    oncoanalyserGlueTableName: mockOncoanalyserGlueTableName,
+    oncoanalyserBothSashGlueTableName: mockOncoanalyserBothSashGlueTableName,
 
     /* SSM Parameters */
     analysisCacheUriSsmParameterName: mockAnalysisCacheUriSsmParameterName,
@@ -70,5 +74,7 @@ export const getStatefulGlueStackProps = (): StackyStatefulTablesConfig => {
     dynamodbUmccriseGlueTableName: mockUmccriseGlueTableName,
     dynamodbRnasumGlueTableName: mockRnasumGlueTableName,
     dynamodbPieriandxGlueTableName: mockPierianDxGlueTableName,
+    dynamodbOncoanalyserGlueTableName: mockOncoanalyserGlueTableName,
+    dynamodbOncoanalyserBothSashGlueTableName: mockOncoanalyserBothSashGlueTableName,
   };
 };

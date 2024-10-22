@@ -34,7 +34,7 @@
     "core-js-pure": "^3.38.1",
     "dotenv": "^16.4.5",
     "source-map-support": "^0.5.21",
-    "sqs-dlq-monitoring": "^1.2.12",
+    "sqs-dlq-monitoring": "^1.2.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.10.0",
