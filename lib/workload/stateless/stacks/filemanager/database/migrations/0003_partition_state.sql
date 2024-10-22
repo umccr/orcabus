@@ -20,3 +20,6 @@ where s3_object.s3_object_id = to_update.s3_object_id;
 
 -- Then, set the default to true to match new logic using `is_current_state`.
 alter table s3_object alter column is_current_state set default true;
+
+-- Create an index for now, although partitioning will be required later.
+create index is_current_state_index on s3_object (is_current_state);
