@@ -10,12 +10,6 @@ class PayloadViewSet(BaseViewSet):
     search_fields = Payload.get_base_fields()
     orcabus_id_prefix = Payload.orcabus_id_prefix
 
-    @extend_schema(parameters=[
-        PayloadSerializer
-    ])
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
-
     def get_queryset(self):
         query_params = self.get_query_params()
         return Payload.objects.get_by_keyword(self.queryset, **query_params)

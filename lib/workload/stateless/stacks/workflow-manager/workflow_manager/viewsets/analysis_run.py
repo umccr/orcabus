@@ -11,9 +11,6 @@ class AnalysisRunViewSet(BaseViewSet):
     queryset = AnalysisRun.objects.prefetch_related("libraries").all()
     orcabus_id_prefix = AnalysisRun.orcabus_id_prefix
 
-    @extend_schema(parameters=[
-        AnalysisRunSerializer
-    ])
     def list(self, request, *args, **kwargs):
         self.serializer_class = AnalysisRunSerializer  # use simple view for record listing
         return super().list(request, *args, **kwargs)

@@ -10,12 +10,6 @@ class WorkflowViewSet(BaseViewSet):
     search_fields = Workflow.get_base_fields()
     orcabus_id_prefix = Workflow.orcabus_id_prefix
 
-    @extend_schema(parameters=[
-        WorkflowSerializer
-    ])
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
-
     def get_queryset(self):
         query_params = self.get_query_params()
         return Workflow.objects.get_by_keyword(self.queryset, **query_params)
