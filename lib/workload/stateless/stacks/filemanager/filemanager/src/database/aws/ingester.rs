@@ -1044,6 +1044,10 @@ pub(crate) mod tests {
             s3_object_results.get::<bool, _>("is_delete_marker")
         );
         assert_eq!(
+            message.is_current_state,
+            s3_object_results.get::<bool, _>("is_current_state")
+        );
+        assert_eq!(
             message.event_type,
             s3_object_results.get::<EventType, _>("event_type")
         );

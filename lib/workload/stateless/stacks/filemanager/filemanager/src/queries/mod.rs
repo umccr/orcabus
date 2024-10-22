@@ -97,6 +97,7 @@ impl Entries {
             storage_class: Set(Some(Self::storage_class(index))),
             sequencer: Set(Some(index.to_string())),
             is_delete_marker: Set(false),
+            is_current_state: Set(event == EventType::Created),
             number_duplicate_events: Set(0),
             attributes: Set(attributes),
             deleted_date: if event == EventType::Deleted {

@@ -118,7 +118,7 @@ pub async fn ingest_s3_inventory(
     let transposed_events: TransposedS3EventMessages =
         FlatS3EventMessages::from(records).sort_and_dedup().into();
 
-    let query = Query::new(database_client.clone());
+    let query = Query::new(&database_client);
 
     let mut tx = query.transaction().await?;
     let database_records = query
@@ -354,7 +354,11 @@ pub(crate) mod tests {
         .await;
         assert_row(
             &s3_object_results[3],
-            message.clone().with_size(None).with_event_type(Deleted),
+            message
+                .clone()
+                .with_size(None)
+                .with_event_type(Deleted)
+                .with_is_current_state(false),
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             Some(DateTime::default()),
         );
@@ -382,7 +386,8 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(client).await;
 
         assert_eq!(s3_object_results.len(), 2);
-        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created);
+        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created)
+            .with_is_current_state(true);
         assert_row(
             &s3_object_results[0],
             message,
@@ -392,7 +397,8 @@ pub(crate) mod tests {
 
         let message = expected_message(None, EXPECTED_VERSION_ID.to_string(), false, Deleted)
             .with_sha256(None)
-            .with_last_modified_date(None);
+            .with_last_modified_date(None)
+            .with_is_current_state(false);
         assert_row(
             &s3_object_results[1],
             message,
@@ -465,7 +471,8 @@ pub(crate) mod tests {
                 .with_version_id(default_version_id())
                 .with_e_tag(Some(EXPECTED_QUOTED_E_TAG.to_string()))
                 .with_last_modified_date(Some(DateTime::default()))
-                .with_sha256(Some(EXPECTED_SHA256.to_string())),
+                .with_sha256(Some(EXPECTED_SHA256.to_string()))
+                .with_is_current_state(true),
         )
     }
 
@@ -522,7 +529,8 @@ pub(crate) mod tests {
             .with_size(Some(size))
             .with_version_id(default_version_id())
             .with_last_modified_date(Some(last_modified.parse().unwrap()))
-            .with_e_tag(Some(e_tag.to_string()));
+            .with_e_tag(Some(e_tag.to_string()))
+            .with_is_current_state(true);
 
         assert_row(row, message, Some("".to_string()), None);
     }

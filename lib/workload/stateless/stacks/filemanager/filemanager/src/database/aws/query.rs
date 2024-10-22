@@ -1,4 +1,4 @@
-use sqlx::{query_as, Acquire, Postgres, Transaction};
+use sqlx::{query, query_as, Acquire, Postgres, Transaction};
 
 use crate::database::Client;
 use crate::error::Result;
@@ -6,17 +6,13 @@ use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 
 /// Query the filemanager via REST interface.
 #[derive(Debug)]
-pub struct Query {
-    client: Client,
+pub struct Query<'a> {
+    client: &'a Client,
 }
 
-pub struct QueryResults {
-    _results: Vec<String>, // FIXME: Adjust return type
-}
-
-impl Query {
+impl<'a> Query<'a> {
     /// Creates a new filemanager query client.
-    pub fn new(client: Client) -> Self {
+    pub fn new(client: &'a Client) -> Self {
         Self { client }
     }
 
@@ -43,15 +39,32 @@ impl Query {
         ))
     }
 
+    pub async fn reset_current_state(
+        &self,
+        conn: impl Acquire<'_, Database = Postgres>,
+        buckets: &[String],
+        keys: &[String],
+        version_ids: &[String],
+        sequencers: &[String],
+    ) -> Result<()> {
+        let mut conn = conn.acquire().await?;
+
+        query(include_str!(
+            "../../../../database/queries/api/reset_current_state.sql"
+        ))
+        .bind(buckets)
+        .bind(keys)
+        .bind(version_ids)
+        .bind(sequencers)
+        .execute(&mut *conn)
+        .await?;
+
+        Ok(())
+    }
+
     /// Start a new transaction.
     pub async fn transaction(&self) -> Result<Transaction<Postgres>> {
         Ok(self.client.pool().begin().await?)
-    }
-}
-
-impl QueryResults {
-    pub fn new(_results: Vec<String>) -> Self {
-        Self { _results }
     }
 }
 
@@ -59,22 +72,22 @@ impl QueryResults {
 mod tests {
     use std::ops::Add;
 
-    use chrono::{DateTime, Duration};
+    use chrono::{DateTime, Duration, Utc};
     use sqlx::PgPool;
 
     use crate::database::aws::ingester::tests::{test_events, test_ingester};
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::Ingest;
     use crate::events::aws::message::EventType::Created;
-    use crate::events::aws::tests::{EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_VERSION_ID};
+    use crate::events::aws::tests::{
+        EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_VERSION_ID,
+    };
     use crate::events::EventSourceType::S3;
 
     use super::*;
 
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_select_existing_by_bucket_key(pool: PgPool) {
+    async fn ingest_test_records(pool: PgPool) -> (String, Option<DateTime<Utc>>) {
         let ingester = test_ingester(pool.clone());
-        let query = Query::new(Client::from_pool(pool));
 
         let events = test_events(Some(Created));
 
@@ -99,10 +112,17 @@ mod tests {
         ingester.ingest(S3(different_key)).await.unwrap();
         ingester.ingest(S3(different_key_and_date)).await.unwrap();
 
-        let mut tx = query.client.pool().begin().await.unwrap();
-        let results = query
+        (new_key.to_string(), new_date)
+    }
+
+    async fn query_current_state(
+        new_key: &String,
+        query: Query<'_>,
+        conn: impl Acquire<'_, Database = Postgres>,
+    ) -> Vec<FlatS3EventMessage> {
+        query
             .select_existing_by_bucket_key(
-                &mut tx,
+                conn,
                 vec!["bucket".to_string(), "bucket".to_string()].as_slice(),
                 vec!["key".to_string(), new_key.to_string()].as_slice(),
                 vec![
@@ -113,7 +133,40 @@ mod tests {
             )
             .await
             .unwrap()
-            .0;
+            .0
+    }
+
+    async fn query_reset_current_state(
+        new_key: &String,
+        query: &Query<'_>,
+        sequencer: &str,
+        conn: impl Acquire<'_, Database = Postgres>,
+    ) {
+        query
+            .reset_current_state(
+                conn,
+                vec!["bucket".to_string(), "bucket".to_string()].as_slice(),
+                vec!["key".to_string(), new_key.to_string()].as_slice(),
+                vec![
+                    EXPECTED_VERSION_ID.to_string(),
+                    EXPECTED_VERSION_ID.to_string(),
+                ]
+                .as_slice(),
+                vec![sequencer.to_string(), sequencer.to_string()].as_slice(),
+            )
+            .await
+            .unwrap();
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_select_existing_by_bucket_key(pool: PgPool) {
+        let (new_key, new_date) = ingest_test_records(pool.clone()).await;
+        let client = Client::from_pool(pool);
+        let query = Query::new(&client);
+
+        let mut tx = query.client.pool().begin().await.unwrap();
+        let results = query_current_state(&new_key, query, &mut tx).await;
+        tx.commit().await.unwrap();
 
         assert_eq!(results.len(), 2);
         assert!(results
@@ -125,5 +178,45 @@ mod tests {
         assert!(results.get(1).iter().all(|result| result.bucket == "bucket"
             && result.key == new_key
             && result.event_time == new_date));
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_reset_current_state(pool: PgPool) {
+        let (new_key, _) = ingest_test_records(pool.clone()).await;
+        let client = Client::from_pool(pool);
+        let query = Query::new(&client);
+
+        let mut tx = query.client.pool().begin().await.unwrap();
+        query_reset_current_state(&new_key, &query, EXPECTED_NEW_SEQUENCER_ONE, &mut tx).await;
+
+        let results = query_current_state(&new_key, query, &mut tx).await;
+
+        tx.commit().await.unwrap();
+
+        for result in results {
+            assert!(!result.is_current_state);
+        }
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_reset_current_state_partial(pool: PgPool) {
+        let (new_key, _) = ingest_test_records(pool.clone()).await;
+        let client = Client::from_pool(pool);
+        let query = Query::new(&client);
+
+        let mut tx = query.client.pool().begin().await.unwrap();
+        query_reset_current_state(&new_key, &query, EXPECTED_SEQUENCER_CREATED_ONE, &mut tx).await;
+
+        let results = query_current_state(&new_key, query, &mut tx).await;
+
+        tx.commit().await.unwrap();
+
+        for result in results {
+            if result.sequencer == Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()) {
+                assert!(!result.is_current_state);
+            } else {
+                assert!(result.is_current_state);
+            }
+        }
     }
 }

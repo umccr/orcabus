@@ -1,11 +1,10 @@
 //! Raw event message definitions from AWS S3, either through EventBridge or SQS directly.
 //!
 
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 use crate::uuid::UuidGenerator;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// The type of S3 event.
 #[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
@@ -189,6 +188,8 @@ impl From<Record> for FlatS3EventMessage {
             storage_class: None,
             last_modified_date: None,
             sha256: None,
+            // This represents the current state only if the event is a created event.
+            is_current_state: event_type == EventType::Created,
             event_type,
             is_delete_marker,
             ingest_id: None,
@@ -318,6 +319,7 @@ mod tests {
             Some(i64::MAX),
             "null".to_string(),
             false,
+            true,
         );
     }
 
@@ -347,6 +349,7 @@ mod tests {
             None,
             EXPECTED_VERSION_ID.to_string(),
             true,
+            false,
         );
     }
 
@@ -369,6 +372,7 @@ mod tests {
             None,
             EXPECTED_VERSION_ID.to_string(),
             true,
+            false,
         );
     }
 
@@ -388,6 +392,7 @@ mod tests {
             None,
             EXPECTED_VERSION_ID.to_string(),
             false,
+            false,
         );
     }
 
@@ -401,6 +406,7 @@ mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
+            false,
             false,
         );
     }
