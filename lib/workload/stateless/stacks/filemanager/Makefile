@@ -69,6 +69,8 @@ clean: docker-clean
 ## Database related targets
 psql:
 	@docker compose exec postgres psql filemanager -U filemanager
+restore:
+	@docker compose exec postgres pg_restore -U filemanager -f $(FILE)
 
 ## Targets related to top-level database management and S3.
 apply-schema:
