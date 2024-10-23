@@ -1,22 +1,21 @@
-from drf_spectacular.utils import extend_schema
-from rest_framework import status
+
+from rest_framework import mixins, status
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 from django.utils import timezone
 
 from workflow_manager.models import State, WorkflowRun
 from workflow_manager.serializers.state import StateSerializer
-from workflow_manager.viewsets.base import BaseViewSet
 
 
-class StateViewSet(BaseViewSet):
+class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin,  GenericViewSet):
     serializer_class = StateSerializer
     search_fields = State.get_base_fields()
     orcabus_id_prefix = State.orcabus_id_prefix
+    http_method_names = ['get', 'post', 'patch']
 
     def get_queryset(self):
-        query_params = self.get_query_params()
-        qs = State.objects.filter(workflow_run=self.kwargs["orcabus_id"])
-        return State.objects.get_by_keyword(qs, **query_params)
+        return State.objects.filter(workflow_run=self.kwargs["orcabus_id"])
     
     def create(self, request, *args, **kwargs):
         wfr_orcabus_id = self.kwargs.get("orcabus_id")
@@ -25,7 +24,7 @@ class StateViewSet(BaseViewSet):
         # Check if the workflow run has a "Failed" or "Aborted" state
         latest_state = workflow_run.get_latest_state()
         if latest_state.status not in ["FAILED"]:
-            return Response({"detail": "Can only create 'Resolved' state for workflow runs with 'Failed' or 'Aborted' states."},
+            return Response({"detail": "Can only create 'Resolved' state for workflow runs with 'Failed' states."},
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Check if the new state is "Resolved"
