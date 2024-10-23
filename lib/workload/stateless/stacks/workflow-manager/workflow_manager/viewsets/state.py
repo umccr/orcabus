@@ -13,6 +13,7 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
     search_fields = State.get_base_fields()
     orcabus_id_prefix = State.orcabus_id_prefix
     http_method_names = ['get', 'post', 'patch']
+    pagination_class = None
 
     def get_queryset(self):
         return State.objects.filter(workflow_run=self.kwargs["orcabus_id"])

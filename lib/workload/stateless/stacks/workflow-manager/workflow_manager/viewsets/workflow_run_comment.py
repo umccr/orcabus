@@ -4,7 +4,7 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
-
+from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 
 from workflow_manager.models import WorkflowRunComment, WorkflowRun
@@ -16,6 +16,7 @@ class WorkflowRunCommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin
     search_fields = WorkflowRunComment.get_base_fields()
     http_method_names = ['get', 'post', 'patch', 'delete']
     orcabus_id_prefix = WorkflowRunComment.orcabus_id_prefix
+    pagination_class = None
 
     def get_queryset(self):
         return WorkflowRunComment.objects.filter(
