@@ -4,6 +4,7 @@
 use sqlx::query;
 use tracing::debug;
 
+use crate::database::aws::query::Query;
 use crate::database::{Client, CredentialGenerator};
 use crate::env::Config;
 use crate::error::Result;
@@ -30,7 +31,7 @@ impl Ingester {
     }
 
     /// Ingest the events into the database by calling the insert and update queries.
-    pub async fn ingest_events(&self, events: TransposedS3EventMessages) -> Result<()> {
+    pub async fn ingest_events(self, events: TransposedS3EventMessages) -> Result<()> {
         let mut tx = self.client().pool().begin().await?;
 
         debug!(
@@ -54,9 +55,21 @@ impl Ingester {
         .bind(&events.is_delete_markers)
         .bind(&events.event_types)
         .bind(&events.ingest_ids)
+        .bind(&events.is_current_state)
         .bind(&events.attributes)
         .fetch_all(&mut *tx)
         .await?;
+
+        // Reset state for records which represent the new state.
+        Query::new(self.client.clone())
+            .reset_current_state(
+                &mut tx,
+                &events.buckets,
+                &events.keys,
+                &events.version_ids,
+                &events.sequencers,
+            )
+            .await?;
 
         tx.commit().await?;
 
@@ -84,9 +97,9 @@ pub(crate) mod tests {
     use crate::events::aws::message::{default_version_id, EventType};
     use crate::events::aws::tests::{
         expected_events_simple, expected_events_simple_delete_marker, expected_flat_events_simple,
-        EXPECTED_QUOTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_ZERO,
-        EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_SHA256,
-        EXPECTED_VERSION_ID,
+        EXPECTED_QUOTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_SEQUENCER_CREATED_TWO,
+        EXPECTED_SEQUENCER_CREATED_ZERO, EXPECTED_SEQUENCER_DELETED_ONE,
+        EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_SHA256, EXPECTED_VERSION_ID,
     };
     use crate::events::aws::{
         FlatS3EventMessage, FlatS3EventMessages, StorageClass, TransposedS3EventMessages,
@@ -122,7 +135,8 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 2);
 
-        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true, Deleted);
+        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), true, Deleted)
+            .with_is_current_state(false);
         assert_row(
             &s3_object_results[0],
             message,
@@ -130,7 +144,8 @@ pub(crate) mod tests {
             Some(Default::default()),
         );
 
-        let message = expected_message(None, EXPECTED_VERSION_ID.to_string(), false, Deleted);
+        let message = expected_message(None, EXPECTED_VERSION_ID.to_string(), false, Deleted)
+            .with_is_current_state(false);
         assert_row(
             &s3_object_results[1],
             message,
@@ -164,6 +179,7 @@ pub(crate) mod tests {
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Created,
+            true,
         );
     }
 
@@ -176,10 +192,13 @@ pub(crate) mod tests {
 
         let s3_object_results = fetch_results(&ingester).await;
 
+        println!("{:#?}", s3_object_results);
         assert_eq!(s3_object_results.len(), 2);
         assert_ingest_events(
-            &s3_object_results[0],
             &s3_object_results[1],
+            &s3_object_results[0],
+            false,
+            false,
             EXPECTED_VERSION_ID,
         );
     }
@@ -207,6 +226,8 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
+            false,
+            false,
             EXPECTED_VERSION_ID,
         );
     }
@@ -220,6 +241,7 @@ pub(crate) mod tests {
         let flat_events: FlatS3EventMessages = replace_sequencers(
             test_events(None),
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
         )
         .into();
         flat_events
@@ -233,17 +255,19 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 3);
         assert_missing_deleted(
-            &s3_object_results[0],
             &s3_object_results[1],
+            &s3_object_results[2],
             EXPECTED_VERSION_ID,
+            false,
         );
         assert_with(
-            &s3_object_results[2],
+            &s3_object_results[0],
             None,
-            Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Deleted,
+            false,
         );
     }
 
@@ -255,6 +279,7 @@ pub(crate) mod tests {
         // Merge events into same ingestion.
         let flat_events: FlatS3EventMessages = replace_sequencers(
             test_events(None),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
             Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
         )
         .into();
@@ -270,16 +295,17 @@ pub(crate) mod tests {
         assert_eq!(s3_object_results.len(), 3);
         assert_missing_created(
             &s3_object_results[0],
-            &s3_object_results[2],
+            &s3_object_results[1],
             EXPECTED_VERSION_ID,
         );
         assert_with(
-            &s3_object_results[1],
+            &s3_object_results[2],
             Some(0),
-            Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Created,
+            false,
         );
     }
 
@@ -307,6 +333,8 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[1],
             &s3_object_results[0],
+            false,
+            false,
             EXPECTED_VERSION_ID,
         );
 
@@ -316,6 +344,8 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
+            false,
+            false,
             EXPECTED_VERSION_ID,
         );
     }
@@ -333,6 +363,8 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
+            true,
+            false,
             &default_version_id(),
         );
     }
@@ -363,6 +395,8 @@ pub(crate) mod tests {
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
+            true,
+            false,
             &default_version_id(),
         );
     }
@@ -406,10 +440,13 @@ pub(crate) mod tests {
             "version_id".to_string(),
             Some(Default::default()),
             Created,
+            true,
         );
         assert_ingest_events(
             &s3_object_results[1],
             &s3_object_results[2],
+            true,
+            false,
             EXPECTED_VERSION_ID,
         );
     }
@@ -424,6 +461,7 @@ pub(crate) mod tests {
         let events_two = replace_sequencers(
             test_events(Some(Created)),
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
         );
 
         ingester.ingest(S3(events_one)).await.unwrap();
@@ -436,6 +474,7 @@ pub(crate) mod tests {
             &s3_object_results[0],
             &s3_object_results[1],
             EXPECTED_VERSION_ID,
+            false,
         );
     }
 
@@ -449,6 +488,7 @@ pub(crate) mod tests {
         let events_two = replace_sequencers(
             test_events(Some(Created)),
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
         );
 
         // Re-order
@@ -462,6 +502,7 @@ pub(crate) mod tests {
             &s3_object_results[0],
             &s3_object_results[1],
             EXPECTED_VERSION_ID,
+            false,
         );
     }
 
@@ -474,6 +515,7 @@ pub(crate) mod tests {
         // New deleted event with a higher sequencer.
         let events_two = replace_sequencers(
             test_events(Some(Deleted)),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
             Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
         );
 
@@ -499,6 +541,7 @@ pub(crate) mod tests {
         // New deleted event with a higher sequencer.
         let events_two = replace_sequencers(
             test_events(Some(Deleted)),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
             Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
         );
 
@@ -520,8 +563,8 @@ pub(crate) mod tests {
     async fn ingest_object_no_sequencer_created(pool: PgPool) {
         let ingester = test_ingester(pool);
 
-        let events_one = replace_sequencers(test_events(Some(Created)), None);
-        let events_two = replace_sequencers(test_events(Some(Created)), None);
+        let events_one = replace_sequencers(test_events(Some(Created)), None, None);
+        let events_two = replace_sequencers(test_events(Some(Created)), None, None);
 
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
@@ -536,6 +579,7 @@ pub(crate) mod tests {
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Created,
+            true,
         );
         assert_with(
             &s3_object_results[1],
@@ -544,6 +588,7 @@ pub(crate) mod tests {
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Created,
+            true,
         );
     }
 
@@ -551,8 +596,8 @@ pub(crate) mod tests {
     async fn ingest_object_no_sequencer_deleted(pool: PgPool) {
         let ingester = test_ingester(pool);
 
-        let events_one = replace_sequencers(test_events(Some(Deleted)), None);
-        let events_two = replace_sequencers(test_events(Some(Deleted)), None);
+        let events_one = replace_sequencers(test_events(Some(Deleted)), None, None);
+        let events_two = replace_sequencers(test_events(Some(Deleted)), None, None);
 
         ingester.ingest(S3(events_one)).await.unwrap();
         ingester.ingest(S3(events_two)).await.unwrap();
@@ -567,6 +612,7 @@ pub(crate) mod tests {
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Deleted,
+            false,
         );
         assert_with(
             &s3_object_results[1],
@@ -575,6 +621,7 @@ pub(crate) mod tests {
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Deleted,
+            false,
         );
     }
 
@@ -582,7 +629,7 @@ pub(crate) mod tests {
     async fn ingest_object_no_sequencer(pool: PgPool) {
         let ingester = test_ingester(pool);
 
-        let events = replace_sequencers(test_events(None), None);
+        let events = replace_sequencers(test_events(None), None, None);
         ingester.ingest(S3(events)).await.unwrap();
 
         let s3_object_results = fetch_results(&ingester).await;
@@ -595,6 +642,7 @@ pub(crate) mod tests {
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Created,
+            true,
         );
         assert_with(
             &s3_object_results[1],
@@ -603,6 +651,7 @@ pub(crate) mod tests {
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Deleted,
+            false,
         );
     }
 
@@ -613,11 +662,13 @@ pub(crate) mod tests {
         let events_one = replace_sequencers(
             test_events(Some(Created)),
             Some(EXPECTED_SEQUENCER_CREATED_ZERO.to_string()),
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
         );
         let events_two = test_events(Some(Created));
         let events_three = replace_sequencers(
             test_events(Some(Deleted)),
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
         );
 
         ingester.ingest(S3(events_one)).await.unwrap();
@@ -634,10 +685,13 @@ pub(crate) mod tests {
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Created,
+            true,
         );
         assert_ingest_events(
             &s3_object_results[1],
             &s3_object_results[2],
+            true,
+            false,
             EXPECTED_VERSION_ID,
         );
     }
@@ -648,10 +702,12 @@ pub(crate) mod tests {
 
         let events_one = replace_sequencers(
             test_events(Some(Deleted)),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
             Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
         );
         let events_two = replace_sequencers(
             test_events(Some(Deleted)),
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
         );
         let events_three = test_events(Some(Created));
@@ -670,10 +726,13 @@ pub(crate) mod tests {
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Deleted,
+            false,
         );
         assert_ingest_events(
             &s3_object_results[0],
             &s3_object_results[1],
+            true,
+            false,
             EXPECTED_VERSION_ID,
         );
     }
@@ -815,7 +874,13 @@ pub(crate) mod tests {
         .await;
     }
 
-    pub(crate) fn assert_ingest_events(created: &PgRow, deleted: &PgRow, version_id: &str) {
+    pub(crate) fn assert_ingest_events(
+        created: &PgRow,
+        deleted: &PgRow,
+        created_state: bool,
+        deleted_state: bool,
+        version_id: &str,
+    ) {
         assert_with(
             created,
             Some(0),
@@ -823,6 +888,7 @@ pub(crate) mod tests {
             version_id.to_string(),
             Some(Default::default()),
             Created,
+            created_state,
         );
         assert_with(
             deleted,
@@ -831,7 +897,8 @@ pub(crate) mod tests {
             version_id.to_string(),
             Some(Default::default()),
             Deleted,
-        );
+            deleted_state,
+        )
     }
 
     fn example_event_permutations() -> Vec<FlatS3EventMessage> {
@@ -917,7 +984,12 @@ pub(crate) mod tests {
         );
     }
 
-    fn assert_missing_deleted(created: &PgRow, deleted: &PgRow, version_id: &str) {
+    fn assert_missing_deleted(
+        created: &PgRow,
+        deleted: &PgRow,
+        version_id: &str,
+        is_current_state: bool,
+    ) {
         assert_with(
             created,
             Some(0),
@@ -925,6 +997,7 @@ pub(crate) mod tests {
             version_id.to_string(),
             Some(Default::default()),
             Created,
+            is_current_state,
         );
         assert_with(
             deleted,
@@ -933,6 +1006,7 @@ pub(crate) mod tests {
             version_id.to_string(),
             Some(Default::default()),
             Created,
+            is_current_state,
         );
     }
 
@@ -944,6 +1018,7 @@ pub(crate) mod tests {
             version_id.to_string(),
             Some(Default::default()),
             Deleted,
+            false,
         );
         assert_with(
             created,
@@ -952,6 +1027,7 @@ pub(crate) mod tests {
             version_id.to_string(),
             Some(Default::default()),
             Deleted,
+            false,
         );
     }
 
@@ -968,12 +1044,11 @@ pub(crate) mod tests {
 
     pub(crate) fn replace_sequencers(
         mut events: TransposedS3EventMessages,
-        sequencer: Option<String>,
+        sequencer_one: Option<String>,
+        sequencer_two: Option<String>,
     ) -> TransposedS3EventMessages {
-        events
-            .sequencers
-            .iter_mut()
-            .for_each(|replace_sequencer| replace_sequencer.clone_from(&sequencer));
+        events.sequencers[0] = sequencer_one;
+        events.sequencers[1] = sequencer_two;
 
         events
     }
@@ -1000,6 +1075,7 @@ pub(crate) mod tests {
             EXPECTED_VERSION_ID.to_string(),
             Some(Default::default()),
             Created,
+            true,
         )
     }
 
@@ -1078,8 +1154,10 @@ pub(crate) mod tests {
         version_id: String,
         event_time: Option<DateTime<Utc>>,
         event_type: EventType,
+        is_current_state: bool,
     ) {
-        let message = expected_message(size, version_id, false, event_type);
+        let message = expected_message(size, version_id, false, event_type)
+            .with_is_current_state(is_current_state);
 
         assert_row(s3_object_results, message, sequencer, event_time);
     }

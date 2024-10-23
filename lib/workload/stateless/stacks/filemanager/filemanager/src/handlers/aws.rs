@@ -118,7 +118,7 @@ pub async fn ingest_s3_inventory(
     let transposed_events: TransposedS3EventMessages =
         FlatS3EventMessages::from(records).sort_and_dedup().into();
 
-    let query = Query::new(&database_client);
+    let query = Query::new(database_client.clone());
 
     let mut tx = query.transaction().await?;
     let database_records = query
@@ -229,8 +229,8 @@ pub(crate) mod tests {
     use crate::events::aws::message::EventType::Deleted;
     use crate::events::aws::tests::{
         expected_event_record_simple, EXPECTED_QUOTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE,
-        EXPECTED_SEQUENCER_CREATED_TWO, EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SHA256,
-        EXPECTED_VERSION_ID,
+        EXPECTED_SEQUENCER_CREATED_TWO, EXPECTED_SEQUENCER_DELETED_ONE,
+        EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_SHA256, EXPECTED_VERSION_ID,
     };
     use crate::events::aws::FlatS3EventMessage;
     use crate::events::EventSourceType::S3;
@@ -349,6 +349,7 @@ pub(crate) mod tests {
             replace_sequencers(
                 remove_version_ids(test_events(Some(Created))),
                 Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
+                Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
             ),
         )
         .await;

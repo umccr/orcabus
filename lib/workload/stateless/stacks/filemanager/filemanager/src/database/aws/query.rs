@@ -1,4 +1,4 @@
-use sqlx::{query, query_as, Acquire, Postgres, Transaction};
+use sqlx::{query, query_as, Acquire, PgConnection, Postgres, Transaction};
 
 use crate::database::Client;
 use crate::error::Result;
@@ -6,13 +6,13 @@ use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 
 /// Query the filemanager via REST interface.
 #[derive(Debug)]
-pub struct Query<'a> {
-    client: &'a Client,
+pub struct Query {
+    client: Client,
 }
 
-impl<'a> Query<'a> {
+impl Query {
     /// Creates a new filemanager query client.
-    pub fn new(client: &'a Client) -> Self {
+    pub fn new(client: Client) -> Self {
         Self { client }
     }
 
@@ -41,13 +41,13 @@ impl<'a> Query<'a> {
 
     pub async fn reset_current_state(
         &self,
-        conn: impl Acquire<'_, Database = Postgres>,
+        conn: &mut PgConnection,
         buckets: &[String],
         keys: &[String],
         version_ids: &[String],
-        sequencers: &[String],
+        sequencers: &[Option<String>],
     ) -> Result<()> {
-        let mut conn = conn.acquire().await?;
+        let conn = conn.acquire().await?;
 
         query(include_str!(
             "../../../../database/queries/api/reset_current_state.sql"
@@ -117,7 +117,7 @@ mod tests {
 
     async fn query_current_state(
         new_key: &String,
-        query: Query<'_>,
+        query: &Query,
         conn: impl Acquire<'_, Database = Postgres>,
     ) -> Vec<FlatS3EventMessage> {
         query
@@ -138,9 +138,9 @@ mod tests {
 
     async fn query_reset_current_state(
         new_key: &String,
-        query: &Query<'_>,
+        query: &Query,
         sequencer: &str,
-        conn: impl Acquire<'_, Database = Postgres>,
+        conn: &mut PgConnection,
     ) {
         query
             .reset_current_state(
@@ -152,7 +152,7 @@ mod tests {
                     EXPECTED_VERSION_ID.to_string(),
                 ]
                 .as_slice(),
-                vec![sequencer.to_string(), sequencer.to_string()].as_slice(),
+                vec![Some(sequencer.to_string()), Some(sequencer.to_string())].as_slice(),
             )
             .await
             .unwrap();
@@ -162,10 +162,10 @@ mod tests {
     async fn test_select_existing_by_bucket_key(pool: PgPool) {
         let (new_key, new_date) = ingest_test_records(pool.clone()).await;
         let client = Client::from_pool(pool);
-        let query = Query::new(&client);
+        let query = Query::new(client);
 
         let mut tx = query.client.pool().begin().await.unwrap();
-        let results = query_current_state(&new_key, query, &mut tx).await;
+        let results = query_current_state(&new_key, &query, &mut tx).await;
         tx.commit().await.unwrap();
 
         assert_eq!(results.len(), 2);
@@ -184,12 +184,12 @@ mod tests {
     async fn test_reset_current_state(pool: PgPool) {
         let (new_key, _) = ingest_test_records(pool.clone()).await;
         let client = Client::from_pool(pool);
-        let query = Query::new(&client);
+        let query = Query::new(client);
 
         let mut tx = query.client.pool().begin().await.unwrap();
         query_reset_current_state(&new_key, &query, EXPECTED_NEW_SEQUENCER_ONE, &mut tx).await;
 
-        let results = query_current_state(&new_key, query, &mut tx).await;
+        let results = query_current_state(&new_key, &query, &mut tx).await;
 
         tx.commit().await.unwrap();
 
@@ -202,12 +202,12 @@ mod tests {
     async fn test_reset_current_state_partial(pool: PgPool) {
         let (new_key, _) = ingest_test_records(pool.clone()).await;
         let client = Client::from_pool(pool);
-        let query = Query::new(&client);
+        let query = Query::new(client);
 
         let mut tx = query.client.pool().begin().await.unwrap();
         query_reset_current_state(&new_key, &query, EXPECTED_SEQUENCER_CREATED_ONE, &mut tx).await;
 
-        let results = query_current_state(&new_key, query, &mut tx).await;
+        let results = query_current_state(&new_key, &query, &mut tx).await;
 
         tx.commit().await.unwrap();
 
