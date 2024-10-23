@@ -1,16 +1,15 @@
 import re
 import logging
 from itertools import batched
-from typing import Dict, List
+from typing import List
 
 from .request_utils import get_request_response_results
+from libumccr import libregex
 
 logger = logging.getLogger(__name__)
 
-regex_ulid = r"[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}"
-
-lib_orca_id_regex = re.compile(r"(lib\.)?" + regex_ulid)
-lib_lab_id_regex = re.compile(r"L(PRJ)?\d{6,7}")
+lib_orca_id_regex = libregex.ORCABUS_ID_MM_REGEX_OBJS["library"]
+lib_lab_id_regex = re.compile(libregex.LIBRARY_REGEX_STR["id"])
 
 metadata_domain = 'metadata.dev.umccr.org'  # FIXME: get from env var
 api_root = 'api/v1/'

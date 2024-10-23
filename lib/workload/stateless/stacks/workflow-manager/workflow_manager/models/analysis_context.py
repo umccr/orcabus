@@ -4,26 +4,35 @@ from enum import Enum
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 
 
-class AnalysisContextOption(Enum):
+class ApprovalOption(Enum):
     """
-    Supported / expected values for an AnalysisContext.
-    # TODO: replace with more controlled / formalised models.TextChoices?
+    Supported / expected values for a approval AnalysisContext.
     """
     NATA = "NATA"
     CLINICAL = "clinical"
-    RESEARCH = "research"
-    INTERNAL = "internal"
-    VALIDATION = "validation"
-    DEVELOPMENT = "development"
 
-class AnalysisContextUsecase(Enum):
+class ComputeOption(Enum):
+    """
+    Supported / expected values for a compute env AnalysisContext.
+    """
+    ACCREDITED = "accredited"
+    RESEARCH = "research"
+
+class StorageOption(Enum):
+    """
+    Supported / expected values for a storage AnalysisContext.
+    """
+    ACCREDITED = "accredited"
+    RESEARCH = "research"
+    TEMP = "temp"
+
+class Usecase(Enum):
     """
     Supported / expected values for an AnalysisContext.
-    # TODO: replace with more controlled / formalised models.TextChoices?
     """
-    ANALYSIS = "analysis"
+    APPROVAL = "approval"
     STORAGE = "storage"
-    COMPUTE_ENV = "compute-env"
+    COMPUTE = "compute"
 
 class AnalysisContextManager(OrcaBusBaseManager):
     pass
@@ -37,8 +46,8 @@ class AnalysisContext(OrcaBusBaseModel):
 
     name = models.CharField(max_length=255)  # Supposed to be the value of an AnalysisContextOption
     usecase = models.CharField(max_length=255)
-    description = models.CharField(max_length=255)
-    status = models.CharField(max_length=255)
+    description = models.CharField(max_length=255, null=True, blank=True)
+    status = models.CharField(max_length=255, null=True, blank=True)
 
     objects = AnalysisContextManager()
 

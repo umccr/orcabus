@@ -1,8 +1,20 @@
 from django.db import models
 
+from enum import Enum
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.analysis_context import AnalysisContext
 from workflow_manager.models.workflow import Workflow
+
+
+class AnalysisName(Enum):
+    """
+    Supported / expected values for an AnalysisName.
+    # TODO: load/align with external source?
+    """
+    WGTS_QC = "WGTS-Alignment-QC"
+    TN = "Tumor-Normal"
+    WTS = "WTS"
+    CTTSO = "ctTSO"
 
 
 class AnalysisManager(OrcaBusBaseManager):
