@@ -10,7 +10,6 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as path from 'path';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as events_targets from 'aws-cdk-lib/aws-events-targets';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as lambda_python from '@aws-cdk/aws-lambda-python-alpha';
 import * as batch from 'aws-cdk-lib/aws-batch';
 
