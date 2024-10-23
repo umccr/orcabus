@@ -4,6 +4,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { NewSamplesheetEventShowerConstruct } from './part_1/samplesheet-event-shower';
 import { NewFastqListRowsEventShowerConstruct } from './part_2/fastq-list-rows-event-shower';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 
 /*
 Provide the glue to push 'shower' events
@@ -13,6 +14,7 @@ When either new fastq list rows arrive or when a new samplesheet arrives
 export interface showerGlueHandlerConstructProps {
   eventBusObj: events.IEventBus;
   instrumentRunTableObj: dynamodb.ITableV2;
+  icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
 export class showerGlueHandlerConstruct extends Construct {
@@ -40,10 +42,12 @@ export class showerGlueHandlerConstruct extends Construct {
       this,
       'fastq_list_rows_shower',
       {
-        // Event bus
+        /* Event bus */
         eventBusObj: props.eventBusObj,
-        // Tables
+        /* Tables */
         tableObj: props.instrumentRunTableObj,
+        /* Secrets */
+        icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
       }
     );
   }

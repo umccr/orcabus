@@ -162,6 +162,11 @@ class WorkflowRunViewSet(BaseViewSet):
             states__status="FAILED"
         ).count()
         
+        resolved_count = annotate_queryset.filter(
+            states__timestamp=F('latest_state_time'),
+            states__status="RESOLVED"
+        ).count()
+        
         ongoing_count = base_queryset.filter(
             ~Q(states__status="FAILED") &
             ~Q(states__status="ABORTED") &
@@ -173,5 +178,6 @@ class WorkflowRunViewSet(BaseViewSet):
             'succeeded': succeeded_count,
             'aborted': aborted_count,
             'failed': failed_count,
+            'resolved': resolved_count,
             'ongoing': ongoing_count
         }, status=200)

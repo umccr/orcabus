@@ -261,6 +261,12 @@ To stop the running server, simply use the `make stop` command
 To run the test from scratch use `make test`, but if you want to test with a running database you could use `make suite`
 .
 
+Coverage test
+
+```bash
+make coverage
+```
+
 ### Development
 
 #### Migrations

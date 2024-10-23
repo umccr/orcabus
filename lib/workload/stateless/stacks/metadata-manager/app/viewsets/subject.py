@@ -1,7 +1,8 @@
 from drf_spectacular.utils import extend_schema, OpenApiParameter
+from rest_framework.decorators import action
 
 from app.models import Subject, Library
-from app.serializers.subject import SubjectSerializer, SubjectDetailSerializer
+from app.serializers.subject import SubjectSerializer, SubjectDetailSerializer, SubjectHistorySerializer
 from .base import BaseViewSet
 
 
@@ -46,3 +47,8 @@ class SubjectViewSet(BaseViewSet):
     ])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
+    @extend_schema(responses=SubjectHistorySerializer(many=True), description="Retrieve the history of this model")
+    @action(detail=True, methods=['get'], url_name='history', url_path='history')
+    def retrieve_history(self, request, *args, **kwargs):
+        return super().retrieve_history(SubjectHistorySerializer)

@@ -15,3 +15,8 @@ class IndividualDetailSerializer(IndividualSerializer):
 
     subject_set = SubjectSerializer(many=True, read_only=True)
 
+
+class IndividualHistorySerializer(IndividualSerializer):
+    class Meta:
+        model = Individual.history.model
+        fields = "__all__"

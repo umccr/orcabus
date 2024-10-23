@@ -12,10 +12,6 @@ This project is split up into multiple crates in a workspace. For development, d
 
 ## Rust code development
 
-The filemanager uses docker to run a local postgres database to track objects, and sqlx, which connects to the database
-at compile time to ensure that queries are valid. Compilation will emit errors if a query cannot successfully be run
-on postgres database.
-
 Makefile is used to simplify development. To get started run:
 
 ```sh
@@ -51,7 +47,7 @@ Unit tests can be run with:
 make test
 ```
 
-Which runs `cargo test`.
+Which runs `cargo test`. This will also launch a local postgres database for testing.
 
 To lint the code and format it, run:
 

@@ -72,11 +72,15 @@ makemigrations:
 migrate:
 	@python manage.py migrate
 
-insert-data:
+mock: reset-db migrate
 	@python manage.py insert_mock_data
 
 suite:
 	@python manage.py test --parallel
+
+coverage:
+	@coverage run manage.py test
+	@coverage report -m
 
 # full mock suite test pipeline - install deps, bring up compose stack, run suite, bring down compose stack
 test: install up suite down

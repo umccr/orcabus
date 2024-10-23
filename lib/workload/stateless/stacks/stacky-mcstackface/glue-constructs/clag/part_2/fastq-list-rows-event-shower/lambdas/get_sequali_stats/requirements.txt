@@ -1,0 +1,3 @@
+pandas==2.2.3
+wrapica==2.27.1.post20240830140737
+sequali==0.11.1

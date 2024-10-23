@@ -9,7 +9,7 @@ class StateBaseSerializer(SerializersBase):
 class StateMinSerializer(StateBaseSerializer):
     class Meta:
         model = State
-        fields = ["orcabus_id", "status"]
+        fields = ["orcabus_id", "status", "timestamp"]
 
 
 class StateSerializer(StateBaseSerializer):

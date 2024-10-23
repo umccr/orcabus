@@ -1,3 +1,7 @@
+from abc import ABC
+
+from rest_framework import serializers
+
 from app.models import Contact
 from .base import SerializersBase
 
@@ -7,7 +11,6 @@ class ContactBaseSerializer(SerializersBase):
 
 
 class ContactSerializer(ContactBaseSerializer):
-
     class Meta:
         model = Contact
         fields = "__all__"
@@ -22,3 +25,8 @@ class ContactDetailSerializer(ContactBaseSerializer):
         model = Contact
         fields = "__all__"
 
+
+class ContactHistorySerializer(ContactBaseSerializer):
+    class Meta:
+        model = Contact.history.model
+        fields = "__all__"
