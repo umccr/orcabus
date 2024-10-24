@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from workflow_manager.serializers.base import SerializersBase
+from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
 from workflow_manager.models import WorkflowRun, AnalysisRun
 from workflow_manager.serializers.state import StateMinSerializer
 
@@ -15,6 +15,11 @@ class WorkflowRunBaseSerializer(SerializersBase):
         latest_state = obj.get_latest_state()
         return StateMinSerializer(latest_state).data if latest_state else None
 
+
+class WorkflowRunListParamSerializer(OptionalFieldsMixin, WorkflowRunBaseSerializer):
+    class Meta:
+        model = WorkflowRun
+        fields = "__all__"
 
 class WorkflowRunSerializer(WorkflowRunBaseSerializer):
     from .workflow import WorkflowMinSerializer
