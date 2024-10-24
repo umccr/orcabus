@@ -24,4 +24,4 @@ alter table s3_object alter column is_current_state set default true;
 -- Create an indexes for now, although partitioning will be required later.
 create index is_current_state_index on s3_object (is_current_state);
 -- This helps the query which resets the current state when ingesting objects.
-create index reset_current_state_index on s3_object (bucket, key, version_id, sequencer);
+create index reset_current_state_index on s3_object (bucket, key, version_id, sequencer, is_current_state);
