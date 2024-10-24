@@ -11,9 +11,7 @@ class SerializersBase(serializers.ModelSerializer):
 
 class OptionalFieldsMixin:
     def make_fields_optional(self):
-        # Get the list of fields to exclude
-        
-            # Make all fields optional
+        # Make all fields optional
         for field in self.fields.values():
             field.required = False
 
