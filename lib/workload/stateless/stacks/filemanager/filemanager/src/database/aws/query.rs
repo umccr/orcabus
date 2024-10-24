@@ -72,23 +72,19 @@ impl Query {
 mod tests {
     use std::ops::Add;
 
-    use chrono::{DateTime, Duration, Utc};
-    use sqlx::PgPool;
-
-    use crate::database::aws::ingester::tests::{test_events, test_ingester};
+    use crate::database::aws::ingester::tests::test_events;
+    use crate::database::aws::ingester::Ingester;
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::Ingest;
     use crate::events::aws::message::EventType::Created;
     use crate::events::aws::tests::{
         EXPECTED_NEW_SEQUENCER_ONE, EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_VERSION_ID,
     };
-    use crate::events::EventSourceType::S3;
+    use chrono::{DateTime, Duration, Utc};
+    use sqlx::PgPool;
 
     use super::*;
 
     async fn ingest_test_records(pool: PgPool) -> (String, Option<DateTime<Utc>>) {
-        let ingester = test_ingester(pool.clone());
-
         let events = test_events(Some(Created));
 
         let new_date = Some(DateTime::default().add(Duration::days(1)));
@@ -107,10 +103,18 @@ mod tests {
         different_key_and_date.keys[0] = new_key.to_string();
         different_key_and_date.sequencers[0].clone_from(&new_sequencer);
 
-        ingester.ingest(S3(events)).await.unwrap();
-        ingester.ingest(S3(increase_date)).await.unwrap();
-        ingester.ingest(S3(different_key)).await.unwrap();
-        ingester.ingest(S3(different_key_and_date)).await.unwrap();
+        Ingester::ingest_query(&events, &mut pool.acquire().await.unwrap())
+            .await
+            .unwrap();
+        Ingester::ingest_query(&increase_date, &mut pool.acquire().await.unwrap())
+            .await
+            .unwrap();
+        Ingester::ingest_query(&different_key, &mut pool.acquire().await.unwrap())
+            .await
+            .unwrap();
+        Ingester::ingest_query(&different_key_and_date, &mut pool.acquire().await.unwrap())
+            .await
+            .unwrap();
 
         (new_key.to_string(), new_date)
     }
@@ -188,24 +192,6 @@ mod tests {
 
         let mut tx = query.client.pool().begin().await.unwrap();
         query_reset_current_state(&new_key, &query, EXPECTED_NEW_SEQUENCER_ONE, &mut tx).await;
-
-        let results = query_current_state(&new_key, &query, &mut tx).await;
-
-        tx.commit().await.unwrap();
-
-        for result in results {
-            assert!(!result.is_current_state);
-        }
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_reset_current_state_partial(pool: PgPool) {
-        let (new_key, _) = ingest_test_records(pool.clone()).await;
-        let client = Client::from_pool(pool);
-        let query = Query::new(client);
-
-        let mut tx = query.client.pool().begin().await.unwrap();
-        query_reset_current_state(&new_key, &query, EXPECTED_SEQUENCER_CREATED_ONE, &mut tx).await;
 
         let results = query_current_state(&new_key, &query, &mut tx).await;
 

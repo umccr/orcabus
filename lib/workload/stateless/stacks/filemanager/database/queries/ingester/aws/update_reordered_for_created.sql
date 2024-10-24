@@ -134,6 +134,7 @@ select
     size,
     is_delete_marker,
     ingest_id,
+    is_current_state,
     attributes,
     -- This is used to simplify re-constructing the FlatS3EventMessages in the Lambda. I.e. this update detected an
     -- out of order created event, so return a created event back.

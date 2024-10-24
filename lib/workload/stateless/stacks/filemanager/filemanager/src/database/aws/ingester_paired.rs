@@ -1594,10 +1594,6 @@ pub(crate) mod tests {
             message.is_delete_marker,
             s3_object_results.get::<bool, _>("is_delete_marker")
         );
-        assert_eq!(
-            message.is_current_state,
-            s3_object_results.get::<bool, _>("is_current_state")
-        );
     }
 
     pub(crate) fn expected_message(

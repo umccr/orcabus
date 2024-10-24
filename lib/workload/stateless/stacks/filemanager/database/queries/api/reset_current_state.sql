@@ -42,8 +42,9 @@ to_update as (
                 -- Only need to update current objects
                 s3_object.is_current_state = true or
                 -- Or objects where there is a newer sequencer than the one being processed.
-                -- This is required in case an out-of-order event is encountered.
-                s3_object.sequencer > input.sequencer
+                -- This is required in case an out-of-order event is encountered. This always
+                -- includes the object being processed as it's required for the above row-logic.
+                s3_object.sequencer >= input.sequencer
             )
     ) s3_object
 )

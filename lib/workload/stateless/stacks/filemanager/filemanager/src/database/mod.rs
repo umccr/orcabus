@@ -241,6 +241,7 @@ pub(crate) mod tests {
         .bind(vec![false])
         .bind(vec![event_type])
         .bind(vec![UuidGenerator::generate()])
+        .bind(vec![false])
         .bind(vec![None::<Json>])
         .fetch_all(pool)
         .await

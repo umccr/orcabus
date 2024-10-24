@@ -213,8 +213,7 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::database::aws::ingester::tests::{
-        assert_row, expected_message, fetch_results, remove_version_ids, replace_sequencers,
-        test_events, test_ingester,
+        assert_row, expected_message, fetch_results, remove_version_ids, test_events, test_ingester,
     };
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::collecter::tests::{
@@ -229,8 +228,8 @@ pub(crate) mod tests {
     use crate::events::aws::message::EventType::Deleted;
     use crate::events::aws::tests::{
         expected_event_record_simple, EXPECTED_QUOTED_E_TAG, EXPECTED_SEQUENCER_CREATED_ONE,
-        EXPECTED_SEQUENCER_CREATED_TWO, EXPECTED_SEQUENCER_DELETED_ONE,
-        EXPECTED_SEQUENCER_DELETED_TWO, EXPECTED_SHA256, EXPECTED_VERSION_ID,
+        EXPECTED_SEQUENCER_CREATED_TWO, EXPECTED_SEQUENCER_DELETED_ONE, EXPECTED_SHA256,
+        EXPECTED_VERSION_ID,
     };
     use crate::events::aws::FlatS3EventMessage;
     use crate::events::EventSourceType::S3;
@@ -274,7 +273,7 @@ pub(crate) mod tests {
         assert_eq!(s3_object_results.len(), 2);
         let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created);
         assert_row(
-            &s3_object_results[0],
+            &s3_object_results[1],
             message,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(Default::default()),
@@ -284,7 +283,7 @@ pub(crate) mod tests {
             .with_sha256(None)
             .with_last_modified_date(None);
         assert_row(
-            &s3_object_results[1],
+            &s3_object_results[0],
             message,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             Some(Default::default()),
@@ -330,13 +329,13 @@ pub(crate) mod tests {
                 .await;
         assert_row(
             &s3_object_results[3],
-            message.clone(),
+            message.clone().with_is_current_state(false),
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(DateTime::default()),
         );
         assert_row(
             &s3_object_results[4],
-            message.with_size(None).with_event_type(Deleted).clone(),
+            message.with_size(None).with_event_type(Deleted),
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             Some(DateTime::default()),
         );
@@ -344,15 +343,9 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_inventory_ingestion_reorder_delete_event(pool: PgPool) {
-        let (s3_object_results, message) = test_inventory_ingestion_reorder(
-            pool,
-            replace_sequencers(
-                remove_version_ids(test_events(Some(Created))),
-                Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
-                Some(EXPECTED_SEQUENCER_DELETED_TWO.to_string()),
-            ),
-        )
-        .await;
+        let mut events = remove_version_ids(test_events(Some(Created)));
+        events.sequencers[0] = Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string());
+        let (s3_object_results, message) = test_inventory_ingestion_reorder(pool, events).await;
         assert_row(
             &s3_object_results[3],
             message
@@ -365,7 +358,7 @@ pub(crate) mod tests {
         );
         assert_row(
             &s3_object_results[4],
-            message,
+            message.with_is_current_state(true),
             Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
             Some(DateTime::default()),
         );
@@ -388,9 +381,9 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 2);
         let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created)
-            .with_is_current_state(true);
+            .with_is_current_state(false);
         assert_row(
-            &s3_object_results[0],
+            &s3_object_results[1],
             message,
             Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
             Some(Default::default()),
@@ -401,7 +394,7 @@ pub(crate) mod tests {
             .with_last_modified_date(None)
             .with_is_current_state(false);
         assert_row(
-            &s3_object_results[1],
+            &s3_object_results[0],
             message,
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             Some(Default::default()),
@@ -447,6 +440,7 @@ pub(crate) mod tests {
             0,
             EXPECTED_LAST_MODIFIED_ONE,
             EXPECTED_QUOTED_E_TAG,
+            true,
         );
         assert_inventory_records(
             &s3_object_results[1],
@@ -454,6 +448,7 @@ pub(crate) mod tests {
             0,
             EXPECTED_LAST_MODIFIED_TWO,
             EXPECTED_QUOTED_E_TAG,
+            false,
         );
         assert_inventory_records(
             &s3_object_results[2],
@@ -461,6 +456,7 @@ pub(crate) mod tests {
             5,
             EXPECTED_LAST_MODIFIED_THREE,
             EXPECTED_QUOTED_E_TAG_KEY_2,
+            true,
         );
 
         (
@@ -473,7 +469,7 @@ pub(crate) mod tests {
                 .with_e_tag(Some(EXPECTED_QUOTED_E_TAG.to_string()))
                 .with_last_modified_date(Some(DateTime::default()))
                 .with_sha256(Some(EXPECTED_SHA256.to_string()))
-                .with_is_current_state(true),
+                .with_is_current_state(false),
         )
     }
 
@@ -500,6 +496,7 @@ pub(crate) mod tests {
             0,
             EXPECTED_LAST_MODIFIED_ONE,
             EXPECTED_QUOTED_E_TAG,
+            true,
         );
         assert_inventory_records(
             &s3_object_results[1],
@@ -507,6 +504,7 @@ pub(crate) mod tests {
             0,
             EXPECTED_LAST_MODIFIED_TWO,
             EXPECTED_QUOTED_E_TAG,
+            true,
         );
         assert_inventory_records(
             &s3_object_results[2],
@@ -514,6 +512,7 @@ pub(crate) mod tests {
             5,
             EXPECTED_LAST_MODIFIED_THREE,
             EXPECTED_QUOTED_E_TAG_KEY_2,
+            true,
         );
     }
 
@@ -523,6 +522,7 @@ pub(crate) mod tests {
         size: i64,
         last_modified: &str,
         e_tag: &str,
+        is_current_state: bool,
     ) {
         let message = FlatS3EventMessage::default()
             .with_bucket("bucket".to_string())
@@ -531,7 +531,7 @@ pub(crate) mod tests {
             .with_version_id(default_version_id())
             .with_last_modified_date(Some(last_modified.parse().unwrap()))
             .with_e_tag(Some(e_tag.to_string()))
-            .with_is_current_state(true);
+            .with_is_current_state(is_current_state);
 
         assert_row(row, message, Some("".to_string()), None);
     }
