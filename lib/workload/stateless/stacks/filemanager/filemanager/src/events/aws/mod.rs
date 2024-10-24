@@ -14,13 +14,26 @@ use crate::events::aws::message::{default_version_id, EventType};
 use crate::events::aws::EventType::{Created, Deleted, Other};
 use crate::uuid::UuidGenerator;
 use sea_orm::prelude::Json;
+use strum::{EnumCount, FromRepr};
 
 pub mod collecter;
 pub mod inventory;
 pub mod message;
 
 /// A wrapper around AWS storage types with sqlx support.
-#[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Clone,
+    sqlx::Type,
+    Serialize,
+    Deserialize,
+    FromRepr,
+    EnumCount,
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[sqlx(type_name = "storage_class")]
 pub enum StorageClass {

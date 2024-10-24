@@ -41,6 +41,18 @@ Within the application code, out of order events are removed within the [events]
 By default, filemanager makes no assumption about the ordering of events, and ingests events in the order that they arrive.
 The sequencer value is stored on the `s3_object` table, which allows ordering entries when querying.
 
+### Current vs historical records
+
+Since the filemanager database keeps growing as records are never deleted, the current state of records is stored on a
+`is_current_state` column. This column indicates which records represent real objects in S3, and which records are
+historical data that represent previously deleted objects.
+
+This value is computed when events are ingested, and automatically kept up to date. This is done at ingestion because
+the performance impact of determining this is too great on every API call. This does incur a performance penalty for
+ingestion. However, it should be minimal as only other current records need to be considered. This is because records
+only need to transition from current to historical (and not the other way around). Records which are current represent
+a smaller subset of all records, meaning that only a smaller part of the dataset needs to be queried when ingesting.
+
 #### Paired ingest mode
 Ordering events on ingestion can be turned on by setting `PAIRED_INGEST_MODE=true` as an environment variable. This has
 a performance cost on ingestion, but it removes the requirment to order events when querying the database.

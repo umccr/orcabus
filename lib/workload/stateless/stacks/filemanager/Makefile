@@ -70,7 +70,7 @@ clean: docker-clean
 psql:
 	@docker compose exec postgres psql filemanager -U filemanager
 restore:
-	@docker compose exec postgres pg_restore -U filemanager -f $(FILE)
+	@docker compose exec -T postgres pg_restore -U filemanager -d filemanager
 
 ## Targets related to top-level database management and S3.
 apply-schema:

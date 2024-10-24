@@ -307,7 +307,7 @@ impl<'a> Collecter<'a> {
             ..Default::default()
         };
         let moved_object = ListQueryBuilder::new(database_client.connection_ref())
-            .filter_all(filter, true)?
+            .filter_all(filter, true, false)?
             .one()
             .await
             .ok()
@@ -588,7 +588,8 @@ pub(crate) mod tests {
             .with_ingest_id(ingest_id)
             .with_n(1)
             .build(&client)
-            .await;
+            .await
+            .unwrap();
 
         collecter.raw_events = FlatS3EventMessages(vec![
             expected_s3_event_message().with_version_id(default_version_id())

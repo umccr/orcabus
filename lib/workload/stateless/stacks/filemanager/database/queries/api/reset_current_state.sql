@@ -1,6 +1,6 @@
 -- Resets the `is_current_state` to false for a set of objects based on the `bucket`, `key`, `version_id`
--- and `sequencer`. This is used to reset the current state so that a new object can have it's `is_current_state`
--- set to true.
+-- and `sequencer`. This is used to update the current state so that a new object can have it's `is_current_state`
+-- set to true based on whether it is a `Created` or `Deleted` event.
 
 -- Unnest input.
 with input as (
@@ -34,6 +34,10 @@ to_update as (
             end as updated_state
         from s3_object
         where
+            -- This should be fairly efficient as it's only targeting objects where `is_current_state` is true,
+            -- or objects with the highest sequencer values (in case of an out-of-order event). This means that
+            -- although there is a performance impact for running this on ingestion, it should be minimal with
+            -- the right indexes.
             input.bucket = s3_object.bucket and
             input.key = s3_object.key and
             input.version_id = s3_object.version_id and

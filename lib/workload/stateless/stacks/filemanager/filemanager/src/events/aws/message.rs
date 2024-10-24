@@ -5,9 +5,12 @@ use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 use crate::uuid::UuidGenerator;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum::{EnumCount, FromRepr};
 
 /// The type of S3 event.
-#[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type)]
+#[derive(
+    Debug, Default, Eq, PartialEq, Ord, PartialOrd, Clone, Hash, sqlx::Type, FromRepr, EnumCount,
+)]
 #[sqlx(type_name = "event_type")]
 pub enum EventType {
     #[default]

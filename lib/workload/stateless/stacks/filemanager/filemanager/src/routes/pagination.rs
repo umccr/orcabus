@@ -239,6 +239,7 @@ mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3Object> =
@@ -311,6 +312,7 @@ mod tests {
             .with_n(1001)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3Object> =
@@ -337,6 +339,7 @@ mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3Object> = response_from_get(
@@ -370,6 +373,7 @@ mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3Object> = response_from_get(
@@ -406,6 +410,7 @@ mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3Object> =

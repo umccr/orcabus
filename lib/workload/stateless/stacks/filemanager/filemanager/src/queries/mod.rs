@@ -3,16 +3,20 @@
 
 use std::ops::Add;
 
+use crate::database::aws::ingester::Ingester;
 use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
 use crate::database::entities::s3_object::Model as S3Object;
 use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
 use crate::database::Client;
+use crate::error::Result;
+use crate::events::aws;
+use crate::events::aws::{message, FlatS3EventMessage, FlatS3EventMessages};
 use crate::uuid::UuidGenerator;
 use chrono::{DateTime, Days};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use sea_orm::Set;
-use sea_orm::{ActiveModelTrait, TryIntoModel};
+use sea_orm::TryIntoModel;
 use serde_json::json;
 use strum::EnumCount;
 use uuid::Uuid;
@@ -42,28 +46,39 @@ impl Entries {
         bucket_divisor: usize,
         key_divisor: usize,
         ingest_id: Option<Uuid>,
-    ) -> Vec<S3Object> {
+    ) -> Result<Vec<S3Object>> {
         let mut output = vec![];
 
-        let mut entries: Vec<_> = (0..n)
-            .map(|index| Self::generate_entry(index, bucket_divisor, key_divisor, ingest_id))
+        let mut entries: Vec<(_, _)> = (0..n)
+            .map(|index| {
+                let uuid = UuidGenerator::generate();
+                let ingest_id = ingest_id.unwrap_or_else(UuidGenerator::generate);
+                (
+                    Self::generate_entry(index, bucket_divisor, key_divisor, ingest_id, uuid),
+                    Self::generate_event_message(
+                        index,
+                        bucket_divisor,
+                        key_divisor,
+                        ingest_id,
+                        uuid,
+                    ),
+                )
+            })
             .collect();
 
         if shuffle {
             entries.shuffle(&mut thread_rng());
         }
 
-        for s3_object in entries {
-            s3_object
-                .clone()
-                .insert(client.connection_ref())
-                .await
-                .unwrap();
+        for (s3_object, message) in entries {
+            Ingester::new(client.clone())
+                .ingest_events(FlatS3EventMessages(vec![message]).into())
+                .await?;
 
-            output.push(s3_object.try_into_model().unwrap());
+            output.push(s3_object.try_into_model()?);
         }
 
-        output
+        Ok(output)
     }
 
     /// Generate a single record entry using the index.
@@ -71,9 +86,11 @@ impl Entries {
         index: usize,
         bucket_divisor: usize,
         key_divisor: usize,
-        ingest_id: Option<Uuid>,
+        ingest_id: Uuid,
+        uuid: Uuid,
     ) -> ActiveS3Object {
-        let event = Self::event_type(index);
+        let event = EventType::from_repr((index % (EventType::COUNT - 1)) as u8)
+            .unwrap_or(EventType::Created);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
         let attributes = Some(json!({
             "attributeId": format!("{}", index),
@@ -83,8 +100,8 @@ impl Entries {
         }));
 
         ActiveS3Object {
-            s3_object_id: Set(UuidGenerator::generate()),
-            ingest_id: Set(Some(ingest_id.unwrap_or_else(UuidGenerator::generate))),
+            s3_object_id: Set(uuid),
+            ingest_id: Set(Some(ingest_id)),
             event_type: Set(event.clone()),
             bucket: Set((index / bucket_divisor).to_string()),
             key: Set((index / key_divisor).to_string()),
@@ -94,32 +111,56 @@ impl Entries {
             sha256: Set(Some(index.to_string())),
             last_modified_date: date(),
             e_tag: Set(Some(index.to_string())),
-            storage_class: Set(Some(Self::storage_class(index))),
+            storage_class: Set(StorageClass::from_repr((index % StorageClass::COUNT) as u8)),
             sequencer: Set(Some(index.to_string())),
             is_delete_marker: Set(false),
             is_current_state: Set(event == EventType::Created),
             number_duplicate_events: Set(0),
             attributes: Set(attributes),
-            deleted_date: if event == EventType::Deleted {
-                date()
-            } else {
-                Set(None)
-            },
-            deleted_sequencer: if event == EventType::Deleted {
-                Set(Some(index.to_string()))
-            } else {
-                Set(None)
-            },
+            deleted_date: Set(None),
+            deleted_sequencer: Set(None),
             number_reordered: Set(0),
         }
     }
 
-    fn event_type(index: usize) -> EventType {
-        EventType::from_repr((index % (EventType::COUNT - 1)) as u8).unwrap()
-    }
+    /// Generate a single record event message.
+    pub fn generate_event_message(
+        index: usize,
+        bucket_divisor: usize,
+        key_divisor: usize,
+        ingest_id: Uuid,
+        uuid: Uuid,
+    ) -> FlatS3EventMessage {
+        let event = message::EventType::from_repr(index % (EventType::COUNT - 1))
+            .unwrap_or(message::EventType::Created);
+        let date = || Some(DateTime::default().add(Days::new(index as u64)));
+        let attributes = Some(json!({
+            "attributeId": format!("{}", index),
+            "nestedId": {
+                "attributeId": format!("{}", index)
+            }
+        }));
 
-    fn storage_class(index: usize) -> StorageClass {
-        StorageClass::from_repr((index % StorageClass::COUNT) as u8).unwrap()
+        FlatS3EventMessage {
+            s3_object_id: uuid,
+            sequencer: Some(index.to_string()),
+            bucket: (index / bucket_divisor).to_string(),
+            key: (index / key_divisor).to_string(),
+            version_id: (index / key_divisor).to_string(),
+            size: Some(index as i64),
+            e_tag: Some(index.to_string()),
+            sha256: Some(index.to_string()),
+            storage_class: aws::StorageClass::from_repr(index % StorageClass::COUNT),
+            last_modified_date: date(),
+            event_time: date(),
+            is_current_state: event == message::EventType::Created,
+            event_type: event,
+            is_delete_marker: false,
+            ingest_id: Some(ingest_id),
+            attributes,
+            number_duplicate_events: 0,
+            number_reordered: 0,
+        }
     }
 }
 
@@ -165,7 +206,7 @@ impl EntriesBuilder {
     }
 
     /// Build the entries and initialize the database.
-    pub async fn build(self, client: &Client) -> Entries {
+    pub async fn build(self, client: &Client) -> Result<Entries> {
         let mut entries = Entries::initialize_database(
             client,
             self.n,
@@ -174,12 +215,12 @@ impl EntriesBuilder {
             self.key_divisor,
             self.ingest_id,
         )
-        .await;
+        .await?;
 
         // Return the correct ordering for test purposes
         entries.sort_by(|a, b| a.sequencer.cmp(&b.sequencer));
 
-        entries.into()
+        Ok(entries.into())
     }
 }
 
