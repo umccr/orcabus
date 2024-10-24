@@ -80,6 +80,8 @@ class OrcaBusBaseModel(models.Model):
     class Meta:
         abstract = True
 
+    orcabus_id_prefix = None
+
     orcabus_id = models.CharField(
         primary_key=True,
         unique=True,
@@ -90,9 +92,18 @@ class OrcaBusBaseModel(models.Model):
     )
 
     def save(self, *args, **kwargs):
+        # handle the OrcaBus ID
         if not self.orcabus_id:
+            # if no OrcaBus ID was provided, then generate one
             self.orcabus_id = ulid.new().str
-        self.full_clean()  # make sure we are validating
+        else:
+            # check provided OrcaBus ID
+            if len(self.orcabus_id) > 26:
+                # assume the OrcaBus ID carries the prefix
+                # we strip it off and continue to the validation
+                l = len(self.orcabus_id_prefix)
+                self.orcabus_id = str(self.orcabus_id)[l:]
+        self.full_clean()  # make sure we are validating the inputs (especially the OrcaBus ID)
         return super(OrcaBusBaseModel, self).save(*args, **kwargs)
 
 
