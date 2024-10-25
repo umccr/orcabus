@@ -131,12 +131,11 @@ pub async fn update_s3_collection_attributes(
 ) -> Result<extract::Json<Vec<S3>>> {
     let txn = state.database_client().connection_ref().begin().await?;
 
-    let mut results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn)
-        .filter_all(filter_all, wildcard.case_sensitive())?;
-
-    if list.current_state() {
-        results = results.current_state();
-    }
+    let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(&txn).filter_all(
+        filter_all,
+        wildcard.case_sensitive(),
+        list.current_state(),
+    )?;
 
     let results = results.update_s3_attributes(patch).await?.all().await?;
 
@@ -177,7 +176,8 @@ mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_attributes(
             state.database_client(),
@@ -210,7 +210,8 @@ mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_attributes(
             state.database_client(),
@@ -244,7 +245,8 @@ mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_attributes(
             state.database_client(),
@@ -294,7 +296,8 @@ mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_attributes(
             state.database_client(),
@@ -344,7 +347,8 @@ mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_attributes(
             state.database_client(),
@@ -388,7 +392,8 @@ mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_attributes(
             state.database_client(),
@@ -428,7 +433,8 @@ mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_many(
             state.database_client(),
@@ -465,7 +471,8 @@ mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_many(
             state.database_client(),
@@ -511,7 +518,8 @@ mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_many(
             state.database_client(),
@@ -542,7 +550,8 @@ mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_many(
             state.database_client(),

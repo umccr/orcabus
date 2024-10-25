@@ -27,7 +27,6 @@ pub trait CredentialGenerator {
 /// A database client handles database interaction.
 #[derive(Debug, Clone)]
 pub struct Client {
-    // Use a Cow here to allow an owned pool or a shared reference to a pool.
     connection: DatabaseConnection,
 }
 
@@ -242,6 +241,7 @@ pub(crate) mod tests {
         .bind(vec![false])
         .bind(vec![event_type])
         .bind(vec![UuidGenerator::generate()])
+        .bind(vec![false])
         .bind(vec![None::<Json>])
         .fetch_all(pool)
         .await

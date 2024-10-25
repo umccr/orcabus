@@ -96,6 +96,7 @@ pub async fn presign_s3_by_id(
                 ..Default::default()
             },
             true,
+            true,
         )?
         .all()
         .await?;
@@ -158,6 +159,7 @@ mod tests {
         let entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let first = entries.first().unwrap();
@@ -194,7 +196,8 @@ mod tests {
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result = response_from_get::<Option<Url>>(
             state,
@@ -223,7 +226,8 @@ mod tests {
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result = response_from_get::<Option<Url>>(
             state,
@@ -260,7 +264,8 @@ mod tests {
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result: Option<Url> = response_from_get(
             state,
@@ -285,7 +290,8 @@ mod tests {
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result: Option<Url> = response_from_get(
             state,
@@ -312,7 +318,8 @@ mod tests {
             .with_key_divisor(3)
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result: Option<Url> = response_from_get(
             state,

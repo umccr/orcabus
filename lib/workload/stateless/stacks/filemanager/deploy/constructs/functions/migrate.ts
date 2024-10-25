@@ -16,7 +16,8 @@ export class MigrateFunction extends fn.Function {
   constructor(scope: Construct, id: string, props: MigrateFunctionProps) {
     super(scope, id, {
       package: 'filemanager-migrate-lambda',
-      timeout: Duration.minutes(2),
+      // This needs to be higher to account for longer migrations.
+      timeout: Duration.minutes(15),
       ...props,
     });
 

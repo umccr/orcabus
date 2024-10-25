@@ -38,6 +38,7 @@ pub struct Model {
     pub deleted_sequencer: Option<String>,
     pub number_reordered: i64,
     pub ingest_id: Option<Uuid>,
+    pub is_current_state: bool,
 }
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}

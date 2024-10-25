@@ -1,4 +1,5 @@
 from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
+from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
 from workflow_manager.models import Analysis, Workflow, AnalysisContext
 
 
