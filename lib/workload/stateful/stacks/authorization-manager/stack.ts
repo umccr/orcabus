@@ -5,7 +5,7 @@ import { CfnPolicyStore, CfnPolicy, CfnIdentitySource } from 'aws-cdk-lib/aws-ve
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 
 import cedarSchemaJson from './cedarSchema.json';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
 import path from 'path';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
@@ -112,6 +112,7 @@ export class AuthorizationManagerStack extends Stack {
   }) {
     const adminLambdaAuth = new PythonFunction(this, 'AdminHTTPAuthorizerLambda', {
       entry: path.join(__dirname, 'http-lambda-authorizer'),
+      architecture: Architecture.ARM_64,
       runtime: Runtime.PYTHON_3_12,
       index: 'admin_access_authorizer.py',
       retryAttempts: 0,
