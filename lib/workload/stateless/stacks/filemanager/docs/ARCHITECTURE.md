@@ -50,10 +50,19 @@ historical data that represent previously deleted objects.
 This value is computed when events are ingested, and automatically kept up to date. This is done at ingestion because
 the performance impact of determining this is too great on every API call. This does incur a performance penalty for
 ingestion. However, it should be minimal as only other current records need to be considered. This is because records
-only need to transition from current to historical (and not the other way around). Records which are current represent
-a smaller subset of all records, meaning that only a smaller part of the dataset needs to be queried when ingesting.
+only need to transition from current to historical (and not the other way around). 
+
+For example, consider a `Created` event `"A"` for a given key. `"A"` starts with `is_current_state` set to true.
+Then, another `Created` event `"B"` comes in for the same key, which represents overwriting that object. Now, `"B"`
+has `is_current_state` set to true. The ingester needs to flip `is_current_state` to false on `"A"` as it's no longer current.
+This also applies if a new version of an object is created.
+
+Since records which are current represent a smaller subset of all records, only a smaller part of the database needs to be
+queried to do this logic. This is currently performant enough to happen at ingestion, however if it becomes an issue,
+it could be performed asynchronously in a different process.
 
 #### Paired ingest mode
+
 Ordering events on ingestion can be turned on by setting `PAIRED_INGEST_MODE=true` as an environment variable. This has
 a performance cost on ingestion, but it removes the requirment to order events when querying the database.
 
