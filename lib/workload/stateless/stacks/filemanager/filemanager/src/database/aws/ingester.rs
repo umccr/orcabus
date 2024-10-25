@@ -790,6 +790,44 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_objects_reset_current_state_versioned(pool: PgPool) {
+        let ingester = test_ingester(pool);
+
+        let mut events_one = test_events(Some(Created));
+        events_one.sequencers[0] = Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string());
+        events_one.version_ids[0] = "2".to_string();
+        // Previous version of the object.
+        let mut events_two = test_events(Some(Created));
+        events_two.version_ids[0] = "1".to_string();
+
+        // Out of order.
+        ingester.ingest(S3(events_one)).await.unwrap();
+        ingester.ingest(S3(events_two)).await.unwrap();
+
+        let s3_object_results = fetch_results_ordered(&ingester).await;
+
+        assert_eq!(s3_object_results.len(), 2);
+        assert_with(
+            &s3_object_results[0],
+            Some(0),
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            "1".to_string(),
+            Some(Default::default()),
+            Created,
+            false,
+        );
+        assert_with(
+            &s3_object_results[1],
+            Some(0),
+            Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string()),
+            "2".to_string(),
+            Some(Default::default()),
+            Created,
+            true,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_permutations_small_without_version_id(pool: PgPool) {
         let event_permutations = vec![
             FlatS3EventMessage::new_with_generated_id()

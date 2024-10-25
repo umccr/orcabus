@@ -40,7 +40,8 @@ to_update as (
             -- the right indexes.
             input.bucket = s3_object.bucket and
             input.key = s3_object.key and
-            input.version_id = s3_object.version_id and
+            -- Note that we need to fetch all versions of an object, because when a record is updated,
+            -- previous versions need to have their `is_current_state` set to false.
             -- This is an optimization which prevents querying against all objects in the set.
             (
                 -- Only need to update current objects

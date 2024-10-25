@@ -9,8 +9,8 @@ alter table s3_object add column is_current_state boolean not null default false
 with to_update as (
     -- Get all records representing the current state.
     select * from (
-        select distinct on (bucket, key, version_id) * from s3_object
-        order by bucket, key, version_id, sequencer desc
+        select distinct on (bucket, key) * from s3_object
+        order by bucket, key, sequencer desc
     ) as s3_object
     where event_type = 'Created' and is_delete_marker = false
 )
@@ -26,6 +26,6 @@ alter table s3_object alter column is_current_state set default true;
 -- Create an indexes for now, although partitioning will be required later.
 create index is_current_state_index on s3_object (is_current_state);
 -- This helps the query which resets the current state when ingesting objects.
-create index reset_current_state_index on s3_object (bucket, key, version_id, sequencer, is_current_state);
+create index reset_current_state_index on s3_object (bucket, key, sequencer, is_current_state);
 
 commit;
