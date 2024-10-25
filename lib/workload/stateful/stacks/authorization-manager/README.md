@@ -10,7 +10,10 @@ The current stack deploys AWS Verified Permissions, defining an identity source 
 
 - **UMCCR Cognito User Pool**
 
-  Sourced from the UMCCR Cognito User Pool, defined in the infrastructure Terraform repository. The AWS Cognito User Pool is expected to have an `admin` group, which will be used in the policy.
+  Sourced from the UMCCR Cognito User Pool, defined in the infrastructure Terraform repository. The AWS Cognito User Pool
+  is expected to have an `admin` group, which will be used in the policy. Note that the JWT must be generated with the
+  latest token containing the proper Cognito group claims for it to work. This also applies when a user is removed from
+  the group; the JWT must expire to become invalid.
 
 ### Policy
 
