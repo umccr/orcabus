@@ -225,7 +225,6 @@ export class ApiGatewayConstruct extends Construct {
     return new HttpLambdaAuthorizer('AdminGroupLambdaAuthorizer', lambdaAuthorizer, {
       authorizerName: 'CognitoAdminGroupLambdaAuthorizer',
       responseTypes: [HttpLambdaResponseType.SIMPLE],
-      resultsCacheTtl: Duration.minutes(0),
     });
   }
 
