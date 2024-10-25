@@ -54,14 +54,14 @@
     "Get Default Pipeline Version": {
       "Type": "Task",
       "Parameters": {
-        "Name": "__pipeline_version_ssm_path__"
+        "Name": "${__pipeline_version_ssm_path__}"
       },
       "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
-      "Next": "Generate Batch Submission Job",
-      "ResultPath": "$.get_default_pipeline_version_step",
       "ResultSelector": {
-        "default_pipeline_version.$": "$.Parameter.String"
-      }
+        "default_pipeline_version.$": "$.Parameter.Value"
+      },
+      "ResultPath": "$.get_default_pipeline_version_step",
+      "Next": "Generate Batch Submission Job"
     },
     "Generate Batch Submission Job": {
       "Type": "Task",
@@ -71,7 +71,8 @@
         "Payload": {
           "inputs.$": "$.workflow_inputs.payload.data.inputs",
           "engine_parameters.$": "$.workflow_inputs.payload.data.engineParameters",
-          "default_pipeline_version.$": "$.get_default_pipeline_version_step.default_pipeline_version"
+          "default_pipeline_version.$": "$.get_default_pipeline_version_step.default_pipeline_version",
+          "portal_run_id.$": "$.workflow_inputs.portalRunId"
         }
       },
       "Retry": [
@@ -99,7 +100,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::batch:submitJob",
       "Parameters": {
-        "JobName": "$.workflow_inputs.workflowRunName",
+        "JobName.$": "$.workflow_inputs.workflowRunName",
         "JobDefinition": "${__job_definition_arn__}",
         "JobQueue": "${__job_queue_name__}",
         "ContainerOverrides": {
@@ -111,7 +112,7 @@
         "Parameters.$": "$.get_batch_submission_step.parameters"
       },
       "ResultSelector": {
-        "jobId.$": "$.Output.jobId"
+        "jobId.$": "$.JobId"
       },
       "ResultPath": "$.submit_oncoanalyser_job_step",
       "Next": "Append Job Id to Engine Parameters"
@@ -136,7 +137,7 @@
         "UpdateExpression": "SET engine_parameters = :engine_parameters",
         "ExpressionAttributeValues": {
           ":engine_parameters": {
-            "S.$": "States.StringToJson($.merge_engine_parameters_step.engine_parameters)"
+            "S.$": "States.JsonToString($.merge_engine_parameters_step.engine_parameters)"
           }
         }
       },

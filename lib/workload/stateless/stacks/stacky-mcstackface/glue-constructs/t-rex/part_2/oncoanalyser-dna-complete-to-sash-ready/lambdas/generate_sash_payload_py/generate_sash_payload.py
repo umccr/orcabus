@@ -52,9 +52,9 @@ def join_url_paths(url: str, path_ext: str) -> str:
     return str(
         urlunparse(
             (
-                url_obj.netloc,
                 url_obj.scheme,
-                url_path,
+                url_obj.netloc,
+                str(url_path),
                 None, None, None
             )
         )

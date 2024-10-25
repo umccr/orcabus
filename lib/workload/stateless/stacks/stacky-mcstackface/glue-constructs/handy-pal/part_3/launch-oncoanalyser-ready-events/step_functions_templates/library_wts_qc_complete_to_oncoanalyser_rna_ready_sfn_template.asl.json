@@ -185,7 +185,8 @@
                   "tumor_library_id.$": "$.payload_data.library.libraryId",
                   "tumor_fastq_list_rows.$": "$.get_parameters_step.tumor_fastq_list_rows",
                   "tumor_fastq_list_row_ids.$": "$.get_parameters_step.tumor_fastq_list_row_ids",
-                  "subject_id.$": "$.get_library_item_step.Item.subject_id.S"
+                  "subject_id.$": "$.get_library_item_step.Item.subject_id.S",
+                  "individual_id.$": "$.get_subject_obj_step.individual_id"
                 }
               },
               "Retry": [
@@ -243,7 +244,7 @@
           "StatePayload": {
             "portal_run_id.$": "$.get_parameters_step.portal_run_id",
             "workflow_run_name.$": "$.get_parameters_step.workflow_run_name",
-            "linked_libraries": "$.generate_draft_event_payload_data_step.linked_libraries",
+            "linked_libraries.$": "$.generate_draft_event_payload_data_step.linked_libraries",
             "data_inputs.$": "$.generate_draft_event_payload_data_step.input_event_data",
             "data_tags.$": "$.generate_draft_event_payload_data_step.event_tags"
           }

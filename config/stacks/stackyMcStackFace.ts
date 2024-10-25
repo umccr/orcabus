@@ -1,26 +1,26 @@
 import {
-  mockPrimaryOutputUriSsmParameterName,
-  mockAnalysisCacheUriSsmParameterName,
-  mockAnalysisLogsUriSsmParameterName,
-  mockAnalysisOutputUriSsmParameterName,
-  mockEventBusName,
-  mockIcav2ProjectIdSsmParameterName,
-  mockInputMakerTableName,
-  mockInstrumentRunTableName,
-  mockWorkflowManagerTableName,
-  mockCttsov2InputGlueTableName,
+  stackyPrimaryOutputUriSsmParameterName,
+  stackyAnalysisCacheUriSsmParameterName,
+  stackyAnalysisLogsUriSsmParameterName,
+  stackyAnalysisOutputUriSsmParameterName,
+  stackyEventBusName,
+  stackyIcav2ProjectIdSsmParameterName,
+  stackyInputMakerTableName,
+  stackyInstrumentRunTableName,
+  stackyWorkflowManagerTableName,
+  stackyCttsov2InputGlueTableName,
   icav2AccessTokenSecretName,
-  mockWgtsQcGlueTableName,
+  stackyWgtsQcGlueTableName,
   AppStage,
-  mockTnGlueTableName,
-  mockWtsGlueTableName,
-  mockUmccriseGlueTableName,
-  mockRnasumGlueTableName,
-  mockPierianDxGlueTableName,
+  stackyTnGlueTableName,
+  stackyWtsGlueTableName,
+  stackyUmccriseGlueTableName,
+  stackyRnasumGlueTableName,
+  stackyPierianDxGlueTableName,
   pieriandxProjectInfoSsmParameterPath,
   redcapLambdaFunctionName,
-  mockOncoanalyserGlueTableName,
-  mockOncoanalyserBothSashGlueTableName,
+  stackyOncoanalyserGlueTableName,
+  stackyOncoanalyserBothSashGlueTableName,
 } from '../constants';
 import { GlueStackConfig } from '../../lib/workload/stateless/stacks/stacky-mcstackface/glue-constructs';
 import { StackyStatefulTablesConfig } from '../../lib/workload/stateful/stacks/stacky-mcstackface-dynamodb';
@@ -28,33 +28,33 @@ import { StackyStatefulTablesConfig } from '../../lib/workload/stateful/stacks/s
 export const getGlueStackProps = (stage: AppStage): GlueStackConfig => {
   return {
     /* Events */
-    eventBusName: mockEventBusName,
+    eventBusName: stackyEventBusName,
 
     /* Tables */
-    inputMakerTableName: mockInputMakerTableName,
-    instrumentRunTableName: mockInstrumentRunTableName,
-    workflowManagerTableName: mockWorkflowManagerTableName,
-    cttsov2GlueTableName: mockCttsov2InputGlueTableName,
-    wgtsQcGlueTableName: mockWgtsQcGlueTableName,
-    tnGlueTableName: mockTnGlueTableName,
-    wtsGlueTableName: mockWtsGlueTableName,
-    umccriseGlueTableName: mockUmccriseGlueTableName,
-    rnasumGlueTableName: mockRnasumGlueTableName,
-    pieriandxGlueTableName: mockPierianDxGlueTableName,
-    oncoanalyserGlueTableName: mockOncoanalyserGlueTableName,
-    oncoanalyserBothSashGlueTableName: mockOncoanalyserBothSashGlueTableName,
+    inputMakerTableName: stackyInputMakerTableName,
+    instrumentRunTableName: stackyInstrumentRunTableName,
+    workflowManagerTableName: stackyWorkflowManagerTableName,
+    cttsov2GlueTableName: stackyCttsov2InputGlueTableName,
+    wgtsQcGlueTableName: stackyWgtsQcGlueTableName,
+    tnGlueTableName: stackyTnGlueTableName,
+    wtsGlueTableName: stackyWtsGlueTableName,
+    umccriseGlueTableName: stackyUmccriseGlueTableName,
+    rnasumGlueTableName: stackyRnasumGlueTableName,
+    pieriandxGlueTableName: stackyPierianDxGlueTableName,
+    oncoanalyserGlueTableName: stackyOncoanalyserGlueTableName,
+    oncoanalyserBothSashGlueTableName: stackyOncoanalyserBothSashGlueTableName,
 
     /* SSM Parameters */
-    analysisCacheUriSsmParameterName: mockAnalysisCacheUriSsmParameterName,
-    analysisOutputUriSsmParameterName: mockAnalysisOutputUriSsmParameterName,
-    icav2ProjectIdSsmParameterName: mockIcav2ProjectIdSsmParameterName,
-    analysisLogsUriSsmParameterName: mockAnalysisLogsUriSsmParameterName,
+    analysisCacheUriSsmParameterName: stackyAnalysisCacheUriSsmParameterName,
+    analysisOutputUriSsmParameterName: stackyAnalysisOutputUriSsmParameterName,
+    icav2ProjectIdSsmParameterName: stackyIcav2ProjectIdSsmParameterName,
+    analysisLogsUriSsmParameterName: stackyAnalysisLogsUriSsmParameterName,
 
     /* Secrets */
     icav2AccessTokenSecretName: icav2AccessTokenSecretName[stage],
 
     /* BSSH SSM Parameters */
-    bsshOutputFastqCopyUriSsmParameterName: mockPrimaryOutputUriSsmParameterName,
+    bsshOutputFastqCopyUriSsmParameterName: stackyPrimaryOutputUriSsmParameterName,
 
     /* PierianDx SSM Parameters */
     pieriandxProjectInfoSsmParameterPath: pieriandxProjectInfoSsmParameterPath,
@@ -64,17 +64,17 @@ export const getGlueStackProps = (stage: AppStage): GlueStackConfig => {
 
 export const getStatefulGlueStackProps = (): StackyStatefulTablesConfig => {
   return {
-    dynamodbInstrumentRunManagerTableName: mockInstrumentRunTableName,
-    dynamodbWorkflowManagerTableName: mockWorkflowManagerTableName,
-    dynamodbInputGlueTableName: mockInputMakerTableName,
-    dynamodbCttsov2WorkflowGlueTableName: mockCttsov2InputGlueTableName,
-    dynamodbWgtsQcGlueTableName: mockWgtsQcGlueTableName,
-    dynamodbTnGlueTableName: mockTnGlueTableName,
-    dynamodbWtsGlueTableName: mockWtsGlueTableName,
-    dynamodbUmccriseGlueTableName: mockUmccriseGlueTableName,
-    dynamodbRnasumGlueTableName: mockRnasumGlueTableName,
-    dynamodbPieriandxGlueTableName: mockPierianDxGlueTableName,
-    dynamodbOncoanalyserGlueTableName: mockOncoanalyserGlueTableName,
-    dynamodbOncoanalyserBothSashGlueTableName: mockOncoanalyserBothSashGlueTableName,
+    dynamodbInstrumentRunManagerTableName: stackyInstrumentRunTableName,
+    dynamodbWorkflowManagerTableName: stackyWorkflowManagerTableName,
+    dynamodbInputGlueTableName: stackyInputMakerTableName,
+    dynamodbCttsov2WorkflowGlueTableName: stackyCttsov2InputGlueTableName,
+    dynamodbWgtsQcGlueTableName: stackyWgtsQcGlueTableName,
+    dynamodbTnGlueTableName: stackyTnGlueTableName,
+    dynamodbWtsGlueTableName: stackyWtsGlueTableName,
+    dynamodbUmccriseGlueTableName: stackyUmccriseGlueTableName,
+    dynamodbRnasumGlueTableName: stackyRnasumGlueTableName,
+    dynamodbPieriandxGlueTableName: stackyPierianDxGlueTableName,
+    dynamodbOncoanalyserGlueTableName: stackyOncoanalyserGlueTableName,
+    dynamodbOncoanalyserBothSashGlueTableName: stackyOncoanalyserBothSashGlueTableName,
   };
 };

@@ -111,7 +111,7 @@ export class WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct extends Con
     const submitJobPolicy = new iam.Policy(this, 'submitJobPolicy', {
       statements: [
         new iam.PolicyStatement({
-          actions: ['batch:SubmitJob'],
+          actions: ['batch:SubmitJob', 'batch:TagResource'],
           resources: [
             props.batchJobDefinitionObj.jobDefinitionArn,
             props.batchJobQueueObj.jobQueueArn,

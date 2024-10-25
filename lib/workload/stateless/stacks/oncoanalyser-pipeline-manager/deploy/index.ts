@@ -93,10 +93,10 @@ export class OncoanalyserNfPipelineManagerStack extends cdk.Stack {
     Build lambdas
     */
     const setBatchParametersLambdaObj = new PythonFunction(this, 'get_batch_parameters', {
-      entry: path.join(__dirname, '../lambdas/get_outputs_py'),
+      entry: path.join(__dirname, '../lambdas/generate_batch_parameters_py'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
-      index: 'get_outputs.py',
+      index: 'generate_batch_parameters.py',
       handler: 'handler',
       memorySize: 1024,
     });

@@ -50,7 +50,7 @@ def handler(event, context) -> Dict:
             "analysisType": ANALYSIS_TYPE,
             "subjectId": subject_id,
             "tumorRnaSampleId": tumor_library_id,
-            "tumorRnaFastqUriList": flatten(
+            "tumorRnaFastqUriList": list(flatten(
                 list(
                     map(
                         lambda fastq_list_row_iter_: [
@@ -58,9 +58,8 @@ def handler(event, context) -> Dict:
                             fastq_list_row_iter_.get("read2FileUri")
                         ],
                         tumor_fastq_list_rows
-                    )                )
-
-            ),
+                    ))
+            )),
         },
         "event_tags": {
             "subjectId": subject_id,
@@ -69,3 +68,53 @@ def handler(event, context) -> Dict:
             "fastqListRowIds": tumor_fastq_list_row_ids,
         }
     }
+
+
+# if __name__ == "__main__":
+#     import json
+#
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "tumor_fastq_list_row_ids": [
+#                         "CTGGAGTA.GTTCGGTT.4.240229_A00130_0288_BH5HM2DSXC.L2400254"
+#                     ],
+#                     "subject_id": "218-007",
+#                     "tumor_fastq_list_rows": [
+#                         {
+#                             "rgid": "CTGGAGTA.GTTCGGTT.4.240229_A00130_0288_BH5HM2DSXC.L2400254",
+#                             "rgsm": "L2400254",
+#                             "rglb": "L2400254",
+#                             "lane": 4,
+#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400254/L2400254_S26_L004_R1_001.fastq.gz",
+#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400254/L2400254_S26_L004_R2_001.fastq.gz"
+#                         }
+#                     ],
+#                     "tumor_library_id": "L2400254",
+#                     "individual_id": "SBJ04661"
+#                 },
+#                 None
+#             ), indent=4
+#         )
+#     )
+#     # {
+#     #     "input_event_data": {
+#     #         "mode": "wgts",
+#     #         "analysisType": "RNA",
+#     #         "subjectId": "218-007",
+#     #         "tumorRnaSampleId": "L2400254",
+#     #         "tumorRnaFastqUriList": [
+#     #             "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400254/L2400254_S26_L004_R1_001.fastq.gz",
+#     #             "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400254/L2400254_S26_L004_R2_001.fastq.gz"
+#     #         ]
+#     #     },
+#     #     "event_tags": {
+#     #         "subjectId": "218-007",
+#     #         "individualId": "SBJ04661",
+#     #         "libraryId": "L2400254",
+#     #         "fastqListRowIds": [
+#     #             "CTGGAGTA.GTTCGGTT.4.240229_A00130_0288_BH5HM2DSXC.L2400254"
+#     #         ]
+#     #     }
+#     # }

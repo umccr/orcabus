@@ -61,7 +61,7 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     payloadVersion: '2024.07.23',
     tablePartitionName: {
       library: 'library',
-      fastqListRow: 'fastq_list_Row',
+      fastqListRow: 'fastq_list_row',
     },
   };
 
@@ -80,8 +80,8 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     triggerSource: 'orcabus.wgtsqcinputeventglue',
     triggerStatus: 'QC_COMPLETE',
     triggerDetailType: 'LibraryStateChange',
-    sampleType: 'wts',
-    workflowName: 'rnadna',
+    sampleType: 'WTS',
+    workflowName: 'oncoanalyser-wgts-rna',
     workflowVersion: '1.0.0',
   };
 

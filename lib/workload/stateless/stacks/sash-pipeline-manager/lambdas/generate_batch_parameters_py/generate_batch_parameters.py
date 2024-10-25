@@ -71,6 +71,12 @@ def handler(event, context):
         engine_parameters.items()
     ))
 
+    # Add portal run id to engine parameters
+    engine_parameters.update(
+        {
+            "portal_run_id": event.get("portal_run_id")
+        }
+    )
 
     # Pop the pipeline version from engine_parameters
     pipeline_version = engine_parameters.pop('pipeline_version', None)
@@ -107,7 +113,8 @@ def handler(event, context):
                     "output_directory": engine_parameters.get("output_results_dir")
                 },
                 separators=(',', ':')
-            )
+            ),
+            "orcabus": True,
         },
         "tags": tags
     }

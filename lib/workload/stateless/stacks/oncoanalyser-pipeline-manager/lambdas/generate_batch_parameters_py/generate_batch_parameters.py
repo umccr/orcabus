@@ -116,7 +116,7 @@ def handler(event, context):
     tags.update(NEXTFLOW_TAGS)
 
     # Add the portal run id as a tag
-    tags['PortalRunId'] = engine_parameters.get("portal_run_id")
+    tags['PortalRunId'] = event.get("portal_run_id")
 
     # Convert inputs and engine_parameters to snake case
     inputs = dict(map(
@@ -138,6 +138,12 @@ def handler(event, context):
         engine_parameters.items()
     ))
 
+    # Add portal run id to engine parameters
+    engine_parameters.update(
+        {
+            "portal_run_id": event.get("portal_run_id")
+        }
+    )
 
     # Pop the pipeline version from engine_parameters
     pipeline_version = engine_parameters.pop('pipeline_version', event.get('default_pipeline_version'))
@@ -147,10 +153,10 @@ def handler(event, context):
         "overrides": {
             "resource_requirements": [
                 {
-                    "type": "MEMORY", "value": "15000"
+                    "Type": "MEMORY", "Value": "15000"
                 },
                 {
-                    "type": "VCPU", "value": "2"
+                    "Type": "VCPU", "Value": "2"
                 }
             ],
             "command": [
@@ -166,7 +172,7 @@ def handler(event, context):
             ],
         },
         "parameters": {
-            "portal_run_id": engine_parameters.get("portal_run_id"),
+            "portal_run_id": event.get("portal_run_id"),
             "workflow": ANALYSIS_TYPE_TO_WORKFLOW_MAPPER.get(inputs.get("analysis_type")),
             "version": pipeline_version,
             "output": json.dumps(
@@ -174,7 +180,68 @@ def handler(event, context):
                     "output_directory": engine_parameters.get("output_results_dir")
                 },
                 separators=(',', ':')
-            )
+            ),
+            "orcabus": True,
         },
         "tags": tags
     }
+
+
+# if __name__ == "__main__":
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "inputs": {
+#                         "mode": "wgts",
+#                         "analysisType": "DNA",
+#                         "subjectId": "SN_PMC-141",
+#                         "tumorDnaSampleId": "L2400231",
+#                         "normalDnaSampleId": "L2400238",
+#                         "tumorDnaBamUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor-normal/20241003500edb11/L2400231_dragen_somatic/L2400231_tumor.bam",
+#                         "normalDnaBamUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor-normal/20241003500edb11/L2400231_dragen_somatic/L2400238_normal.bam"
+#                     },
+#                     "default_pipeline_version": "42ee926",
+#                     "engine_parameters": {
+#                         "outputUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/oncoanalyser-wgts-dna/20241024e8deca09/",
+#                         "logsUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/logs/oncoanalyser-wgts-dna/20241024e8deca09/",
+#                         "cacheUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/cache/oncoanalyser-wgts-dna/20241024e8deca09/"
+#                     },
+#                     "portal_run_id": "20241024e8deca09"  # pragma: allowlist secret
+#                 },
+#                 None
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # {
+#     #     "overrides": {
+#     #         "resource_requirements": [
+#     #             {
+#     #                 "type": "MEMORY",
+#     #                 "value": "15000"
+#     #             },
+#     #             {
+#     #                 "type": "VCPU",
+#     #                 "value": "2"
+#     #             }
+#     #         ],
+#     #         "command": [
+#     #             "./assets/run-v2.sh",
+#     #             "--manifest-json",
+#     #             "{\"inputs\":{\"mode\":\"wgts\",\"analysis_type\":\"DNA\",\"subject_id\":\"SN_PMC-141\",\"tumor_dna_sample_id\":\"L2400231\",\"normal_dna_sample_id\":\"L2400238\",\"tumor_dna_bam_uri\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor-normal/20241003500edb11/L2400231_dragen_somatic/L2400231_tumor.bam\",\"normal_dna_bam_uri\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor-normal/20241003500edb11/L2400231_dragen_somatic/L2400238_normal.bam\"},\"engine_parameters\":{\"output_results_dir\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/oncoanalyser-wgts-dna/20241024e8deca09/\",\"logs_uri\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/logs/oncoanalyser-wgts-dna/20241024e8deca09/\",\"output_scratch_dir\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/cache/oncoanalyser-wgts-dna/20241024e8deca09/\"}}"
+#     #         ]
+#     #     },
+#     #     "parameters": {
+#     #         "portal_run_id": "20241024e8deca09",  # pragma: allowlist secret
+#     #         "workflow": "oncoanalyser-wgts-dna",
+#     #         "version": "42ee926",
+#     #         "output": "{\"output_directory\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/oncoanalyser-wgts-dna/20241024e8deca09/\"}"
+#     #     },
+#     #     "tags": {
+#     #         "Stack": "NextflowStack",
+#     #         "SubStack": "OncoanalyserStack",
+#     #         "PortalRunId": "20241024e8deca09"  # pragma: allowlist secret
+#     #     }
+#     # }

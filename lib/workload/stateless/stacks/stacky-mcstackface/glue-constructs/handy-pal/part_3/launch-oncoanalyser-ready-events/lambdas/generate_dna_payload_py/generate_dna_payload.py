@@ -60,9 +60,9 @@ def join_url_paths(url: str, path_ext: str) -> str:
     return str(
         urlunparse(
             (
-                url_obj.netloc,
                 url_obj.scheme,
-                url_path,
+                url_obj.netloc,
+                str(url_path),
                 None, None, None
             )
         )
@@ -85,9 +85,6 @@ def handler(event, context) -> Dict:
     tumor_fastq_list_row_ids: List[str] = event['tumor_fastq_list_row_ids']
     normal_fastq_list_row_ids: List[str] = event['normal_fastq_list_row_ids']
 
-    # Get the bam uris by taking the library ids
-
-
     return {
         "input_event_data": {
             "mode": MODE,
@@ -109,3 +106,58 @@ def handler(event, context) -> Dict:
             "dragenGermlineOutputS3Uri": dragen_germline_output_s3_uri,
         }
     }
+
+
+# if __name__ == "__main__":
+#     import json
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "subject_id": "SN_PMC-141",
+#                     "tumor_fastq_list_row_ids": [
+#                         "TCGTAGTG.CCAAGTCT.2.240229_A00130_0288_BH5HM2DSXC.L2400231",
+#                         "TCGTAGTG.CCAAGTCT.3.240229_A00130_0288_BH5HM2DSXC.L2400231"
+#                     ],
+#                     "dragen_somatic_output_s3_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor-normal/20241003500edb11/L2400231_dragen_somatic/",
+#                     "normal_library_id": "L2400238",
+#                     "tumor_library_id": "L2400231",
+#                     "normal_fastq_list_row_ids": [
+#                         "GGAGCGTC.GCACGGAC.2.240229_A00130_0288_BH5HM2DSXC.L2400238",
+#                         "GGAGCGTC.GCACGGAC.3.240229_A00130_0288_BH5HM2DSXC.L2400238"
+#                     ],
+#                     "dragen_germline_output_s3_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor-normal/20241003500edb11/L2400238_dragen_germline/",
+#                     "individual_id": "SBJ04659"
+#                 },
+#                 None
+#             ),
+#             indent=4
+#         )
+#     )
+#     # {
+#     #     "input_event_data": {
+#     #         "mode": "wgts",
+#     #         "analysisType": "DNA",
+#     #         "subjectId": "SN_PMC-141",
+#     #         "tumorDnaSampleId": "L2400231",
+#     #         "normalDnaSampleId": "L2400238",
+#     #         "tumorDnaBamUri": "pipeline-dev-cache-503977275616-ap-southeast-2://s3/byob-icav2/development/analysis/tumor-normal/20241003500edb11/L2400231_dragen_somatic/L2400231_tumor.bam",
+#     #         "normalDnaBamUri": "pipeline-dev-cache-503977275616-ap-southeast-2://s3/byob-icav2/development/analysis/tumor-normal/20241003500edb11/L2400231_dragen_somatic/L2400238_normal.bam"
+#     #     },
+#     #     "event_tags": {
+#     #         "subjectId": "SN_PMC-141",
+#     #         "individualId": "SBJ04659",
+#     #         "tumorLibraryId": "L2400231",
+#     #         "normalLibraryId": "L2400238",
+#     #         "tumorFastqListRowIds": [
+#     #             "TCGTAGTG.CCAAGTCT.2.240229_A00130_0288_BH5HM2DSXC.L2400231",
+#     #             "TCGTAGTG.CCAAGTCT.3.240229_A00130_0288_BH5HM2DSXC.L2400231"
+#     #         ],
+#     #         "normalFastqListRowIds": [
+#     #             "GGAGCGTC.GCACGGAC.2.240229_A00130_0288_BH5HM2DSXC.L2400238",
+#     #             "GGAGCGTC.GCACGGAC.3.240229_A00130_0288_BH5HM2DSXC.L2400238"
+#     #         ],
+#     #         "dragenSomaticOutputS3Uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor-normal/20241003500edb11/L2400231_dragen_somatic/",
+#     #         "dragenGermlineOutputS3Uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/tumor-normal/20241003500edb11/L2400238_dragen_germline/"
+#     #     }
+#     # }

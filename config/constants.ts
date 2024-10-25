@@ -711,6 +711,7 @@ export const oncoanalyserBatchJobDefinitionArn: Record<AppStage, string> = {
   [AppStage.PROD]: `arn:aws:batch:${region}:${accountIdAlias.prod}:job-definition/Nextflow-oncoanalyser`, // pragma: allowlist secret
 };
 export const oncoanalyserStateMachinePrefix = 'oncoanalyser';
+
 export const oncoanalyserPipelineVersionSSMParameterPath =
   '/nextflow_stack/oncoanalyser/pipeline_version_tag';
 
@@ -750,28 +751,55 @@ export const sashBatchJobDefinitionArn: Record<AppStage, string> = {
 export const sashStateMachinePrefix = 'sash';
 export const sashPipelineVersionSSMParameterPath = '/nextflow_stack/sash/pipeline_version_tag';
 
-// Mock Stack
-export const mockEventBusName = eventBusName;
-export const mockInstrumentRunTableName = 'stacky-instrument-run-table';
-export const mockInputMakerTableName = 'stacky-input-maker-table';
-export const mockCttsov2InputGlueTableName = 'stacky-cttsov2-workflow-glue-table';
-export const mockWgtsQcGlueTableName = 'stacky-wgts-qc-glue-table';
-export const mockTnGlueTableName = 'stacky-tn-glue-table';
-export const mockWtsGlueTableName = 'stacky-wts-glue-table';
-export const mockUmccriseGlueTableName = 'stacky-umccrise-glue-table';
-export const mockRnasumGlueTableName = 'stacky-rnasum-glue-table';
-export const mockPierianDxGlueTableName = 'stacky-pieriandx-glue-table';
-export const mockOncoanalyserGlueTableName = 'stacky-oncoanalyser-glue-table';
-export const mockOncoanalyserBothSashGlueTableName = 'stacky-oncoanalyser-both-sash-glue-table';
-export const mockWorkflowManagerTableName = 'stacky-workflow-manager-table';
+// Stacky Stack
+export const stackyEventBusName = eventBusName;
+export const stackyInstrumentRunTableName = 'stacky-instrument-run-table';
+export const stackyInputMakerTableName = 'stacky-input-maker-table';
+export const stackyCttsov2InputGlueTableName = 'stacky-cttsov2-workflow-glue-table';
+export const stackyWgtsQcGlueTableName = 'stacky-wgts-qc-glue-table';
+export const stackyTnGlueTableName = 'stacky-tn-glue-table';
+export const stackyWtsGlueTableName = 'stacky-wts-glue-table';
+export const stackyUmccriseGlueTableName = 'stacky-umccrise-glue-table';
+export const stackyRnasumGlueTableName = 'stacky-rnasum-glue-table';
+export const stackyPierianDxGlueTableName = 'stacky-pieriandx-glue-table';
+export const stackyOncoanalyserGlueTableName = 'stacky-oncoanalyser-glue-table';
+export const stackyOncoanalyserBothSashGlueTableName = 'stacky-oncoanalyser-both-sash-glue-table';
+export const stackyWorkflowManagerTableName = 'stacky-workflow-manager-table';
 
+// dev
 // {
 //    "project_id":"ea19a3f5-ec7c-4940-a474-c31cd91dbad4",
 //    "project_name": "development"
 // }
-export const mockIcav2ProjectIdSsmParameterName = '/orcabus/stacky/icav2_project_id_and_name_json';
-export const mockPrimaryOutputUriSsmParameterName = '/orcabus/stacky/primary_output_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/primary/__instrument_run_id__/__portal_run_id__/
-export const mockAnalysisOutputUriSsmParameterName = '/orcabus/stacky/analysis_output_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/analysis/__workflow_name__/__portal_run_id__/
-export const mockAnalysisLogsUriSsmParameterName = '/orcabus/stacky/analysis_logs_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/logs/__workflow_name__/__portal_run_id__/
+// stg
+// {
+//   "project_id": "157b9e78-b2e1-45a7-bfcd-691159995f7c",
+//   "project_name": "staging"
+// }
+// prod
+// {
+//   "project_id": "eba5c946-1677-441d-bbce-6a11baadecbb",
+//   "project_name": "production"
+// }
+export const stackyIcav2ProjectIdSsmParameterName =
+  '/orcabus/stacky/icav2_project_id_and_name_json';
 
-export const mockAnalysisCacheUriSsmParameterName = '/orcabus/stacky/analysis_cache_uri'; // icav2://7595e8f2-32d3-4c76-a324-c6a85dae87b5/cache/__workflow_name__/__portal_run_id__/
+// dev: s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/__instrument_run_id__/__portal_run_id__/
+// stg: s3://pipeline-stg-cache-503977275616-ap-southeast-2/byob-icav2/staging/primary/__instrument_run_id__/__portal_run_id__/
+// prod: s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/primary/__instrument_run_id__/__portal_run_id__/
+export const stackyPrimaryOutputUriSsmParameterName = '/orcabus/stacky/primary_output_uri';
+
+// dev: s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/__workflow_name__/__portal_run_id__/
+// stg: s3://pipeline-stg-cache-503977275616-ap-southeast-2/byob-icav2/staging/analysis/__workflow_name__/__portal_run_id__/
+// prod: s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/__workflow_name__/__portal_run_id__/
+export const stackyAnalysisOutputUriSsmParameterName = '/orcabus/stacky/analysis_output_uri';
+
+// dev: s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/logs/__workflow_name__/__portal_run_id__/
+// stg: s3://pipeline-stg-cache-503977275616-ap-southeast-2/byob-icav2/staging/logs/__workflow_name__/__portal_run_id__/
+// prod: s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/logs/__workflow_name__/__portal_run_id__/
+export const stackyAnalysisLogsUriSsmParameterName = '/orcabus/stacky/analysis_logs_uri';
+
+// dev: s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/cache/__workflow_name__/__portal_run_id__/
+// stg: s3://pipeline-stg-cache-503977275616-ap-southeast-2/byob-icav2/staging/cache/__workflow_name__/__portal_run_id__/
+// prod: s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/cache/__workflow_name__/__portal_run_id__/
+export const stackyAnalysisCacheUriSsmParameterName = '/orcabus/stacky/analysis_cache_uri';

@@ -37,11 +37,13 @@ export interface WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstructPr
 export class WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct extends Construct {
   public readonly stateMachineObj: sfn.StateMachine;
   private readonly globals = {
-    defaultEventBusName: 'default',
     eventStatus: 'SUBMITTED',
     portalRunTablePartitionName: 'portal_run_id',
     eventDetailType: 'WorkflowRunStateChange',
     serviceVersion: '2024.10.17',
+    batchEventBusName: 'default',
+    batchEventSource: 'aws.batch',
+    batchEventDetailType: 'Batch Job State Change',
   };
 
   constructor(
@@ -56,7 +58,7 @@ export class WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct exten
     const defaultEventBus = events.EventBus.fromEventBusName(
       this,
       'default-event-bus',
-      this.globals.defaultEventBusName
+      this.globals.batchEventBusName
     );
 
     // Build state machine object
@@ -94,12 +96,18 @@ export class WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct exten
     // Create a rule for this state machine
     const rule = new events.Rule(this, 'rule', {
       eventBus: defaultEventBus,
-      ruleName: `${props.stateMachinePrefix}-wrsc-rule`,
+      ruleName: `${props.stateMachinePrefix}-batch-state-change-rule`,
       eventPattern: {
-        source: [props.triggerLaunchSource],
-        detailType: [props.detailType],
+        source: [this.globals.batchEventSource],
+        detailType: [this.globals.batchEventDetailType],
         detail: {
-          jobDefinition: [{ 'equals-ignore-case': props.batchJobDefinitionObj.jobDefinitionArn }],
+          // Has a trailing ':1' at the end of the job definition object
+          jobDefinition: [
+            { prefix: { 'equals-ignore-case': props.batchJobDefinitionObj.jobDefinitionArn } },
+          ],
+          parameters: {
+            orcabus: [{ exists: true }],
+          },
         },
       },
     });
