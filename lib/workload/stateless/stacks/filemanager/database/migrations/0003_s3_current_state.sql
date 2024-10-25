@@ -9,8 +9,8 @@ alter table s3_object add column is_current_state boolean not null default false
 with to_update as (
     -- Get all records representing the current state.
     select * from (
-        select distinct on (bucket, key, version_id) * from s3_object
-        order by bucket, key, version_id, sequencer desc
+        select distinct on (bucket, key) * from s3_object
+        order by bucket, key, sequencer desc
     ) as s3_object
     where event_type = 'Created' and is_delete_marker = false
 )
