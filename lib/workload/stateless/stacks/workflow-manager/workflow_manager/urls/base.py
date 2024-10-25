@@ -8,7 +8,8 @@ from workflow_manager.viewsets.workflow_run import WorkflowRunViewSet
 from workflow_manager.viewsets.payload import PayloadViewSet
 from workflow_manager.viewsets.analysis_context import AnalysisContextViewSet
 from workflow_manager.viewsets.state import StateViewSet
-from workflow_manager.viewsets.library import LibraryViewSet
+# from workflow_manager.viewsets.library import LibraryViewSet
+from workflow_manager.viewsets.workflow_run_comment import WorkflowRunCommentViewSet
 from workflow_manager.settings.base import API_VERSION
 
 api_namespace = "api"
@@ -25,7 +26,7 @@ router.register(r"payload", PayloadViewSet, basename="payload")
 
 # may no longer need this as it's currently included in the detail response for an individual WorkflowRun record
 router.register(
-    "workflowrun/(?P<wfr_orcabus_id>[^/.]+)/state",
+    "workflowrun/(?P<orcabus_id>[^/.]+)/state",
     StateViewSet,
     basename="workflowrun-state",
 )
@@ -35,6 +36,12 @@ router.register(
 #     LibraryViewSet,
 #     basename="workflowrun-library",
 # )
+
+router.register(
+    "workflowrun/(?P<orcabus_id>[^/.]+)/comment",
+    WorkflowRunCommentViewSet,
+    basename="workflowrun-comment",
+)
 
 urlpatterns = [
     path(f"{api_base}", include(router.urls)),

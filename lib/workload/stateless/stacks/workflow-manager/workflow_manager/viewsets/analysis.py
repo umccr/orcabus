@@ -1,7 +1,7 @@
 from drf_spectacular.utils import extend_schema
 
 from workflow_manager.models.analysis import Analysis
-from workflow_manager.serializers.analysis import AnalysisDetailSerializer, AnalysisSerializer
+from workflow_manager.serializers.analysis import AnalysisDetailSerializer, AnalysisSerializer, AnalysisListParamSerializer
 from .base import BaseViewSet
 
 
@@ -12,7 +12,7 @@ class AnalysisViewSet(BaseViewSet):
     orcabus_id_prefix = Analysis.orcabus_id_prefix
 
     @extend_schema(parameters=[
-        AnalysisSerializer
+        AnalysisListParamSerializer
     ])
     def list(self, request, *args, **kwargs):
         self.serializer_class = AnalysisSerializer  # use simple serializer for list view

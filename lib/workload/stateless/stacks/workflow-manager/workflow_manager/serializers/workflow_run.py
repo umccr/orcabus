@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
-from workflow_manager.serializers.base import SerializersBase
+from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
 from workflow_manager.models import WorkflowRun, AnalysisRun
-from workflow_manager.serializers.state import StateSerializer, StateMinSerializer
+from workflow_manager.serializers.state import StateMinSerializer
 
 class WorkflowRunBaseSerializer(SerializersBase):
     prefix = WorkflowRun.orcabus_id_prefix
@@ -13,8 +13,13 @@ class WorkflowRunBaseSerializer(SerializersBase):
 
     def get_current_state(self, obj) -> dict:
         latest_state = obj.get_latest_state()
-        return StateSerializer(latest_state).data if latest_state else None
+        return StateMinSerializer(latest_state).data if latest_state else None
 
+
+class WorkflowRunListParamSerializer(OptionalFieldsMixin, WorkflowRunBaseSerializer):
+    class Meta:
+        model = WorkflowRun
+        fields = "__all__"
 
 class WorkflowRunSerializer(WorkflowRunBaseSerializer):
     from .workflow import WorkflowMinSerializer
@@ -31,19 +36,14 @@ class WorkflowRunSerializer(WorkflowRunBaseSerializer):
             representation['analysis_run'] = AnalysisRun.orcabus_id_prefix + representation['analysis_run']
         return representation
 
-    def get_current_state(self, obj) -> dict:
-        # overwrite the default State serializer to only report the minimal information in listings
-        latest_state = obj.get_latest_state()
-        return StateMinSerializer(latest_state).data if latest_state else None
-
 
 class WorkflowRunDetailSerializer(WorkflowRunBaseSerializer):
     from .library import LibrarySerializer
-    from .workflow import WorkflowMinSerializer
+    from .workflow import WorkflowSerializer
     from .analysis_run import AnalysisRunSerializer
 
     libraries = LibrarySerializer(many=True, read_only=True)
-    workflow = WorkflowMinSerializer(read_only=True)
+    workflow = WorkflowSerializer(read_only=True)
     analysis_run = AnalysisRunSerializer(read_only=True)
     current_state = serializers.SerializerMethodField()
 

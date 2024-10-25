@@ -1,10 +1,15 @@
-from workflow_manager.serializers.base import SerializersBase
+from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
 from workflow_manager.models import AnalysisContext
 
 
 class AnalysisContextBaseSerializer(SerializersBase):
     prefix = AnalysisContext.orcabus_id_prefix
 
+
+class AnalysisContextListParamSerializer( OptionalFieldsMixin, AnalysisContextBaseSerializer):
+    class Meta:
+        model = AnalysisContext
+        fields = "__all__"
 
 class AnalysisContextMinSerializer(AnalysisContextBaseSerializer):
     class Meta:
