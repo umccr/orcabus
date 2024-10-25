@@ -10,6 +10,11 @@ class AnalysisListParamSerializer( OptionalFieldsMixin, AnalysisBaseSerializer):
         model = Analysis
         fields = "__all__"
 
+class AnalysisMinSerializer(AnalysisBaseSerializer):
+    class Meta:
+        model = Analysis
+        fields = ["orcabus_id", "analysis_name", "analysis_version", 'status']
+
 class AnalysisSerializer(AnalysisBaseSerializer):
     """
     Serializer to define a default representation of an Analysis record,
