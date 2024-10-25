@@ -68,6 +68,19 @@ function applyNagSuppression(stackId: string, stack: Stack) {
 
   // for each stack specific
   switch (stackId) {
+    case 'AuthorizationManagerStack':
+      // FIXME - https://github.com/umccr/orcabus/issues/174
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        ['/AuthorizationManagerStack/AdminHTTPAuthorizerLambda/ServiceRole/Resource'],
+        [
+          {
+            id: 'AwsSolutions-IAM4',
+            reason: 'Tracking this at (https://github.com/umccr/orcabus/issues/174)',
+          },
+        ]
+      );
+      break;
     case 'TokenServiceStack':
       // suppress by resource
       NagSuppressions.addResourceSuppressionsByPath(
