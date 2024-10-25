@@ -19,7 +19,8 @@ The current stack deploys AWS Verified Permissions, defining an identity source 
 
 - **AdminPolicy**
 
-  A static policy defined in the stack that allows anyone in the `admin` group of the Cognito user pool to perform any action. This essentially checks if a user is in the group, integrated with the Cognito setup.
+  A static policy defined in the stack that allows anyone in the `admin` group of the Cognito user pool to perform any
+  action. This essentially checks if a user is in the `admin` group, integrated with the Cognito setup.
 
   The HTTP Lambda Authorizer is also defined for use in stacks where routes/methods need to comply with this policy. The
   Lambda ARN is stored in SSM Parameter String defined in `config/constants.ts` as the `adminHttpLambdaAuthorizerParameterName` constant.
