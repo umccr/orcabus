@@ -4,10 +4,9 @@
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
-    Alias, Asterisk, BinOper, ColumnRef, ConditionExpression, IntoColumnRef, IntoCondition,
-    PostgresQueryBuilder, Query, SimpleExpr,
+    Alias, BinOper, ColumnRef, ConditionExpression, IntoColumnRef, IntoCondition,
+    PostgresQueryBuilder, SimpleExpr,
 };
-use sea_orm::Order::{Asc, Desc};
 use sea_orm::{
     ColumnTrait, Condition, ConnectionTrait, EntityTrait, FromQueryResult, IntoSimpleExpr,
     JsonValue, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, Select,
@@ -60,10 +59,17 @@ where
     ///     bucket = filter.bucket and
     ///     ...;
     /// ```
-    pub fn filter_all(mut self, filter: S3ObjectsFilter, case_sensitive: bool) -> Result<Self> {
-        self.select = self
-            .select
-            .filter(Self::filter_condition(filter, case_sensitive)?);
+    pub fn filter_all(
+        mut self,
+        filter: S3ObjectsFilter,
+        case_sensitive: bool,
+        current_state: bool,
+    ) -> Result<Self> {
+        self.select = self.select.filter(Self::filter_condition(
+            filter,
+            case_sensitive,
+            current_state,
+        )?);
 
         self.trace_query("filter_all");
 
@@ -87,7 +93,11 @@ where
     }
 
     /// Create a condition to filter a query.
-    pub fn filter_condition(filter: S3ObjectsFilter, case_sensitive: bool) -> Result<Condition> {
+    pub fn filter_condition(
+        filter: S3ObjectsFilter,
+        case_sensitive: bool,
+        current_state: bool,
+    ) -> Result<Condition> {
         let mut condition = Condition::all()
             .add_option(
                 filter
@@ -163,6 +173,12 @@ where
                     .map(|v| Ok(s3_object::Column::IngestId.eq(v))),
             )?);
 
+        if current_state {
+            condition = condition
+                .add(s3_object::Column::IsCurrentState.eq(true))
+                .add(s3_object::Column::IsDeleteMarker.eq(false));
+        }
+
         if let Some(attributes) = filter.attributes {
             let json_condition = JsonPathBuilder::json_condition(
                 s3_object::Column::Attributes.into_column_ref(),
@@ -173,53 +189,6 @@ where
         }
 
         Ok(condition)
-    }
-
-    /// Update this query to find objects that represent the current state of S3 objects. That is,
-    /// this gets all non-deleted objects. This means that only `Created` events will be returned,
-    /// and these will be the most up to date at this point, without any 'Deleted' events coming
-    /// after them.
-    ///
-    /// This creates a query which is roughly equivalent to the following:
-    ///
-    /// ```sql
-    /// select * from (
-    ///     select distinct on (bucket, key, version_id) * from s3_object
-    ///     order by bucket, key, version_id, sequencer desc
-    /// ) as s3_object
-    /// where event_type = 'Created' and is_delete_marker = false;
-    /// ```
-    ///
-    /// This finds all distinct objects within a (bucket, key, version_id) grouping such that they
-    /// are most recent and only `Created` events.
-    pub fn current_state(mut self) -> Self {
-        let subquery = Query::select()
-            .column(Asterisk)
-            .distinct_on([
-                s3_object::Column::Bucket,
-                s3_object::Column::Key,
-                s3_object::Column::VersionId,
-            ])
-            .from(s3_object::Entity)
-            .order_by_columns([
-                (s3_object::Column::Bucket, Asc),
-                (s3_object::Column::Key, Asc),
-                (s3_object::Column::VersionId, Asc),
-                (s3_object::Column::Sequencer, Desc),
-            ])
-            .take();
-
-        // Clear the current from state (which should be `from s3_object`), and
-        // Update it to the distinct_on subquery.
-        QuerySelect::query(&mut self.select)
-            .from_clear()
-            .from_subquery(subquery, Alias::new("s3_object"))
-            .and_where(s3_object::Column::EventType.eq("Created"))
-            .and_where(s3_object::Column::IsDeleteMarker.eq(false));
-
-        self.trace_query("current_state");
-
-        self
     }
 }
 
@@ -510,9 +479,11 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(&client)
             .await
+            .unwrap()
             .s3_objects;
-        let builder =
-            ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref()).current_state();
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+            .filter_all(S3ObjectsFilter::default(), false, true)
+            .unwrap();
         let result = builder.all().await.unwrap();
 
         assert_eq!(result, vec![entries[2].clone(), entries[8].clone()]);
@@ -529,9 +500,11 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(&client)
             .await
+            .unwrap()
             .s3_objects;
-        let builder =
-            ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref()).current_state();
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+            .filter_all(S3ObjectsFilter::default(), false, true)
+            .unwrap();
         let result = builder.all().await.unwrap();
 
         assert_eq!(
@@ -550,10 +523,12 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(&client)
             .await
+            .unwrap()
             .s3_objects;
 
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
-            .current_state()
+            .filter_all(S3ObjectsFilter::default(), false, true)
+            .unwrap()
             .paginate(0, 1)
             .await
             .unwrap();
@@ -562,10 +537,11 @@ pub(crate) mod tests {
 
         // Order of paginate call shouldn't matter.
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+            .filter_all(S3ObjectsFilter::default(), false, true)
+            .unwrap()
             .paginate(1, 1)
             .await
-            .unwrap()
-            .current_state();
+            .unwrap();
         let result = builder.all().await.unwrap();
         assert_eq!(result, vec![entries[8].clone()]);
     }
@@ -581,15 +557,16 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(&client)
             .await
+            .unwrap()
             .s3_objects;
 
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
-            .current_state()
             .filter_all(
                 S3ObjectsFilter {
                     size: vec![14],
                     ..Default::default()
                 },
+                true,
                 true,
             )
             .unwrap();
@@ -604,9 +581,9 @@ pub(crate) mod tests {
                     ..Default::default()
                 },
                 true,
+                true,
             )
-            .unwrap()
-            .current_state();
+            .unwrap();
         let result = builder.all().await.unwrap();
         assert_eq!(result, vec![entries[24].clone()]);
     }
@@ -618,6 +595,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(&client)
             .await
+            .unwrap()
             .s3_objects;
 
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref());
@@ -633,6 +611,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(&client)
             .await
+            .unwrap()
             .s3_objects;
 
         let result = filter_all_s3_from(
@@ -655,6 +634,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(&client)
             .await
+            .unwrap()
             .s3_objects;
 
         let result = filter_all_s3_from(
@@ -677,6 +657,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(&client)
             .await
+            .unwrap()
             .s3_objects;
 
         let result = filter_all_s3_from(
@@ -701,6 +682,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(&client)
             .await
+            .unwrap()
             .s3_objects;
 
         let result = filter_all_s3_from(
@@ -809,6 +791,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(&client)
             .await
+            .unwrap()
             .s3_objects;
 
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref());
@@ -849,7 +832,8 @@ pub(crate) mod tests {
         EntriesBuilder::default()
             .with_shuffle(true)
             .build(&client)
-            .await;
+            .await
+            .unwrap();
 
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref());
 
@@ -911,7 +895,8 @@ pub(crate) mod tests {
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(&client)
-            .await;
+            .await
+            .unwrap();
         let s3_entries = entries.s3_objects.clone();
 
         let result = filter_all_s3_from(
@@ -956,7 +941,8 @@ pub(crate) mod tests {
         let mut entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(&client)
-            .await;
+            .await
+            .unwrap();
 
         let test_attributes = json!({
             "nestedId": {
@@ -1167,7 +1153,7 @@ pub(crate) mod tests {
         case_sensitive: bool,
     ) -> Vec<s3_object::Model> {
         ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
-            .filter_all(filter, case_sensitive)
+            .filter_all(filter, case_sensitive, false)
             .unwrap()
             .all()
             .await

@@ -57,18 +57,19 @@ where
     }
 
     /// Filter records by all fields in the filter variable.
-    pub fn filter_all(mut self, filter: S3ObjectsFilter, case_sensitive: bool) -> Result<Self> {
-        self.select_to_update = self.select_to_update.filter_all(filter, case_sensitive)?;
+    pub fn filter_all(
+        mut self,
+        filter: S3ObjectsFilter,
+        case_sensitive: bool,
+        current_state: bool,
+    ) -> Result<Self> {
+        self.select_to_update =
+            self.select_to_update
+                .filter_all(filter, case_sensitive, current_state)?;
 
         self.trace_query("filter_all");
 
         Ok(self)
-    }
-
-    /// Update the current state according to `ListQueryBuilder::current_state`.
-    pub fn current_state(mut self) -> Self {
-        self.select_to_update = self.select_to_update.current_state();
-        self
     }
 
     /// Update the attributes on an s3_object using the attribute patch.
@@ -305,7 +306,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_unsupported(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
         change_many(
             &client,
@@ -363,7 +364,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_add(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
         change_many(
             &client,
@@ -392,7 +393,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_add_wildcard(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
         change_many(
             &client,
@@ -428,7 +429,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_current_state(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
         change_many(
             &client,
@@ -443,7 +444,6 @@ pub(crate) mod tests {
         ]);
 
         let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
-            .current_state()
             .filter_all(
                 S3ObjectsFilter {
                     attributes: Some(json!({
@@ -451,6 +451,7 @@ pub(crate) mod tests {
                     })),
                     ..Default::default()
                 },
+                true,
                 true,
             )
             .unwrap()
@@ -473,7 +474,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_wildcard_like(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
         change_many(
             &client,
@@ -488,7 +489,6 @@ pub(crate) mod tests {
         ]);
 
         let results = UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
-            .current_state()
             .filter_all(
                 S3ObjectsFilter {
                     event_time: vec![WildcardEither::Wildcard(Wildcard::new(
@@ -496,6 +496,7 @@ pub(crate) mod tests {
                     ))],
                     ..Default::default()
                 },
+                true,
                 true,
             )
             .unwrap()
@@ -513,7 +514,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_add_from_null_json(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
         change_many(&client, &entries, &[0, 1], Some(Value::Null)).await;
 
@@ -532,7 +533,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_add_from_not_set(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
         null_attributes(&client, &entries, 0).await;
 
@@ -552,7 +553,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_no_op(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
         change_many(
             &client,
@@ -577,7 +578,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_failed_test(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
         change_many(
             &client,
@@ -611,7 +612,7 @@ pub(crate) mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_replace_different_attribute_ids(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let mut entries = EntriesBuilder::default().build(&client).await;
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
         change_attributes(&client, &entries, 0, Some(json!({"attributeId": "2"}))).await;
         change_attributes(&client, &entries, 1, Some(json!({"attributeId": "2"}))).await;
@@ -652,9 +653,9 @@ pub(crate) mod tests {
                     ..Default::default()
                 },
                 true,
-            )
-            .unwrap()
-            .update_s3_attributes(PatchBody::new(from_value(patch).unwrap()))
+                false,
+            )?
+            .update_s3_attributes(PatchBody::new(from_value(patch)?))
             .await
     }
 

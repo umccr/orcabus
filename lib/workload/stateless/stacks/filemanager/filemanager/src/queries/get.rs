@@ -45,7 +45,11 @@ mod tests {
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_list_s3(pool: PgPool) {
         let client = Client::from_pool(pool);
-        let entries = EntriesBuilder::default().build(&client).await.s3_objects;
+        let entries = EntriesBuilder::default()
+            .build(&client)
+            .await
+            .unwrap()
+            .s3_objects;
 
         let first = entries.first().unwrap();
         let builder = GetQueryBuilder::new(client.connection_ref());

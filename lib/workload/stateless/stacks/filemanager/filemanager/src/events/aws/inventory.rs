@@ -528,6 +528,8 @@ impl From<Record> for FlatS3EventMessage {
             // Anything in an inventory report is always a created event.
             event_type: Created,
             is_delete_marker: is_delete_marker.unwrap_or_default(),
+            // This will also represent the current state since it is a created event.
+            is_current_state: true,
             ingest_id: None,
             attributes: None,
             number_duplicate_events: 0,
