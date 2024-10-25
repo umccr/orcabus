@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import * as events from 'aws-cdk-lib/aws-events';
+import { NestedStack } from 'aws-cdk-lib/core';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { NewSamplesheetEventShowerConstruct } from './part_1/samplesheet-event-shower';
 import { NewFastqListRowsEventShowerConstruct } from './part_2/fastq-list-rows-event-shower';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
@@ -17,7 +17,7 @@ export interface showerGlueHandlerConstructProps {
   icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
-export class showerGlueHandlerConstruct extends Construct {
+export class showerGlueHandlerConstruct extends NestedStack {
   constructor(scope: Construct, id: string, props: showerGlueHandlerConstructProps) {
     super(scope, id);
 

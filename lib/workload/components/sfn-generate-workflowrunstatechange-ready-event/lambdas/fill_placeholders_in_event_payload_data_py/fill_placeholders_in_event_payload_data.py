@@ -33,7 +33,6 @@ from os import environ
 import boto3
 import typing
 
-
 if typing.TYPE_CHECKING:
     from mypy_boto3_ssm import SSMClient
     from mypy_boto3_secretsmanager import SecretsManagerClient
@@ -191,8 +190,9 @@ def set_icav2_env_vars():
 
 
 def handler(event, context):
-    # Set env vars
-    set_icav2_env_vars()
+    if environ.get('ICAV2_ACCESS_TOKEN_SECRET_ID', None) is not None:
+        # Set env vars
+        set_icav2_env_vars()
 
     # Get the portal run id from the event
     portal_run_id: str = event.get('portal_run_id', None)

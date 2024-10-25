@@ -5,6 +5,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { UmccriseInitialiseLibraryConstruct } from './part_1/initialise-umccrise-library-dbs';
 import { TnCompleteToUmccriseReadyConstruct } from './part_2/tn-complete-to-umccrise-draft';
+import { NestedStack } from 'aws-cdk-lib/core';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting wgts qc analyses
@@ -24,7 +25,7 @@ export interface umccriseGlueHandlerConstructProps {
   icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
-export class UmccriseGlueHandlerConstruct extends Construct {
+export class UmccriseGlueHandlerConstruct extends NestedStack {
   constructor(scope: Construct, id: string, props: umccriseGlueHandlerConstructProps) {
     super(scope, id);
     /*

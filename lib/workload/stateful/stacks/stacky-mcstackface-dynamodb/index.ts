@@ -15,6 +15,8 @@ export interface StackyStatefulTablesConfig {
   dynamodbUmccriseGlueTableName: string;
   dynamodbRnasumGlueTableName: string;
   dynamodbPieriandxGlueTableName: string;
+  dynamodbOncoanalyserGlueTableName: string;
+  dynamodbOncoanalyserBothSashGlueTableName: string;
   removalPolicy?: RemovalPolicy;
 }
 
@@ -31,6 +33,8 @@ export class StackyStatefulTablesStack extends Stack {
   public readonly umccriseGlueTable: dynamodb.ITableV2;
   public readonly rnasumGlueTable: dynamodb.ITableV2;
   public readonly pieriandxGlueTable: dynamodb.ITableV2;
+  public readonly oncoanalyserGlueTable: dynamodb.ITableV2;
+  public readonly oncoanalyserBothSashGlueTable: dynamodb.ITableV2;
   constructor(scope: Construct, id: string, props: StackProps & StackyStatefulTablesStackProps) {
     super(scope, id, props);
 
@@ -125,5 +129,29 @@ export class StackyStatefulTablesStack extends Stack {
       tableName: props.dynamodbPieriandxGlueTableName,
       removalPolicy: props.removalPolicy,
     }).tableObj;
+
+    /*
+    Initialise dynamodb table for the oncoanalyser glue service
+    */
+    this.oncoanalyserGlueTable = new DynamodbPartitionedPipelineConstruct(
+      this,
+      'oncoanalyserGlueTable',
+      {
+        tableName: props.dynamodbOncoanalyserGlueTableName,
+        removalPolicy: props.removalPolicy,
+      }
+    ).tableObj;
+
+    /*
+    Initialise dynamodb table for the oncoanalyser both + sash glue service
+    */
+    this.oncoanalyserBothSashGlueTable = new DynamodbPartitionedPipelineConstruct(
+      this,
+      'oncoanalyserBothSashGlueTable',
+      {
+        tableName: props.dynamodbOncoanalyserBothSashGlueTableName,
+        removalPolicy: props.removalPolicy,
+      }
+    ).tableObj;
   }
 }

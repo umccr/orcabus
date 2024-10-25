@@ -31,6 +31,7 @@ describe('cdk-nag-stateless-stack', () => {
       const stackId = stack.node.id;
 
       Aspects.of(stack).add(new AwsSolutionsChecks());
+
       applyNagSuppression(stackId, stack);
 
       test(`${stackId}: cdk-nag AwsSolutions Pack errors`, () => {
@@ -105,26 +106,34 @@ function applyNagSuppression(stackId: string, stack: Stack) {
     true
   );
 
-  NagSuppressions.addStackSuppressions(stack, [
-    {
-      id: 'AwsSolutions-SF1',
-      reason:
-        'We do not utilise StepFunction CloudWatch logging feature yet. ' +
-        'If turn this feature on, we will hit `AwsSolutions-IAM5` nag. FYI.' +
-        'See policy doc in https://docs.aws.amazon.com/step-functions/latest/dg/cw-logs.html',
-    },
-  ]);
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-SF1',
+        reason:
+          'We do not utilise StepFunction CloudWatch logging feature yet. ' +
+          'If turn this feature on, we will hit `AwsSolutions-IAM5` nag. FYI.' +
+          'See policy doc in https://docs.aws.amazon.com/step-functions/latest/dg/cw-logs.html',
+      },
+    ],
+    true
+  );
 
-  NagSuppressions.addStackSuppressions(stack, [
-    {
-      id: 'AwsSolutions-SF2',
-      reason:
-        'We do not utilise StepFunction XRay tracing feature yet. ' +
-        'https://docs.aws.amazon.com/step-functions/latest/dg/concepts-xray-tracing.html ' +
-        'If turn this feature on, we will hit `AwsSolutions-IAM5` nag. FYI.' +
-        'See policy doc in https://docs.aws.amazon.com/step-functions/latest/dg/xray-iam.html',
-    },
-  ]);
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-SF2',
+        reason:
+          'We do not utilise StepFunction XRay tracing feature yet. ' +
+          'https://docs.aws.amazon.com/step-functions/latest/dg/concepts-xray-tracing.html ' +
+          'If turn this feature on, we will hit `AwsSolutions-IAM5` nag. FYI.' +
+          'See policy doc in https://docs.aws.amazon.com/step-functions/latest/dg/xray-iam.html',
+      },
+    ],
+    true
+  );
 
   // for each stack specific
 
@@ -140,7 +149,8 @@ function applyNagSuppression(stackId: string, stack: Stack) {
               'The provider function needs to be able to invoke the configured function. It uses' +
               "`lambda.Function.grantInvoke` to achieve this which contains a '*' and is not changeable.",
           },
-        ]
+        ],
+        true
       );
       break;
 
@@ -189,7 +199,8 @@ function applyNagSuppression(stackId: string, stack: Stack) {
               'The provider function needs to be able to invoke the configured function. It uses' +
               "`lambda.Function.grantInvoke` to achieve this which contains a '*' and is not changeable.",
           },
-        ]
+        ],
+        true
       );
       break;
 

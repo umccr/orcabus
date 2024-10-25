@@ -9,8 +9,8 @@ import * as events from 'aws-cdk-lib/aws-events';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { Icav2AnalysisEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-handle-event-change-sfn';
-import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../../../components/dynamodb-icav2-ready-event-handler-sfn';
+import { Icav2AnalysisEventHandlerConstruct } from '../../../../../../components/sfn-icav2-state-change-event-handler';
+import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../../../components/sfn-icav2-ready-event-handler';
 import { DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
 
 interface Cttsov2Icav2PipelineManagerConstructProps {

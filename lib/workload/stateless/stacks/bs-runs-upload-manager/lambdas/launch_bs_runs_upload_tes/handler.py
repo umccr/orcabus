@@ -110,19 +110,19 @@ def handler(event, context):
     )
 
 
-if __name__ == "__main__":
-    import json
-    print(
-        json.dumps(
-            handler(
-                {
-                    "gds_folder_path": "/Runs/231109_A01052_0171_BHLJW7DSX7_r.NULhvzxcSEWmqZw8QljXfQ",
-                    "samplesheet_name": "SampleSheet.V2.1711336300.924772.csv",
-                    "gds_volume_name": "bssh.acddbfda498038ed99fa94fe79523959",
-                    "instrument_run_id": "231109_A01052_0171_BHLJW7DSX7"
-                },
-                None
-            ),
-            indent=2
-        )
-    )
+# if __name__ == "__main__":
+#     import json
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "gds_folder_path": "/Runs/231109_A01052_0171_BHLJW7DSX7_r.NULhvzxcSEWmqZw8QljXfQ",
+#                     "samplesheet_name": "SampleSheet.V2.1711336300.924772.csv",
+#                     "gds_volume_name": "bssh.acddbfda498038ed99fa94fe79523959",
+#                     "instrument_run_id": "231109_A01052_0171_BHLJW7DSX7"
+#                 },
+#                 None
+#             ),
+#             indent=2
+#         )
+#     )

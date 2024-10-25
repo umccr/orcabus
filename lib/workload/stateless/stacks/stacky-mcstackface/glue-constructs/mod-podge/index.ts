@@ -6,6 +6,7 @@ import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { WtsInitialiseLibraryAndFastqListRowConstruct } from './part_1/initialise-wts-library-dbs';
 import { WtsPopulateFastqListRowConstruct } from './part_2/update-fastq-list-rows-dbs';
 import { LibraryQcCompleteToWtsReadyConstruct } from './part_3/library-qc-complete-to-wts';
+import { NestedStack } from 'aws-cdk-lib/core';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting wgts qc analyses
@@ -25,7 +26,7 @@ export interface wtsGlueHandlerConstructProps {
   icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
-export class WtsGlueHandlerConstruct extends Construct {
+export class WtsGlueHandlerConstruct extends NestedStack {
   constructor(scope: Construct, id: string, props: wtsGlueHandlerConstructProps) {
     super(scope, id);
 

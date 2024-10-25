@@ -62,6 +62,14 @@ import {
   PieriandxPipelineManagerStack,
   PierianDxPipelineManagerStackProps,
 } from './stacks/pieriandx-pipeline-manager/deploy';
+import {
+  OncoanalyserNfPipelineManagerStack,
+  OncoanalyserNfPipelineManagerStackProps,
+} from './stacks/oncoanalyser-pipeline-manager/deploy';
+import {
+  SashNfPipelineManagerStack,
+  SashNfPipelineManagerStackProps,
+} from './stacks/sash-pipeline-manager/deploy';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -77,6 +85,8 @@ export interface StatelessStackCollectionProps {
   umccriseIcav2PipelineManagerStackProps: UmccriseIcav2PipelineManagerStackProps;
   rnasumIcav2PipelineManagerStackProps: RnasumIcav2PipelineManagerStackProps;
   pieriandxPipelineManagerStackProps: PierianDxPipelineManagerStackProps;
+  oncoanalyserPipelineManagerStackProps: OncoanalyserNfPipelineManagerStackProps;
+  sashPipelineManagerStackProps: SashNfPipelineManagerStackProps;
   eventSchemaStackProps: SchemaStackProps;
   dataSchemaStackProps: SchemaStackProps;
   bclConvertManagerStackProps: BclConvertManagerStackProps;
@@ -100,6 +110,8 @@ export class StatelessStackCollection {
   readonly umccriseIcav2PipelineManagerStack: Stack;
   readonly rnasumIcav2PipelineManagerStack: Stack;
   readonly pieriandxPipelineManagerStack: Stack;
+  readonly oncoanalyserPipelineManagerStack: Stack;
+  readonly sashPipelineManagerStack: Stack;
   readonly eventSchemaStack: Stack;
   readonly dataSchemaStack: Stack;
   readonly bclConvertManagerStack: Stack;
@@ -226,6 +238,24 @@ export class StatelessStackCollection {
       {
         ...this.createTemplateProps(env, 'PieriandxPipelineManagerStack'),
         ...statelessConfiguration.pieriandxPipelineManagerStackProps,
+      }
+    );
+
+    this.oncoanalyserPipelineManagerStack = new OncoanalyserNfPipelineManagerStack(
+      scope,
+      'OncoanalyserNfPipelineManagerStack',
+      {
+        ...this.createTemplateProps(env, 'OncoanalyserNfPipelineManagerStack'),
+        ...statelessConfiguration.oncoanalyserPipelineManagerStackProps,
+      }
+    );
+
+    this.sashPipelineManagerStack = new SashNfPipelineManagerStack(
+      scope,
+      'SashNfPipelineManagerStack',
+      {
+        ...this.createTemplateProps(env, 'SashNfPipelineManagerStack'),
+        ...statelessConfiguration.sashPipelineManagerStackProps,
       }
     );
 

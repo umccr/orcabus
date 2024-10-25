@@ -148,34 +148,34 @@ def handler(event, context) -> Dict[str, Dict]:
     }
 
 
-if __name__ == "__main__":
-    import json
-    from os import environ
-    environ['AWS_PROFILE'] = 'umccr-development'
-    environ['AWS_DEFAULT_REGION'] = 'ap-southeast-2'
-    environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
-
-    print(
-        json.dumps(
-            handler(
-                {
-                    "output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20241003ead8ad9f/",
-                    "sample_id": "L2400160"
-                },
-                None
-            ),
-            indent=4
-        )
-    )
-
-    # {
-    #     "data_files": {
-    #         "microsatOutputUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Logs_Intermediates/DragenCaller/L2400161/L2400161.microsat_output.json",
-    #         "tmbMetricsUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Logs_Intermediates/Tmb/L2400161/L2400161.tmb.metrics.csv",
-    #         "cnvVcfUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Results/L2400161/L2400161.cnv.vcf.gz",
-    #         "hardFilteredVcfUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Results/L2400161/L2400161.hard-filtered.vcf.gz",
-    #         "fusionsUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Results/L2400161/L2400161_Fusions.csv",
-    #         "metricsOutputUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Results/L2400161/L2400161_MetricsOutput.tsv",
-    #         "samplesheetUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Logs_Intermediates/SampleSheetValidation/SampleSheet_Intermediate.csv"
-    #     }
-    # }
+# if __name__ == "__main__":
+#     import json
+#     from os import environ
+#     environ['AWS_PROFILE'] = 'umccr-development'
+#     environ['AWS_DEFAULT_REGION'] = 'ap-southeast-2'
+#     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20241003ead8ad9f/",
+#                     "sample_id": "L2400160"
+#                 },
+#                 None
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # {
+#     #     "data_files": {
+#     #         "microsatOutputUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Logs_Intermediates/DragenCaller/L2400161/L2400161.microsat_output.json",
+#     #         "tmbMetricsUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Logs_Intermediates/Tmb/L2400161/L2400161.tmb.metrics.csv",
+#     #         "cnvVcfUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Results/L2400161/L2400161.cnv.vcf.gz",
+#     #         "hardFilteredVcfUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Results/L2400161/L2400161.hard-filtered.vcf.gz",
+#     #         "fusionsUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Results/L2400161/L2400161_Fusions.csv",
+#     #         "metricsOutputUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Results/L2400161/L2400161_MetricsOutput.tsv",
+#     #         "samplesheetUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/analysis/cttsov2/20240910d260200d/Logs_Intermediates/SampleSheetValidation/SampleSheet_Intermediate.csv"
+#     #     }
+#     # }
