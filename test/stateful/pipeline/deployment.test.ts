@@ -72,6 +72,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       // FIXME - https://github.com/umccr/orcabus/issues/174
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
+        // pragma: allowlist nextline secret
         ['/AuthorizationManagerStack/AdminHTTPAuthorizerLambda/ServiceRole/Resource'],
         [
           {
