@@ -52,6 +52,7 @@ import {
   getPierianDxPipelineManagerStackProps,
   getPierianDxPipelineTableStackProps,
 } from './stacks/pierianDxPipelineManager';
+import { getAuthorizationManagerStackProps } from './stacks/authorizationManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -72,6 +73,7 @@ interface EnvironmentConfig {
 export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null => {
   const stackProps = {
     statefulConfig: {
+      authorizationManagerStackProps: getAuthorizationManagerStackProps(stage),
       dataBucketStackProps: getDataBucketStackProps(stage),
       sharedStackProps: getSharedStackProps(stage),
       postgresManagerStackProps: getPostgresManagerStackProps(),
