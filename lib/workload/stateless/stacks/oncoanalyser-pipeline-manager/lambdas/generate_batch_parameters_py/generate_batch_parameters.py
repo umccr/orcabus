@@ -181,7 +181,7 @@ def handler(event, context):
                 },
                 separators=(',', ':')
             ),
-            "orcabus": True,
+            "orcabus": "true",
         },
         "tags": tags
     }

@@ -55,13 +55,14 @@
           "id.$": "$.workflow_inputs.parameters.portal_run_id",
           "id_type": "${__portal_run_table_partition_name__}"
         },
-        "UpdateExpression": "SET status = :status",
+        "UpdateExpression": "SET analysis_status = :analysis_status",
         "ExpressionAttributeValues": {
-          ":status": {
-            "S": "$.workflow_inputs.status"
+          ":analysis_status": {
+            "S.$": "$.workflow_inputs.status"
           }
         }
       },
+      "ResultPath": null,
       "Next": "Is Terminal Status"
     },
     "Is Terminal Status": {
@@ -124,11 +125,8 @@
           "id.$": "$.workflow_inputs.parameters.portal_run_id",
           "id_type": "${__portal_run_table_partition_name__}"
         },
-        "UpdateExpression": "SET status = :status",
+        "UpdateExpression": "SET outputs = :outputs",
         "ExpressionAttributeValues": {
-          ":status": {
-            "S.$": "$.workflow_inputs.status"
-          },
           ":outputs": {
             "S.$": "States.JsonToString($.generate_outputs_step.outputs)"
           }
