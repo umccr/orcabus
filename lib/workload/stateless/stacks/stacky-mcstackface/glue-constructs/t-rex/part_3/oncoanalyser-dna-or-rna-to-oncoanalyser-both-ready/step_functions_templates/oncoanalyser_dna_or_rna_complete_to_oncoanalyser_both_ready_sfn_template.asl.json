@@ -13,7 +13,7 @@
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.workflow_inputs.workflow_name",
+          "Variable": "$.workflow_inputs.workflowName",
           "StringEquals": "${__rna_workflow_run_name__}",
           "Next": "Get RNA Library Item"
         }
@@ -53,12 +53,96 @@
           "Variable": "$.get_library_item_step.Item",
           "IsPresent": true,
           "Comment": "Library Item In DataBase",
-          "Next": "Add Oncoanalyser Analysis Complete"
+          "Next": "Is WTS Library 2"
         }
       ],
       "Default": "Not a TN library"
     },
-    "Add Oncoanalyser Analysis Complete": {
+    "Is WTS Library 2": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.workflow_inputs.workflowName",
+          "StringEquals": "${__rna_workflow_run_name__}",
+          "Next": "Add Oncoanalyser Analysis Complete to WTS Library"
+        }
+      ],
+      "Default": "Update DNA Libraries"
+    },
+    "Update DNA Libraries": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Add Oncoanalyser Analysis Complete Tumor",
+          "States": {
+            "Add Oncoanalyser Analysis Complete Tumor": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.get_library_item_step.Item.id.S",
+                  "id_type": "${__library_partition_name__}"
+                },
+                "UpdateExpression": "SET outputs = :outputs, analysis_complete = :analysis_complete",
+                "ExpressionAttributeValues": {
+                  ":outputs": {
+                    "S.$": "States.JsonToString($.workflow_inputs.payload.data.outputs)"
+                  },
+                  ":analysis_complete": {
+                    "BOOL": true
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Normal Library Item",
+          "States": {
+            "Get Normal Library Item": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:getItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "States.ArrayGetItem($.workflow_inputs.linkedLibraries[?(@.libraryId==$.workflow_inputs.payload.data.tags.normalLibraryId)].orcabusId, 0)",
+                  "id_type": "${__library_partition_name__}"
+                }
+              },
+              "ResultPath": "$.get_normal_library_item_step",
+              "Next": "Add Oncoanalyser Analysis Complete Normal"
+            },
+            "Add Oncoanalyser Analysis Complete Normal": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Key": {
+                  "id.$": "$.get_normal_library_item_step.Item.id.S",
+                  "id_type": "${__library_partition_name__}"
+                },
+                "UpdateExpression": "SET outputs = :outputs, analysis_complete = :analysis_complete",
+                "ExpressionAttributeValues": {
+                  ":outputs": {
+                    "S.$": "States.JsonToString($.workflow_inputs.payload.data.outputs)"
+                  },
+                  ":analysis_complete": {
+                    "BOOL": true
+                  }
+                }
+              },
+              "ResultPath": null,
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": null,
+      "Next": "Wait"
+    },
+    "Add Oncoanalyser Analysis Complete to WTS Library": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:updateItem",
       "Parameters": {
@@ -139,7 +223,7 @@
             "Type": "Choice",
             "Choices": [
               {
-                "Variable": "$.get_library_map_step.Item.analysis_complete",
+                "Variable": "$.get_library_map_step.Item.analysis_complete.BOOL",
                 "BooleanEquals": true,
                 "Comment": "Library Has Completed Analysis",
                 "Next": "Set Output"
@@ -270,7 +354,7 @@
                       "Type": "Task",
                       "Resource": "arn:aws:states:::dynamodb:getItem",
                       "Parameters": {
-                        "TableName": "MyDynamoDBTable",
+                        "TableName": "${__table_name__}",
                         "Key": {
                           "id.$": "$.get_orcabus_dna_rna_pair_step.tumor_rna_library.orcabus_id",
                           "id_type": "${__library_partition_name__}"
@@ -288,7 +372,6 @@
                 "dna_outputs.$": "$.[0].outputs",
                 "rna_outputs.$": "$.[1].outputs"
               },
-              "ResultPath": "$.get_oncoanalyser_outputs_step",
               "End": true
             }
           }

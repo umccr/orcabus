@@ -79,7 +79,7 @@ export class WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct extends Con
         /* Table object */
         __table_name__: props.tableObj.tableName,
         /* Table Partitions */
-        __portal_run_table_partition_name: this.globals.portalRunTablePartitionName,
+        __portal_run_table_partition_name__: this.globals.portalRunTablePartitionName,
         /* Event metadata */
         __event_bus_name__: props.eventBusObj.eventBusName,
         __event_detail_type__: this.globals.eventDetailType,

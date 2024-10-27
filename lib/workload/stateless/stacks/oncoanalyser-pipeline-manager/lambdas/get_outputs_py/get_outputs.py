@@ -6,7 +6,7 @@ Given the engine parameters and inputs, use these to collect the output uris
 For oncoanalyser-wgts-dna:
     * Extend the outputUri from the engineParameters with the tumorSampleId and normalSampleId
 
-For rnadna:
+For oncoanalyser-wgts-rna:
     * Extend the outputUri from the engineParameters with the tumorSampleId
 """
 
@@ -64,7 +64,7 @@ def handler(event, context):
                 "dnaOncoanalyserAnalysisUri": extend_url(output_uri, f'{tumor_sample_id}_{normal_sample_id}') + '/'
             }
         }
-    elif workflow_name == "rnadna":
+    elif workflow_name == "oncoanalyser-wgts-rna":
         tumor_sample_id = inputs.get('tumorRnaSampleId')
         return {
             "outputs": {

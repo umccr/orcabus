@@ -75,7 +75,7 @@ import json
 # Globals
 ANALYSIS_TYPE_TO_WORKFLOW_MAPPER = {
     "DNA": "oncoanalyser-wgts-dna",
-    "RNA": "rnadna",
+    "RNA": "oncoanalyser-wgts-rna",
     "DNA/RNA": "oncoanalyser-wgts-dna-rna"
 }
 

@@ -235,7 +235,7 @@ export class GlueConstruct extends Construct {
     });
 
     /*
-    Part K: Plumber up the oncoanalyser-wgts-both and sash service - both
+    Part K: Plumber up the oncoanalyser-wgts-dna-rna and sash service - both
     have the same entry point so we can use the same construct
     */
     const tRex = new OncoanalyserBothSashGlueHandlerConstruct(this, 'trex', {

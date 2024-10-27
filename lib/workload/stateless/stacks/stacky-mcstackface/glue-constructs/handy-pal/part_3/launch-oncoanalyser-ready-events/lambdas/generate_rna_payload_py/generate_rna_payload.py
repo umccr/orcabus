@@ -28,7 +28,6 @@ ANALYSIS_TYPE = "RNA"
 
 # Functions
 from typing import Dict, List
-from more_itertools import flatten
 
 
 def handler(event, context) -> Dict:
@@ -50,16 +49,7 @@ def handler(event, context) -> Dict:
             "analysisType": ANALYSIS_TYPE,
             "subjectId": subject_id,
             "tumorRnaSampleId": tumor_library_id,
-            "tumorRnaFastqUriList": list(flatten(
-                list(
-                    map(
-                        lambda fastq_list_row_iter_: [
-                            fastq_list_row_iter_.get("read1FileUri"),
-                            fastq_list_row_iter_.get("read2FileUri")
-                        ],
-                        tumor_fastq_list_rows
-                    ))
-            )),
+            "tumorRnaFastqListRows": tumor_fastq_list_rows,
         },
         "event_tags": {
             "subjectId": subject_id,

@@ -30,6 +30,7 @@ ANALYSIS_TYPE = "DNA/RNA"
 # Functions
 from typing import Dict
 
+
 def handler(event, context) -> Dict:
     """
     Generate draft event payload for the event
@@ -63,3 +64,5 @@ def handler(event, context) -> Dict:
             "individualId": individual_id,
         }
     }
+
+

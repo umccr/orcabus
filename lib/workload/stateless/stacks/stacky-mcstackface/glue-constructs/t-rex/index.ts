@@ -88,7 +88,7 @@ export class OncoanalyserBothSashGlueHandlerConstruct extends NestedStack {
         Input Event Source: `orcabus.workflowmanager`
         Input Event DetailType: `WorkflowRunStateChangeComplete`
         Input Event status: `SUCCEEDED`
-        Input Event workflow type: oncoanalyser-wgts-dna / rnadna
+        Input Event workflow type: oncoanalyser-wgts-dna /
 
         Output Event source: `orcabus.oncoanalyserinputeventglue`
         Output Event DetailType: `WorkflowRunStateChange`

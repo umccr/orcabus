@@ -40,12 +40,12 @@ export class OncoanalyserDnaRnaReadyConstruct extends Construct {
     triggerStatus: 'succeeded',
     triggerWorkflowNames: {
       DNA: 'oncoanalyser-wgts-dna',
-      RNA: 'rnadna',
+      RNA: 'oncoanalyser-wgts-rna',
     },
     triggerDetailType: 'WorkflowRunStateChange',
     outputSource: 'orcabus.oncoanalyserinputeventglue',
     payloadVersion: '2024.07.23',
-    workflowName: 'oncoanalyser-both',
+    workflowName: 'oncoanalyser-wgts-dna-rna',
     workflowVersion: '1.0.0',
     tablePartitionName: 'library',
   };
@@ -74,10 +74,10 @@ export class OncoanalyserDnaRnaReadyConstruct extends Construct {
       this,
       'get_complement_library_pair_lambdaobj',
       {
-        entry: path.join(__dirname, 'lambdas', 'get_oncoanalyser_dna_rna_payload_py'),
+        entry: path.join(__dirname, 'lambdas', 'find_complement_library_py'),
         runtime: lambda.Runtime.PYTHON_3_12,
         architecture: lambda.Architecture.ARM_64,
-        index: 'get_oncoanalyser_dna_rna_payload.py',
+        index: 'find_complement_library.py',
         handler: 'handler',
         memorySize: 1024,
       }
@@ -92,7 +92,7 @@ export class OncoanalyserDnaRnaReadyConstruct extends Construct {
 
     // Add CONTEXT, FROM_ID and RETURN_STR environment variables to the lambda
     collectOrcaBusObjFromSubjectIdLambdaObj.addEnvironment('CONTEXT', 'subject');
-    collectOrcaBusObjFromSubjectIdLambdaObj.addEnvironment('FROM_ID', '');
+    collectOrcaBusObjFromSubjectIdLambdaObj.addEnvironment('FROM_ORCABUS', '');
     collectOrcaBusObjFromSubjectIdLambdaObj.addEnvironment('RETURN_OBJ', '');
 
     /*

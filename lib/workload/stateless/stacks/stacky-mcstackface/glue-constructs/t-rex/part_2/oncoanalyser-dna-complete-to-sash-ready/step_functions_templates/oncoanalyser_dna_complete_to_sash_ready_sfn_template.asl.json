@@ -15,7 +15,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "States.ArrayGetItem($.workflow_inputs.linked_libraries[?(@.libraryId==$.workflow_inputs.payload.data.tags.tumorLibraryId)].orcabusId, 0)",
+          "id.$": "States.ArrayGetItem($.workflow_inputs.linkedLibraries[?(@.libraryId==$.workflow_inputs.payload.data.tags.tumorLibraryId)].orcabusId, 0)",
           "id_type": "${__library_partition_name__}"
         }
       },
@@ -87,7 +87,6 @@
                 "StateMachineArn": "${__sfn_preamble_state_machine_arn__}",
                 "Input": {}
               },
-              "ResultPath": "$.get_sfn_preamble_outputs_step",
               "ResultSelector": {
                 "portal_run_id.$": "$.Output.portal_run_id",
                 "workflow_run_name.$": "$.Output.workflow_run_name"
@@ -114,7 +113,7 @@
           "StatePayload": {
             "portal_run_id.$": "$.get_parameters_step.portal_run_id",
             "workflow_run_name.$": "$.get_parameters_step.workflow_run_name",
-            "linked_libraries": "$.workflow_inputs.linkedLibraries",
+            "linked_libraries.$": "$.workflow_inputs.linkedLibraries",
             "data_inputs.$": "$.get_parameters_step.input_event_data",
             "data_tags.$": "$.get_parameters_step.event_tags"
           }

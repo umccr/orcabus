@@ -48,8 +48,8 @@ def handler(event, context):
     # Merge the tags
     tags.update(NEXTFLOW_TAGS)
 
-    # Also add the portal run id to the tags under 'RunId'
-    tags['RunId'] = engine_parameters.get("portal_run_id")
+    # Add the portal run id as a tag
+    tags['PortalRunId'] = event.get("portal_run_id")
 
     # Convert inputs and engine_parameters to snake case
     inputs = dict(map(
@@ -79,17 +79,17 @@ def handler(event, context):
     )
 
     # Pop the pipeline version from engine_parameters
-    pipeline_version = engine_parameters.pop('pipeline_version', None)
+    pipeline_version = engine_parameters.pop('pipeline_version', event.get('default_pipeline_version'))
 
     # Generate the payload
     return {
         "overrides": {
             "resource_requirements": [
                 {
-                    "type": "MEMORY", "value": "15000"
+                    "Type": "MEMORY", "Value": "15000"
                 },
                 {
-                    "type": "VCPU", "value": "2"
+                    "Type": "VCPU", "Value": "2"
                 }
             ],
             "command": [
@@ -114,7 +114,7 @@ def handler(event, context):
                 },
                 separators=(',', ':')
             ),
-            "orcabus": True,
+            "orcabus": "true",
         },
         "tags": tags
     }

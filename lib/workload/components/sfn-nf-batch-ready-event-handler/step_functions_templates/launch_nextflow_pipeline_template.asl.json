@@ -94,9 +94,9 @@
         "tags.$": "$.Payload.tags"
       },
       "ResultPath": "$.get_batch_submission_step",
-      "Next": "Submit Oncoanalyser Job"
+      "Next": "Submit Nextflow Job"
     },
-    "Submit Oncoanalyser Job": {
+    "Submit Nextflow Job": {
       "Type": "Task",
       "Resource": "arn:aws:states:::batch:submitJob",
       "Parameters": {
@@ -114,14 +114,14 @@
       "ResultSelector": {
         "jobId.$": "$.JobId"
       },
-      "ResultPath": "$.submit_oncoanalyser_job_step",
+      "ResultPath": "$.submit_nextflow_job_step",
       "Next": "Append Job Id to Engine Parameters"
     },
     "Append Job Id to Engine Parameters": {
       "Type": "Pass",
       "Next": "Update engine parameters in db",
       "Parameters": {
-        "engine_parameters.$": "States.JsonMerge($.workflow_inputs.payload.data.engineParameters, $.submit_oncoanalyser_job_step,false)"
+        "engine_parameters.$": "States.JsonMerge($.workflow_inputs.payload.data.engineParameters, $.submit_nextflow_job_step,false)"
       },
       "ResultPath": "$.merge_engine_parameters_step"
     },

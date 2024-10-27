@@ -217,10 +217,12 @@
             "Get RNA Linked Libraries Object": {
               "Type": "Pass",
               "Parameters": {
-                "linked_libraries": {
-                  "orcabusId.$": "$.payload_data.library.orcabusId",
-                  "libraryId.$": "$.payload_data.library.libraryId"
-                }
+                "linked_libraries": [
+                  {
+                    "orcabusId.$": "$.payload_data.library.orcabusId",
+                    "libraryId.$": "$.payload_data.library.libraryId"
+                  }
+                ]
               },
               "End": true
             }

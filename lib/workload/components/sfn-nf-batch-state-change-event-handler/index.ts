@@ -74,13 +74,14 @@ export class WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct exten
         /* Table object */
         __table_name__: props.tableObj.tableName,
         /* Table Partitions */
-        __portal_run_table_partition_name: this.globals.portalRunTablePartitionName,
+        __portal_run_table_partition_name__: this.globals.portalRunTablePartitionName,
         /* Event metadata */
         __event_bus_name__: props.eventBusObj.eventBusName,
         __event_detail_type__: this.globals.eventDetailType,
         __event_detail_version__: this.globals.serviceVersion,
-        __event_source__: props.internalEventSource,
+        __event_output_source__: props.internalEventSource,
         __event_status__: this.globals.eventStatus,
+        __service_version__: this.globals.serviceVersion,
         /* Lambdas */
         __generate_outputs_lambda_function_arn__:
           props.generateBatchOutputsLambdaObj.currentVersion.functionArn,
