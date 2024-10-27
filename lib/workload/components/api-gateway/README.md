@@ -3,8 +3,8 @@
 Usage example:
 
 ```ts
-const srmApi = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
-const httpApi = srmApi.httpApi;
+const apiGateway = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
+const httpApi = apiGateway.httpApi;
 
 const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
 
