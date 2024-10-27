@@ -6,6 +6,7 @@ import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { Cttsov2InitialiseLibraryAndFastqListRowConstruct } from './part_1/initialise-cttsov2-library-dbs';
 import { Cttsov2PopulateFastqListRowConstruct } from './part_2/populate-fastq-list-row-dbs';
 import { Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct } from './part_3/fastq-list-row-event-shower-complete-to-cttsov2-ready';
+import { NestedStack } from 'aws-cdk-lib/core';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting cttsov2 analyses
@@ -25,7 +26,7 @@ export interface cttsov2GlueHandlerConstructProps {
   icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
-export class Cttsov2GlueHandlerConstruct extends Construct {
+export class Cttsov2GlueHandlerConstruct extends NestedStack {
   constructor(scope: Construct, id: string, props: cttsov2GlueHandlerConstructProps) {
     super(scope, id);
 

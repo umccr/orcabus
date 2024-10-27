@@ -25,7 +25,7 @@ def handler(event, context) -> Dict[str, Dict]:
         "enable_map_align_output_germline": False,
         "enable_duplicate_marking": event_data_input.get('enableDuplicateMarking', True),
         "enable_cnv_somatic": event_data_input.get('enableCnvSomatic', None),
-        "enable_hrd_somatic": event_data_input.get('enableHrdSomatic', None),
+        "enable_hrd": event_data_input.get('enableHrdSomatic', None),
         "enable_sv_somatic": event_data_input.get('enableSvSomatic', None),
         "cnv_use_somatic_vc_baf": event_data_input.get('cnvUseSomaticVcBaf', None)
     }
@@ -100,7 +100,7 @@ def handler(event, context) -> Dict[str, Dict]:
 #     #     "boolean_parameters": {
 #     #         "enable_duplicate_marking": true,
 #     #         "enable_cnv_somatic": true,
-#     #         "enable_hrd_somatic": true,
+#     #         "enable_hrd": true,
 #     #         "enable_sv_somatic": true,
 #     #         "cnv_use_somatic_vc_baf": true,
 #     #         "enable_map_align_output_somatic": true,

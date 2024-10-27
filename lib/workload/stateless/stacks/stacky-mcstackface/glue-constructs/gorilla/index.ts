@@ -4,6 +4,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { BclconvertInteropQcDraftMakerConstruct } from './part_1/bclconvert-interop-qc-draft-event-maker';
+import { NestedStack } from 'aws-cdk-lib/core';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -20,7 +21,7 @@ export interface BsshFastqCopyToBclconvertInteropQcConstructProps {
   icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
-export class BsshFastqCopyToBclconvertInteropQcConstruct extends Construct {
+export class BsshFastqCopyToBclconvertInteropQcConstruct extends NestedStack {
   constructor(
     scope: Construct,
     id: string,
