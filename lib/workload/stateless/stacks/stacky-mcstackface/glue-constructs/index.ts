@@ -29,8 +29,6 @@ export interface GlueConstructProps {
 
   /* Tables */
   instrumentRunTableObj: dynamodb.ITableV2;
-  inputMakerTableObj: dynamodb.ITableV2;
-  workflowManagerTableObj: dynamodb.ITableV2;
   cttsov2GlueTableObj: dynamodb.ITableV2;
   wgtsQcGlueTableObj: dynamodb.ITableV2;
   tnGlueTableObj: dynamodb.ITableV2;
@@ -257,8 +255,6 @@ export interface GlueStackConfig {
 
   /* Tables */
   instrumentRunTableName: string;
-  inputMakerTableName: string;
-  workflowManagerTableName: string;
   cttsov2GlueTableName: string;
   wgtsQcGlueTableName: string;
   tnGlueTableName: string;
@@ -306,16 +302,6 @@ export class GlueStack extends cdk.Stack {
     /*
     Get the tables
     */
-    const workflowManagerTableObj = dynamodb.Table.fromTableName(
-      this,
-      'workflowManagerTableObj',
-      props.workflowManagerTableName
-    );
-    const inputMakerTableObj = dynamodb.Table.fromTableName(
-      this,
-      'inputMakerTableObj',
-      props.inputMakerTableName
-    );
     const instrumentRunTableObj = dynamodb.Table.fromTableName(
       this,
       'instrumentRunTableObj',
@@ -437,8 +423,6 @@ export class GlueStack extends cdk.Stack {
       eventBusObj: eventBusObj,
 
       /* Tables */
-      workflowManagerTableObj: workflowManagerTableObj,
-      inputMakerTableObj: inputMakerTableObj,
       instrumentRunTableObj: instrumentRunTableObj,
       wgtsQcGlueTableObj: wgtsQcGlueTableObj,
       cttsov2GlueTableObj: cttsov2GlueTableObj,

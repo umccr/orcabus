@@ -754,7 +754,6 @@ export const sashPipelineVersionSSMParameterPath = '/nextflow_stack/sash/pipelin
 // Stacky Stack
 export const stackyEventBusName = eventBusName;
 export const stackyInstrumentRunTableName = 'stacky-instrument-run-table';
-export const stackyInputMakerTableName = 'stacky-input-maker-table';
 export const stackyCttsov2InputGlueTableName = 'stacky-cttsov2-workflow-glue-table';
 export const stackyWgtsQcGlueTableName = 'stacky-wgts-qc-glue-table';
 export const stackyTnGlueTableName = 'stacky-tn-glue-table';

@@ -5,9 +5,7 @@ import {
   stackyAnalysisOutputUriSsmParameterName,
   stackyEventBusName,
   stackyIcav2ProjectIdSsmParameterName,
-  stackyInputMakerTableName,
   stackyInstrumentRunTableName,
-  stackyWorkflowManagerTableName,
   stackyCttsov2InputGlueTableName,
   icav2AccessTokenSecretName,
   stackyWgtsQcGlueTableName,
@@ -31,9 +29,7 @@ export const getGlueStackProps = (stage: AppStage): GlueStackConfig => {
     eventBusName: stackyEventBusName,
 
     /* Tables */
-    inputMakerTableName: stackyInputMakerTableName,
     instrumentRunTableName: stackyInstrumentRunTableName,
-    workflowManagerTableName: stackyWorkflowManagerTableName,
     cttsov2GlueTableName: stackyCttsov2InputGlueTableName,
     wgtsQcGlueTableName: stackyWgtsQcGlueTableName,
     tnGlueTableName: stackyTnGlueTableName,
@@ -65,8 +61,6 @@ export const getGlueStackProps = (stage: AppStage): GlueStackConfig => {
 export const getStatefulGlueStackProps = (): StackyStatefulTablesConfig => {
   return {
     dynamodbInstrumentRunManagerTableName: stackyInstrumentRunTableName,
-    dynamodbWorkflowManagerTableName: stackyWorkflowManagerTableName,
-    dynamodbInputGlueTableName: stackyInputMakerTableName,
     dynamodbCttsov2WorkflowGlueTableName: stackyCttsov2InputGlueTableName,
     dynamodbWgtsQcGlueTableName: stackyWgtsQcGlueTableName,
     dynamodbTnGlueTableName: stackyTnGlueTableName,
