@@ -115,7 +115,8 @@ async fn main() -> Result<()> {
             .with_key_divisor(key_divisor)
             .with_shuffle(shuffle)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
     }
 
     if args.migrate {

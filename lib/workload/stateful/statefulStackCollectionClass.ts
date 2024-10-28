@@ -53,6 +53,14 @@ import {
   AuthorizationManagerStack,
   AuthorizationManagerStackProps,
 } from './stacks/authorization-manager/stack';
+import {
+  OncoanalyserNfPipelineTable,
+  OncoanalyserNfPipelineTableStackProps,
+} from './stacks/oncoanalyser-dynamodb/deploy/stack';
+import {
+  SashNfPipelineTable,
+  SashNfPipelineTableStackProps,
+} from './stacks/sash-dynamodb/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -71,6 +79,8 @@ export interface StatefulStackCollectionProps {
   BclConvertTableStackProps: BclConvertTableStackProps;
   stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
   pierianDxPipelineTableStackProps: PierianDxPipelineTableStackProps;
+  oncoanalyserPipelineTableStackProps: OncoanalyserNfPipelineTableStackProps;
+  sashPipelineTableStackProps: SashNfPipelineTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -92,6 +102,8 @@ export class StatefulStackCollection {
   readonly BclConvertTableStack: Stack;
   readonly stackyStatefulTablesStack: Stack;
   readonly pierianDxPipelineTableStack: Stack;
+  readonly oncoanalyserPipelineTableStack: Stack;
+  readonly sashPipelineTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -217,6 +229,20 @@ export class StatefulStackCollection {
         ...statefulConfiguration.pierianDxPipelineTableStackProps,
       }
     );
+
+    this.oncoanalyserPipelineTableStack = new OncoanalyserNfPipelineTable(
+      scope,
+      'OncoanalyserNfPipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'OncoanalyserNfPipelineTableStack'),
+        ...statefulConfiguration.oncoanalyserPipelineTableStackProps,
+      }
+    );
+
+    this.sashPipelineTableStack = new SashNfPipelineTable(scope, 'SashNfPipelineTableStack', {
+      ...this.createTemplateProps(env, 'SashNfPipelineTableStack'),
+      ...statefulConfiguration.sashPipelineTableStackProps,
+    });
   }
 
   /**

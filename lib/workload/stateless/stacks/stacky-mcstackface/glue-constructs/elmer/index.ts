@@ -4,6 +4,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { BsshFastqCopyManagerReadyMakerConstruct } from './part_1/bclconvert-succeeded-to-bssh-fastq-copy';
+import { NestedStack } from 'aws-cdk-lib/core';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -21,7 +22,7 @@ export interface BclconvertToBsshFastqCopyEventHandlerConstructProps {
   icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
-export class BclconvertToBsshFastqCopyEventHandlerConstruct extends Construct {
+export class BclconvertToBsshFastqCopyEventHandlerConstruct extends NestedStack {
   constructor(
     scope: Construct,
     id: string,

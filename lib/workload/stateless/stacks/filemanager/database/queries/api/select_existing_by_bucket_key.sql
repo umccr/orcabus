@@ -36,6 +36,7 @@ select
     event_type,
     ingest_id,
     attributes,
+    is_current_state,
     0::bigint as "number_reordered"
 from input
 -- Grab the most recent object in each input group.

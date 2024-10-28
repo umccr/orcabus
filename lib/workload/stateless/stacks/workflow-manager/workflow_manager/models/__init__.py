@@ -10,3 +10,4 @@ from .utils import WorkflowRunUtil
 from .analysis import Analysis
 from .analysis_run import AnalysisRun
 from .analysis_context import AnalysisContext
+from .workflow_run_comment import WorkflowRunComment

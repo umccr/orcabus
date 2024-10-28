@@ -14,13 +14,26 @@ use crate::events::aws::message::{default_version_id, EventType};
 use crate::events::aws::EventType::{Created, Deleted, Other};
 use crate::uuid::UuidGenerator;
 use sea_orm::prelude::Json;
+use strum::{EnumCount, FromRepr};
 
 pub mod collecter;
 pub mod inventory;
 pub mod message;
 
 /// A wrapper around AWS storage types with sqlx support.
-#[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, sqlx::Type, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Clone,
+    sqlx::Type,
+    Serialize,
+    Deserialize,
+    FromRepr,
+    EnumCount,
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[sqlx(type_name = "storage_class")]
 pub enum StorageClass {
@@ -74,6 +87,7 @@ pub struct TransposedS3EventMessages {
     pub event_types: Vec<EventType>,
     pub is_delete_markers: Vec<bool>,
     pub ingest_ids: Vec<Option<Uuid>>,
+    pub is_current_state: Vec<bool>,
     pub attributes: Vec<Option<Json>>,
 }
 
@@ -96,6 +110,7 @@ impl TransposedS3EventMessages {
             event_types: Vec::with_capacity(capacity),
             is_delete_markers: Vec::with_capacity(capacity),
             ingest_ids: Vec::with_capacity(capacity),
+            is_current_state: Vec::with_capacity(capacity),
             attributes: Vec::with_capacity(capacity),
         }
     }
@@ -117,6 +132,7 @@ impl TransposedS3EventMessages {
             event_type,
             is_delete_marker,
             ingest_id,
+            is_current_state,
             attributes,
             ..
         } = message;
@@ -135,6 +151,7 @@ impl TransposedS3EventMessages {
         self.event_types.push(event_type);
         self.is_delete_markers.push(is_delete_marker);
         self.ingest_ids.push(ingest_id);
+        self.is_current_state.push(is_current_state);
         self.attributes.push(attributes);
     }
 }
@@ -174,6 +191,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
             messages.event_types,
             messages.is_delete_markers,
             messages.ingest_ids,
+            messages.is_current_state,
             messages.attributes,
         )
         .map(
@@ -192,6 +210,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                 event_type,
                 is_delete_marker,
                 ingest_id,
+                is_current_state,
                 attributes,
             )| {
                 FlatS3EventMessage {
@@ -209,6 +228,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                     event_type,
                     is_delete_marker,
                     ingest_id,
+                    is_current_state,
                     attributes,
                     number_duplicate_events: 0,
                     number_reordered: 0,
@@ -443,6 +463,7 @@ pub struct FlatS3EventMessage {
     pub event_type: EventType,
     pub is_delete_marker: bool,
     pub ingest_id: Option<Uuid>,
+    pub is_current_state: bool,
     pub attributes: Option<Json>,
     pub number_duplicate_events: i64,
     pub number_reordered: i64,
@@ -582,6 +603,12 @@ impl FlatS3EventMessage {
         self
     }
 
+    /// Set the is current state flag.
+    pub fn with_is_current_state(mut self, is_current_state: bool) -> Self {
+        self.is_current_state = is_current_state;
+        self
+    }
+
     /// Set the attributes.
     pub fn with_attributes(mut self, attributes: Option<Json>) -> Self {
         self.attributes = attributes;
@@ -644,6 +671,7 @@ pub(crate) mod tests {
             None,
             EXPECTED_VERSION_ID.to_string(),
             false,
+            false,
         );
 
         let second = result.next().unwrap();
@@ -654,6 +682,7 @@ pub(crate) mod tests {
             Some(0),
             EXPECTED_VERSION_ID.to_string(),
             false,
+            true,
         );
 
         let third = result.next().unwrap();
@@ -664,6 +693,7 @@ pub(crate) mod tests {
             Some(0),
             EXPECTED_VERSION_ID.to_string(),
             false,
+            true,
         );
     }
 
@@ -680,6 +710,7 @@ pub(crate) mod tests {
             Some(0),
             EXPECTED_VERSION_ID.to_string(),
             false,
+            true,
         );
 
         let second = result.next().unwrap();
@@ -689,6 +720,7 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
+            false,
             false,
         );
     }
@@ -718,6 +750,7 @@ pub(crate) mod tests {
             Some(0),
             EXPECTED_VERSION_ID.to_string(),
             false,
+            true,
         );
 
         let second = result.next().unwrap();
@@ -727,6 +760,7 @@ pub(crate) mod tests {
             Some(EXPECTED_SEQUENCER_DELETED_ONE.to_string()),
             None,
             EXPECTED_VERSION_ID.to_string(),
+            false,
             false,
         );
 
@@ -738,6 +772,7 @@ pub(crate) mod tests {
             None,
             "version_id".to_string(),
             false,
+            false,
         );
     }
 
@@ -748,6 +783,7 @@ pub(crate) mod tests {
         size: Option<i64>,
         version_id: String,
         is_delete_marker: bool,
+        is_current_state: bool,
     ) {
         assert_eq!(event.event_time, Some(DateTime::<Utc>::default()));
         assert_eq!(&event.event_type, event_type);
@@ -760,6 +796,7 @@ pub(crate) mod tests {
         assert_eq!(event.storage_class, None);
         assert_eq!(event.last_modified_date, None);
         assert_eq!(event.is_delete_marker, is_delete_marker);
+        assert_eq!(event.is_current_state, is_current_state);
     }
 
     fn assert_object(

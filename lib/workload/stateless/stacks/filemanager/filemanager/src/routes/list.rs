@@ -134,12 +134,11 @@ pub async fn list_s3(
 ) -> Result<Json<ListResponse<S3>>> {
     let txn = state.database_client().connection_ref().begin().await?;
 
-    let mut response = ListQueryBuilder::<_, s3_object::Entity>::new(&txn)
-        .filter_all(filter_all.clone(), wildcard.case_sensitive())?;
-
-    if list.current_state {
-        response = response.current_state();
-    }
+    let response = ListQueryBuilder::<_, s3_object::Entity>::new(&txn).filter_all(
+        filter_all.clone(),
+        wildcard.case_sensitive(),
+        list.current_state,
+    )?;
 
     let url = if let Some(url) = state.config().api_links_url() {
         url
@@ -196,13 +195,9 @@ pub async fn count_s3(
     WithRejection(extract::Query(list), _): Query<ListS3Params>,
     WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
-    let mut response =
+    let response =
         ListQueryBuilder::<_, s3_object::Entity>::new(state.database_client.connection_ref())
-            .filter_all(filter_all, wildcard.case_sensitive())?;
-
-    if list.current_state {
-        response = response.current_state();
-    }
+            .filter_all(filter_all, wildcard.case_sensitive(), list.current_state)?;
 
     Ok(Json(response.to_list_count().await?))
 }
@@ -381,6 +376,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3> = response_from_get(state, "/s3?currentState=false").await;
@@ -398,6 +394,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3> = response_from_get(state, "/s3?rowsPerPage=1&page=1").await;
@@ -425,6 +422,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3> = response_from_get(state, "/s3?rowsPerPage=1&page=1").await;
@@ -455,6 +453,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3> = response_from_get(state, "/s3?rowsPerPage=1&page=1").await;
@@ -493,7 +492,8 @@ pub(crate) mod tests {
             .with_key_divisor(3)
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result: ListResponse<Url> = response_from_get(state, "/s3/presign").await;
         assert_eq!(result.links(), &Links::new(None, None,));
@@ -530,7 +530,8 @@ pub(crate) mod tests {
             .with_key_divisor(3)
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result: ListResponse<Url> =
             response_from_get(state, "/s3/presign?responseContentDisposition=attachment").await;
@@ -569,7 +570,8 @@ pub(crate) mod tests {
             .with_key_divisor(3)
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result: ListResponse<Url> = response_from_get(state, "/s3/presign").await;
         assert_eq!(result.links(), &Links::new(None, None));
@@ -590,6 +592,7 @@ pub(crate) mod tests {
             .with_key_divisor(5)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3> =
@@ -606,6 +609,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3> =
@@ -625,6 +629,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3> =
@@ -640,6 +645,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3> =
@@ -657,7 +663,8 @@ pub(crate) mod tests {
         let mut entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let value = "test-!)regex_%like";
         change_key(state.database_client(), &entries, 0, value.to_string()).await;
@@ -705,6 +712,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3> = response_from_get(
@@ -774,6 +782,7 @@ pub(crate) mod tests {
             .with_shuffle(true)
             .build(state.database_client())
             .await
+            .unwrap()
             .s3_objects;
 
         let result: ListResponse<S3> = response_from_get(
@@ -814,7 +823,8 @@ pub(crate) mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_many(
             state.database_client(),
@@ -856,7 +866,8 @@ pub(crate) mod tests {
         let state = AppState::from_pool(pool).await;
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         change_many(
             state.database_client(),
@@ -917,7 +928,8 @@ pub(crate) mod tests {
         EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result: ListCount = response_from_get(state, "/s3/count?currentState=false").await;
         assert_eq!(result.n_records, 10);
@@ -929,7 +941,8 @@ pub(crate) mod tests {
         EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result: ListCount =
             response_from_get(state, "/s3/count?currentState=false&bucket=0").await;
@@ -944,7 +957,8 @@ pub(crate) mod tests {
             .with_key_divisor(3)
             .with_shuffle(true)
             .build(state.database_client())
-            .await;
+            .await
+            .unwrap();
 
         let result: ListCount = response_from_get(state, "/s3/count").await;
         assert_eq!(result.n_records, 2);

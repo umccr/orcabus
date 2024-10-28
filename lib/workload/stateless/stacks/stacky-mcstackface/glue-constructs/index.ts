@@ -15,6 +15,8 @@ import { WtsGlueHandlerConstruct } from './mod-podge';
 import { UmccriseGlueHandlerConstruct } from './pva';
 import { RnasumGlueHandlerConstruct } from './roket';
 import { PieriandxGlueHandlerConstruct } from './nails/';
+import { OncoanalyserGlueHandlerConstruct } from './handy-pal';
+import { OncoanalyserBothSashGlueHandlerConstruct } from './t-rex';
 
 /*
 Provide the glue to get from the bclconvertmanager success event
@@ -36,6 +38,8 @@ export interface GlueConstructProps {
   umccriseGlueTableObj: dynamodb.ITableV2;
   rnasumGlueTableObj: dynamodb.ITableV2;
   pieriandxGlueTableObj: dynamodb.ITableV2;
+  oncoanalyserGlueTableObj: dynamodb.ITableV2;
+  oncoanalyserBothSashGlueTableObj: dynamodb.ITableV2;
 
   /* Standard SSM Parameters */
   icav2ProjectIdSsmParameterObj: ssm.IStringParameter;
@@ -88,12 +92,26 @@ export class GlueConstruct extends Construct {
     const gorilla = new BsshFastqCopyToBclconvertInteropQcConstruct(this, 'gorilla', {
       /* Event Objects */
       eventBusObj: props.eventBusObj,
-      /* SSM Parameter Ojbects */
+      /* SSM Parameter Objects */
       analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
       analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
       icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
       /* Secrets */
       icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    });
+
+    /*
+    Part D: Plumber-up the oncoanalyser services
+    */
+    const handyPal = new OncoanalyserGlueHandlerConstruct(this, 'handyPal', {
+      /* Event Objects */
+      eventBusObj: props.eventBusObj,
+      /* Tables */
+      oncoanalyserGlueTableObj: props.oncoanalyserGlueTableObj,
+      /* SSM Parameter Objects */
+      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
     });
 
     /*
@@ -215,6 +233,21 @@ export class GlueConstruct extends Construct {
       /* Secrets */
       icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
     });
+
+    /*
+    Part K: Plumber up the oncoanalyser-wgts-dna-rna and sash service - both
+    have the same entry point so we can use the same construct
+    */
+    const tRex = new OncoanalyserBothSashGlueHandlerConstruct(this, 'trex', {
+      /* Event Objects */
+      eventBusObj: props.eventBusObj,
+      /* Tables */
+      oncoanalyserBothSashGlueTableObj: props.oncoanalyserBothSashGlueTableObj,
+      /* SSM Parameter Objects */
+      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+    });
   }
 }
 
@@ -233,6 +266,8 @@ export interface GlueStackConfig {
   umccriseGlueTableName: string;
   rnasumGlueTableName: string;
   pieriandxGlueTableName: string;
+  oncoanalyserGlueTableName: string;
+  oncoanalyserBothSashGlueTableName: string;
 
   /* SSM Parameters */
   icav2ProjectIdSsmParameterName: string;
@@ -321,6 +356,16 @@ export class GlueStack extends cdk.Stack {
       'pieriandxGlueTableObj',
       props.pieriandxGlueTableName
     );
+    const oncoanalyserGlueTableObj = dynamodb.Table.fromTableName(
+      this,
+      'oncoanalyserGlueTableObj',
+      props.oncoanalyserGlueTableName
+    );
+    const oncoanalyserBothSashGlueTableObj = dynamodb.Table.fromTableName(
+      this,
+      'oncoanalyserBothSashGlueTableObj',
+      props.oncoanalyserBothSashGlueTableName
+    );
 
     /*
     Get the SSM Parameters
@@ -402,6 +447,8 @@ export class GlueStack extends cdk.Stack {
       umccriseGlueTableObj: umccriseGlueTableObj,
       rnasumGlueTableObj: rnasumGlueTableObj,
       pieriandxGlueTableObj: pieriandxGlueTableObj,
+      oncoanalyserGlueTableObj: oncoanalyserGlueTableObj,
+      oncoanalyserBothSashGlueTableObj: oncoanalyserBothSashGlueTableObj,
 
       /* SSM Parameters */
       icav2ProjectIdSsmParameterObj: icav2ProjectIdSsmParameterObj,

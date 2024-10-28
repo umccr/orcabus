@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from workflow_manager.models.workflow_run import WorkflowRun
-from workflow_manager.serializers.workflow_run import WorkflowRunCountByStatusSerializer
+from workflow_manager.serializers.workflow_run import WorkflowRunCountByStatusSerializer, WorkflowRunListParamSerializer
 from workflow_manager.serializers.workflow_run import WorkflowRunDetailSerializer, WorkflowRunSerializer
 from workflow_manager.viewsets.base import BaseViewSet
 
@@ -16,7 +16,7 @@ class WorkflowRunViewSet(BaseViewSet):
     orcabus_id_prefix = WorkflowRun.orcabus_id_prefix
 
     @extend_schema(parameters=[
-        WorkflowRunSerializer
+        WorkflowRunListParamSerializer
     ])
     def list(self, request, *args, **kwargs):
         self.serializer_class = WorkflowRunSerializer  # use simple view for record listing
