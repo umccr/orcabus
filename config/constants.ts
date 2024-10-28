@@ -36,6 +36,12 @@ export const vpcProps: VpcLookupOptions = {
   },
 };
 
+/**
+ * The SSM Parameter Name for HTTP Lambda Authorizer ARN (admin user pool group)
+ */
+export const adminHttpLambdaAuthorizerParameterName =
+  '/orcabus/authorization-stack/admin-http-lambda-authorization-arn';
+
 // upstream infra: cognito
 export const cognitoPortalAppClientIdParameterName =
   '/data_portal/client/data2/cog_app_client_id_stage';

@@ -50,6 +50,10 @@ import {
   PierianDxPipelineTableStackProps,
 } from './stacks/pieriandx-pipeline-dynamo-db/deploy';
 import {
+  AuthorizationManagerStack,
+  AuthorizationManagerStackProps,
+} from './stacks/authorization-manager/stack';
+import {
   OncoanalyserNfPipelineTable,
   OncoanalyserNfPipelineTableStackProps,
 } from './stacks/oncoanalyser-dynamodb/deploy/stack';
@@ -60,6 +64,7 @@ import {
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
+  authorizationManagerStackProps: AuthorizationManagerStackProps;
   sharedStackProps: SharedStackProps;
   postgresManagerStackProps: PostgresManagerStackProps;
   tokenServiceStackProps: TokenServiceStackProps;
@@ -81,6 +86,7 @@ export interface StatefulStackCollectionProps {
 export class StatefulStackCollection {
   // You could add more stack here and initiate it at the constructor. See example below for reference
 
+  readonly authorizationManagerStack: Stack;
   readonly dataBucketStack: Stack;
   readonly sharedStack: Stack;
   readonly postgresManagerStack: Stack;
@@ -111,6 +117,15 @@ export class StatefulStackCollection {
         ...statefulConfiguration.dataBucketStackProps,
       });
     }
+
+    this.authorizationManagerStack = new AuthorizationManagerStack(
+      scope,
+      'AuthorizationManagerStack',
+      {
+        ...this.createTemplateProps(env, 'AuthorizationManagerStack'),
+        ...statefulConfiguration.authorizationManagerStackProps,
+      }
+    );
 
     this.sharedStack = new SharedStack(scope, 'SharedStack', {
       ...this.createTemplateProps(env, 'SharedStack'),

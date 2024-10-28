@@ -153,12 +153,14 @@ export class Filemanager extends Stack {
     new HttpRoute(this, 'PatchHttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
+      authorizer: apiGateway.cognitoAdminGroupAuthorizer,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.PATCH),
     });
 
     new HttpRoute(this, 'PostHttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
+      authorizer: apiGateway.cognitoAdminGroupAuthorizer,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.POST),
     });
 
