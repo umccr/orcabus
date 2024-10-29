@@ -75,14 +75,14 @@ test('Test EventSourceConstruct created props with event types', () => {
   });
 });
 
-test('Test EventSourceConstruct created props with prefix', () => {
+test('Test EventSourceConstruct created props with key rule', () => {
   new EventSourceConstruct(stack, 'TestEventSourceConstruct', {
     queueName: 'queue',
     maxReceiveCount: 100,
     rules: [
       {
         bucket: 'bucket',
-        prefix: 'prefix',
+        key: [{ 'anything-but': { wildcard: 'wildcard/*' } }, { prefix: 'prefix' }],
       },
     ],
   });
@@ -94,6 +94,9 @@ test('Test EventSourceConstruct created props with prefix', () => {
       detail: {
         object: {
           key: [
+            {
+              'anything-but': { wildcard: 'wildcard/*' },
+            },
             {
               prefix: 'prefix',
             },

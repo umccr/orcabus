@@ -94,9 +94,12 @@ const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
     rules: [
       {
         bucket: oncoanalyserBucket[stage],
+        eventTypes: ['Object Created', 'Object Deleted'],
       },
       {
         bucket: icav2PipelineCacheBucket[stage],
+        eventTypes: ['Object Created', 'Object Deleted'],
+        key: [{ 'anything-but': { wildcard: 'byob-icav2/*/cache/*' } }],
       },
     ],
   };
