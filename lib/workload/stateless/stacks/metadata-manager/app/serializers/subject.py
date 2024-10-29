@@ -29,7 +29,7 @@ class SubjectDetailSerializer(SubjectBaseSerializer):
 
 
 class SubjectHistorySerializer(SubjectBaseSerializer):
-    class IndividualOrcabusIdSet(serializers.RelatedField):
+    class IndividualOrcabusIdSet(serializers.StringRelatedField):
         def to_internal_value(self, data):
             raise NotImplementedError()
 
