@@ -59,7 +59,13 @@ export class LambdaAPIConstruct extends Construct {
     new HttpRoute(this, 'ApiLambdaHttpRoute', {
       httpApi: apiGW.httpApi,
       integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.GET),
+      routeKey: HttpRouteKey.with('/{PROXY+}', HttpMethod.GET),
+    });
+
+    new HttpRoute(this, 'ApiLambdaHttpRoutePost', {
+      httpApi: apiGW.httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{PROXY+}', HttpMethod.POST),
     });
 
     // Would need to add permission and env-var for the sync lambdas
