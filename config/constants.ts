@@ -36,6 +36,12 @@ export const vpcProps: VpcLookupOptions = {
   },
 };
 
+/**
+ * The SSM Parameter Name for HTTP Lambda Authorizer ARN (admin user pool group)
+ */
+export const adminHttpLambdaAuthorizerParameterName =
+  '/orcabus/authorization-stack/admin-http-lambda-authorization-arn';
+
 // upstream infra: cognito
 export const cognitoPortalAppClientIdParameterName =
   '/data_portal/client/data2/cog_app_client_id_stage';
@@ -754,7 +760,6 @@ export const sashPipelineVersionSSMParameterPath = '/nextflow_stack/sash/pipelin
 // Stacky Stack
 export const stackyEventBusName = eventBusName;
 export const stackyInstrumentRunTableName = 'stacky-instrument-run-table';
-export const stackyInputMakerTableName = 'stacky-input-maker-table';
 export const stackyCttsov2InputGlueTableName = 'stacky-cttsov2-workflow-glue-table';
 export const stackyWgtsQcGlueTableName = 'stacky-wgts-qc-glue-table';
 export const stackyTnGlueTableName = 'stacky-tn-glue-table';
