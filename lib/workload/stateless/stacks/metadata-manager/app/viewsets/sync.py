@@ -51,7 +51,7 @@ class SyncViewSet(ViewSet):
     @extend_schema(
         request=SyncCustomCsvSerializer,
         responses=OpenApiTypes.STR,
-        description="Sync metadata with the Google tracking sheet"
+        description="Sync metadata from the provided csv presigned url."
     )
     @action(
         detail=False,
