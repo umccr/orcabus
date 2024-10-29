@@ -4,3 +4,4 @@ from .subject import SubjectViewSet
 from .project import ProjectViewSet
 from .contact import ContactViewSet
 from .individual import IndividualViewSet
+from .sync import SyncViewSet
