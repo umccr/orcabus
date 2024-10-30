@@ -86,6 +86,11 @@ export const icav2PipelineCacheBucket: Record<AppStage, string> = {
   [AppStage.PROD]: 'pipeline-prod-cache-503977275616-ap-southeast-2',
 };
 
+// The archive bucket. Noting that this is only present for prod data.
+export const icav2ArchiveAnalysisBucket: Record<AppStage.PROD, string> = {
+  [AppStage.PROD]: 'archive-prod-analysis-503977275616-ap-southeast-2',
+};
+
 export const gdsBsRunsUploadLogPath: Record<AppStage, string> = {
   [AppStage.BETA]: 'gds://development/primary_data/temp/bs_runs_upload_tes/',
   [AppStage.GAMMA]: 'gds://staging/primary_data/temp/bs_runs_upload_tes/',
