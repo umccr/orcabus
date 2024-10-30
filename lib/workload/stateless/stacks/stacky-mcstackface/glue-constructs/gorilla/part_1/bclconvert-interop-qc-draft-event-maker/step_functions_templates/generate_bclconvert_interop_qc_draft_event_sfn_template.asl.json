@@ -30,9 +30,9 @@
         "StateMachineArn": "${__launch_ready_event_sfn_arn__}",
         "Input": {
           "StatePayload": {
-            "portal_run_id.$": "$.get_workflow_inputs_step.portal_run_id",
-            "workflow_run_name.$": "$.get_workflow_inputs_step.workflow_run_name",
-            "linked_libraries.$": "$.get_workflow_inputs_step.linked_libraries_list",
+            "portal_run_id.$": "$.get_sfn_preamble_outputs_step.portal_run_id",
+            "workflow_run_name.$": "$.get_sfn_preamble_outputs_step.workflow_run_name",
+            "linked_libraries.$": "$.inputs.linkedLibraries",
             "data_inputs": {
               "bclconvertReportDirectory.$": "States.Format('{}Reports/', $.inputs.payload.data.outputs.outputUri)",
               "interopDirectory.$": "States.Format('{}InterOp/', $.inputs.payload.data.outputs.outputUri)",
