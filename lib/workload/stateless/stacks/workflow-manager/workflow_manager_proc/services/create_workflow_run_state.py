@@ -27,6 +27,11 @@ logger.setLevel(logging.INFO)
 ASSOCIATION_STATUS = "ACTIVE"
 
 
+def sanitize_orcabus_id(orcabus_id: str) -> str:
+    # TODO: better sanitization and better location
+    return orcabus_id[-26:]
+
+
 @transaction.atomic
 def handler(event, context):
     """
@@ -91,14 +96,16 @@ def handler(event, context):
         input_libraries: list[srv.LibraryRecord] = srv_wrsc.linkedLibraries
         if input_libraries:
             for input_rec in input_libraries:
+                # make sure OrcaBus ID format is sanitized (without prefix) for lookups
+                orca_id = sanitize_orcabus_id(input_rec.orcabusId)
                 # get the DB record of the library
                 try:
-                    db_lib: Library = Library.objects.get(orcabus_id=input_rec.orcabusId)
+                    db_lib: Library = Library.objects.get(orcabus_id=orca_id)
                 except Library.DoesNotExist:
                     # The library record should exist - synced with metadata service on LibraryStateChange events
                     # However, until that sync is in place we may need to create a record on demand
                     # FIXME: remove this once library records are automatically synced
-                    db_lib = Library.objects.create(orcabus_id=input_rec.orcabusId, library_id=input_rec.libraryId)
+                    db_lib = Library.objects.create(orcabus_id=orca_id, library_id=input_rec.libraryId)
 
                 # create the library association
                 LibraryAssociation.objects.create(
