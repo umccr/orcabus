@@ -11,8 +11,6 @@ from rest_framework.viewsets import ViewSet
 
 from app.serializers.sync import SyncGSheetSerializer, SyncCustomCsvSerializer
 
-lambda_client = lambda_client()
-
 
 class SyncViewSet(ViewSet):
 
@@ -38,7 +36,7 @@ class SyncViewSet(ViewSet):
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
 
-        lambda_client.invoke(
+        lambda_client().invoke(
             FunctionName=lambda_function_name,
             InvocationType='Event',
             Payload=json.dumps({
@@ -56,8 +54,8 @@ class SyncViewSet(ViewSet):
     @action(
         detail=False,
         methods=['post'],
-        url_name='custom-csv',
-        url_path='custom-csv'
+        url_name='presigned-csv',
+        url_path='presigned-csv'
     )
     def sync_custom_csv(self, request):
         lambda_function_name = os.environ.get('SYNC_CSV_PRESIGNED_URL_LAMBDA_NAME', None)
@@ -70,7 +68,7 @@ class SyncViewSet(ViewSet):
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
 
-        lambda_client.invoke(
+        lambda_client().invoke(
             FunctionName=lambda_function_name,
             InvocationType='Event',
             Payload=json.dumps({
@@ -78,4 +76,4 @@ class SyncViewSet(ViewSet):
             })
         )
 
-        return Response("Syncing metadata with the provided csv presigned url.")
+        return Response("Start syncing metadata with the provided csv presigned url.")
