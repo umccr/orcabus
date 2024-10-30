@@ -1,7 +1,5 @@
 from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
 from workflow_manager.models import Analysis, Workflow, AnalysisContext
-
 
 class AnalysisBaseSerializer(SerializersBase):
     prefix = Analysis.orcabus_id_prefix
