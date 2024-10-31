@@ -23,17 +23,22 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 import typing
 from os import environ
+from time import sleep
+
 import boto3
 
 # Samplesheet imports
 from v2_samplesheet_maker.functions.v2_samplesheet_writer import v2_samplesheet_writer
+from wrapica.enums import DataType
 
 # Wrapica imports
 from wrapica.project_data import (
     write_icav2_file_contents,
     convert_project_data_obj_to_uri,
     get_project_data_obj_by_id,
-    convert_uri_to_project_data_obj
+    convert_uri_to_project_data_obj,
+    delete_project_data,
+    get_project_data_obj_from_project_id_and_path
 )
 
 
@@ -42,6 +47,7 @@ if typing.TYPE_CHECKING:
 
 # Globals
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
+SAMPLESHEET_BASENAME = "SampleSheet.csv"
 
 
 def get_secrets_manager_client() -> 'SecretsManagerClient':
@@ -105,7 +111,24 @@ def handler(event, context):
     if not samplesheet:
         raise ValueError("samplesheet is required")
 
-    # Samplesheet csv str
+    # Check samplesheet doesn't already exist
+    # And delete it if it does
+    try:
+        samplesheet_obj = get_project_data_obj_from_project_id_and_path(
+            project_id,
+            cache_path / SAMPLESHEET_BASENAME,
+            data_type=DataType.FILE,
+            create_data_if_not_found=False
+        )
+    except FileNotFoundError:
+        pass
+    else:
+        # Delete existing samplesheet
+        delete_project_data(
+            samplesheet_obj.project_id,
+            samplesheet_obj.data.id
+        )
+        sleep(5)
 
     # Write samplesheet to file
     with NamedTemporaryFile(suffix='.csv') as samplesheet_tmp_h:
@@ -115,7 +138,7 @@ def handler(event, context):
         # Generate the samplesheet as a csv
         samplesheet_file_id = write_icav2_file_contents(
             project_id=project_id,
-            data_path=cache_path / "SampleSheet.csv",
+            data_path=cache_path / SAMPLESHEET_BASENAME,
             file_stream_or_path=Path(samplesheet_tmp_h.name)
         )
 
