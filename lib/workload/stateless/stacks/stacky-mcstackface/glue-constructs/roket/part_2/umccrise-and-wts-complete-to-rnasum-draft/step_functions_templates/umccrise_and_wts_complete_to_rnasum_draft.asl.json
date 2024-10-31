@@ -71,7 +71,7 @@
         }
       ],
       "ResultSelector": {
-        "subject_orcabus_id.$": "$.Payload.orcabus_id",
+        "subject_orcabus_id.$": "$.Payload.orcabusId",
         "individual_id.$": "States.ArrayGetItem($.Payload.individualSet[?(@.individualId =~ /SBJ.*?/i)].individualId, 0)"
       },
       "ResultPath": "$.get_subject_orcabus_id_step",
