@@ -10,6 +10,7 @@ from workflow_manager.viewsets.analysis_context import AnalysisContextViewSet
 from workflow_manager.viewsets.state import StateViewSet
 # from workflow_manager.viewsets.library import LibraryViewSet
 from workflow_manager.viewsets.workflow_run_comment import WorkflowRunCommentViewSet
+from workflow_manager.viewsets.workflow_run_stats import WorkflowRunStatsViewSet
 from workflow_manager.settings.base import API_VERSION
 
 api_namespace = "api"
@@ -36,6 +37,8 @@ router.register(
 #     LibraryViewSet,
 #     basename="workflowrun-library",
 # )
+
+router.register(r"workflowrun_list_all", WorkflowRunStatsViewSet, basename="workflowrun_list_all")
 
 router.register(
     "workflowrun/(?P<orcabus_id>[^/.]+)/comment",

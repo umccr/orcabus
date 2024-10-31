@@ -4,8 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from workflow_manager.models.workflow_run import WorkflowRun
-from workflow_manager.serializers.workflow_run import WorkflowRunCountByStatusSerializer, WorkflowRunListParamSerializer
-from workflow_manager.serializers.workflow_run import WorkflowRunDetailSerializer, WorkflowRunSerializer
+from workflow_manager.serializers.workflow_run import WorkflowRunCountByStatusSerializer, WorkflowRunListParamSerializer, WorkflowRunDetailSerializer, WorkflowRunSerializer
 from workflow_manager.viewsets.base import BaseViewSet
 
 
@@ -15,9 +14,7 @@ class WorkflowRunViewSet(BaseViewSet):
     queryset = WorkflowRun.objects.prefetch_related("libraries").all()
     orcabus_id_prefix = WorkflowRun.orcabus_id_prefix
 
-    @extend_schema(parameters=[
-        WorkflowRunListParamSerializer
-    ])
+    @extend_schema(parameters=[WorkflowRunListParamSerializer])
     def list(self, request, *args, **kwargs):
         self.serializer_class = WorkflowRunSerializer  # use simple view for record listing
         return super().list(request, *args, **kwargs)
@@ -135,7 +132,7 @@ class WorkflowRunViewSet(BaseViewSet):
         serializer = self.get_serializer(pagw_qs, many=True)
         return self.get_paginated_response(serializer.data)
 
-    @extend_schema(operation_id='/api/v1/workflow_run/count_by_status/', responses=WorkflowRunCountByStatusSerializer)
+    @extend_schema(responses=WorkflowRunCountByStatusSerializer)
     @action(detail=False, methods=['GET'])
     def count_by_status(self, request):
         """
