@@ -1,0 +1,32 @@
+{
+  "OrcaBus": {
+    "actions": {
+      "writeAccess": {
+        "appliesTo": {
+          "principalTypes": ["User"]
+        }
+      }
+    },
+    "entityTypes": {
+      "CognitoUserGroup": {
+        "memberOfTypes": [],
+        "shape": {
+          "type": "Record",
+          "attributes": {}
+        }
+      },
+      "User": {
+        "memberOfTypes": ["CognitoUserGroup"],
+        "shape": {
+          "attributes": {
+            "email": {
+              "type": "String",
+              "required": false
+            }
+          },
+          "type": "Record"
+        }
+      }
+    }
+  }
+}

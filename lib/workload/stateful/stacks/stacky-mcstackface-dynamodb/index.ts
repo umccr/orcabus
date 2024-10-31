@@ -6,8 +6,6 @@ import * as cdk from 'aws-cdk-lib';
 
 export interface StackyStatefulTablesConfig {
   dynamodbInstrumentRunManagerTableName: string;
-  dynamodbWorkflowManagerTableName: string;
-  dynamodbInputGlueTableName: string;
   dynamodbCttsov2WorkflowGlueTableName: string;
   dynamodbWgtsQcGlueTableName: string;
   dynamodbTnGlueTableName: string;
@@ -15,6 +13,8 @@ export interface StackyStatefulTablesConfig {
   dynamodbUmccriseGlueTableName: string;
   dynamodbRnasumGlueTableName: string;
   dynamodbPieriandxGlueTableName: string;
+  dynamodbOncoanalyserGlueTableName: string;
+  dynamodbOncoanalyserBothSashGlueTableName: string;
   removalPolicy?: RemovalPolicy;
 }
 
@@ -22,8 +22,6 @@ export type StackyStatefulTablesStackProps = StackyStatefulTablesConfig & cdk.St
 
 export class StackyStatefulTablesStack extends Stack {
   public readonly instrumentRunManagerTable: dynamodb.ITableV2;
-  public readonly workflowManagerTable: dynamodb.ITableV2;
-  public readonly inputGlueTable: dynamodb.ITableV2;
   public readonly cttsov2WorkflowGlueTable: dynamodb.ITableV2;
   public readonly wgtsQcGlueTable: dynamodb.ITableV2;
   public readonly tnGlueTable: dynamodb.ITableV2;
@@ -31,6 +29,8 @@ export class StackyStatefulTablesStack extends Stack {
   public readonly umccriseGlueTable: dynamodb.ITableV2;
   public readonly rnasumGlueTable: dynamodb.ITableV2;
   public readonly pieriandxGlueTable: dynamodb.ITableV2;
+  public readonly oncoanalyserGlueTable: dynamodb.ITableV2;
+  public readonly oncoanalyserBothSashGlueTable: dynamodb.ITableV2;
   constructor(scope: Construct, id: string, props: StackProps & StackyStatefulTablesStackProps) {
     super(scope, id, props);
 
@@ -45,26 +45,6 @@ export class StackyStatefulTablesStack extends Stack {
         removalPolicy: props.removalPolicy,
       }
     ).tableObj;
-
-    /*
-    Initialise dynamodb table for the metadata manager
-    */
-    this.workflowManagerTable = new DynamodbPartitionedPipelineConstruct(
-      this,
-      'workflowManagerTable',
-      {
-        tableName: props.dynamodbWorkflowManagerTableName,
-        removalPolicy: props.removalPolicy,
-      }
-    ).tableObj;
-
-    /*
-    Initialise dynamodb table for the glue services
-    */
-    this.inputGlueTable = new DynamodbPartitionedPipelineConstruct(this, 'inputGlueTable', {
-      tableName: props.dynamodbInputGlueTableName,
-      removalPolicy: props.removalPolicy,
-    }).tableObj;
 
     /*
     Initialise dynamodb table for the cttsov2 glue service
@@ -125,5 +105,29 @@ export class StackyStatefulTablesStack extends Stack {
       tableName: props.dynamodbPieriandxGlueTableName,
       removalPolicy: props.removalPolicy,
     }).tableObj;
+
+    /*
+    Initialise dynamodb table for the oncoanalyser glue service
+    */
+    this.oncoanalyserGlueTable = new DynamodbPartitionedPipelineConstruct(
+      this,
+      'oncoanalyserGlueTable',
+      {
+        tableName: props.dynamodbOncoanalyserGlueTableName,
+        removalPolicy: props.removalPolicy,
+      }
+    ).tableObj;
+
+    /*
+    Initialise dynamodb table for the oncoanalyser both + sash glue service
+    */
+    this.oncoanalyserBothSashGlueTable = new DynamodbPartitionedPipelineConstruct(
+      this,
+      'oncoanalyserBothSashGlueTable',
+      {
+        tableName: props.dynamodbOncoanalyserBothSashGlueTableName,
+        removalPolicy: props.removalPolicy,
+      }
+    ).tableObj;
   }
 }

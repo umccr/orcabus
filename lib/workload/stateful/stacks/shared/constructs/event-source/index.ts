@@ -13,16 +13,18 @@ export type EventSourceRule = {
    * Bucket to receive events from. If not specified, captures events from all buckets.
    */
   bucket?: string;
+
   /**
    * The types of events to capture for the bucket. If not specified, captures all events.
    * This should be from the list S3 EventBridge events:
    * https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventBridge.html
    */
   eventTypes?: string[];
+
   /**
-   * A prefix of the objects that are matched when receiving events from the buckets.
+   * Rules matching specified keys in buckets.
    */
-  prefix?: string;
+  key?: { [key: string]: any }[];
 };
 
 /**
@@ -33,13 +35,15 @@ export type EventSourceProps = {
    * The name of the queue to construct.
    */
   queueName: string;
+
   /**
    * The maximum number of times a message can be unsuccessfully received before
    * pushing it to the DLQ.
    */
   maxReceiveCount: number;
+
   /**
-   * A set of EventBridge rules to define..
+   * A set of EventBridge rules to define.
    */
   rules: EventSourceRule[];
 };
@@ -80,13 +84,9 @@ export class EventSourceConstruct extends Construct {
                 name: [prop.bucket],
               },
             }),
-            ...(prop.prefix && {
+            ...(prop.key && {
               object: {
-                key: [
-                  {
-                    prefix: prop.prefix,
-                  },
-                ],
+                key: prop.key,
               },
             }),
           },

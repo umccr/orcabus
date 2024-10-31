@@ -1,0 +1,182 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move inputs",
+  "States": {
+    "Move inputs": {
+      "Type": "Pass",
+      "Next": "Place into portal run db",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      }
+    },
+    "Place into portal run db": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.workflow_inputs.portalRunId",
+          "id_type": "${__portal_run_table_partition_name__}",
+          "ready_event_inputs": {
+            "S.$": "States.JsonToString($.workflow_inputs.payload.data.inputs)"
+          },
+          "ready_event_engine_parameters": {
+            "S.$": "States.JsonToString($.workflow_inputs.payload.data.engineParameters)"
+          },
+          "tags": {
+            "S.$": "States.JsonToString($.workflow_inputs.payload.data.tags)"
+          },
+          "status": {
+            "S": "${__event_status__}"
+          },
+          "workflow_name": {
+            "S.$": "$.workflow_inputs.workflowName"
+          },
+          "workflow_version": {
+            "S.$": "$.workflow_inputs.workflowVersion"
+          },
+          "workflow_run_name": {
+            "S.$": "$.workflow_inputs.workflowRunName"
+          },
+          "linked_libraries": {
+            "S.$": "States.JsonToString($.workflow_inputs.linkedLibraries)"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "Wait for DB Update 1"
+    },
+    "Wait for DB Update 1": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "Get Default Pipeline Version"
+    },
+    "Get Default Pipeline Version": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "${__pipeline_version_ssm_path__}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+      "ResultSelector": {
+        "default_pipeline_version.$": "$.Parameter.Value"
+      },
+      "ResultPath": "$.get_default_pipeline_version_step",
+      "Next": "Generate Batch Submission Job"
+    },
+    "Generate Batch Submission Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_payload_lambda_function_arn__}",
+        "Payload": {
+          "inputs.$": "$.workflow_inputs.payload.data.inputs",
+          "engine_parameters.$": "$.workflow_inputs.payload.data.engineParameters",
+          "default_pipeline_version.$": "$.get_default_pipeline_version_step.default_pipeline_version",
+          "portal_run_id.$": "$.workflow_inputs.portalRunId"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "overrides.$": "$.Payload.overrides",
+        "parameters.$": "$.Payload.parameters",
+        "tags.$": "$.Payload.tags"
+      },
+      "ResultPath": "$.get_batch_submission_step",
+      "Next": "Submit Nextflow Job"
+    },
+    "Submit Nextflow Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::batch:submitJob",
+      "Parameters": {
+        "JobName.$": "$.workflow_inputs.workflowRunName",
+        "JobDefinition": "${__job_definition_arn__}",
+        "JobQueue": "${__job_queue_name__}",
+        "ContainerOverrides": {
+          "ResourceRequirements.$": "$.get_batch_submission_step.overrides.resource_requirements",
+          "Command.$": "$.get_batch_submission_step.overrides.command"
+        },
+        "Tags.$": "$.get_batch_submission_step.tags",
+        "PropagateTags": true,
+        "Parameters.$": "$.get_batch_submission_step.parameters"
+      },
+      "ResultSelector": {
+        "jobId.$": "$.JobId"
+      },
+      "ResultPath": "$.submit_nextflow_job_step",
+      "Next": "Append Job Id to Engine Parameters"
+    },
+    "Append Job Id to Engine Parameters": {
+      "Type": "Pass",
+      "Next": "Update engine parameters in db",
+      "Parameters": {
+        "engine_parameters.$": "States.JsonMerge($.workflow_inputs.payload.data.engineParameters, $.submit_nextflow_job_step,false)"
+      },
+      "ResultPath": "$.merge_engine_parameters_step"
+    },
+    "Update engine parameters in db": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.workflow_inputs.portalRunId",
+          "id_type": "${__portal_run_table_partition_name__}"
+        },
+        "UpdateExpression": "SET engine_parameters = :engine_parameters",
+        "ExpressionAttributeValues": {
+          ":engine_parameters": {
+            "S.$": "States.JsonToString($.merge_engine_parameters_step.engine_parameters)"
+          }
+        }
+      },
+      "Next": "Wait For DB Update 2",
+      "ResultPath": null
+    },
+    "Wait For DB Update 2": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "Put Submitted event"
+    },
+    "Put Submitted event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}",
+            "DetailType": "${__event_detail_type__}",
+            "Detail": {
+              "portalRunId.$": "$.workflow_inputs.portalRunId",
+              "workflowName.$": "$.workflow_inputs.workflowName",
+              "workflowVersion.$": "$.workflow_inputs.workflowVersion",
+              "workflowRunName.$": "$.workflow_inputs.workflowRunName",
+              "timestamp.$": "$$.State.EnteredTime",
+              "payload": {
+                "version": "${__event_detail_version__}",
+                "data": {
+                  "inputs.$": "$.workflow_inputs.payload.data.inputs",
+                  "engineParameters.$": "$.merge_engine_parameters_step.engine_parameters",
+                  "tags.$": "$.workflow_inputs.payload.data.tags"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}

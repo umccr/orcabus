@@ -1,13 +1,19 @@
 import { Construct } from 'constructs';
 import { aws_ssm, Duration, RemovalPolicy } from 'aws-cdk-lib';
-import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
+import {
+  HttpJwtAuthorizer,
+  HttpLambdaAuthorizer,
+  HttpLambdaResponseType,
+} from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { CfnStage, CorsHttpMethod, DomainName, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { IStringParameter, StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Function } from 'aws-cdk-lib/aws-lambda';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
+import { adminHttpLambdaAuthorizerParameterName } from '../../../../config/constants';
 
 export interface ApiGwLogsConfig {
   /**
@@ -56,6 +62,7 @@ export interface ApiGatewayConstructProps {
 export class ApiGatewayConstruct extends Construct {
   private readonly _httpApi: HttpApi;
   private readonly _domainName: string;
+  readonly cognitoAdminGroupAuthorizer: HttpLambdaAuthorizer;
 
   constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
     super(scope, id);
@@ -96,11 +103,15 @@ export class ApiGatewayConstruct extends Construct {
         allowOrigins: props.corsAllowOrigins,
         maxAge: Duration.days(10),
       },
-      defaultAuthorizer: this.getAuthorizer(props),
+      defaultAuthorizer: this.getJWTAuthorizer(props),
       defaultDomainMapping: {
         domainName: apiGWDomainName,
       },
     });
+
+    this.cognitoAdminGroupAuthorizer = this.getCognitoAdminGroupHTTPAuthorizer(
+      adminHttpLambdaAuthorizerParameterName
+    );
 
     new ARecord(this, 'CustomDomainARecord', {
       zone: HostedZone.fromHostedZoneAttributes(this, 'UmccrHostedZone', {
@@ -160,7 +171,7 @@ export class ApiGatewayConstruct extends Construct {
     accessLogs.grantWrite(role);
   }
 
-  private getAuthorizer(props: ApiGatewayConstructProps): HttpJwtAuthorizer {
+  private getJWTAuthorizer(props: ApiGatewayConstructProps): HttpJwtAuthorizer {
     /**
      * FIXME One fine day in future when we have proper Cognito AAI setup.
      *  For the moment, we leverage Portal and established Cognito infrastructure.
@@ -187,6 +198,33 @@ export class ApiGatewayConstruct extends Construct {
 
     return new HttpJwtAuthorizer('PortalAuthorizer', issuer, {
       jwtAudience: clientIdParamsArray.map((param) => param.stringValue),
+    });
+  }
+
+  /**
+   * Get the Cognito Admin Group HTTP Lambda Authorizer
+   * @param adminHttpLambdaAuthorizerParameterName The SSM Parameter Name that stores the ARN of the lambda authorizer
+   * @returns
+   */
+  private getCognitoAdminGroupHTTPAuthorizer(adminHttpLambdaAuthorizerParameterName: string) {
+    const lambdaArn = StringParameter.valueForStringParameter(
+      this,
+      adminHttpLambdaAuthorizerParameterName
+    );
+
+    // Get the lambda HTTP authorizer defined in the authorization stack manager
+    const lambdaAuthorizer = Function.fromFunctionAttributes(
+      this,
+      'AdminGroupHTTPAuthorizerLambda',
+      {
+        functionArn: lambdaArn,
+        sameEnvironment: true,
+      }
+    );
+
+    return new HttpLambdaAuthorizer('AdminGroupLambdaAuthorizer', lambdaAuthorizer, {
+      authorizerName: 'CognitoAdminGroupLambdaAuthorizer',
+      responseTypes: [HttpLambdaResponseType.SIMPLE],
     });
   }
 

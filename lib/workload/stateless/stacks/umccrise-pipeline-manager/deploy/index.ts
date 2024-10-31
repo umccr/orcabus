@@ -11,8 +11,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
-import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../components/dynamodb-icav2-ready-event-handler-sfn';
-import { Icav2AnalysisEventHandlerConstruct } from '../../../../components/dynamodb-icav2-handle-event-change-sfn';
+import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../components/sfn-icav2-ready-event-handler';
+import { Icav2AnalysisEventHandlerConstruct } from '../../../../components/sfn-icav2-state-change-event-handler';
 import { PythonLambdaGetCwlObjectFromS3InputsConstruct } from '../../../../components/python-lambda-get-cwl-object-from-s3-inputs-py';
 
 export interface UmccriseIcav2PipelineManagerConfig {

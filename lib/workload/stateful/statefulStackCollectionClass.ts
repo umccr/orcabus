@@ -49,9 +49,22 @@ import {
   PierianDxPipelineTable,
   PierianDxPipelineTableStackProps,
 } from './stacks/pieriandx-pipeline-dynamo-db/deploy';
+import {
+  AuthorizationManagerStack,
+  AuthorizationManagerStackProps,
+} from './stacks/authorization-manager/stack';
+import {
+  OncoanalyserNfPipelineTable,
+  OncoanalyserNfPipelineTableStackProps,
+} from './stacks/oncoanalyser-dynamodb/deploy/stack';
+import {
+  SashNfPipelineTable,
+  SashNfPipelineTableStackProps,
+} from './stacks/sash-dynamodb/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
+  authorizationManagerStackProps: AuthorizationManagerStackProps;
   sharedStackProps: SharedStackProps;
   postgresManagerStackProps: PostgresManagerStackProps;
   tokenServiceStackProps: TokenServiceStackProps;
@@ -66,11 +79,14 @@ export interface StatefulStackCollectionProps {
   BclConvertTableStackProps: BclConvertTableStackProps;
   stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
   pierianDxPipelineTableStackProps: PierianDxPipelineTableStackProps;
+  oncoanalyserPipelineTableStackProps: OncoanalyserNfPipelineTableStackProps;
+  sashPipelineTableStackProps: SashNfPipelineTableStackProps;
 }
 
 export class StatefulStackCollection {
   // You could add more stack here and initiate it at the constructor. See example below for reference
 
+  readonly authorizationManagerStack: Stack;
   readonly dataBucketStack: Stack;
   readonly sharedStack: Stack;
   readonly postgresManagerStack: Stack;
@@ -86,6 +102,8 @@ export class StatefulStackCollection {
   readonly BclConvertTableStack: Stack;
   readonly stackyStatefulTablesStack: Stack;
   readonly pierianDxPipelineTableStack: Stack;
+  readonly oncoanalyserPipelineTableStack: Stack;
+  readonly sashPipelineTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -99,6 +117,15 @@ export class StatefulStackCollection {
         ...statefulConfiguration.dataBucketStackProps,
       });
     }
+
+    this.authorizationManagerStack = new AuthorizationManagerStack(
+      scope,
+      'AuthorizationManagerStack',
+      {
+        ...this.createTemplateProps(env, 'AuthorizationManagerStack'),
+        ...statefulConfiguration.authorizationManagerStackProps,
+      }
+    );
 
     this.sharedStack = new SharedStack(scope, 'SharedStack', {
       ...this.createTemplateProps(env, 'SharedStack'),
@@ -202,6 +229,20 @@ export class StatefulStackCollection {
         ...statefulConfiguration.pierianDxPipelineTableStackProps,
       }
     );
+
+    this.oncoanalyserPipelineTableStack = new OncoanalyserNfPipelineTable(
+      scope,
+      'OncoanalyserNfPipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'OncoanalyserNfPipelineTableStack'),
+        ...statefulConfiguration.oncoanalyserPipelineTableStackProps,
+      }
+    );
+
+    this.sashPipelineTableStack = new SashNfPipelineTable(scope, 'SashNfPipelineTableStack', {
+      ...this.createTemplateProps(env, 'SashNfPipelineTableStack'),
+      ...statefulConfiguration.sashPipelineTableStackProps,
+    });
   }
 
   /**

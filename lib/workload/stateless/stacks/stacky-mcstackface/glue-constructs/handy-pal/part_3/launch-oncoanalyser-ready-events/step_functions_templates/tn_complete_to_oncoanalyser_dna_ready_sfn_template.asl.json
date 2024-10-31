@@ -1,0 +1,119 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "linked_libraries.$": "$.linkedLibraries",
+        "payload_data.$": "$.payload.data"
+      },
+      "Next": "Get Tumor Library Orcabus Id"
+    },
+    "Get Tumor Library Orcabus Id": {
+      "Type": "Pass",
+      "Next": "Get Library Item",
+      "Parameters": {
+        "tumor_orcabus_id.$": "States.ArrayGetItem($.linked_libraries[?(@.libraryId==$.payload_data.tags.tumorLibraryId)].orcabusId, 0)"
+      },
+      "ResultPath": "$.get_tumor_orcabus_id_step"
+    },
+    "Get Library Item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.get_tumor_orcabus_id_step.tumor_orcabus_id",
+          "id_type": "${__library_partition_name__}"
+        }
+      },
+      "ResultPath": "$.get_library_item_step",
+      "Next": "Library Item In DataBase"
+    },
+    "Library Item In DataBase": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_library_item_step.Item",
+          "IsPresent": true,
+          "Comment": "Subject Item In DataBase",
+          "Next": "Get Portal Run Id and Workflow Run Name"
+        }
+      ],
+      "Default": "Not an automated library"
+    },
+    "Get Portal Run Id and Workflow Run Name": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__sfn_preamble_state_machine_arn__}",
+        "Input": {}
+      },
+      "ResultSelector": {
+        "portal_run_id.$": "$.Output.portal_run_id",
+        "workflow_run_name.$": "$.Output.workflow_run_name"
+      },
+      "ResultPath": "$.get_portal_and_run_name_step",
+      "Next": "Generate DNA Draft Event Payload"
+    },
+    "Generate DNA Draft Event Payload": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__generate_draft_event_payload_lambda_function_arn__}",
+        "Payload": {
+          "subject_id.$": "$.payload_data.tags.subjectId",
+          "individual_id.$": "$.payload_data.tags.individualId",
+          "tumor_library_id.$": "$.payload_data.tags.tumorLibraryId",
+          "normal_library_id.$": "$.payload_data.tags.normalLibraryId",
+          "tumor_fastq_list_row_ids.$": "$.payload_data.tags.tumorFastqListRowIds",
+          "normal_fastq_list_row_ids.$": "$.payload_data.tags.normalFastqListRowIds",
+          "dragen_somatic_output_s3_uri.$": "$.payload_data.outputs.dragenSomaticOutputUri",
+          "dragen_germline_output_s3_uri.$": "$.payload_data.outputs.dragenGermlineOutputUri"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "input_event_data.$": "$.Payload.input_event_data",
+        "event_tags.$": "$.Payload.event_tags"
+      },
+      "ResultPath": "$.generate_draft_event_payload_data_step",
+      "Next": "Push Oncoanalyser DNA Ready Event"
+    },
+    "Push Oncoanalyser DNA Ready Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__launch_ready_event_sfn_arn__}",
+        "Input": {
+          "StatePayload": {
+            "portal_run_id.$": "$.get_portal_and_run_name_step.portal_run_id",
+            "workflow_run_name.$": "$.get_portal_and_run_name_step.workflow_run_name",
+            "linked_libraries.$": "$.linked_libraries",
+            "data_inputs.$": "$.generate_draft_event_payload_data_step.input_event_data",
+            "data_tags.$": "$.generate_draft_event_payload_data_step.event_tags"
+          }
+        }
+      },
+      "ResultPath": null,
+      "End": true
+    },
+    "Not an automated library": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}

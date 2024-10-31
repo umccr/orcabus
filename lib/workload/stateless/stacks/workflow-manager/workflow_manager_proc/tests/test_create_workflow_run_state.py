@@ -62,15 +62,19 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_create_workflow_run_state.WorkflowSrvUnitTests.test_create_wrsc_library
         """
+        # NOTE: orcabusId with and without prefix
+        #       The DB records have to be generated without prefix
+        #       The event records will be passed through as in the input
         library_ids = ["L000001", "L000002"]
+        orcabus_ids = ["lib.01J5M2J44HFJ9424G7074NKTGN", "01J5M2JFE1JPYV62RYQEG99CP5"]
         lib_ids = [
             {
                 "libraryId": library_ids[0],
-                "orcabusId": "01J5M2J44HFJ9424G7074NKTGN"
+                "orcabusId": orcabus_ids[0]
             },
             {
                 "libraryId": library_ids[1],
-                "orcabusId": "01J5M2JFE1JPYV62RYQEG99CP5"
+                "orcabusId": orcabus_ids[1]
             }
         ]
 
@@ -102,6 +106,12 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         logger.info("Test the created WRSC event...")
         result_wrsc: WorkflowRunStateChange = create_workflow_run_state.handler(test_event, None)
         logger.info(result_wrsc)
+
+        # ensure that all library records have been created as proper ULIDs (without prefixes)
+        db_libs = Library.objects.all()
+        for l in db_libs:
+            self.assertTrue(len(l.orcabus_id), 26)
+
         self.assertIsNotNone(result_wrsc)
         self.assertEqual("ctTSO500-L000002", result_wrsc.workflowRunName)
         # We do expect 2 library associations here!
@@ -109,6 +119,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(2, len(result_wrsc.linkedLibraries))
         for lib in result_wrsc.linkedLibraries:
             self.assertTrue(lib.libraryId in library_ids)
+            self.assertTrue(lib.orcabusId in orcabus_ids)
 
         logger.info("Test the persisted DB record...")
         wfr_qs: QuerySet = WorkflowRun.objects.all()
@@ -125,15 +136,19 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         python manage.py test workflow_manager_proc.tests.test_create_workflow_run_state.WorkflowSrvUnitTests.test_create_wrsc_library_exists
         """
 
+        # NOTE: orcabusId with and without prefix
+        #       The DB records have to be generated without prefix
+        #       The event records will be passed through as in the input
         library_ids = ["L000001", "L000002"]
+        orcabus_ids = ["lib.01J5M2J44HFJ9424G7074NKTGN", "01J5M2JFE1JPYV62RYQEG99CP5"]
         lib_ids = [
             {
                 "libraryId": library_ids[0],
-                "orcabusId": "01J5M2J44HFJ9424G7074NKTGN"
+                "orcabusId": orcabus_ids[0]
             },
             {
                 "libraryId": library_ids[1],
-                "orcabusId": "01J5M2JFE1JPYV62RYQEG99CP5"
+                "orcabusId": orcabus_ids[1]
             }
         ]
         for lib_id in lib_ids:
@@ -141,6 +156,11 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
                 library_id=lib_id["libraryId"],
                 orcabus_id=lib_id["orcabusId"]
             )
+
+        # ensure that all library records have been created as proper ULIDs (without prefixes)
+        db_libs = Library.objects.all()
+        for l in db_libs:
+            self.assertTrue(len(l.orcabus_id), 26)
 
         test_event = {
             "portalRunId": "202405012397gatc",
@@ -177,6 +197,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(2, len(result_wrsc.linkedLibraries))
         for lib in result_wrsc.linkedLibraries:
             self.assertTrue(lib.libraryId in library_ids)
+            self.assertTrue(lib.orcabusId in orcabus_ids)
 
         logger.info("Test the persisted DB record...")
         wfr_qs: QuerySet = WorkflowRun.objects.all()

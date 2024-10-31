@@ -52,6 +52,12 @@ import {
   getPierianDxPipelineManagerStackProps,
   getPierianDxPipelineTableStackProps,
 } from './stacks/pierianDxPipelineManager';
+import { getAuthorizationManagerStackProps } from './stacks/authorizationManager';
+import { getSashPipelineManagerStackProps, getSashPipelineTableStackProps } from './stacks/sash';
+import {
+  getOncoanalyserPipelineManagerStackProps,
+  getOncoanalyserPipelineTableStackProps,
+} from './stacks/oncoanalyser';
 
 interface EnvironmentConfig {
   name: string;
@@ -72,6 +78,7 @@ interface EnvironmentConfig {
 export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null => {
   const stackProps = {
     statefulConfig: {
+      authorizationManagerStackProps: getAuthorizationManagerStackProps(stage),
       dataBucketStackProps: getDataBucketStackProps(stage),
       sharedStackProps: getSharedStackProps(stage),
       postgresManagerStackProps: getPostgresManagerStackProps(),
@@ -88,6 +95,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
       stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
       pierianDxPipelineTableStackProps: getPierianDxPipelineTableStackProps(),
+      oncoanalyserPipelineTableStackProps: getOncoanalyserPipelineTableStackProps(),
+      sashPipelineTableStackProps: getSashPipelineTableStackProps(),
     },
     statelessConfig: {
       metadataManagerStackProps: getMetadataManagerStackProps(stage),
@@ -104,6 +113,8 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       umccriseIcav2PipelineManagerStackProps: getUmccriseIcav2PipelineManagerStackProps(stage),
       rnasumIcav2PipelineManagerStackProps: getRnasumIcav2PipelineManagerStackProps(stage),
       pieriandxPipelineManagerStackProps: getPierianDxPipelineManagerStackProps(stage),
+      oncoanalyserPipelineManagerStackProps: getOncoanalyserPipelineManagerStackProps(stage),
+      sashPipelineManagerStackProps: getSashPipelineManagerStackProps(stage),
       eventSchemaStackProps: getEventSchemaStackProps(),
       dataSchemaStackProps: getDataSchemaStackProps(),
       bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),

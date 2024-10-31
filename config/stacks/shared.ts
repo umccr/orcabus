@@ -2,27 +2,28 @@ import { AuroraPostgresEngineVersion } from 'aws-cdk-lib/aws-rds';
 import { ConfigurableDatabaseProps } from '../../lib/workload/stateful/stacks/shared/constructs/database';
 import { SharedStackProps } from '../../lib/workload/stateful/stacks/shared/stack';
 import {
-  AppStage,
   accountIdAlias,
+  AppStage,
   computeSecurityGroupName,
   databasePort,
+  dataSchemaRegistryName,
   dbClusterEndpointHostParameterName,
   dbClusterIdentifier,
   dbClusterResourceIdParameterName,
   eventBusName,
-  eventSourceQueueName,
-  rdsMasterSecretName,
   eventSchemaRegistryName,
-  dataSchemaRegistryName,
-  vpcProps,
-  oncoanalyserBucket,
+  eventSourceQueueName,
+  icav2ArchiveAnalysisBucket,
   icav2PipelineCacheBucket,
+  oncoanalyserBucket,
+  rdsMasterSecretName,
+  vpcProps,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { SchemaRegistryProps } from '../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
 import {
-  EventBusProps,
   EventBusArchiverProps,
+  EventBusProps,
 } from '../../lib/workload/stateful/stacks/shared/constructs/event-bus';
 import { ComputeProps } from '../../lib/workload/stateful/stacks/shared/constructs/compute';
 import { EventSourceProps } from '../../lib/workload/stateful/stacks/shared/constructs/event-source';
@@ -88,18 +89,30 @@ const getComputeConstructProps = (): ComputeProps => {
 };
 
 const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
-  return {
+  const props = {
     queueName: eventSourceQueueName,
     maxReceiveCount: 3,
     rules: [
       {
         bucket: oncoanalyserBucket[stage],
+        eventTypes: ['Object Created', 'Object Deleted'],
       },
       {
         bucket: icav2PipelineCacheBucket[stage],
+        eventTypes: ['Object Created', 'Object Deleted'],
+        key: [{ 'anything-but': { wildcard: 'byob-icav2/*/cache/*' } }],
       },
     ],
   };
+
+  if (stage === AppStage.PROD) {
+    props.rules.push({
+      bucket: icav2ArchiveAnalysisBucket[stage],
+      eventTypes: ['Object Created', 'Object Deleted'],
+    });
+  }
+
+  return props;
 };
 
 const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps => {

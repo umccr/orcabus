@@ -14,6 +14,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { PieriandxInitialiseLibraryConstruct } from './part_1/initialise-library-db';
 import { Cttsov2CompleteToPieriandxConstruct } from './part_2/cttso-v2-output-to-pieriandx-ready-event';
+import { NestedStack } from 'aws-cdk-lib/core';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting wgts qc analyses
@@ -31,7 +32,7 @@ export interface pieriandxGlueHandlerConstructProps {
   redcapLambdaObj: lambda.IFunction;
 }
 
-export class PieriandxGlueHandlerConstruct extends Construct {
+export class PieriandxGlueHandlerConstruct extends NestedStack {
   constructor(scope: Construct, id: string, props: pieriandxGlueHandlerConstructProps) {
     super(scope, id);
     /*

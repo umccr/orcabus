@@ -6,6 +6,7 @@ import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { UmccriseAndWtsCompleteToRnasumReadyConstruct } from './part_2/umccrise-and-wts-complete-to-rnasum-draft';
 import { TnInitialiseLibraryAndFastqListRowConstruct } from '../loctite/part_1/initialise-tn-library-dbs';
 import { RnasumInitialiseLibraryConstruct } from './part_1/initialise-rnasum-library-dbs';
+import { NestedStack } from 'aws-cdk-lib/core';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting wgts qc analyses
@@ -25,7 +26,7 @@ export interface umccriseGlueHandlerConstructProps {
   icav2AccessTokenSecretObj: secretsManager.ISecret;
 }
 
-export class RnasumGlueHandlerConstruct extends Construct {
+export class RnasumGlueHandlerConstruct extends NestedStack {
   constructor(scope: Construct, id: string, props: umccriseGlueHandlerConstructProps) {
     super(scope, id);
 

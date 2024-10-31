@@ -1,0 +1,182 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Inputs",
+  "States": {
+    "Move Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "payload_data.$": "$.payload.data"
+      },
+      "Next": "Get Library Item"
+    },
+    "Get Library Item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.payload_data.library.orcabusId",
+          "id_type": "${__library_partition_name__}"
+        }
+      },
+      "ResultPath": "$.get_library_item_step",
+      "Next": "Update Databases"
+    },
+    "Update Databases": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Pass",
+          "States": {
+            "Pass": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Library in Database",
+          "States": {
+            "Library in Database": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.get_library_item_step.Item",
+                  "IsPresent": false,
+                  "Comment": "Library Not In Database",
+                  "Next": "Initialise Library"
+                }
+              ],
+              "Default": "No Need to Initialise Library"
+            },
+            "Initialise Library": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Parameters": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "id.$": "$.payload_data.library.orcabusId",
+                  "id_type": "${__library_partition_name__}",
+                  "library_id": {
+                    "S.$": "$.payload_data.library.libraryId"
+                  },
+                  "phenotype": {
+                    "S.$": "$.payload_data.library.phenotype"
+                  },
+                  "workflow": {
+                    "S.$": "$.payload_data.library.workflow"
+                  },
+                  "type": {
+                    "S.$": "$.payload_data.library.type"
+                  },
+                  "assay": {
+                    "S.$": "$.payload_data.library.assay"
+                  },
+                  "subject_id": {
+                    "S.$": "$.payload_data.subject.subjectId"
+                  },
+                  "subject_orcabus_id": {
+                    "S.$": "$.payload_data.subject.orcabusId"
+                  }
+                }
+              },
+              "ResultPath": null,
+              "End": true
+            },
+            "No Need to Initialise Library": {
+              "Type": "Pass",
+              "End": true,
+              "ResultPath": null
+            }
+          }
+        }
+      ],
+      "Next": "Initialise Fastq List Rows",
+      "ResultPath": null
+    },
+    "Initialise Fastq List Rows": {
+      "Type": "Map",
+      "ItemsPath": "$.payload_data.bclconvertDataRows",
+      "ItemSelector": {
+        "bclconvert_data_row.$": "$$.Map.Item.Value",
+        "instrument_run_id.$": "$.payload_data.instrumentRunId",
+        "library_id.$": "$.payload_data.library.libraryId",
+        "library_orcabus_id.$": "$.payload_data.library.orcabusId",
+        "index.$": "$$.Map.Item.Index",
+        "fastq_list_row_objs.$": "$.payload_data.fastqListRows"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Get Fastq List Row ID Step",
+        "States": {
+          "Get Fastq List Row ID Step": {
+            "Type": "Pass",
+            "Parameters": {
+              "fastq_list_row_id.$": "States.ArrayGetItem($.fastq_list_row_objs[*].fastqListRowRgid, $.index)"
+            },
+            "ResultPath": "$.get_fastq_list_row_id_step",
+            "Next": "Initialise Fastq List Row and Update Library"
+          },
+          "Initialise Fastq List Row and Update Library": {
+            "Type": "Parallel",
+            "Branches": [
+              {
+                "StartAt": "Initialise Fastq List Row",
+                "States": {
+                  "Initialise Fastq List Row": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:putItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Item": {
+                        "id.$": "$.get_fastq_list_row_id_step.fastq_list_row_id",
+                        "id_type": "${__fastq_list_row_partition_name__}",
+                        "library_id": {
+                          "S.$": "$.library_id"
+                        },
+                        "library_orcabus_id": {
+                          "S.$": "$.library_orcabus_id"
+                        }
+                      }
+                    },
+                    "ResultPath": null,
+                    "End": true
+                  }
+                }
+              },
+              {
+                "StartAt": "Append Fastq List Row to Library",
+                "States": {
+                  "Append Fastq List Row to Library": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:updateItem",
+                    "Parameters": {
+                      "TableName": "${__table_name__}",
+                      "Key": {
+                        "id.$": "$.library_orcabus_id",
+                        "id_type": "${__library_partition_name__}"
+                      },
+                      "UpdateExpression": "ADD fastq_list_row_id_set :fastq_list_row_id_set",
+                      "ExpressionAttributeValues": {
+                        ":fastq_list_row_id_set": {
+                          "SS.$": "States.Array($.get_fastq_list_row_id_step.fastq_list_row_id)"
+                        }
+                      }
+                    },
+                    "End": true,
+                    "ResultPath": null
+                  }
+                }
+              }
+            ],
+            "End": true
+          }
+        }
+      },
+      "End": true,
+      "ResultPath": null
+    }
+  }
+}
