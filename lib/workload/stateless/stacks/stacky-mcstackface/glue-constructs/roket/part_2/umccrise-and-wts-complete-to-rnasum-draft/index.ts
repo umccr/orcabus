@@ -99,7 +99,7 @@ export class UmccriseAndWtsCompleteToRnasumReadyConstruct extends Construct {
     // Add CONTEXT, FROM_ID and RETURN_STR environment variables to the lambda
     collectOrcaBusIdLambdaObj.addEnvironment('CONTEXT', 'subject');
     collectOrcaBusIdLambdaObj.addEnvironment('FROM_ID', '');
-    collectOrcaBusIdLambdaObj.addEnvironment('RETURN_STR', '');
+    collectOrcaBusIdLambdaObj.addEnvironment('RETURN_OBJ', '');
 
     /*
     Part 1: Generate the preamble (sfn to generate the portal run id and the workflow run name)
