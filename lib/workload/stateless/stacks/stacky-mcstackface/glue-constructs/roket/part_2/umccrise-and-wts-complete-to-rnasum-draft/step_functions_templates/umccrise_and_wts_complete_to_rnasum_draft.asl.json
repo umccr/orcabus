@@ -70,7 +70,8 @@
         }
       ],
       "ResultSelector": {
-        "subject_orcabus_id.$": "$.Payload.orcabus_id"
+        "subject_orcabus_id.$": "$.Payload.orcabus_id",
+        "individual_id.$": "States.ArrayGetItem($.Payload.individualSet[?(@.individualId =~ /SBJ.*?/i)].individualId, 0)"
       },
       "ResultPath": "$.get_subject_orcabus_id_step",
       "Next": "Get Subject Orcabus ID"
@@ -109,7 +110,7 @@
           "id.$": "$.get_subject_orcabus_id_step.subject_orcabus_id",
           "id_type": "${__subject_table_partition_name__}",
           "individual_id": {
-            "S.$": "$.workflow_inputs.payload.data.tags.individualId"
+            "S.$": "$.get_subject_orcabus_id_step.individual_id"
           },
           "subject_id": {
             "S.$": "$.workflow_inputs.payload.data.tags.subjectId"
