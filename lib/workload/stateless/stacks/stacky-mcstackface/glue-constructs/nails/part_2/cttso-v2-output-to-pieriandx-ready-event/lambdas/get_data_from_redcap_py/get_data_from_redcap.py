@@ -7,6 +7,7 @@ We really only need the disease name if it exists
 """
 
 # Standard imports
+import logging
 import typing
 from typing import List
 from time import sleep
@@ -18,7 +19,6 @@ from botocore.exceptions import ClientError
 import json
 import pytz
 from datetime import datetime
-import logging
 
 if typing.TYPE_CHECKING:
     from mypy_boto3_lambda import LambdaClient
@@ -287,8 +287,10 @@ def handler(event, context) -> Dict:
     :return:
     """
     # Wait for lambda to warm up
+    logger.info("Warming up redcap lambda")
     while not warm_up_lambda():
         sleep(10)
+    logger.info("Redcap lambda warmup complete!")
 
     # Return
     try:
@@ -314,6 +316,42 @@ def handler(event, context) -> Dict:
 #             handler(
 #                 event={
 #                     "library_id": 'L2401380'
+#                 },
+#                 context=None
+#             ),
+#             indent=4
+#         )
+#     )
+#
+# # {
+# #     "redcap_data": {
+# #         "disease_id": 254637007,
+# #         "requesting_physicians_first_name": "XXX",
+# #         "requesting_physicians_last_name": "XXX",
+# #         "library_id": "L2401380",
+# #         "date_collected": "2024-09-06T23:00:00+1000",
+# #         "date_received": "2024-09-06T00:00:00+1000",
+# #         "patient_urn": "0038-61302",
+# #         "sample_type": "Patient Care Sample",
+# #         "disease_name": "Non-small cell lung cancer",
+# #         "gender": "Unknown",
+# #         "pierian_metadata_complete": "Complete"
+# #     },
+# #     "in_redcap": true
+# # }
+
+
+# if __name__ == '__main__':
+#     # Or 'umccr-staging' / 'umccr-production'
+#     environ['AWS_PROFILE'] = 'umccr-development'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     # Or 'redcap-apis-stg-lambda-function' / 'redcap-apis-prod-lambda-function'
+#     environ['REDCAP_LAMBDA_FUNCTION_NAME'] = 'redcap-apis-dev-lambda-function'
+#     print(
+#         json.dumps(
+#             handler(
+#                 event={
+#                     "library_id": 'L2401529'
 #                 },
 #                 context=None
 #             ),

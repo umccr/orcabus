@@ -107,6 +107,7 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
       index: 'get_data_from_redcap.py',
       handler: 'handler',
       timeout: Duration.seconds(60),
+      memorySize: 2048,
     });
 
     const getDeidentifiedCaseMetadataPyLambdaObj = new PythonFunction(
@@ -118,6 +119,7 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
         architecture: lambda.Architecture.ARM_64,
         index: 'get_deidentified_case_metadata.py',
         handler: 'handler',
+        memorySize: 1024,
       }
     );
     const getIdentifiedCaseMetadataPyLambdaObj = new PythonFunction(
@@ -129,6 +131,7 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
         architecture: lambda.Architecture.ARM_64,
         index: 'get_identified_case_metadata.py',
         handler: 'handler',
+        memorySize: 1024,
       }
     );
     const getPieriandxDataFilesPyLambdaObj = new PythonFunction(
@@ -144,6 +147,7 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
         environment: {
           ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
         },
+        memorySize: 1024,
       }
     );
     const getProjectInfoPyLambdaObj = new PythonFunction(this, 'getProjectInfoPyLambdaObj', {

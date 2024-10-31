@@ -28,7 +28,6 @@ Payload will look a bit like this:
 """
 
 # Imports
-import typing
 from typing import Dict
 
 import pytz
