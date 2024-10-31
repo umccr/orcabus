@@ -8,10 +8,6 @@ class AnalysisRunListParamSerializer( OptionalFieldsMixin, AnalysisRunBaseSerial
     class Meta:
         model = AnalysisRun
         fields = "__all__"
-class AnalysisRunListParamSerializer( OptionalFieldsMixin, AnalysisRunBaseSerializer,):
-    class Meta:
-        model = AnalysisRun
-        fields = "__all__"
 
 class AnalysisRunSerializer(AnalysisRunBaseSerializer):
     from .analysis import AnalysisMinSerializer
