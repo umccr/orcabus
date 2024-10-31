@@ -60,9 +60,10 @@
                     "Lambda.ServiceException",
                     "Lambda.AWSLambdaException",
                     "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException"
+                    "Lambda.TooManyRequestsException",
+                    "States.TaskFailed"
                   ],
-                  "IntervalSeconds": 1,
+                  "IntervalSeconds": 60,
                   "MaxAttempts": 3,
                   "BackoffRate": 2
                 }
@@ -97,9 +98,10 @@
                     "Lambda.ServiceException",
                     "Lambda.AWSLambdaException",
                     "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException"
+                    "Lambda.TooManyRequestsException",
+                    "States.TaskFailed"
                   ],
-                  "IntervalSeconds": 1,
+                  "IntervalSeconds": 60,
                   "MaxAttempts": 3,
                   "BackoffRate": 2
                 }
@@ -124,9 +126,10 @@
                     "Lambda.ServiceException",
                     "Lambda.AWSLambdaException",
                     "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException"
+                    "Lambda.TooManyRequestsException",
+                    "States.TaskFailed"
                   ],
-                  "IntervalSeconds": 1,
+                  "IntervalSeconds": 60,
                   "MaxAttempts": 3,
                   "BackoffRate": 2
                 }
@@ -154,9 +157,10 @@
                     "Lambda.ServiceException",
                     "Lambda.AWSLambdaException",
                     "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException"
+                    "Lambda.TooManyRequestsException",
+                    "States.TaskFailed"
                   ],
-                  "IntervalSeconds": 1,
+                  "IntervalSeconds": 60,
                   "MaxAttempts": 3,
                   "BackoffRate": 2
                 }
