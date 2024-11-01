@@ -222,6 +222,7 @@ def handler(event, context):
     if job_status is False:
         # Add this job id to the failed job list
         failed_job_list.append(job_id)
+        logger.warning(f"job id '{job_id}' failed with status {job_obj.status}")
 
         # Check we haven't exceeded the excess number of attempts
         if len(failed_job_list) >= MAX_JOB_ATTEMPT_COUNTER:
