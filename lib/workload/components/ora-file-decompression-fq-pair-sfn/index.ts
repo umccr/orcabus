@@ -65,7 +65,7 @@ export class OraDecompressionConstruct extends Construct {
     //   "Effect": "Allow",
     //   "Resource": "*"
     // },
-    NagSuppressions.addResourceSuppressions(taskDefinition, [
+    NagSuppressions.addResourceSuppressions(<iam.Role>taskDefinition.executionRole, [
       {
         id: 'AwsSolutions-IAM5',
         reason: 'Fargate has GetAuthorizationToken permission on all resources by default',
