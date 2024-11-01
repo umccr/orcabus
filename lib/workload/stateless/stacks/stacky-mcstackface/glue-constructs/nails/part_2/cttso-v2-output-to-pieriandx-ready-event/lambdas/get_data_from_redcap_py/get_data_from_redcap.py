@@ -86,6 +86,7 @@ def warm_up_lambda():
         )
         return True
     except ClientError as e:
+        print(f"Error warming up lambda: {e}")
         logger.info(f"Error warming up lambda: {e}")
         return False
 
@@ -287,10 +288,10 @@ def handler(event, context) -> Dict:
     :return:
     """
     # Wait for lambda to warm up
-    logger.info("Warming up redcap lambda")
+    print("Warming up redcap lambda")
     while not warm_up_lambda():
         sleep(10)
-    logger.info("Redcap lambda warmup complete!")
+    print("Redcap lambda warmup complete!")
 
     # Return
     try:
@@ -322,23 +323,6 @@ def handler(event, context) -> Dict:
 #             indent=4
 #         )
 #     )
-#
-# # {
-# #     "redcap_data": {
-# #         "disease_id": 254637007,
-# #         "requesting_physicians_first_name": "XXX",
-# #         "requesting_physicians_last_name": "XXX",
-# #         "library_id": "L2401380",
-# #         "date_collected": "2024-09-06T23:00:00+1000",
-# #         "date_received": "2024-09-06T00:00:00+1000",
-# #         "patient_urn": "0038-61302",
-# #         "sample_type": "Patient Care Sample",
-# #         "disease_name": "Non-small cell lung cancer",
-# #         "gender": "Unknown",
-# #         "pierian_metadata_complete": "Complete"
-# #     },
-# #     "in_redcap": true
-# # }
 
 
 # if __name__ == '__main__':
@@ -351,7 +335,7 @@ def handler(event, context) -> Dict:
 #         json.dumps(
 #             handler(
 #                 event={
-#                     "library_id": 'L2401529'
+#                     "library_id": "L2401529"
 #                 },
 #                 context=None
 #             ),
