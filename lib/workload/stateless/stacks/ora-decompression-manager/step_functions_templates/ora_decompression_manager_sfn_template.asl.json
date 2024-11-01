@@ -1,0 +1,50 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Start Decompression Service",
+  "States": {
+    "Start Decompression Service": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__ora_decompression_sfn_arn__}",
+        "Input": {
+          "read1OraFileUri.$": "$.read1OraFileUri",
+          "read1GzOutputFileUri.$": "$.read1GzOutputFileUri",
+          "read2OraFileUri.$": "$.read2OraFileUri",
+          "read2GzOutputFileUri.$": "$.read2GzOutputFileUri",
+          "read1EstimatedGzFileSize.$": "$.read1EstimatedGzFileSize",
+          "read2EstimatedGzFileSize.$": "$.read2EstimatedGzFileSize"
+        }
+      },
+      "ResultPath": null,
+      "Next": "Raise Completion Event"
+    },
+    "Raise Completion Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "EventBusName": "${__event_bus_name__}",
+            "DetailType": "${__detail_type__}",
+            "Source": "${__source__}",
+            "Detail": {
+              "status": "SUCCEEDED",
+              "payload": {
+                "data": {
+                  "read1OraFileUri.$": "$.read1OraFileUri",
+                  "read1GzOutputFileUri.$": "$.read1GzOutputFileUri",
+                  "read2OraFileUri.$": "$.read2OraFileUri",
+                  "read2GzOutputFileUri.$": "$.read2GzOutputFileUri",
+                  "read1EstimatedGzFileSize.$": "$.read1EstimatedGzFileSize",
+                  "read2EstimatedGzFileSize.$": "$.read2EstimatedGzFileSize"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}

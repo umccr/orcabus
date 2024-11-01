@@ -61,6 +61,10 @@ import {
   SashNfPipelineTable,
   SashNfPipelineTableStackProps,
 } from './stacks/sash-dynamodb/deploy/stack';
+import {
+  OraCompressionIcav2PipelineTable,
+  OraCompressionIcav2PipelineTableStackProps,
+} from './stacks/ora-decompression-dynamodb/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -76,6 +80,7 @@ export interface StatefulStackCollectionProps {
   wtsIcav2PipelineTableStackProps: WtsIcav2PipelineTableStackProps;
   umccriseIcav2PipelineTableStackProps: UmccriseIcav2PipelineTableStackProps;
   rnasumIcav2PipelineTableStackProps: RnasumIcav2PipelineTableStackProps;
+  oraCompressionIcav2PipelineTableStackProps: OraCompressionIcav2PipelineTableStackProps;
   BclConvertTableStackProps: BclConvertTableStackProps;
   stackyStatefulTablesStackProps: StackyStatefulTablesStackProps;
   pierianDxPipelineTableStackProps: PierianDxPipelineTableStackProps;
@@ -99,6 +104,7 @@ export class StatefulStackCollection {
   readonly wtsIcav2PipelineTableStack: Stack;
   readonly umccriseIcav2PipelineTableStack: Stack;
   readonly rnasumIcav2PipelineTableStack: Stack;
+  readonly oraCompressionIcav2PipelineTableStack: Stack;
   readonly BclConvertTableStack: Stack;
   readonly stackyStatefulTablesStack: Stack;
   readonly pierianDxPipelineTableStack: Stack;
@@ -204,6 +210,15 @@ export class StatefulStackCollection {
       {
         ...this.createTemplateProps(env, 'RnasumIcav2PipelineTableStack'),
         ...statefulConfiguration.rnasumIcav2PipelineTableStackProps,
+      }
+    );
+
+    this.oraCompressionIcav2PipelineTableStack = new OraCompressionIcav2PipelineTable(
+      scope,
+      'OraCompressionIcav2PipelineTableStack',
+      {
+        ...this.createTemplateProps(env, 'OraCompressionIcav2PipelineTableStack'),
+        ...statefulConfiguration.oraCompressionIcav2PipelineTableStackProps,
       }
     );
 

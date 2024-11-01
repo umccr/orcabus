@@ -9,7 +9,6 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import path from 'path';
 import { Duration } from 'aws-cdk-lib';
 
@@ -86,7 +85,7 @@ export class WorkflowDraftRunStateChangeCommonPreambleConstruct extends Construc
     */
     /* Allow step functions to invoke the lambda */
     [workflowRunNameLambda, portalRunIdLambda].forEach((lambdaObj) => {
-      lambdaObj.currentVersion.grantInvoke(<iam.IRole>this.stepFunctionObj.role);
+      lambdaObj.currentVersion.grantInvoke(this.stepFunctionObj);
     });
   }
 }

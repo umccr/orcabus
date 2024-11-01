@@ -58,6 +58,11 @@ import {
   getOncoanalyserPipelineManagerStackProps,
   getOncoanalyserPipelineTableStackProps,
 } from './stacks/oncoanalyser';
+import {
+  getOraCompressionIcav2PipelineManagerStackProps,
+  getOraCompressionIcav2PipelineTableStackProps,
+} from './stacks/oraCompressionPipelineManager';
+import { getOraDecompressionManagerStackProps } from './stacks/oraDecompressionPipelineManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -92,6 +97,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       wtsIcav2PipelineTableStackProps: getWtsIcav2PipelineTableStackProps(),
       umccriseIcav2PipelineTableStackProps: getUmccriseIcav2PipelineTableStackProps(),
       rnasumIcav2PipelineTableStackProps: getRnasumIcav2PipelineTableStackProps(),
+      oraCompressionIcav2PipelineTableStackProps: getOraCompressionIcav2PipelineTableStackProps(),
       BclConvertTableStackProps: getBclConvertManagerTableStackProps(stage),
       stackyStatefulTablesStackProps: getStatefulGlueStackProps(),
       pierianDxPipelineTableStackProps: getPierianDxPipelineTableStackProps(),
@@ -115,6 +121,9 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       pieriandxPipelineManagerStackProps: getPierianDxPipelineManagerStackProps(stage),
       oncoanalyserPipelineManagerStackProps: getOncoanalyserPipelineManagerStackProps(stage),
       sashPipelineManagerStackProps: getSashPipelineManagerStackProps(stage),
+      oraCompressionIcav2PipelineManagerStackProps:
+        getOraCompressionIcav2PipelineManagerStackProps(stage),
+      oraDecompressionManagerStackProps: getOraDecompressionManagerStackProps(stage),
       eventSchemaStackProps: getEventSchemaStackProps(),
       dataSchemaStackProps: getDataSchemaStackProps(),
       bclConvertManagerStackProps: getBclConvertManagerStackProps(stage),
