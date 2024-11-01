@@ -13,6 +13,7 @@ Given a cttsov2 success event we need to
 import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import path from 'path';
+import { NagSuppressions } from 'cdk-nag';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
@@ -161,7 +162,15 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
     /*
     Handle lambda permissions
     */
-    props.redcapLambdaObj.latestVersion.grantInvoke(getDataFromRedCapPyLambdaObj.currentVersion);
+    // FIXME - cannot get the 'current' version of an IFunction object
+    NagSuppressions.addResourceSuppressions(getDataFromRedCapPyLambdaObj, [
+      {
+        id: 'AwsSolutions-IAM5[Resource::*',
+        reason: 'Cannot get latest version of redcap lambda function ($LATEST) will not work',
+        appliesTo: [`Resource::arn:aws:lambda:::function:${props.redcapLambdaObj.functionName}*`],
+      },
+    ]);
+    props.redcapLambdaObj.grantInvoke(getDataFromRedCapPyLambdaObj.currentVersion);
     getDataFromRedCapPyLambdaObj.addEnvironment(
       'REDCAP_LAMBDA_FUNCTION_NAME',
       props.redcapLambdaObj.functionName
