@@ -164,12 +164,16 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
     Handle lambda permissions
     */
     // FIXME - cannot get the 'current' version of an IFunction object
-    NagSuppressions.addResourceSuppressions(<iam.Role>getDataFromRedCapPyLambdaObj.role, [
-      {
-        id: 'AwsSolutions-IAM5',
-        reason: 'Cannot get latest version of redcap lambda function ($LATEST) will not work',
-      },
-    ]);
+    NagSuppressions.addResourceSuppressions(
+      getDataFromRedCapPyLambdaObj,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Cannot get latest version of redcap lambda function ($LATEST) will not work',
+        },
+      ],
+      true
+    );
     props.redcapLambdaObj.grantInvoke(getDataFromRedCapPyLambdaObj.currentVersion);
     getDataFromRedCapPyLambdaObj.addEnvironment(
       'REDCAP_LAMBDA_FUNCTION_NAME',
