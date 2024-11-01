@@ -15,6 +15,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import path from 'path';
 import { NagSuppressions } from 'cdk-nag';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
@@ -163,7 +164,7 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
     Handle lambda permissions
     */
     // FIXME - cannot get the 'current' version of an IFunction object
-    NagSuppressions.addResourceSuppressions(getDataFromRedCapPyLambdaObj, [
+    NagSuppressions.addResourceSuppressions(<iam.Role>getDataFromRedCapPyLambdaObj.role, [
       {
         id: 'AwsSolutions-IAM5',
         reason: 'Cannot get latest version of redcap lambda function ($LATEST) will not work',
