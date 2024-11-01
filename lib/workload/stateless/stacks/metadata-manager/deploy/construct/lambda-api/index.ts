@@ -1,5 +1,6 @@
 import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
+import { Function } from 'aws-cdk-lib/aws-lambda';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { PythonFunction, PythonFunctionProps } from '@aws-cdk/aws-lambda-python-alpha';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
@@ -22,6 +23,14 @@ type LambdaProps = {
    * The props for api-gateway
    */
   apiGatewayConstructProps: ApiGatewayConstructProps;
+  /**
+   * sync db from gsheet lambda
+   */
+  syncGsheetLambda: Function;
+  /**
+   * sync db from csv file lambda
+   */
+  syncCustomCsvLambda: Function;
 };
 
 export class LambdaAPIConstruct extends Construct {
@@ -50,7 +59,26 @@ export class LambdaAPIConstruct extends Construct {
     new HttpRoute(this, 'ApiLambdaHttpRoute', {
       httpApi: apiGW.httpApi,
       integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.GET),
+      routeKey: HttpRouteKey.with('/{PROXY+}', HttpMethod.GET),
     });
+
+    new HttpRoute(this, 'ApiLambdaHttpRoutePost', {
+      httpApi: apiGW.httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{PROXY+}', HttpMethod.POST),
+    });
+
+    // Would need to add permission and env-var for the sync lambdas
+    lambdaProps.syncGsheetLambda.grantInvoke(this.lambda);
+    this.lambda.addEnvironment(
+      'SYNC_GSHEET_LAMBDA_NAME',
+      lambdaProps.syncGsheetLambda.functionName
+    );
+
+    lambdaProps.syncCustomCsvLambda.grantInvoke(this.lambda);
+    this.lambda.addEnvironment(
+      'SYNC_CSV_PRESIGNED_URL_LAMBDA_NAME',
+      lambdaProps.syncCustomCsvLambda.functionName
+    );
   }
 }

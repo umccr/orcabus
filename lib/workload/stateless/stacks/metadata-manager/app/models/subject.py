@@ -1,8 +1,6 @@
 from django.db import models
-from simple_history.models import HistoricalRecords
 
-from app.models.base import BaseModel, BaseManager
-from app.models.individual import Individual
+from app.models.base import BaseModel, BaseManager, BaseHistoricalRecords
 
 
 class SubjectManager(BaseManager):
@@ -32,4 +30,4 @@ class Subject(BaseModel):
                                             related_name='subject_set', blank=True)
 
     # history
-    history = HistoricalRecords(m2m_fields=[individual_set])
+    history = BaseHistoricalRecords(m2m_fields=[individual_set])

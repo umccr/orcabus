@@ -26,7 +26,7 @@ SSM_NAME_GDRIVE_ACCOUNT = os.getenv('SSM_NAME_GDRIVE_ACCOUNT', '')
 
 
 @transaction.atomic
-def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: bool = True):
+def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: bool = True, reason: str = None):
     """
     Persist metadata records from a pandas dataframe into the db
 
@@ -34,6 +34,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: b
         df (pd.DataFrame): The source of truth for the metadata in this particular year
         sheet_year (type): The year for the metadata df supplied
         is_emit_eb_events: Emit event bridge events for update/create (only for library records for now)
+        reason: The reason for the metadata update
 
     """
     logger.info(f"Start processing LabMetadata")
@@ -110,7 +111,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: b
                 data={
                     "individual_id": record.get('subject_id'),
                     "source": "lab"
-                }
+                }, change_reason=reason
             )
             if is_idv_created:
                 stats['individual']['create_count'] += 1
@@ -124,7 +125,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: b
                 search_key={"subject_id": record.get('external_subject_id')},
                 data={
                     "subject_id": record.get('external_subject_id'),
-                }
+                }, change_reason=reason
             )
 
             if is_sub_created:
@@ -152,7 +153,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: b
                     "sample_id": record.get('sample_id'),
                     "external_sample_id": record.get('external_sample_id'),
                     "source": get_value_from_human_readable_label(Source.choices, record.get('source')),
-                }
+                }, change_reason=reason
             )
             if is_smp_created:
                 stats['sample']['create_count'] += 1
@@ -166,7 +167,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: b
                 search_key={"contact_id": record.get('project_owner')},
                 data={
                     "contact_id": record.get('project_owner'),
-                }
+                }, change_reason=reason
             )
             if is_ctc_created:
                 stats['contact']['create_count'] += 1
@@ -180,7 +181,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: b
                 search_key={"project_id": record.get('project_name')},
                 data={
                     "project_id": record.get('project_name'),
-                }
+                }, change_reason=reason
             )
             if is_prj_created:
                 stats['project']['create_count'] += 1
@@ -217,7 +218,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: b
                     # for foreign key id
                     'sample_id': sample.orcabus_id,
                     'subject_id': subject.orcabus_id,
-                }
+                }, change_reason=reason
             )
             lib_dict = LibrarySerializer(library).data
 

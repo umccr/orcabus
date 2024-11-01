@@ -1,9 +1,8 @@
 import logging
 
 from django.db import models
-from simple_history.models import HistoricalRecords
 
-from app.models.base import BaseManager, BaseModel
+from app.models.base import BaseManager, BaseModel, BaseHistoricalRecords
 from app.models.subject import Subject
 from app.models.sample import Sample
 from app.models.project import Project
@@ -111,7 +110,7 @@ class Library(BaseModel):
                                          blank=True)
 
     # history
-    history = HistoricalRecords(m2m_fields=[project_set])
+    history = BaseHistoricalRecords(m2m_fields=[project_set])
 
 
 def sanitize_library_coverage(value: str):

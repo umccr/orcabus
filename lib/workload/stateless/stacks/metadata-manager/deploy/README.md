@@ -42,7 +42,7 @@ gsheet_sync_lambda_arn=$(aws ssm get-parameter --name '/orcabus/metadata-manager
 
 The lambda handler accepts a json with two parameters: 
 - `year` - a single year from which to run the sheet from the GSheet workbook. Default is the current year.
-- `is_emit_eb_events` - determines whether or not to emit events. Default is `true`.
+- `is_emit_eb_events` - determines whether to emit events to event bus. Default is `true`.
 
 ```json
 {
@@ -76,13 +76,18 @@ load_custom_csv_lambda_arn=$(aws ssm get-parameter --name '/orcabus/metadata-man
 ```
 
 The lambda handler accepts a json with two parameters: 
-- `url` - a presigned url of the csv file
-- `is_emit_eb_events` - determines whether or not to emit events. Default is `true`.
+- `url` - a presigned url of the csv file. _required_
+- `user_id` - The user id recorded for auditing (this could be email). _required_.
+- `is_emit_eb_events` - determines whether to emit events to the Event Bus. Default is `true`.
+- `reason` - The reason/description for the sync.
+
 
 ```json
 {
   "url": "https://example.com/csv",
-  "is_emit_eb_events": false
+  "is_emit_eb_events": false,
+  "user_id": "john.doe@email.com",
+  "reason": "reason/comment for the sync"
 }
 ```
 

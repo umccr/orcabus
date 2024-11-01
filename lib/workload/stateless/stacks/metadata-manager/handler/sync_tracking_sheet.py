@@ -30,7 +30,8 @@ def handler(event, context):
     duplicate_clean_df = warn_drop_duplicated_library(sanitize_df)
     clean_df = drop_incomplete_tracking_sheet_records(duplicate_clean_df)
 
-    result = persist_lab_metadata(clean_df, year, is_emit_eb_events)
+    result = persist_lab_metadata(df=clean_df, sheet_year=year, is_emit_eb_events=is_emit_eb_events,
+                                  reason="Google tracking sheet")
 
     logger.info(f'persist report: {libjson.dumps(result)}')
     return result

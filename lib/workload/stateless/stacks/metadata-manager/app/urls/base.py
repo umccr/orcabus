@@ -1,7 +1,8 @@
 from django.urls import path, include
 
 from app.routers import OptionalSlashDefaultRouter
-from app.viewsets import LibraryViewSet, SubjectViewSet, SampleViewSet, ProjectViewSet, ContactViewSet, IndividualViewSet
+from app.viewsets import LibraryViewSet, SubjectViewSet, SampleViewSet, ProjectViewSet, ContactViewSet, \
+    IndividualViewSet, SyncViewSet
 from app.settings.base import API_VERSION
 
 api_namespace = "api"
@@ -15,6 +16,7 @@ router.register(r"sample", SampleViewSet, basename="sample")
 router.register(r"library", LibraryViewSet, basename="library")
 router.register(r"project", ProjectViewSet, basename="project")
 router.register(r"contact", ContactViewSet, basename="contact")
+router.register(r"sync", SyncViewSet, basename="sync")
 
 urlpatterns = [
     path(f"{api_base}", include(router.urls)),

@@ -1,9 +1,7 @@
-import ulid
 from django.db import models
-from simple_history.models import HistoricalRecords
 
 from app.models.contact import Contact
-from app.models.base import BaseModel, BaseManager
+from app.models.base import BaseModel, BaseManager, BaseHistoricalRecords
 
 
 class ProjectManager(BaseManager):
@@ -43,4 +41,4 @@ class Project(BaseModel):
                                          blank=True)
 
     # history
-    history = HistoricalRecords(m2m_fields=[contact_set])
+    history = BaseHistoricalRecords(m2m_fields=[contact_set])
