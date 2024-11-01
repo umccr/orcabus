@@ -35,11 +35,14 @@ from os import environ
 import typing
 import logging
 
+from libica.openapi.v2.model.data import Data
 # Wrapica imports
 from wrapica.libica_models import ProjectData
 from wrapica.job import get_job
+from wrapica.enums import ProjectDataStatusValues
 from wrapica.project_data import (
-    convert_uri_to_project_data_obj, project_data_copy_batch_handler, delete_project_data
+    convert_uri_to_project_data_obj, project_data_copy_batch_handler, delete_project_data,
+    list_project_data_non_recursively
 )
 
 if typing.TYPE_CHECKING:
@@ -133,6 +136,21 @@ def submit_copy_job(dest_uri: str, source_uris: List[str]) -> str:
         create_data_if_not_found=True
     )
 
+    # Check list of files in the dest project data object and make sure no file has a partial status
+    existing_files = list_project_data_non_recursively(
+        dest_project_data_obj.project_id,
+        dest_project_data_obj.data.id
+    )
+
+    for existing_file in existing_files:
+        # Delete files with a 'partial' status
+        if ProjectDataStatusValues(existing_file.data.details.status) == ProjectDataStatusValues.PARTIAL:
+            logger.info(f"Deleting file {existing_file.data.details.path}, with 'partial' status before rerunning job")
+            delete_project_data(
+                existing_file.project_id,
+                existing_file.data.id
+            )
+
     return project_data_copy_batch_handler(
         source_data_ids=source_data_ids,
         destination_project_id=dest_project_data_obj.project_id,
@@ -204,6 +222,7 @@ def handler(event, context):
     if job_status is False:
         # Add this job id to the failed job list
         failed_job_list.append(job_id)
+        logger.warning(f"job id '{job_id}' failed with status {job_obj.status}")
 
         # Check we haven't exceeded the excess number of attempts
         if len(failed_job_list) >= MAX_JOB_ATTEMPT_COUNTER:
@@ -300,39 +319,39 @@ def handler(event, context):
         }
 
 
-# if __name__ == "__main__":
-#     import json
-#     environ['AWS_PROFILE'] = 'umccr-production'
-#     environ['AWS_DEFAULT_REGION'] = 'ap-southeast-2'
-#     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = 'ICAv2JWTKey-umccr-prod-service-production'
-#     print(
-#         json.dumps(
-#             handler(
-#                 event={
-#                 "job_status": "RUNNING",
-#                 "wait_time_seconds": 20,
-#                 "job_id": "bdfb0a4d-bcae-4670-b51f-9417d23e777a",
-#                 "dest_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/primary/240926_A01052_0232_AHW7LHDSXC/20240928f63332ac/Samples/Lane_4/LPRJ241305/",
-#                 "source_uris": [
-#                   "icav2://9ec02c1f-53ba-47a5-854d-e6b53101adb7/ilmn-analyses/240926_A01052_0232_AHW7LHDSXC_f5e33a_03217c-BclConvert v4_2_7-792cba71-52fa-42b3-85a0-c6593f199353/output/Samples/Lane_4/LPRJ241305/LPRJ241305_S41_L004_R1_001.fastq.gz",
-#                   "icav2://9ec02c1f-53ba-47a5-854d-e6b53101adb7/ilmn-analyses/240926_A01052_0232_AHW7LHDSXC_f5e33a_03217c-BclConvert v4_2_7-792cba71-52fa-42b3-85a0-c6593f199353/output/Samples/Lane_4/LPRJ241305/LPRJ241305_S41_L004_R2_001.fastq.gz"
-#                 ],
-#                 "failed_job_list": []
-#               },
-#                 context=None
-#             ),
-#             indent=4
-#         )
-#     )
-#
-# # {
-# #     "dest_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/primary/240926_A01052_0232_AHW7LHDSXC/20240928f63332ac/Samples/Lane_4/LPRJ241305/",
-# #     "source_uris": [
-# #         "icav2://9ec02c1f-53ba-47a5-854d-e6b53101adb7/ilmn-analyses/240926_A01052_0232_AHW7LHDSXC_f5e33a_03217c-BclConvert v4_2_7-792cba71-52fa-42b3-85a0-c6593f199353/output/Samples/Lane_4/LPRJ241305/LPRJ241305_S41_L004_R1_001.fastq.gz",
-# #         "icav2://9ec02c1f-53ba-47a5-854d-e6b53101adb7/ilmn-analyses/240926_A01052_0232_AHW7LHDSXC_f5e33a_03217c-BclConvert v4_2_7-792cba71-52fa-42b3-85a0-c6593f199353/output/Samples/Lane_4/LPRJ241305/LPRJ241305_S41_L004_R2_001.fastq.gz"
-# #     ],
-# #     "job_id": "bdfb0a4d-bcae-4670-b51f-9417d23e777a",
-# #     "failed_job_list": [],
-# #     "job_status": "SUCCEEDED",
-# #     "wait_time_seconds": 10
-# # }
+if __name__ == "__main__":
+    import json
+    environ['AWS_PROFILE'] = 'umccr-development'
+    environ['AWS_DEFAULT_REGION'] = 'ap-southeast-2'
+    environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = 'ICAv2JWTKey-umccr-prod-service-dev'
+    print(
+        json.dumps(
+            handler(
+                event={
+                "job_id": None,
+                "failed_job_list": [],
+                "wait_time_seconds": 5,
+                "job_status": None,
+                "dest_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/cache/cttsov2/20241031d8a13553/L2401532/",
+                "source_uris": [
+                    "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Samples/Lane_1/L2401532/L2401532_S7_L001_R1_001.fastq.gz",
+                    "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Samples/Lane_1/L2401532/L2401532_S7_L001_R2_001.fastq.gz"
+                ],
+              },
+                context=None
+            ),
+            indent=4
+        )
+    )
+
+# {
+#     "dest_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/primary/240926_A01052_0232_AHW7LHDSXC/20240928f63332ac/Samples/Lane_4/LPRJ241305/",
+#     "source_uris": [
+#         "icav2://9ec02c1f-53ba-47a5-854d-e6b53101adb7/ilmn-analyses/240926_A01052_0232_AHW7LHDSXC_f5e33a_03217c-BclConvert v4_2_7-792cba71-52fa-42b3-85a0-c6593f199353/output/Samples/Lane_4/LPRJ241305/LPRJ241305_S41_L004_R1_001.fastq.gz",
+#         "icav2://9ec02c1f-53ba-47a5-854d-e6b53101adb7/ilmn-analyses/240926_A01052_0232_AHW7LHDSXC_f5e33a_03217c-BclConvert v4_2_7-792cba71-52fa-42b3-85a0-c6593f199353/output/Samples/Lane_4/LPRJ241305/LPRJ241305_S41_L004_R2_001.fastq.gz"
+#     ],
+#     "job_id": "bdfb0a4d-bcae-4670-b51f-9417d23e777a",
+#     "failed_job_list": [],
+#     "job_status": "SUCCEEDED",
+#     "wait_time_seconds": 10
+# }
