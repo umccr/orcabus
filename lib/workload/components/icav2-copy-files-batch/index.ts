@@ -54,7 +54,7 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     });
 
     // Add execution permissions to stateMachine role
-    manifestInverterLambda.currentVersion.grantInvoke(this.icav2CopyFilesBatchSfnObj.role);
+    manifestInverterLambda.currentVersion.grantInvoke(this.icav2CopyFilesBatchSfnObj);
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -68,6 +68,6 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     );
 
     // Add state machine execution permissions to stateMachineBatch role
-    this.icav2CopyFilesSfnObj.grantStartExecution(this.icav2CopyFilesBatchSfnObj.role);
+    this.icav2CopyFilesSfnObj.grantStartExecution(this.icav2CopyFilesBatchSfnObj);
   }
 }

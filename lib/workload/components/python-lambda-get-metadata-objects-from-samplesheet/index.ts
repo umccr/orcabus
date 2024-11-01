@@ -2,7 +2,6 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import path from 'path';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import { MetadataToolsPythonLambdaLayer } from '../python-metadata-tools-layer';
 import { Duration } from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
@@ -60,9 +59,9 @@ export class GetLibraryObjectsFromSamplesheetConstruct extends Construct {
     });
 
     // Allow the lambda to read the secret
-    orcabusTokenSecretObj.grantRead(<iam.IRole>this.lambdaObj.currentVersion.role);
+    orcabusTokenSecretObj.grantRead(this.lambdaObj.currentVersion);
 
     // Allow the lambda to read the ssm parameter
-    hostnameSsmParameterObj.grantRead(<iam.IRole>this.lambdaObj.currentVersion.role);
+    hostnameSsmParameterObj.grantRead(this.lambdaObj.currentVersion);
   }
 }

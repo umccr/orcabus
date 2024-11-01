@@ -1,0 +1,99 @@
+{
+  "Comment": "Launch Icav2 Pipeline and log in db",
+  "StartAt": "Get DataBase Entry",
+  "States": {
+    "Get DataBase Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
+        }
+      },
+      "ResultSelector": {
+        "inputs.$": "States.StringToJson($.Item.ready_event_data_inputs.S)",
+        "engine_parameters.$": "States.StringToJson($.Item.engine_parameters.S)"
+      },
+      "ResultPath": "$.get_input_parameters_from_event",
+      "Next": "Has ORA Reference URI set"
+    },
+    "Has ORA Reference URI set": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_input_parameters_from_event.inputs.oraReferenceUri",
+          "IsPresent": false,
+          "Next": "Get ORA Reference URI",
+          "Comment": "Reference parameter not set"
+        }
+      ],
+      "Default": "Set ORA Reference URI"
+    },
+    "Get ORA Reference URI": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "${__reference_uri_ssm_parameter_path__}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+      "ResultPath": "$.get_ora_reference_uri_step",
+      "ResultSelector": {
+        "ora_reference_uri.$": "$.Parameter.Value"
+      },
+      "Next": "Set Input Json from Event Payload"
+    },
+    "Set ORA Reference URI": {
+      "Type": "Pass",
+      "Parameters": {
+        "ora_reference_uri.$": "$.get_input_parameters_from_event.inputs.oraReferenceUri"
+      },
+      "ResultPath": "$.get_ora_reference_uri_step",
+      "Next": "Set Input Json from Event Payload"
+    },
+    "Set Input Json from Event Payload": {
+      "Type": "Pass",
+      "Parameters": {
+        "input_json": {
+          "instrument_run_directory": {
+            "class": "Directory",
+            "basename.$": "$.get_input_parameters_from_event.inputs.instrumentRunId",
+            "location.$": "$.get_input_parameters_from_event.inputs.instrumentRunDirectoryUri"
+          },
+          "ora_reference": {
+            "class": "File",
+            "location.$": "$.get_ora_reference_uri_step.ora_reference_uri"
+          },
+          "ora_print_file_info": true
+        }
+      },
+      "ResultPath": "$.set_input_json",
+      "Next": "Update Database Entry"
+    },
+    "Update Database Entry": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.portal_run_id",
+          "id_type": "portal_run_id"
+        },
+        "UpdateExpression": "SET input_json = :input_json",
+        "ExpressionAttributeValues": {
+          ":input_json": {
+            "S.$": "States.JsonToString($.set_input_json.input_json)"
+          }
+        }
+      },
+      "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Wait 1 Second (Pre-execution)"
+    },
+    "Wait 1 Second (Pre-execution)": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Comment": "Wait for databases to sync before continuing",
+      "End": true
+    }
+  }
+}

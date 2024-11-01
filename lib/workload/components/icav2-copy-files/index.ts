@@ -1,7 +1,6 @@
 import { Duration } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
@@ -35,9 +34,7 @@ export class ICAv2CopyFilesConstruct extends Construct {
     });
 
     // Allow launch job lambda to read the secret
-    props.icav2JwtSecretParameterObj.grantRead(
-      <iam.Role>check_or_launch_job_lambda.currentVersion.role
-    );
+    props.icav2JwtSecretParameterObj.grantRead(check_or_launch_job_lambda.currentVersion);
 
     // Specify the single statemachine and replace the arn placeholders with the lambda arns defined above
     this.icav2CopyFilesSfnObj = new sfn.StateMachine(this, 'copy_single_state_machine', {
@@ -54,6 +51,6 @@ export class ICAv2CopyFilesConstruct extends Construct {
     });
 
     // Add execution permissions to stateMachine role
-    check_or_launch_job_lambda.currentVersion.grantInvoke(this.icav2CopyFilesSfnObj.role);
+    check_or_launch_job_lambda.currentVersion.grantInvoke(this.icav2CopyFilesSfnObj);
   }
 }

@@ -119,7 +119,7 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
     );
 
     /* Grant the state machine the ability to submit events to the event bus */
-    eventbus_obj.grantPutEventsTo(this.stateMachineObj.role);
+    eventbus_obj.grantPutEventsTo(this.stateMachineObj);
   }
 
   private coerce_names(name: string) {
