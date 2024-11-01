@@ -7,3 +7,4 @@ class SyncGSheetSerializer(serializers.Serializer):
 
 class SyncCustomCsvSerializer(serializers.Serializer):
     presigned_url = serializers.URLField(required=True)
+    reason = serializers.CharField(required=False)

@@ -19,17 +19,17 @@ logger.setLevel(logging.INFO)
 
 
 @transaction.atomic
-def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True):
+def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True, user_id: str = None, reason: str = None):
     """
     Persist metadata records from a pandas dataframe into the db. No record deletion is performed in this method.
 
     Args:
         df (pd.DataFrame): The source of truth for the metadata in this particular year
         is_emit_eb_events: Emit event bridge events for update/create (only for library records for now)
+        user_id: The user_id or email making this sync request
+        reason: The reason for the update or insert request
 
     """
-    logger.info(f"Start processing LabMetadata")
-
     # Event entries for the event bus
     event_bus_entries = list()
 
@@ -86,7 +86,7 @@ def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True):
                     data={
                         "individual_id": individual_id,
                         "source": idv_source
-                    }
+                    }, user_id=user_id, change_reason=reason
                 )
                 if is_idv_created:
                     stats['individual']['create_count'] += 1
@@ -102,7 +102,7 @@ def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True):
                 search_key={"subject_id": subject_id},
                 data={
                     "subject_id": subject_id,
-                }
+                }, user_id=user_id, change_reason=reason
             )
 
             if is_sub_created:
@@ -134,7 +134,7 @@ def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True):
                         "sample_id": sample_id,
                         "external_sample_id": record.get('external_sample_id'),
                         "source": get_value_from_human_readable_label(Source.choices, record.get('source')),
-                    }
+                    }, user_id=user_id, change_reason=reason
                 )
                 if is_smp_created:
                     stats['sample']['create_count'] += 1
@@ -152,7 +152,7 @@ def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True):
                     search_key={"contact_id": contact_id},
                     data={
                         "contact_id": contact_id,
-                    }
+                    }, user_id=user_id, change_reason=reason
                 )
                 if is_ctc_created:
                     stats['contact']['create_count'] += 1
@@ -167,10 +167,10 @@ def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True):
             project_id = record.get('project_name')
             if project_id:
                 project, is_prj_created, is_prj_updated = Project.objects.update_or_create_if_needed(
-                    search_key={"project_id":project_id},
+                    search_key={"project_id": project_id},
                     data={
                         "project_id": project_id,
-                    }
+                    }, user_id=user_id, change_reason=reason
                 )
                 if is_prj_created:
                     stats['project']['create_count'] += 1
@@ -206,7 +206,7 @@ def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True):
                     # relationships
                     'sample_id': sample.orcabus_id,
                     'subject_id': subject.orcabus_id,
-                }
+                }, user_id=user_id, change_reason=reason
             )
 
             lib_dict = LibrarySerializer(library).data

@@ -21,6 +21,12 @@ def handler(event, _context):
     if csv_url is None:
         raise ValueError("URL is required")
 
+    user_id = event.get('user_id', None)
+    if user_id is None:
+        raise ValueError("user_id (or email) required")
+
+    reason = event.get('reason', None)
+
     is_emit_eb_events: bool = event.get('is_emit_eb_events', True)
 
     csv_df = download_csv_to_pandas(csv_url)
@@ -28,7 +34,8 @@ def handler(event, _context):
     duplicate_clean_df = warn_drop_duplicated_library(sanitize_df)
     clean_df = drop_incomplete_csv_records(duplicate_clean_df)
 
-    result = load_metadata_csv(clean_df, is_emit_eb_events)
+    result = load_metadata_csv(df=clean_df, is_emit_eb_events=is_emit_eb_events, user_id=user_id,
+                               reason=reason)
 
     logger.info(f'persist report: {libjson.dumps(result)}')
     return result

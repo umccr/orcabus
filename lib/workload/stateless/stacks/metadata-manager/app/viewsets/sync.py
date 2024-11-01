@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from app.serializers.sync import SyncGSheetSerializer, SyncCustomCsvSerializer
+from app.viewsets.utils import get_email_from_jwt
 
 
 class SyncViewSet(ViewSet):
@@ -68,11 +69,17 @@ class SyncViewSet(ViewSet):
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
 
+        requester_email = get_email_from_jwt(request)
+        if requester_email is None:
+            raise Exception("Requester email not found in the token")
+
         lambda_client().invoke(
             FunctionName=lambda_function_name,
             InvocationType='Event',
             Payload=json.dumps({
-                "url": serializer.data['presigned_url']
+                "url": serializer.data['presigned_url'],
+                "user_id": requester_email,
+                "reason": serializer.data['reason']
             })
         )
 
