@@ -1,8 +1,7 @@
 import ulid
 from django.db import models
-from simple_history.models import HistoricalRecords
 
-from app.models.base import BaseModel, BaseManager
+from app.models.base import BaseModel, BaseManager, BaseHistoricalRecords
 
 
 class Source(models.TextChoices):
@@ -47,4 +46,4 @@ class Sample(BaseModel):
     source = models.CharField(choices=Source.choices, blank=True, null=True)
 
     # history
-    history = HistoricalRecords()
+    history = BaseHistoricalRecords()

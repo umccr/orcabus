@@ -19,6 +19,9 @@ from django.db.models import (
     OneToOneRel,
     QuerySet,
 )
+
+from simple_history.models import HistoricalRecords
+
 from rest_framework.settings import api_settings
 from app.pagination import PaginationConstant
 
@@ -78,14 +81,18 @@ class BaseManager(models.Manager):
 
         return qs
 
-    def update_or_create_if_needed(self, search_key: dict, data: dict) -> tuple[models.Model, bool, bool]:
+    def update_or_create_if_needed(self, search_key: dict, data: dict, user_id: str = None,
+                                   change_reason: str = None) -> tuple[models.Model, bool, bool]:
         """
-        The regular django update_or_create method will always update the record even if there is no change. This
-        method is a wrapper that will check and only update or create when necessary.
+        The regular Django `update_or_create` method will always update the record even if there is no change. This
+        method will only update the record if there is a change. It also includes extra functionality to record the
+        user and change reason in the history tables as part of the audit.
 
         Args:
-            search_key (dict): The search key to find the object
-            data (dict): The latest data to update or create if needed
+            search_key (dict): The search key to find the object.
+            data (dict): The latest data to update or create if needed.
+            user_id (str): The ID of the user making the change (could potentially be the email address).
+            change_reason (str): The reason for the change/insert.
 
         Returns:
             tuple: A tuple containing:
@@ -93,17 +100,24 @@ class BaseManager(models.Manager):
                 - is_created (bool): A boolean if the object is created
                 - is_updated (bool): A boolean if the object is updated
         """
+        is_created = False
+        is_updated = False
 
         try:
-            # We wanted the exact match of the data, else we need to update this
-            obj = self.get(**data)
-            return obj, False, False
+            obj = self.get(**search_key)
+            for key, value in data.items():
+                if getattr(obj, key) != value:
+                    setattr(obj, key, value)
+                    is_updated = True
         except self.model.DoesNotExist:
-            # If the search key doesn't exist it will create a new one, else it will update the record no matter what
-            obj, is_created = self.update_or_create(**search_key, defaults=data)
+            obj = self.model(**data)
+            is_created = True
+        if is_created or is_updated:
+            obj._history_user = user_id
+            obj._change_reason = change_reason
+            obj.save()
 
-            # obj, is_created, is_updated (if the object is created, it is not updated)
-            return obj, is_created, not is_created
+        return obj, is_created, is_updated
 
 
 class BaseModel(models.Model):
@@ -156,3 +170,19 @@ class BaseModel(models.Model):
                 continue
             base_fields.add(f.name)
         return list(base_fields)
+
+
+class BaseHistoricalRecords(HistoricalRecords):
+    """
+    This should alter user_id tracking to models.CharField instead of user model
+    """
+
+    def _history_user_setter(self, historical_instance, user_id):
+        historical_instance.history_user_id = user_id
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            history_user_id_field=models.CharField(null=True, blank=True),
+            history_user_setter=self._history_user_setter,
+            *args, **kwargs
+        )

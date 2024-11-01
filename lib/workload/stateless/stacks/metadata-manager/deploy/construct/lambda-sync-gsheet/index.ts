@@ -35,7 +35,7 @@ export class LambdaSyncGsheetConstruct extends Construct {
   private readonly GDRIVE_CRED_PARAM_NAME = '/umccr/google/drive/lims_service_account_json';
   private readonly GDRIVE_SHEET_ID_PARAM_NAME = '/umccr/google/drive/tracking_sheet_id';
 
-  private readonly lambda: PythonFunction;
+  readonly lambda: PythonFunction;
 
   constructor(scope: Construct, id: string, lambdaProps: LambdaProps) {
     super(scope, id);

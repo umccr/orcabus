@@ -27,7 +27,7 @@ type LambdaProps = {
 };
 
 export class LambdaLoadCustomCSVConstruct extends Construct {
-  private readonly lambda: PythonFunction;
+  readonly lambda: PythonFunction;
 
   constructor(scope: Construct, id: string, lambdaProps: LambdaProps) {
     super(scope, id);

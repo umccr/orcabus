@@ -27,7 +27,7 @@ class ProjectDetailSerializer(ProjectBaseSerializer):
 
 
 class ProjectHistorySerializer(ProjectBaseSerializer):
-    class ContactOrcabusIdSet(serializers.RelatedField):
+    class ContactOrcabusIdSet(serializers.StringRelatedField):
 
         def to_internal_value(self, data):
             raise NotImplementedError()
