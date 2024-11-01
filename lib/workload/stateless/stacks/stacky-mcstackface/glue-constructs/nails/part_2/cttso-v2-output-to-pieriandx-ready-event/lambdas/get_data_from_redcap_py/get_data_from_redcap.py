@@ -25,7 +25,8 @@ if typing.TYPE_CHECKING:
 
 # Set logger
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
+logger.setLevel(level=logging.INFO)
 
 # Globals
 AUS_TIMEZONE = pytz.timezone("Australia/Melbourne")
@@ -288,10 +289,10 @@ def handler(event, context) -> Dict:
     :return:
     """
     # Wait for lambda to warm up
-    print("Warming up redcap lambda")
+    logger.info("Warming up redcap lambda")
     while not warm_up_lambda():
         sleep(10)
-    print("Redcap lambda warmup complete!")
+    logger.info("Redcap lambda warmup complete!")
 
     # Return
     try:
