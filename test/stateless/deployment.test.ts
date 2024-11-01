@@ -152,6 +152,19 @@ function applyNagSuppression(stackId: string, stack: Stack) {
         ],
         true
       );
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/MetadataManagerStack/APILambda/APILambda/ServiceRole/DefaultPolicy/Resource`,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              `Allow asterisk arn resource to allow any of the lambda version to be invoked ` +
+              `from this API lambda`,
+          },
+        ],
+        true
+      );
       break;
 
     case 'FileManagerStack':
