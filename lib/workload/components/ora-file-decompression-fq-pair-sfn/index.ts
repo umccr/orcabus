@@ -65,12 +65,16 @@ export class OraDecompressionConstruct extends Construct {
     //   "Effect": "Allow",
     //   "Resource": "*"
     // },
-    NagSuppressions.addResourceSuppressions(<iam.Role>taskDefinition.executionRole, [
-      {
-        id: 'AwsSolutions-IAM5',
-        reason: 'Fargate has GetAuthorizationToken permission on all resources by default',
-      },
-    ]);
+    NagSuppressions.addResourceSuppressions(
+      taskDefinition,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Fargate has GetAuthorizationToken permission on all resources by default',
+        },
+      ],
+      true
+    );
 
     // Add permission to task role
     const icav2SecretObj = secretsManager.Secret.fromSecretNameV2(
