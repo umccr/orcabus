@@ -1,3 +1,4 @@
 /.yarn/releases/** binary
 /.yarn/plugins/** binary
 *.json.gz filter=lfs diff=lfs merge=lfs -text
+*.tar.gz filter=lfs diff=lfs merge=lfs -text

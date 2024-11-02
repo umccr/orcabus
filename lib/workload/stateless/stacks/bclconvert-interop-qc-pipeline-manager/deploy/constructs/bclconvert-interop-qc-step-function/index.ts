@@ -83,7 +83,7 @@ export class BclConvertInteropQcIcav2PipelineConstruct extends Construct {
     );
 
     // Give the lambda function access to the secret
-    props.icav2AccessTokenSecretObj.grantRead(<iam.Role>set_outputs_json_lambda_function.role);
+    props.icav2AccessTokenSecretObj.grantRead(set_outputs_json_lambda_function.currentVersion);
 
     // Generate outputs
     const configure_outputs_sfn = new sfn.StateMachine(this, 'configure_outputs_sfn', {

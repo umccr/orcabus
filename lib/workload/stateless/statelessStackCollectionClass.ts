@@ -57,6 +57,11 @@ import {
   RnasumIcav2PipelineManagerStack,
   RnasumIcav2PipelineManagerStackProps,
 } from './stacks/rnasum-pipeline-manager/deploy';
+import {
+  OraCompressionIcav2PipelineManagerStack,
+  OraCompressionIcav2PipelineManagerStackProps,
+} from './stacks/ora-compression-manager/deploy';
+
 import { FMAnnotator, FMAnnotatorConfigurableProps } from './stacks/fmannotator/deploy/stack';
 import {
   PieriandxPipelineManagerStack,
@@ -70,6 +75,10 @@ import {
   SashNfPipelineManagerStack,
   SashNfPipelineManagerStackProps,
 } from './stacks/sash-pipeline-manager/deploy';
+import {
+  OraDecompressionManagerStack,
+  OraDecompressionManagerStackProps,
+} from './stacks/ora-decompression-manager/deploy';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -87,6 +96,8 @@ export interface StatelessStackCollectionProps {
   pieriandxPipelineManagerStackProps: PierianDxPipelineManagerStackProps;
   oncoanalyserPipelineManagerStackProps: OncoanalyserNfPipelineManagerStackProps;
   sashPipelineManagerStackProps: SashNfPipelineManagerStackProps;
+  oraCompressionIcav2PipelineManagerStackProps: OraCompressionIcav2PipelineManagerStackProps;
+  oraDecompressionManagerStackProps: OraDecompressionManagerStackProps;
   eventSchemaStackProps: SchemaStackProps;
   dataSchemaStackProps: SchemaStackProps;
   bclConvertManagerStackProps: BclConvertManagerStackProps;
@@ -112,6 +123,8 @@ export class StatelessStackCollection {
   readonly pieriandxPipelineManagerStack: Stack;
   readonly oncoanalyserPipelineManagerStack: Stack;
   readonly sashPipelineManagerStack: Stack;
+  readonly oraCompressionIcav2PipelineManagerStack: Stack;
+  readonly oraDecompressionManagerStack: Stack;
   readonly eventSchemaStack: Stack;
   readonly dataSchemaStack: Stack;
   readonly bclConvertManagerStack: Stack;
@@ -256,6 +269,24 @@ export class StatelessStackCollection {
       {
         ...this.createTemplateProps(env, 'SashNfPipelineManagerStack'),
         ...statelessConfiguration.sashPipelineManagerStackProps,
+      }
+    );
+
+    this.oraCompressionIcav2PipelineManagerStack = new OraCompressionIcav2PipelineManagerStack(
+      scope,
+      'OraCompressionIcav2PipelineManagerStack',
+      {
+        ...this.createTemplateProps(env, 'OraCompressionIcav2PipelineManagerStack'),
+        ...statelessConfiguration.oraCompressionIcav2PipelineManagerStackProps,
+      }
+    );
+
+    this.oraDecompressionManagerStack = new OraDecompressionManagerStack(
+      scope,
+      'OraDecompressionManagerStack',
+      {
+        ...this.createTemplateProps(env, 'OraDecompressionManagerStack'),
+        ...statelessConfiguration.oraDecompressionManagerStackProps,
       }
     );
 

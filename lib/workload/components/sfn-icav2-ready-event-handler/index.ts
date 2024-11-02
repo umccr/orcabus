@@ -7,7 +7,6 @@ import * as events_targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import { PythonLambdaUuidConstruct } from '../python-lambda-uuid-generator-function';
 import * as lambda_python from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
@@ -65,9 +64,6 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
       props.eventBusName
     );
 
-    // Build the lambda python function to generate a uuid
-    const uuid_lambda_obj = new PythonLambdaUuidConstruct(this, 'uuid_python').lambdaObj;
-
     // Build the launch lambda object
     const launch_lambda_obj = new lambda_python.PythonFunction(
       this,
@@ -87,7 +83,7 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
     );
 
     // Give the lambda the ability to read the icav2 secret
-    props.icav2AccessTokenSecretObj.grantRead(<iam.Role>launch_lambda_obj.role);
+    props.icav2AccessTokenSecretObj.grantRead(launch_lambda_obj);
 
     // Collect the pipeline id from the ssm parameter store
     const pipeline_id_ssm_param_obj = ssm.StringParameter.fromStringParameterName(
@@ -119,7 +115,6 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
         __workflow_version__: props.workflowVersion,
         __service_version__: props.serviceVersion,
         /* Lambdas */
-        __generate_db_uuid_lambda_function_arn__: uuid_lambda_obj.currentVersion.functionArn,
         __launch_icav2_pipeline_lambda_function_name__:
           launch_lambda_obj.currentVersion.functionArn,
         /* SSM Parameter paths */
@@ -129,14 +124,11 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
       },
     });
 
-    /* Grant the state machine access to invoke the dbuuid generator lambda function */
-    uuid_lambda_obj.currentVersion.grantInvoke(this.stateMachineObj.role);
-
     /* Grant the state machine access to invoke the launch lambda function */
-    launch_lambda_obj.currentVersion.grantInvoke(this.stateMachineObj.role);
+    launch_lambda_obj.currentVersion.grantInvoke(this.stateMachineObj);
 
     /* Grant the state machine access to the ssm parameter path */
-    pipeline_id_ssm_param_obj.grantRead(this.stateMachineObj.role);
+    pipeline_id_ssm_param_obj.grantRead(this.stateMachineObj);
 
     /* Grant the state machine access to invoke the internal launch sfn machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
@@ -151,7 +143,7 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
     );
 
     // Grant the state machine the ability to start the internal generate inputs sfn
-    props.generateInputsJsonSfn.grantStartExecution(this.stateMachineObj.role);
+    props.generateInputsJsonSfn.grantStartExecution(this.stateMachineObj);
 
     /* Grant the state machine read and write access to the table */
     table_obj.grantReadWriteData(this.stateMachineObj);
@@ -178,6 +170,6 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
     );
 
     /* Grant the state machine the ability to submit events to the event bus */
-    eventbus_obj.grantPutEventsTo(this.stateMachineObj.role);
+    eventbus_obj.grantPutEventsTo(this.stateMachineObj);
   }
 }

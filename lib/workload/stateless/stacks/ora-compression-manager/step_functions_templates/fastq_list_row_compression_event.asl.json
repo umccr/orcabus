@@ -1,0 +1,63 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Get fastq files from fastq list csv",
+  "States": {
+    "Get fastq files from fastq list csv": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${__merge_sizes_lambda_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultSelector": {
+        "fastq_list_events_map.$": "$.Payload"
+      },
+      "Next": "Fan out fastq list row compression event creation"
+    },
+    "Fan out fastq list row compression event creation": {
+      "Type": "Map",
+      "ItemsPath": "$.fastq_list_events_map",
+      "ItemSelector": {
+        "output_event_detail.$": "$$.Map.Item.Value"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Put Fastq List Row Compression Event",
+        "States": {
+          "Put Fastq List Row Compression Event": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents",
+            "Parameters": {
+              "Entries": [
+                {
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "orcabus.oracompressionmanager",
+                  "DetailType": "${__detail_type__}",
+                  "Detail.$": "$.output_event_detail"
+                }
+              ]
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

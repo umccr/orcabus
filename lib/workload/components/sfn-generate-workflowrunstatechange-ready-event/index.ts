@@ -118,13 +118,13 @@ export class GenerateWorkflowRunStateChangeReadyConstruct extends Construct {
         // Skip
         return;
       }
-      ssmParameterObj.grantRead(engineParameterGeneratorStateMachineSfn.role);
+      ssmParameterObj.grantRead(engineParameterGeneratorStateMachineSfn);
     });
 
     // Add permissions for the statemachine to fill in the placeholders
     [flattenObjectListLambdaObj, fillPlaceholdersInEventPayloadDataLambdaObj].forEach(
       (lambdaObj) => {
-        lambdaObj.currentVersion.grantInvoke(engineParameterGeneratorStateMachineSfn.role);
+        lambdaObj.currentVersion.grantInvoke(engineParameterGeneratorStateMachineSfn);
       }
     );
 
