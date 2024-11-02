@@ -139,6 +139,8 @@ import typing
 import boto3
 import logging
 
+from wrapica.enums import AnalysisStorageSize
+
 # IDE imports only
 if typing.TYPE_CHECKING:
     from mypy_boto3_secretsmanager.client import SecretsManagerClient
@@ -236,6 +238,9 @@ def handler(event, context):
                 user_tags[f"{key}.{iter_}"] = value_iter
             del user_tags[key]
 
+    # Get the analysis storage size
+    analysis_storage_size: str = event.get("analysis_storage_size")
+
     # Get the pipeline id
     pipeline_id = event.get("pipeline_id")
 
@@ -292,6 +297,9 @@ def handler(event, context):
         project_id=project_id,
         pipeline_id=pipeline_id,
         analysis_input=icav2_analysis_input_obj.create_analysis_input(),
+        # FIXME - not sure why this is necessary, need to read up on types
+        # FIXME - and type hints
+        analysis_storage_size=AnalysisStorageSize(AnalysisStorageSize[analysis_storage_size]),
         analysis_output_uri=analysis_output_uri,
         ica_logs_uri=ica_logs_uri,
         tags=ICAv2PipelineAnalysisTags(

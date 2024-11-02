@@ -42,6 +42,9 @@ export interface WfmWorkflowStateChangeIcav2ReadyEventHandlerConstructProps {
   workflowName: string;
   workflowVersion: string;
   serviceVersion: string;
+
+  /* Extras (all optional) */
+  analysisStorageSize?: string;
 }
 
 export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Construct {
@@ -117,6 +120,7 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
         /* Lambdas */
         __launch_icav2_pipeline_lambda_function_name__:
           launch_lambda_obj.currentVersion.functionArn,
+        __analysis_storage_size__: props.analysisStorageSize || 'SMALL',
         /* SSM Parameter paths */
         __pipeline_id_ssm_path__: pipeline_id_ssm_param_obj.parameterName,
         /* Step functions */
