@@ -163,6 +163,11 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
     /*
     Handle lambda permissions
     */
+    props.redcapLambdaObj.grantInvoke(getDataFromRedCapPyLambdaObj.currentVersion);
+    getDataFromRedCapPyLambdaObj.addEnvironment(
+      'REDCAP_LAMBDA_FUNCTION_NAME',
+      props.redcapLambdaObj.functionName
+    );
     // FIXME - cannot get the 'current' version of an IFunction object
     NagSuppressions.addResourceSuppressions(
       getDataFromRedCapPyLambdaObj,
@@ -173,11 +178,6 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
         },
       ],
       true
-    );
-    props.redcapLambdaObj.grantInvoke(getDataFromRedCapPyLambdaObj.currentVersion);
-    getDataFromRedCapPyLambdaObj.addEnvironment(
-      'REDCAP_LAMBDA_FUNCTION_NAME',
-      props.redcapLambdaObj.functionName
     );
 
     // Allow the getPieriandxDataFilesPyLambdaObj to read the secret
