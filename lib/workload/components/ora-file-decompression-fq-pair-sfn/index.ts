@@ -59,23 +59,6 @@ export class OraDecompressionConstruct extends Construct {
       },
     });
 
-    // FIXME - cdk nag error on fargate task definition role
-    // {
-    //   "Action": "ecr:GetAuthorizationToken",
-    //   "Effect": "Allow",
-    //   "Resource": "*"
-    // },
-    NagSuppressions.addResourceSuppressions(
-      taskDefinition,
-      [
-        {
-          id: 'AwsSolutions-IAM5',
-          reason: 'Fargate has GetAuthorizationToken permission on all resources by default',
-        },
-      ],
-      true
-    );
-
     // Add permission to task role
     const icav2SecretObj = secretsManager.Secret.fromSecretNameV2(
       this,
@@ -118,6 +101,23 @@ export class OraDecompressionConstruct extends Construct {
 
     // Allow step function to run the ECS task
     taskDefinition.grantRun(this.sfnObject);
+
+    // FIXME - cdk nag error on fargate task definition role
+    // {
+    //   "Action": "ecr:GetAuthorizationToken",
+    //   "Effect": "Allow",
+    //   "Resource": "*"
+    // },
+    NagSuppressions.addResourceSuppressions(
+      taskDefinition,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Fargate has GetAuthorizationToken permission on all resources by default',
+        },
+      ],
+      true
+    );
 
     /* Grant the state machine access to monitor the tasks */
     this.sfnObject.addToRolePolicy(

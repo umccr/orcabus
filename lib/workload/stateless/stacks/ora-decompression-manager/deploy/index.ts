@@ -1,6 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { OraDecompressionConstruct } from '../../../../components/ora-file-decompression-fq-pair-sfn';
