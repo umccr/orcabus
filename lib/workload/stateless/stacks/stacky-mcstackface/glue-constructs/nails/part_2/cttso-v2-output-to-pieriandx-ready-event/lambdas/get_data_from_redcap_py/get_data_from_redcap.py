@@ -7,6 +7,7 @@ We really only need the disease name if it exists
 """
 
 # Standard imports
+import logging
 import typing
 from typing import List
 from time import sleep
@@ -18,14 +19,14 @@ from botocore.exceptions import ClientError
 import json
 import pytz
 from datetime import datetime
-import logging
 
 if typing.TYPE_CHECKING:
     from mypy_boto3_lambda import LambdaClient
 
 # Set logger
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
+logger.setLevel(level=logging.INFO)
 
 # Globals
 AUS_TIMEZONE = pytz.timezone("Australia/Melbourne")
@@ -86,6 +87,7 @@ def warm_up_lambda():
         )
         return True
     except ClientError as e:
+        print(f"Error warming up lambda: {e}")
         logger.info(f"Error warming up lambda: {e}")
         return False
 
@@ -287,8 +289,10 @@ def handler(event, context) -> Dict:
     :return:
     """
     # Wait for lambda to warm up
+    logger.info("Warming up redcap lambda")
     while not warm_up_lambda():
         sleep(10)
+    logger.info("Redcap lambda warmup complete!")
 
     # Return
     try:
@@ -314,6 +318,25 @@ def handler(event, context) -> Dict:
 #             handler(
 #                 event={
 #                     "library_id": 'L2401380'
+#                 },
+#                 context=None
+#             ),
+#             indent=4
+#         )
+#     )
+
+
+# if __name__ == '__main__':
+#     # Or 'umccr-staging' / 'umccr-production'
+#     environ['AWS_PROFILE'] = 'umccr-development'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     # Or 'redcap-apis-stg-lambda-function' / 'redcap-apis-prod-lambda-function'
+#     environ['REDCAP_LAMBDA_FUNCTION_NAME'] = 'redcap-apis-dev-lambda-function'
+#     print(
+#         json.dumps(
+#             handler(
+#                 event={
+#                     "library_id": "L2401529"
 #                 },
 #                 context=None
 #             ),

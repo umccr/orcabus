@@ -28,7 +28,6 @@ Payload will look a bit like this:
 """
 
 # Imports
-import typing
 from typing import Dict
 
 import pytz
@@ -43,7 +42,7 @@ logger = logging.getLogger(__name__)
 # Globals
 AUS_TIMEZONE = pytz.timezone("Australia/Melbourne")
 AUS_TIME = datetime.now(AUS_TIMEZONE)
-AUS_TIME_AS_STR = f"{AUS_TIME.date().isoformat()}T{AUS_TIME.time().isoformat(timespec='seconds')}{AUS_TIME.strftime("%z")}"
+AUS_TIME_AS_STR = f"{AUS_TIME.date().isoformat()}T{AUS_TIME.time().isoformat(timespec='seconds')}{AUS_TIME.strftime('%z')}"
 
 DEFAULT_INDICATION = "NA"
 

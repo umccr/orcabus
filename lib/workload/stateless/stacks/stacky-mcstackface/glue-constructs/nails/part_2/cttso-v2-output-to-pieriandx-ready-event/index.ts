@@ -13,7 +13,9 @@ Given a cttsov2 success event we need to
 import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import path from 'path';
+import { NagSuppressions } from 'cdk-nag';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as events from 'aws-cdk-lib/aws-events';
@@ -107,6 +109,7 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
       index: 'get_data_from_redcap.py',
       handler: 'handler',
       timeout: Duration.seconds(60),
+      memorySize: 2048,
     });
 
     const getDeidentifiedCaseMetadataPyLambdaObj = new PythonFunction(
@@ -118,6 +121,7 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
         architecture: lambda.Architecture.ARM_64,
         index: 'get_deidentified_case_metadata.py',
         handler: 'handler',
+        memorySize: 1024,
       }
     );
     const getIdentifiedCaseMetadataPyLambdaObj = new PythonFunction(
@@ -129,6 +133,7 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
         architecture: lambda.Architecture.ARM_64,
         index: 'get_identified_case_metadata.py',
         handler: 'handler',
+        memorySize: 1024,
       }
     );
     const getPieriandxDataFilesPyLambdaObj = new PythonFunction(
@@ -144,6 +149,7 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
         environment: {
           ICAV2_ACCESS_TOKEN_SECRET_ID: props.icav2AccessTokenSecretObj.secretName,
         },
+        memorySize: 1024,
       }
     );
     const getProjectInfoPyLambdaObj = new PythonFunction(this, 'getProjectInfoPyLambdaObj', {
@@ -157,10 +163,21 @@ export class Cttsov2CompleteToPieriandxConstruct extends Construct {
     /*
     Handle lambda permissions
     */
-    props.redcapLambdaObj.latestVersion.grantInvoke(getDataFromRedCapPyLambdaObj.currentVersion);
+    props.redcapLambdaObj.grantInvoke(getDataFromRedCapPyLambdaObj.currentVersion);
     getDataFromRedCapPyLambdaObj.addEnvironment(
       'REDCAP_LAMBDA_FUNCTION_NAME',
       props.redcapLambdaObj.functionName
+    );
+    // FIXME - cannot get the 'current' version of an IFunction object
+    NagSuppressions.addResourceSuppressions(
+      getDataFromRedCapPyLambdaObj,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Cannot get latest version of redcap lambda function ($LATEST) will not work',
+        },
+      ],
+      true
     );
 
     // Allow the getPieriandxDataFilesPyLambdaObj to read the secret
