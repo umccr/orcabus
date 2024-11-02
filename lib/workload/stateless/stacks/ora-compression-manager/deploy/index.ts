@@ -78,6 +78,7 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
   private globals = {
     workflowManagerSource: 'orcabus.workflowmanager',
     outputCompressionDetailType: 'FastqListRowCompressed',
+    analysisStorageSize: 'LARGE', // 7.2 Tb
   };
 
   constructor(scope: Construct, id: string, props: OraCompressionIcav2PipelineManagerStackProps) {
@@ -193,6 +194,7 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
         workflowName: props.workflowName,
         workflowVersion: props.workflowVersion,
         serviceVersion: props.serviceVersion,
+        analysisStorageSize: this.globals.analysisStorageSize,
       }
     ).stateMachineObj;
 
