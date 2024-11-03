@@ -75,8 +75,12 @@ sequali \
 """
 
 # Set loggers
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 def get_secrets_manager_client() -> 'SecretsManagerClient':

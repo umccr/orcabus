@@ -38,8 +38,12 @@ from pieriandx_pipeline_tools.utils.pieriandx_helpers import get_pieriandx_clien
 from pieriandx_pipeline_tools.utils.secretsmanager_helpers import set_pieriandx_env_vars
 
 # Set logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
+logger = logging.getLogger()
 
 
 JOB_STATUS_BOOL = {

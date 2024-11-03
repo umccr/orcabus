@@ -154,8 +154,12 @@ from wrapica.utils import recursively_build_open_api_body_from_libica_item
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
 
 # Set loggers
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 def get_secrets_manager_client() -> 'SecretsManagerClient':

@@ -11,8 +11,12 @@ from copy import deepcopy
 from typing import Optional
 import logging
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
+logger = logging.getLogger()
 
 # Globals
 HEADER = {

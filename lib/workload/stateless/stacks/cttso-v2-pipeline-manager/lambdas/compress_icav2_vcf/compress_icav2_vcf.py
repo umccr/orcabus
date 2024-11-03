@@ -25,9 +25,13 @@ if typing.TYPE_CHECKING:
     from mypy_boto3_ssm import SSMClient
     from mypy_boto3_secretsmanager import SecretsManagerClient
 
-logger = logging.getLogger(__name__)
-
-logging.basicConfig(level=logging.INFO)
+# Set logger
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
+logger = logging.getLogger()
 
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
 

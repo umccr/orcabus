@@ -13,8 +13,12 @@ import logging
 from typing import Dict, Union
 
 # Set logger
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 def pascal_case_to_snake_case(pascal_case_str: str) -> str:

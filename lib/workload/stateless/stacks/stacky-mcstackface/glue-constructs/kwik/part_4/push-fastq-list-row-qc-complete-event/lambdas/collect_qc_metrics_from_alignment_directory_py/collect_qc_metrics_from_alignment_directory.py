@@ -59,8 +59,12 @@ RNA_QUANTIFICATION_FOLD_COVERAGE_OF_ALL_EXONS_DESCRIPTION = "Fold coverage of al
 ICAV2_BASE_URL = "https://ica.illumina.com/ica/rest"
 
 # Set logger
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 def get_secrets_manager_client() -> 'SecretsManagerClient':

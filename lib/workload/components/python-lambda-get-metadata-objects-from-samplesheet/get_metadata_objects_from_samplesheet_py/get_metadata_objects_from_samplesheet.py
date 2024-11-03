@@ -12,8 +12,12 @@ from typing import List, Dict
 from metadata_tools import get_all_libraries
 
 # Logger
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 def get_library_objs(library_id_list: List[str]) -> List[Dict]:

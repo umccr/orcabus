@@ -36,8 +36,12 @@ import logging
 
 
 # Set logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
+logger = logging.getLogger()
 
 # Globals
 AUS_TIMEZONE = pytz.timezone("Australia/Melbourne")

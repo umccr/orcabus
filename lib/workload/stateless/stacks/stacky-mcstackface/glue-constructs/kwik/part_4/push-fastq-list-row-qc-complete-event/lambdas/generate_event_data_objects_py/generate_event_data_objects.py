@@ -28,8 +28,12 @@ import logging
 from typing import Dict
 
 # Set log level
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 def handler(event, context) -> Dict[str, Dict[str, str]]:

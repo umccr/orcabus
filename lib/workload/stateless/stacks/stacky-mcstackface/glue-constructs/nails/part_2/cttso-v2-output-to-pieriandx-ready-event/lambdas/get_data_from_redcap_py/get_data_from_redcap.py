@@ -24,9 +24,12 @@ if typing.TYPE_CHECKING:
     from mypy_boto3_lambda import LambdaClient
 
 # Set logger
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
 logger = logging.getLogger()
-logger.setLevel(level=logging.INFO)
 
 # Globals
 AUS_TIMEZONE = pytz.timezone("Australia/Melbourne")

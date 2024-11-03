@@ -28,8 +28,12 @@ from wrapica.project_data import (
 from wrapica.enums import DataType
 
 # Set logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    force=True,
+    format='%(asctime)s %(message)s'
+)
+logger = logging.getLogger()
 
 if typing.TYPE_CHECKING:
     from mypy_boto3_secretsmanager.client import SecretsManagerClient
