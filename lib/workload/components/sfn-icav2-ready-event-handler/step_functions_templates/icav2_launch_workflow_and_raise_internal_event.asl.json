@@ -339,9 +339,11 @@
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
+                "FunctionName": "${__launch_icav2_pipeline_lambda_function_name__}",
                 "Payload": {
                   "project_id.$": "$.get_parameters_from_payload.project_id",
                   "pipeline_id.$": "$.get_parameters_from_payload.pipeline_id",
+                  "analysis_storage_size": "${__analysis_storage_size__}",
                   "workflow_type": "${__workflow_platform_type__}",
                   "user_reference.$": "$.workflow_inputs.workflowRunName",
                   "input_json.$": "$.get_parameters_from_payload.input_json",
@@ -350,8 +352,7 @@
                   "technical_tags.$": "$.add_technical_tags_step.technical_tags",
                   "user_tags.$": "$.get_parameters_from_payload.user_tags",
                   "idempotency_key.$": "$.workflow_inputs.portalRunId"
-                },
-                "FunctionName": "${__launch_icav2_pipeline_lambda_function_name__}"
+                }
               },
               "Retry": [
                 {
