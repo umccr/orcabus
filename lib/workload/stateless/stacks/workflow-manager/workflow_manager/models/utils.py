@@ -130,7 +130,8 @@ class WorkflowRunUtil:
 
     def persist_state(self, new_state):
         new_state.workflow_run = self.workflow_run
-        new_state.payload.save()  # Need to save Payload before we can save State
+        if new_state.payload:
+            new_state.payload.save()  # Need to save Payload before we can save State
         new_state.save()
 
     @staticmethod
