@@ -147,7 +147,8 @@ if typing.TYPE_CHECKING:
 
 # Imports
 from wrapica.project_pipelines import (
-    ICAv2PipelineAnalysisTags
+    ICAv2PipelineAnalysisTags,
+    get_analysis_storage_from_analysis_storage_size
 )
 from wrapica.libica_models import Analysis
 from wrapica.utils import recursively_build_open_api_body_from_libica_item
@@ -290,6 +291,11 @@ def handler(event, context):
     else:
         raise ValueError(f"workflow_type should be one of 'nextflow' or 'cwl' got {workflow_type} instead")
 
+    # Get the analysis storage size from the event
+    # FIXME - need to directly use analysis storage size while
+    # FIXME - https://github.com/umccr/wrapica/issues/115
+    analysis_storage_size: AnalysisStorageSize = getattr(AnalysisStorageSize, event.get("analysis_storage_size"))
+
     # Initialise an ICAv2CWLPipeline Analysis object
     logger.info("Generating the analysis object")
     analysis_obj = ICAv2PipelineAnalysis(
@@ -297,9 +303,8 @@ def handler(event, context):
         project_id=project_id,
         pipeline_id=pipeline_id,
         analysis_input=icav2_analysis_input_obj.create_analysis_input(),
-        # FIXME - not sure why this is necessary, need to read up on types
-        # FIXME - and type hints
-        analysis_storage_size=AnalysisStorageSize(AnalysisStorageSize[analysis_storage_size]),
+        # FIXME - https://github.com/umccr/wrapica/issues/115
+        analysis_storage_id=get_analysis_storage_from_analysis_storage_size(analysis_storage_size).id,
         analysis_output_uri=analysis_output_uri,
         ica_logs_uri=ica_logs_uri,
         tags=ICAv2PipelineAnalysisTags(
@@ -637,3 +642,147 @@ def handler(event, context):
 #             indent=2
 #         )
 #     )
+
+
+# # Analysis storage size test
+# if __name__ == "__main__":
+#     import os
+#
+#     os.environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+#     os.environ['AWS_PROFILE'] = "umccr-development"
+#     os.environ['AWS_REGION'] = "ap-southeast-2"
+#     print(
+#         json.dumps(
+#             handler(
+#                 event={
+#                     "analysis_storage_size": "LARGE",
+#                     "workflow_type": "cwl",
+#                     "user_tags": {
+#                         "instrumentRunId": "241024_A00130_0336_BHW7MVDSXC"
+#                     },
+#                     "technical_tags": {
+#                         "portal_run_id": "202411016290aa4d",
+#                         "step_functions_execution_arn": "arn:aws:states:ap-southeast-2:843407916570:execution:oraCompressionSfn-wfm-ready-event-handler:bbdf82d7-b099-46fe-9063-5def7b2272f7",
+#                         "analysis_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411016290aa4d/"
+#                     },
+#                     "user_reference": "umccr--automated--ora-compression--2024-10-30--202411016290aa4d",
+#                     "project_id": "ea19a3f5-ec7c-4940-a474-c31cd91dbad4",
+#                     "pipeline_id": "ba8f618a-842f-4a2f-9b2f-a074c0472218",
+#                     "idempotency_key": "202411016290aa4d",
+#                     "ica_logs_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/logs/ora-compression/202411016290aa4d/",
+#                     "analysis_output_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411016290aa4d/",
+#                     "input_json": "{\"instrument_run_directory\":{\"class\":\"Directory\",\"basename\":\"241024_A00130_0336_BHW7MVDSXC\",\"location\":\"s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/\"},\"ora_reference\":{\"class\":\"File\",\"location\":\"icav2://reference-data/dragen-ora/v2/ora_reference_v2.tar.gz\"},\"ora_print_file_info\":true}"
+#                 },
+#                 context=None
+#             ),
+#             indent=2
+#         )
+#     )
+#
+# # {
+# #   "analysis_id": "c49ff760-5b3f-480f-a1e0-e29fc3b30781",
+# #   "analysis_status": "REQUESTED",
+# #   "analysis_return_payload": {
+# #     "id": "c49ff760-5b3f-480f-a1e0-e29fc3b30781",
+# #     "timeCreated": "2024-11-03T08:22:07Z",
+# #     "timeModified": "2024-11-03T08:22:09Z",
+# #     "owner": {
+# #       "id": "73636fd8-692b-375c-9081-d416cd6a4357"
+# #     },
+# #     "tenant": {
+# #       "id": "1555b441-c3be-40b0-a8f0-fb9dc7500545",
+# #       "name": "umccr-prod"
+# #     },
+# #     "reference": "umccr--automated--ora-compression--2024-10-30--202411016290aa4d-c49ff760-5b3f-480f-a1e0-e29fc3b30781",
+# #     "userReference": "umccr--automated--ora-compression--2024-10-30--202411016290aa4d",
+# #     "pipeline": {
+# #       "id": "ba8f618a-842f-4a2f-9b2f-a074c0472218",
+# #       "timeCreated": "2024-10-30T04:22:10Z",
+# #       "timeModified": "2024-10-30T04:22:13Z",
+# #       "owner": {
+# #         "id": "fdb409d3-f99f-34d7-92d8-a6921e44c4be"
+# #       },
+# #       "tenant": {
+# #         "id": "1555b441-c3be-40b0-a8f0-fb9dc7500545",
+# #         "name": "umccr-prod"
+# #       },
+# #       "code": "dragen-instrument-run-fastq-to-ora-pipeline__4_2_4__20241030041958",
+# #       "description": "GitHub Release URL: https://github.com/umccr/cwl-ica/releases/tag/dragen-instrument-run-fastq-to-ora-pipeline/4.2.4__20241030041958",
+# #       "language": "CWL",
+# #       "pipelineTags": {
+# #         "technicalTags": []
+# #       },
+# #       "analysisStorage": {
+# #         "id": "6e1b6c8f-f913-48b2-9bd0-7fc13eda0fd0",
+# #         "name": "Small",
+# #         "description": "1.2TB"
+# #       },
+# #       "urn": "urn:ilmn:ica:pipeline:ba8f618a-842f-4a2f-9b2f-a074c0472218#dragen-instrument-run-fastq-to-ora-pipeline__4_2_4__20241030041958",
+# #       "status": "RELEASED",
+# #       "proprietary": false,
+# #       "null": "XML"
+# #     },
+# #     "status": "REQUESTED",
+# #     "tags": {
+# #       "technicalTags": [
+# #         "portal_run_id=202411016290aa4d",
+# #         "step_functions_execution_arn=arn:aws:states:ap-southeast-2:843407916570:execution:oraCompressionSfn-wfm-ready-event-handler:bbdf82d7-b099-46fe-9063-5def7b2272f7",
+# #         "analysis_output_uri=s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411016290aa4d/"
+# #       ],
+# #       "userTags": [
+# #         "instrument_run_id=241024_A00130_0336_BHW7MVDSXC"  # pragma: allowlist secret
+# #       ],
+# #       "referenceTags": []
+# #     },
+# #     "analysisStorage": {
+# #       "id": "3fab13dd-46e7-4b54-bb34-b80a01a99379",
+# #       "name": "Large",
+# #       "description": "7.2TB"
+# #     },
+# #     "analysisPriority": "MEDIUM"
+# #   },
+# #   "analysis_launch_payload": {
+# #     "userReference": "umccr--automated--ora-compression--2024-10-30--202411016290aa4d",
+# #     "pipelineId": "ba8f618a-842f-4a2f-9b2f-a074c0472218",
+# #     "analysisInput": {
+# #       "objectType": "JSON",
+# #       "inputJson": "{\n  \"instrument_run_directory\": {\n    \"class\": \"Directory\",\n    \"basename\": \"241024_A00130_0336_BHW7MVDSXC\",\n    \"location\": \"ea19a3f5-ec7c-4940-a474-c31cd91dbad4/fol.e77c7a60e27d4eea125508dcf7906b20/20241030c613872c\"\n  },\n  \"ora_reference\": {\n    \"class\": \"File\",\n    \"location\": \"92bc8608-9393-44b4-bf16-fb0c5a12269a/fil.3f573b26c22c4507077908dcb063a68d/ora_reference_v2.tar.gz\"\n  },\n  \"ora_print_file_info\": true\n}",
+# #       "mounts": [
+# #         {
+# #           "dataId": "fol.e77c7a60e27d4eea125508dcf7906b20",
+# #           "mountPath": "ea19a3f5-ec7c-4940-a474-c31cd91dbad4/fol.e77c7a60e27d4eea125508dcf7906b20/20241030c613872c"
+# #         },
+# #         {
+# #           "dataId": "fil.3f573b26c22c4507077908dcb063a68d",
+# #           "mountPath": "92bc8608-9393-44b4-bf16-fb0c5a12269a/fil.3f573b26c22c4507077908dcb063a68d/ora_reference_v2.tar.gz"
+# #         }
+# #       ],
+# #       "externalData": [],
+# #       "dataIds": [
+# #         "fol.e77c7a60e27d4eea125508dcf7906b20",
+# #         "fil.3f573b26c22c4507077908dcb063a68d"
+# #       ]
+# #     },
+# #     "tags": {
+# #       "technicalTags": [
+# #         "portal_run_id=202411016290aa4d",
+# #         "step_functions_execution_arn=arn:aws:states:ap-southeast-2:843407916570:execution:oraCompressionSfn-wfm-ready-event-handler:bbdf82d7-b099-46fe-9063-5def7b2272f7",
+# #         "analysis_output_uri=s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411016290aa4d/"
+# #       ],
+# #       "userTags": [
+# #         "instrument_run_id=241024_A00130_0336_BHW7MVDSXC"  # pragma: allowlist secret
+# #       ],
+# #       "referenceTags": []
+# #     },
+# #     "activationCodeDetailId": "103094d2-e932-4e34-8dd4-06ee1fb8be68",
+# #     "analysisStorageId": "3fab13dd-46e7-4b54-bb34-b80a01a99379",
+# #     "analysisOutput": [
+# #       {
+# #         "sourcePath": "out/",
+# #         "targetProjectId": "ea19a3f5-ec7c-4940-a474-c31cd91dbad4",
+# #         "targetPath": "/ora-compression/202411016290aa4d/",
+# #         "type": "FOLDER"
+# #       }
+# #     ]
+# #   }
+# # }
