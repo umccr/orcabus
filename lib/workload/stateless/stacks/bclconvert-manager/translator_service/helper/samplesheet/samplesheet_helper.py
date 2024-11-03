@@ -120,7 +120,7 @@ def read_v2_samplesheet(
     )
 
     # And now append the lane attribute to every
-    v2_samplesheet_dict['bclconvert_data'] = flatten(
+    v2_samplesheet_dict['bclconvert_data'] = list(flatten(
         map(
             lambda bclconvert_data_row_iter: list(
                 map(
@@ -133,6 +133,6 @@ def read_v2_samplesheet(
             ),
             v2_samplesheet_dict['bclconvert_data']
         ),
-    )
+    ))
 
     return v2_samplesheet_dict
