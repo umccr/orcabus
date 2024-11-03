@@ -90,7 +90,8 @@ def read_runinfo_xml(project_id: str, data_id: str) -> Dict:
                 project_id=project_id,
                 data_id=data_id
             )
-        )
+        ),
+        keep_flowcell_layout=True
     )
 
 
