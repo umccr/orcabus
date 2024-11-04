@@ -51,6 +51,9 @@ interface Cttsov2Icav2PipelineManagerConstructProps {
 }
 
 export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
+  // Set the analysis storage size for these runs to LARGE
+  private readonly analysisStorageSize = 'LARGE';
+
   constructor(scope: Construct, id: string, props: Cttsov2Icav2PipelineManagerConstructProps) {
     super(scope, id);
 
@@ -220,6 +223,8 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       workflowName: props.workflowType,
       workflowVersion: props.workflowVersion,
       serviceVersion: props.serviceVersion,
+      /* Miscell configurations */
+      analysisStorageSize: this.analysisStorageSize,
     });
 
     // Create statemachine for handling any state changes of the pipeline
