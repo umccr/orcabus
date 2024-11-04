@@ -79,7 +79,7 @@ class SyncViewSet(ViewSet):
             Payload=json.dumps({
                 "url": serializer.data['presigned_url'],
                 "user_id": requester_email,
-                "reason": serializer.data['reason']
+                "reason": serializer.data.get('reason', None)
             })
         )
 
