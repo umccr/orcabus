@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 from typing import List
 
@@ -57,6 +58,40 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual("ctTSO500-L000002", db_wfr.workflow_run_name)
         # We don't expect any library associations here!
         self.assertEqual(0, db_wfr.libraries.count())
+
+
+    def test_create_wrsc_no_payload(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_create_workflow_run_state.WorkflowSrvUnitTests.test_create_wrsc_no_payload
+        """
+
+        test_event = {
+            "portalRunId": "202405012397gatc",
+            "executionId": "icav2.id.12345",
+            "timestamp": "2025-05-01T09:25:44Z",
+            "status": "DRAFT",
+            "workflowName": "ctTSO500",
+            "workflowVersion": "4.2.7",
+            "workflowRunName": "ctTSO500-L000002"
+        }
+
+        logger.info("Test the created WRSC event...")
+        result_wrsc: WorkflowRunStateChange = create_workflow_run_state.handler(test_event, None)
+        logger.info(result_wrsc)
+        self.assertIsNotNone(result_wrsc)
+        self.assertEqual("ctTSO500-L000002", result_wrsc.workflowRunName)
+        # We don't expect any library associations here!
+        self.assertIsNone(result_wrsc.linkedLibraries)
+        self.assertIsNone(result_wrsc.payload)
+
+        logger.info("Test the persisted DB record...")
+        wfr_qs: QuerySet = WorkflowRun.objects.all()
+        self.assertEqual(1, wfr_qs.count())
+        db_wfr: WorkflowRun = wfr_qs.first()
+        self.assertEqual("ctTSO500-L000002", db_wfr.workflow_run_name)
+        # We don't expect any library associations here!
+        self.assertEqual(0, db_wfr.libraries.count())
+
 
     def test_create_wrsc_library(self):
         """
