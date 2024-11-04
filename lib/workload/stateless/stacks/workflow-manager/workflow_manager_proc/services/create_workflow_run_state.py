@@ -14,7 +14,6 @@ from workflow_manager.models import (
     Workflow,
     Library,
     LibraryAssociation,
-    Payload,
     State,
     Status,
 )
@@ -121,8 +120,10 @@ def handler(event, context):
     new_state = State(
         status=srv_wrsc.status,
         timestamp=srv_wrsc.timestamp,
-        payload=create_payload_stub_from_wrsc(srv_wrsc)
     )
+    if srv_wrsc.payload:
+        # handle the payload
+        new_state.payload = create_payload_stub_from_wrsc(srv_wrsc)
 
     # attempt to transition to new state (will persist new state if successful)
     success = wfr_util.transition_to(new_state)
@@ -130,15 +131,13 @@ def handler(event, context):
         logger.warning(f"Could not apply new state: {new_state}")
         return None
 
-    wfm_wrsc = map_srv_wrsc_to_wfm_wrsc(srv_wrsc)
-    # Update payload ID
-    wfm_wrsc.payload.refId = new_state.payload.payload_ref_id
+    wfm_wrsc = map_srv_wrsc_to_wfm_wrsc(srv_wrsc, new_state)
 
     logger.info(f"{__name__} done.")
     return wfm_wrsc
 
 
-def map_srv_wrsc_to_wfm_wrsc(input_wrsc: srv.WorkflowRunStateChange) -> wfm.WorkflowRunStateChange:
+def map_srv_wrsc_to_wfm_wrsc(input_wrsc: srv.WorkflowRunStateChange, new_state: State) -> wfm.WorkflowRunStateChange:
     out_wrsc = wfm.WorkflowRunStateChange(
         portalRunId=input_wrsc.portalRunId,
         timestamp=input_wrsc.timestamp,
@@ -147,6 +146,18 @@ def map_srv_wrsc_to_wfm_wrsc(input_wrsc: srv.WorkflowRunStateChange) -> wfm.Work
         workflowVersion=input_wrsc.workflowVersion,
         workflowRunName=input_wrsc.workflowRunName,
         linkedLibraries=input_wrsc.linkedLibraries,
-        payload=input_wrsc.payload,  # requires payload ID
     )
+    # NOTE: the srv payload is not quite the same as the wfm payload (it's missing a payload ref id that's assigned by the wfm)
+    # So, if the new state has a payload, we need to map the service payload to the wfm payload
+    if new_state.payload:
+        out_wrsc.payload = map_srv_payload_to_wfm_payload(input_wrsc.payload, new_state.payload.payload_ref_id)
     return out_wrsc
+
+
+def map_srv_payload_to_wfm_payload(input_payload: srv.Payload, ref_id: str) -> wfm.Payload:
+    out_payload = wfm.Payload(
+        refId=ref_id,
+        version=input_payload.version,
+        data=input_payload.data
+    )
+    return out_payload
