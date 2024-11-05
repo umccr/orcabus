@@ -106,8 +106,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-
-
 def handler(event, context):
     # Set env vars
     set_icav2_env_vars()
@@ -277,7 +275,6 @@ def handler(event, context):
         "sequencerrun_s3_path": sequencerrun_s3_path,
         "sample_name": sample_name,
     }
-
 
 
 #  # Idenitified Patient
@@ -620,4 +617,162 @@ def handler(event, context):
 #     #   ],
 #     #   "sequencerrun_s3_path": "s3://pdx-cgwxfer-test/melbournetest/240229_A00130_0288_BH5HM2DSXC__L2400160__V2__20241003f44a5496__20241003f44a5496",
 #     #   "sample_name": "L2400160"
+#     # }
+
+
+# PROD
+# if __name__ == "__main__":
+#     import json
+#     from os import environ
+#
+#     environ['AWS_PROFILE'] = 'umccr-production'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-production"
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "sequencerrun_s3_path_root": "s3://pdx-cgwxfer/melbourne",
+#                     "portal_run_id": "20241105f6bc3fb9",
+#                     "samplesheet_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Logs_Intermediates/SampleSheetValidation/SampleSheet_Intermediate.csv",
+#                     "panel_name": "tso500_DRAGEN_ctDNA_v2_1_Universityofmelbourne",  # pragma: allowlist secret
+#                     "dag": {
+#                         "dagName": "cromwell_tso500_ctdna_workflow_1.0.4",
+#                         "dagDescription": "tso500_ctdna_workflow"
+#                     },
+#                     "data_files": {
+#                         "microsatOutputUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Logs_Intermediates/DragenCaller/L2401560/L2401560.microsat_output.json",
+#                         "tmbMetricsUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Logs_Intermediates/Tmb/L2401560/L2401560.tmb.metrics.csv",
+#                         "cnvVcfUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Results/L2401560/L2401560.cnv.vcf.gz",
+#                         "hardFilteredVcfUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Results/L2401560/L2401560.hard-filtered.vcf.gz",
+#                         "fusionsUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Results/L2401560/L2401560_Fusions.csv",
+#                         "metricsOutputUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Results/L2401560/L2401560_MetricsOutput.tsv",
+#                         "samplesheetUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Logs_Intermediates/SampleSheetValidation/SampleSheet_Intermediate.csv"
+#                     },
+#                     "case_metadata": {
+#                         "isIdentified": False,
+#                         "caseAccessionNumber": "L2401560__V2__20241105f6bc3fb9",
+#                         "externalSpecimenId": "0042-61203",
+#                         "sampleType": "patientcare",
+#                         "specimenLabel": "primarySpecimen",
+#                         "indication": "NA",
+#                         "diseaseCode": 254637007,
+#                         "specimenCode": "122561005",
+#                         "sampleReception": {
+#                             "dateAccessioned": "2024-11-05T16:11:36+1100",
+#                             "dateCollected": "2024-10-23T23:00:00+1100",
+#                             "dateReceived": "2024-10-24T00:00:00+1100"
+#                         },
+#                         "study": {
+#                             "id": "OCEANiC",
+#                             "subjectIdentifier": "0042-61203"
+#                         }
+#                     },
+#                     "instrument_run_id": "241101_A01052_0236_BHVJNMDMXY"
+#                 },
+#                 None
+#             ),
+#             indent=2
+#         )
+#     )
+#
+#     # Yields
+#     # {
+#     #   "case_creation_obj": {
+#     #     "identified": false,
+#     #     "indication": "NA",
+#     #     "panelName": "tso500_DRAGEN_ctDNA_v2_1_Universityofmelbourne",  # pragma: allowlist secret
+#     #     "sampleType": "patientcare",
+#     #     "specimens": [
+#     #       {
+#     #         "accessionNumber": "L2401560__V2__20241105f6bc3fb9",
+#     #         "dateAccessioned": "2024-11-05T05:11:36Z",
+#     #         "dateReceived": "2024-10-23T13:00:00Z",
+#     #         "datecollected": "2024-10-23T12:00:00Z",
+#     #         "externalSpecimenId": "0042-61203",
+#     #         "name": "primarySpecimen",
+#     #         "type": {
+#     #           "code": "122561005",
+#     #           "label": "Blood specimen from patient"
+#     #         },
+#     #         "studyIdentifier": "OCEANiC",
+#     #         "studySubjectIdentifier": "0042-61203"
+#     #       }
+#     #     ],
+#     #     "dagDescription": "tso500_ctdna_workflow",
+#     #     "dagName": "cromwell_tso500_ctdna_workflow_1.0.4",
+#     #     "disease": {
+#     #       "code": "254637007",
+#     #       "label": "Non-small cell lung cancer"
+#     #     }
+#     #   },
+#     #   "sequencerrun_creation_obj": {
+#     #     "runId": "241101_A01052_0236_BHVJNMDMXY__L2401560__V2__20241105f6bc3fb9__20241105f6bc3fb9",
+#     #     "specimens": [
+#     #       {
+#     #         "accessionNumber": "L2401560__V2__20241105f6bc3fb9",
+#     #         "barcode": "ATTCAGAA-AGGCTATA",
+#     #         "lane": "1",
+#     #         "sampleId": "L2401560",
+#     #         "sampleType": "DNA"
+#     #       }
+#     #     ],
+#     #     "type": "pairedEnd"
+#     #   },
+#     #   "informaticsjob_creation_obj": {
+#     #     "input": [
+#     #       {
+#     #         "accessionNumber": "L2401560__V2__20241105f6bc3fb9",
+#     #         "sequencerRunInfos": [
+#     #           {
+#     #             "runId": "241101_A01052_0236_BHVJNMDMXY__L2401560__V2__20241105f6bc3fb9__20241105f6bc3fb9",
+#     #             "barcode": "ATTCAGAA-AGGCTATA",
+#     #             "lane": "1",
+#     #             "sampleId": "L2401560",
+#     #             "sampleType": "DNA"
+#     #           }
+#     #         ]
+#     #       }
+#     #     ]
+#     #   },
+#     #   "data_files": [
+#     #     {
+#     #       "src_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Logs_Intermediates/DragenCaller/L2401560/L2401560.microsat_output.json",
+#     #       "dest_uri": "s3://pdx-cgwxfer/melbourne/241101_A01052_0236_BHVJNMDMXY__L2401560__V2__20241105f6bc3fb9__20241105f6bc3fb9/Data/Intensities/BaseCalls/L2401560.microsat_output.json",
+#     #       "needs_decompression": false,
+#     #       "contents": null
+#     #     },
+#     #     {
+#     #       "src_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Logs_Intermediates/Tmb/L2401560/L2401560.tmb.metrics.csv",
+#     #       "dest_uri": "s3://pdx-cgwxfer/melbourne/241101_A01052_0236_BHVJNMDMXY__L2401560__V2__20241105f6bc3fb9__20241105f6bc3fb9/Data/Intensities/BaseCalls/L2401560.tmb.metrics.csv",
+#     #       "needs_decompression": false,
+#     #       "contents": null
+#     #     },
+#     #     {
+#     #       "src_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Results/L2401560/L2401560.cnv.vcf.gz",
+#     #       "dest_uri": "s3://pdx-cgwxfer/melbourne/241101_A01052_0236_BHVJNMDMXY__L2401560__V2__20241105f6bc3fb9__20241105f6bc3fb9/Data/Intensities/BaseCalls/L2401560.cnv.vcf",
+#     #       "needs_decompression": true,
+#     #       "contents": null
+#     #     },
+#     #     {
+#     #       "src_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Results/L2401560/L2401560.hard-filtered.vcf.gz",
+#     #       "dest_uri": "s3://pdx-cgwxfer/melbourne/241101_A01052_0236_BHVJNMDMXY__L2401560__V2__20241105f6bc3fb9__20241105f6bc3fb9/Data/Intensities/BaseCalls/L2401560.hard-filtered.vcf",
+#     #       "needs_decompression": true,
+#     #       "contents": null
+#     #     },
+#     #     {
+#     #       "src_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Results/L2401560/L2401560_Fusions.csv",
+#     #       "dest_uri": "s3://pdx-cgwxfer/melbourne/241101_A01052_0236_BHVJNMDMXY__L2401560__V2__20241105f6bc3fb9__20241105f6bc3fb9/Data/Intensities/BaseCalls/L2401560_Fusions.csv",
+#     #       "needs_decompression": false,
+#     #       "contents": null
+#     #     },
+#     #     {
+#     #       "src_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Results/L2401560/L2401560_MetricsOutput.tsv",
+#     #       "dest_uri": "s3://pdx-cgwxfer/melbourne/241101_A01052_0236_BHVJNMDMXY__L2401560__V2__20241105f6bc3fb9__20241105f6bc3fb9/Data/Intensities/BaseCalls/L2401560_MetricsOutput.tsv",
+#     #       "needs_decompression": false,
+#     #       "contents": null
+#     #     }
+#     #   ],
+#     #   "sequencerrun_s3_path": "s3://pdx-cgwxfer/melbourne/241101_A01052_0236_BHVJNMDMXY__L2401560__V2__20241105f6bc3fb9__20241105f6bc3fb9",
+#     #   "sample_name": "L2401560"
 #     # }
