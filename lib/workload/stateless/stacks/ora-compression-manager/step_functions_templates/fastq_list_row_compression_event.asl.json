@@ -7,7 +7,9 @@
       "Resource": "arn:aws:states:::lambda:invoke",
       "OutputPath": "$.Payload",
       "Parameters": {
-        "Payload.$": "$",
+        "Payload": {
+          "output_dir_uri.$": "$.payload.data.outputs.instrumentRunOraOutputUri"
+        },
         "FunctionName": "${__merge_sizes_lambda_function_arn__}"
       },
       "Retry": [

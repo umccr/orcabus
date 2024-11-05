@@ -228,6 +228,7 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
         ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
       },
       timeout: Duration.seconds(60),
+      memorySize: 1024,
     });
     // Give the lambda function access to the secret
     icav2AccessTokenSecretObj.grantRead(setMergeSizesLambdaObj.currentVersion);
@@ -270,7 +271,7 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
           detailType: [props.detailType],
           detail: {
             workflowName: [{ 'equals-ignore-case': props.workflowName }],
-            state: [{ 'equals-ignore-case': 'SUCCEEDED' }],
+            status: [{ 'equals-ignore-case': 'SUCCEEDED' }],
           },
         },
       }
