@@ -24,7 +24,14 @@ def get_s3_client() -> 'S3Client':
 
 def upload_file(bucket: str, key: str, input_file_path: Path) -> None:
     s3 = get_s3_client()
-    s3.upload_file(str(input_file_path), bucket, key.lstrip("/"))
+    s3.upload_file(
+        str(input_file_path),
+        bucket,
+        key.lstrip("/"),
+        ExtraArgs={
+            'ServerSideEncryption': 'AES256'
+        }
+    )
 
 
 def set_s3_access_cred_env_vars():
