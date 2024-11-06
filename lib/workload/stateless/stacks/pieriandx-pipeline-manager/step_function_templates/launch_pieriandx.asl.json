@@ -402,10 +402,13 @@
                   "id.$": "$.workflow_inputs.portalRunId",
                   "id_type": "portal_run_id"
                 },
-                "UpdateExpression": "SET engine_parameters = :engine_parameters",
+                "UpdateExpression": "SET engine_parameters = :engine_parameters, workflow_status = :workflow_status",
                 "ExpressionAttributeValues": {
                   ":engine_parameters": {
                     "S.$": "States.JsonToString($.set_engine_parameters_step.engine_parameters)"
+                  },
+                  ":workflow_status": {
+                    "S": "RUNNING"
                   }
                 }
               },
