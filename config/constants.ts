@@ -560,7 +560,7 @@ export const pieriandxDagSsmParameterPath = '/umccr/orcabus/stateful/pieriandx/d
 /*
 "s3://pdx-cgwxfer-test/melbournetest" // development
 "s3://pdx-cgwxfer-test/melbournetest" // staging
-"s3://pdx-cgwxfer/melbourne" // production
+"s3://pdx-xfer/melbourne" // production
 */
 export const pieriandxS3SequencerRunRootSsmParameterPath =
   '/umccr/orcabus/pieriandx/s3_sequencer_run_root';
