@@ -212,7 +212,7 @@
                 "job_id.$": "$.get_portal_run_db_step.Item.informaticsjob_id.N",
                 "case_accession_number.$": "$.get_portal_run_db_step.Item.case_accession_number.S",
                 "report_id.$": "$.get_portal_run_db_step.Item.report_id.N",
-                "pieriandx_base_url": "https://app.uat.pieriandx.com/cgw-api/v2.0.0",
+                "pieriandx_base_url": "${__pieriandx_base_url__}",
                 "sample_name.$": "$.get_portal_run_db_step.Item.sample_name.S"
               }
             },
@@ -252,7 +252,7 @@
                     "workflowName": "${__workflow_name__}",
                     "workflowVersion": "${__workflow_version__}",
                     "workflowRunName.$": "$.get_portal_run_db_step.Item.workflow_run_name.S",
-                    "linkedLibraries.$": "States.StringToJson($.get_portal_run_db_step.Item.linkedLibraries.S)",
+                    "linkedLibraries.$": "States.StringToJson($.get_portal_run_db_step.Item.linked_libraries.S)",
                     "payload": {
                       "version": "${__payload_version__}",
                       "data.$": "$.get_data_payload_step.data_payload"
