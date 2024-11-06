@@ -16,6 +16,53 @@ The outputs (if report status is complete) will comprise the following
 
 """
 
+from urllib.parse import (
+    urlparse, urlunparse
+)
+from pathlib import Path
+
+
+def strip_path_from_url(url: str) -> str:
+    """
+    Strip the path from the url
+    :param url:
+    :return:
+    """
+    url_obj = urlparse(url)
+
+    return str(
+        urlunparse(
+            (
+                url_obj.scheme,
+                url_obj.netloc,
+                "/",
+                None, None, None
+            )
+        )
+    )
+
+
+def join_url_paths(url: str, path_ext: str) -> str:
+    """
+    Join the url paths
+    :param url: str
+    :param path_ext: str
+    :return: url
+    """
+    url_obj = urlparse(url)
+    url_path = Path(url_obj.path) / path_ext
+
+    return str(
+        urlunparse(
+            (
+                url_obj.scheme,
+                url_obj.netloc,
+                str(url_path),
+                None, None, None
+            )
+        )
+    )
+
 
 def handler(event, context):
     """
@@ -53,15 +100,28 @@ def handler(event, context):
 
     # Set the outputs
     return_dict["data_payload"]["outputs"] = {
-        "caseUrl": f"{pieriandx_base_url.replace("cgw-api/v2.0.0/", "")}/cgw/order/viewOrderDetails/{case_id}",
-        "vcfOutputUrl": f"{pieriandx_base_url.replace("cgw-api/v2.0.0/", "")}/cgw/informatics/downloadJobOutputAnalysisFile?caseId={case_id}&jobId={job_id}&accessionNumber={case_accession_number}&fileName=main.vcf",
-        "reportPdfUrl": f"{pieriandx_base_url.replace("cgw-api/v2.0.0/", "")}/cgw/report/openPdfReport/{report_id}",
-        "biomarkerReportUrl": f"{pieriandx_base_url.replace("cgw-api/v2.0.0/", "")}/cgw/informatics/downloadJobOutputAnalysisFile?caseId={case_id}&jobId={job_id}&accessionNumber={case_accession_number}&fileName={sample_name}_BiomarkerReport.txt"
+        "caseUrl": join_url_paths(
+            strip_path_from_url(pieriandx_base_url),
+            f"/cgw/order/viewOrderDetails/{case_id}"
+        ),
+        "vcfOutputUrl": join_url_paths(
+            strip_path_from_url(pieriandx_base_url),
+     f"/cgw/informatics/downloadJobOutputAnalysisFile?caseId={case_id}&jobId={job_id}&accessionNumber={case_accession_number}&fileName=main.vcf"
+        ),
+        "reportPdfUrl": join_url_paths(
+            strip_path_from_url(pieriandx_base_url),
+     f"/cgw/report/openPdfReport/{report_id}"
+        ),
+        "biomarkerReportUrl": join_url_paths(
+            strip_path_from_url(pieriandx_base_url),
+     f"/cgw/informatics/downloadJobOutputAnalysisFile?caseId={case_id}&jobId={job_id}&accessionNumber={case_accession_number}&fileName={sample_name}_BiomarkerReport.txt"
+        ),
     }
 
     return return_dict
 
 
+# DEV
 # if __name__ == "__main__":
 #     import json
 #
@@ -178,6 +238,130 @@ def handler(event, context):
 #     #             "vcfOutputUrl": "https://app.uat.pieriandx.com/cgw-api/v2.0.0/cgw/informatics/downloadJobOutputAnalysisFile?caseId=103779&jobId=46014&accessionNumber=L2400160__V2__2024100405a12a95&fileName=main.vcf",
 #     #             "reportPdfUrl": "https://app.uat.pieriandx.com/cgw-api/v2.0.0/cgw/report/openPdfReport/38152",
 #     #             "biomarkerReportUrl": "https://app.uat.pieriandx.com/cgw-api/v2.0.0/cgw/informatics/downloadJobOutputAnalysisFile?caseId=103779&jobId=46014&accessionNumber=L2400160__V2__2024100405a12a95&fileName=L2400160_BiomarkerReport.txt"
+#     #         }
+#     #     }
+#     # }
+
+
+# # PROD
+# if __name__ == "__main__":
+#     import json
+#
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "pieriandx_base_url": "https://app.pieriandx.com/cgw-api/v2.0.0",
+#                     "inputs": {
+#                         "instrumentRunId": "241101_A01052_0236_BHVJNMDMXY",
+#                         "panelVersion": "main",
+#                         "caseMetadata": {
+#                             "isIdentified": False,
+#                             "caseAccessionNumber": "L2401562__V2__20241106c25602c7",
+#                             "externalSpecimenId": "CMM0.5pc-10646979",
+#                             "sampleType": "validation",
+#                             "specimenLabel": "primarySpecimen",
+#                             "indication": "NA",
+#                             "diseaseCode": 55342001,
+#                             "specimenCode": "122561005",
+#                             "sampleReception": {
+#                                 "dateAccessioned": "2024-11-07T08:39:55+1100",
+#                                 "dateCollected": "2024-11-07T08:39:55+1100",
+#                                 "dateReceived": "2024-11-07T08:39:55+1100"
+#                             },
+#                             "study": {
+#                                 "id": "Control",
+#                                 "subjectIdentifier": "Sera-ctDNA-Comp05pc"
+#                             }
+#                         },
+#                         "dataFiles": {
+#                             "microsatOutputUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Logs_Intermediates/DragenCaller/L2401562/L2401562.microsat_output.json",
+#                             "tmbMetricsUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Logs_Intermediates/Tmb/L2401562/L2401562.tmb.metrics.csv",
+#                             "cnvVcfUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Results/L2401562/L2401562.cnv.vcf.gz",
+#                             "hardFilteredVcfUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Results/L2401562/L2401562.hard-filtered.vcf.gz",
+#                             "fusionsUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Results/L2401562/L2401562_Fusions.csv",
+#                             "metricsOutputUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Results/L2401562/L2401562_MetricsOutput.tsv",
+#                             "samplesheetUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Logs_Intermediates/SampleSheetValidation/SampleSheet_Intermediate.csv"
+#                         }
+#                     },
+#                     "job_id": "302091",
+#                     "report_id": "312010",
+#                     "case_id": "336486",
+#                     "report_status": "complete",
+#                     "case_accession_number": "L2401562__V2__20241106c25602c7",
+#                     "engine_parameters": {
+#                         "caseId": "336486",
+#                         "informaticsJobId": "302091"
+#                     },
+#                     "tags": {
+#                         "metadataFromRedCap": False,
+#                         "isIdentified": False,
+#                         "libraryId": "L2401562",
+#                         "sampleType": "validation",
+#                         "projectId": "Control",
+#                         "instrumentRunId": "241101_A01052_0236_BHVJNMDMXY",
+#                         "panelVersion": "main"
+#                     },
+#                     "sample_name": "L2401562"
+#                 },
+#                 None
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # {
+#     #     "data_payload": {
+#     #         "inputs": {
+#     #             "instrumentRunId": "241101_A01052_0236_BHVJNMDMXY",
+#     #             "panelVersion": "main",
+#     #             "caseMetadata": {
+#     #                 "isIdentified": false,
+#     #                 "caseAccessionNumber": "L2401562__V2__20241106c25602c7",
+#     #                 "externalSpecimenId": "CMM0.5pc-10646979",
+#     #                 "sampleType": "validation",
+#     #                 "specimenLabel": "primarySpecimen",
+#     #                 "indication": "NA",
+#     #                 "diseaseCode": 55342001,
+#     #                 "specimenCode": "122561005",
+#     #                 "sampleReception": {
+#     #                     "dateAccessioned": "2024-11-07T08:39:55+1100",
+#     #                     "dateCollected": "2024-11-07T08:39:55+1100",
+#     #                     "dateReceived": "2024-11-07T08:39:55+1100"
+#     #                 },
+#     #                 "study": {
+#     #                     "id": "Control",
+#     #                     "subjectIdentifier": "Sera-ctDNA-Comp05pc"
+#     #                 }
+#     #             },
+#     #             "dataFiles": {
+#     #                 "microsatOutputUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Logs_Intermediates/DragenCaller/L2401562/L2401562.microsat_output.json",
+#     #                 "tmbMetricsUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Logs_Intermediates/Tmb/L2401562/L2401562.tmb.metrics.csv",
+#     #                 "cnvVcfUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Results/L2401562/L2401562.cnv.vcf.gz",
+#     #                 "hardFilteredVcfUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Results/L2401562/L2401562.hard-filtered.vcf.gz",
+#     #                 "fusionsUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Results/L2401562/L2401562_Fusions.csv",
+#     #                 "metricsOutputUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Results/L2401562/L2401562_MetricsOutput.tsv",
+#     #                 "samplesheetUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411052080dbdd/Logs_Intermediates/SampleSheetValidation/SampleSheet_Intermediate.csv"
+#     #             }
+#     #         },
+#     #         "engineParameters": {
+#     #             "caseId": "336486",
+#     #             "informaticsJobId": "302091"
+#     #         },
+#     #         "tags": {
+#     #             "metadataFromRedCap": false,
+#     #             "isIdentified": false,
+#     #             "libraryId": "L2401562",
+#     #             "sampleType": "validation",
+#     #             "projectId": "Control",
+#     #             "instrumentRunId": "241101_A01052_0236_BHVJNMDMXY",
+#     #             "panelVersion": "main"
+#     #         },
+#     #         "outputs": {
+#     #             "caseUrl": "https://app.pieriandx.com/cgw/order/viewOrderDetails/336486",
+#     #             "vcfOutputUrl": "https://app.pieriandx.com/cgw/informatics/downloadJobOutputAnalysisFile?caseId=336486&jobId=302091&accessionNumber=L2401562__V2__20241106c25602c7&fileName=main.vcf",
+#     #             "reportPdfUrl": "https://app.pieriandx.com/cgw/report/openPdfReport/312010",
+#     #             "biomarkerReportUrl": "https://app.pieriandx.com/cgw/informatics/downloadJobOutputAnalysisFile?caseId=336486&jobId=302091&accessionNumber=L2401562__V2__20241106c25602c7&fileName=L2401562_BiomarkerReport.txt"
 #     #         }
 #     #     }
 #     # }
