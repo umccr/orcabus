@@ -36,7 +36,7 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
       v1: 'cttso',
       v2: 'cttsov2',
     },
-    ntc_prefix: 'ntc',
+    ntc_prefix: 'NTC',
   };
 
   constructor(
@@ -109,10 +109,7 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
                 sampleId: [
                   {
                     'anything-but': {
-                      prefix: {
-                        'equals-ignore-case':
-                          this.Cttsov2InitialiseLibraryAndFastqListRowMap.ntc_prefix,
-                      },
+                      prefix: this.Cttsov2InitialiseLibraryAndFastqListRowMap.ntc_prefix,
                     },
                   },
                 ],
