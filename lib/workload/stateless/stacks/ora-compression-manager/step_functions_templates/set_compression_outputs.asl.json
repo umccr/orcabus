@@ -25,7 +25,7 @@
       "Parameters": {
         "FunctionName": "${__set_outputs_json_lambda_function_arn__}",
         "Payload": {
-          "instrument_run_id.$": "$.ready_event_data_inputs.instrumentRunId",
+          "instrument_run_id.$": "$.get_db_attributes_step.ready_event_data_inputs.instrumentRunId",
           "analysis_output_uri.$": "$.get_db_attributes_step.analysis_output_uri"
         }
       },
