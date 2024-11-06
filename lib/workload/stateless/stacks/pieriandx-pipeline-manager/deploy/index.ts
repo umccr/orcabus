@@ -157,7 +157,7 @@ export class PieriandxPipelineManagerStack extends cdk.Stack {
         handler: 'handler',
         memorySize: 1024,
         layers: [lambdaLayerObj.lambdaLayerVersionObj],
-        timeout: Duration.seconds(20),
+        timeout: Duration.seconds(60),
         environment: icav2Envs,
       }
     );
