@@ -257,8 +257,8 @@ def get_and_merge_raw_and_label_data(library_id: str) -> Dict:
     redcap_raw_df = redcap_raw_df[
         [
             "disease_id",
-            "requesting_physicians_first_name",
-            "requesting_physicians_last_name",
+            "requesting_physician_first_name",
+            "requesting_physician_last_name",
             "library_id",
             "date_collected",
             "date_received",
