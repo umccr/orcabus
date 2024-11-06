@@ -36,6 +36,7 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
       v1: 'cttso',
       v2: 'cttsov2',
     },
+    ntc_prefix: 'NTC',
   };
 
   constructor(
@@ -100,6 +101,16 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
                   {
                     'equals-ignore-case':
                       this.Cttsov2InitialiseLibraryAndFastqListRowMap.triggerAssayType.v2,
+                  },
+                ],
+              },
+              // Dont add the ntc to the list of libraries to process
+              sample: {
+                sampleId: [
+                  {
+                    'anything-but': {
+                      prefix: this.Cttsov2InitialiseLibraryAndFastqListRowMap.ntc_prefix,
+                    },
                   },
                 ],
               },
