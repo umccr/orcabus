@@ -334,7 +334,7 @@ TN Stateless stack
 */
 
 // Deployed under dev/stg/prod
-export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 0f5575bc-6cf8-4a90-a80e-05088aae8ed7
+export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 6ce2b636-ba2f-4004-8065-f3557f286c98
 export const tnIcav2PipelineWorkflowType = 'tumor-normal';
 export const tnIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const tnIcav2ServiceVersion = '2024.07.01';

@@ -19,12 +19,15 @@ def handler(event, context) -> Dict[str, Dict]:
 
     # Get the boolean parameters from the event input
     cwl_parameter_dict: Dict = {
+        # Write normal bam in somatic workflow
+        # But take the vcf from the germline workflow
         "enable_map_align_somatic": True,
         "enable_map_align_output_somatic": event_data_input.get('enableMapAlignOutput', True),
         "enable_map_align_germline": True,
         "enable_map_align_output_germline": False,
         "enable_duplicate_marking": event_data_input.get('enableDuplicateMarking', True),
         "enable_cnv_somatic": event_data_input.get('enableCnvSomatic', None),
+        # HRD is somatic Only
         "enable_hrd": event_data_input.get('enableHrdSomatic', None),
         "enable_sv_somatic": event_data_input.get('enableSvSomatic', None),
         "cnv_use_somatic_vc_baf": event_data_input.get('cnvUseSomaticVcBaf', None)
