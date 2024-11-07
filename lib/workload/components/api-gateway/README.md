@@ -20,7 +20,7 @@ new HttpRoute(this, 'GetHttpRoute', {
 new HttpRoute(this, 'PostHttpRoute', {
   httpApi: httpApi,
   integration: apiIntegration,
-  authorizer: apiGateway.cognitoAdminGroupAuthorizer,
+  authorizer: apiGateway.authStackHttpLambdaAuthorizer,
   routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.POST),
 });
 ```

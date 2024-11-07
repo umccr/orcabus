@@ -13,7 +13,7 @@ import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
-import { adminHttpLambdaAuthorizerParameterName } from '../../../../config/constants';
+import { authStackHttpLambdaAuthorizerParameterName } from '../../../../config/constants';
 
 export interface ApiGwLogsConfig {
   /**
@@ -62,7 +62,7 @@ export interface ApiGatewayConstructProps {
 export class ApiGatewayConstruct extends Construct {
   private readonly _httpApi: HttpApi;
   private readonly _domainName: string;
-  readonly cognitoAdminGroupAuthorizer: HttpLambdaAuthorizer;
+  readonly authStackHttpLambdaAuthorizer: HttpLambdaAuthorizer;
 
   constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
     super(scope, id);
@@ -109,8 +109,8 @@ export class ApiGatewayConstruct extends Construct {
       },
     });
 
-    this.cognitoAdminGroupAuthorizer = this.getCognitoAdminGroupHTTPAuthorizer(
-      adminHttpLambdaAuthorizerParameterName
+    this.authStackHttpLambdaAuthorizer = this.getAuthStackHTTPLambdaAuthorizer(
+      authStackHttpLambdaAuthorizerParameterName
     );
 
     new ARecord(this, 'CustomDomainARecord', {
@@ -202,28 +202,28 @@ export class ApiGatewayConstruct extends Construct {
   }
 
   /**
-   * Get the Cognito Admin Group HTTP Lambda Authorizer
-   * @param adminHttpLambdaAuthorizerParameterName The SSM Parameter Name that stores the ARN of the lambda authorizer
+   * Get the HTTP Lambda Authorizer defined in the authorization stack manager
+   * @param authStackHttpLambdaAuthorizerParameterName The SSM Parameter Name that stores the ARN of the lambda authorizer
    * @returns
    */
-  private getCognitoAdminGroupHTTPAuthorizer(adminHttpLambdaAuthorizerParameterName: string) {
+  private getAuthStackHTTPLambdaAuthorizer(authStackHttpLambdaAuthorizerParameterName: string) {
     const lambdaArn = StringParameter.valueForStringParameter(
       this,
-      adminHttpLambdaAuthorizerParameterName
+      authStackHttpLambdaAuthorizerParameterName
     );
 
     // Get the lambda HTTP authorizer defined in the authorization stack manager
     const lambdaAuthorizer = Function.fromFunctionAttributes(
       this,
-      'AdminGroupHTTPAuthorizerLambda',
+      'AuthStackHTTPLambdaAuthorizer',
       {
         functionArn: lambdaArn,
         sameEnvironment: true,
       }
     );
 
-    return new HttpLambdaAuthorizer('AdminGroupLambdaAuthorizer', lambdaAuthorizer, {
-      authorizerName: 'CognitoAdminGroupLambdaAuthorizer',
+    return new HttpLambdaAuthorizer('AuthStackLambdaHttpAuthorizer', lambdaAuthorizer, {
+      authorizerName: 'AuthStackHTTPLambdaAuthorizer',
       responseTypes: [HttpLambdaResponseType.SIMPLE],
     });
   }
