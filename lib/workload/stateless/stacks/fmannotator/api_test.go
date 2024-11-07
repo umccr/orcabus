@@ -26,7 +26,13 @@ func TestMarshallPortalRunId(t *testing.T) {
 }
 
 func TestApiBuild(t *testing.T) {
-	config := Config{"http://localhost:8000", "token"}
+	config := Config{
+		"http://localhost:8000",
+		"token",
+		"queue",
+		100,
+		60,
+	}
 
 	api, err := NewApiClient(&config, bytes.NewBuffer([]byte{}))
 	require.NoError(t, err)

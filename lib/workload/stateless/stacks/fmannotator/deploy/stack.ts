@@ -80,14 +80,18 @@ export class FMAnnotator extends Stack {
       )
     );
 
+    const env = {
+      FMANNOTATOR_FILE_MANAGER_ENDPOINT: `https://${props.domainName}`,
+      FMANNOTATOR_FILE_MANAGER_SECRET_NAME: tokenSecret.secretName,
+      FMANNOTATOR_QUEUE_NAME: this.dlq.queueName,
+      FMANNOTATOR_QUEUE_MAX_MESSAGES: '100',
+      FMANNOTATOR_QUEUE_WAIT_TIME_SECS: '60',
+      GO_LOG: 'debug',
+    };
     const entry = path.join(__dirname, '..', 'cmd', 'portalrunid');
-    const fn = new GoFunction(this, 'handler', {
+    const fn = new GoFunction(this, 'PortalRunId', {
       entry,
-      environment: {
-        FMANNOTATOR_FILE_MANAGER_ENDPOINT: `https://${props.domainName}`,
-        FMANNOTATOR_FILE_MANAGER_SECRET_NAME: tokenSecret.secretName,
-        GO_LOG: 'debug',
-      },
+      environment: env,
       memorySize: 128,
       timeout: Duration.seconds(28),
       architecture: Architecture.ARM_64,
@@ -116,6 +120,21 @@ export class FMAnnotator extends Stack {
           { 'equals-ignore-case': 'ABORTED' },
         ],
       },
+    });
+
+    const entryQueue = path.join(__dirname, '..', 'cmd', 'portalrunidqueue');
+    new GoFunction(this, 'PortalRunIdQueue', {
+      entry: entryQueue,
+      environment: env,
+      memorySize: 128,
+      timeout: Duration.seconds(28),
+      architecture: Architecture.ARM_64,
+      role: this.role,
+      vpc: this.vpc,
+      vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [this.securityGroup],
+      deadLetterQueue: this.dlq,
+      deadLetterQueueEnabled: true,
     });
   }
 
