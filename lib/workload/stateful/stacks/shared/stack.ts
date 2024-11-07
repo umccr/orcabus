@@ -6,6 +6,7 @@ import { ConfigurableDatabaseProps, DatabaseConstruct } from './constructs/datab
 import { ComputeProps, ComputeConstruct } from './constructs/compute';
 import { SchemaRegistryConstruct, SchemaRegistryProps } from './constructs/schema-registry';
 import { EventSourceConstruct, EventSourceProps } from './constructs/event-source';
+import { EventDLQConstruct, EventDLQProps } from './constructs/event-dlq';
 
 export interface SharedStackProps {
   /**
@@ -29,6 +30,10 @@ export interface SharedStackProps {
    * Any configuration related to event source
    */
   eventSourceProps?: EventSourceProps;
+  /**
+   * Any configuration related to event DLQs
+   */
+  eventDLQProps?: EventDLQProps[];
   /**
    * VPC (lookup props) that will be used by resources
    */
@@ -65,6 +70,14 @@ export class SharedStack extends Stack {
 
     if (props.eventSourceProps) {
       new EventSourceConstruct(this, 'EventSourceConstruct', props.eventSourceProps);
+    }
+
+    for (const prop of props.eventDLQProps ?? []) {
+      // Convert kebab-case to PascalCase.
+      const name = prop.queueName
+        .toLowerCase()
+        .replace(/(^.)|(-[a-z])/g, (group) => group.toUpperCase().replace('-', ''));
+      new EventDLQConstruct(this, `${name}`, `${name}Alarm`, prop);
     }
   }
 }

@@ -135,6 +135,19 @@ function applyNagSuppression(stackId: string, stack: Stack) {
           },
         ]
       );
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        '/SharedStack/EventDLQConstruct/DeadLetterQueue/Resource',
+        [
+          {
+            id: 'AwsSolutions-SQS3',
+            reason:
+              'it is expected that the DLQ construct has a Queue without a DLQ, because that ' +
+              'queue itself acts as the DLQ for other constructs.',
+          },
+        ],
+        true
+      );
       break;
 
     case 'PostgresManagerStack':

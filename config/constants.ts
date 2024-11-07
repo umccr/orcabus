@@ -128,6 +128,9 @@ export const dataSchemaRegistryName = 'orcabus.data';
 export const eventBusName = 'OrcaBusMain';
 export const eventSourceQueueName = 'orcabus-event-source-queue';
 
+// DLQs for stateless stack functions
+export const eventDlqNameFMAnnotator = 'orcabus-event-dlq-fmannotator';
+
 /**
  * Configuration for resources created in TokenServiceStack
  */

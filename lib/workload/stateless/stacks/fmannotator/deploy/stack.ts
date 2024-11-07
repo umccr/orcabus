@@ -1,4 +1,4 @@
-import { aws_events_targets as targets, Duration, Stack, StackProps } from 'aws-cdk-lib';
+import { Arn, aws_events_targets as targets, Duration, Stack, StackProps } from 'aws-cdk-lib';
 import {
   ISecurityGroup,
   IVpc,
@@ -15,6 +15,7 @@ import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { NamedLambdaRole } from '../../../../components/named-lambda-role';
 import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
+import { IQueue, Queue } from 'aws-cdk-lib/aws-sqs';
 
 /**
  * Config for the FM annotator.
@@ -22,6 +23,7 @@ import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 export type FMAnnotatorConfig = {
   vpcProps: VpcLookupOptions;
   eventBusName: string;
+  eventDLQName: string;
   jwtSecretName: string;
 };
 
@@ -45,6 +47,7 @@ export class FMAnnotator extends Stack {
   private readonly securityGroup: ISecurityGroup;
   private readonly eventBus: IEventBus;
   private readonly role: Role;
+  private readonly dlq: IQueue;
 
   constructor(scope: Construct, id: string, props: FMAnnotatorProps) {
     super(scope, id, props);
@@ -65,6 +68,18 @@ export class FMAnnotator extends Stack {
     // Need access to secrets to fetch FM JWT token.
     tokenSecret.grantRead(this.role);
 
+    this.dlq = Queue.fromQueueArn(
+      this,
+      'FilemanagerQueue',
+      Arn.format(
+        {
+          resource: props.eventDLQName,
+          service: 'sqs',
+        },
+        this
+      )
+    );
+
     const entry = path.join(__dirname, '..', 'cmd', 'portalrunid');
     const fn = new GoFunction(this, 'handler', {
       entry,
@@ -80,6 +95,8 @@ export class FMAnnotator extends Stack {
       vpc: this.vpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [this.securityGroup],
+      deadLetterQueue: this.dlq,
+      deadLetterQueueEnabled: true,
     });
 
     const eventRule = new Rule(this, 'EventRule', {
