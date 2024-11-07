@@ -14,6 +14,10 @@ def handler(event, context):
     try:
 
         if auth_token:
+            
+            if auth_token.lower().startswith("bearer "):
+                auth_token = auth_token.split(" ")[1]
+            
             avp_response = client.is_authorized_with_token(
                 policyStoreId=os.environ.get("POLICY_STORE_ID"),
                 identityToken=auth_token,
