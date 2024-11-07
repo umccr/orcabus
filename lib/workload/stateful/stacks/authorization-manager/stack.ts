@@ -110,7 +110,7 @@ export class AuthorizationManagerStack extends Stack {
     policyStoreARN: string;
     authStackHttpLambdaAuthorizerParameterName: string;
   }) {
-    const lambdaAuth = new PythonFunction(this, 'HTTPAuthorizerLambda', {
+    const lambdaAuth = new PythonFunction(this, 'HTTPLambdaAuthorizer', {
       entry: path.join(__dirname, 'http-lambda-authorizer'),
       architecture: Architecture.ARM_64,
       runtime: Runtime.PYTHON_3_12,
@@ -125,7 +125,7 @@ export class AuthorizationManagerStack extends Stack {
       ],
     });
 
-    new StringParameter(this, 'HTTPAuthorizerLambdaARNParameter', {
+    new StringParameter(this, 'HTTPLambdaAuthorizerARNParameter', {
       parameterName: props.authStackHttpLambdaAuthorizerParameterName,
       description:
         'ARN of the HTTP lambda authorizer that allow access defined in Amazon Verified Permission',

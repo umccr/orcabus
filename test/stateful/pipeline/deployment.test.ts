@@ -73,7 +73,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
         // pragma: allowlist nextline secret
-        ['/AuthorizationManagerStack/AdminHTTPAuthorizerLambda/ServiceRole/Resource'],
+        ['/AuthorizationManagerStack/HTTPLambdaAuthorizer/ServiceRole/Resource'],
         [
           {
             id: 'AwsSolutions-IAM4',
