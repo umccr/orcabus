@@ -137,7 +137,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       );
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
-        '/SharedStack/EventDLQConstruct/DeadLetterQueue/Resource',
+        '/SharedStack/OrcabusEventDlqFmannotator/Resource',
         [
           {
             id: 'AwsSolutions-SQS3',
