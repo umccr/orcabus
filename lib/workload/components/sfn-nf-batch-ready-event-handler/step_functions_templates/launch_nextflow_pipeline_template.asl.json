@@ -165,6 +165,7 @@
               "workflowVersion.$": "$.workflow_inputs.workflowVersion",
               "workflowRunName.$": "$.workflow_inputs.workflowRunName",
               "timestamp.$": "$$.State.EnteredTime",
+              "status.$": "${__event_status__}",
               "payload": {
                 "version": "${__event_detail_version__}",
                 "data": {
