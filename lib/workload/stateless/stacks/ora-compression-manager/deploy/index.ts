@@ -248,6 +248,8 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
           )
         ),
         definitionSubstitutions: {
+          __event_bus_name__: eventBusObj.eventBusName,
+          __detail_type__: this.globals.outputCompressionDetailType,
           __merge_sizes_lambda_function_arn__: setMergeSizesLambdaObj.currentVersion.functionArn,
         },
       }
