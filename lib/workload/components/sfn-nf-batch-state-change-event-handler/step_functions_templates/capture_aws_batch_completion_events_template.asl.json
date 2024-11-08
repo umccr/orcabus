@@ -155,7 +155,7 @@
               "workflowVersion.$": "$.get_portal_run_id_from_db_step.Item.workflow_version.S",
               "workflowRunName.$": "$.get_portal_run_id_from_db_step.Item.workflow_run_name.S",
               "payload": {
-                "version": "${__payload_version__}",
+                "version": "${__service_version__}",
                 "data": {
                   "inputs.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.ready_event_inputs.S)",
                   "engineParameters.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.engine_parameters.S)",
@@ -187,7 +187,7 @@
               "workflowVersion.$": "$.get_portal_run_id_from_db_step.Item.workflow_version.S",
               "workflowRunName.$": "$.get_portal_run_id_from_db_step.Item.workflow_run_name.S",
               "payload": {
-                "version": "${__event_detail_version__}",
+                "version": "${__service_version__}",
                 "data": {
                   "inputs.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.ready_event_inputs.S)",
                   "engineParameters.$": "States.StringToJson($.get_portal_run_id_from_db_step.Item.engine_parameters.S)",
