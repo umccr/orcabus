@@ -64,7 +64,7 @@ export class UmccriseAndWtsCompleteToRnasumReadyConstruct extends Construct {
     outputSource: 'orcabus.rnasuminputeventglue',
     payloadVersion: '2024.07.23',
     workflowName: 'rnasum',
-    workflowVersion: '4.2.4',
+    workflowVersion: '1.1.5',
   };
 
   constructor(
