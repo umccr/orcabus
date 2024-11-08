@@ -24,7 +24,7 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     migrateDatabase: true,
     inventorySourceBuckets: ['filemanager-inventory-test'],
     eventSourceBuckets: [oncoanalyserBucket[stage], icav2PipelineCacheBucket[stage]],
-    fileManagerIngestRoleName: fileManagerIngestRoleName,
+    fileManagerRoleName: fileManagerIngestRoleName,
     apiGatewayCognitoProps: {
       ...cognitoApiGatewayConfig,
       corsAllowOrigins: corsAllowOrigins[stage],
