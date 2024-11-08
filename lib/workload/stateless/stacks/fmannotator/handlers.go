@@ -59,7 +59,7 @@ func PortalRunIdQueue(annotatorConfig *Config, token string) (err error) {
 		sqs.NewFromConfig(sdkConfig),
 	}
 
-	messages, err := sqsClient.GetMessages(ctx, annotatorConfig.QueueName, annotatorConfig.QueueMaxMessages, annotatorConfig.QueueWaitTimeSecs)
+	messages, err := sqsClient.GetMessages(ctx, annotatorConfig.QueueName)
 	if err != nil {
 		return err
 	}

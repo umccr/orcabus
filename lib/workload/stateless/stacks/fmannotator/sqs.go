@@ -14,12 +14,11 @@ type Sqs struct {
 }
 
 // GetMessages uses the ReceiveMessage to get messages from an SQS queue.
-func (actor Sqs) GetMessages(ctx context.Context, queueUrl string, maxMessages int32, waitTime int32) ([]workflowrunstatechange.Event, error) {
+func (actor Sqs) GetMessages(ctx context.Context, queueUrl string) ([]workflowrunstatechange.Event, error) {
 	var messages []workflowrunstatechange.Event
 	result, err := actor.SqsClient.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(queueUrl),
-		MaxNumberOfMessages: maxMessages,
-		WaitTimeSeconds:     waitTime,
+		MaxNumberOfMessages: 10,
 	})
 	if err != nil {
 		return nil, err

@@ -30,8 +30,6 @@ func TestApiBuild(t *testing.T) {
 		"http://localhost:8000",
 		"token",
 		"queue",
-		100,
-		60,
 	}
 
 	api, err := NewApiClient(&config, bytes.NewBuffer([]byte{}))

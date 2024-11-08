@@ -19,8 +19,6 @@ type Config struct {
 	FileManagerEndpoint   string `required:"true" split_words:"true"`
 	FileManagerSecretName string `required:"true" split_words:"true"`
 	QueueName             string `required:"true" split_words:"true"`
-	QueueMaxMessages      int32  `required:"true" split_words:"true"`
-	QueueWaitTimeSecs     int32  `required:"true" split_words:"true"`
 }
 
 // LoadConfig Load config from the environment.
