@@ -127,7 +127,7 @@ export class WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct extends Con
     props.eventBusObj.grantPutEventsTo(this.stateMachineObj);
 
     // Create a rule for this state machine if the addRule flag is set to true or null
-    if (props.addRule === true || (props.addRule === null && this.globals.defaultAddRule)) {
+    if (props.addRule === true || (props.addRule === undefined && this.globals.defaultAddRule)) {
       this.addRule(props);
     }
 
