@@ -2,8 +2,8 @@ import { Construct } from 'constructs';
 import { Rule } from 'aws-cdk-lib/aws-events';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { SqsQueue } from 'aws-cdk-lib/aws-events-targets';
-import { Alarm, ComparisonOperator, MathExpression } from 'aws-cdk-lib/aws-cloudwatch';
 import { ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { EventDLQConstruct } from '../event-dlq';
 
 /**
  * Properties for defining an S3 EventBridge rule.
@@ -53,22 +53,21 @@ export type EventSourceProps = {
  */
 export class EventSourceConstruct extends Construct {
   readonly queue: Queue;
-  readonly deadLetterQueue: Queue;
-  readonly alarm: Alarm;
+  readonly deadLetterQueue: EventDLQConstruct;
 
   constructor(scope: Construct, id: string, props: EventSourceProps) {
     super(scope, id);
 
-    this.deadLetterQueue = new Queue(this, 'DeadLetterQueue', {
+    this.deadLetterQueue = new EventDLQConstruct(this, 'DeadLetterQueue', 'Alarm', {
       queueName: `${props.queueName}-dlq`,
-      enforceSSL: true,
+      alarmName: 'Orcabus EventSource Alarm',
     });
     this.queue = new Queue(this, 'Queue', {
       queueName: props.queueName,
       enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount: props.maxReceiveCount,
-        queue: this.deadLetterQueue,
+        queue: this.deadLetterQueue.queue,
       },
     });
 
@@ -98,23 +97,6 @@ export class EventSourceConstruct extends Construct {
     }
 
     this.queue.grantSendMessages(new ServicePrincipal('events.amazonaws.com'));
-
-    const rateOfMessages = new MathExpression({
-      expression: 'RATE(visible + notVisible)',
-      usingMetrics: {
-        visible: this.deadLetterQueue.metricApproximateNumberOfMessagesVisible(),
-        notVisible: this.deadLetterQueue.metricApproximateNumberOfMessagesVisible(),
-      },
-    });
-
-    this.alarm = new Alarm(this, 'Alarm', {
-      metric: rateOfMessages,
-      comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
-      threshold: 0,
-      evaluationPeriods: 1,
-      alarmName: 'Orcabus EventSource Alarm',
-      alarmDescription: 'An event has been received in the dead letter queue.',
-    });
   }
 
   /**

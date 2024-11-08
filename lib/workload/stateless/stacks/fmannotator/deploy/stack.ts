@@ -1,4 +1,4 @@
-import { aws_events_targets as targets, Duration, Stack, StackProps } from 'aws-cdk-lib';
+import { Arn, aws_events_targets as targets, Duration, Stack, StackProps } from 'aws-cdk-lib';
 import {
   ISecurityGroup,
   IVpc,
@@ -12,9 +12,10 @@ import { GoFunction } from '@aws-cdk/aws-lambda-go-alpha';
 import path from 'path';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
-import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
+import { ISecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { NamedLambdaRole } from '../../../../components/named-lambda-role';
 import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
+import { IQueue, Queue } from 'aws-cdk-lib/aws-sqs';
 
 /**
  * Config for the FM annotator.
@@ -22,6 +23,7 @@ import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 export type FMAnnotatorConfig = {
   vpcProps: VpcLookupOptions;
   eventBusName: string;
+  eventDLQName: string;
   jwtSecretName: string;
 };
 
@@ -44,7 +46,7 @@ export class FMAnnotator extends Stack {
   private readonly vpc: IVpc;
   private readonly securityGroup: ISecurityGroup;
   private readonly eventBus: IEventBus;
-  private readonly role: Role;
+  private readonly dlq: IQueue;
 
   constructor(scope: Construct, id: string, props: FMAnnotatorProps) {
     super(scope, id, props);
@@ -59,27 +61,41 @@ export class FMAnnotator extends Stack {
     });
 
     const tokenSecret = Secret.fromSecretNameV2(this, 'JwtSecret', props.jwtSecretName);
+    const role = this.createRole(tokenSecret, 'Role');
 
-    this.role = new NamedLambdaRole(this, 'Role');
-    this.addAwsManagedPolicy('service-role/AWSLambdaVPCAccessExecutionRole');
-    // Need access to secrets to fetch FM JWT token.
-    tokenSecret.grantRead(this.role);
+    this.dlq = Queue.fromQueueArn(
+      this,
+      'FilemanagerQueue',
+      Arn.format(
+        {
+          resource: props.eventDLQName,
+          service: 'sqs',
+        },
+        this
+      )
+    );
 
+    const env = {
+      FMANNOTATOR_FILE_MANAGER_ENDPOINT: `https://${props.domainName}`,
+      FMANNOTATOR_FILE_MANAGER_SECRET_NAME: tokenSecret.secretName,
+      FMANNOTATOR_QUEUE_NAME: this.dlq.queueName,
+      FMANNOTATOR_QUEUE_MAX_MESSAGES: '100',
+      FMANNOTATOR_QUEUE_WAIT_TIME_SECS: '60',
+      GO_LOG: 'debug',
+    };
     const entry = path.join(__dirname, '..', 'cmd', 'portalrunid');
-    const fn = new GoFunction(this, 'handler', {
+    const fn = new GoFunction(this, 'PortalRunId', {
       entry,
-      environment: {
-        FMANNOTATOR_FILE_MANAGER_ENDPOINT: `https://${props.domainName}`,
-        FMANNOTATOR_FILE_MANAGER_SECRET_NAME: tokenSecret.secretName,
-        GO_LOG: 'debug',
-      },
+      environment: env,
       memorySize: 128,
       timeout: Duration.seconds(28),
       architecture: Architecture.ARM_64,
-      role: this.role,
+      role: role,
       vpc: this.vpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [this.securityGroup],
+      deadLetterQueue: this.dlq,
+      deadLetterQueueEnabled: true,
     });
 
     const eventRule = new Rule(this, 'EventRule', {
@@ -100,19 +116,35 @@ export class FMAnnotator extends Stack {
         ],
       },
     });
+
+    const queueRole = this.createRole(tokenSecret, 'QueueRole');
+    queueRole.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaSQSQueueExecutionRole')
+    );
+    const entryQueue = path.join(__dirname, '..', 'cmd', 'portalrunidqueue');
+    new GoFunction(this, 'PortalRunIdQueue', {
+      entry: entryQueue,
+      environment: env,
+      memorySize: 128,
+      timeout: Duration.seconds(28),
+      architecture: Architecture.ARM_64,
+      role: queueRole,
+      vpc: this.vpc,
+      vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [this.securityGroup],
+      deadLetterQueue: this.dlq,
+      deadLetterQueueEnabled: true,
+    });
   }
 
-  /**
-   * Add an AWS managed policy to the function's role.
-   */
-  addAwsManagedPolicy(policyName: string) {
-    this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName(policyName));
-  }
+  private createRole(tokenSecret: ISecret, id: string) {
+    const role = new NamedLambdaRole(this, id);
+    role.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
+    );
+    // Need access to secrets to fetch FM JWT token.
+    tokenSecret.grantRead(role);
 
-  /**
-   * Add a policy statement to this function's role.
-   */
-  addToPolicy(policyStatement: PolicyStatement) {
-    this.role.addToPolicy(policyStatement);
+    return role;
   }
 }
