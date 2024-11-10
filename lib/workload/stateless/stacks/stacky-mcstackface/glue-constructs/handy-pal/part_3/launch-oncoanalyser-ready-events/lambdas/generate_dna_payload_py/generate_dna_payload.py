@@ -89,7 +89,7 @@ def handler(event, context) -> Dict:
         "input_event_data": {
             "mode": MODE,
             "analysisType": ANALYSIS_TYPE,
-            "subjectId": subject_id,
+            "subjectId": subject_id.replace(" ", "_"),
             "tumorDnaSampleId": tumor_library_id,
             "normalDnaSampleId": normal_library_id,
             "tumorDnaBamUri": join_url_paths(dragen_somatic_output_s3_uri, tumor_library_id + "_tumor.bam"),

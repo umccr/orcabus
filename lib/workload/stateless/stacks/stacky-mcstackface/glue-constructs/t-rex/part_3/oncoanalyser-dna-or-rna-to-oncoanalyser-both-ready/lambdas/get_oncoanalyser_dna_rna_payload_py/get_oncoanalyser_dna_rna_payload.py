@@ -49,7 +49,7 @@ def handler(event, context) -> Dict:
         "input_event_data": {
             "mode": MODE,
             "analysisType": ANALYSIS_TYPE,
-            "subjectId": subject_id,
+            "subjectId": subject_id.replace(" ", "_"),
             "tumorDnaSampleId": tumor_dna_library_id,
             "normalDnaSampleId": normal_dna_library_id,
             "tumorRnaSampleId": tumor_rna_library_id,
