@@ -47,7 +47,7 @@ def handler(event, context) -> Dict:
         "input_event_data": {
             "mode": MODE,
             "analysisType": ANALYSIS_TYPE,
-            "subjectId": subject_id,
+            "subjectId": subject_id.replace(" ", "_"),
             "tumorRnaSampleId": tumor_library_id,
             "tumorRnaFastqListRows": tumor_fastq_list_rows,
         },
