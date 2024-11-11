@@ -80,7 +80,7 @@ def handler(event, context) -> Dict:
     # Get the bam uris by taking the library ids
     return {
         "input_event_data": {
-            "subjectId": subject_id,
+            "subjectId": subject_id.replace(" ", "_"),
             "tumorDnaSampleId": tumor_library_id,
             "normalDnaSampleId": normal_library_id,
             "dragenSomaticUri": dragen_somatic_output_s3_uri,

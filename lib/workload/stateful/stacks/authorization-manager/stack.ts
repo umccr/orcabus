@@ -11,7 +11,7 @@ import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 export interface AuthorizationManagerStackProps {
   cognito: CognitoConfig;
-  adminHttpLambdaAuthorizerParameterName: string;
+  authStackHttpLambdaAuthorizerParameterName: string;
 }
 
 interface CognitoConfig {
@@ -50,7 +50,7 @@ export class AuthorizationManagerStack extends Stack {
     this.setupTokenLambdaAuthorization({
       policyStoreARN: policyStore.attrArn,
       policyStoreId: policyStore.attrPolicyStoreId,
-      adminHttpLambdaAuthorizerParameterName: props.adminHttpLambdaAuthorizerParameterName,
+      authStackHttpLambdaAuthorizerParameterName: props.authStackHttpLambdaAuthorizerParameterName,
     });
   }
 
@@ -108,13 +108,13 @@ export class AuthorizationManagerStack extends Stack {
   private setupTokenLambdaAuthorization(props: {
     policyStoreId: string;
     policyStoreARN: string;
-    adminHttpLambdaAuthorizerParameterName: string;
+    authStackHttpLambdaAuthorizerParameterName: string;
   }) {
-    const adminLambdaAuth = new PythonFunction(this, 'AdminHTTPAuthorizerLambda', {
+    const lambdaAuth = new PythonFunction(this, 'HTTPLambdaAuthorizer', {
       entry: path.join(__dirname, 'http-lambda-authorizer'),
       architecture: Architecture.ARM_64,
       runtime: Runtime.PYTHON_3_12,
-      index: 'admin_access_authorizer.py',
+      index: 'http_authorizer.py',
       retryAttempts: 0,
       environment: { POLICY_STORE_ID: props.policyStoreId },
       initialPolicy: [
@@ -125,11 +125,11 @@ export class AuthorizationManagerStack extends Stack {
       ],
     });
 
-    new StringParameter(this, 'AdminHTTPAuthorizerLambdaARNParameter', {
-      parameterName: props.adminHttpLambdaAuthorizerParameterName,
+    new StringParameter(this, 'HTTPLambdaAuthorizerARNParameter', {
+      parameterName: props.authStackHttpLambdaAuthorizerParameterName,
       description:
-        'ARN of the HTTP lambda authorizer that allow access for admin in the cognito user pool group',
-      stringValue: adminLambdaAuth.functionArn,
+        'ARN of the HTTP lambda authorizer that allow access defined in Amazon Verified Permission',
+      stringValue: lambdaAuth.functionArn,
     });
   }
 }

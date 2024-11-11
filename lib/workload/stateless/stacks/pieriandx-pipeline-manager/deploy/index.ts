@@ -13,6 +13,7 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Duration } from 'aws-cdk-lib';
 import { PieriandxMonitorRunsStepFunctionStateMachineConstruct } from './constructs/pieriandx_monitor_runs_step_function';
 import { PythonLambdaLayerConstruct } from '../../../../components/python-lambda-layer';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface PierianDxPipelineManagerConfig {
   /* DynamoDB Table */
@@ -157,7 +158,7 @@ export class PieriandxPipelineManagerStack extends cdk.Stack {
         handler: 'handler',
         memorySize: 1024,
         layers: [lambdaLayerObj.lambdaLayerVersionObj],
-        timeout: Duration.seconds(20),
+        timeout: Duration.seconds(60),
         environment: icav2Envs,
       }
     );
@@ -208,6 +209,7 @@ export class PieriandxPipelineManagerStack extends cdk.Stack {
         memorySize: 1024,
         layers: [lambdaLayerObj.lambdaLayerVersionObj],
         environment: pieriandxEnvs,
+        timeout: Duration.seconds(60),
       }
     );
 
@@ -286,30 +288,40 @@ export class PieriandxPipelineManagerStack extends cdk.Stack {
       getInformaticsjobAndReportStatusLambdaObj,
     ].forEach((lambdaFunction) => {
       // Give the lambda permission to access the pieriandx apis
-      pieriandxTokenCollectionLambdaObj.latestVersion.grantInvoke(lambdaFunction);
+      // Fixme, no way to give access to only the current version
+      pieriandxTokenCollectionLambdaObj.grantInvoke(lambdaFunction.currentVersion);
+      NagSuppressions.addResourceSuppressions(
+        lambdaFunction,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              'Cannot get latest version of pieriandx collect access token function ($LATEST) will not work',
+          },
+        ],
+        true
+      );
     });
 
     /*
-        Give the upload lambda access to the pieriandx s3 bucket
-        */
-    // @ts-ignore
+    Give the upload lambda access to the pieriandx s3 bucket
+    */
     pieriandxS3AccessTokenSecretObj.grantRead(uploadDataToS3LambdaObj);
 
     /*
-        Give the lambdas permission to access the icav2 apis
-        */
+    Give the lambdas permission to access the icav2 apis
+    */
     [
       generatePieriandxObjectsLambdaObj,
       generateSamplesheetLambdaObj,
       uploadDataToS3LambdaObj,
     ].forEach((lambdaFunction) => {
-      // @ts-ignore
       icav2AccessTokenSecretObj.grantRead(lambdaFunction);
     });
 
     /*
-        Generate State Machines
-        */
+      Generate State Machines
+      */
 
     /* Generate case creation statemachine object */
     const pieriandxLaunchCaseCreationStateMachine =

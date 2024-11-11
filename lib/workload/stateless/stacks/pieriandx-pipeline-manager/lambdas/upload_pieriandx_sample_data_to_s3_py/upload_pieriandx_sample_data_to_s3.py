@@ -23,14 +23,21 @@ Input will look like this
 
 """
 
+# Standard imports
 from tempfile import TemporaryDirectory
 from pathlib import Path
 from urllib.parse import urlparse
 from wrapica.project_data import read_icav2_file_contents, convert_uri_to_project_data_obj
+import logging
 
+# Layer imports
 from pieriandx_pipeline_tools.utils.s3_helpers import set_s3_access_cred_env_vars, upload_file
 from pieriandx_pipeline_tools.utils.secretsmanager_helpers import set_icav2_env_vars
 from pieriandx_pipeline_tools.utils.compression_helpers import decompress_file
+
+# Logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
@@ -107,3 +114,21 @@ def handler(event, context):
 #         },
 #         None
 #     )
+
+# if __name__ == "__main__":
+#     from os import environ
+#     environ["AWS_PROFILE"] = 'umccr-production'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     environ["ICAV2_ACCESS_TOKEN_SECRET_ID"] = "ICAv2JWTKey-umccr-prod-service-production"
+#     environ['PIERIANDX_S3_ACCESS_CREDENTIALS_SECRET_ID'] = "PierianDx/S3Credentials"
+#
+#     handler(
+#         {
+#           "needs_decompression": False,
+#           "src_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/analysis/cttsov2/202411053da6481e/Results/L2401560/L2401560_MetricsOutput.tsv",
+#           "contents": None,
+#           "dest_uri": "s3://pdx-xfer/melbourne/241101_A01052_0236_BHVJNMDMXY__L2401560__V2__20241105f6bc3fb9__20241105f6bc3fb9/Data/Intensities/BaseCalls/L2401560_MetricsOutput.tsv"
+#         },
+#         None
+#     )
+#

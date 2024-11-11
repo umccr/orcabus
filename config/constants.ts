@@ -37,10 +37,10 @@ export const vpcProps: VpcLookupOptions = {
 };
 
 /**
- * The SSM Parameter Name for HTTP Lambda Authorizer ARN (admin user pool group)
+ * The SSM Parameter Name for HTTP Lambda Authorizer ARN defined in authorization stack manager
  */
-export const adminHttpLambdaAuthorizerParameterName =
-  '/orcabus/authorization-stack/admin-http-lambda-authorization-arn';
+export const authStackHttpLambdaAuthorizerParameterName =
+  '/orcabus/authorization-stack/http-lambda-authorization-arn';
 
 // upstream infra: cognito
 export const cognitoPortalAppClientIdParameterName =
@@ -127,6 +127,9 @@ export const eventSchemaRegistryName = 'orcabus.events';
 export const dataSchemaRegistryName = 'orcabus.data';
 export const eventBusName = 'OrcaBusMain';
 export const eventSourceQueueName = 'orcabus-event-source-queue';
+
+// DLQs for stateless stack functions
+export const eventDlqNameFMAnnotator = 'orcabus-event-dlq-fmannotator';
 
 /**
  * Configuration for resources created in TokenServiceStack
@@ -334,7 +337,7 @@ TN Stateless stack
 */
 
 // Deployed under dev/stg/prod
-export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 0f5575bc-6cf8-4a90-a80e-05088aae8ed7
+export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 6ce2b636-ba2f-4004-8065-f3557f286c98
 export const tnIcav2PipelineWorkflowType = 'tumor-normal';
 export const tnIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const tnIcav2ServiceVersion = '2024.07.01';
@@ -560,7 +563,7 @@ export const pieriandxDagSsmParameterPath = '/umccr/orcabus/stateful/pieriandx/d
 /*
 "s3://pdx-cgwxfer-test/melbournetest" // development
 "s3://pdx-cgwxfer-test/melbournetest" // staging
-"s3://pdx-cgwxfer/melbourne" // production
+"s3://pdx-xfer/melbourne" // production
 */
 export const pieriandxS3SequencerRunRootSsmParameterPath =
   '/umccr/orcabus/pieriandx/s3_sequencer_run_root';

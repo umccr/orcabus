@@ -78,7 +78,6 @@ export class WfmWorkflowStateChangeNfBatchStateChangeEventHandlerConstruct exten
         /* Event metadata */
         __event_bus_name__: props.eventBusObj.eventBusName,
         __event_detail_type__: this.globals.eventDetailType,
-        __event_detail_version__: this.globals.serviceVersion,
         __event_output_source__: props.internalEventSource,
         __event_status__: this.globals.eventStatus,
         __service_version__: this.globals.serviceVersion,

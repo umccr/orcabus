@@ -11,6 +11,7 @@ import {
   dbClusterIdentifier,
   dbClusterResourceIdParameterName,
   eventBusName,
+  eventDlqNameFMAnnotator,
   eventSchemaRegistryName,
   eventSourceQueueName,
   icav2ArchiveAnalysisBucket,
@@ -27,6 +28,7 @@ import {
 } from '../../lib/workload/stateful/stacks/shared/constructs/event-bus';
 import { ComputeProps } from '../../lib/workload/stateful/stacks/shared/constructs/compute';
 import { EventSourceProps } from '../../lib/workload/stateful/stacks/shared/constructs/event-source';
+import { EventDLQProps } from '../../lib/workload/stateful/stacks/shared/constructs/event-dlq';
 
 const getEventSchemaRegistryConstructProps = (): SchemaRegistryProps => {
   return {
@@ -115,6 +117,15 @@ const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
   return props;
 };
 
+const getEventDLQConstructProps = (): EventDLQProps[] => {
+  return [
+    {
+      queueName: eventDlqNameFMAnnotator,
+      alarmName: 'Orcabus FMAnnotator DLQ Alarm',
+    },
+  ];
+};
+
 const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps => {
   const baseConfig = {
     clusterIdentifier: dbClusterIdentifier,
@@ -170,5 +181,6 @@ export const getSharedStackProps = (stage: AppStage): SharedStackProps => {
     databaseProps: getDatabaseConstructProps(stage),
     computeProps: getComputeConstructProps(),
     eventSourceProps: getEventSourceConstructProps(stage),
+    eventDLQProps: getEventDLQConstructProps(),
   };
 };

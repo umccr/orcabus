@@ -130,8 +130,8 @@ def launch_redcap_raw_lambda(library_id: str) -> pd.DataFrame:
     # Rename columns
     redcap_raw_df.rename(
         columns={
-            "clinician_firstname": "requesting_physicians_first_name",
-            "clinician_lastname": "requesting_physicians_last_name",
+            "clinician_firstname": "requesting_physician_first_name",
+            "clinician_lastname": "requesting_physician_last_name",
             "libraryid": "library_id",
             "mrn": "patient_urn",
             "disease": "disease_id",
@@ -257,8 +257,8 @@ def get_and_merge_raw_and_label_data(library_id: str) -> Dict:
     redcap_raw_df = redcap_raw_df[
         [
             "disease_id",
-            "requesting_physicians_first_name",
-            "requesting_physicians_last_name",
+            "requesting_physician_first_name",
+            "requesting_physician_last_name",
             "library_id",
             "date_collected",
             "date_received",

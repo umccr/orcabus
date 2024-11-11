@@ -73,7 +73,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
         // pragma: allowlist nextline secret
-        ['/AuthorizationManagerStack/AdminHTTPAuthorizerLambda/ServiceRole/Resource'],
+        ['/AuthorizationManagerStack/HTTPLambdaAuthorizer/ServiceRole/Resource'],
         [
           {
             id: 'AwsSolutions-IAM4',
@@ -134,6 +134,19 @@ function applyNagSuppression(stackId: string, stack: Stack) {
               'https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html ',
           },
         ]
+      );
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        '/SharedStack/OrcabusEventDlqFmannotator/Resource',
+        [
+          {
+            id: 'AwsSolutions-SQS3',
+            reason:
+              'it is expected that the DLQ construct has a Queue without a DLQ, because that ' +
+              'queue itself acts as the DLQ for other constructs.',
+          },
+        ],
+        true
       );
       break;
 

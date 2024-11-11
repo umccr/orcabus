@@ -68,6 +68,7 @@ func SetupFileManager(t *testing.T) *sql.DB {
 
 	t.Setenv("FMANNOTATOR_FILE_MANAGER_ENDPOINT", fmEndpoint)
 	t.Setenv("FMANNOTATOR_FILE_MANAGER_SECRET_NAME", "secret")
+	t.Setenv("FMANNOTATOR_QUEUE_NAME", "queue")
 
 	return loadFixtures(t, databaseEndpoint)
 }

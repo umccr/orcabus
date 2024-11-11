@@ -13,6 +13,7 @@ import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { InventoryFunction } from './constructs/functions/inventory';
 import { NamedLambdaRole } from '../../../../components/named-lambda-role';
+import { Role } from 'aws-cdk-lib/aws-iam';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 
@@ -27,7 +28,7 @@ export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & 
   vpcProps: VpcLookupOptions;
   migrateDatabase?: boolean;
   securityGroupName: string;
-  fileManagerIngestRoleName: string;
+  fileManagerRoleName: string;
   apiGatewayCognitoProps: ApiGatewayConstructProps;
 };
 
@@ -63,6 +64,7 @@ export class Filemanager extends Stack {
       props.databaseClusterEndpointHostParameter
     );
 
+    const role = this.createRole(props.fileManagerRoleName);
     if (props?.migrateDatabase) {
       const migrateFunction = new MigrateFunction(this, 'MigrateFunction', {
         vpc: this.vpc,
@@ -89,27 +91,27 @@ export class Filemanager extends Stack {
       )
     );
 
-    this.createIngestFunction(props);
-    this.createInventoryFunction(props);
+    this.createIngestFunction(props, role);
+    this.createInventoryFunction(props, role);
 
-    this.domainName = this.createApiFunction(props);
+    this.domainName = this.createApiFunction(props, role);
   }
 
-  private createIngestRole(name: string) {
+  private createRole(name: string) {
     return new NamedLambdaRole(this, 'IngestFunctionRole', { name });
   }
 
   /**
    * Lambda function definitions and surrounding infrastructure.
    */
-  private createIngestFunction(props: FilemanagerProps) {
+  private createIngestFunction(props: FilemanagerProps, role: Role) {
     return new IngestFunction(this, 'IngestFunction', {
       vpc: this.vpc,
       host: this.host,
       securityGroup: this.securityGroup,
       eventSources: [this.queue],
       buckets: props.eventSourceBuckets,
-      role: this.createIngestRole(props.fileManagerIngestRoleName),
+      role,
       ...props,
     });
   }
@@ -117,25 +119,27 @@ export class Filemanager extends Stack {
   /**
    * Create the inventory function.
    */
-  private createInventoryFunction(props: FilemanagerProps) {
+  private createInventoryFunction(props: FilemanagerProps, role: Role) {
     return new InventoryFunction(this, 'InventoryFunction', {
       vpc: this.vpc,
       host: this.host,
       securityGroup: this.securityGroup,
       port: props.port,
       buckets: props.inventorySourceBuckets,
+      role,
     });
   }
 
   /**
    * Query function and API Gateway fronting the function. Returns the configured domain name.
    */
-  private createApiFunction(props: FilemanagerProps): string {
+  private createApiFunction(props: FilemanagerProps, role: Role): string {
     let apiLambda = new ApiFunction(this, 'ApiFunction', {
       vpc: this.vpc,
       host: this.host,
       securityGroup: this.securityGroup,
       buckets: [...props.eventSourceBuckets, ...props.inventorySourceBuckets],
+      role,
       ...props,
     });
 
@@ -153,14 +157,14 @@ export class Filemanager extends Stack {
     new HttpRoute(this, 'PatchHttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
-      authorizer: apiGateway.cognitoAdminGroupAuthorizer,
+      authorizer: apiGateway.authStackHttpLambdaAuthorizer,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.PATCH),
     });
 
     new HttpRoute(this, 'PostHttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
-      authorizer: apiGateway.cognitoAdminGroupAuthorizer,
+      authorizer: apiGateway.authStackHttpLambdaAuthorizer,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.POST),
     });
 

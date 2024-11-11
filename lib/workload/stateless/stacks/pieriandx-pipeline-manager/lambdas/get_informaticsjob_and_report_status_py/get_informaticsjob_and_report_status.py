@@ -200,7 +200,7 @@ def handler(event, context):
             "S": job_status
         },
         ":report_id": {
-            "S": reportjob_obj.get("id")
+            "N": reportjob_obj.get("id")
         },
         ":report_status": {
             "S": report_status

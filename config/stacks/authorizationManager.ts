@@ -4,7 +4,7 @@ import {
   region,
   accountIdAlias,
   AppStage,
-  adminHttpLambdaAuthorizerParameterName,
+  authStackHttpLambdaAuthorizerParameterName,
 } from '../constants';
 
 export const getAuthorizationManagerStackProps = (
@@ -16,6 +16,6 @@ export const getAuthorizationManagerStackProps = (
       region: region,
       accountNumber: accountIdAlias[stage],
     },
-    adminHttpLambdaAuthorizerParameterName: adminHttpLambdaAuthorizerParameterName,
+    authStackHttpLambdaAuthorizerParameterName: authStackHttpLambdaAuthorizerParameterName,
   };
 };
