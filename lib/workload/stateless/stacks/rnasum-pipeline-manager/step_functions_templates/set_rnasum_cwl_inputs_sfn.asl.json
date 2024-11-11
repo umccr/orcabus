@@ -147,7 +147,7 @@
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.get_input_parameters_from_event_step.inputs.genomesVersion",
+                  "Variable": "$.get_input_parameters_from_event_step.inputs.dataset",
                   "IsPresent": false,
                   "Comment": "Get Default Version",
                   "Next": "Set Dataset as Default (PANCAN)"
