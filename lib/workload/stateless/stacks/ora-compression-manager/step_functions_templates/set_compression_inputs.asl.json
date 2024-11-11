@@ -57,7 +57,7 @@
         "input_json": {
           "instrument_run_directory": {
             "class": "Directory",
-            "basename.$": "$.get_input_parameters_from_event.inputs.instrumentRunId",
+            "basename.$": "$.portal_run_id",
             "location.$": "$.get_input_parameters_from_event.inputs.instrumentRunDirectoryUri"
           },
           "ora_reference": {
