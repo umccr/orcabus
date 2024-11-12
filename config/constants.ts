@@ -504,9 +504,9 @@ UMCCRise Stateless stack
 */
 
 // Deployed in dev/stg/prod
-export const rnasumIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/rnasum_1.1.0_pipeline_id'; // 69362d8e-8f6f-4d87-84b5-a8c6205b7032
+export const rnasumIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/rnasum_1.1.5_pipeline_id'; // c412a2ee-5a92-465d-b619-7516da56b9bf
 export const rnasumIcav2PipelineWorkflowType = 'rnasum';
-export const rnasumIcav2PipelineWorkflowTypeVersion = '1.1.0';
+export const rnasumIcav2PipelineVersion = '1.1.5';
 export const rnasumIcav2ServiceVersion = '2024.07.01';
 export const rnasumIcav2ReadyEventSource = 'orcabus.workflowmanager';
 export const rnasumIcav2EventSource = 'orcabus.rnasum';
