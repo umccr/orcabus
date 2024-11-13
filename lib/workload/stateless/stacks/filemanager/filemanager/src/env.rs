@@ -5,9 +5,11 @@ use axum::http::header::AUTHORIZATION;
 use axum::http::Method;
 use chrono::Duration;
 use envy::from_env;
-use serde::Deserialize;
+use serde::de::Error;
+use serde::{Deserialize, Deserializer};
 use serde_with::serde_as;
-use serde_with::DurationSeconds;
+use std::result;
+use std::str::FromStr;
 use url::Url;
 
 use crate::error::Error::ConfigError;
@@ -33,17 +35,47 @@ pub struct Config {
     pub(crate) ingester_tag_name: String,
     #[serde(default, rename = "filemanager_api_links_url")]
     pub(crate) api_links_url: Option<Url>,
-    #[serde(rename = "filemanager_api_presign_limit")]
-    pub(crate) api_presign_limit: Option<u64>,
-    #[serde_as(as = "Option<DurationSeconds<i64>>")]
-    #[serde(rename = "filemanager_api_presign_expiry")]
-    pub(crate) api_presign_expiry: Option<Duration>,
+    #[serde(
+        rename = "filemanager_api_presign_limit",
+        deserialize_with = "parse_limit"
+    )]
+    pub(crate) api_presign_limit: u64,
+    #[serde(
+        rename = "filemanager_api_presign_expiry",
+        deserialize_with = "parse_expiry"
+    )]
+    pub(crate) api_presign_expiry: Duration,
     #[serde(rename = "filemanager_api_cors_allow_origins")]
     pub(crate) api_cors_allow_origins: Option<Vec<String>>,
     #[serde(rename = "filemanager_api_cors_allow_methods")]
     pub(crate) api_cors_allow_methods: Vec<String>,
     #[serde(rename = "filemanager_api_cors_allow_headers")]
     pub(crate) api_cors_allow_headers: Vec<String>,
+}
+
+/// Maximum default presigned URL size limit, 100MB.
+pub const DEFAULT_PRESIGN_LIMIT: u64 = 104857600;
+
+/// Default presigned URL expiry time, 5 minutes.
+pub const DEFAULT_PRESIGN_EXPIRY: Duration = Duration::hours(1);
+
+fn parse_limit<'de, D>(deserializer: D) -> result::Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let slice = <&[u8]>::deserialize(deserializer)?;
+    let bytes = parse_size::parse_size(slice).map_err(Error::custom)?;
+    Ok(bytes)
+}
+
+fn parse_expiry<'de, D>(deserializer: D) -> result::Result<Duration, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let str = <&str>::deserialize(deserializer)?;
+    let duration = humantime::Duration::from_str(str).map_err(Error::custom)?;
+
+    Duration::from_std(*duration).map_err(Error::custom)
 }
 
 impl Default for Config {
@@ -59,8 +91,8 @@ impl Default for Config {
             ingester_track_moves: true,
             ingester_tag_name: "ingest_id".to_string(),
             api_links_url: None,
-            api_presign_limit: None,
-            api_presign_expiry: None,
+            api_presign_limit: DEFAULT_PRESIGN_LIMIT,
+            api_presign_expiry: DEFAULT_PRESIGN_EXPIRY,
             api_cors_allow_origins: None,
             api_cors_allow_methods: vec![
                 Method::GET.to_string(),
@@ -142,12 +174,12 @@ impl Config {
     }
 
     /// Get the presigned size limit.
-    pub fn api_presign_limit(&self) -> Option<u64> {
+    pub fn api_presign_limit(&self) -> u64 {
         self.api_presign_limit
     }
 
     /// Get the presigned expiry time.
-    pub fn api_presign_expiry(&self) -> Option<Duration> {
+    pub fn api_presign_expiry(&self) -> Duration {
         self.api_presign_expiry
     }
 
@@ -225,8 +257,8 @@ mod tests {
                 ingester_track_moves: false,
                 ingester_tag_name: "tag".to_string(),
                 api_links_url: Some("https://localhost:8000".parse().unwrap()),
-                api_presign_limit: Some(123),
-                api_presign_expiry: Some(Duration::seconds(60)),
+                api_presign_limit: 123,
+                api_presign_expiry: Duration::seconds(60),
                 api_cors_allow_origins: Some(vec![
                     "localhost:8000".to_string(),
                     "127.0.0.1".to_string()

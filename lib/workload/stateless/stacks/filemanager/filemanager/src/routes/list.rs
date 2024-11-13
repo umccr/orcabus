@@ -557,7 +557,7 @@ pub(crate) mod tests {
         );
 
         let config = Config {
-            api_presign_limit: Some(2),
+            api_presign_limit: 2,
             ..Default::default()
         };
         let state = AppState::from_pool(pool)

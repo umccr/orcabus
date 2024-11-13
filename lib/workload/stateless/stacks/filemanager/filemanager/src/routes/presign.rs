@@ -1,7 +1,6 @@
 //! Logic for the presigned url route.
 //!
 
-use chrono::Duration;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
@@ -52,12 +51,6 @@ pub enum ContentDisposition {
     Attachment,
 }
 
-/// Maximum default presigned URL size limit, 20MB.
-pub const DEFAULT_PRESIGN_LIMIT: u64 = 20971520;
-
-/// Default presigned URL expiry time, 5 minutes.
-pub const DEFAULT_PRESIGN_EXPIRY: Duration = Duration::minutes(5);
-
 /// A builder for presigned urls.
 pub struct PresignedUrlBuilder<'a> {
     s3_client: &'a s3::Client,
@@ -93,11 +86,7 @@ impl<'a> PresignedUrlBuilder<'a> {
         response_content_encoding: Option<String>,
     ) -> Result<Option<Url>> {
         let limit = if let Some(size) = self.object_size {
-            u64::try_from(size).unwrap_or_default()
-                <= self
-                    .config
-                    .api_presign_limit()
-                    .unwrap_or(DEFAULT_PRESIGN_LIMIT)
+            u64::try_from(size).unwrap_or_default() <= self.config.api_presign_limit()
         } else {
             true
         };
@@ -119,9 +108,7 @@ impl<'a> PresignedUrlBuilder<'a> {
                         response_content_type,
                         response_content_encoding,
                     ),
-                    self.config
-                        .api_presign_expiry()
-                        .unwrap_or(DEFAULT_PRESIGN_EXPIRY),
+                    self.config.api_presign_expiry(),
                 )
                 .await
                 .map_err(|err| PresignedUrlError(err.into_service_error().to_string()))?;
@@ -163,6 +150,7 @@ impl<'a> PresignedUrlBuilder<'a> {
 #[cfg(test)]
 pub(crate) mod tests {
     use aws_smithy_mocks_experimental::{mock_client, RuleMode};
+    use chrono::Duration;
 
     use crate::clients::aws::s3;
     use crate::env::Config;
@@ -284,7 +272,7 @@ pub(crate) mod tests {
             &[&mock_get_object("0", "1", b""),]
         ));
         let config = Config {
-            api_presign_limit: Some(1),
+            api_presign_limit: 1,
             ..Default::default()
         };
 
@@ -312,7 +300,7 @@ pub(crate) mod tests {
             &[&mock_get_object("0", "1", b""),]
         ));
         let config = Config {
-            api_presign_expiry: Some(Duration::seconds(500)),
+            api_presign_expiry: Duration::seconds(500),
             ..Default::default()
         };
 
