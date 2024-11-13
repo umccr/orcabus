@@ -187,7 +187,7 @@ pub(crate) mod tests {
             .unwrap();
 
         let query = url.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=3600"));
+        assert!(query.contains("X-Amz-Expires=43200"));
         assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(url.path(), "/1/0");
 
@@ -206,7 +206,7 @@ pub(crate) mod tests {
             .unwrap();
 
         let query = url.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=3600"));
+        assert!(query.contains("X-Amz-Expires=43200"));
         assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(url.path(), "/1/0");
     }
@@ -263,7 +263,7 @@ pub(crate) mod tests {
             .unwrap();
 
         let query = url.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=3600"));
+        assert!(query.contains("X-Amz-Expires=43200"));
         assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%220%22"));
         assert_eq!(url.path(), "/1/0");
     }
@@ -329,7 +329,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn assert_presigned_params(query: &str, content_disposition: &str) {
-        assert!(query.contains("X-Amz-Expires=3600"));
+        assert!(query.contains("X-Amz-Expires=43200"));
         assert!(query.contains(&format!(
             "response-content-disposition={content_disposition}"
         )));

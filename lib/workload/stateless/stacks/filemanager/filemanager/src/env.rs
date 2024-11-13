@@ -53,8 +53,8 @@ pub struct Config {
     pub(crate) api_cors_allow_headers: Vec<String>,
 }
 
-/// Default presigned URL expiry time, 5 minutes.
-pub const DEFAULT_PRESIGN_EXPIRY: Duration = Duration::hours(1);
+/// Default presigned URL expiry time, 12 hours.
+pub const DEFAULT_PRESIGN_EXPIRY: Duration = Duration::hours(12);
 
 fn parse_limit<'de, D>(deserializer: D) -> result::Result<Option<u64>, D::Error>
 where
