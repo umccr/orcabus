@@ -85,13 +85,17 @@ impl<'a> PresignedUrlBuilder<'a> {
         response_content_type: Option<String>,
         response_content_encoding: Option<String>,
     ) -> Result<Option<Url>> {
-        let limit = if let Some(size) = self.object_size {
-            u64::try_from(size).unwrap_or_default() <= self.config.api_presign_limit()
+        let less_than_limit = if let Some(size) = self.object_size {
+            if let Some(limit) = self.config.api_presign_limit() {
+                u64::try_from(size).unwrap_or_default() <= limit
+            } else {
+                true
+            }
         } else {
             true
         };
 
-        if limit {
+        if less_than_limit {
             let content_disposition = match response_content_disposition {
                 ContentDisposition::Inline => "inline",
                 ContentDisposition::Attachment => &format!("attachment; filename=\"{key}\""),
@@ -183,7 +187,7 @@ pub(crate) mod tests {
             .unwrap();
 
         let query = url.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("X-Amz-Expires=3600"));
         assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(url.path(), "/1/0");
 
@@ -202,7 +206,7 @@ pub(crate) mod tests {
             .unwrap();
 
         let query = url.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("X-Amz-Expires=3600"));
         assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(url.path(), "/1/0");
     }
@@ -272,7 +276,7 @@ pub(crate) mod tests {
             &[&mock_get_object("0", "1", b""),]
         ));
         let config = Config {
-            api_presign_limit: 1,
+            api_presign_limit: Some(1),
             ..Default::default()
         };
 
@@ -325,7 +329,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn assert_presigned_params(query: &str, content_disposition: &str) {
-        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("X-Amz-Expires=3600"));
         assert!(query.contains(&format!(
             "response-content-disposition={content_disposition}"
         )));

@@ -39,7 +39,7 @@ pub struct Config {
         rename = "filemanager_api_presign_limit",
         deserialize_with = "parse_limit"
     )]
-    pub(crate) api_presign_limit: u64,
+    pub(crate) api_presign_limit: Option<u64>,
     #[serde(
         rename = "filemanager_api_presign_expiry",
         deserialize_with = "parse_expiry"
@@ -53,27 +53,25 @@ pub struct Config {
     pub(crate) api_cors_allow_headers: Vec<String>,
 }
 
-/// Maximum default presigned URL size limit, 100MB.
-pub const DEFAULT_PRESIGN_LIMIT: u64 = 104857600;
-
 /// Default presigned URL expiry time, 5 minutes.
 pub const DEFAULT_PRESIGN_EXPIRY: Duration = Duration::hours(1);
 
-fn parse_limit<'de, D>(deserializer: D) -> result::Result<u64, D::Error>
+fn parse_limit<'de, D>(deserializer: D) -> result::Result<Option<u64>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let slice = <&[u8]>::deserialize(deserializer)?;
-    let bytes = parse_size::parse_size(slice).map_err(Error::custom)?;
-    Ok(bytes)
+    <Option<String>>::deserialize(deserializer)?
+        .map(parse_size::parse_size)
+        .transpose()
+        .map_err(Error::custom)
 }
 
 fn parse_expiry<'de, D>(deserializer: D) -> result::Result<Duration, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let str = <&str>::deserialize(deserializer)?;
-    let duration = humantime::Duration::from_str(str).map_err(Error::custom)?;
+    let str = String::deserialize(deserializer)?;
+    let duration = humantime::Duration::from_str(&str).map_err(Error::custom)?;
 
     Duration::from_std(*duration).map_err(Error::custom)
 }
@@ -91,7 +89,7 @@ impl Default for Config {
             ingester_track_moves: true,
             ingester_tag_name: "ingest_id".to_string(),
             api_links_url: None,
-            api_presign_limit: DEFAULT_PRESIGN_LIMIT,
+            api_presign_limit: None,
             api_presign_expiry: DEFAULT_PRESIGN_EXPIRY,
             api_cors_allow_origins: None,
             api_cors_allow_methods: vec![
@@ -174,7 +172,7 @@ impl Config {
     }
 
     /// Get the presigned size limit.
-    pub fn api_presign_limit(&self) -> u64 {
+    pub fn api_presign_limit(&self) -> Option<u64> {
         self.api_presign_limit
     }
 
@@ -230,8 +228,8 @@ mod tests {
             ("FILEMANAGER_INGESTER_TRACK_MOVES", "false"),
             ("FILEMANAGER_INGESTER_TAG_NAME", "tag"),
             ("FILEMANAGER_API_LINKS_URL", "https://localhost:8000"),
-            ("FILEMANAGER_API_PRESIGN_LIMIT", "123"),
-            ("FILEMANAGER_API_PRESIGN_EXPIRY", "60"),
+            ("FILEMANAGER_API_PRESIGN_LIMIT", "1 MB"),
+            ("FILEMANAGER_API_PRESIGN_EXPIRY", "12 hours"),
             (
                 "FILEMANAGER_API_CORS_ALLOW_ORIGINS",
                 "localhost:8000,127.0.0.1",
@@ -257,8 +255,8 @@ mod tests {
                 ingester_track_moves: false,
                 ingester_tag_name: "tag".to_string(),
                 api_links_url: Some("https://localhost:8000".parse().unwrap()),
-                api_presign_limit: 123,
-                api_presign_expiry: Duration::seconds(60),
+                api_presign_limit: Some(1000000),
+                api_presign_expiry: Duration::hours(12),
                 api_cors_allow_origins: Some(vec![
                     "localhost:8000".to_string(),
                     "127.0.0.1".to_string()

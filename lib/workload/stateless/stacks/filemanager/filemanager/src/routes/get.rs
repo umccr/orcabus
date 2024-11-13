@@ -253,7 +253,7 @@ mod tests {
         );
 
         let config = Config {
-            api_presign_limit: 1,
+            api_presign_limit: Some(1),
             ..Default::default()
         };
         let state = AppState::from_pool(pool)
