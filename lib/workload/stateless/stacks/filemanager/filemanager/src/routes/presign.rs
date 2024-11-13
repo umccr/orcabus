@@ -263,7 +263,7 @@ pub(crate) mod tests {
             .unwrap();
 
         let query = url.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=300"));
+        assert!(query.contains("X-Amz-Expires=3600"));
         assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%220%22"));
         assert_eq!(url.path(), "/1/0");
     }

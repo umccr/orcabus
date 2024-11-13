@@ -20,6 +20,7 @@ export class ApiFunction extends fn.Function {
         // See https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/lambda-http#integration-with-api-gateway-stages
         // for more info.
         AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH: 'true',
+        FILEMANAGER_API_PRESIGN_EXPIRY: '12 hours',
         ...props.environment,
       },
       ...props,
