@@ -6,7 +6,7 @@ import {
   rnasumIcav2PipelineIdSSMParameterPath,
   rnasumIcav2PipelineManagerDynamodbTableName,
   rnasumIcav2PipelineWorkflowType,
-  rnasumIcav2PipelineWorkflowTypeVersion,
+  rnasumIcav2PipelineVersion,
   rnasumIcav2ServiceVersion,
   rnasumIcav2ReadyEventSource,
   rnasumIcav2EventSource,
@@ -43,7 +43,7 @@ export const getRnasumIcav2PipelineManagerStackProps = (
     icaEventPipeName: `${icaEventPipeStackName}Pipe`,
     /* Event handling */
     workflowType: rnasumIcav2PipelineWorkflowType,
-    workflowVersion: rnasumIcav2PipelineWorkflowTypeVersion,
+    workflowVersion: rnasumIcav2PipelineVersion,
     serviceVersion: rnasumIcav2ServiceVersion,
     triggerLaunchSource: rnasumIcav2ReadyEventSource,
     internalEventSource: rnasumIcav2EventSource,
