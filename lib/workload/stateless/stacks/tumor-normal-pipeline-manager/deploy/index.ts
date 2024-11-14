@@ -20,6 +20,7 @@ export interface TnIcav2PipelineManagerConfig {
   icav2TokenSecretId: string; // "/icav2/umccr-prod/service-production-jwt-token-secret-arn"
   pipelineIdSsmPath: string; // List of parameters the workflow session state machine will need access to
   referenceUriSsmPath: string; // "/icav2/umccr-prod/reference-genome-uri"
+  oraReferenceUriSsmPath: string; // "/icav2/umccr-prod/ora-reference-uri-ssm-path"
   defaultReferenceVersion: string;
   /* Table to store analyis metadata */
   dynamodbTableName: string;
@@ -79,6 +80,11 @@ export class TnIcav2PipelineManagerStack extends cdk.Stack {
       props.referenceUriSsmPath,
       props.referenceUriSsmPath
     );
+    const oraReferenceSsmObj = ssm.StringParameter.fromStringParameterName(
+      this,
+      props.oraReferenceUriSsmPath,
+      props.oraReferenceUriSsmPath
+    );
 
     // Get event bus object
     this.eventBusObj = events.EventBus.fromEventBusName(this, 'event_bus', props.eventBusName);
@@ -107,6 +113,19 @@ export class TnIcav2PipelineManagerStack extends cdk.Stack {
         timeout: Duration.seconds(60),
       }
     );
+    const addOraReferenceLambdaObj = new PythonFunction(
+      this,
+      'add_ora_reference_lambda_python_function',
+      {
+        entry: path.join(__dirname, '../lambdas/add_ora_reference_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'add_ora_reference.py',
+        handler: 'handler',
+        memorySize: 1024,
+        timeout: Duration.seconds(60),
+      }
+    );
 
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
     const configureInputsSfn = new sfn.StateMachine(
@@ -124,6 +143,7 @@ export class TnIcav2PipelineManagerStack extends cdk.Stack {
           __table_name__: this.dynamodbTableObj.tableName,
           /* SSM Parameters */
           __reference_version_uri_ssm_parameter_name__: referenceSsmObj.parameterName,
+          __ora_reference_uri_ssm_parameter_path__: oraReferenceSsmObj.parameterName,
           __default_reference_version__: props.defaultReferenceVersion,
           // We collect the reference version AND the pipeline versions
           /* Lambdas */
@@ -131,6 +151,8 @@ export class TnIcav2PipelineManagerStack extends cdk.Stack {
             convertFastqListRowsToCwlInputObjectsLambdaObj.currentVersion.functionArn,
           __get_boolean_parameters_lambda_function_arn__:
             getBooleanParametersFromEventInputLambdaObj.currentVersion.functionArn,
+          __add_ora_reference_lambda_function_arn__:
+            addOraReferenceLambdaObj.currentVersion.functionArn,
         },
       }
     );
@@ -139,6 +161,7 @@ export class TnIcav2PipelineManagerStack extends cdk.Stack {
     [
       convertFastqListRowsToCwlInputObjectsLambdaObj,
       getBooleanParametersFromEventInputLambdaObj,
+      addOraReferenceLambdaObj,
     ].forEach((lambdaObj) => {
       lambdaObj.currentVersion.grantInvoke(configureInputsSfn);
     });
@@ -147,7 +170,9 @@ export class TnIcav2PipelineManagerStack extends cdk.Stack {
     this.dynamodbTableObj.grantReadWriteData(configureInputsSfn);
 
     // Allow state machine to read ssm parameters
-    referenceSsmObj.grantRead(configureInputsSfn);
+    [referenceSsmObj, oraReferenceSsmObj].forEach((ssmObj) => {
+      ssmObj.grantRead(configureInputsSfn);
+    });
 
     /*
     Part 2: Configure the lambdas and outputs step function
