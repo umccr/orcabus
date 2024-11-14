@@ -4,6 +4,7 @@ import {
   icaEventPipeStackName,
   icav2AccessTokenSecretName,
   dragenIcav2ReferenceUriMappingSSMParameterPath,
+  dragenIcav2OraReferenceUriSSMParameterPath,
   tnIcav2PipelineIdSSMParameterPath,
   tnIcav2PipelineManagerDynamodbTableName,
   tnIcav2PipelineWorkflowType,
@@ -54,5 +55,6 @@ export const getTnIcav2PipelineManagerStackProps = (
     /* SSM Workflow Parameters */
     defaultReferenceVersion: tnDefaultReferenceVersion,
     referenceUriSsmPath: dragenIcav2ReferenceUriMappingSSMParameterPath,
+    oraReferenceUriSsmPath: dragenIcav2OraReferenceUriSSMParameterPath,
   };
 };

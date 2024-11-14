@@ -41,7 +41,7 @@
                     }
                   ],
                   "Comment": "Fastq List Row Inputs",
-                  "Next": "Convert Fastq List Rows To CWL Input Objects (Tumor and Normal)"
+                  "Next": "Handle FQLR"
                 },
                 {
                   "And": [
@@ -74,58 +74,105 @@
               ],
               "Default": "Fail"
             },
-            "Fail": {
-              "Type": "Fail",
-              "Comment": "Not one of fastqListRows, bamInput or cramInput were defined"
-            },
-            "Convert Fastq List Rows To CWL Input Objects (Tumor and Normal)": {
+            "Handle FQLR": {
               "Type": "Parallel",
               "Branches": [
                 {
-                  "StartAt": "Convert Fastq List Rows to CWL Input Objects (Tumor)",
+                  "StartAt": "Convert Fastq List Rows To CWL Input Objects (Tumor and Normal)",
                   "States": {
-                    "Convert Fastq List Rows to CWL Input Objects (Tumor)": {
-                      "Type": "Task",
-                      "Resource": "arn:aws:states:::lambda:invoke",
-                      "Parameters": {
-                        "FunctionName": "${__convert_fastq_list_rows_lambda_function_arn__}",
-                        "Payload": {
-                          "fastq_list_rows.$": "$.get_input_parameters_from_event_step.inputs.tumorFastqListRows"
-                        }
-                      },
-                      "Retry": [
+                    "Convert Fastq List Rows To CWL Input Objects (Tumor and Normal)": {
+                      "Type": "Parallel",
+                      "Branches": [
                         {
-                          "ErrorEquals": [
-                            "Lambda.ServiceException",
-                            "Lambda.AWSLambdaException",
-                            "Lambda.SdkClientException",
-                            "Lambda.TooManyRequestsException",
-                            "States.TaskFailed"
-                          ],
-                          "IntervalSeconds": 60,
-                          "MaxAttempts": 3,
-                          "BackoffRate": 2
+                          "StartAt": "Convert Fastq List Rows to CWL Input Objects (Tumor)",
+                          "States": {
+                            "Convert Fastq List Rows to CWL Input Objects (Tumor)": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "FunctionName": "${__convert_fastq_list_rows_lambda_function_arn__}",
+                                "Payload": {
+                                  "fastq_list_rows.$": "$.get_input_parameters_from_event_step.inputs.tumorFastqListRows"
+                                }
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException",
+                                    "States.TaskFailed"
+                                  ],
+                                  "IntervalSeconds": 60,
+                                  "MaxAttempts": 3,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "End": true,
+                              "ResultSelector": {
+                                "fastq_list_rows.$": "$.Payload.fastq_list_rows"
+                              },
+                              "ResultPath": "$.convert_tumor_fastq_list_rows_to_cwl_input_objects_step"
+                            }
+                          }
+                        },
+                        {
+                          "StartAt": "Convert Fastq List Rows to CWL Input Objects (Normal)",
+                          "States": {
+                            "Convert Fastq List Rows to CWL Input Objects (Normal)": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload": {
+                                  "fastq_list_rows.$": "$.get_input_parameters_from_event_step.inputs.fastqListRows"
+                                },
+                                "FunctionName": "${__convert_fastq_list_rows_lambda_function_arn__}"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException",
+                                    "States.TaskFailed"
+                                  ],
+                                  "IntervalSeconds": 60,
+                                  "MaxAttempts": 3,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.convert_fastq_list_rows_to_cwl_input_objects_step",
+                              "ResultSelector": {
+                                "fastq_list_rows.$": "$.Payload.fastq_list_rows"
+                              },
+                              "End": true
+                            }
+                          }
                         }
                       ],
                       "End": true,
                       "ResultSelector": {
-                        "fastq_list_rows.$": "$.Payload.fastq_list_rows"
-                      },
-                      "ResultPath": "$.convert_tumor_fastq_list_rows_to_cwl_input_objects_step"
+                        "cwl_data_inputs": {
+                          "tumor_fastq_list_rows.$": "$.[0].convert_tumor_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows",
+                          "fastq_list_rows.$": "$.[1].convert_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows"
+                        }
+                      }
                     }
                   }
                 },
                 {
-                  "StartAt": "Convert Fastq List Rows to CWL Input Objects (Normal)",
+                  "StartAt": "Add ORA Reference Bool",
                   "States": {
-                    "Convert Fastq List Rows to CWL Input Objects (Normal)": {
+                    "Add ORA Reference Bool": {
                       "Type": "Task",
                       "Resource": "arn:aws:states:::lambda:invoke",
                       "Parameters": {
                         "Payload": {
-                          "fastq_list_rows.$": "$.get_input_parameters_from_event_step.inputs.fastqListRows"
+                          "event_data_input.$": "$.get_input_parameters_from_event_step.inputs"
                         },
-                        "FunctionName": "${__convert_fastq_list_rows_lambda_function_arn__}"
+                        "FunctionName": "${__add_ora_reference_lambda_function_arn__}"
                       },
                       "Retry": [
                         {
@@ -133,30 +180,74 @@
                             "Lambda.ServiceException",
                             "Lambda.AWSLambdaException",
                             "Lambda.SdkClientException",
-                            "Lambda.TooManyRequestsException",
-                            "States.TaskFailed"
+                            "Lambda.TooManyRequestsException"
                           ],
-                          "IntervalSeconds": 60,
+                          "IntervalSeconds": 1,
                           "MaxAttempts": 3,
-                          "BackoffRate": 2
+                          "BackoffRate": 2,
+                          "JitterStrategy": "FULL"
                         }
                       ],
-                      "ResultPath": "$.convert_fastq_list_rows_to_cwl_input_objects_step",
                       "ResultSelector": {
-                        "fastq_list_rows.$": "$.Payload.fastq_list_rows"
+                        "add_ora_step": "$.Payload.add_ora_step"
                       },
-                      "End": true
+                      "ResultPath": "$.add_ora_step_path",
+                      "Next": "Need Ora Reference"
+                    },
+                    "Need Ora Reference": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Variable": "$.add_ora_step_path.add_ora_step",
+                          "BooleanEquals": true,
+                          "Comment": "Needs ORA Reference Tar as Input",
+                          "Next": "Get the ORA Reference Version"
+                        }
+                      ],
+                      "Default": "Set Output to Null"
+                    },
+                    "Set Output to Null": {
+                      "Type": "Pass",
+                      "End": true,
+                      "Result": {
+                        "cwl_data_inputs": {}
+                      }
+                    },
+                    "Get the ORA Reference Version": {
+                      "Type": "Task",
+                      "Parameters": {
+                        "Name": "${__ora_reference_uri_ssm_parameter_path__}"
+                      },
+                      "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+                      "End": true,
+                      "ResultSelector": {
+                        "cwl_data_inputs": {
+                          "ora_reference_tar": {
+                            "class": "File",
+                            "location.$": "$.Parameter.Value"
+                          }
+                        }
+                      }
                     }
                   }
                 }
               ],
-              "End": true,
+              "Next": "Merge Data References",
               "ResultSelector": {
-                "cwl_data_inputs": {
-                  "tumor_fastq_list_rows.$": "$.[0].convert_tumor_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows",
-                  "fastq_list_rows.$": "$.[1].convert_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows"
-                }
+                "fastq_list_row_cwl_data_inputs.$": "$.[0].cwl_data_inputs",
+                "ora_reference_data_inputs.$": "$.[1].cwl_data_inputs"
               }
+            },
+            "Merge Data References": {
+              "Type": "Pass",
+              "End": true,
+              "Parameters": {
+                "cwl_data_inputs.$": "States.JsonMerge($.fastq_list_row_cwl_data_inputs, $.ora_reference_data_inputs, false)"
+              }
+            },
+            "Fail": {
+              "Type": "Fail",
+              "Comment": "Not one of fastqListRows, bamInput or cramInput were defined"
             },
             "Convert Bam Inputs to CWL Input Objects": {
               "Type": "Pass",
