@@ -854,7 +854,7 @@ Resources used by the ora compression pipeline
 // Pipeline ID is: ba8f618a-842f-4a2f-9b2f-a074c047221
 // deployed to dev, stg and prod
 export const oraCompressionIcav2PipelineIdSSMParameterPath =
-  '/icav2/umccr-prod/ora_compression_pipeline_id';
+  '/icav2/umccr-prod/ora_compression_pipeline_id'; // 456a1e54-acc7-44bd-a516-b1eb4e91e955
 
 // Default Reference Uri for compressing ORA files
 // Reference URI is icav2://reference-data/dragen-ora/v2/ora_reference_v2.tar.gz
