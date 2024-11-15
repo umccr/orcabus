@@ -189,7 +189,7 @@
                         }
                       ],
                       "ResultSelector": {
-                        "add_ora_step": "$.Payload.add_ora_step"
+                        "add_ora_step.$": "$.Payload.add_ora_step"
                       },
                       "ResultPath": "$.add_ora_step_path",
                       "Next": "Need Ora Reference"
