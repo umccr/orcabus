@@ -68,6 +68,64 @@
         }
       },
       "ResultPath": "$.update_entry_post_launch_step",
+      "Next": "Merge File Sizes for Fastq List Rows"
+    },
+    "Merge File Sizes for Fastq List Rows": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload": {
+          "output_dir_uri.$": "$.analysis_outputs_step.output_json.instrumentRunOraOutputUri"
+        },
+        "FunctionName": "${__merge_file_sizes_for_fastq_list_rows_lambda_function_arn__}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "ResultSelector": {
+        "fastq_list_events_map.$": "$.Payload"
+      },
+      "ResultPath": "$.merge_file_sizes_step",
+      "Next": "Validate Fastq Outputs"
+    },
+    "Validate Fastq Outputs": {
+      "Type": "Map",
+      "ItemsPath": "$.merge_file_sizes_step.fastq_list_events_map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Step Functions StartExecution",
+        "States": {
+          "Step Functions StartExecution": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::states:startExecution.sync:2",
+            "Parameters": {
+              "StateMachineArn": "${__ora_validation_sfn_arn__}",
+              "Input": {
+                "read1OraFileUri.$": "$.read1FileUri",
+                "read2OraFileUri.$": "$.read2FileUri",
+                "read1RawMd5sum.$": "$.read1FileRawMd5sum",
+                "read2RawMd5sum.$": "$.read2FileRawMd5sum",
+                "validationOnly": true
+              }
+            },
+            "End": true
+          }
+        }
+      },
       "Next": "Wait 1 Second (Post-update)"
     },
     "Wait 1 Second (Post-update)": {

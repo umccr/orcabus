@@ -34,6 +34,8 @@ import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
 import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../components/sfn-icav2-ready-event-handler';
 import { Icav2AnalysisEventHandlerConstruct } from '../../../../components/sfn-icav2-state-change-event-handler';
+import { OraDecompressionConstruct } from '../../../../components/ora-file-decompression-fq-pair-sfn';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 export interface OraCompressionIcav2PipelineManagerConfig {
   /*
@@ -154,8 +156,31 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       }
     );
 
+    // Generate the merge file sizes lambda (used by both the outputs json and the fastq list row compression events)
+    const setMergeSizesLambdaObj = new PythonFunction(this, 'set_merge_sizes_lambda_obj', {
+      runtime: Runtime.PYTHON_3_12,
+      entry: path.join(__dirname, '../lambdas/merge_file_sizes_for_fastq_list_rows_py'),
+      architecture: Architecture.ARM_64,
+      handler: 'handler',
+      index: 'merge_file_sizes_for_fastq_list_rows.py',
+      environment: {
+        ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
+      },
+      timeout: Duration.seconds(120),
+      memorySize: 1024,
+    });
+
+    // Give the lambda function access to the secret
+    icav2AccessTokenSecretObj.grantRead(setMergeSizesLambdaObj.currentVersion);
+
     // Give the lambda function access to the secret
     icav2AccessTokenSecretObj.grantRead(setOutputsJsonLambdaFunctionObj.currentVersion);
+
+    // Generate an ora decompression construct
+    const oraDecompressionSfn = new OraDecompressionConstruct(this, 'ora_decompression', {
+      sfnPrefix: props.stateMachinePrefix,
+      icav2AccessTokenSecretId: icav2AccessTokenSecretObj.secretName,
+    }).sfnObject;
 
     // Generate outputs
     const configureOutputsSfn = new sfn.StateMachine(this, 'configure_outputs_sfn', {
@@ -167,6 +192,9 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
         __table_name__: dynamodbTableObj.tableName,
         __set_outputs_json_lambda_function_arn__:
           setOutputsJsonLambdaFunctionObj.currentVersion.functionArn,
+        __merge_file_sizes_for_fastq_list_rows_lambda_function_arn__:
+          setMergeSizesLambdaObj.currentVersion.functionArn,
+        __ora_validation_sfn_arn__: oraDecompressionSfn.stateMachineArn,
       },
     });
 
@@ -174,7 +202,24 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
     dynamodbTableObj.grantReadWriteData(configureOutputsSfn);
 
     // Configure step function invoke access to the lambda function
-    setOutputsJsonLambdaFunctionObj.currentVersion.grantInvoke(configureOutputsSfn);
+    [setMergeSizesLambdaObj, setOutputsJsonLambdaFunctionObj].forEach((lambda_obj) => {
+      lambda_obj.currentVersion.grantInvoke(configureOutputsSfn);
+    });
+
+    /* Allow step function to call nested state machine */
+    // Because we run a nested state machine, we need to add the permissions to the state machine role
+    // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
+    configureOutputsSfn.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
+        ],
+        actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
+      })
+    );
+
+    // Configure step function invoke access to the ora decompression sfn
+    oraDecompressionSfn.grantStartExecution(configureOutputsSfn);
 
     // Generate state machine for handling the 'READY' event
     const handleWfmReadyEventSfn = new WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct(
@@ -216,26 +261,11 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       }
     ).stateMachineObj;
 
-    // Generate the state machine for generating the fastq list row compression events
-    // First need the lambda
-    const setMergeSizesLambdaObj = new PythonFunction(this, 'set_merge_sizes_lambda_obj', {
-      runtime: Runtime.PYTHON_3_12,
-      entry: path.join(__dirname, '../lambdas/merge_file_sizes_for_fastq_list_rows_py'),
-      architecture: Architecture.ARM_64,
-      handler: 'handler',
-      index: 'merge_file_sizes_for_fastq_list_rows.py',
-      environment: {
-        ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
-      },
-      timeout: Duration.seconds(120),
-      memorySize: 1024,
-    });
-    // Give the lambda function access to the secret
-    icav2AccessTokenSecretObj.grantRead(setMergeSizesLambdaObj.currentVersion);
-
     /*
     Part 3 - add on service to collect outputs from the succeeded v2 workflow and generate the fastq list row compression events
     */
+
+    // Generate the state machine for generating the fastq list row compression events
     const generateFastqListRowCompressionEventsSfn = new sfn.StateMachine(
       this,
       'generate_fastq_list_row_compression_events_sfn',
