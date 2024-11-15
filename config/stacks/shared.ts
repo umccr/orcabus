@@ -15,6 +15,7 @@ import {
   eventSchemaRegistryName,
   eventSourceQueueName,
   icav2ArchiveAnalysisBucket,
+  icav2ArchiveFastqBucket,
   icav2PipelineCacheBucket,
   oncoanalyserBucket,
   rdsMasterSecretName,
@@ -110,6 +111,10 @@ const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
   if (stage === AppStage.PROD) {
     props.rules.push({
       bucket: icav2ArchiveAnalysisBucket[stage],
+      eventTypes: ['Object Created', 'Object Deleted'],
+    });
+    props.rules.push({
+      bucket: icav2ArchiveFastqBucket[stage],
       eventTypes: ['Object Created', 'Object Deleted'],
     });
   }
