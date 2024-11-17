@@ -47,7 +47,7 @@ export ICAV2_ACCESS_TOKEN
 
 if [[ "${IS_VALIDATION}" == "true" ]]; then
   # Ensure that the RAW MD5SUM has been provided
-  if [[ ! -v "${RAW_MD5SUM}" ]]; then
+  if [[ ! -v RAW_MD5SUM ]]; then
     echo "RAW_MD5SUM is required for validation" 1>&2
     exit 1
   fi

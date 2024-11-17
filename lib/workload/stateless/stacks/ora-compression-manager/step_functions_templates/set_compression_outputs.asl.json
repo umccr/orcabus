@@ -73,10 +73,10 @@
     "Merge File Sizes for Fastq List Rows": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "OutputPath": "$.Payload",
       "Parameters": {
         "Payload": {
-          "output_dir_uri.$": "$.analysis_outputs_step.output_json.instrumentRunOraOutputUri"
+          "output_dir_uri.$": "$.analysis_outputs_step.output_json.instrumentRunOraOutputUri",
+          "convert_to_icav2_uri": true
         },
         "FunctionName": "${__merge_file_sizes_for_fastq_list_rows_lambda_function_arn__}"
       },

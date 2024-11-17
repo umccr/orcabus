@@ -20,13 +20,11 @@
         "ora_files_map": [
           {
             "input_uri.$": "$.read1OraFileUri",
-            "output_uri.$": "$.read1GzOutputFileUri",
-            "estimated_gz_file_size.$": "States.Format('{}', $.read1EstimatedGzFileSize)"
+            "raw_md5sum.$": "$.read1RawMd5sum"
           },
           {
             "input_uri.$": "$.read2OraFileUri",
-            "output_uri.$": "$.read2GzOutputFileUri",
-            "estimated_gz_file_size.$": "States.Format('{}', $.read2EstimatedGzFileSize)"
+            "raw_md5sum.$": "$.read2RawMd5sum"
           }
         ]
       },
@@ -39,11 +37,13 @@
         "ora_files_map": [
           {
             "input_uri.$": "$.read1OraFileUri",
-            "raw_md5sum.$": "$.read1RawMd5sum"
+            "output_uri.$": "$.read1GzOutputFileUri",
+            "estimated_gz_file_size.$": "States.Format('{}', $.read1EstimatedGzFileSize)"
           },
           {
             "input_uri.$": "$.read2OraFileUri",
-            "raw_md5sum.$": "$.read2RawMd5sum"
+            "output_uri.$": "$.read2GzOutputFileUri",
+            "estimated_gz_file_size.$": "States.Format('{}', $.read2EstimatedGzFileSize)"
           }
         ]
       },
@@ -54,7 +54,7 @@
       "ItemsPath": "$.fastq_list_row_as_map.ora_files_map",
       "ItemSelector": {
         "validation_only.$": "$.validationOnly",
-        "fastqMap.$": "$$.Map.Value"
+        "fastqMap.$": "$$.Map.Item.Value"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
