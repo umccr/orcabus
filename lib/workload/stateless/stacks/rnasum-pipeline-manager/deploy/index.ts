@@ -254,6 +254,7 @@ export class RnasumIcav2PipelineManagerStack extends cdk.Stack {
       hostnameSsmParameterObj.parameterName
     );
     rerunWithDataSet.addEnvironment('ORCABUS_TOKEN_SECRET_ID', orcabusTokenSecretObj.secretName);
+    rerunWithDataSet.addEnvironment('EVENT_BUS_NAME', this.eventBusObj.eventBusName);
 
     /* Add permissions */
     hostnameSsmParameterObj.grantRead(rerunWithDataSet);
