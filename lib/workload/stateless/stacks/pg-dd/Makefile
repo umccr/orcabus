@@ -11,3 +11,6 @@ check: lint
 
 local: install
 	@poetry run local
+
+clean:
+	rm -rf data && rm -rf .ruff_cache

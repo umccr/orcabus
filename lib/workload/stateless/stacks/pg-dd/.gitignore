@@ -1,2 +1,3 @@
 .env
 data
+.ruff_cache

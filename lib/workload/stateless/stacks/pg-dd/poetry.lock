@@ -50,6 +50,24 @@ files = [
 ]
 
 [[package]]
+name = "libumccr"
+version = "0.4.1"
+description = "UMCCR Reusable Python modules"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "libumccr-0.4.1-py3-none-any.whl", hash = "sha256:20e06ec4b99ff6d68f9e21b72da10c16e33933314e20f53abe2983d03f3a080e"},
+    {file = "libumccr-0.4.1.tar.gz", hash = "sha256:0c6963bbd164eaf799acdb8cda28ba5b5a49bf06a552978901b49802da4fc5ec"},
+]
+
+[package.extras]
+all = ["Django", "boto3", "botocore", "cachetools", "google-auth", "gspread", "gspread-pandas", "pandas", "requests"]
+aws = ["boto3", "botocore", "cachetools"]
+dev = ["build", "detect-secrets", "pdoc3", "pipdeptree", "pre-commit", "setuptools", "twine", "wheel"]
+libgdrive = ["cachetools", "google-auth", "gspread", "gspread-pandas", "pandas", "requests"]
+test = ["awscli-local", "cachetools", "flake8", "mockito", "nose2", "pytest", "pytest-cov", "tox"]
+
+[[package]]
 name = "mypy"
 version = "1.13.0"
 description = "Optional static typing for Python"
@@ -345,4 +363,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "f03df58d71fc68afa3a117ecf4609fb7315b3c6ad61f8b6bd782dd4468bb31d4"
+content-hash = "b35be5685a82a2219a11fda89d02d5868fe1f311462c6e32297961021b7a2e89"

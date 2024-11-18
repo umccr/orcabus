@@ -1,3 +1,5 @@
+import gzip
+import logging
 import os
 from typing import Dict, List, Any
 
@@ -12,11 +14,20 @@ load_dotenv()
 
 
 class PgDD:
-    def __init__(self):
+    """
+    A class to dump postgres databases to CSV files.
+    """
+
+    def __init__(self, logger=logging.getLogger(__name__)):
         self.databases = self.read_databases()
+        self.logger = logger
 
     @staticmethod
     def read_databases() -> Dict[str, Dict[str, Any]]:
+        """
+        Read the databases to dump from env variables.
+        """
+
         prefix = "PG_DD_DATABASE_"
         sql_prefix = "_SQL"
         variables = {}
@@ -38,6 +49,10 @@ class PgDD:
     def copy_tables_to_csv(
         cur: psycopg.cursor.Cursor, tables: List[str]
     ) -> Dict[str, str]:
+        """
+        Get tables as a csv string.
+        """
+
         csvs = {}
         for table in tables:
             rows = []
@@ -57,11 +72,14 @@ class PgDD:
         return csvs
 
     def csvs_for_tables(self) -> Dict[str, Dict[str, str]]:
+        """
+        Get csvs for all tables in all databases.
+        """
+
         database_url = os.getenv("PG_DD_URL")
         databases = {}
         for entry in self.databases.values():
-            url = database_url.rsplit("/", 1)[0]
-            url = f"{url}/{entry['database']}"
+            url = f"{database_url}/{entry['database']}"
 
             conn: psycopg.connection.Connection
             with psycopg.connect(url) as conn:
@@ -73,6 +91,7 @@ class PgDD:
                         """
                     )
                     tables = [name[0] for name in cur.fetchall()]
+                    self.logger.debug(f"fetched table names: {tables}")
 
                 with conn.cursor() as cur:
                     databases[entry["database"]] = self.copy_tables_to_csv(cur, tables)
@@ -81,39 +100,55 @@ class PgDD:
 
 
 class PgDDLocal(PgDD):
-    def __init__(self):
-        super().__init__()
+    """
+    Dump CSV files to a local directory.
+    """
+
+    def __init__(self, logger=logging.getLogger(__name__)):
+        super().__init__(logger=logger)
         self.out = os.getenv("PG_DD_DIR")
 
     def write_to_dir(self) -> None:
+        """
+        Write the CSV files to the output directory.
+        """
+
         for database, tables in self.csvs_for_tables().items():
             output_dir = f"{self.out}/{database}"
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
 
+            self.logger.debug(f"writing to directory: {output_dir}")
+
             for table, value in tables.items():
-                with open(f"{self.out}/{database}/{table}.csv", "w") as f:
-                    f.write(value)
+                with open(f"{self.out}/{database}/{table}.csv.gz", "wb") as f:
+                    f.write(gzip.compress(str.encode(value)))
 
 
 class PgDDS3(PgDD):
-    def __init__(self):
-        super().__init__()
+    """
+    Dump CSV files to an S3 bucket.
+    """
+
+    def __init__(self, logger=logging.getLogger(__name__)):
+        super().__init__(logger=logger)
         self.bucket = os.getenv("PG_DD_BUCKET")
         self.prefix = os.getenv("PG_DD_PREFIX")
 
     def write_to_bucket(self) -> None:
+        """
+        Write the CSV files to the S3 bucket.
+        """
+
         s3: S3ServiceResource = boto3.resource("s3")
         for database, tables in self.csvs_for_tables().items():
             for table, value in tables.items():
-                key = f"{database}/{table}.csv"
+                key = f"{database}/{table}.csv.gz"
 
                 if self.prefix:
                     key = f"{self.prefix}/{key}"
 
+                self.logger.debug(f"writing to bucket with key: {key}")
+
                 s3_object = s3.Object(self.bucket, key)
-                s3_object.put(Body=value)
-
-
-def handler():
-    PgDDS3().write_to_bucket()
+                s3_object.put(Body=gzip.compress(str.encode(value)))

@@ -11,10 +11,11 @@ python = "^3.12"
 boto3 = "^1"
 psycopg = { version = "^3", extras = ["binary"] }
 python-dotenv = "^1"
+libumccr = "^0.4"
+mypy-boto3-s3 = "^1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1"
-mypy-boto3-s3 = "^1"
 ruff = "^0.7"
 
 [build-system]
