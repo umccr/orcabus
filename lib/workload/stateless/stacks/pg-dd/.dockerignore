@@ -2,7 +2,6 @@ deploy
 .env
 .env.example
 .gitignore
-Makefile
 README.md
 data
 .ruff_cache

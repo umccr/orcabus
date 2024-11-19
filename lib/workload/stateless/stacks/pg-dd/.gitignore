@@ -1,3 +1,4 @@
 .env
 data
 .ruff_cache
+response.json

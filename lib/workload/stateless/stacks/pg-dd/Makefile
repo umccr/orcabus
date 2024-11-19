@@ -9,8 +9,8 @@ lint: install
 check: lint
 	@poetry run ruff check .
 
-local: install
-	@poetry run local
+cli: install
+	@poetry run cli
 
 clean:
 	rm -rf data && rm -rf .ruff_cache

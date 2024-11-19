@@ -90,7 +90,7 @@ export class PgDDStack extends Stack {
       index: 'pg_dd/handler.py',
       runtime: Runtime.PYTHON_3_12,
       architecture: Architecture.ARM_64,
-      timeout: Duration.minutes(15),
+      timeout: Duration.minutes(5),
       memorySize: 1024,
       vpc: this.vpc,
       vpcSubnets: {
@@ -108,6 +108,7 @@ export class PgDDStack extends Stack {
         PG_DD_DATABASE_SEQUENCE_RUN_MANAGER: 'sequence_run_manager',
         PG_DD_DATABASE_WORKFLOW_MANAGER: 'workflow_manager',
         PG_DD_DATABASE_FILEMANAGER: 'filemanager',
+        PG_DD_DATABASE_FILEMANAGER_SQL: 'select * from s3_object order by sequencer limit 10000',
         ...(props.prefix && { PG_DD_PREFIX: props.prefix }),
       },
     });

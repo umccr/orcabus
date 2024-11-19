@@ -13,6 +13,7 @@ psycopg = { version = "^3", extras = ["binary"] }
 python-dotenv = "^1"
 libumccr = "^0.4"
 mypy-boto3-s3 = "^1"
+click = "^8"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1"
@@ -23,4 +24,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-local = "pg_dd.local:main"
+cli = "pg_dd.cli:cli"
