@@ -68,17 +68,33 @@
         }
       },
       "ResultPath": "$.update_entry_post_launch_step",
-      "Next": "Merge File Sizes for Fastq List Rows"
+      "Next": "Get RGIDs from DB"
     },
-    "Merge File Sizes for Fastq List Rows": {
+    "Get RGIDs from DB": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.get_db_attributes_step.ready_event_data_inputs.tags.instrumentRunId",
+          "id_type": "${__instrument_run_id_table_partition_name__}"
+        }
+      },
+      "ResultSelector": {
+        "rgids.$": "$.Item.rgid_list.SS"
+      },
+      "ResultPath": "$.get_rgids_from_db_step",
+      "Next": "Merge fastq list csv with rgids"
+    },
+    "Merge fastq list csv with rgids": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
+        "FunctionName": "${__merge_fastq_list_csv_with_rgid_lambda_function_arn__}",
         "Payload": {
-          "output_dir_uri.$": "$.analysis_outputs_step.output_json.instrumentRunOraOutputUri",
-          "convert_to_icav2_uri": true
-        },
-        "FunctionName": "${__merge_file_sizes_for_fastq_list_rows_lambda_function_arn__}"
+          "rgids.$": "$.get_rgids_from_db_step.rgids",
+          "output_dir_uri.$": "$.analysis_outputs_step.output_json.instrumentRunOraOutputUri"
+        }
       },
       "Retry": [
         {
@@ -95,30 +111,65 @@
         }
       ],
       "ResultSelector": {
-        "fastq_list_events_map.$": "$.Payload"
+        "fastq_ora_file_ora_by_rgid.$": "$.Payload"
       },
-      "ResultPath": "$.merge_file_sizes_step",
+      "ResultPath": "$.merge_rgids_step",
       "Next": "Validate Fastq Outputs"
     },
     "Validate Fastq Outputs": {
       "Type": "Map",
-      "ItemsPath": "$.merge_file_sizes_step.fastq_list_events_map",
+      "ItemsPath": "$.merge_rgids_step.fastq_ora_file_ora_by_rgid",
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Step Functions StartExecution",
+        "StartAt": "Get Raw md5sums for rgid",
         "States": {
+          "Get Raw md5sums for rgid": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "$.rgid",
+                "id_type": "${__fastq_list_row_table_partition_name__}"
+              }
+            },
+            "ResultPath": "$.get_raw_md5sums_for_rgid_step",
+            "Next": "Update fastq list row partition with ora outputs"
+          },
+          "Update fastq list row partition with ora outputs": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:updateItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "$.rgid",
+                "id_type": "${__fastq_list_row_table_partition_name__}"
+              },
+              "UpdateExpression": "SET read1_ora_file_uri = :read1OraFileUri, read2_ora_file_uri = :read2OraFileUri",
+              "ExpressionAttributeValues": {
+                ":read1OraFileUri": {
+                  "S.$": "$.read_1_file_uri"
+                },
+                ":read2OraFileUri": {
+                  "S.$": "$.read_2_file_uri"
+                }
+              }
+            },
+            "ResultPath": null,
+            "Next": "Step Functions StartExecution"
+          },
           "Step Functions StartExecution": {
             "Type": "Task",
             "Resource": "arn:aws:states:::states:startExecution.sync:2",
             "Parameters": {
               "StateMachineArn": "${__ora_validation_sfn_arn__}",
               "Input": {
-                "read1OraFileUri.$": "$.read1FileUri",
-                "read2OraFileUri.$": "$.read2FileUri",
-                "read1RawMd5sum.$": "$.read1FileRawMd5sum",
-                "read2RawMd5sum.$": "$.read2FileRawMd5sum",
+                "read1OraFileUri.$": "$.read_1_file_uri",
+                "read2OraFileUri.$": "$.read_2_file_uri",
+                "read1RawMd5sum.$": "$.get_raw_md5sums_for_rgid_step.Item.read1_raw_md5sum.S",
+                "read2RawMd5sum.$": "$.get_raw_md5sums_for_rgid_step.Item.read2_raw_md5sum.S",
                 "validationOnly": true
               }
             },

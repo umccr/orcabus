@@ -93,7 +93,243 @@
       "Type": "Wait",
       "Seconds": 1,
       "Comment": "Wait for databases to sync before continuing",
-      "End": true
+      "Next": "Get Raw Md5sums"
+    },
+    "Get Raw Md5sums": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Get V2 Samplesheets",
+          "States": {
+            "Get V2 Samplesheets": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__get_v2_samplesheets_uri_lambda_function_arn__}",
+                "Payload": {
+                  "instrument_run_folder_uri.$": "$.get_input_parameters_from_event.inputs.instrumentRunDirectoryUri",
+                  "instrument_run_id.$": "$.get_input_parameters_from_event.inputs.instrumentRunId"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "ResultSelector": {
+                "rgid_pairs_list.$": "$.Payload"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Find Fastq Pairs",
+          "States": {
+            "Find Fastq Pairs": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__find_fastq_pairs_lambda_function_arn__}",
+                "Payload": {
+                  "instrument_run_folder_uri.$": "$.get_input_parameters_from_event.inputs.instrumentRunDirectoryUri",
+                  "instrument_run_id.$": "$.get_input_parameters_from_event.inputs.instrumentRunId"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "ResultSelector": {
+                "rgid_files_list.$": "$.Payload"
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultSelector": {
+        "rgids_in_samplesheet.$": "$.[0].rgid_pairs_list",
+        "rgids_files_list.$": "$.[1].rgid_files_list"
+      },
+      "ResultPath": "$.get_rgid_pairs",
+      "Next": "Merge on partial rgids"
+    },
+    "Merge on partial rgids": {
+      "Type": "Map",
+      "ItemsPath": "$.get_rgid_pairs.rgids_in_samplesheet",
+      "ItemSelector": {
+        "rgid_pair.$": "$$.Map.Item.Value",
+        "rgids_files_list.$": "$.get_rgid_pairs.rgids_files_list",
+        "cache_uri_prefix.$": "$.get_input_parameters_from_event.engine_parameters.cacheUri"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Get rgid files",
+        "States": {
+          "Get rgid files": {
+            "Type": "Pass",
+            "Parameters": {
+              "rgid_files_list.$": "States.ArrayGetItem($.rgids_files_list[?(@.rgid_partial == $.rgid_pair.rgid_partial)], 0)"
+            },
+            "ResultPath": "$.get_rgid_files_step",
+            "Next": "Merge JSONs"
+          },
+          "Merge JSONs": {
+            "Type": "Pass",
+            "Parameters": {
+              "fastq_pair_obj": {
+                "rgid.$": "$.rgid_pair.rgid",
+                "rgid_partial.$": "$.rgid_pair.rgid_partial",
+                "read1_file_uri.$": "$.get_rgid_files_step.rgid_files_list.read_1_file_uri",
+                "read2_file_uri.$": "$.get_rgid_files_step.rgid_files_list.read_2_file_uri"
+              }
+            },
+            "ResultPath": "$.get_fastq_pair_obj_step",
+            "Next": "Update Cache URI for rgid"
+          },
+          "Update Cache URI for rgid": {
+            "Type": "Pass",
+            "Parameters": {
+              "cache_uri.$": "States.Format('{}{}/', $.cache_uri_prefix, $.get_fastq_pair_obj_step.fastq_pair_obj.rgid)"
+            },
+            "ResultPath": "$.get_cache_uri_step",
+            "Next": "Initialise RGID"
+          },
+          "Initialise RGID": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:putItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Item": {
+                "id.$": "$.get_fastq_pair_obj_step.fastq_pair_obj.rgid",
+                "id_type": "${__fastq_list_row_table_partition_name__}",
+                "rgid_partial": {
+                  "S.$": "$.get_fastq_pair_obj_step.fastq_pair_obj.rgid_partial"
+                },
+                "read1_gz_file_uri": {
+                  "S.$": "$.get_fastq_pair_obj_step.fastq_pair_obj.read1_file_uri"
+                },
+                "read2_gz_file_uri": {
+                  "S.$": "$.get_fastq_pair_obj_step.fastq_pair_obj.read2_file_uri"
+                },
+                "cache_uri": {
+                  "S.$": "$.get_cache_uri_step.cache_uri"
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "Put Instrument Run ID Item",
+      "ResultPath": null
+    },
+    "Put Instrument Run ID Item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id.$": "$.get_input_parameters_from_event.inputs.instrumentRunId",
+          "id_type": "${__instrument_run_id_table_partition_name__}",
+          "rgid_list": {
+            "SS.$": "$.get_rgid_pairs.rgids_in_samplesheet[*].rgid"
+          }
+        }
+      },
+      "Next": "For each rgid",
+      "ResultPath": null
+    },
+    "For each rgid": {
+      "Type": "Map",
+      "ItemsPath": "$.get_rgid_pairs.rgids_in_samplesheet",
+      "ItemSelector": {
+        "rgid_pair.$": "$$.Map.Item.Value"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "DynamoDB Get Fastq RGID",
+        "States": {
+          "DynamoDB Get Fastq RGID": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "$.rgid_pair.rgid",
+                "id_type": "${__fastq_list_row_table_partition_name__}"
+              }
+            },
+            "ResultPath": "$.get_fastq_rgid_from_dynamodb_step",
+            "Next": "Get Raw MD5sum for fastq gzip pair"
+          },
+          "Get Raw MD5sum for fastq gzip pair": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::states:startExecution.sync:2",
+            "Parameters": {
+              "StateMachineArn": "${__gzip_raw_md5sum_sfn_arn__}",
+              "Input": {
+                "read1GzFileUri.$": "$.get_fastq_rgid_from_dynamodb_step.Item.read1_gz_file_uri.S",
+                "read2GzFileUri.$": "$.get_fastq_rgid_from_dynamodb_step.Item.read2_gz_file_uri.S",
+                "cacheDir.$": "$.get_fastq_rgid_from_dynamodb_step.Item.cache_uri.S"
+              }
+            },
+            "ResultSelector": {
+              "read1RawMd5sum.$": "$.Output.read1RawMd5sum",
+              "read2RawMd5sum.$": "$.Output.read2RawMd5sum"
+            },
+            "ResultPath": "$.get_raw_md5sums_step",
+            "Next": "Add raw md5sums to db"
+          },
+          "Add raw md5sums to db": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:updateItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "$.rgid_pair.rgid",
+                "id_type": "${__fastq_list_row_table_partition_name__}"
+              },
+              "UpdateExpression": "SET read1_raw_md5sum = :read1RawMd5sum, read2_raw_md5sum = :read2RawMd5sum",
+              "ExpressionAttributeValues": {
+                ":read1RawMd5sum": {
+                  "S.$": "$.get_raw_md5sums_step.read1RawMd5sum"
+                },
+                ":read2RawMd5sum": {
+                  "S.$": "$.get_raw_md5sums_step.read2RawMd5sum"
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true,
+      "ResultPath": null
     }
   }
 }

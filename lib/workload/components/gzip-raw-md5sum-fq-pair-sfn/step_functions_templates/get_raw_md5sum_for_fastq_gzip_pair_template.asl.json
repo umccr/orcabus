@@ -1,0 +1,161 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Convert Fastq List Row GZ URIs to Array",
+  "States": {
+    "Convert Fastq List Row GZ URIs to Array": {
+      "Type": "Pass",
+      "Next": "Decompress GZIP Files",
+      "Parameters": {
+        "gzip_files_map": [
+          {
+            "input_uri.$": "$.read1GzFileUri",
+            "output_uri.$": "States.Format('{}R1.md5sum.txt', $.cacheDir)"
+          },
+          {
+            "input_uri.$": "$.read2GzFileUri",
+            "output_uri.$": "States.Format('{}R2.md5sum.txt', $.cacheDir)"
+          }
+        ]
+      },
+      "ResultPath": "$.fastq_list_row_as_map"
+    },
+    "Decompress GZIP Files": {
+      "Type": "Map",
+      "ItemsPath": "$.fastq_list_row_as_map.gzip_files_map",
+      "ItemSelector": {
+        "fastqMap.$": "$$.Map.Item.Value"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Validate ORA File",
+        "States": {
+          "Validate ORA File": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::ecs:runTask.sync",
+            "Parameters": {
+              "LaunchType": "FARGATE",
+              "Cluster": "${__gzip_to_raw_md5sum_cluster_arn__}",
+              "TaskDefinition": "${__gzip_to_raw_md5sum_task_definition_arn__}",
+              "NetworkConfiguration": {
+                "AwsvpcConfiguration": {
+                  "Subnets.$": "States.StringSplit('${__subnets__}', ',')",
+                  "SecurityGroups.$": "States.Array('${__sg_group__}')"
+                }
+              },
+              "Overrides": {
+                "ContainerOverrides": [
+                  {
+                    "Name": "${__gzip_to_raw_md5sum_container_name__}",
+                    "Environment": [
+                      {
+                        "Name": "INPUT_URI",
+                        "Value.$": "$.fastqMap.input_uri"
+                      },
+                      {
+                        "Name": "ICAV2_ACCESS_TOKEN_SECRET_ID",
+                        "Value": "${__icav2_access_token_secret_id__}"
+                      },
+                      {
+                        "Name": "OUTPUT_URI",
+                        "Value.$": "$.fastqMap.output_uri"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "TimeoutSeconds": 7200,
+            "ResultPath": "$.gzip_to_raw_md5sum_step_result",
+            "Next": "Read md5sum output"
+          },
+          "Read md5sum output": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "${__read_icav2_file_contents_lambda_function_arn__}",
+              "Payload": {
+                "file_uri.$": "$.fastqMap.output_uri"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "ResultSelector": {
+              "md5sum.$": "$.Payload.file_contents"
+            },
+            "ResultPath": "$.get_md5sum_step_result",
+            "Next": "Set Task Outputs"
+          },
+          "Set Task Outputs": {
+            "Type": "Pass",
+            "Parameters": {
+              "fileUri.$": "$.fastqMap.input_uri",
+              "md5sum.$": "$.get_md5sum_step_result.md5sum"
+            },
+            "End": true
+          }
+        }
+      },
+      "ResultSelector": {
+        "read_1_file_uri.$": "$.[0].fileUri",
+        "read_1_raw_md5sum.$": "$.[0].md5sum",
+        "read_2_file_uri.$": "$.[1].fileUri",
+        "read_2_raw_md5sum.$": "$.[1].md5sum"
+      },
+      "ResultPath": "$.get_md5sums_step_result",
+      "Next": "Delete Cache Dir"
+    },
+    "Delete Cache Dir": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${__delete_icav2_cache_uri_lambda_function_arn__}",
+        "Payload": {
+          "cache_uri.$": "$.cacheDir"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "ResultPath": null,
+      "Next": "Set Workflow Outputs"
+    },
+    "Set Workflow Outputs": {
+      "Type": "Pass",
+      "Next": "Success",
+      "Parameters": {
+        "read1FileUri.$": "$.get_md5sums_step_result.read_1_file_uri",
+        "read1RawMd5sum.$": "$.get_md5sums_step_result.read_1_raw_md5sum",
+        "read2FileUri.$": "$.get_md5sums_step_result.read_2_file_uri",
+        "read2RawMd5sum.$": "$.get_md5sums_step_result.read_2_raw_md5sum"
+      }
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}
