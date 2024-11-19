@@ -1,5 +1,10 @@
+import logging
+
 from pg_dd.pg_dd import PgDDLocal, PgDDS3
 import click
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 @click.group()
@@ -8,11 +13,17 @@ def cli():
 
 
 @cli.command()
-def download():
+@click.option(
+    "--exists-ok/--no-exists-ok",
+    default=True,
+    help="If the file already exists, do not download it.",
+)
+def download(exists_ok):
     """
     Download S3 CSV dumps to the local directory.
+    :return:
     """
-    PgDDS3().download_local()
+    PgDDS3(logger=logger).download_local(exists_ok)
 
 
 @cli.command()
@@ -20,23 +31,34 @@ def upload():
     """
     Uploads local CSV dumps to S3.
     """
-    PgDDS3().write_to_bucket()
+    PgDDS3(logger=logger).write_to_bucket()
 
 
 @cli.command()
-def dump():
+@click.option(
+    "--database", help="Specify the database to dump, dumps all databases by default."
+)
+def dump(database):
     """
     Dump from the local database to CSV files.
     """
-    PgDDLocal().write_to_dir()
+    PgDDLocal(logger=logger).write_to_dir(database)
 
 
 @cli.command()
-def load():
+@click.option(
+    "--download-exists-ok/--no-download-exists-ok",
+    default=True,
+    help="Download the CSV files from S3 if they are not already in the local directory.",
+)
+def load(download_exists_ok):
     """
-    Load local CSV files into the database
+    Load local CSV files into the database.
     """
-    PgDDLocal().load_to_database()
+    if download_exists_ok:
+        PgDDS3(logger=logger).download_local(download_exists_ok)
+
+    PgDDLocal(logger=logger).load_to_database()
 
 
 if __name__ == "__main__":

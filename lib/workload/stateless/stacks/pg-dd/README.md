@@ -13,6 +13,16 @@ aws lambda invoke --function-name orcabus-pg-dd response.json
 This is setup to dump the metadata_manager, workflow_manager, sequence_run_manager, and 10000 of the most recent
 rows of the filemanager database.
 
+This command can also be run locally, for example:
+
+```
+make cli COMMAND="--help"
+```
+
+The `Dockerfile` is setup to launch with the top-level `Makefile`, which also contains commands for running the CLI.
+By default `start-all-service` will run a `load` on the local database, downloading any dumps from S3 along the way.
+AWS credentials must be present in the shell for this to work.
+
 ## Configuration
 
 This function can be configured by setting the following environment variables, see [.env.example][env-example] for an example:
@@ -31,12 +41,6 @@ This function can be configured by setting the following environment variables, 
 ## Local development 
 
 This project uses [poetry] to manage dependencies.
-
-The pg-dd command can be run locally to dump data to a directory:
-
-```
-make cli
-```
 
 Run the linter and formatter:
 

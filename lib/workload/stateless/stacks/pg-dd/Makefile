@@ -1,5 +1,7 @@
 .PHONY: *
 
+COMMAND ?= "load --exists-ok"
+
 install:
 	@poetry update
 
@@ -10,7 +12,7 @@ check: lint
 	@poetry run ruff check .
 
 cli: install
-	@poetry run cli
+	@poetry run cli $(COMMAND)
 
 clean:
 	rm -rf data && rm -rf .ruff_cache

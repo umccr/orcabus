@@ -8,6 +8,7 @@ from libumccr.aws import libsm
 from pg_dd.pg_dd import PgDDS3
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 try:
     secret_str = libsm.get_secret(os.getenv("PG_DD_SECRET"))

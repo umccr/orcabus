@@ -24,13 +24,29 @@ start-all-service:
 	docker compose up --wait -d db
 
 	# Insert all dump data in before running servers
-	@(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) s3-load)
-	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) s3-load)
-	@(cd lib/workload/stateless/stacks/workflow-manager && $(MAKE) s3-load)
-	@(cd lib/workload/stateless/stacks/filemanager && $(MAKE) s3-load)
+	@(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) reset-db)
+	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) reset-db)
+	@(cd lib/workload/stateless/stacks/workflow-manager && $(MAKE) reset-db)
+	@(cd lib/workload/stateless/stacks/filemanager && $(MAKE) reset-db)
 
 	# Running the rest of the µ-service server
 	docker compose up --wait -d --build
+
+# Commands for pg-dd
+dump: PG_DD_COMMAND=dump
+dump: pg-dd
+
+upload: PG_DD_COMMAND=upload
+upload: pg-dd
+
+download: PG_DD_COMMAND=download
+download: pg-dd
+
+load: PG_DD_COMMAND=load
+load: pg-dd
+
+pg-dd:
+	@PG_DD_COMMAND=$(COMMAND) docker compose up pg-dd
 
 stop-all-service:
 	docker compose down

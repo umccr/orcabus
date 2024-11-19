@@ -18,19 +18,23 @@ class PgDD:
     A class to dump postgres databases to CSV files.
     """
 
-    def __init__(self, logger=logging.getLogger(__name__)):
+    def __init__(self, logger: logging.Logger = logging.getLogger(__name__)):
         self.url = os.getenv("PG_DD_URL")
         self.databases = self.read_databases()
         self.logger = logger
 
-    def csvs_for_tables(self) -> Dict[str, Dict[str, str]]:
+    def csvs_for_tables(self, db: str = None) -> Dict[str, Dict[str, str]]:
         """
         Get csvs for all tables in all databases.
         """
 
         databases = {}
         for entry in self.databases.values():
-            url = f"{self.url}/{entry['database']}"
+            database = entry["database"]
+            if db is not None and db != database:
+                continue
+
+            url = f"{self.url}/{database}"
 
             conn: psycopg.connection.Connection
             with psycopg.connect(url) as conn:
@@ -52,7 +56,13 @@ class PgDD:
 
         return databases
 
-    def load_table(self, table, data, conn, only_non_empty=True):
+    def load_table(
+        self,
+        table: str,
+        data: str,
+        conn: psycopg.connection.Connection,
+        only_non_empty: bool = True,
+    ):
         """
         Load a table with the CSV data.
         """
@@ -88,13 +98,13 @@ class PgDD:
             ) as copy:
                 copy.write(data)
 
-    def target_files(self) -> List[Tuple[str, str, str, str]]:
+    def target_files(self, db: str = None) -> List[Tuple[str, str, str, str]]:
         """
         Get the target files for all directories.
         """
 
         files = []
-        for database, tables in self.csvs_for_tables().items():
+        for database, tables in self.csvs_for_tables(db).items():
             for table, value in tables.items():
                 file = f"{database}/{table}.csv.gz"
                 files += [(database, table, file, value)]
@@ -174,19 +184,19 @@ class PgDDLocal(PgDD):
     Dump CSV files to a local directory.
     """
 
-    def __init__(self, logger=logging.getLogger(__name__)):
+    def __init__(self, logger: logging.Logger = logging.getLogger(__name__)):
         super().__init__(logger=logger)
         self.out = os.getenv("PG_DD_DIR")
         self.bucket = os.getenv("PG_DD_BUCKET")
         self.prefix = os.getenv("PG_DD_PREFIX")
         self.s3: S3ServiceResource = boto3.resource("s3")
 
-    def write_to_dir(self):
+    def write_to_dir(self, db: str = None):
         """
         Write the CSV files to the output directory.
         """
 
-        for _, _, f, value in self.target_files():
+        for _, _, f, value in self.target_files(db):
             file = f"{self.out}/{f}"
             os.makedirs(file.rsplit("/", 1)[0], exist_ok=True)
             self.logger.info(f"writing to file: {f}")
@@ -215,7 +225,10 @@ class PgDDLocal(PgDD):
         for _, dirs, _ in os.walk(self.out):
             for database in dirs:
                 conn: psycopg.connection.Connection
-                with psycopg.connect(f"{self.url}/{database}") as conn:
+                url = f"{self.url}/{database}"
+                with psycopg.connect(url) as conn:
+                    self.logger.info(f"connecting to: {url}")
+
                     conn.set_deferrable(True)
                     load_files()
                     conn.commit()
@@ -226,7 +239,7 @@ class PgDDS3(PgDD):
     Commands related to running this inside a Lambda function.
     """
 
-    def __init__(self, logger=logging.getLogger(__name__)):
+    def __init__(self, logger: logging.Logger = logging.getLogger(__name__)):
         super().__init__(logger=logger)
         self.bucket = os.getenv("PG_DD_BUCKET")
         self.prefix = os.getenv("PG_DD_PREFIX")
@@ -247,7 +260,7 @@ class PgDDS3(PgDD):
             s3_object = self.s3.Object(self.bucket, key)
             s3_object.put(Body=gzip.compress(str.encode(value)))
 
-    def download_local(self):
+    def download_local(self, exists_ok: bool = True):
         """
         Download from S3 CSV files to load.
         """
@@ -257,5 +270,9 @@ class PgDDS3(PgDD):
             file = f"{self.dir}/{f}"
             os.makedirs(file.rsplit("/", 1)[0], exist_ok=True)
 
+            if exists_ok and os.path.exists(file):
+                self.logger.info(f"file already exists: {f}")
+                continue
+
             s3_object = self.s3.Object(self.bucket, f"{self.prefix}/{f}")
-            s3_object.download_file(f"{self.dir}/{f}")
+            s3_object.download_file(file)
