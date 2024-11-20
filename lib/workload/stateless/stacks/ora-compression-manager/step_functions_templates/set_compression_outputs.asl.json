@@ -76,7 +76,7 @@
       "Parameters": {
         "TableName": "${__table_name__}",
         "Key": {
-          "id.$": "$.get_db_attributes_step.ready_event_data_inputs.tags.instrumentRunId",
+          "id.$": "$.get_db_attributes_step.ready_event_data_inputs.instrumentRunId",
           "id_type": "${__instrument_run_id_table_partition_name__}"
         }
       },
