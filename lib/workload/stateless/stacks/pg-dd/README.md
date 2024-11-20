@@ -13,10 +13,16 @@ aws lambda invoke --function-name orcabus-pg-dd response.json
 This is setup to dump the metadata_manager, workflow_manager, sequence_run_manager, and 10000 of the most recent
 rows of the filemanager database.
 
-This command can also be run locally, for example:
+This command can be run locally using make, or by running `poetry` directly:
 
-```
+```sh
 make cli COMMAND="--help"
+```
+
+For example, to dump and upload a specific database to s3:
+
+```sh
+poetry run cli dump --database metadata_manager && poetry run cli upload
 ```
 
 The `Dockerfile` is setup to launch with the top-level `Makefile`, which also contains commands for running the CLI.

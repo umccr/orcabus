@@ -21,17 +21,20 @@ def cli():
 def download(exists_ok):
     """
     Download S3 CSV dumps to the local directory.
-    :return:
     """
     PgDDS3(logger=logger).download_local(exists_ok)
 
 
 @cli.command()
-def upload():
+@click.option(
+    "--database",
+    help="Specify the database to upload, uploads all databases by default.",
+)
+def upload(database):
     """
     Uploads local CSV dumps to S3.
     """
-    PgDDS3(logger=logger).write_to_bucket()
+    PgDDS3(logger=logger).write_to_bucket(database)
 
 
 @cli.command()
@@ -51,14 +54,19 @@ def dump(database):
     default=True,
     help="Download the CSV files from S3 if they are not already in the local directory.",
 )
-def load(download_exists_ok):
+@click.option(
+    "--only-empty/--no-only-empty",
+    default=True,
+    help="Only load into tables that are empty and exist in the database.",
+)
+def load(download_exists_ok, only_empty):
     """
     Load local CSV files into the database.
     """
     if download_exists_ok:
         PgDDS3(logger=logger).download_local(download_exists_ok)
 
-    PgDDLocal(logger=logger).load_to_database()
+    PgDDLocal(logger=logger).load_to_database(only_empty)
 
 
 if __name__ == "__main__":
