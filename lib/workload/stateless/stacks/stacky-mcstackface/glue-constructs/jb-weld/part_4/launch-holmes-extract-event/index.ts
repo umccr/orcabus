@@ -9,7 +9,6 @@ import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { LambdaServiceDiscoveryConstruct } from '../../../../../../../components/python-lambda-service-discovery';
 import { LambdaDiscoverInstancesConstruct } from '../../../../../../../components/python-lambda-list-service-instances';
 import { GetMetadataLambdaConstruct } from '../../../../../../../components/python-lambda-metadata-mapper';
-import { GetWorkflowPayloadLambdaConstruct } from '../../../../../../../components/python-lambda-get-workflow-payload';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { NagSuppressions } from 'cdk-nag';

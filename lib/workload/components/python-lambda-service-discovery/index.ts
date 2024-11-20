@@ -1,7 +1,6 @@
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as serviceDiscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import path from 'path';
 import { NagSuppressions } from 'cdk-nag';
