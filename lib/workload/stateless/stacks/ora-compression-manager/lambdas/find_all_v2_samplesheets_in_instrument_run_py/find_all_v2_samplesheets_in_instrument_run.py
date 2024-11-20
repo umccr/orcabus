@@ -23,7 +23,6 @@ from os import environ
 from wrapica.project_data import (
     find_project_data_bulk,
     convert_uri_to_project_data_obj,
-    read_icav2_file_contents,
     ProjectData, read_icav2_file_contents_to_string
 )
 from wrapica.enums import DataType

@@ -1,31 +1,19 @@
 {
   "Comment": "A description of my state machine",
-  "StartAt": "Get fastq files from fastq list csv",
+  "StartAt": "Get RGIDs in instrument run id",
   "States": {
-    "Get fastq files from fastq list csv": {
+    "Get RGIDs in instrument run id": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
       "Parameters": {
-        "Payload": {
-          "output_dir_uri.$": "$.payload.data.outputs.instrumentRunOraOutputUri"
-        },
-        "FunctionName": "${__merge_sizes_lambda_function_arn__}"
-      },
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "Lambda.TooManyRequestsException"
-          ],
-          "IntervalSeconds": 1,
-          "MaxAttempts": 3,
-          "BackoffRate": 2
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id.$": "$.payload.data.inputs.instrumentRunId",
+          "id_type": "${__instrument_run_table_partition_name__}"
         }
-      ],
+      },
       "ResultSelector": {
-        "fastq_list_events_map.$": "$.Payload"
+        "fastq_list_events_map.$": "$.Item.rgid_list.SS"
       },
       "Next": "Fan out fastq list row compression event creation"
     },
@@ -39,8 +27,108 @@
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Put Fastq List Row Compression Event",
+        "StartAt": "Get RGID in database",
         "States": {
+          "Get RGID in database": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "$.rgid",
+                "id_type": "${__fastq_list_row_table_partition_name__}"
+              }
+            },
+            "ResultPath": "$.get_rgid_db_step",
+            "Next": "Generate file input array"
+          },
+          "Generate file input array": {
+            "Type": "Pass",
+            "Parameters": {
+              "file_uris.$": "States.Array($.get_rgid_db_step.Item.read1_gz_file_uri.S, $.get_rgid_db_step.Item.read2_gz_file_uri.S, $.get_rgid_db_step.Item.read1_ora_file_uri.S, $.get_rgid_db_step.Item.read2_ora_file_uri.S)"
+            },
+            "ResultPath": "$.get_uri_step",
+            "Next": "Get File Sizes for R1, R2 inputs and outputs"
+          },
+          "Get File Sizes for R1, R2 inputs and outputs": {
+            "Type": "Map",
+            "ItemsPath": "$.get_uri_step.file_uris",
+            "ItemSelector": {
+              "file_uri.$": "$$.Map.Item.Value"
+            },
+            "ItemProcessor": {
+              "ProcessorConfig": {
+                "Mode": "INLINE"
+              },
+              "StartAt": "Get File Size",
+              "States": {
+                "Get File Size": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "Parameters": {
+                    "FunctionName": "${__get_file_size_lambda_function_arn__}",
+                    "Payload": {
+                      "file_uri.$": "$.file_uri"
+                    }
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "Lambda.TooManyRequestsException"
+                      ],
+                      "IntervalSeconds": 1,
+                      "MaxAttempts": 3,
+                      "BackoffRate": 2,
+                      "JitterStrategy": "FULL"
+                    }
+                  ],
+                  "End": true,
+                  "ResultSelector": {
+                    "file_size.$": "$.Payload.file_size"
+                  }
+                }
+              }
+            },
+            "ResultSelector": {
+              "read_1_gz_file_size.$": "$.[0].file_size",
+              "read_2_gz_file_size.$": "$.[1].file_size",
+              "read_1_ora_file_size.$": "$.[2].file_size",
+              "read_2_ora_file_size.$": "$.[3].file_size"
+            },
+            "ResultPath": "$.get_file_sizes_step",
+            "Next": "Add file sizes to db"
+          },
+          "Add file sizes to db": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:updateItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "$.rgid",
+                "id_type": "${__fastq_list_row_table_partition_name__}"
+              },
+              "UpdateExpression": "SET read_1_gz_file_size_in_bytes = :read1GzFileSizeInBytes, read_2_gz_file_size_in_bytes = :read2GzFileSizeInBytes, read_1_ora_file_size_in_bytes = :read1OraFileSizeInBytes, read_2_ora_file_size_in_bytes = :read2OraFileSizeInBytes",
+              "ExpressionAttributeValues": {
+                ":read1GzFileSizeInBytes": {
+                  "N.$": "States.Format('{}', $.get_file_sizes_step.read_1_gz_file_size)"
+                },
+                ":read2GzFileSizeInBytes": {
+                  "N.$": "States.Format('{}', $.get_file_sizes_step.read_2_gz_file_size)"
+                },
+                ":read1OraFileSizeInBytes": {
+                  "N.$": "States.Format('{}', $.get_file_sizes_step.read_1_ora_file_size)"
+                },
+                ":read2OraFileSizeInBytes": {
+                  "N.$": "States.Format('{}', $.get_file_sizes_step.read_2_ora_file_size)"
+                }
+              }
+            },
+            "ResultPath": null,
+            "Next": "Put Fastq List Row Compression Event"
+          },
           "Put Fastq List Row Compression Event": {
             "Type": "Task",
             "Resource": "arn:aws:states:::events:putEvents",
@@ -50,7 +138,21 @@
                   "EventBusName": "${__event_bus_name__}",
                   "Source": "orcabus.oracompressionmanager",
                   "DetailType": "${__detail_type__}",
-                  "Detail.$": "$.output_event_detail"
+                  "Detail": {
+                    "payload": {
+                      "data": {
+                        "fastqListRowRgid.$": "$.rgid",
+                        "read1GzFileSizeInBytes.$": "$.get_file_sizes_step.read_1_gz_file_size",
+                        "read2GzFileSizeInBytes.$": "$.get_file_sizes_step.read_2_gz_file_size",
+                        "read1OraFileSizeInBytes.$": "$.get_file_sizes_step.read_1_ora_file_size",
+                        "read2OraFileSizeInBytes.$": "$.get_file_sizes_step.read_2_ora_file_size",
+                        "read1OraFileUri.$": "$.get_rgid_db_step.Item.read1_ora_file_uri.S",
+                        "read2OraFileUri.$": "$.get_rgid_db_step.Item.read2_ora_file_uri.S",
+                        "read1Md5sumRaw.$": "$.get_rgid_db_step.Item.read1_raw_md5sum.S",
+                        "read2Md5sumRaw.$": "$.get_rgid_db_step.Item.read2_raw_md5sum.S"
+                      }
+                    }
+                  }
                 }
               ]
             },
