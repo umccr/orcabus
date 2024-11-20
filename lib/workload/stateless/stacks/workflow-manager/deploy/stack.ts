@@ -111,6 +111,7 @@ export class WorkflowManagerStack extends Stack {
   }
 
   private createApiHandlerAndIntegration(props: WorkflowManagerStackProps) {
+    const API_VERSION = 'v1';
     const apiFn: PythonFunction = this.createPythonFunction('Api', {
       index: 'api.py',
       handler: 'handler',
@@ -144,6 +145,17 @@ export class WorkflowManagerStack extends Stack {
       httpApi: httpApi,
       integration: apiIntegration,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.DELETE),
+    });
+
+    // Route and permission for rerun cases where it needs to put event to mainBus
+    this.mainBus.grantPutEventsTo(apiFn);
+    new HttpRoute(this, 'PostRerunHttpRoute', {
+      httpApi: httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with(
+        `api/${API_VERSION}/workflowrun/{orcabusId}/rerun/{proxy+}`,
+        HttpMethod.POST
+      ),
     });
   }
 

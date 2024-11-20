@@ -98,7 +98,7 @@ def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, new_portal_run_id: str,
     """
 
     # Get the payload where the state is 'READY'
-    ready_state: State = wfl_run.states.filter(status='READY').order_by('-orcabus_id').first()
+    ready_state: State = wfl_run.states.get(status='READY')
     ready_data_payload = PayloadSerializer(ready_state.payload).data.get("data", None)
 
     # Start crafting the payload based on the old ones
