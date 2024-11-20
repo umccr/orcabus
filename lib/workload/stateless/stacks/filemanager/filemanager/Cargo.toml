@@ -57,6 +57,8 @@ url = { version = "2", features = ["serde"] }
 bytes = "1.6"
 envy = "0.4"
 rand = "0.8"
+parse-size = "1"
+humantime = "2"
 
 # Inventory
 csv = "1"

@@ -1,5 +1,6 @@
 import { Construct } from 'constructs';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Duration } from 'aws-cdk-lib';
 
 /**
  * Props for the named lambda role construct.
@@ -13,6 +14,10 @@ export type NamedLambdaRoleProps = {
    * Description for the role.
    */
   description?: string;
+  /**
+   * Specify the maximum session duration.
+   */
+  maxSessionDuration?: Duration;
 };
 
 /**
@@ -24,6 +29,7 @@ export class NamedLambdaRole extends Role {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
       description: props?.description ?? 'Lambda execution role',
       roleName: props?.name,
+      maxSessionDuration: props?.maxSessionDuration,
     });
   }
 }

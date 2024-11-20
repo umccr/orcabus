@@ -13,6 +13,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../../../../components/sfn-workflowdraftrunstatechange-common-preamble';
 import { GetMetadataLambdaConstruct } from '../../../../../../../components/python-lambda-metadata-mapper';
 import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
+import { rnasumIcav2PipelineVersion } from '../../../../../../../../../config/constants';
 
 /*
 Part 4
@@ -64,7 +65,7 @@ export class UmccriseAndWtsCompleteToRnasumReadyConstruct extends Construct {
     outputSource: 'orcabus.rnasuminputeventglue',
     payloadVersion: '2024.07.23',
     workflowName: 'rnasum',
-    workflowVersion: '4.2.4',
+    workflowVersion: rnasumIcav2PipelineVersion,
   };
 
   constructor(

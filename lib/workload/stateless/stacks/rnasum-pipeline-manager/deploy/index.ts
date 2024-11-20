@@ -13,6 +13,9 @@ import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../components/sfn-icav2-ready-event-handler';
 import { Icav2AnalysisEventHandlerConstruct } from '../../../../components/sfn-icav2-state-change-event-handler';
 import { PythonLambdaGetCwlObjectFromS3InputsConstruct } from '../../../../components/python-lambda-get-cwl-object-from-s3-inputs-py';
+import { Duration } from 'aws-cdk-lib';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import { WorkflowToolsPythonLambdaLayer } from '../../../../components/python-workflow-tools-layer';
 
 export interface RnasumIcav2PipelineManagerConfig {
   /* ICAv2 Pipeline analysis essentials */
@@ -47,6 +50,10 @@ export class RnasumIcav2PipelineManagerStack extends cdk.Stack {
   private readonly icav2AccessTokenSecretObj: secretsManager.ISecret;
   private readonly eventBusObj: events.IEventBus;
   private readonly pipelineIdSsmObj: ssm.IStringParameter;
+
+  // Globals
+  private readonly hostnameSsmParameterPath = '/hosted_zone/umccr/name';
+  private readonly orcabusTokenSecretId = 'orcabus/token-service-jwt'; // pragma: allowlist secret
 
   constructor(scope: Construct, id: string, props: RnasumIcav2PipelineManagerStackProps) {
     super(scope, id, props);
@@ -209,5 +216,51 @@ export class RnasumIcav2PipelineManagerStack extends cdk.Stack {
         generateOutputsJsonSfn: configureOutputsSfn,
       }
     ).stateMachineObj;
+
+    /*
+    Collect the required secret and ssm parameters for getting metadata
+    */
+    const hostnameSsmParameterObj = ssm.StringParameter.fromStringParameterName(
+      this,
+      'hostname_ssm_parameter',
+      this.hostnameSsmParameterPath
+    );
+    const orcabusTokenSecretObj = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'orcabus_token_secret',
+      this.orcabusTokenSecretId
+    );
+
+    /* Cheeky lambda for the OrcaUI to trigger */
+    const rerunWithDataSet = new PythonFunction(this, 'rerun_with_new_dataset_py', {
+      functionName: 'rerunRnaSumWithNewDatasetLambdaPy',
+      entry: path.join(__dirname, '../lambdas/rerun_with_new_dataset_py'),
+      runtime: lambda.Runtime.PYTHON_3_12,
+      architecture: lambda.Architecture.ARM_64,
+      index: 'rerun_with_new_dataset.py',
+      handler: 'handler',
+      memorySize: 1024,
+      timeout: Duration.seconds(60),
+      layers: [
+        new WorkflowToolsPythonLambdaLayer(this, 'workflow_tools_layer', {
+          layerPrefix: 'workflow-tools',
+        }).lambdaLayerVersionObj,
+      ],
+    });
+
+    /* Add env vars */
+    rerunWithDataSet.addEnvironment(
+      'HOSTNAME_SSM_PARAMETER',
+      hostnameSsmParameterObj.parameterName
+    );
+    rerunWithDataSet.addEnvironment('ORCABUS_TOKEN_SECRET_ID', orcabusTokenSecretObj.secretName);
+    rerunWithDataSet.addEnvironment('EVENT_BUS_NAME', this.eventBusObj.eventBusName);
+
+    /* Add permissions */
+    hostnameSsmParameterObj.grantRead(rerunWithDataSet);
+    orcabusTokenSecretObj.grantRead(rerunWithDataSet);
+
+    /* Allow the lambda to put events to the event bus */
+    this.eventBusObj.grantPutEventsTo(rerunWithDataSet);
   }
 }

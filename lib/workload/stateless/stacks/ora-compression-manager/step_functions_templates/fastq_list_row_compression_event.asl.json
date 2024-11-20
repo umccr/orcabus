@@ -5,7 +5,6 @@
     "Get fastq files from fastq list csv": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "OutputPath": "$.Payload",
       "Parameters": {
         "Payload": {
           "output_dir_uri.$": "$.payload.data.outputs.instrumentRunOraOutputUri"

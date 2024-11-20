@@ -91,6 +91,11 @@ export const icav2ArchiveAnalysisBucket: Record<AppStage.PROD, string> = {
   [AppStage.PROD]: 'archive-prod-analysis-503977275616-ap-southeast-2',
 };
 
+// The fastq bucket. Noting that this is only present for prod data.
+export const icav2ArchiveFastqBucket: Record<AppStage.PROD, string> = {
+  [AppStage.PROD]: 'archive-prod-fastq-503977275616-ap-southeast-2',
+};
+
 export const gdsBsRunsUploadLogPath: Record<AppStage, string> = {
   [AppStage.BETA]: 'gds://development/primary_data/temp/bs_runs_upload_tes/',
   [AppStage.GAMMA]: 'gds://staging/primary_data/temp/bs_runs_upload_tes/',
@@ -504,9 +509,9 @@ UMCCRise Stateless stack
 */
 
 // Deployed in dev/stg/prod
-export const rnasumIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/rnasum_1.1.0_pipeline_id'; // 69362d8e-8f6f-4d87-84b5-a8c6205b7032
+export const rnasumIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/rnasum_1.1.5_pipeline_id'; // c412a2ee-5a92-465d-b619-7516da56b9bf
 export const rnasumIcav2PipelineWorkflowType = 'rnasum';
-export const rnasumIcav2PipelineWorkflowTypeVersion = '1.1.0';
+export const rnasumIcav2PipelineVersion = '1.1.5';
 export const rnasumIcav2ServiceVersion = '2024.07.01';
 export const rnasumIcav2ReadyEventSource = 'orcabus.workflowmanager';
 export const rnasumIcav2EventSource = 'orcabus.rnasum';

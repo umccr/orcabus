@@ -106,7 +106,8 @@ class BaseManager(models.Manager):
         try:
             obj = self.get(**search_key)
             for key, value in data.items():
-                if getattr(obj, key) != value:
+                # compare both value in str format to avoid any type mismatch
+                if str(getattr(obj, key)) != str(value):
                     setattr(obj, key, value)
                     is_updated = True
         except self.model.DoesNotExist:

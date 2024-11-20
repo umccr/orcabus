@@ -35,6 +35,7 @@ type LambdaProps = {
 
 export class LambdaAPIConstruct extends Construct {
   private readonly lambda: PythonFunction;
+  private readonly API_VERSION = 'v1';
 
   constructor(scope: Construct, id: string, lambdaProps: LambdaProps) {
     super(scope, id);
@@ -50,35 +51,48 @@ export class LambdaAPIConstruct extends Construct {
       index: 'handler/api.py',
       handler: 'handler',
       timeout: Duration.seconds(28),
+      // The optimum memory from lambda power tuning tool (Result based on enforcing cold start)
+      // https://lambda-power-tuning.show/#gAAAAQACAAQABgAI;ulPPRclpmUU0UHpFIoxhRT3aVkVGyk9F;XJ7INgXRyTZLUMM2DoLGNpPG0DZMo/42
+      memorySize: 1024,
     });
     lambdaProps.dbConnectionSecret.grantRead(this.lambda);
 
     // add some integration to the http api gw
     const apiIntegration = new HttpLambdaIntegration('ApiLambdaIntegration', this.lambda);
 
-    new HttpRoute(this, 'ApiLambdaHttpRoute', {
+    new HttpRoute(this, 'GetHttpRoute', {
       httpApi: apiGW.httpApi,
       integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{PROXY+}', HttpMethod.GET),
+      routeKey: HttpRouteKey.with(`/api/${this.API_VERSION}/{PROXY+}`, HttpMethod.GET),
     });
 
-    new HttpRoute(this, 'ApiLambdaHttpRoutePost', {
-      httpApi: apiGW.httpApi,
-      integration: apiIntegration,
-      routeKey: HttpRouteKey.with('/{PROXY+}', HttpMethod.POST),
-    });
+    // Add permission, HTTP route, and env-var for the sync lambdas
 
-    // Would need to add permission and env-var for the sync lambdas
     lambdaProps.syncGsheetLambda.grantInvoke(this.lambda);
     this.lambda.addEnvironment(
       'SYNC_GSHEET_LAMBDA_NAME',
       lambdaProps.syncGsheetLambda.functionName
     );
+    new HttpRoute(this, 'PostHttpRouteSyncGsheet', {
+      httpApi: apiGW.httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with(`/api/${this.API_VERSION}/sync/gsheet/{PROXY+}`, HttpMethod.POST),
+    });
 
     lambdaProps.syncCustomCsvLambda.grantInvoke(this.lambda);
     this.lambda.addEnvironment(
       'SYNC_CSV_PRESIGNED_URL_LAMBDA_NAME',
       lambdaProps.syncCustomCsvLambda.functionName
     );
+    new HttpRoute(this, 'PostHttpRouteSyncPresignedCsv', {
+      httpApi: apiGW.httpApi,
+      integration: apiIntegration,
+      // Only admin group can use this csv sync endpoint
+      authorizer: apiGW.authStackHttpLambdaAuthorizer,
+      routeKey: HttpRouteKey.with(
+        `/api/${this.API_VERSION}/sync/presigned-csv/{PROXY+}`,
+        HttpMethod.POST
+      ),
+    });
   }
 }

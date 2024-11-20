@@ -76,7 +76,7 @@ def handler(events, context):
 
     # Get analysis uri
     analysis_uri = events.get("analysis_output_uri")
-    instrument_run_id = events.get("instrument_run_id")
+    portal_run_id = events.get("portal_run_id")
 
     # Convert analysis uri to project folder object
     analysis_project_data_obj = convert_uri_to_project_data_obj(analysis_uri)
@@ -87,19 +87,19 @@ def handler(events, context):
         parent_folder_id=analysis_project_data_obj.data.id,
     )
 
-    # Get multiqc directory
+    # Get instrument run id
     try:
         instrument_run_id_project_data_obj: ProjectData = next(
             filter(
                 lambda project_data_iter: (
-                    project_data_iter.data.details.name == instrument_run_id and
+                    project_data_iter.data.details.name == portal_run_id and
                     DataType[project_data_iter.data.details.data_type] == DataType.FOLDER
                 ),
                 analysis_top_level_data_list
             )
         )
     except StopIteration:
-        raise ValueError(f"instrument run id directory '{instrument_run_id}' not found in '{analysis_uri}'")
+        raise ValueError(f"output directory '{portal_run_id}' not found in '{analysis_uri}'")
 
     return {
         "instrument_run_ora_output_uri": convert_project_data_obj_to_uri(instrument_run_id_project_data_obj, UriType.S3),

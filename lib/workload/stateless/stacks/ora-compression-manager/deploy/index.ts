@@ -227,7 +227,7 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       environment: {
         ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
       },
-      timeout: Duration.seconds(60),
+      timeout: Duration.seconds(120),
       memorySize: 1024,
     });
     // Give the lambda function access to the secret
@@ -248,6 +248,8 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
           )
         ),
         definitionSubstitutions: {
+          __event_bus_name__: eventBusObj.eventBusName,
+          __detail_type__: this.globals.outputCompressionDetailType,
           __merge_sizes_lambda_function_arn__: setMergeSizesLambdaObj.currentVersion.functionArn,
         },
       }

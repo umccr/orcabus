@@ -4,7 +4,7 @@ import { MigrateFunction } from './constructs/functions/migrate';
 import { ApiFunction } from './constructs/functions/api';
 import { DatabaseProps } from './constructs/functions/function';
 import { Vpc, SecurityGroup, VpcLookupOptions, IVpc, ISecurityGroup } from 'aws-cdk-lib/aws-ec2';
-import { Arn, Stack, StackProps } from 'aws-cdk-lib';
+import { Arn, Duration, Stack, StackProps } from 'aws-cdk-lib';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { ProviderFunction } from '../../../../components/provider-function';
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
@@ -98,7 +98,10 @@ export class Filemanager extends Stack {
   }
 
   private createRole(name: string) {
-    return new NamedLambdaRole(this, 'IngestFunctionRole', { name });
+    return new NamedLambdaRole(this, 'IngestFunctionRole', {
+      name,
+      maxSessionDuration: Duration.hours(12),
+    });
   }
 
   /**
