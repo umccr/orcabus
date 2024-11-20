@@ -14,6 +14,7 @@ import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../
 import { GetMetadataLambdaConstruct } from '../../../../../../../components/python-lambda-metadata-mapper';
 import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
 import { rnasumIcav2PipelineVersion } from '../../../../../../../../../config/constants';
+import { NagSuppressions } from 'cdk-nag';
 
 /*
 Part 4
@@ -197,6 +198,12 @@ export class UmccriseAndWtsCompleteToRnasumReadyConstruct extends Construct {
       lambda.currentVersion.grantInvoke(umccriseAndWtsCompleteToDraftSfn);
     });
 
+    // Allow the state machine to be able to invoke the preamble sfn
+    [sfnPreamble, engineParameterAndReadyEventMakerSfn].forEach((sfnObj) => {
+      sfnObj.grantStartExecution(umccriseAndWtsCompleteToDraftSfn);
+      sfnObj.grantRead(umccriseAndWtsCompleteToDraftSfn);
+    });
+
     /* Allow step function to call nested state machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -208,9 +215,20 @@ export class UmccriseAndWtsCompleteToRnasumReadyConstruct extends Construct {
         actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
       })
     );
-    // Allow the state machine to be able to invoke the preamble sfn
-    sfnPreamble.grantStartExecution(umccriseAndWtsCompleteToDraftSfn);
-    engineParameterAndReadyEventMakerSfn.grantStartExecution(umccriseAndWtsCompleteToDraftSfn);
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      umccriseAndWtsCompleteToDraftSfn,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn

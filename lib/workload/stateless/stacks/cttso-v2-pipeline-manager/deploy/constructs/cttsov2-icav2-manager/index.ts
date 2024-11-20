@@ -12,6 +12,7 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Icav2AnalysisEventHandlerConstruct } from '../../../../../../components/sfn-icav2-state-change-event-handler';
 import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../../../components/sfn-icav2-ready-event-handler';
 import { DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
+import { NagSuppressions } from 'cdk-nag';
 
 interface Cttsov2Icav2PipelineManagerConstructProps {
   /* Stack Objects */
@@ -105,6 +106,10 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     // Allow state machine to read/write to dynamodb table
     props.dynamodbTableObj.grantReadWriteData(configureInputsSfn);
 
+    // Add state machine execution permissions to stateMachine role
+    props.icav2CopyFilesStateMachineObj.grantStartExecution(configureInputsSfn);
+    props.icav2CopyFilesStateMachineObj.grantRead(configureInputsSfn);
+
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
     configureInputsSfn.addToRolePolicy(
@@ -116,8 +121,19 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       })
     );
 
-    // Add state machine execution permissions to stateMachine role
-    props.icav2CopyFilesStateMachineObj.grantStartExecution(configureInputsSfn);
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      configureInputsSfn,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     // Update checkNumRunningSfnsLambdaObj env var to include the state machine arn of
     // the icav2 copy files sfn

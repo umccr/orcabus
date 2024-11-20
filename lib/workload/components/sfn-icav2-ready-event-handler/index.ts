@@ -11,6 +11,7 @@ import * as lambda_python from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface WfmWorkflowStateChangeIcav2ReadyEventHandlerConstructProps {
   /* Names of table to write to */
@@ -134,6 +135,10 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
     /* Grant the state machine access to the ssm parameter path */
     pipeline_id_ssm_param_obj.grantRead(this.stateMachineObj);
 
+    // Grant the state machine the ability to start the internal generate inputs sfn
+    props.generateInputsJsonSfn.grantStartExecution(this.stateMachineObj);
+    props.generateInputsJsonSfn.grantRead(this.stateMachineObj);
+
     /* Grant the state machine access to invoke the internal launch sfn machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -146,8 +151,19 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
       })
     );
 
-    // Grant the state machine the ability to start the internal generate inputs sfn
-    props.generateInputsJsonSfn.grantStartExecution(this.stateMachineObj);
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      this.stateMachineObj,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     /* Grant the state machine read and write access to the table */
     table_obj.grantReadWriteData(this.stateMachineObj);

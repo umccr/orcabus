@@ -14,6 +14,7 @@ import * as cdk from 'aws-cdk-lib';
 import { PythonLambdaFlattenListOfObjectsConstruct } from '../python-lambda-flatten-list-of-objects';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { Duration } from 'aws-cdk-lib';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface WorkflowRunStateChangeInternalInputMakerProps {
   /* Object name prefixes */
@@ -164,6 +165,8 @@ export class GenerateWorkflowRunStateChangeReadyConstruct extends Construct {
     /*
     Part 3 - Connect permissions between state-machines
     */
+    engineParameterGeneratorStateMachineSfn.grantStartExecution(this.stepFunctionObj);
+    engineParameterGeneratorStateMachineSfn.grantRead(this.stepFunctionObj);
 
     /* Allow step function to call nested state machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
@@ -176,7 +179,20 @@ export class GenerateWorkflowRunStateChangeReadyConstruct extends Construct {
         actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
       })
     );
-    engineParameterGeneratorStateMachineSfn.grantStartExecution(this.stepFunctionObj);
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      this.stepFunctionObj,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     /* Allow step function to send events */
     props.eventBusObj.grantPutEventsTo(this.stepFunctionObj);

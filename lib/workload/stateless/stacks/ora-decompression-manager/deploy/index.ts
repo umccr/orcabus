@@ -7,6 +7,7 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import path from 'path';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface OraDecompressionPipelineManagerConfig {
   /* Stack essentials */
@@ -62,6 +63,10 @@ export class OraDecompressionManagerStack extends cdk.Stack {
       },
     });
 
+    /* Grant the state machine access to invoke the internal launch sfn machine */
+    oraDecompressionSfnConstruct.sfnObject.grantStartExecution(oraManagerSfn);
+    oraDecompressionSfnConstruct.sfnObject.grantRead(oraManagerSfn);
+
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
     oraManagerSfn.addToRolePolicy(
@@ -73,8 +78,19 @@ export class OraDecompressionManagerStack extends cdk.Stack {
       })
     );
 
-    /* Grant the state machine access to invoke the internal launch sfn machine */
-    oraDecompressionSfnConstruct.sfnObject.grantStartExecution(oraManagerSfn);
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      oraManagerSfn,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     // Create a rule to trigger the state machine
     const rule = new events.Rule(this, 'rule', {

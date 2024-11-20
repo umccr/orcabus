@@ -8,6 +8,7 @@ import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import { NagSuppressions } from 'cdk-nag';
 
 interface BsshIcav2FastqCopyStateMachineConstructProps {
   prefix: string; // bsshFastqCopy
@@ -61,9 +62,13 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
     });
 
     // Add execution permissions to stateMachine role
-    props.bclconvertSuccessEventHandlerLambdaObj.currentVersion.grantInvoke(stateMachine.role);
+    props.bclconvertSuccessEventHandlerLambdaObj.currentVersion.grantInvoke(stateMachine);
 
     // Allow the icav2 copy batch statemachine to be started by the bssh fastq copy manager
+
+    // State machine
+    props.icav2CopyBatchStateMachineObj.grantStartExecution(stateMachine);
+    props.icav2CopyBatchStateMachineObj.grantRead(stateMachine);
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -76,8 +81,19 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
       })
     );
 
-    // State machine
-    props.icav2CopyBatchStateMachineObj.grantStartExecution(stateMachine.role);
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      stateMachine,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     // Trigger state machine on event
     const rule = new events.Rule(this, 'bssh_fastq_copy_trigger_rule', {
@@ -100,6 +116,6 @@ export class BsshIcav2FastqCopyStateMachineConstruct extends Construct {
     );
 
     // Allow the statemachine to submit events to the event bus
-    props.eventBusObj.grantPutEventsTo(stateMachine.role);
+    props.eventBusObj.grantPutEventsTo(stateMachine);
   }
 }

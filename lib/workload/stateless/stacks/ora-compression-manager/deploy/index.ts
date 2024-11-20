@@ -37,6 +37,7 @@ import { Icav2AnalysisEventHandlerConstruct } from '../../../../components/sfn-i
 import { OraDecompressionConstruct } from '../../../../components/ora-file-decompression-fq-pair-sfn';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { GzipRawMd5sumDecompressionConstruct } from '../../../../components/gzip-raw-md5sum-fq-pair-sfn';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface OraCompressionIcav2PipelineManagerConfig {
   /*
@@ -208,6 +209,10 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       }
     );
 
+    // Configure step function invoke access to the gzip raw md5sum sfn
+    gzipRawMd5sumSfnObj.grantStartExecution(configureInputsSfn);
+    gzipRawMd5sumSfnObj.grantRead(configureInputsSfn);
+
     // Configure the step function to have invoke access to the gzip raw md5sum sfn
     /* Allow step function to call nested state machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
@@ -220,7 +225,20 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
         actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
       })
     );
-    gzipRawMd5sumSfnObj.grantStartExecution(configureInputsSfn);
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      configureInputsSfn,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     /*
     Generate the outputs sfn
@@ -299,6 +317,10 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       lambda_obj.currentVersion.grantInvoke(configureOutputsSfn);
     });
 
+    // Configure step function invoke access to the ora decompression sfn
+    oraDecompressionSfn.grantStartExecution(configureOutputsSfn);
+    oraDecompressionSfn.grantRead(configureOutputsSfn);
+
     /* Allow step function to call nested state machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -311,8 +333,19 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       })
     );
 
-    // Configure step function invoke access to the ora decompression sfn
-    oraDecompressionSfn.grantStartExecution(configureOutputsSfn);
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      configureOutputsSfn,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     // Generate state machine for handling the 'READY' event
     const handleWfmReadyEventSfn = new WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct(
