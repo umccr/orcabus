@@ -13,7 +13,7 @@ import * as cdk from 'aws-cdk-lib';
 import { NagSuppressions } from 'cdk-nag';
 
 /*
-Part 7
+Part 6
 
 Input Event Source: `orcabus.wgtsqcinputeventglue`
 Input Event DetailType: `LibraryStateChange`
@@ -142,7 +142,7 @@ export class HolmesExtractConstruct extends Construct {
         __event_source__: this.HolmesExtractMap.outputSource,
         __detail_type__: this.HolmesExtractMap.outputDetailType,
         __payload_version__: this.HolmesExtractMap.payloadVersion,
-        __status__: this.HolmesExtractMap.outputStatus,
+        __event_status__: this.HolmesExtractMap.outputStatus,
         /* Table stuff */
         __table_name__: props.tableObj.tableName,
         __fastq_list_row_table_partition_name__: this.HolmesExtractMap.tablePartitions.fastqListRow,

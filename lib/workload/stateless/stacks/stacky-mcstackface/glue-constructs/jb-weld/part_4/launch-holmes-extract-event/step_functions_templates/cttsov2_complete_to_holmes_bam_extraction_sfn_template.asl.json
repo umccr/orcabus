@@ -1,7 +1,14 @@
 {
   "Comment": "A description of my state machine",
-  "StartAt": "Get Extract Inputs",
+  "StartAt": "Move Workflow Inputs",
   "States": {
+    "Move Workflow Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      },
+      "Next": "Get Extract Inputs"
+    },
     "Get Extract Inputs": {
       "Type": "Parallel",
       "Branches": [
@@ -84,7 +91,7 @@
               "Parameters": {
                 "FunctionName": "${__get_library_obj_lambda_function_arn__}",
                 "Payload": {
-                  "value.$": "$.payload.data.library.orcabusId"
+                  "value.$": "$.workflow_inputs.linkedLibraries[0].orcabusId"
                 }
               },
               "Retry": [
@@ -114,31 +121,9 @@
                   "StartAt": "Get tumor bam uri from portal run id",
                   "States": {
                     "Get tumor bam uri from portal run id": {
-                      "Type": "Task",
-                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Type": "Pass",
                       "Parameters": {
-                        "FunctionName": "${__get_alignment_bam_uri_lambda_function_arn__}",
-                        "Payload": {
-                          "portal_run_id.$": "$.get_portal_run_id_step.portal_run_id",
-                          "workflow_status": "SUCCEEDED"
-                        }
-                      },
-                      "Retry": [
-                        {
-                          "ErrorEquals": [
-                            "Lambda.ServiceException",
-                            "Lambda.AWSLambdaException",
-                            "Lambda.SdkClientException",
-                            "Lambda.TooManyRequestsException"
-                          ],
-                          "IntervalSeconds": 1,
-                          "MaxAttempts": 3,
-                          "BackoffRate": 2,
-                          "JitterStrategy": "FULL"
-                        }
-                      ],
-                      "ResultSelector": {
-                        "alignment_bam_uri.$": "States.Format('{}DragenCaller/{}/{}_tumor.bam', $.Payload.payload.data.outputs.logsIntermediatesDir, $.Payload.payload.data.inputs.sampleId, $.Payload.payload.data.inputs.sampleId)"
+                        "alignment_bam_uri.$": "States.Format('{}DragenCaller/{}/{}_tumor.bam', $.workflow_inputs.payload.data.outputs.logsIntermediatesDir, $.workflow_inputs.payload.data.inputs.sampleId, $.workflow_inputs.payload.data.inputs.sampleId)"
                       },
                       "ResultPath": "$.get_alignment_bam_uri_step",
                       "End": true
@@ -204,7 +189,7 @@
         "StateMachineArn.$": "$.extract_inputs.extract_arn",
         "Input": {
           "subjectIdentifier.$": "$.extract_inputs.individual_id",
-          "libraryIdentifier.$": "$.payload.data.library.libraryId",
+          "libraryIdentifier.$": "$.workflow_inputs.linkedLibraries[0].libraryId",
           "indexes.$": "States.Array($.extract_inputs.alignment_bam)",
           "reference": "${__reference_name__}"
         }
