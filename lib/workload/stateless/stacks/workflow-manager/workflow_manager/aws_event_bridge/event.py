@@ -1,29 +1,30 @@
 import os
+import logging
 import boto3
 import json
+from typing import Literal
 import workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange as wfm
-from workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange import WorkflowRunStateChange
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 client = boto3.client('events')
-source = "orcabus.workflowmanager"
 event_bus_name = os.environ["EVENT_BUS_NAME"]
 
 
-def handler(event, context):
+def emit_wrsc_api_event(event):
     """
-    event has to be JSON conform to workflowmanager.WorkflowRunStateChange
+    Emit events to the event bridge sourced from the workflow manager API
     """
-    logger.info(f"Processing {event}, {context}")
+    source = "orcabus.workflowmanager"
+
+    logger.info(f"Emitting event: {event}")
 
     response = client.put_events(
         Entries=[
             {
                 'Source': source,
-                'DetailType': WorkflowRunStateChange.__name__,
+                'DetailType': wfm.WorkflowRunStateChange.__name__,
                 'Detail': json.dumps(wfm.Marshaller.marshall(event)),
                 'EventBusName': event_bus_name,
             },

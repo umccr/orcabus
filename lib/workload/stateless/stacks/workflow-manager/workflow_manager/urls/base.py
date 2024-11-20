@@ -8,6 +8,7 @@ from workflow_manager.viewsets.workflow_run import WorkflowRunViewSet
 from workflow_manager.viewsets.payload import PayloadViewSet
 from workflow_manager.viewsets.analysis_context import AnalysisContextViewSet
 from workflow_manager.viewsets.state import StateViewSet
+from workflow_manager.viewsets.workflow_run_action import WorkflowRunAction
 # from workflow_manager.viewsets.library import LibraryViewSet
 from workflow_manager.viewsets.workflow_run_comment import WorkflowRunCommentViewSet
 from workflow_manager.settings.base import API_VERSION
@@ -22,6 +23,7 @@ router.register(r"analysisrun", AnalysisRunViewSet, basename="analysisrun")
 router.register(r"analysiscontext", AnalysisContextViewSet, basename="analysiscontext")
 router.register(r"workflow", WorkflowViewSet, basename="workflow")
 router.register(r"workflowrun", WorkflowRunViewSet, basename="workflowrun")
+router.register(r"workflowrun", WorkflowRunAction, basename="workflowrun-action")
 router.register(r"payload", PayloadViewSet, basename="payload")
 
 # may no longer need this as it's currently included in the detail response for an individual WorkflowRun record

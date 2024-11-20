@@ -7,8 +7,8 @@ import datetime
 import logging
 
 from django.db import transaction
-import workflow_manager_proc.domain.executionservice.workflowrunstatechange as srv
-import workflow_manager_proc.domain.workflowmanager.workflowrunstatechange as wfm
+import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
+import workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange as wfm
 from workflow_manager.models import (
     WorkflowRun,
     Workflow,
