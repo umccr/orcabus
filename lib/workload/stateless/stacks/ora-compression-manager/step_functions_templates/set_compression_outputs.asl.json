@@ -92,8 +92,8 @@
       "Parameters": {
         "FunctionName": "${__merge_fastq_list_csv_with_rgid_lambda_function_arn__}",
         "Payload": {
-          "rgids.$": "$.get_rgids_from_db_step.rgids",
-          "output_dir_uri.$": "$.analysis_outputs_step.output_json.instrumentRunOraOutputUri"
+          "rgids_list.$": "$.get_rgids_from_db_step.rgids",
+          "instrument_run_folder_uri.$": "$.analysis_outputs_step.output_json.instrumentRunOraOutputUri"
         }
       },
       "Retry": [

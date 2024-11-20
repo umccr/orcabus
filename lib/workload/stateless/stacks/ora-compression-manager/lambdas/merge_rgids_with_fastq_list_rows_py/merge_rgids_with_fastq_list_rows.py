@@ -14,26 +14,23 @@ merge with the rgids list csv to get the full rgids and return as a json records
 ]
 """
 
-
+# Imports
 import typing
 from io import StringIO
-
 import boto3
 from os import environ
 import re
 import pandas as pd
 
 from wrapica.project_data import (
-    find_project_data_bulk,
     convert_uri_to_project_data_obj,
-    ProjectData, convert_project_data_obj_to_uri, read_icav2_file_contents, list_project_data_non_recursively
+    ProjectData, read_icav2_file_contents, list_project_data_non_recursively
 )
-from wrapica.enums import DataType, UriType
+from wrapica.enums import DataType
 
 if typing.TYPE_CHECKING:
     from mypy_boto3_ssm import SSMClient
     from mypy_boto3_secretsmanager import SecretsManagerClient
-
 
 # Constants
 # index.index2.lane.rgsm.instrument_run_id
