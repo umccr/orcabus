@@ -270,18 +270,18 @@
       "Parameters": {
         "Entries": [
           {
+            "EventBusName": "${__event_bus_name__}",
+            "DetailType": "${__detail_type__}",
+            "Source": "${__event_source__}",
             "Detail": {
               "status": "${__event_status__}",
               "payload": {
                 "data": {
-                  "libraryId.$": "$.extract_inputs.individual_id",
-                  "outputs.$": "$.launch_holmes_extract_step.Output"
+                  "library.$": "$.payload.data.library",
+                  "bamFiles.$": "$.extract_inputs.alignment_bams"
                 }
               }
-            },
-            "DetailType": "${__detail_type__}",
-            "EventBusName": "${__event_bus_name__}",
-            "Source": "${__event_source__}"
+            }
           }
         ]
       },
