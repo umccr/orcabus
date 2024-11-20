@@ -18,6 +18,8 @@ api_version = API_VERSION
 api_base = f"{api_namespace}/{api_version}/"
 
 router = OptionalSlashDefaultRouter()
+
+router.register("workflowrun/list_all", WorkflowRunStatsViewSet, basename="workflowrun_list_all") # put it before workflowrun, as it will match the workflowrun/list_all/ url
 router.register(r"analysis", AnalysisViewSet, basename="analysis")
 router.register(r"analysisrun", AnalysisRunViewSet, basename="analysisrun")
 router.register(r"analysiscontext", AnalysisContextViewSet, basename="analysiscontext")
@@ -37,8 +39,6 @@ router.register(
 #     LibraryViewSet,
 #     basename="workflowrun-library",
 # )
-
-router.register(r"workflowrun_list_all", WorkflowRunStatsViewSet, basename="workflowrun_list_all")
 
 router.register(
     "workflowrun/(?P<orcabus_id>[^/.]+)/comment",
