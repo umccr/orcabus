@@ -79,130 +79,233 @@
           }
         },
         {
-          "StartAt": "Generate Copy Manifest",
+          "StartAt": "For each fastq list row",
           "States": {
-            "Generate Copy Manifest": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${__generate_copy_manifest_dict__}",
-                "Payload": {
-                  "sample_id.$": "$.get_ready_event_step.inputs.sampleId",
-                  "cache_uri.$": "$.get_ready_event_step.engine_parameters.cacheUri",
-                  "fastq_list_rows.$": "$.get_ready_event_step.inputs.fastqListRows"
+            "For each fastq list row": {
+              "Type": "Map",
+              "ItemsPath": "$.get_ready_event_step.inputs.fastqListRows",
+              "ItemSelector": {
+                "fastq_list_row.$": "$$.Map.Item.Value",
+                "sample_id.$": "$.get_ready_event_step.inputs.sampleId",
+                "cache_uri.$": "$.get_ready_event_step.engine_parameters.cacheUri"
+              },
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Check fastq list rows are ora",
+                "States": {
+                  "Check fastq list rows are ora": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                      "FunctionName": "${__fastq_list_rows_are_ora_lambda_function_arn__}",
+                      "Payload": {
+                        "fastq_list_row.$": "$.fastq_list_row"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2,
+                        "JitterStrategy": "FULL"
+                      }
+                    ],
+                    "ResultSelector": {
+                      "is_ora.$": "$.Payload.is_ora"
+                    },
+                    "ResultPath": "$.is_ora_step",
+                    "Next": "Is ORA FQ Pair"
+                  },
+                  "Is ORA FQ Pair": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$.is_ora_step.is_ora",
+                        "BooleanEquals": true,
+                        "Next": "Convert ORA to Cache URI GZ",
+                        "Comment": "Decompress ORA"
+                      }
+                    ],
+                    "Default": "Generate Copy Manifest"
+                  },
+                  "Convert ORA to Cache URI GZ": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                      "FunctionName": "${__convert_ora_uri_to_gz_cache_uri_lambda_function_arn__}",
+                      "Payload": {
+                        "sample_id.$": "$.sample_id",
+                        "fastq_list_row.$": "$.fastq_list_row",
+                        "cache_uri.$": "$.cache_uri"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2,
+                        "JitterStrategy": "FULL"
+                      }
+                    ],
+                    "ResultPath": "$.get_ora_cache_uri_step",
+                    "Next": "ORA Decompress Fastqs"
+                  },
+                  "ORA Decompress Fastqs": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::states:startExecution.sync:2",
+                    "Parameters": {
+                      "StateMachineArn": "${__ora_fastq_list_row_decompression_sfn_arn__}",
+                      "Input": {
+                        "read1OraFileUri.$": "$.fastq_list_row.read1FileUri",
+                        "read2OraFileUri.$": "$.fastq_list_row.read2FileUri",
+                        "read1GzOutputFileUri.$": "$.get_ora_cache_uri_step.read_1_gz_output_uri",
+                        "read2GzOutputFileUri.$": "$.get_ora_cache_uri_step.read_2_gz_output_uri",
+                        "read1EstimatedGzFileSize": -1,
+                        "read2EstimatedGzFileSize": -1
+                      }
+                    },
+                    "End": true
+                  },
+                  "Generate Copy Manifest": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                      "FunctionName": "${__generate_copy_manifest_dict__}",
+                      "Payload": {
+                        "sample_id.$": "$.sample_id",
+                        "cache_uri.$": "$.cache_uri",
+                        "fastq_list_rows.$": "States.Array($.fastq_list_row)"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException",
+                          "States.TaskFailed"
+                        ],
+                        "IntervalSeconds": 60,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2
+                      }
+                    ],
+                    "Comment": "Generate a copy manifest object, ready to parse into the icav2 copy batch utility step function\n\nWe expect the following inputs:\n\n* cache_path\n* project_id\n* sample_id\n* fastq_list_rows\n\nAnd we expect the following outputs:\n\n* manifest",
+                    "ResultSelector": {
+                      "dest_uri.$": "$.Payload.dest_uri",
+                      "source_uris.$": "$.Payload.source_uris"
+                    },
+                    "ResultPath": "$.generate_copy_manifest_dict_step",
+                    "Next": "Get Variable number of seconds"
+                  },
+                  "Get Variable number of seconds": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                      "FunctionName": "${__get_variable_number_of_seconds_lambda_function_arn__}"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException",
+                          "States.TaskFailed"
+                        ],
+                        "IntervalSeconds": 60,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2
+                      }
+                    ],
+                    "ResultSelector": {
+                      "num_seconds.$": "$.Payload.random_number"
+                    },
+                    "ResultPath": "$.get_variable_seconds_step",
+                    "Next": "Wait a variable amount of time"
+                  },
+                  "Wait a variable amount of time": {
+                    "Type": "Wait",
+                    "SecondsPath": "$.get_variable_seconds_step.num_seconds",
+                    "Next": "Check Running Copy Fastq Job Number"
+                  },
+                  "Check Running Copy Fastq Job Number": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                      "FunctionName": "${__check_number_of_copy_jobs_running_lambda_function_arn__}"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException",
+                          "States.TaskFailed"
+                        ],
+                        "IntervalSeconds": 60,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2
+                      }
+                    ],
+                    "ResultSelector": {
+                      "run_copy_job_step_bool.$": "$.Payload.run_copy_job_step_bool"
+                    },
+                    "ResultPath": "$.run_copy_job_step",
+                    "Next": "Allowed to run"
+                  },
+                  "Allowed to run": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$.run_copy_job_step.run_copy_job_step_bool",
+                        "BooleanEquals": false,
+                        "Next": "Wait A Minute",
+                        "Comment": "Too Many jobs running already"
+                      }
+                    ],
+                    "Default": "Copy Fastq Files to Cache Directory"
+                  },
+                  "Wait A Minute": {
+                    "Type": "Wait",
+                    "Seconds": 60,
+                    "Next": "Check Running Copy Fastq Job Number"
+                  },
+                  "Copy Fastq Files to Cache Directory": {
+                    "Type": "Task",
+                    "End": true,
+                    "Parameters": {
+                      "StateMachineArn": "${__copy_icav2_files_state_machine_arn__}",
+                      "Input": {
+                        "dest_uri.$": "$.generate_copy_manifest_dict_step.dest_uri",
+                        "source_uris.$": "$.generate_copy_manifest_dict_step.source_uris"
+                      }
+                    },
+                    "Resource": "arn:aws:states:::states:startExecution.sync:2",
+                    "ResultPath": "$.copy_fastq_files_to_cache_directory_step",
+                    "ResultSelector": {
+                      "job_id.$": "$.Output.job_id"
+                    }
+                  }
                 }
               },
-              "Retry": [
-                {
-                  "ErrorEquals": [
-                    "Lambda.ServiceException",
-                    "Lambda.AWSLambdaException",
-                    "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException",
-                    "States.TaskFailed"
-                  ],
-                  "IntervalSeconds": 60,
-                  "MaxAttempts": 3,
-                  "BackoffRate": 2
-                }
-              ],
-              "Next": "Get Variable number of seconds",
-              "Comment": "Generate a copy manifest object, ready to parse into the icav2 copy batch utility step function\n\nWe expect the following inputs:\n\n* cache_path\n* project_id\n* sample_id\n* fastq_list_rows\n\nAnd we expect the following outputs:\n\n* manifest",
-              "ResultSelector": {
-                "dest_uri.$": "$.Payload.dest_uri",
-                "source_uris.$": "$.Payload.source_uris"
-              },
-              "ResultPath": "$.generate_copy_manifest_dict_step"
-            },
-            "Get Variable number of seconds": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${__get_variable_number_of_seconds_lambda_function_arn__}"
-              },
-              "Retry": [
-                {
-                  "ErrorEquals": [
-                    "Lambda.ServiceException",
-                    "Lambda.AWSLambdaException",
-                    "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException",
-                    "States.TaskFailed"
-                  ],
-                  "IntervalSeconds": 60,
-                  "MaxAttempts": 3,
-                  "BackoffRate": 2
-                }
-              ],
-              "ResultSelector": {
-                "num_seconds.$": "$.Payload.random_number"
-              },
-              "ResultPath": "$.get_variable_seconds_step",
-              "Next": "Wait a variable amount of time"
-            },
-            "Wait a variable amount of time": {
-              "Type": "Wait",
-              "SecondsPath": "$.get_variable_seconds_step.num_seconds",
-              "Next": "Check Running Copy Fastq Job Number"
-            },
-            "Check Running Copy Fastq Job Number": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${__check_number_of_copy_jobs_running_lambda_function_arn__}"
-              },
-              "Retry": [
-                {
-                  "ErrorEquals": [
-                    "Lambda.ServiceException",
-                    "Lambda.AWSLambdaException",
-                    "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException",
-                    "States.TaskFailed"
-                  ],
-                  "IntervalSeconds": 60,
-                  "MaxAttempts": 3,
-                  "BackoffRate": 2
-                }
-              ],
-              "ResultSelector": {
-                "run_copy_job_step_bool.$": "$.Payload.run_copy_job_step_bool"
-              },
-              "ResultPath": "$.run_copy_job_step",
-              "Next": "Allowed to run"
-            },
-            "Allowed to run": {
-              "Type": "Choice",
-              "Choices": [
-                {
-                  "Variable": "$.run_copy_job_step.run_copy_job_step_bool",
-                  "BooleanEquals": false,
-                  "Next": "Wait A Minute",
-                  "Comment": "Too Many jobs running already"
-                }
-              ],
-              "Default": "Copy Fastq Files to Cache Directory"
-            },
-            "Wait A Minute": {
-              "Type": "Wait",
-              "Seconds": 60,
-              "Next": "Check Running Copy Fastq Job Number"
-            },
-            "Copy Fastq Files to Cache Directory": {
-              "Type": "Task",
-              "End": true,
-              "Parameters": {
-                "StateMachineArn": "${__copy_icav2_files_state_machine_arn__}",
-                "Input": {
-                  "dest_uri.$": "$.generate_copy_manifest_dict_step.dest_uri",
-                  "source_uris.$": "$.generate_copy_manifest_dict_step.source_uris"
-                }
-              },
-              "Resource": "arn:aws:states:::states:startExecution.sync:2",
-              "ResultPath": "$.copy_fastq_files_to_cache_directory_step",
-              "ResultSelector": {
-                "job_id.$": "$.Output.job_id"
-              }
+              "End": true
             }
           }
         }

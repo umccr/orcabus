@@ -40,6 +40,8 @@ interface Cttsov2Icav2PipelineManagerConstructProps {
   generateCopyManifestDictLambdaObj: PythonFunction;
   checkNumRunningSfnsLambdaObj: PythonFunction;
   getRandomNumberLambdaObj: PythonFunction;
+  checkFastqListRowIsOraLambdaObj: PythonFunction;
+  convertOraToCacheUriGzPathLambdaObj: PythonFunction;
   // SFN Output lambdas
   deleteCacheUriLambdaObj: PythonFunction;
   setOutputJsonLambdaObj: PythonFunction;
@@ -48,6 +50,8 @@ interface Cttsov2Icav2PipelineManagerConstructProps {
   checkSuccessSampleLambdaObj: PythonFunction;
   // ICAv2 Copy Batch State Machine Object
   icav2CopyFilesStateMachineObj: sfn.IStateMachine;
+  // ORA Decompression Statemachine Object
+  oraDecompressionStateMachineObj: sfn.IStateMachine;
 }
 
 export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
@@ -83,9 +87,15 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
             props.getRandomNumberLambdaObj.currentVersion.functionArn,
           __check_number_of_copy_jobs_running_lambda_function_arn__:
             props.checkNumRunningSfnsLambdaObj.currentVersion.functionArn,
+          __fastq_list_rows_are_ora_lambda_function_arn__:
+            props.checkFastqListRowIsOraLambdaObj.currentVersion.functionArn,
+          __convert_ora_uri_to_gz_cache_uri_lambda_function_arn__:
+            props.convertOraToCacheUriGzPathLambdaObj.currentVersion.functionArn,
           /* Subfunction state machines */
           __copy_icav2_files_state_machine_arn__:
             props.icav2CopyFilesStateMachineObj.stateMachineArn,
+          __ora_fastq_list_row_decompression_sfn_arn__:
+            props.oraDecompressionStateMachineObj.stateMachineArn,
           /* Dynamodb tables */
           __table_name__: props.dynamodbTableObj.tableName,
         },
@@ -98,6 +108,8 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
       props.uploadSamplesheetToCacheDirLambdaObj,
       props.getRandomNumberLambdaObj,
       props.checkNumRunningSfnsLambdaObj,
+      props.checkFastqListRowIsOraLambdaObj,
+      props.convertOraToCacheUriGzPathLambdaObj,
     ].forEach((lambda_obj) => {
       lambda_obj.currentVersion.grantInvoke(configureInputsSfn);
     });
@@ -118,6 +130,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
 
     // Add state machine execution permissions to stateMachine role
     props.icav2CopyFilesStateMachineObj.grantStartExecution(configureInputsSfn);
+    props.oraDecompressionStateMachineObj.grantStartExecution(configureInputsSfn);
 
     // Update checkNumRunningSfnsLambdaObj env var to include the state machine arn of
     // the icav2 copy files sfn
