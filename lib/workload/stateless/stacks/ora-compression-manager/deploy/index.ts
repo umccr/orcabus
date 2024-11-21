@@ -136,7 +136,8 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
         environment: {
           ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
         },
-        timeout: Duration.seconds(60),
+        memorySize: 1024,
+        timeout: Duration.seconds(300),
       }
     );
     const findAllFastqPairsInInstrumentRunLambdaObj = new PythonFunction(
@@ -151,7 +152,8 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
         environment: {
           ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
         },
-        timeout: Duration.seconds(60),
+        memorySize: 1024,
+        timeout: Duration.seconds(300),
       }
     );
 
@@ -257,7 +259,8 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
         environment: {
           ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
         },
-        timeout: Duration.seconds(60),
+        memorySize: 1024,
+        timeout: Duration.seconds(300),
       }
     );
 
@@ -401,7 +404,8 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       environment: {
         ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
       },
-      timeout: Duration.seconds(60),
+      memorySize: 1024,
+      timeout: Duration.seconds(300),
     });
 
     // Give the lambda function access to the secret
