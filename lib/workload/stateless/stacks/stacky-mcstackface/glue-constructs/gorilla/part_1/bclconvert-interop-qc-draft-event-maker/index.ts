@@ -9,6 +9,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
+import { NagSuppressions } from 'cdk-nag';
 
 /*
 Part 1
@@ -62,7 +63,7 @@ export class BclconvertInteropQcDraftMakerConstruct extends Construct {
     /*
     Part 1: Generate the preamble (sfn to generate the portal run id and the workflow run name)
     */
-    const sfn_preamble = new WorkflowDraftRunStateChangeCommonPreambleConstruct(
+    const sfnPreamble = new WorkflowDraftRunStateChangeCommonPreambleConstruct(
       this,
       `${this.bclconvertInteropQcDraftMakerEventMap.prefix}_sfn_preamble`,
       {
@@ -118,7 +119,7 @@ export class BclconvertInteropQcDraftMakerConstruct extends Construct {
         __workflow_version__: this.bclconvertInteropQcDraftMakerEventMap.workflowVersion,
         __payload_version__: this.bclconvertInteropQcDraftMakerEventMap.payloadVersion,
         // Subfunctions
-        __sfn_preamble_state_machine_arn__: sfn_preamble.stateMachineArn,
+        __sfn_preamble_state_machine_arn__: sfnPreamble.stateMachineArn,
         __launch_ready_event_sfn_arn__: engineParametersAndReadyLaunchSfn.stateMachineArn,
       },
     });
@@ -126,6 +127,10 @@ export class BclconvertInteropQcDraftMakerConstruct extends Construct {
     /*
     Part 2: Grant the sfn permissions
     */
+    [sfnPreamble, engineParametersAndReadyLaunchSfn].forEach((sfnObj) => {
+      sfnObj.grantStartExecution(inputsMakerSfn);
+      sfnObj.grantRead(inputsMakerSfn);
+    });
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -138,9 +143,19 @@ export class BclconvertInteropQcDraftMakerConstruct extends Construct {
       })
     );
 
-    // Add state machine execution permissions to stateMachine role
-    sfn_preamble.grantStartExecution(inputsMakerSfn);
-    engineParametersAndReadyLaunchSfn.grantStartExecution(inputsMakerSfn);
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      inputsMakerSfn,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     /*
     Part 3: Subscribe to the event bus for this event type

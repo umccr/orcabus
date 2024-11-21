@@ -855,11 +855,11 @@ export const oraCompressionStateMachinePrefix = 'oraCompressionSfn';
 Resources used by the ora compression pipeline
 */
 
-// Release can be found here: https://github.com/umccr/cwl-ica/releases/tag/dragen-instrument-run-fastq-to-ora-pipeline%2F4.2.4__20241030041958
-// Pipeline ID is: ba8f618a-842f-4a2f-9b2f-a074c047221
+// Release can be found here: https://github.com/umccr/cwl-ica/releases/tag/dragen-instrument-run-fastq-to-ora-pipeline%2F4.2.4__20241120224050
+// Pipeline ID is: 5c1c2fa2-30dc-46ed-9e7f-dc4fefac77b6
 // deployed to dev, stg and prod
 export const oraCompressionIcav2PipelineIdSSMParameterPath =
-  '/icav2/umccr-prod/ora_compression_pipeline_id';
+  '/icav2/umccr-prod/ora_compression_pipeline_id'; // 5c1c2fa2-30dc-46ed-9e7f-dc4fefac77b6
 
 // Default Reference Uri for compressing ORA files
 // Reference URI is icav2://reference-data/dragen-ora/v2/ora_reference_v2.tar.gz

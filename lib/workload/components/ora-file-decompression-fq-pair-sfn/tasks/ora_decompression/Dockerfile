@@ -78,6 +78,7 @@ ENV ORADATA_PATH="${ORA_MOUNT}/oradata/"
 # And make it executable
 RUN \
     wget \
+      --quiet \
       --output-document /dev/stdout \
       "${ORAD_AARCH_64_DOWNLOAD_URL}" | \
     tar \

@@ -6,6 +6,7 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as events_targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface Icav2AnalysisEventHandlerConstructProps {
   /* Names of objects to get */
@@ -75,6 +76,7 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
 
     /* Grant state machine permissions to run the output json step function */
     props.generateOutputsJsonSfn.grantStartExecution(this.stateMachineObj);
+    props.generateOutputsJsonSfn.grantRead(this.stateMachineObj);
 
     /* Grant the state machine access to invoke the internal launch sfn machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
@@ -86,6 +88,20 @@ export class Icav2AnalysisEventHandlerConstruct extends Construct {
         ],
         actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
       })
+    );
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      this.stateMachineObj,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
     );
 
     const rulePrefix = this.coerce_names(`umccr__automated__${props.workflowName}`);

@@ -12,6 +12,7 @@ import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { LambdaB64GzTranslatorConstruct } from '../../../../../../../components/python-lambda-b64gz-translator';
 import { GetLibraryObjectsFromSamplesheetConstruct } from '../../../../../../../components/python-lambda-get-metadata-objects-from-samplesheet';
 import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
+import { NagSuppressions } from 'cdk-nag';
 
 /*
 Part 1
@@ -152,6 +153,12 @@ export class BsshFastqCopyManagerReadyMakerConstruct extends Construct {
       lambda.currentVersion.grantInvoke(inputsMakerSfn);
     });
 
+    // Add state machine execution permissions to stateMachine role
+    [sfnPreamble, engineParametersAndReadyLaunchSfn].forEach((sfnObj) => {
+      sfnObj.grantStartExecution(inputsMakerSfn);
+      sfnObj.grantRead(inputsMakerSfn);
+    });
+
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
     inputsMakerSfn.addToRolePolicy(
@@ -163,9 +170,19 @@ export class BsshFastqCopyManagerReadyMakerConstruct extends Construct {
       })
     );
 
-    // Add state machine execution permissions to stateMachine role
-    sfnPreamble.grantStartExecution(inputsMakerSfn);
-    engineParametersAndReadyLaunchSfn.grantStartExecution(inputsMakerSfn);
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      inputsMakerSfn,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     const eventRule = new events.Rule(this, 'update_database_on_new_samplesheet_event_rule', {
       ruleName: `stacky-${this.bsshFastqCopyManagerDraftMakerEventMap.prefix}-event-rule`,

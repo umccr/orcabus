@@ -12,6 +12,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../../../../components/sfn-workflowdraftrunstatechange-common-preamble';
 import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
+import { NagSuppressions } from 'cdk-nag';
 
 /*
 Part 2
@@ -153,6 +154,12 @@ export class TnCompleteToUmccriseReadyConstruct extends Construct {
     // allow the step function to invoke the lambdas
     generateEventDataLambdaObj.currentVersion.grantInvoke(qcCompleteToDraftSfn);
 
+    // Allow the state machine to be able to invoke the preamble sfn
+    [sfnPreamble, engineParameterAndReadyEventMakerSfn].forEach((sfnObj) => {
+      sfnObj.grantStartExecution(qcCompleteToDraftSfn);
+      sfnObj.grantRead(qcCompleteToDraftSfn);
+    });
+
     /* Allow step function to call nested state machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -164,9 +171,20 @@ export class TnCompleteToUmccriseReadyConstruct extends Construct {
         actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
       })
     );
-    // Allow the state machine to be able to invoke the preamble sfn
-    sfnPreamble.grantStartExecution(qcCompleteToDraftSfn);
-    engineParameterAndReadyEventMakerSfn.grantStartExecution(qcCompleteToDraftSfn);
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      qcCompleteToDraftSfn,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn

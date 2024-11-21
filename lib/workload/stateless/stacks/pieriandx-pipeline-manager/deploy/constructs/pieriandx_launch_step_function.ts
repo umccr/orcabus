@@ -10,6 +10,7 @@ import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { LambdaLayerConstruct } from './lambda_layer';
 import * as events_targets from 'aws-cdk-lib/aws-events-targets';
+import { NagSuppressions } from 'cdk-nag';
 
 interface PieriandxLaunchStepFunctionConstructProps {
   /* Stack Objects */
@@ -108,6 +109,16 @@ export class PieriandxLaunchStepFunctionStateMachineConstruct extends Construct 
     // Allow state machine to read/write to dynamodb table
     props.dynamodbTableObj.grantReadWriteData(stateMachine.role);
 
+    // Allow sub-state launch machines to be invoked by this statemachine
+    [
+      props.launchPieriandxCaseCreationStepfunctionObj,
+      props.launchPieriandxInformaticsjobCreationStepfunctionObj,
+      props.launchPieriandxSequencerrunCreationStepfunctionObj,
+    ].forEach((state_machine_obj) => {
+      state_machine_obj.grantStartExecution(stateMachine);
+      state_machine_obj.grantRead(stateMachine);
+    });
+
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
     stateMachine.addToRolePolicy(
@@ -118,15 +129,19 @@ export class PieriandxLaunchStepFunctionStateMachineConstruct extends Construct 
         actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
       })
     );
-
-    // Allow sub-state launch machines to be invoked by this statemachine
-    [
-      props.launchPieriandxCaseCreationStepfunctionObj,
-      props.launchPieriandxInformaticsjobCreationStepfunctionObj,
-      props.launchPieriandxSequencerrunCreationStepfunctionObj,
-    ].forEach((state_machine_obj) => {
-      state_machine_obj.grantStartExecution(stateMachine);
-    });
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      stateMachine,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     // Get event bus from event bus name
     const eventBusObj = events.EventBus.fromEventBusName(this, 'eventBus', props.eventBusName);
