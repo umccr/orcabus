@@ -9,6 +9,10 @@ import * as cdk from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
+import {
+  bclconvertInteropQcIcav2PipelineWorkflowName,
+  bclconvertInteropQcIcav2PipelineWorkflowTypeVersion,
+} from '../../../../../../../../../config/constants';
 
 /*
 Part 1
@@ -52,8 +56,8 @@ export class BclconvertInteropQcDraftMakerConstruct extends Construct {
     triggerWorkflowName: 'bsshFastqCopy',
     outputSource: 'orcabus.bclconvertinteropqcinputeventglue',
     payloadVersion: '2024.05.24',
-    workflowName: 'bclconvert-interop-qc',
-    workflowVersion: '2024.05.24',
+    workflowName: bclconvertInteropQcIcav2PipelineWorkflowName,
+    workflowVersion: bclconvertInteropQcIcav2PipelineWorkflowTypeVersion,
   };
 
   constructor(scope: Construct, id: string, props: bclconvertInteropQcDraftMakerConstructProps) {

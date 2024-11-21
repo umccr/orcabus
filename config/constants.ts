@@ -195,7 +195,7 @@ export const bclconvertInteropQcDynamoDbTableSSMArn = path.join(
 
 // Stateless
 export const bclconvertInteropQcIcav2PipelineWorkflowName = 'bclconvert-interop-qc';
-export const bclconvertInteropQcIcav2PipelineWorkflowTypeVersion = '1.3.1--1.21';
+export const bclconvertInteropQcIcav2PipelineWorkflowTypeVersion = '1.3.1--1.25.2';
 export const bclconvertInteropQcIcav2ServiceVersion = '2024.07.01';
 
 export const bclconvertInteropQcIcav2ReadyEventSource = 'orcabus.workflowmanager';
@@ -207,8 +207,8 @@ export const bclconvertInteropQcStateMachinePrefix = 'bclconvertInteropQcSfn';
 Resources used by the bclConvert InteropQc Pipeline
 */
 
-// Release can be found here: https://github.com/umccr/cwl-ica/releases/tag/bclconvert-interop-qc%2F1.3.1--1.21__20240627051309
-// Pipeline ID is: 35cae57c-8895-4814-ae89-db4b5e9668b2
+// Release can be found here: https://github.com/umccr/cwl-ica/releases/tag/bclconvert-interop-qc%2F1.3.1--1.25.2__20241120234352
+// Pipeline ID is: dfbf508b-fa4d-47d5-8de5-da63a20c894b
 export const bclconvertInteropQcIcav2PipelineIdSSMParameterPath =
   '/icav2/umccr-prod/bclconvert_interop_qc_pipeline_id';
 
