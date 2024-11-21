@@ -67,6 +67,15 @@
               }
             },
             "TimeoutSeconds": 7200,
+            "Retry": [
+              {
+                "ErrorEquals": ["ECS.AmazonECSException"],
+                "BackoffRate": 2,
+                "IntervalSeconds": 300,
+                "MaxAttempts": 3,
+                "JitterStrategy": "FULL"
+              }
+            ],
             "ResultPath": "$.gzip_to_raw_md5sum_step_result",
             "Next": "Read md5sum output"
           },
