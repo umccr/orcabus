@@ -30,28 +30,28 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import path from 'path';
-import { MetadataToolsPythonLambdaLayer } from '../python-metadata-tools-layer';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Duration } from 'aws-cdk-lib';
+import { WorkflowToolsPythonLambdaLayer } from '../python-workflow-tools-layer';
 
-interface MapMetadataLambdaObj {
+interface GetWorkflowPayloadLambdaObj {
   functionNamePrefix: string;
 }
 
-export class GetMetadataLambdaConstruct extends Construct {
+export class GetWorkflowPayloadLambdaConstruct extends Construct {
   public readonly lambdaObj: PythonFunction;
 
   // Globals
   private readonly hostnameSsmParameterPath = '/hosted_zone/umccr/name';
   private readonly orcabusTokenSecretId = 'orcabus/token-service-jwt'; // pragma: allowlist secret
 
-  constructor(scope: Construct, id: string, props: MapMetadataLambdaObj) {
+  constructor(scope: Construct, id: string, props: GetWorkflowPayloadLambdaObj) {
     super(scope, id);
 
     // Get the metadata layer object
-    const metadataLayerObj = new MetadataToolsPythonLambdaLayer(this, 'metadata-tools-layer', {
-      layerPrefix: `${props.functionNamePrefix}-mtl`,
+    const workflowToolsLayer = new WorkflowToolsPythonLambdaLayer(this, 'workflow-tools-layer', {
+      layerPrefix: `${props.functionNamePrefix}-wtl`,
     });
 
     /*
@@ -69,15 +69,15 @@ export class GetMetadataLambdaConstruct extends Construct {
     );
 
     // Get library objects
-    this.lambdaObj = new PythonFunction(this, 'map_metadata_py', {
-      functionName: `${props.functionNamePrefix}-map-metadata-py`,
-      entry: path.join(__dirname, 'map_metadata_py'),
+    this.lambdaObj = new PythonFunction(this, 'get_workflow_payload_py', {
+      functionName: `${props.functionNamePrefix}-get-workflow-payload-py`,
+      entry: path.join(__dirname, 'get_workflow_payload_py'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
-      index: 'map_metadata.py',
+      index: 'get_workflow_payload.py',
       handler: 'handler',
       memorySize: 1024,
-      layers: [metadataLayerObj.lambdaLayerVersionObj],
+      layers: [workflowToolsLayer.lambdaLayerVersionObj],
       environment: {
         HOSTNAME_SSM_PARAMETER: hostnameSsmParameterObj.parameterName,
         ORCABUS_TOKEN_SECRET_ID: orcabusTokenSecretObj.secretName,

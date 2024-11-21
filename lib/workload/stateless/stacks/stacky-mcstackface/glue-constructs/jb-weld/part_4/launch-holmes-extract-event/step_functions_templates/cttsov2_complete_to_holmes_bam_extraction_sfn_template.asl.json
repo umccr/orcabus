@@ -1,0 +1,224 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Move Workflow Inputs",
+  "States": {
+    "Move Workflow Inputs": {
+      "Type": "Pass",
+      "Parameters": {
+        "workflow_inputs.$": "$"
+      },
+      "Next": "Get Extract Inputs"
+    },
+    "Get Extract Inputs": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Get Service",
+          "States": {
+            "Get Service": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__get_cloudmap_service_lambda_function_arn__}",
+                "Payload": {
+                  "service_name": "${__service_name__}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "ResultSelector": {
+                "service_obj.$": "$.Payload.service_obj"
+              },
+              "ResultPath": "$.get_service_obj_step",
+              "Next": "Get Service Instances"
+            },
+            "Get Service Instances": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__get_service_instances_lambda_function_arn__}",
+                "Payload": {
+                  "service_id.$": "$.get_service_obj_step.service_obj.service_id"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "ResultSelector": {
+                "service_instances.$": "$.Payload.service_instances"
+              },
+              "ResultPath": "$.get_service_instances_step",
+              "Next": "Get extract ARN"
+            },
+            "Get extract ARN": {
+              "Type": "Pass",
+              "Parameters": {
+                "extract_arn.$": "States.ArrayGetItem($.get_service_instances_step.service_instances[0].instance_attributes[?(@.attr_key=='${__extract_arn_key__}')].attr_value, 0)"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Library Obj from Library Orcabus ID",
+          "States": {
+            "Get Library Obj from Library Orcabus ID": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__get_library_obj_lambda_function_arn__}",
+                "Payload": {
+                  "value.$": "$.workflow_inputs.linkedLibraries[0].orcabusId"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "ResultSelector": {
+                "library_obj.$": "$.Payload"
+              },
+              "ResultPath": "$.get_library_obj_step",
+              "Next": "Get payload inputs"
+            },
+            "Get payload inputs": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Get tumor bam uri from portal run id",
+                  "States": {
+                    "Get tumor bam uri from portal run id": {
+                      "Type": "Pass",
+                      "Parameters": {
+                        "alignment_bam_uri.$": "States.Format('{}DragenCaller/{}/{}_tumor.bam', $.workflow_inputs.payload.data.outputs.logsIntermediatesDir, $.workflow_inputs.payload.data.inputs.sampleId, $.workflow_inputs.payload.data.inputs.sampleId)"
+                      },
+                      "ResultPath": "$.get_alignment_bam_uri_step",
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Get Individual ID from Subject OrcaBus ID",
+                  "States": {
+                    "Get Individual ID from Subject OrcaBus ID": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${__get_individual_obj_lambda_function_arn__}",
+                        "Payload": {
+                          "value.$": "$.get_library_obj_step.library_obj.subject.orcabusId"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2,
+                          "JitterStrategy": "FULL"
+                        }
+                      ],
+                      "ResultPath": "$.get_individual_id_step",
+                      "ResultSelector": {
+                        "individual_id.$": "States.ArrayGetItem($.Payload.individualSet[?(@.individualId =~ /SBJ.*?/i)].individualId, 0)"
+                      },
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "ResultSelector": {
+                "alignment_bam.$": "$.[0].get_alignment_bam_uri_step.alignment_bam_uri",
+                "individual_id.$": "$.[1].get_individual_id_step.individual_id"
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultSelector": {
+        "extract_arn.$": "$.[0].extract_arn",
+        "individual_id.$": "$.[1].individual_id",
+        "alignment_bam.$": "$.[1].alignment_bam"
+      },
+      "ResultPath": "$.extract_inputs",
+      "Next": "Launch Holmes Extract"
+    },
+    "Launch Holmes Extract": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn.$": "$.extract_inputs.extract_arn",
+        "Input": {
+          "subjectIdentifier.$": "$.extract_inputs.individual_id",
+          "libraryIdentifier.$": "$.workflow_inputs.linkedLibraries[0].libraryId",
+          "indexes.$": "States.Array($.extract_inputs.alignment_bam)",
+          "reference": "${__reference_name__}"
+        }
+      },
+      "ResultPath": "$.launch_holmes_extract_step",
+      "Next": "Holmes Extract Complete"
+    },
+    "Holmes Extract Complete": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "EventBusName": "${__event_bus_name__}",
+            "DetailType": "${__detail_type__}",
+            "Source": "${__event_source__}",
+            "Detail": {
+              "status": "${__event_status__}",
+              "payload": {
+                "data": {
+                  "library.$": "$.workflow_inputs.linkedLibraries[0]",
+                  "bamFiles.$": "States.Array($.extract_inputs.alignment_bam)"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}
