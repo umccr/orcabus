@@ -6,7 +6,6 @@ A serverless WebSocket API implementation using AWS CDK, API Gateway WebSocket A
 
 ![Architecture Diagram](./websocket-api-arch.png)
 
-
 ### Components
 
 - **API Gateway WebSocket API**: Handles WebSocket connections

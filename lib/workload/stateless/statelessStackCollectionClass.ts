@@ -80,6 +80,8 @@ import {
   OraDecompressionManagerStackProps,
 } from './stacks/ora-decompression-manager/deploy';
 
+import { WebSocketApiStackProps, WebSocketApiStack } from './stacks/client-websocket-conn/deploy';
+
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
@@ -104,6 +106,7 @@ export interface StatelessStackCollectionProps {
   workflowManagerStackProps: WorkflowManagerStackProps;
   stackyMcStackFaceProps: GlueStackProps;
   fmAnnotatorProps: FMAnnotatorConfigurableProps;
+  websocketApiStackProps: WebSocketApiStackProps;
 }
 
 export class StatelessStackCollection {
@@ -131,6 +134,7 @@ export class StatelessStackCollection {
   readonly workflowManagerStack: Stack;
   readonly stackyMcStackFaceStack: Stack;
   readonly fmAnnotator: Stack;
+  readonly websocketApiStack: Stack;
 
   constructor(
     scope: Construct,
@@ -308,6 +312,11 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'FMAnnotatorStack'),
       ...statelessConfiguration.fmAnnotatorProps,
       domainName: fileManagerStack.domainName,
+    });
+
+    this.websocketApiStack = new WebSocketApiStack(scope, 'WebSocketApiStack', {
+      ...this.createTemplateProps(env, 'WebSocketApiStack'),
+      ...statelessConfiguration.websocketApiStackProps,
     });
   }
 

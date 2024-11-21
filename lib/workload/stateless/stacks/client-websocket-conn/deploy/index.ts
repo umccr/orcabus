@@ -8,16 +8,17 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 export interface WebSocketApiStackProps extends StackProps {
   connectionTableName: string;
   websocketApigatewayName: string;
-  connectionFunctionName: string;
-  disconnectFunctionName: string;
-  messageFunctionName: string;
 
   lambdaSecurityGroupName: string;
   vpcProps: VpcLookupOptions;
+
+  websocketApiEndpointParameterName: string;
+  websocketStageName: string;
 }
 
 export class WebSocketApiStack extends Stack {
@@ -60,21 +61,21 @@ export class WebSocketApiStack extends Stack {
     // });
 
     // Lambda function for $connect
-    const connectHandler = this.createPythonFunction(props.connectionFunctionName, {
+    const connectHandler = this.createPythonFunction('connectHandler', {
       index: 'connect.py',
       handler: 'lambda_handler',
       timeout: Duration.minutes(2),
     });
 
     // Lambda function for $disconnect
-    const disconnectHandler = this.createPythonFunction(props.disconnectFunctionName, {
+    const disconnectHandler = this.createPythonFunction('disconnectHandler', {
       index: 'disconnect.py',
       handler: 'lambda_handler',
       timeout: Duration.minutes(2),
     });
 
     // Lambda function for $default (broadcast messages)
-    const messageHandler = this.createPythonFunction(props.messageFunctionName, {
+    const messageHandler = this.createPythonFunction('messageHandler', {
       index: 'message.py',
       handler: 'lambda_handler',
       timeout: Duration.minutes(2),
@@ -108,12 +109,19 @@ export class WebSocketApiStack extends Stack {
     // Deploy WebSocket API to a stage
     const stage = new WebSocketStage(this, 'WebSocketStage', {
       webSocketApi: api,
-      stageName: 'dev',
+      stageName: props.websocketStageName,
       autoDeploy: true,
     });
 
     // Create the WebSocket API endpoint URL
     const webSocketApiEndpoint = `${api.apiEndpoint}/${stage.stageName}`;
+
+    // save this url into the parameter store for the client to use
+    new StringParameter(this, 'WebSocketApiEndpoint', {
+      parameterName: props.websocketApiEndpointParameterName,
+      description: 'The endpoint URL for the WebSocket API',
+      stringValue: webSocketApiEndpoint,
+    });
 
     const commonEnvironment = {
       CONNECTION_TABLE: connectionTable.tableName,

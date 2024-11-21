@@ -63,7 +63,7 @@ import {
   getOraCompressionIcav2PipelineTableStackProps,
 } from './stacks/oraCompressionPipelineManager';
 import { getOraDecompressionManagerStackProps } from './stacks/oraDecompressionPipelineManager';
-
+import { getWebSocketApiStackProps } from './stacks/clientWebsocketApi';
 interface EnvironmentConfig {
   name: string;
   region: string;
@@ -130,6 +130,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       workflowManagerStackProps: getWorkflowManagerStackProps(stage),
       stackyMcStackFaceProps: getGlueStackProps(stage),
       fmAnnotatorProps: getFmAnnotatorProps(),
+      websocketApiStackProps: getWebSocketApiStackProps(stage),
     },
   };
 
