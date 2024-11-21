@@ -22,14 +22,15 @@ from workflow_manager.models import (
 )
 
 
-class WorkflowRunAction(ViewSet):
+class WorkflowRunActionViewSet(ViewSet):
+    lookup_value_regex = "[^/]+" # to allow orcabus id prefix
     queryset = WorkflowRun.objects.prefetch_related('states').all()
     orcabus_id_prefix = WorkflowRun.orcabus_id_prefix
 
     @extend_schema(
         request= PolymorphicProxySerializer(
             component_name='WorkflowRunRerun',
-            serializers=RERUN_INPUT_SERIALIZERS.values(),
+            serializers=list(RERUN_INPUT_SERIALIZERS.values()),
             resource_type_field_name=None
         ),
         responses=OpenApiTypes.OBJECT,

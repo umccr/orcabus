@@ -153,7 +153,7 @@ export class WorkflowManagerStack extends Stack {
       httpApi: httpApi,
       integration: apiIntegration,
       routeKey: HttpRouteKey.with(
-        `api/${API_VERSION}/workflowrun/{orcabusId}/rerun/{proxy+}`,
+        `/api/${API_VERSION}/workflowrun/{orcabusId}/rerun/{proxy+}`,
         HttpMethod.POST
       ),
     });
