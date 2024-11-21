@@ -153,6 +153,7 @@ export class WorkflowManagerStack extends Stack {
     new HttpRoute(this, 'PostRerunHttpRoute', {
       httpApi: httpApi,
       integration: apiIntegration,
+      authorizer: wfmApi.authStackHttpLambdaAuthorizer,
       routeKey: HttpRouteKey.with(
         `/api/${API_VERSION}/workflowrun/{orcabusId}/rerun/{proxy+}`,
         HttpMethod.POST
