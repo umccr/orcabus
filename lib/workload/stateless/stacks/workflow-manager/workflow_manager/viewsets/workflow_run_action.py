@@ -35,7 +35,7 @@ class WorkflowRunActionViewSet(ViewSet):
         ),
         responses=OpenApiTypes.OBJECT,
         description="Trigger a workflow run rerun by emitting an event to EventBridge with an overridden workflow "
-                    "input payload. (Current supported workflow: 'rnasum')"
+                    "input payload. Current supported workflow: 'rnasum'"
     )
     @action(
         detail=True,
@@ -85,7 +85,7 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
         "status": 'READY',
         "payload": new_payload,
         "portalRunId": new_portal_run_id,
-        "linkedLibraries": LibrarySerializer(wfl_run.libraries.all(), many=True).data,
+        "linkedLibraries": LibrarySerializer(wfl_run.libraries.all(), many=True, camel_case_data=True).data,
         "workflowName": wfl_run.workflow.workflow_name,
         "workflowRunName": wfl_run.workflow_run_name,
         "workflowVersion": wfl_run.workflow.workflow_version,
@@ -100,14 +100,15 @@ def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, new_portal_run_id: str,
 
     # Get the payload where the state is 'READY'
     ready_state: State = wfl_run.states.get(status='READY')
-    ready_data_payload = PayloadSerializer(ready_state.payload).data.get("data", None)
+    ready_data_payload = PayloadSerializer(ready_state.payload).data
 
-    # Start crafting the payload based on the old ones
-    new_data_payload = ready_data_payload.copy()
+    new_data_payload = {
+        'version': ready_data_payload['version'],
+        'data': ready_data_payload['data']
+    }
 
     # Override payload based on given input
-    new_data_payload["inputs"]["dataset"] = input_body["dataset"]
-
+    new_data_payload['data']["inputs"]["dataset"] = input_body["dataset"]
     # Replace old portal_run_id with new_portal_run_id in any part of the string
     # In the 'rnasum` payload, the engine parameter URI prefixes contain the portal_run_id
     new_data_payload = json.loads(

@@ -98,6 +98,7 @@ export class WorkflowManagerStack extends Stack {
       vpcSubnets: { subnets: this.vpc.privateSubnets },
       role: this.lambdaRole,
       architecture: Architecture.ARM_64,
+      memorySize: 1024,
       ...props,
     });
   }

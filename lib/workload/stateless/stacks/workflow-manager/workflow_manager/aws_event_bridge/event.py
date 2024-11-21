@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-
 def emit_wrsc_api_event(event):
     """
     Emit events to the event bridge sourced from the workflow manager API
