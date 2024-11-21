@@ -7,6 +7,7 @@ import { Cttsov2InitialiseLibraryAndFastqListRowConstruct } from './part_1/initi
 import { Cttsov2PopulateFastqListRowConstruct } from './part_2/populate-fastq-list-row-dbs';
 import { Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct } from './part_3/fastq-list-row-event-shower-complete-to-cttsov2-ready';
 import { NestedStack } from 'aws-cdk-lib/core';
+import { HolmesExtractConstruct } from './part_4/launch-holmes-extract-event';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting cttsov2 analyses
@@ -99,5 +100,10 @@ export class Cttsov2GlueHandlerConstruct extends NestedStack {
           icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
         }
       );
+
+    const holmesExtractConstruct = new HolmesExtractConstruct(this, 'holmes_extract', {
+      eventBusObj: props.eventBusObj,
+      tableObj: props.cttsov2GlueTableObj,
+    });
   }
 }

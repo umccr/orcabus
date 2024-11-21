@@ -20,12 +20,12 @@ from urllib.parse import urlparse, urlunparse
 from pathlib import Path
 
 # Wrapica imports
-from wrapica.enums import DataType
+from wrapica.enums import DataType, UriType
 from wrapica.project_data import (
     ProjectData,
     convert_uri_to_project_data_obj,
     list_project_data_non_recursively,
-    read_icav2_file_contents
+    read_icav2_file_contents, convert_project_data_obj_to_uri
 )
 
 # Type checking
@@ -146,7 +146,7 @@ def get_icav2_file_from_folder(project_data_list: typing.List[ProjectData], file
 
 def merge_fastq_list_rows_with_md5sums_and_filesizes(
         fastq_list_ora_df: pd.DataFrame,
-        fastq_gzipped_md5_df: pd.DataFrame,
+        fastq_raw_md5_df: pd.DataFrame,
         fastq_ora_md5_df: pd.DataFrame,
         fastq_gzipped_filesizes_df: pd.DataFrame,
         fastq_ora_filesizes_df: pd.DataFrame
@@ -154,7 +154,7 @@ def merge_fastq_list_rows_with_md5sums_and_filesizes(
     """
     Given the fastq list rows, the md5sums and the file sizes, merge them together
     :param fastq_list_ora_df:
-    :param fastq_gzipped_md5_df:
+    :param fastq_raw_md5_df:
     :param fastq_ora_md5_df:
     :param fastq_gzipped_filesizes_df:
     :param fastq_ora_filesizes_df:
@@ -162,7 +162,7 @@ def merge_fastq_list_rows_with_md5sums_and_filesizes(
     """
     # Extend the gzipped md5s to the fastq list rows
     fastq_list_ora_df = fastq_list_ora_df.merge(
-        fastq_gzipped_md5_df.assign(
+        fastq_raw_md5_df.assign(
             fastqPath=lambda row_iter_: row_iter_.fastqPath.str.rstrip(".gz") + ".ora"
         ),
         how="left",
@@ -171,9 +171,9 @@ def merge_fastq_list_rows_with_md5sums_and_filesizes(
     ).drop(
         columns='fastqPath'
     ).rename(
-        columns={"md5sum": "read1FileGzippedMd5sum"}
+        columns={"md5sum": "read1FileRawMd5sum"}
     ).merge(
-        fastq_gzipped_md5_df.assign(
+        fastq_raw_md5_df.assign(
             fastqPath=lambda row_iter_: row_iter_.fastqPath.str.rstrip(".gz") + ".ora"
         ),
         how="left",
@@ -182,7 +182,7 @@ def merge_fastq_list_rows_with_md5sums_and_filesizes(
     ).drop(
         columns='fastqPath'
     ).rename(
-        columns={"md5sum": "read2FileGzippedMd5sum"}
+        columns={"md5sum": "read2FileRawMd5sum"}
     )
 
     # Extend the ora md5s to the fastq list rows
@@ -292,6 +292,7 @@ def handler(event, context):
 
     # Get the output directory
     output_dir_uri = event["output_dir_uri"]
+    convert_to_icav2_uri = event.get("convert_to_icav2_uri", False)
 
     # Get the output directory as an icav2 object
     output_dir_project_obj: ProjectData = convert_uri_to_project_data_obj(output_dir_uri)
@@ -313,7 +314,7 @@ def handler(event, context):
     fastq_gzipped_md5_file_obj = read_md5sum(
         get_icav2_file_from_folder(
             output_dir_project_data_list,
-            "fastq_gzipped.md5.txt")
+            "fastq_raw.md5.txt")
     )
 
     # Get the file sizes for the new ora compressed tsv
@@ -347,6 +348,12 @@ def handler(event, context):
         fastq_gzipped_filesizes_file_obj,
         fastq_ora_filesizes_file_obj
     )
+
+    if convert_to_icav2_uri:
+        output_dir_uri = convert_project_data_obj_to_uri(
+            output_dir_project_obj,
+            uri_type=UriType.ICAV2
+        )
 
     # Convert read1File and read2File to URIs
     fastq_list_ora_df["read1FileUri"] = fastq_list_ora_df["read1File"].apply(
@@ -384,7 +391,8 @@ def handler(event, context):
 #         json.dumps(
 #             handler(
 #                 {
-#                     "output_dir_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/"
+#                     "convert_to_icav2_uri": True,
+#                     "output_dir_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/"
 #                 },
 #                 None
 #             ),
@@ -392,397 +400,397 @@ def handler(event, context):
 #         )
 #     )
 #
-#     # [
-#     #     {
-#     #         "rgsm": "L2401526",
-#     #         "lane": 1,
-#     #         "read1FileGzippedMd5sum": "ff9f75053fd5dfe34ac011fd679c62dd",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "18a267c2c5ca2f71e272815cd7508fd8",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "bb26321f461de85419c95131ce73f0a5",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "986ef94789f76d7a5e510d34b465033b",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 42630072057,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 43902595265,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 8647052933,
-#     #         "read2OraFileSizeInBytes": 9265337812,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401526/L2401526_S1_L001_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401526/L2401526_S1_L001_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401532",
-#     #         "lane": 1,
-#     #         "read1FileGzippedMd5sum": "7ec0a49be2a3c0a049b7593d00474cdb",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "af902803801285d3475ef1c8776ad611",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "6e2c5ce6e3014fd5f8be78bf9d769b26",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "54c5a6787ab80f07c25fc4abd5eb6bbc",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 4870,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 5969,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 4189,
-#     #         "read2OraFileSizeInBytes": 4914,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401532/L2401532_S7_L001_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401532/L2401532_S7_L001_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401528",
-#     #         "lane": 1,
-#     #         "read1FileGzippedMd5sum": "6de45d4c93afcf310d45c0edb0361427",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "c9a3dfed465b4053e1bacbc9e1b6bc70",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "1b947ed0f912f5dc0d5246cf0cbe63b9",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "16e8dc8d559dd8dd9515946c5112021c",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 43357314992,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 44092409731,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 8541275179,
-#     #         "read2OraFileSizeInBytes": 8863424337,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401528/L2401528_S3_L001_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401528/L2401528_S3_L001_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401531",
-#     #         "lane": 1,
-#     #         "read1FileGzippedMd5sum": "6dd394650558c4a93e2e2dd0322eaf08",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "f8ccf03414fc374903b1a2a5302ac517",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "1c61d4cca313a29dab5a05c2b9173a93",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "14583d8caca26fda8fac0701c0588292",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 43818023110,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 44844382192,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 8589773627,
-#     #         "read2OraFileSizeInBytes": 9065337736,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401531/L2401531_S6_L001_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401531/L2401531_S6_L001_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401527",
-#     #         "lane": 1,
-#     #         "read1FileGzippedMd5sum": "0953e17b02574f3167abbaba37dcd4ef",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "4d7f065b4ba5f7a702a469d566403bc6",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "70e9b68355b87e6fc3d96871def6e881",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "f3d0b90486c6f77fd78832777972b1be",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 37685523375,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 39255037633,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 7599984647,
-#     #         "read2OraFileSizeInBytes": 8409290279,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401527/L2401527_S2_L001_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401527/L2401527_S2_L001_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401530",
-#     #         "lane": 1,
-#     #         "read1FileGzippedMd5sum": "cd9e0018d17f119871e3b34ee5c6cf78",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "b4d9ab7d12e752eef790f27dd7d68aa5",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "9f2eb09791defb77c40e54693301d327",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "81434c21c81358e2d454750d428912ac",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 40837628477,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 41771419794,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 8127751530,
-#     #         "read2OraFileSizeInBytes": 8567645785,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401530/L2401530_S5_L001_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401530/L2401530_S5_L001_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401529",
-#     #         "lane": 1,
-#     #         "read1FileGzippedMd5sum": "69b4f91a0c87e52a5f02186d61f58f5d",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "5c42766421250fcbb97944d7e0920cc0",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "26cd69ff20668ca692f4fbc043bbfba6",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "09442fbd28bbf53778b71eeed1223027",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 40964945004,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 41736727855,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 8158884285,
-#     #         "read2OraFileSizeInBytes": 8535009518,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401529/L2401529_S4_L001_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_1/L2401529/L2401529_S4_L001_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401539",
-#     #         "lane": 2,
-#     #         "read1FileGzippedMd5sum": "1cf861134c39c7a1fe885396de951fd9",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "8f97bf9c1fcbb364d7779d9bdaba7e12",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "833cd38bea126e644627694af39e551b",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "31bda754f678a2c1d39cb7484eafc28b",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 76151725499,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 81298319647,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 13777362811,
-#     #         "read2OraFileSizeInBytes": 17019842335,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_2/L2401539/L2401539_S9_L002_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_2/L2401539/L2401539_S9_L002_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401544",
-#     #         "lane": 2,
-#     #         "read1FileGzippedMd5sum": "a6e1b6243503bfdffb15389be16a8300",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "6e08a07e72f14a59b663bec92d060960",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "6acbc7678701e00a7918932729a76d9c",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "71fc9c563ab6b1292a60a63919fe47b8",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 4479234306,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 4788152749,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 836174432,
-#     #         "read2OraFileSizeInBytes": 1029001113,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_2/L2401544/L2401544_S12_L002_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_2/L2401544/L2401544_S12_L002_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401540",
-#     #         "lane": 2,
-#     #         "read1FileGzippedMd5sum": "c45c22d932e8c2d4501663779f0b745a",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "3b4c5bc5b1001bd171302d01e676eb0b",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "0de3746eab5f548936fb5d1708e0e329",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "e52be348378672ca5929e4a27a0f4d88",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 37104673601,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 39140876826,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 6782972169,
-#     #         "read2OraFileSizeInBytes": 8108052715,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_2/L2401540/L2401540_S10_L002_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_2/L2401540/L2401540_S10_L002_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401538",
-#     #         "lane": 2,
-#     #         "read1FileGzippedMd5sum": "fd5aa3bce601adfdad0d7d5b7a057dae",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "d62a9e486cee349f3815393ce39f74d6",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "a0300d16e659784a6c7e1fdc1e07c758",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "a5cbe8fcb140fc739de8e14c732c00d8",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 48811078595,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 52362376545,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 8778675617,
-#     #         "read2OraFileSizeInBytes": 10994671353,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_2/L2401538/L2401538_S8_L002_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_2/L2401538/L2401538_S8_L002_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401541",
-#     #         "lane": 2,
-#     #         "read1FileGzippedMd5sum": "a8c7ef1c26e6d1f45322573ddcbf0f43",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "855832733f5bec03edb713af77bf5c56",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "ad152e6d64994a5b979a8da5c22b1162",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "a64a55a3060c020a8b336abaf3859d4a",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 79859580981,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 84868225988,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 14472788302,
-#     #         "read2OraFileSizeInBytes": 17716720660,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_2/L2401541/L2401541_S11_L002_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_2/L2401541/L2401541_S11_L002_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401544",
-#     #         "lane": 3,
-#     #         "read1FileGzippedMd5sum": "01144e91f95713e33c3c601e884953f6",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "c2bb45d50802ed331a1aa5b84e9a3567",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "f959dc44f6049aaa0455f9be19cb5e96",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "55630173730476750a60cfc09237aa58",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 4850199518,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 5205848638,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 882723687,
-#     #         "read2OraFileSizeInBytes": 1106636114,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_3/L2401544/L2401544_S12_L003_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_3/L2401544/L2401544_S12_L003_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401543",
-#     #         "lane": 3,
-#     #         "read1FileGzippedMd5sum": "a3d78547cfb81248ccf691b25695ea2f",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "36491c11fc8f70dc6fe4a689c8328dfb",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "4379cdba30cd66dc00f5ee656e6406fa",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "61c5f092d6ed26734c629c0b3e3edbee",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 75954251054,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 82404528509,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 13513480258,
-#     #         "read2OraFileSizeInBytes": 17848930076,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_3/L2401543/L2401543_S14_L003_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_3/L2401543/L2401543_S14_L003_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401547",
-#     #         "lane": 3,
-#     #         "read1FileGzippedMd5sum": "d4dea3f865c97dc4a211a4b5516d2cd4",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "8a8b5164e0d2fe7b0781598c097d4752",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "c9d8b466877cc812f2ebbee77bf21f4a",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "9ed9e112cbf77f59afc8df6cea61eb4c",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 86760295505,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 93262377888,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 15309343750,
-#     #         "read2OraFileSizeInBytes": 19523044745,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_3/L2401547/L2401547_S16_L003_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_3/L2401547/L2401547_S16_L003_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401542",
-#     #         "lane": 3,
-#     #         "read1FileGzippedMd5sum": "b90d2ff9c255519a64ee5163688c721c",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "5c3ad35d21d25152e0b1b8973358e660",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "229e76982a4b90e50d176c5f6c9cf6ad",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "4126386d832c12d2393759a22857949c",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 40828499212,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 44036500870,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 7251745092,
-#     #         "read2OraFileSizeInBytes": 9315003236,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_3/L2401542/L2401542_S13_L003_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_3/L2401542/L2401542_S13_L003_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401546",
-#     #         "lane": 3,
-#     #         "read1FileGzippedMd5sum": "cba424c2f9dee702dc6a64a70ad68f81",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "ad331f601cc96117f3db794460126b8e",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "053d9ca034d2cdd7539144295e583ce5",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "f28fb5e6b0087edaf4e2c26a16e605f3",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 40759960531,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 43604558126,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 7175776406,
-#     #         "read2OraFileSizeInBytes": 8928609579,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_3/L2401546/L2401546_S15_L003_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_3/L2401546/L2401546_S15_L003_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401537",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "f2f18f5dff7dce7e118ef61833ff51c8",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "f90ee88763865873dcaaf6e04162964f",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "ff27530bfd372e3008f45429b271b0ca",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "79694fa527e5e3c59a156e09b92c8e53",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 57604117,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 58247458,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 20303567,
-#     #         "read2OraFileSizeInBytes": 20866911,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401537/L2401537_S22_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401537/L2401537_S22_L004_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401553",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "79f78fb976346efbd560cec9bbafd88d",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "9808e155473c766661f95a277306cb1a",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "f09eb0ca7ce678bbc2e7bb09cb5ebcb9",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "0c997dbe96adc7c1beb34416d052cdf3",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 35683061339,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 38483719785,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 6617978068,
-#     #         "read2OraFileSizeInBytes": 8629405567,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401553/L2401553_S27_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401553/L2401553_S27_L004_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401549",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "ff922a5d65f93f38e485e6ea8da1d770",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "c4af49c86f576dbb82b58b4db13f6046",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "1ae324e09bfd67c71abcf68005fe3cda",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "1f0a4c24b4cea13412250d92c2dbbb65",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 86165891313,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 92043170392,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 15540038685,
-#     #         "read2OraFileSizeInBytes": 19403308615,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401549/L2401549_S25_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401549/L2401549_S25_L004_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401534",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "b6e5e8a16e92abd76eae33cd347c6191",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "2a269b78b37ae188f664a673081085a1",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "95bb938dab7f366c2eb6a780873a4039",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "fccd14d34831d34b9ba48c17e53933a9",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 6628903368,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 6559410472,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 1299905533,
-#     #         "read2OraFileSizeInBytes": 1238284291,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401534/L2401534_S19_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401534/L2401534_S19_L004_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401533",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "c7f5be35252703b2d5b596e608e9d01b",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "8d0cae172acfd63ef8cd9a000bb59be7",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "f38df2aafd432cf49eb608da422cd7f3",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "f34ed206348221529dc79eadea940250",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 6179483185,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 6065388584,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 1209397423,
-#     #         "read2OraFileSizeInBytes": 1129072555,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401533/L2401533_S18_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401533/L2401533_S18_L004_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401552",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "a32f53cd103868e9000d105a6e907cde",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "15963cfcd84d2ee0326a10ada72e204c",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "69c89690e2a0a7c5585b3967c8cb6bca",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "611bd48574d9e684031d09b94dc21a15",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 33237582408,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 36766116815,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 6123700775,
-#     #         "read2OraFileSizeInBytes": 8612068652,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401552/L2401552_S26_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401552/L2401552_S26_L004_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401536",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "d278e8dc93355cceb54e38e128075989",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "bc5a290c4cdd223abde54714c9c16245",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "76ca92e1017fad3c2d372e2199a333a8",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "1d0460fa288bbc3e9230b94f6ff0e664",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 501994324,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 501436393,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 108705055,
-#     #         "read2OraFileSizeInBytes": 106336466,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401536/L2401536_S21_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401536/L2401536_S21_L004_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401545",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "68efe19804293a725fd41bd94878d378",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "9006f2e7db1b0cf9e640d3f60c20d6d3",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "cf9e7482431174d17f710fd94e3ae972",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "acc3bf20a8b03283fb66edc41fd65c7a",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 1717017,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 2075979,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 796634,
-#     #         "read2OraFileSizeInBytes": 1165743,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401545/L2401545_S23_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401545/L2401545_S23_L004_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401535",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "313a6608fba6b5fd7fdd830eace645c1",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "4260bd94f0e2f2e961bc3aaf3e0e9851",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "624e816beb856153d35e8a71478277ea",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "201607c4b04536c07e0b5514d961e56e",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 4592850293,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 4532211687,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 912733086,
-#     #         "read2OraFileSizeInBytes": 863814241,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401535/L2401535_S20_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401535/L2401535_S20_L004_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401548",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "c32a0f8a097796431462a4942106159f",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "3ab0eb6b307b0138a3c086b0ddd395dd",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "39dff48606c97a86deb048a9c3a367ee",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "3020cb923c39f0a75fa26030b88c3ade",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 40344869450,  # pragma: allowlist secret
-#     #         "read2GzippedFileSizeInBytes": 43831721872,  # pragma: allowlist secret
-#     #         "read1OraFileSizeInBytes": 7394266403,
-#     #         "read2OraFileSizeInBytes": 9748368514,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401548/L2401548_S24_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401548/L2401548_S24_L004_R2_001.fastq.ora"
-#     #     },
-#     #     {
-#     #         "rgsm": "L2401499",
-#     #         "lane": 4,
-#     #         "read1FileGzippedMd5sum": "dbf0cdca626f00e95f327e377f25e3d4",  # pragma: allowlist secret
-#     #         "read2FileGzippedMd5sum": "d4fae1544cb032110dc02c5c1a676eed",  # pragma: allowlist secret
-#     #         "read1FileOraMd5sum": "47987c5ea8fa2aa8d73af6ca0719e587",  # pragma: allowlist secret
-#     #         "read2FileOraMd5sum": "2fb0307a88b882e0bdd29b16e5367cb6",  # pragma: allowlist secret
-#     #         "read1GzippedFileSizeInBytes": 31601361740,
-#     #         "read2GzippedFileSizeInBytes": 32500865849,
-#     #         "read1OraFileSizeInBytes": 5680732076,
-#     #         "read2OraFileSizeInBytes": 6122244909,
-#     #         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401499/L2401499_S17_L004_R1_001.fastq.ora",
-#     #         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/ora-compression/202411046290aa4g/241024_A00130_0336_BHW7MVDSXC/Samples/Lane_4/L2401499/L2401499_S17_L004_R2_001.fastq.ora"
-#     #     }
-#     # ]
+# # [
+# #     {
+# #         "rgsm": "L2401537",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "5923a6ae1351243c196a6526376ad689",# pragma: allowlist secret  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "d0587ebc6a83a14f791423bb198f4b6a",# pragma: allowlist secret  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "509e126e0bf734a3f65caf6c49eb3715",# pragma: allowlist secret  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "f0e5487d1be657d66997cf52369fb8cb",# pragma: allowlist secret  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 57604117,
+# #         "read2GzippedFileSizeInBytes": 58247458,
+# #         "read1OraFileSizeInBytes": 20303567,
+# #         "read2OraFileSizeInBytes": 20866911,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401537/L2401537_S22_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401537/L2401537_S22_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401553",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "42e4871ba2afd7cc0ad3d7bcfc5c8259",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "8f5c4a1039a1c873878661846b1f61a3",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "f04679d570d4aa000b8d8c5adc4960b0",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "6f5e75572cc8cbe70c008dad92edd6e2",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 35683061339,
+# #         "read2GzippedFileSizeInBytes": 38483719785,
+# #         "read1OraFileSizeInBytes": 6617978068,
+# #         "read2OraFileSizeInBytes": 8629405567,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401553/L2401553_S27_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401553/L2401553_S27_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401533",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "880b39c74e406ccfd44aec66d6d7fe57",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "64359aa03a7662fc12d3028de217e4a2",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "cdbc3e8778e078d20ba3a558dd8d3d71",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "d1fbad47b621f920f654626e97f02993",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 6179483185,
+# #         "read2GzippedFileSizeInBytes": 6065388584,
+# #         "read1OraFileSizeInBytes": 1209397423,
+# #         "read2OraFileSizeInBytes": 1129072555,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401533/L2401533_S18_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401533/L2401533_S18_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401534",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "b0b32fe9482dcdb6710214f48a3179a1",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "2f81751a8df8413718e943be03843f4a",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "4ee4f545716b187a8af7b110e582f2ae",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "8f12ed32cc67ccb013807044a880b0ee",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 6628903368,
+# #         "read2GzippedFileSizeInBytes": 6559410472,
+# #         "read1OraFileSizeInBytes": 1299905533,
+# #         "read2OraFileSizeInBytes": 1238284291,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401534/L2401534_S19_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401534/L2401534_S19_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401549",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "2ed16482feafd5ad3ff9dd3dd153aa26",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "6a97988a8faab94905d9693e38a7f50a",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "c5ff45a7fb9690f41f0d81c015288e89",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "cd8c4fe281b7ecbee45eb15e0376360c",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 86165891313,
+# #         "read2GzippedFileSizeInBytes": 92043170392,
+# #         "read1OraFileSizeInBytes": 15540038685,
+# #         "read2OraFileSizeInBytes": 19403308615,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401549/L2401549_S25_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401549/L2401549_S25_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401552",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "1c529416ac85f8157beea3274dcfc1ac",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "e03ebe7fa52194351167efc70ab9daf8",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "58c8aa1f43a331b1d4885ed487e0c12d",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "0e836c2917f9d4379d9273b233feea4a",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 33237582408,
+# #         "read2GzippedFileSizeInBytes": 36766116815,
+# #         "read1OraFileSizeInBytes": 6123700775,
+# #         "read2OraFileSizeInBytes": 8612068652,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401552/L2401552_S26_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401552/L2401552_S26_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401536",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "83f07c1ddb7dec775e5818ff7ad8ada5",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "3d08eb5131a8a42eb4bd05d7617c177d",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "7c79b8972d6352b4eee0a43a5e44c34d",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "f35515d6561f755a910e464a3ee0195f",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 501994324,
+# #         "read2GzippedFileSizeInBytes": 501436393,
+# #         "read1OraFileSizeInBytes": 108705055,
+# #         "read2OraFileSizeInBytes": 106336466,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401536/L2401536_S21_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401536/L2401536_S21_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401499",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "c3514b3b43fa4085bf8aff71b4ebc99c",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "25c0a9e1e3ab045f8a79c88f5fbec0fb",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "4c93fbe164a171ea968932a5c5704c60",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "d7700d65c048d5ba3216a9c9950f8a74",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 31601361740,
+# #         "read2GzippedFileSizeInBytes": 32500865849,
+# #         "read1OraFileSizeInBytes": 5680732076,
+# #         "read2OraFileSizeInBytes": 6122244909,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401499/L2401499_S17_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401499/L2401499_S17_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401548",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "b2ce15279be6d00b2d5ab503602801f9",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "e060ed8955cbd12c594a64fd38c99a4c",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "2175bb0b70ff73c6363dfdfe788be95b",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "ccaff8c5b79e65283c92664d3e5f98f3",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 40344869450,
+# #         "read2GzippedFileSizeInBytes": 43831721872,
+# #         "read1OraFileSizeInBytes": 7394266403,
+# #         "read2OraFileSizeInBytes": 9748368514,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401548/L2401548_S24_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401548/L2401548_S24_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401535",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "b37e100d62b3c4f8c6b6ff915fa47085",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "55645533f053385edf32fc9b1974151b",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "440edffeae046fe74d985d26858fd212",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "320c81f5760378e0b2c0326f1988a2e9",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 4592850293,
+# #         "read2GzippedFileSizeInBytes": 4532211687,
+# #         "read1OraFileSizeInBytes": 912733086,
+# #         "read2OraFileSizeInBytes": 863814241,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401535/L2401535_S20_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401535/L2401535_S20_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401545",
+# #         "lane": 4,
+# #         "read1FileRawMd5sum": "20bdacd47f934806826cff64f14137ab",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "a664925ef738144b3ea7fecca7d17c8b",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "d332c60acbf477f5c3ff67ba812ed8cd",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "a839e130511cac8d04c8501af280ea3e",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 1717017,
+# #         "read2GzippedFileSizeInBytes": 2075979,
+# #         "read1OraFileSizeInBytes": 796634,
+# #         "read2OraFileSizeInBytes": 1165743,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401545/L2401545_S23_L004_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_4/L2401545/L2401545_S23_L004_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401546",
+# #         "lane": 3,
+# #         "read1FileRawMd5sum": "fa4949739bc0cc1e038f755e6dfc935f",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "ba49fca883bbbec90b8ea0d63016703c",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "5d039529fc8b0b3413a1a7433a629d7f",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "bb7c59d8acec52682f48ee926b1e4389",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 40759960531,
+# #         "read2GzippedFileSizeInBytes": 43604558126,
+# #         "read1OraFileSizeInBytes": 7175776406,
+# #         "read2OraFileSizeInBytes": 8928609579,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_3/L2401546/L2401546_S15_L003_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_3/L2401546/L2401546_S15_L003_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401542",
+# #         "lane": 3,
+# #         "read1FileRawMd5sum": "3f45b8e9207c7cfce65c82b8ef704da8",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "f747f7e2029a37f3259b0115d570174c",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "85a35fd245a4136ba9093b489156aaea",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "c40df4c6d54d43520e2a4984050ef903",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 40828499212,
+# #         "read2GzippedFileSizeInBytes": 44036500870,
+# #         "read1OraFileSizeInBytes": 7251745092,
+# #         "read2OraFileSizeInBytes": 9315003236,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_3/L2401542/L2401542_S13_L003_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_3/L2401542/L2401542_S13_L003_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401547",
+# #         "lane": 3,
+# #         "read1FileRawMd5sum": "7489f449122d247a76efd1016b27698c",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "5b17722045c5ad922040d5f83d75e298",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "a8e07545994f8f04480b7448c55d0301",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "4d700b55404518d5d8bc19fb80b4d91a",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 86760295505,
+# #         "read2GzippedFileSizeInBytes": 93262377888,
+# #         "read1OraFileSizeInBytes": 15309343750,
+# #         "read2OraFileSizeInBytes": 19523044745,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_3/L2401547/L2401547_S16_L003_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_3/L2401547/L2401547_S16_L003_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401543",
+# #         "lane": 3,
+# #         "read1FileRawMd5sum": "858a3c75c61c9a6a3ee57bb88e9767d2",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "c6df027a2fd06d07fd5b5f7db3389bea",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "d2fb3773c2892f641ffb9bda8647c540",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "58f4d929cb990b3b47b55863e6e0b3b6",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 75954251054,
+# #         "read2GzippedFileSizeInBytes": 82404528509,
+# #         "read1OraFileSizeInBytes": 13513480258,
+# #         "read2OraFileSizeInBytes": 17848930076,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_3/L2401543/L2401543_S14_L003_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_3/L2401543/L2401543_S14_L003_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401544",
+# #         "lane": 3,
+# #         "read1FileRawMd5sum": "a293c56089c02db4e7f367bdff27523a",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "459851c15d64c58e49f1ed118791745c",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "e8aa34afe2ffbba9fc0e85e0a75a18f0",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "908698d64255f71d0d65ee034c9085ea",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 4850199518,
+# #         "read2GzippedFileSizeInBytes": 5205848638,
+# #         "read1OraFileSizeInBytes": 882723687,
+# #         "read2OraFileSizeInBytes": 1106636114,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_3/L2401544/L2401544_S12_L003_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_3/L2401544/L2401544_S12_L003_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401528",
+# #         "lane": 1,
+# #         "read1FileRawMd5sum": "1a6e08e4f7805b8fd0a92497e8b9273b",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "b994fc1dfd3ddebc5a92b07cb6b69a92",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "d6bebc64de6bb53fa8e5396651e5c1d0",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "f74ff3d37bc18dff494614e6751446ed",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 43357314992,
+# #         "read2GzippedFileSizeInBytes": 44092409731,
+# #         "read1OraFileSizeInBytes": 8541275179,
+# #         "read2OraFileSizeInBytes": 8863424337,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401528/L2401528_S3_L001_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401528/L2401528_S3_L001_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401531",
+# #         "lane": 1,
+# #         "read1FileRawMd5sum": "f75d74e45d34cd1ae462a42054b43c58",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "02dab4a53141b59d124b3508e2a06e61",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "9a79a240701d5ef5550846d2e7e89252",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "518e6b29cdd676aa792d0dc287aaffd3",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 43818023110,
+# #         "read2GzippedFileSizeInBytes": 44844382192,
+# #         "read1OraFileSizeInBytes": 8589773627,
+# #         "read2OraFileSizeInBytes": 9065337736,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401531/L2401531_S6_L001_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401531/L2401531_S6_L001_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401532",
+# #         "lane": 1,
+# #         "read1FileRawMd5sum": "418061742b8283ea8d994c1865228e6b",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "a407b0b76df9f1822cd5a88fa9d76162",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "884170f085d518d2b1108a4702cd029d",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "5dba61efadf46f3a6a44db15b5ed29c4",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 4870,
+# #         "read2GzippedFileSizeInBytes": 5969,
+# #         "read1OraFileSizeInBytes": 4189,
+# #         "read2OraFileSizeInBytes": 4914,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401532/L2401532_S7_L001_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401532/L2401532_S7_L001_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401526",
+# #         "lane": 1,
+# #         "read1FileRawMd5sum": "29ff36a7a31d82a4e6fbf56aaa71c37e",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "dd78b2e398341b5daa58906beca76553",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "81553075806a382b4e432a4868ecf131",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "66c33f6a91430e8290ff8554b4eb21d9",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 42630072057,
+# #         "read2GzippedFileSizeInBytes": 43902595265,
+# #         "read1OraFileSizeInBytes": 8647052933,
+# #         "read2OraFileSizeInBytes": 9265337812,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401526/L2401526_S1_L001_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401526/L2401526_S1_L001_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401530",
+# #         "lane": 1,
+# #         "read1FileRawMd5sum": "080976d19d4db63755854bf6a6de0b63",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "4db952a4d51f62ae897e1186bd0667dd",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "3c042d89ee4280c1ee7b9e87381651ab",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "ebdad90918f67c7b1e1b755f6beaac37",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 40837628477,
+# #         "read2GzippedFileSizeInBytes": 41771419794,
+# #         "read1OraFileSizeInBytes": 8127751530,
+# #         "read2OraFileSizeInBytes": 8567645785,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401530/L2401530_S5_L001_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401530/L2401530_S5_L001_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401529",
+# #         "lane": 1,
+# #         "read1FileRawMd5sum": "6edb8a29af315fb7e1bae4fd3fc7ee1c",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "3a46212b10cbff9858f3dd59adcd2230",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "c58b4181c4b8a28ed22831c636eefbc3",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "7424b60deebf0543e9f8c71c52e55512",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 40964945004,
+# #         "read2GzippedFileSizeInBytes": 41736727855,
+# #         "read1OraFileSizeInBytes": 8158884285,
+# #         "read2OraFileSizeInBytes": 8535009518,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401529/L2401529_S4_L001_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401529/L2401529_S4_L001_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401527",
+# #         "lane": 1,
+# #         "read1FileRawMd5sum": "3dd9eda1e25779ec135a6cae1b0499b0",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "8073b9a378798ca05c225e34856cb7df",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "96af9a95b84170df89e8bb1ed9a8cff9",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "5707dc0a406509e6dc609f9be9aba81a",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 37685523375,
+# #         "read2GzippedFileSizeInBytes": 39255037633,
+# #         "read1OraFileSizeInBytes": 7599984647,
+# #         "read2OraFileSizeInBytes": 8409290279,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401527/L2401527_S2_L001_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_1/L2401527/L2401527_S2_L001_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401541",
+# #         "lane": 2,
+# #         "read1FileRawMd5sum": "c98185f4e56321381cbef490389145bf",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "065fe4d4a2645420c3725a2465b6b253",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "150aebde6729e5494f885a70f688478a",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "927d3b5cf29205422911126bf2ea3f86",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 79859580981,
+# #         "read2GzippedFileSizeInBytes": 84868225988,
+# #         "read1OraFileSizeInBytes": 14472788302,
+# #         "read2OraFileSizeInBytes": 17716720660,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_2/L2401541/L2401541_S11_L002_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_2/L2401541/L2401541_S11_L002_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401538",
+# #         "lane": 2,
+# #         "read1FileRawMd5sum": "66804083d7972087f7717ea085c3a1b8",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "7048ceefbc53cbf37d44351e1b2f39eb",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "c8ced2ae3c0c7f9f0c3221653cd83bfd",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "675f36b14721d8b2995bdaf8ea2b87d8",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 48811078595,
+# #         "read2GzippedFileSizeInBytes": 52362376545,
+# #         "read1OraFileSizeInBytes": 8778675617,
+# #         "read2OraFileSizeInBytes": 10994671353,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_2/L2401538/L2401538_S8_L002_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_2/L2401538/L2401538_S8_L002_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401540",
+# #         "lane": 2,
+# #         "read1FileRawMd5sum": "8c82101b4bbb4d57a9729571c9a6ac01",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "e4232576c3219c4f5e436353441c02b7",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "cd9a063a333fd27fd4ba4bd482382147",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "7989cc0ca3bed6718c6e9781ca7e5f27",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 37104673601,
+# #         "read2GzippedFileSizeInBytes": 39140876826,
+# #         "read1OraFileSizeInBytes": 6782972169,
+# #         "read2OraFileSizeInBytes": 8108052715,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_2/L2401540/L2401540_S10_L002_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_2/L2401540/L2401540_S10_L002_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401539",
+# #         "lane": 2,
+# #         "read1FileRawMd5sum": "274c55db47de846ca6cc2dc96861366e",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "9c5f494d57e33bc2507ead5e3999941e",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "1aa8f6b2adda58c48777e6ca19ca868d",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "3622162b980acafba6c4cc7c5f841490",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 76151725499,
+# #         "read2GzippedFileSizeInBytes": 81298319647,
+# #         "read1OraFileSizeInBytes": 13777362811,
+# #         "read2OraFileSizeInBytes": 17019842335,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_2/L2401539/L2401539_S9_L002_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_2/L2401539/L2401539_S9_L002_R2_001.fastq.ora"
+# #     },
+# #     {
+# #         "rgsm": "L2401544",
+# #         "lane": 2,
+# #         "read1FileRawMd5sum": "fd45570ebced2ff8e53a81dd5bedc258",  # pragma: allowlist secret
+# #         "read2FileRawMd5sum": "5aa64f276ccf757126dd0e3346d9011f",  # pragma: allowlist secret
+# #         "read1FileOraMd5sum": "128e45b1cbbbdf04640df017efe130fa",  # pragma: allowlist secret
+# #         "read2FileOraMd5sum": "a5686b1cb274911e14ab4cb8620f8c38",  # pragma: allowlist secret
+# #         "read1GzippedFileSizeInBytes": 4479234306,
+# #         "read2GzippedFileSizeInBytes": 4788152749,
+# #         "read1OraFileSizeInBytes": 836174432,
+# #         "read2OraFileSizeInBytes": 1029001113,
+# #         "read1FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_2/L2401544/L2401544_S12_L002_R1_001.fastq.ora",
+# #         "read2FileUri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/ora-compression/241024_A00130_0336_BHW7MVDSXC/202411156290aa4i/Samples/Lane_2/L2401544/L2401544_S12_L002_R2_001.fastq.ora"
+# #     }
+# # ]

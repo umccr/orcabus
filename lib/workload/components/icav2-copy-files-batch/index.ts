@@ -7,6 +7,7 @@ import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import path from 'path';
 import { ICAv2CopyFilesConstruct } from '../icav2-copy-files';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface ICAv2CopyFilesBatchConstructProps {
   /* Constructs */
@@ -56,6 +57,10 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
     // Add execution permissions to stateMachine role
     manifestInverterLambda.currentVersion.grantInvoke(this.icav2CopyFilesBatchSfnObj);
 
+    // Add state machine execution permissions to stateMachineBatch role
+    this.icav2CopyFilesSfnObj.grantStartExecution(this.icav2CopyFilesBatchSfnObj);
+    this.icav2CopyFilesSfnObj.grantRead(this.icav2CopyFilesBatchSfnObj);
+
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
     this.icav2CopyFilesBatchSfnObj.addToRolePolicy(
@@ -67,7 +72,18 @@ export class ICAv2CopyBatchUtilityConstruct extends Construct {
       })
     );
 
-    // Add state machine execution permissions to stateMachineBatch role
-    this.icav2CopyFilesSfnObj.grantStartExecution(this.icav2CopyFilesBatchSfnObj);
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      this.icav2CopyFilesBatchSfnObj,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
   }
 }

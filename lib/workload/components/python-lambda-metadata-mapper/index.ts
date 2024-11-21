@@ -51,7 +51,7 @@ export class GetMetadataLambdaConstruct extends Construct {
 
     // Get the metadata layer object
     const metadataLayerObj = new MetadataToolsPythonLambdaLayer(this, 'metadata-tools-layer', {
-      layerPrefix: 'get-library-objects',
+      layerPrefix: `${props.functionNamePrefix}-mtl`,
     });
 
     /*

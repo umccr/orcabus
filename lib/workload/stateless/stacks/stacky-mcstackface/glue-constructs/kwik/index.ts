@@ -9,6 +9,7 @@ import { WgtsQcFastqListRowShowerCompleteToWorkflowReadyConstruct } from './part
 import { FastqListRowQcCompleteConstruct } from './part_4/push-fastq-list-row-qc-complete-event';
 import { WgtsQcLibraryQcCompleteConstruct } from './part_5/library-qc-complete-event';
 import { NestedStack } from 'aws-cdk-lib/core';
+import { HolmesExtractConstruct } from './part_6/launch-holmes-extract-event';
 
 /*
 Provide the glue to get from the bssh fastq copy manager to submitting wgts qc analyses
@@ -147,6 +148,26 @@ export class WgtsQcGlueHandlerConstruct extends NestedStack {
     const FastqListRowQcCompleteToLibraryQcComplete = new WgtsQcLibraryQcCompleteConstruct(
       this,
       'wgts_qc_complete_to_fastq_list_row_qc_complete',
+      {
+        eventBusObj: props.eventBusObj,
+        tableObj: props.wgtsQcGlueTableObj,
+      }
+    );
+
+    /*
+    Part 6
+
+    Input Event Source: `orcabus.wgtsqcinputeventglue`
+    Input Event DetailType: `LibraryStateChange`
+    Input Event status: `QC_COMPLETE`
+
+    Output Event Source: `orcabus.wgtsqcinputeventglue`
+    Output Event DetailType: `LibraryStateChange`
+    Output Event status: `HOLMES_EXTRACTION_COMPLETE`
+    */
+    const LibraryQcCompleteToHolmesExtract = new HolmesExtractConstruct(
+      this,
+      'wgts_qc_complete_to_holmes_extract_complete',
       {
         eventBusObj: props.eventBusObj,
         tableObj: props.wgtsQcGlueTableObj,

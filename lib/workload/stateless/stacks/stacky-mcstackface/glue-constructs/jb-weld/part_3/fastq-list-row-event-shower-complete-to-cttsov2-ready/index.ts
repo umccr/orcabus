@@ -12,6 +12,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
+import { NagSuppressions } from 'cdk-nag';
 
 /*
 Part 4
@@ -201,6 +202,12 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
     // Allow the sfn to invoke the lambda
     buildCttsoV2Samplesheet.currentVersion.grantInvoke(inputMakerSfn);
 
+    // Allow the state machine to be able to invoke the preamble sfn
+    [sfnPreamble, engineParameterAndReadyEventMakerSfn].forEach((sfnObj) => {
+      sfnObj.grantStartExecution(inputMakerSfn);
+      sfnObj.grantRead(inputMakerSfn);
+    });
+
     /* Allow step function to call nested state machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
@@ -212,9 +219,20 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
         actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
       })
     );
-    // Allow the state machine to be able to invoke the preamble sfn
-    sfnPreamble.grantStartExecution(inputMakerSfn);
-    engineParameterAndReadyEventMakerSfn.grantStartExecution(inputMakerSfn);
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      inputMakerSfn,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     /*
     Part 4: Subscribe to the event bus for this event type
