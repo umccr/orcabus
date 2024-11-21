@@ -124,12 +124,12 @@
                 }
               },
               "Next": "Pass",
-              "ResultPath": "$.outputs_collection_sfn_step"
+              "ResultPath": null
             },
             "Pass": {
               "Type": "Pass",
               "End": true,
-              "ResultPath": "$.pass_placeholder"
+              "ResultPath": null
             }
           }
         }
