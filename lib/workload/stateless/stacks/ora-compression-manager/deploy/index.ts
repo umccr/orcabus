@@ -433,6 +433,9 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       }
     );
 
+    // Configure step function write access to the dynamodb table
+    dynamodbTableObj.grantReadWriteData(generateFastqListRowCompressionEventsSfn);
+
     // Configure step function invoke access to the lambda function
     getFileSizesLambdaObj.currentVersion.grantInvoke(generateFastqListRowCompressionEventsSfn);
 

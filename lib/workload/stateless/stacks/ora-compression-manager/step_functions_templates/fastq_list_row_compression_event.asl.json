@@ -21,7 +21,7 @@
       "Type": "Map",
       "ItemsPath": "$.fastq_list_events_map",
       "ItemSelector": {
-        "output_event_detail.$": "$$.Map.Item.Value"
+        "rgid.$": "$$.Map.Item.Value"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
