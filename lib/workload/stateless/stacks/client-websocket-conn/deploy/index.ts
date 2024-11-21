@@ -9,6 +9,11 @@ import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+// import {
+//   WebSocketIamAuthorizer,
+//   WebSocketLambdaAuthorizer,
+//   WebSocketLambdaAuthorizerProps,
+// } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 
 export interface WebSocketApiStackProps extends StackProps {
   connectionTableName: string;
@@ -19,6 +24,10 @@ export interface WebSocketApiStackProps extends StackProps {
 
   websocketApiEndpointParameterName: string;
   websocketStageName: string;
+
+  // Cognito configuration for the authorizer
+  cognitoRegion: string;
+  cognitoUserPoolIdParameterName: string;
 }
 
 export class WebSocketApiStack extends Stack {
@@ -81,6 +90,23 @@ export class WebSocketApiStack extends Stack {
       timeout: Duration.minutes(2),
     });
 
+    const userPoolId = StringParameter.fromStringParameterName(
+      this,
+      'CognitoUserPoolIdParameter',
+      props.cognitoUserPoolIdParameterName
+    ).stringValue;
+
+    // authorizer function to check the client token based on the JWT token
+    const connectAuthorizer = this.createPythonFunction('connectAuthorizer', {
+      index: 'auth.py',
+      handler: 'lambda_handler',
+      timeout: Duration.minutes(2),
+      environment: {
+        COGNITO_REGION: props.cognitoRegion,
+        COGNITO_USER_POOL_ID: userPoolId,
+      },
+    });
+
     // Grant permissions to Lambda functions
     connectionTable.grantReadWriteData(connectHandler);
     connectionTable.grantReadWriteData(disconnectHandler);
@@ -93,6 +119,10 @@ export class WebSocketApiStack extends Stack {
       apiName: props.websocketApigatewayName,
       connectRouteOptions: {
         integration: new WebSocketLambdaIntegration('ConnectIntegration', connectHandler),
+        // authorizer: new WebSocketLambdaAuthorizer('ConnectAuthorizer', connectAuthorizer, {
+        //   authorizerName: 'ConnectAuthorizer',
+        //   identitySource: ['route.request.header.Authorization'],
+        // }),
       },
       disconnectRouteOptions: {
         integration: new WebSocketLambdaIntegration('DisconnectIntegration', disconnectHandler),
@@ -102,6 +132,7 @@ export class WebSocketApiStack extends Stack {
       },
     });
 
+    // Add a route for sending messages for sending messages to the client
     api.addRoute('sendMessage', {
       integration: new WebSocketLambdaIntegration('SendMessageIntegration', messageHandler),
     });

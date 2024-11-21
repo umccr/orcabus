@@ -1,5 +1,5 @@
 import { WebSocketApiStackProps } from '../../lib/workload/stateless/stacks/client-websocket-conn/deploy';
-import { AppStage, vpcProps } from '../constants';
+import { AppStage, vpcProps, region, cognitoUserPoolIdParameterName } from '../constants';
 
 export const getWebSocketApiStackProps = (stage: AppStage): WebSocketApiStackProps => {
   return {
@@ -9,5 +9,7 @@ export const getWebSocketApiStackProps = (stage: AppStage): WebSocketApiStackPro
     vpcProps: vpcProps,
     websocketApiEndpointParameterName: `/orcabus/client-websocket-api-endpoint`,
     websocketStageName: stage,
+    cognitoRegion: region,
+    cognitoUserPoolIdParameterName: cognitoUserPoolIdParameterName,
   };
 };
