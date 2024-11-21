@@ -13,7 +13,7 @@ def emit_wrsc_api_event(event):
     """
     Emit events to the event bridge sourced from the workflow manager API
     """
-    source = "orcabus.workflowmanager"
+    source = "orcabus.workflowmanagerapi"
     event_bus_name = os.environ.get("EVENT_BUS_NAME", None)
 
     if event_bus_name is None:
