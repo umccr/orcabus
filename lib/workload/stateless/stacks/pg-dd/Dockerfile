@@ -9,6 +9,6 @@ RUN pip3 install poetry
 WORKDIR /app
 
 COPY . .
-RUN poetry install --no-interaction
+RUN poetry install --no-interaction --no-root
 
 ENTRYPOINT ["poetry", "run", "cli"]

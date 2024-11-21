@@ -30,10 +30,18 @@ def download(exists_ok):
     "--database",
     help="Specify the database to upload, uploads all databases by default.",
 )
-def upload(database):
+@click.option(
+    "--dump-db/--no-dump-db",
+    default=False,
+    help="Dump from the database first before uploading.",
+)
+def upload(database, dump_db):
     """
     Uploads local CSV dumps to S3.
     """
+    if dump_db:
+        PgDDLocal(logger=logger).write_to_dir(database)
+
     PgDDS3(logger=logger).write_to_bucket(database)
 
 

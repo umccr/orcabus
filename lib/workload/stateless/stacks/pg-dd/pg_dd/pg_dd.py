@@ -254,32 +254,38 @@ class PgDDS3(PgDD):
         Write the CSV files to the S3 bucket.
         """
 
-        for _, _, key, value in self.target_files(db):
-            if self.prefix:
-                key = f"{self.prefix}/{key}"
+        for root, dirs, files in os.walk(self.dir):
+            for file in files:
+                file = os.path.join(root, file)
+                key = file.removeprefix(self.dir).removeprefix("/")
 
-            self.logger.info(f"writing to bucket with key: {key}")
+                if key == "" or (db is not None and not key.startswith(db)):
+                    continue
 
-            s3_object = self.s3.Object(self.bucket, key)
-            s3_object.put(Body=gzip.compress(str.encode(value)))
+                if self.prefix:
+                    key = f"{self.prefix}/{key}"
+
+                self.logger.info(f"writing to bucket with key: {key}")
+
+                s3_object = self.s3.Object(self.bucket, key)
+                with open(file, "rb") as f:
+                    s3_object.put(Body=gzip.compress(f.read()))
 
     def download_local(self, exists_ok: bool = True):
         """
         Download from S3 CSV files to load.
         """
 
-        for _, _, f, _ in self.target_files():
-            self.logger.info(f"target file: {f}")
-            file = f"{self.dir}/{f}"
-            os.makedirs(file.rsplit("/", 1)[0], exist_ok=True)
+        objects = self.s3.Bucket(self.bucket).objects.filter(Prefix=self.prefix)
+        for obj in objects:
+            split = obj.key.rsplit("/", 2)
+            directory = f"{self.dir}/{split[-2]}"
+            os.makedirs(directory, exist_ok=True)
+            file = f"{directory}/{split[-1]}"
 
             if exists_ok and os.path.exists(file):
-                self.logger.info(f"file already exists: {f}")
+                self.logger.info(f"file already exists: {file}")
                 continue
 
-            s3_object = self.s3.Object(self.bucket, f"{self.prefix}/{f}")
-            try:
-                s3_object.download_file(file)
-            except Exception as e:
-                self.logger.info(f"could not find file: {e}")
-                continue
+            s3_object = self.s3.Object(self.bucket, obj.key)
+            s3_object.download_file(file)
