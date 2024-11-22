@@ -176,23 +176,23 @@ export class StatelessPipelineStack extends cdk.Stack {
         'aws s3 cp $ZIP_ARCHIVE s3://$S3_PATH',
       ],
     });
+    pipeline.addStage(new cdk.Stage(this, 'StripAssetsFromAssembly'), {
+      pre: [stripAssetsFromAssembly],
+    });
 
     /**
      * Deployment to Beta (Dev) account
      */
     const betaConfig = getEnvironmentConfig(AppStage.BETA);
     if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(
-        this,
-        'OrcaBusBeta',
-        betaConfig.stackProps.statelessConfig,
-        {
-          account: betaConfig.accountId,
-          region: betaConfig.region,
-        }
-      ),
-      { pre: [stripAssetsFromAssembly] } // I think this should only be done once across stages
+    const betaDeploymentStage = new OrcaBusStatelessDeploymentStage(
+      this,
+      'OrcaBusBeta',
+      betaConfig.stackProps.statelessConfig,
+      {
+        account: betaConfig.accountId,
+        region: betaConfig.region,
+      }
     );
 
     /**
@@ -200,18 +200,25 @@ export class StatelessPipelineStack extends cdk.Stack {
      */
     const gammaConfig = getEnvironmentConfig(AppStage.GAMMA);
     if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(
-        this,
-        'OrcaBusGamma',
-        gammaConfig.stackProps.statelessConfig,
-        {
-          account: gammaConfig.accountId,
-          region: gammaConfig.region,
-        }
-      ),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
+    const gammaDeploymentStage = new OrcaBusStatelessDeploymentStage(
+      this,
+      'OrcaBusGamma',
+      gammaConfig.stackProps.statelessConfig,
+      {
+        account: gammaConfig.accountId,
+        region: gammaConfig.region,
+      }
     );
+
+    // Creating a wave so dev and stg be deployed in parallel
+    // We disable deploying to dev automatically to avoid stack deployed manually for testing to be
+    // overwritten by the pipeline. The dev is guarded with manual approval and should be approved
+    // time to time. The automatic deployment should start in stg.
+    const betaGammaWave = pipeline.addWave('BetaAndGammaDeployment');
+    betaGammaWave.addStage(betaDeploymentStage, {
+      pre: [new pipelines.ManualApprovalStep('PromoteToBeta')],
+    });
+    betaGammaWave.addStage(gammaDeploymentStage);
 
     /**
      * Deployment to Prod account
