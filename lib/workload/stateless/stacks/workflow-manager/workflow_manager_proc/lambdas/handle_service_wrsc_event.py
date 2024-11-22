@@ -3,8 +3,8 @@ import django
 django.setup()
 
 # --- keep ^^^ at top of the module
-import workflow_manager_proc.domain.executionservice.workflowrunstatechange as srv
-import workflow_manager_proc.domain.workflowmanager.workflowrunstatechange as wfm
+import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
+import workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange as wfm
 from workflow_manager_proc.services import emit_workflow_run_state_change, create_workflow_run_state
 import logging
 

@@ -1,5 +1,6 @@
 import logging
-from datetime import timedelta
+import uuid
+from datetime import timedelta, datetime, timezone
 from typing import List
 
 from workflow_manager.models import Status, State, WorkflowRun
@@ -142,3 +143,7 @@ class WorkflowRunUtil:
                 last = s
         return last
 
+
+def create_portal_run_id() -> str:
+    date = datetime.now(timezone.utc)
+    return f"{date.year}{date.month}{date.day}{str(uuid.uuid4())[:8]}"

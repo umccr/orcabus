@@ -1,13 +1,27 @@
+import re
 from rest_framework import serializers
+
+
+def to_camel_case(snake_str):
+    components = re.split(r'[_\-\s]', snake_str)
+    return components[0].lower() + ''.join(x.title() for x in components[1:])
 
 
 class SerializersBase(serializers.ModelSerializer):
     prefix = ''
 
+    def __init__(self, *args, camel_case_data=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.use_camel_case = camel_case_data
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['orcabus_id'] = self.prefix + str(representation['orcabus_id'])
+
+        if self.use_camel_case:
+            return {to_camel_case(key): value for key, value in representation.items()}
         return representation
+
 
 class OptionalFieldsMixin:
     def make_fields_optional(self):

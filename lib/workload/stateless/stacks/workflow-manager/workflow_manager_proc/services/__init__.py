@@ -1,5 +1,5 @@
 import uuid
-from workflow_manager_proc.domain.executionservice.workflowrunstatechange import WorkflowRunStateChange
+from workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange import WorkflowRunStateChange
 from workflow_manager.models import Payload
 
 

@@ -5,7 +5,7 @@ from typing import List
 from django.db.models import QuerySet
 from django.utils.timezone import make_aware
 
-from workflow_manager_proc.domain.workflowmanager.workflowrunstatechange import WorkflowRunStateChange
+from workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange import WorkflowRunStateChange
 from workflow_manager_proc.services import create_workflow_run_state
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 from workflow_manager.models import WorkflowRun, State, WorkflowRunUtil, Library
