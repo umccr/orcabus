@@ -77,23 +77,27 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
 
     new_payload: dict
     if wfl_name == AllowedRerunWorkflow.RNASUM.value:
-        new_payload = construct_rnasum_rerun_payload(wfl_run, new_portal_run_id, input_body)
+        new_payload = construct_rnasum_rerun_payload(wfl_run, input_body)
     else:
         raise ValueError(f"Rerun is not allowed for this workflow: {wfl_name}")
 
-    return {
-        "status": 'READY',
-        "payload": new_payload,
-        "portalRunId": new_portal_run_id,
-        "linkedLibraries": LibrarySerializer(wfl_run.libraries.all(), many=True, camel_case_data=True).data,
-        "workflowName": wfl_run.workflow.workflow_name,
-        "workflowRunName": wfl_run.workflow_run_name,
-        "workflowVersion": wfl_run.workflow.workflow_version,
-        "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-    }
+    # Replace old portal_run_id with new_portal_run_id in any part of the string
+    new_eb_detail = json.loads(
+        json.dumps({
+                "status": 'READY',
+                "payload": new_payload,
+                "portalRunId": new_portal_run_id,
+                "linkedLibraries": LibrarySerializer(wfl_run.libraries.all(), many=True, camel_case_data=True).data,
+                "workflowName": wfl_run.workflow.workflow_name,
+                "workflowRunName": wfl_run.workflow_run_name,
+                "workflowVersion": wfl_run.workflow.workflow_version,
+                "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        }).replace(f"{wfl_run.portal_run_id}", f"{new_portal_run_id}"))
+
+    return new_eb_detail
 
 
-def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, new_portal_run_id: str, input_body: dict) -> dict:
+def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> dict:
     """
     Construct payload for rerun for 'rnasum' workflow based on the request body payload
     """
@@ -109,9 +113,5 @@ def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, new_portal_run_id: str,
 
     # Override payload based on given input
     new_data_payload['data']["inputs"]["dataset"] = input_body["dataset"]
-    # Replace old portal_run_id with new_portal_run_id in any part of the string
-    # In the 'rnasum` payload, the engine parameter URI prefixes contain the portal_run_id
-    new_data_payload = json.loads(
-        json.dumps(new_data_payload).replace(f"{wfl_run.portal_run_id}", f"{new_portal_run_id}"))
 
     return new_data_payload
