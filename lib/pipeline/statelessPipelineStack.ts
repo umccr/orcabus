@@ -176,9 +176,6 @@ export class StatelessPipelineStack extends cdk.Stack {
         'aws s3 cp $ZIP_ARCHIVE s3://$S3_PATH',
       ],
     });
-    pipeline.addStage(new cdk.Stage(this, 'StripAssetsFromAssembly'), {
-      pre: [stripAssetsFromAssembly],
-    });
 
     /**
      * Deployment to Beta (Dev) account
@@ -214,7 +211,13 @@ export class StatelessPipelineStack extends cdk.Stack {
     // We disable deploying to dev automatically to avoid stack deployed manually for testing to be
     // overwritten by the pipeline. The dev is guarded with manual approval and should be approved
     // time to time. The automatic deployment should start in stg.
-    const betaGammaWave = pipeline.addWave('BetaAndGammaDeployment');
+    const betaGammaWave = pipeline.addWave(
+      'BetaAndGammaDeployment',
+      // See the comment on creating stripAssetsFromAssembly above for why the pre step here
+      {
+        pre: [stripAssetsFromAssembly],
+      }
+    );
     betaGammaWave.addStage(betaDeploymentStage, {
       pre: [new pipelines.ManualApprovalStep('PromoteToBeta')],
     });
