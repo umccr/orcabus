@@ -178,8 +178,10 @@ export class StatelessPipelineStack extends cdk.Stack {
     });
 
     /**
-     * Deployment to Beta (Dev) account
+     * Creating deployment stages for each environment (not integrated with the pipeline yet)
      */
+
+    // Beta (Dev)
     const betaConfig = getEnvironmentConfig(AppStage.BETA);
     if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
     const betaDeploymentStage = new OrcaBusStatelessDeploymentStage(
@@ -192,9 +194,7 @@ export class StatelessPipelineStack extends cdk.Stack {
       }
     );
 
-    /**
-     * Deployment to Gamma (Staging) account
-     */
+    // Gamma (Staging)
     const gammaConfig = getEnvironmentConfig(AppStage.GAMMA);
     if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
     const gammaDeploymentStage = new OrcaBusStatelessDeploymentStage(
@@ -207,43 +207,54 @@ export class StatelessPipelineStack extends cdk.Stack {
       }
     );
 
-    // Creating a wave so dev and stg be deployed in parallel
-    // We disable deploying to dev automatically to avoid stack deployed manually for testing to be
-    // overwritten by the pipeline. The dev is guarded with manual approval and should be approved
-    // time to time. The automatic deployment should start in stg.
-    const betaGammaWave = pipeline.addWave(
-      'BetaAndGammaDeployment',
+    // Prod
+    const prodConfig = getEnvironmentConfig(AppStage.PROD);
+    if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
+    const prodDeploymentStage = new OrcaBusStatelessDeploymentStage(
+      this,
+      'OrcaBusProd',
+      prodConfig.stackProps.statelessConfig,
+      {
+        account: prodConfig.accountId,
+        region: prodConfig.region,
+      }
+    );
+
+    /**
+     * Assembly stages into the pipelines
+     */
+
+    // Direct auto deployment to the gamma account
+    pipeline.addStage(
+      gammaDeploymentStage,
       // See the comment on creating stripAssetsFromAssembly above for why the pre step here
       {
         pre: [stripAssetsFromAssembly],
       }
     );
-    betaGammaWave.addStage(betaDeploymentStage, {
+
+    // Creating a wave so dev and prod deployed in parallel
+    // We disable deploying to dev automatically to avoid stack deployed manually for testing to be
+    // overwritten by the pipeline.
+    // The dev and prod put at the end of the pipeline so that if dev could still be easily deployed
+    // by a click of a button. The prod deployment should not be blocked by the dev deployment, so
+    // we put this two in parallel.
+    const betaProdWave = pipeline.addWave(
+      'BetaProdDeployment',
+      // See the comment on creating stripAssetsFromAssembly above for why the pre step here
+      {
+        pre: [stripAssetsFromAssembly],
+      }
+    );
+    betaProdWave.addStage(betaDeploymentStage, {
       pre: [new pipelines.ManualApprovalStep('PromoteToBeta')],
     });
-    betaGammaWave.addStage(gammaDeploymentStage);
-
-    /**
-     * Deployment to Prod account
-     */
-    const prodConfig = getEnvironmentConfig(AppStage.PROD);
-    if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(
-        this,
-        'OrcaBusProd',
-        prodConfig.stackProps.statelessConfig,
-        {
-          account: prodConfig.accountId,
-          region: prodConfig.region,
-        }
-      ),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
-    );
+    betaProdWave.addStage(prodDeploymentStage, {
+      pre: [new pipelines.ManualApprovalStep('PromoteToProd')],
+    });
 
     // need to build pipeline so we could add notification at the pipeline construct
     pipeline.buildPipeline();
-
     pipeline.pipeline.artifactBucket.grantReadWrite(stripAssetsFromAssembly.project);
 
     // notification for success/failure
