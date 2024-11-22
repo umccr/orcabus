@@ -178,80 +178,62 @@ export class StatelessPipelineStack extends cdk.Stack {
     });
 
     /**
-     * Creating deployment stages for each environment (not integrated with the pipeline yet)
+     * Deployment to Gamma (Staging) account directly without approval
      */
-
-    // Beta (Dev)
-    const betaConfig = getEnvironmentConfig(AppStage.BETA);
-    if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
-    const betaDeploymentStage = new OrcaBusStatelessDeploymentStage(
-      this,
-      'OrcaBusBeta',
-      betaConfig.stackProps.statelessConfig,
-      {
-        account: betaConfig.accountId,
-        region: betaConfig.region,
-      }
-    );
-
-    // Gamma (Staging)
     const gammaConfig = getEnvironmentConfig(AppStage.GAMMA);
     if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
-    const gammaDeploymentStage = new OrcaBusStatelessDeploymentStage(
-      this,
-      'OrcaBusGamma',
-      gammaConfig.stackProps.statelessConfig,
-      {
-        account: gammaConfig.accountId,
-        region: gammaConfig.region,
-      }
-    );
-
-    // Prod
-    const prodConfig = getEnvironmentConfig(AppStage.PROD);
-    if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
-    const prodDeploymentStage = new OrcaBusStatelessDeploymentStage(
-      this,
-      'OrcaBusProd',
-      prodConfig.stackProps.statelessConfig,
-      {
-        account: prodConfig.accountId,
-        region: prodConfig.region,
-      }
+    pipeline.addStage(
+      new OrcaBusStatelessDeploymentStage(
+        this,
+        'OrcaBusGamma',
+        gammaConfig.stackProps.statelessConfig,
+        {
+          account: gammaConfig.accountId,
+          region: gammaConfig.region,
+        }
+      ),
+      { pre: [stripAssetsFromAssembly] } // See above for the reason
     );
 
     /**
-     * Assembly stages into the pipelines
+     * Deployment to Prod account
      */
-
-    // Direct auto deployment to the gamma account
+    const prodConfig = getEnvironmentConfig(AppStage.PROD);
+    if (!prodConfig) throw new Error(`No 'Prod' account configuration`);
     pipeline.addStage(
-      gammaDeploymentStage,
-      // See the comment on creating stripAssetsFromAssembly above for why the pre step here
-      {
-        pre: [stripAssetsFromAssembly],
-      }
+      new OrcaBusStatelessDeploymentStage(
+        this,
+        'OrcaBusProd',
+        prodConfig.stackProps.statelessConfig,
+        {
+          account: prodConfig.accountId,
+          region: prodConfig.region,
+        }
+      ),
+      { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
     );
 
-    // Creating a wave so dev and prod deployed in parallel
-    // We disable deploying to dev automatically to avoid stack deployed manually for testing to be
-    // overwritten by the pipeline.
-    // The dev and prod put at the end of the pipeline so that if dev could still be easily deployed
-    // by a click of a button. The prod deployment should not be blocked by the dev deployment, so
-    // we put this two in parallel.
-    const betaProdWave = pipeline.addWave(
-      'BetaProdDeployment',
-      // See the comment on creating stripAssetsFromAssembly above for why the pre step here
-      {
-        pre: [stripAssetsFromAssembly],
-      }
+    /**
+     * Deployment to Beta (Dev)
+     * This shouldn't be deployed automatically. Some dev work may be deployed manually from local
+     * for testing but then could got overwritten by the pipeline if someone has pushed to the main
+     * branch. This is put at the end of the pipeline just to have a way of deployment with
+     * a click of a button.
+     */
+    const betaConfig = getEnvironmentConfig(AppStage.BETA);
+    if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
+    pipeline.addStage(
+      new OrcaBusStatelessDeploymentStage(
+        this,
+        'OrcaBusBeta',
+        betaConfig.stackProps.statelessConfig,
+        {
+          account: betaConfig.accountId,
+          region: betaConfig.region,
+        }
+      ),
+      { pre: [new pipelines.ManualApprovalStep('PromoteToDev')] }
     );
-    betaProdWave.addStage(betaDeploymentStage, {
-      pre: [new pipelines.ManualApprovalStep('PromoteToBeta')],
-    });
-    betaProdWave.addStage(prodDeploymentStage, {
-      pre: [new pipelines.ManualApprovalStep('PromoteToProd')],
-    });
 
     // need to build pipeline so we could add notification at the pipeline construct
     pipeline.buildPipeline();
