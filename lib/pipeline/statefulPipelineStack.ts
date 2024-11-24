@@ -93,24 +93,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     });
 
     /**
-     * Deployment to Beta (Dev) account
-     */
-    const betaConfig = getEnvironmentConfig(AppStage.BETA);
-    if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatefulDeploymentStage(
-        this,
-        'OrcaBusBeta',
-        betaConfig.stackProps.statefulConfig,
-        {
-          account: betaConfig.accountId,
-          region: betaConfig.region,
-        }
-      )
-    );
-
-    /**
-     * Deployment to Gamma (Staging) account
+     * Deployment to Gamma (Staging) account directly without approval
      */
     const gammaConfig = getEnvironmentConfig(AppStage.GAMMA);
     if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
@@ -123,12 +106,8 @@ export class StatefulPipelineStack extends cdk.Stack {
           account: gammaConfig.accountId,
           region: gammaConfig.region,
         }
-      ),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
+      )
     );
-
-    // Some stack have dependencies to the 'shared stack' so we need to deploy it first beforehand
-    // should only be a one-off initial deployment
 
     /**
      * Deployment to Prod account
@@ -146,6 +125,28 @@ export class StatefulPipelineStack extends cdk.Stack {
         }
       ),
       { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
+    );
+
+    /**
+     * Deployment to Beta (Dev)
+     * This shouldn't be deployed automatically. Some dev work may be deployed manually from local
+     * for testing but then could got overwritten by the pipeline if someone has pushed to the main
+     * branch. This is put at the end of the pipeline just to have a way of deployment with
+     * a click of a button.
+     */
+    const betaConfig = getEnvironmentConfig(AppStage.BETA);
+    if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
+    pipeline.addStage(
+      new OrcaBusStatefulDeploymentStage(
+        this,
+        'OrcaBusBeta',
+        betaConfig.stackProps.statefulConfig,
+        {
+          account: betaConfig.accountId,
+          region: betaConfig.region,
+        }
+      ),
+      { pre: [new pipelines.ManualApprovalStep('PromoteToDev')] }
     );
 
     // need to build pipeline so we could add notification at the pipeline construct

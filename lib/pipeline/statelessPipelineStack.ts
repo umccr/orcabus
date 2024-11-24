@@ -178,25 +178,7 @@ export class StatelessPipelineStack extends cdk.Stack {
     });
 
     /**
-     * Deployment to Beta (Dev) account
-     */
-    const betaConfig = getEnvironmentConfig(AppStage.BETA);
-    if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
-    pipeline.addStage(
-      new OrcaBusStatelessDeploymentStage(
-        this,
-        'OrcaBusBeta',
-        betaConfig.stackProps.statelessConfig,
-        {
-          account: betaConfig.accountId,
-          region: betaConfig.region,
-        }
-      ),
-      { pre: [stripAssetsFromAssembly] } // I think this should only be done once across stages
-    );
-
-    /**
-     * Deployment to Gamma (Staging) account
+     * Deployment to Gamma (Staging) account directly without approval
      */
     const gammaConfig = getEnvironmentConfig(AppStage.GAMMA);
     if (!gammaConfig) throw new Error(`No 'Gamma' account configuration`);
@@ -210,7 +192,7 @@ export class StatelessPipelineStack extends cdk.Stack {
           region: gammaConfig.region,
         }
       ),
-      { pre: [new pipelines.ManualApprovalStep('PromoteToGamma')] }
+      { pre: [stripAssetsFromAssembly] } // See above for the reason
     );
 
     /**
@@ -231,9 +213,30 @@ export class StatelessPipelineStack extends cdk.Stack {
       { pre: [new pipelines.ManualApprovalStep('PromoteToProd')] }
     );
 
+    /**
+     * Deployment to Beta (Dev)
+     * This shouldn't be deployed automatically. Some dev work may be deployed manually from local
+     * for testing but then could got overwritten by the pipeline if someone has pushed to the main
+     * branch. This is put at the end of the pipeline just to have a way of deployment with
+     * a click of a button.
+     */
+    const betaConfig = getEnvironmentConfig(AppStage.BETA);
+    if (!betaConfig) throw new Error(`No 'Beta' account configuration`);
+    pipeline.addStage(
+      new OrcaBusStatelessDeploymentStage(
+        this,
+        'OrcaBusBeta',
+        betaConfig.stackProps.statelessConfig,
+        {
+          account: betaConfig.accountId,
+          region: betaConfig.region,
+        }
+      ),
+      { pre: [new pipelines.ManualApprovalStep('PromoteToDev')] }
+    );
+
     // need to build pipeline so we could add notification at the pipeline construct
     pipeline.buildPipeline();
-
     pipeline.pipeline.artifactBucket.grantReadWrite(stripAssetsFromAssembly.project);
 
     // notification for success/failure
