@@ -19,6 +19,7 @@ from io import StringIO
 import boto3
 from typing import List, Dict
 from os import environ
+import pandas as pd
 
 from wrapica.project_data import (
     find_project_data_bulk,
@@ -122,12 +123,13 @@ def handler(event, context):
         for bclconvert_iter_ in samplesheet_data_dict["bclconvert_data"]:
             rgids_list.append(
                 {
-                    "rgid": f"{bclconvert_iter_['index']}.{bclconvert_iter_['index2']}.{bclconvert_iter_['lane']}.{bclconvert_iter_['sample_id']}.{instrument_run_id}",
-                    "rgid_partial": f"{bclconvert_iter_['lane']}.{bclconvert_iter_['sample_id']}",
+                    "rgid": f"{bclconvert_iter_['index']}.{bclconvert_iter_['index2']}.{bclconvert_iter_.get('lane', 1)}.{bclconvert_iter_['sample_id']}.{instrument_run_id}",
+                    "rgid_partial": f"{bclconvert_iter_.get('lane', 1)}.{bclconvert_iter_['sample_id']}",
                 }
             )
 
-    return rgids_list
+    # Convert rgids_list to pandas dataframe and drop duplicates
+    return pd.DataFrame(rgids_list).drop_duplicates().to_dict(orient='records')
 
 
 # if __name__ == "__main__":
@@ -157,5 +159,40 @@ def handler(event, context):
 #     #     {
 #     #         "rgid": "TGACGAAT.GCCTACTG.4.L2401553.241024_A00130_0336_BHW7MVDSXC",
 #     #         "rgid_partial": "4.L2401553"
+#     #     }
+#     # ]
+
+
+# if __name__ == "__main__":
+#     # Test the handler function
+#     import json
+#     environ["AWS_PROFILE"] = "umccr-production"
+#     environ["ICAV2_ACCESS_TOKEN_SECRET_ID"] = "ICAv2JWTKey-umccr-prod-service-production"
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "instrument_run_folder_uri": "icav2://data-migration/primary_data/210701_A01052_0055_AH7KWGDSX2/202201052f795bab/",
+#                     "instrument_run_id": "210701_A01052_0055_AH7KWGDSX2"
+#                 },
+#                 None,
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # [
+#     #     {
+#     #         "rgid": "TACCGAGG.AGTTCAGG.1.PRJ210449_L2100607.210701_A01052_0055_AH7KWGDSX2",
+#     #         "rgid_partial": "1.PRJ210449_L2100607"
+#     #     },
+#     #     {
+#     #         "rgid": "CGTTAGAA.GACCTGAA.1.PRJ210450_L2100608.210701_A01052_0055_AH7KWGDSX2",
+#     #         "rgid_partial": "1.PRJ210450_L2100608"
+#     #     },
+#     #     ...
+#     #     {
+#     #         "rgid": "TTACAGGA.GCTTGTCA.1.MDX210166_L2100720.210701_A01052_0055_AH7KWGDSX2",
+#     #         "rgid_partial": "1.MDX210166_L2100720"
 #     #     }
 #     # ]

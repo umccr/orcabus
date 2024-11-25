@@ -16,5 +16,6 @@
     ]
   },
   "context": {
+    "@aws-cdk/core:suppressTemplateIndentation": true
   }
 }

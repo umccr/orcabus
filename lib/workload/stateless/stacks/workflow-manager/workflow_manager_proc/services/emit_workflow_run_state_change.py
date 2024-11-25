@@ -1,8 +1,8 @@
 import os
 import boto3
 import json
-import workflow_manager_proc.domain.workflowmanager.workflowrunstatechange as wfm
-from workflow_manager_proc.domain.workflowmanager.workflowrunstatechange import WorkflowRunStateChange
+import workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange as wfm
+from workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange import WorkflowRunStateChange
 import logging
 
 logger = logging.getLogger(__name__)

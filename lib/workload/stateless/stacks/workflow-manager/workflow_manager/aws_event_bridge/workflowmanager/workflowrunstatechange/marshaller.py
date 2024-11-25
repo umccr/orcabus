@@ -1,7 +1,7 @@
 import datetime
 import re
 import six
-from workflow_manager_proc.domain.workflowmanager import workflowrunstatechange
+from workflow_manager.aws_event_bridge.workflowmanager import workflowrunstatechange
 
 class Marshaller:
     PRIMITIVE_TYPES = (float, bool, bytes, six.text_type) + six.integer_types

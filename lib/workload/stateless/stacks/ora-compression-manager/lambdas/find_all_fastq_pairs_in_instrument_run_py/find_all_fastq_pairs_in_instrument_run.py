@@ -19,6 +19,7 @@ import typing
 import boto3
 from os import environ
 import re
+import pandas as pd
 
 from wrapica.project_data import (
     find_project_data_bulk,
@@ -142,6 +143,11 @@ def handler(event, context):
             "read_2_file_uri": convert_project_data_obj_to_uri(r2_file)
         })
 
+    # Assert that the all rgid_partial are unique
+    assert \
+        len(pd.DataFrame(fastq_pair_list)['rgid_partial'].unique().tolist()) == len(fastq_pair_list), \
+        "rgid_partial are not unique"
+
     return fastq_pair_list
 
 
@@ -166,13 +172,13 @@ def handler(event, context):
 #     # [
 #     #     {
 #     #         "rgid_partial": "1.L2401526",
-#     #         "read1_file_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Samples/Lane_1/L2401526/L2401526_S1_L001_R1_001.fastq.gz",
-#     #         "read2_file_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Samples/Lane_1/L2401526/L2401526_S1_L001_R2_001.fastq.gz"
+#     #         "read_1_file_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Samples/Lane_1/L2401526/L2401526_S1_L001_R1_001.fastq.gz",
+#     #         "read_2_file_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Samples/Lane_1/L2401526/L2401526_S1_L001_R2_001.fastq.gz"
 #     #     },
 #     #     ...
 #     #     {
 #     #         "rgid_partial": "4.L2401553",
-#     #         "read1_file_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Samples/Lane_4/L2401553/L2401553_S27_L004_R1_001.fastq.gz",
-#     #         "read2_file_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Samples/Lane_4/L2401553/L2401553_S27_L004_R2_001.fastq.gz"
+#     #         "read_1_file_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Samples/Lane_4/L2401553/L2401553_S27_L004_R1_001.fastq.gz",
+#     #         "read_2_file_uri": "icav2://ea19a3f5-ec7c-4940-a474-c31cd91dbad4/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Samples/Lane_4/L2401553/L2401553_S27_L004_R2_001.fastq.gz"
 #     #     }
 #     # ]

@@ -4,8 +4,8 @@ django.setup()
 
 # --- keep ^^^ at top of the module
 from workflow_manager.models.workflow_run import WorkflowRun
-import workflow_manager_proc.domain.executionservice.workflowrunstatechange as srv
-import workflow_manager_proc.domain.workflowmanager.workflowrunstatechange as wfm
+import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
+import workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange as wfm
 import logging
 
 logger = logging.getLogger(__name__)
