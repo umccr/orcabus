@@ -3,6 +3,7 @@ import os
 
 def lambda_handler(event, context):
     # Get table names from environment variables
+    assert 'CONNECTION_TABLE' in os.environ, "CONNECTION_TABLE environment variable is not set"
     connections_table_name = os.environ['CONNECTION_TABLE']
 
     dynamodb = boto3.resource('dynamodb')
@@ -13,9 +14,9 @@ def lambda_handler(event, context):
     try:
         # Store connection
         connections_table.put_item(
-            Item={'ConnectionId': connection_id}
+            Item={'connectionId': connection_id}
         )
+        return {'statusCode': 200}
     except Exception as e:
+        print(f"Error storing connection: {e}")
         return {'statusCode': 500, 'body': str(e)}
-
-    return {'statusCode': 200}

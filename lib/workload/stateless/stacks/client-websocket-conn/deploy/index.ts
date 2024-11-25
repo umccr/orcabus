@@ -4,30 +4,31 @@ import { Vpc, SecurityGroup, VpcLookupOptions, IVpc, ISecurityGroup } from 'aws-
 import { WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { WebSocketLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { Runtime, Architecture } from 'aws-cdk-lib/aws-lambda';
+import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
+import { Runtime, Architecture, LayerVersion } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import { WebSocketLambdaAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
-// import {
-//   WebSocketIamAuthorizer,
-//   WebSocketLambdaAuthorizer,
-//   WebSocketLambdaAuthorizerProps,
-// } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 
 export interface WebSocketApiStackProps extends StackProps {
+  // DynamoDB and Lambda configuration
   connectionTableName: string;
   websocketApigatewayName: string;
+  connectionFunctionName: string;
+  disconnectFunctionName: string;
+  messageFunctionName: string;
+  messageHistoryTableName: string;
 
-  lambdaSecurityGroupName: string;
-  vpcProps: VpcLookupOptions;
-
+  // Parameter name for the WebSocket API endpoint
   websocketApiEndpointParameterName: string;
   websocketStageName: string;
 
   // Cognito configuration for the authorizer
   cognitoRegion: string;
   cognitoUserPoolIdParameterName: string;
+  lambdaSecurityGroupName: string;
+  vpcProps: VpcLookupOptions;
 }
 
 export class WebSocketApiStack extends Stack {
@@ -50,44 +51,52 @@ export class WebSocketApiStack extends Stack {
     );
 
     // DynamoDB Table for storing connection IDs
-    const connectionTable = new Table(this, 'WebSocketConnections', {
+    const connectionTable = new Table(this, 'WebSocketApiConnections', {
       tableName: props.connectionTableName,
       partitionKey: {
-        name: 'ConnectionId',
+        name: 'connectionId',
         type: AttributeType.STRING,
       },
       removalPolicy: RemovalPolicy.DESTROY, // For demo purposes, not recommended for production
     });
 
-    // DynamoDB Table for message history
-    // const messageHistoryTable = new Table(this, "WebSocketMessageHistory", {
-    //   partitionKey: {
-    //     name: "messageId",
-    //     type: AttributeType.STRING,
-    //   },
-    //   timeToLiveAttribute: "ttl", // Enable TTL
-    //   removalPolicy: RemovalPolicy.DESTROY,
-    // });
+    //DynamoDB Table for message history
+    const messageHistoryTable = new Table(this, 'WebSocketApiMessageHistory', {
+      tableName: props.messageHistoryTableName,
+      partitionKey: {
+        name: 'messageId',
+        type: AttributeType.STRING,
+      },
+      timeToLiveAttribute: 'ttl', // Enable TTL
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
 
     // Lambda function for $connect
-    const connectHandler = this.createPythonFunction('connectHandler', {
+    const connectHandler = this.createPythonFunction(props.connectionFunctionName, {
       index: 'connect.py',
       handler: 'lambda_handler',
       timeout: Duration.minutes(2),
     });
 
     // Lambda function for $disconnect
-    const disconnectHandler = this.createPythonFunction('disconnectHandler', {
+    const disconnectHandler = this.createPythonFunction(props.disconnectFunctionName, {
       index: 'disconnect.py',
       handler: 'lambda_handler',
       timeout: Duration.minutes(2),
     });
 
     // Lambda function for $default (broadcast messages)
-    const messageHandler = this.createPythonFunction('messageHandler', {
+    const messageHandler = this.createPythonFunction(props.messageFunctionName, {
       index: 'message.py',
       handler: 'lambda_handler',
       timeout: Duration.minutes(2),
+    });
+
+    // build layer from deps
+    const authLayer = new PythonLayerVersion(this, 'BaseLayer', {
+      entry: path.join(__dirname, '../deps'),
+      compatibleRuntimes: [this.lambdaRuntimePythonVersion],
+      compatibleArchitectures: [Architecture.ARM_64],
     });
 
     const userPoolId = StringParameter.fromStringParameterName(
@@ -97,7 +106,7 @@ export class WebSocketApiStack extends Stack {
     ).stringValue;
 
     // authorizer function to check the client token based on the JWT token
-    const connectAuthorizer = this.createPythonFunction('connectAuthorizer', {
+    const connectAuthorizer = this.createPythonFunction('AuthHandler', {
       index: 'auth.py',
       handler: 'lambda_handler',
       timeout: Duration.minutes(2),
@@ -105,6 +114,7 @@ export class WebSocketApiStack extends Stack {
         COGNITO_REGION: props.cognitoRegion,
         COGNITO_USER_POOL_ID: userPoolId,
       },
+      layers: [authLayer],
     });
 
     // Grant permissions to Lambda functions
@@ -112,17 +122,26 @@ export class WebSocketApiStack extends Stack {
     connectionTable.grantReadWriteData(disconnectHandler);
     connectionTable.grantReadWriteData(messageHandler);
     // messageHistoryTable.grantReadData(connectHandler);
-    // messageHistoryTable.grantReadWriteData(messageHandler);
+    messageHistoryTable.grantReadWriteData(messageHandler);
 
     // WebSocket API
     const api = new WebSocketApi(this, props.websocketApigatewayName, {
       apiName: props.websocketApigatewayName,
+      description: 'WebSocket API for the app notifications',
       connectRouteOptions: {
         integration: new WebSocketLambdaIntegration('ConnectIntegration', connectHandler),
-        // authorizer: new WebSocketLambdaAuthorizer('ConnectAuthorizer', connectAuthorizer, {
-        //   authorizerName: 'ConnectAuthorizer',
-        //   identitySource: ['route.request.header.Authorization'],
-        // }),
+        // FIXME: uncomment this when auth is implemented
+        // authorizer: new WebSocketLambdaAuthorizer(
+        //   "ConnectAuthorizer",
+        //   connectAuthorizer,
+        //   {
+        //     authorizerName: "ConnectAuthorizer",
+        //     identitySource: [
+        //       "route.request.header.Authorization",
+        //       "route.request.querystring.Authorization",
+        //     ],
+        //   }
+        // ),
       },
       disconnectRouteOptions: {
         integration: new WebSocketLambdaIntegration('DisconnectIntegration', disconnectHandler),
@@ -132,7 +151,6 @@ export class WebSocketApiStack extends Stack {
       },
     });
 
-    // Add a route for sending messages for sending messages to the client
     api.addRoute('sendMessage', {
       integration: new WebSocketLambdaIntegration('SendMessageIntegration', messageHandler),
     });
@@ -156,7 +174,7 @@ export class WebSocketApiStack extends Stack {
 
     const commonEnvironment = {
       CONNECTION_TABLE: connectionTable.tableName,
-      // MESSAGE_HISTORY_TABLE: messageHistoryTable.tableName,
+      MESSAGE_HISTORY_TABLE: messageHistoryTable.tableName,
       WEBSOCKET_API_ENDPOINT: webSocketApiEndpoint,
     };
 

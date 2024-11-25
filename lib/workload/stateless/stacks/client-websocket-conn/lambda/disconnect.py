@@ -3,6 +3,7 @@ import os
 
 def lambda_handler(event, context):
     # Get table name from environment variable
+    assert 'CONNECTION_TABLE' in os.environ, "CONNECTION_TABLE environment variable is not set"
     connections_table_name = os.environ['CONNECTION_TABLE']
     
     dynamodb = boto3.resource('dynamodb')
@@ -14,4 +15,5 @@ def lambda_handler(event, context):
         table.delete_item(Key={'ConnectionId': connection_id})
         return {'statusCode': 200}
     except Exception as e:
+        print(f"Error deleting connection: {e}")
         return {'statusCode': 500, 'body': str(e)}

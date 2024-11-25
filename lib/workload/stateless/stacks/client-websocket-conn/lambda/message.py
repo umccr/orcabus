@@ -1,21 +1,26 @@
 import boto3
 import json
 import os
+import uuid
+from datetime import datetime, timedelta
+import time
 
 def lambda_handler(event, context):
     
     assert os.environ['CONNECTION_TABLE'] is not None, "CONNECTION_TABLE environment variable is not set"
     assert os.environ['WEBSOCKET_API_ENDPOINT'] is not None, "WEBSOCKET_API_ENDPOINT environment variable is not set"
+    assert os.environ['MESSAGE_HISTORY_TABLE'] is not None, "MESSAGE_HISTORY_TABLE environment variable is not set"
     
     # Get environment variables
     connections_table_name = os.environ['CONNECTION_TABLE']
+    message_history_table_name = os.environ['MESSAGE_HISTORY_TABLE']
    
     # connections URL with replace wss:// header to https
     websocket_endpoint = os.environ['WEBSOCKET_API_ENDPOINT'].replace('wss://', 'https://')
 
     dynamodb = boto3.resource('dynamodb')
     connections_table = dynamodb.Table(connections_table_name)
-
+    message_table = dynamodb.Table(message_history_table_name)
     # Initialize API Gateway client
     apigw_client = boto3.client('apigatewaymanagementapi', 
         endpoint_url=websocket_endpoint)
@@ -30,11 +35,28 @@ def lambda_handler(event, context):
             'message': data.get('message', '')
         }
         
+        
+        # save message to dynamodb
+        message_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
+        ttl_time = datetime.now() + timedelta(days=2)
+        ttl_timestamp = int(time.mktime(ttl_time.timetuple()))
+        message_data = {
+            'messageId': message_id,
+            'data': response_data,
+            'timestamp': timestamp,
+            'ttl': ttl_timestamp
+        }
+        try:
+            message_table.put_item(Item=message_data)
+        except Exception as e:
+            print(f"Error saving message to dynamodb: {e}")
+        
         # Broadcast to all connections
         connections = connections_table.scan()['Items']
         
         for connection in connections:
-            connection_id = connection['ConnectionId']
+            connection_id = connection['connectionId']
             try:
                 apigw_client.post_to_connection(
                     ConnectionId=connection_id,
