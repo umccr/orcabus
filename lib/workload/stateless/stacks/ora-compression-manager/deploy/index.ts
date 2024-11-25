@@ -78,7 +78,6 @@ export type OraCompressionIcav2PipelineManagerStackProps =
   OraCompressionIcav2PipelineManagerConfig & cdk.StackProps;
 
 export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
-  public readonly OraCompressionLaunchStateMachineObj: string;
   private globals = {
     workflowManagerSource: 'orcabus.workflowmanager',
     outputCompressionDetailType: 'FastqListRowCompressed',
@@ -86,6 +85,7 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
     tablePartitionNames: {
       fastqListRow: 'fastq_list_row',
       instrumentRunId: 'instrument_run_id',
+      portalRunId: 'portal_run_id',
     },
   };
 
@@ -167,10 +167,105 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
     /*
     Generate an instance of the gzip raw md5sum sfn arn
     */
-    const gzipRawMd5sumSfnObj = new GzipRawMd5sumDecompressionConstruct(this, 'gzip_raw_md5sum', {
-      sfnPrefix: props.stateMachinePrefix,
-      icav2AccessTokenSecretId: icav2AccessTokenSecretObj.secretName,
-    }).sfnObject;
+    const gzipRawMd5sumSingleSfnObj = new GzipRawMd5sumDecompressionConstruct(
+      this,
+      'gzip_raw_md5sum_single',
+      {
+        sfnPrefix: props.stateMachinePrefix,
+        icav2AccessTokenSecretId: icav2AccessTokenSecretObj.secretName,
+      }
+    ).sfnObject;
+
+    // Create the wrapper that runs this for all fastq files
+    const gzipRawMd5sumInstrumentRunScatterSfnObj = new sfn.StateMachine(
+      this,
+      'gzip_raw_md5sum_run',
+      {
+        stateMachineName: `${props.stateMachinePrefix}-gzip-raw-md5sum-instrument-run`,
+        definitionBody: sfn.DefinitionBody.fromFile(
+          path.join(
+            __dirname,
+            '../step_functions_templates/get_raw_md5sum_for_all_fastq_gzips_sfn_template.asl.json'
+          )
+        ),
+        definitionSubstitutions: {
+          /* Table */
+          __table_name__: dynamodbTableObj.tableName,
+          __fastq_list_row_table_partition_name__: this.globals.tablePartitionNames.fastqListRow,
+          /* Step functions */
+          __gzip_raw_md5sum_sfn_arn__: gzipRawMd5sumSingleSfnObj.stateMachineArn,
+        },
+      }
+    );
+
+    // Configure step function write access to the dynamodb table
+    dynamodbTableObj.grantReadWriteData(gzipRawMd5sumInstrumentRunScatterSfnObj);
+
+    // Configure step function invoke access to the gzip raw md5sum sfn
+    gzipRawMd5sumSingleSfnObj.grantStartExecution(gzipRawMd5sumInstrumentRunScatterSfnObj);
+    gzipRawMd5sumSingleSfnObj.grantRead(gzipRawMd5sumInstrumentRunScatterSfnObj);
+
+    // Allow step function to call nested state machine
+    // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
+    gzipRawMd5sumInstrumentRunScatterSfnObj.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
+        ],
+        actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
+      })
+    );
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      gzipRawMd5sumInstrumentRunScatterSfnObj,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
+
+    // Generate the rate limit sfn for the gzip raw md5sum sfn
+    const gzipRawMd5sumRateLimitSfnObj = new sfn.StateMachine(
+      this,
+      'rate_limit_get_raw_md5sums_gzip_sfn',
+      {
+        stateMachineName: `${props.stateMachinePrefix}-rate-limit-gzip-raw-md5sum-sfn`,
+        definitionBody: sfn.DefinitionBody.fromFile(
+          path.join(
+            __dirname,
+            '../step_functions_templates/rate_limit_get_raw_md5sum_for_fastq_gzip_sfn_template.asl.json'
+          )
+        ),
+        definitionSubstitutions: {
+          /* Step functions */
+          __instrument_run_gzip_to_md5_sfn_arn__:
+            gzipRawMd5sumInstrumentRunScatterSfnObj.stateMachineArn,
+        },
+      }
+    );
+
+    // Configure step function to have listexecutions access to the gzip raw md5sum sfn
+    gzipRawMd5sumInstrumentRunScatterSfnObj.grantRead(gzipRawMd5sumRateLimitSfnObj);
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      gzipRawMd5sumRateLimitSfnObj,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     /*
     Generate the inputs sfn
@@ -194,7 +289,9 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
         __find_fastq_pairs_lambda_function_arn__:
           findAllFastqPairsInInstrumentRunLambdaObj.currentVersion.functionArn,
         /* Step functions */
-        __gzip_raw_md5sum_sfn_arn__: gzipRawMd5sumSfnObj.stateMachineArn,
+        __rate_limit_get_raw_md5sums_gzip_sfn_arn__: gzipRawMd5sumRateLimitSfnObj.stateMachineArn,
+        __get_raw_md5sums_for_fastq_gzip_pair_sfn_arn__:
+          gzipRawMd5sumInstrumentRunScatterSfnObj.stateMachineArn,
       },
     });
 
@@ -211,9 +308,11 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       }
     );
 
-    // Configure step function invoke access to the gzip raw md5sum sfn
-    gzipRawMd5sumSfnObj.grantStartExecution(configureInputsSfn);
-    gzipRawMd5sumSfnObj.grantRead(configureInputsSfn);
+    // Configure step functions invoke access to the gzip raw md5sum sfn
+    [gzipRawMd5sumRateLimitSfnObj, gzipRawMd5sumInstrumentRunScatterSfnObj].forEach((sfnObj) => {
+      sfnObj.grantStartExecution(configureInputsSfn);
+      sfnObj.grantRead(configureInputsSfn);
+    });
 
     // Configure the step function to have invoke access to the gzip raw md5sum sfn
     /* Allow step function to call nested state machine */
@@ -290,6 +389,105 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       icav2AccessTokenSecretId: icav2AccessTokenSecretObj.secretName,
     }).sfnObject;
 
+    // Create the wrapper that runs this for all fastq files
+    const oraRawMd5sumInstrumentRunScatterSfnObj = new sfn.StateMachine(
+      this,
+      'ora_raw_md5sum_run',
+      {
+        stateMachineName: `${props.stateMachinePrefix}-ora-raw-md5sum-instrument-run`,
+        definitionBody: sfn.DefinitionBody.fromFile(
+          path.join(
+            __dirname,
+            '../step_functions_templates/get_raw_md5sum_for_all_fastq_ora_sfn_template.asl.json'
+          )
+        ),
+        definitionSubstitutions: {
+          /* Table */
+          __table_name__: dynamodbTableObj.tableName,
+          __fastq_list_row_table_partition_name__: this.globals.tablePartitionNames.fastqListRow,
+          __instrument_run_id_table_partition_name__:
+            this.globals.tablePartitionNames.instrumentRunId,
+          /* Lambdas */
+          __merge_fastq_list_csv_with_rgid_lambda_function_arn__:
+            setMergeRgidsLambdaObj.currentVersion.functionArn,
+          /* Step functions */
+          __ora_validation_sfn_arn__: oraDecompressionSfn.stateMachineArn,
+        },
+      }
+    );
+
+    // Configure step function write access to the dynamodb table
+    dynamodbTableObj.grantReadWriteData(oraRawMd5sumInstrumentRunScatterSfnObj);
+
+    // Configure step function invoke access to the lambda function
+    setMergeRgidsLambdaObj.currentVersion.grantInvoke(oraRawMd5sumInstrumentRunScatterSfnObj);
+
+    // Configure step function invoke access to the ora raw md5sum sfn
+    oraDecompressionSfn.grantStartExecution(oraRawMd5sumInstrumentRunScatterSfnObj);
+    oraDecompressionSfn.grantRead(oraRawMd5sumInstrumentRunScatterSfnObj);
+
+    // Allow step function to call nested state machine
+    // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
+    oraRawMd5sumInstrumentRunScatterSfnObj.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
+        ],
+        actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
+      })
+    );
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      oraRawMd5sumInstrumentRunScatterSfnObj,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
+
+    // Generate the rate limit sfn for the ora raw md5sum sfn
+    const oraRawMd5sumRateLimitSfnObj = new sfn.StateMachine(
+      this,
+      'rate_limit_get_raw_md5sums_ora_sfn',
+      {
+        stateMachineName: `${props.stateMachinePrefix}-rate-limit-ora-raw-md5sum-sfn`,
+        definitionBody: sfn.DefinitionBody.fromFile(
+          path.join(
+            __dirname,
+            '../step_functions_templates/rate_limit_get_raw_md5sum_for_fastq_ora_sfn_template.asl.json'
+          )
+        ),
+        definitionSubstitutions: {
+          /* Step functions */
+          __instrument_run_ora_to_md5_sfn_arn__:
+            oraRawMd5sumInstrumentRunScatterSfnObj.stateMachineArn,
+        },
+      }
+    );
+
+    // Configure step function to have listexecutions access to the ora raw md5sum sfn
+    oraRawMd5sumInstrumentRunScatterSfnObj.grantRead(oraRawMd5sumRateLimitSfnObj);
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      oraRawMd5sumRateLimitSfnObj,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
+
     // Generate outputs
     const configureOutputsSfn = new sfn.StateMachine(this, 'configure_outputs_sfn', {
       stateMachineName: `${props.stateMachinePrefix}-configure-outputs-json`,
@@ -299,16 +497,11 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       definitionSubstitutions: {
         /* Table */
         __table_name__: dynamodbTableObj.tableName,
-        __fastq_list_row_table_partition_name__: this.globals.tablePartitionNames.fastqListRow,
-        __instrument_run_id_table_partition_name__:
-          this.globals.tablePartitionNames.instrumentRunId,
-        /* Lambda Functions */
-        __set_outputs_json_lambda_function_arn__:
-          setOutputsJsonLambdaFunctionObj.currentVersion.functionArn,
-        __merge_fastq_list_csv_with_rgid_lambda_function_arn__:
-          setMergeRgidsLambdaObj.currentVersion.functionArn,
+        __portal_run_id_table_partition_name__: this.globals.tablePartitionNames.portalRunId,
         /* Step functions */
-        __ora_validation_sfn_arn__: oraDecompressionSfn.stateMachineArn,
+        __rate_limit_get_raw_md5sums_ora_sfn_arn__: oraRawMd5sumRateLimitSfnObj.stateMachineArn,
+        __get_raw_md5sums_for_fastq_ora_pair_sfn_arn__:
+          oraRawMd5sumInstrumentRunScatterSfnObj.stateMachineArn,
       },
     });
 
@@ -316,13 +509,14 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
     dynamodbTableObj.grantReadWriteData(configureOutputsSfn);
 
     // Configure step function invoke access to the lambda function
-    [setMergeRgidsLambdaObj, setOutputsJsonLambdaFunctionObj].forEach((lambda_obj) => {
-      lambda_obj.currentVersion.grantInvoke(configureOutputsSfn);
-    });
+    setOutputsJsonLambdaFunctionObj.currentVersion.grantInvoke(configureOutputsSfn);
 
-    // Configure step function invoke access to the ora decompression sfn
-    oraDecompressionSfn.grantStartExecution(configureOutputsSfn);
-    oraDecompressionSfn.grantRead(configureOutputsSfn);
+    // Configure step function invoke access to the ora raw md5sum sfn rate limiter
+    // And to the ora raw md5sum sfn
+    [oraRawMd5sumInstrumentRunScatterSfnObj, oraRawMd5sumRateLimitSfnObj].forEach((sfnObj) => {
+      sfnObj.grantStartExecution(configureOutputsSfn);
+      sfnObj.grantRead(configureOutputsSfn);
+    });
 
     /* Allow step function to call nested state machine */
     // Because we run a nested state machine, we need to add the permissions to the state machine role

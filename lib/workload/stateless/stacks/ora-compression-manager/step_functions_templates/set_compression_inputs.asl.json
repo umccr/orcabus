@@ -259,77 +259,29 @@
           }
         }
       },
-      "Next": "For each rgid",
-      "ResultPath": null
+      "ResultPath": null,
+      "Next": "Rate Limit Get Raw MD5sums for fastq gzip run"
     },
-    "For each rgid": {
-      "Type": "Map",
-      "ItemsPath": "$.get_rgid_pairs.rgids_in_samplesheet",
-      "ItemSelector": {
-        "rgid_pair.$": "$$.Map.Item.Value"
+    "Rate Limit Get Raw MD5sums for fastq gzip run": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__rate_limit_get_raw_md5sums_gzip_sfn_arn__}",
+        "Input": {}
       },
-      "ItemProcessor": {
-        "ProcessorConfig": {
-          "Mode": "INLINE"
-        },
-        "StartAt": "DynamoDB Get Fastq RGID",
-        "States": {
-          "DynamoDB Get Fastq RGID": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::dynamodb:getItem",
-            "Parameters": {
-              "TableName": "${__table_name__}",
-              "Key": {
-                "id.$": "$.rgid_pair.rgid",
-                "id_type": "${__fastq_list_row_table_partition_name__}"
-              }
-            },
-            "ResultPath": "$.get_fastq_rgid_from_dynamodb_step",
-            "Next": "Get Raw MD5sum for fastq gzip pair"
-          },
-          "Get Raw MD5sum for fastq gzip pair": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::states:startExecution.sync:2",
-            "Parameters": {
-              "StateMachineArn": "${__gzip_raw_md5sum_sfn_arn__}",
-              "Input": {
-                "read1GzFileUri.$": "$.get_fastq_rgid_from_dynamodb_step.Item.read1_gz_file_uri.S",
-                "read2GzFileUri.$": "$.get_fastq_rgid_from_dynamodb_step.Item.read2_gz_file_uri.S",
-                "cacheDir.$": "$.get_fastq_rgid_from_dynamodb_step.Item.cache_uri.S"
-              }
-            },
-            "ResultSelector": {
-              "read1RawMd5sum.$": "$.Output.read1RawMd5sum",
-              "read2RawMd5sum.$": "$.Output.read2RawMd5sum"
-            },
-            "ResultPath": "$.get_raw_md5sums_step",
-            "Next": "Add raw md5sums to db"
-          },
-          "Add raw md5sums to db": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::dynamodb:updateItem",
-            "Parameters": {
-              "TableName": "${__table_name__}",
-              "Key": {
-                "id.$": "$.rgid_pair.rgid",
-                "id_type": "${__fastq_list_row_table_partition_name__}"
-              },
-              "UpdateExpression": "SET read1_raw_md5sum = :read1RawMd5sum, read2_raw_md5sum = :read2RawMd5sum",
-              "ExpressionAttributeValues": {
-                ":read1RawMd5sum": {
-                  "S.$": "$.get_raw_md5sums_step.read1RawMd5sum"
-                },
-                ":read2RawMd5sum": {
-                  "S.$": "$.get_raw_md5sums_step.read2RawMd5sum"
-                }
-              }
-            },
-            "End": true
-          }
+      "ResultPath": null,
+      "Next": "Get Raw MD5sums for fastq gzip pair"
+    },
+    "Get Raw MD5sums for fastq gzip pair": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__get_raw_md5sums_for_fastq_gzip_pair_sfn_arn__}",
+        "Input": {
+          "rgid_list.$": "$.get_rgid_pairs.rgids_in_samplesheet"
         }
       },
-      "End": true,
-      "ResultPath": null
+      "End": true
     }
   }
 }

@@ -9,7 +9,7 @@
         "TableName": "${__table_name__}",
         "Key": {
           "id.$": "$.portal_run_id",
-          "id_type": "portal_run_id"
+          "id_type": "${__portal_run_id_table_partition_name__}"
         }
       },
       "ResultSelector": {
@@ -58,7 +58,7 @@
         "TableName": "${__table_name__}",
         "Key": {
           "id.$": "$.portal_run_id",
-          "id_type": "portal_run_id"
+          "id_type": "${__portal_run_id_table_partition_name__}"
         },
         "UpdateExpression": "SET analysis_output = :output_json",
         "ExpressionAttributeValues": {
@@ -68,122 +68,28 @@
         }
       },
       "ResultPath": "$.update_entry_post_launch_step",
-      "Next": "Get RGIDs from DB"
+      "Next": "Rate Limit Get Raw MD5sums for fastq ora run"
     },
-    "Get RGIDs from DB": {
+    "Rate Limit Get Raw MD5sums for fastq ora run": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
       "Parameters": {
-        "TableName": "${__table_name__}",
-        "Key": {
-          "id.$": "$.get_db_attributes_step.ready_event_data_inputs.instrumentRunId",
-          "id_type": "${__instrument_run_id_table_partition_name__}"
-        }
+        "StateMachineArn": "${__rate_limit_get_raw_md5sums_ora_sfn_arn__}",
+        "Input": {}
       },
-      "ResultSelector": {
-        "rgids.$": "$.Item.rgid_list.SS"
-      },
-      "ResultPath": "$.get_rgids_from_db_step",
-      "Next": "Merge fastq list csv with rgids"
+      "ResultPath": null,
+      "Next": "Get Raw MD5sums for fastq ora pair"
     },
-    "Merge fastq list csv with rgids": {
+    "Get Raw MD5sums for fastq ora pair": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
       "Parameters": {
-        "FunctionName": "${__merge_fastq_list_csv_with_rgid_lambda_function_arn__}",
-        "Payload": {
-          "rgids_list.$": "$.get_rgids_from_db_step.rgids",
+        "StateMachineArn": "${__get_raw_md5sums_for_fastq_ora_pair_sfn_arn__}",
+        "Input": {
+          "instrument_run_id.$": "$.get_db_attributes_step.ready_event_data_inputs.instrumentRunId",
           "instrument_run_folder_uri.$": "$.analysis_outputs_step.output_json.instrumentRunOraOutputUri"
         }
       },
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "Lambda.TooManyRequestsException"
-          ],
-          "IntervalSeconds": 1,
-          "MaxAttempts": 3,
-          "BackoffRate": 2,
-          "JitterStrategy": "FULL"
-        }
-      ],
-      "ResultSelector": {
-        "fastq_ora_file_ora_by_rgid.$": "$.Payload"
-      },
-      "ResultPath": "$.merge_rgids_step",
-      "Next": "Validate Fastq Outputs"
-    },
-    "Validate Fastq Outputs": {
-      "Type": "Map",
-      "ItemsPath": "$.merge_rgids_step.fastq_ora_file_ora_by_rgid",
-      "ItemProcessor": {
-        "ProcessorConfig": {
-          "Mode": "INLINE"
-        },
-        "StartAt": "Get Raw md5sums for rgid",
-        "States": {
-          "Get Raw md5sums for rgid": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::dynamodb:getItem",
-            "Parameters": {
-              "TableName": "${__table_name__}",
-              "Key": {
-                "id.$": "$.rgid",
-                "id_type": "${__fastq_list_row_table_partition_name__}"
-              }
-            },
-            "ResultPath": "$.get_raw_md5sums_for_rgid_step",
-            "Next": "Update fastq list row partition with ora outputs"
-          },
-          "Update fastq list row partition with ora outputs": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::dynamodb:updateItem",
-            "Parameters": {
-              "TableName": "${__table_name__}",
-              "Key": {
-                "id.$": "$.rgid",
-                "id_type": "${__fastq_list_row_table_partition_name__}"
-              },
-              "UpdateExpression": "SET read1_ora_file_uri = :read1OraFileUri, read2_ora_file_uri = :read2OraFileUri",
-              "ExpressionAttributeValues": {
-                ":read1OraFileUri": {
-                  "S.$": "$.read_1_file_uri"
-                },
-                ":read2OraFileUri": {
-                  "S.$": "$.read_2_file_uri"
-                }
-              }
-            },
-            "ResultPath": null,
-            "Next": "Step Functions StartExecution"
-          },
-          "Step Functions StartExecution": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::states:startExecution.sync:2",
-            "Parameters": {
-              "StateMachineArn": "${__ora_validation_sfn_arn__}",
-              "Input": {
-                "read1OraFileUri.$": "$.read_1_file_uri",
-                "read2OraFileUri.$": "$.read_2_file_uri",
-                "read1RawMd5sum.$": "$.get_raw_md5sums_for_rgid_step.Item.read1_raw_md5sum.S",
-                "read2RawMd5sum.$": "$.get_raw_md5sums_for_rgid_step.Item.read2_raw_md5sum.S",
-                "validationOnly": true
-              }
-            },
-            "ResultPath": null,
-            "End": true
-          }
-        }
-      },
-      "Next": "Wait 1 Second (Post-update)"
-    },
-    "Wait 1 Second (Post-update)": {
-      "Type": "Wait",
-      "Seconds": 1,
-      "Comment": "Wait for databases to sync before continuing",
       "End": true
     }
   }
