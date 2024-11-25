@@ -115,6 +115,7 @@ def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True, user_id:
                 try:
                     subject.individual_set.get(orcabus_id=idv.orcabus_id)
                 except ObjectDoesNotExist:
+                    subject._change_reason = reason
                     subject.individual_set.add(idv)
 
                     # We update the stats when new idv is linked to sbj, only if this is not recorded as
@@ -182,6 +183,7 @@ def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True, user_id:
                     try:
                         project.contact_set.get(orcabus_id=contact.orcabus_id)
                     except ObjectDoesNotExist:
+                        project._change_reason = reason
                         project.contact_set.add(contact)
 
                         # We update the stats when new ctc is linked to prj, only if this is not recorded as
@@ -236,8 +238,8 @@ def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True, user_id:
                 try:
                     library.project_set.get(orcabus_id=project.orcabus_id)
                 except ObjectDoesNotExist:
+                    library._change_reason = reason
                     library.project_set.add(project)
-
                     # We update the stats when new project is linked to library, only if this is not recorded as
                     # update/create in previous upsert method
                     if not is_lib_created and not is_lib_updated:

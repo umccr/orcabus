@@ -137,6 +137,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: b
             try:
                 subject.individual_set.get(orcabus_id=idv.orcabus_id)
             except ObjectDoesNotExist:
+                subject._change_reason = reason
                 subject.individual_set.add(idv)
 
                 # We update the stats when new idv is linked to sbj, only if this is not recorded as
@@ -192,6 +193,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: b
             try:
                 project.contact_set.get(orcabus_id=contact.orcabus_id)
             except ObjectDoesNotExist:
+                project._change_reason = reason
                 project.contact_set.add(contact)
 
                 # We update the stats when new ctc is linked to prj, only if this is not recorded as
@@ -247,6 +249,7 @@ def persist_lab_metadata(df: pd.DataFrame, sheet_year: str, is_emit_eb_events: b
             try:
                 library.project_set.get(orcabus_id=project.orcabus_id)
             except ObjectDoesNotExist:
+                library._change_reason = reason
                 library.project_set.add(project)
 
                 # We update the stats when new project is linked to library, only if this is not recorded as
