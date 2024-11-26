@@ -287,5 +287,7 @@ class PgDDS3(PgDD):
                 self.logger.info(f"file already exists: {file}")
                 continue
 
-            s3_object = self.s3.Object(self.bucket, obj.key)
-            s3_object.download_file(file)
+            s3_object = self.s3.Object(self.bucket, obj.key).get()
+            data = gzip.decompress(s3_object["Body"].read())
+            with open(file, "wb") as f:
+                f.write(data)

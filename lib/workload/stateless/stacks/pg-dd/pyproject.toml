@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "postgres-data-dump"
+name = "pg-dd"
 version = "0.1.0"
 description = "A serivce to dump postgres databases to S3."
 authors = ["Marko malenic <mmalenic1@gmail.com>"]
