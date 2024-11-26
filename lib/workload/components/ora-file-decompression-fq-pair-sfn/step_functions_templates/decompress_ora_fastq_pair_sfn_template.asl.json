@@ -15,7 +15,7 @@
     },
     "Convert Fastq List Row ORA Validation to Array": {
       "Type": "Pass",
-      "Next": "Decompress ORA Files",
+      "Next": "Wait for Task Availability",
       "Parameters": {
         "ora_files_map": [
           {
@@ -32,7 +32,7 @@
     },
     "Convert Fastq List Row ORA to Array": {
       "Type": "Pass",
-      "Next": "Decompress ORA Files",
+      "Next": "Wait for Task Availability",
       "Parameters": {
         "ora_files_map": [
           {
@@ -48,6 +48,16 @@
         ]
       },
       "ResultPath": "$.fastq_list_row_as_map"
+    },
+    "Wait for Task Availability": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__ecs_task_rate_limit_sfn_arn__}",
+        "Input": {}
+      },
+      "Next": "Decompress ORA Files",
+      "ResultPath": null
     },
     "Decompress ORA Files": {
       "Type": "Map",
@@ -117,8 +127,15 @@
               {
                 "ErrorEquals": ["ECS.AmazonECSException"],
                 "BackoffRate": 2,
-                "IntervalSeconds": 300,
-                "MaxAttempts": 3,
+                "IntervalSeconds": 3600,
+                "MaxAttempts": 5,
+                "JitterStrategy": "FULL"
+              },
+              {
+                "ErrorEquals": ["States.TaskFailed"],
+                "BackoffRate": 2,
+                "IntervalSeconds": 3600,
+                "MaxAttempts": 2,
                 "JitterStrategy": "FULL"
               }
             ],

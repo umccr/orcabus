@@ -1,0 +1,39 @@
+{
+  "Comment": "Task Backoff SFN",
+  "StartAt": "ListExecutions",
+  "States": {
+    "ListExecutions": {
+      "Type": "Task",
+      "Parameters": {
+        "StateMachineArn": "${__instrument_run_ora_to_md5_sfn_arn__}",
+        "StatusFilter": "RUNNING"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:listExecutions",
+      "Next": "Over 10 executions running",
+      "ResultSelector": {
+        "num_executions_running.$": "States.ArrayLength($.Executions)"
+      },
+      "ResultPath": "$.get_num_running_executions_step"
+    },
+    "Over 10 executions running": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_num_running_executions_step.num_executions_running",
+          "NumericGreaterThan": 10,
+          "Comment": "More than 10 executions running",
+          "Next": "Sleep 5 mins"
+        }
+      ],
+      "Default": "Success"
+    },
+    "Sleep 5 mins": {
+      "Type": "Wait",
+      "Seconds": 300,
+      "Next": "Over 10 executions running"
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}
