@@ -11,7 +11,7 @@
       "Resource": "arn:aws:states:::aws-sdk:sfn:listExecutions",
       "Next": "Over 10 executions running",
       "ResultSelector": {
-        "num_executions_running.$": "States.ArrayLength(.Executions)"
+        "num_executions_running.$": "States.ArrayLength($.Executions)"
       },
       "ResultPath": "$.get_num_running_executions_step"
     },

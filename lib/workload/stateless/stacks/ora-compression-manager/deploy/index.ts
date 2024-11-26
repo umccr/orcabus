@@ -171,7 +171,7 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
       this,
       'gzip_raw_md5sum_single',
       {
-        sfnPrefix: props.stateMachinePrefix,
+        sfnPrefix: `${props.stateMachinePrefix}-gzip`,
         icav2AccessTokenSecretId: icav2AccessTokenSecretObj.secretName,
       }
     ).sfnObject;
@@ -385,7 +385,7 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
 
     // Generate an ora decompression construct
     const oraDecompressionSfn = new OraDecompressionConstruct(this, 'ora_decompression', {
-      sfnPrefix: props.stateMachinePrefix,
+      sfnPrefix: `${props.stateMachinePrefix}-ora`,
       icav2AccessTokenSecretId: icav2AccessTokenSecretObj.secretName,
     }).sfnObject;
 
@@ -498,6 +498,9 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
         /* Table */
         __table_name__: dynamodbTableObj.tableName,
         __portal_run_id_table_partition_name__: this.globals.tablePartitionNames.portalRunId,
+        /* Lambdas */
+        __set_outputs_json_lambda_function_arn__:
+          setOutputsJsonLambdaFunctionObj.currentVersion.functionArn,
         /* Step functions */
         __rate_limit_get_raw_md5sums_ora_sfn_arn__: oraRawMd5sumRateLimitSfnObj.stateMachineArn,
         __get_raw_md5sums_for_fastq_ora_pair_sfn_arn__:
