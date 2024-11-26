@@ -89,3 +89,38 @@ services:
       interval: 10s
       timeout: 2s
       retries: 5
+
+  # Load test data into the database.
+  pg-dd:
+    build:
+      context: ./lib/workload/stateless/stacks/pg-dd
+      dockerfile: Dockerfile
+    volumes:
+      # Store the dumps to the local filesystem.
+      - ./lib/workload/stateless/stacks/pg-dd/data:/app/data
+    depends_on:
+      # Depends on migration from all services, so they must be started first.
+      - db
+      - metadata-manager
+      - workflow-manager
+      - sequence-run-manager
+      - filemanager
+    command: ${PG_DD_COMMAND:-load}
+    environment:
+      - PG_DD_URL=postgresql://orcabus:orcabus@db:5432
+      - PG_DD_DIR=data
+      - PG_DD_BUCKET=orcabus-test-data-843407916570-ap-southeast-2
+      - PG_DD_PREFIX=pg-dd
+
+      - PG_DD_DATABASE_METADATA_MANAGER=metadata_manager
+      - PG_DD_DATABASE_SEQUENCE_RUN_MANAGER=sequence_run_manager
+      - PG_DD_DATABASE_WORKFLOW_MANAGER=workflow_manager
+      - PG_DD_DATABASE_FILEMANAGER=filemanager
+      - PG_DD_DATABASE_FILEMANAGER_SQL_DUMP=select * from s3_object order by sequencer limit 10000
+      - PG_DD_DATABASE_FILEMANAGER_SQL_LOAD=s3_object
+
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-access_key_id}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-secret_access_key}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-southeast-2}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-session_token}
+    restart: no
