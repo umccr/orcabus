@@ -27,10 +27,10 @@ class LibraryViewSet(BaseViewSet):
             query_params.pop("coverage[gte]")
             qs = qs.filter(coverage__gte=coverage__gte)
 
-        project_id = query_params.get("project_id", None)
-        if project_id:
+        project_id_list = query_params.getlist("project_id", None)
+        if project_id_list:
             query_params.pop("project_id")
-            qs = qs.filter(project_set__project_id=project_id)
+            qs = qs.filter(project_set__project_id__in=project_id_list)
 
         # Continue filtering by the keys inside the library model
         return Library.objects.get_by_keyword(qs, **query_params)
