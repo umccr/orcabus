@@ -1,20 +1,26 @@
 import { FilemanagerConfig } from '../../lib/workload/stateless/stacks/filemanager/deploy/stack';
 import {
   AppStage,
+  cognitoApiGatewayConfig,
   computeSecurityGroupName,
+  corsAllowOrigins,
   databasePort,
   dbClusterEndpointHostParameterName,
   eventSourceQueueName,
-  vpcProps,
-  oncoanalyserBucket,
-  icav2PipelineCacheBucket,
   fileManagerIngestRoleName,
+  fileManagerInventoryBucket,
+  icav2PipelineCacheBucket,
   logsApiGatewayConfig,
-  cognitoApiGatewayConfig,
-  corsAllowOrigins,
+  oncoanalyserBucket,
+  vpcProps,
 } from '../constants';
 
 export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => {
+  const inventorySourceBuckets = [];
+  if (stage == AppStage.BETA) {
+    inventorySourceBuckets.push(fileManagerInventoryBucket[stage]);
+  }
+
   return {
     securityGroupName: computeSecurityGroupName,
     vpcProps,
@@ -22,7 +28,7 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     databaseClusterEndpointHostParameter: dbClusterEndpointHostParameterName,
     port: databasePort,
     migrateDatabase: true,
-    inventorySourceBuckets: ['filemanager-inventory-test'],
+    inventorySourceBuckets,
     eventSourceBuckets: [oncoanalyserBucket[stage], icav2PipelineCacheBucket[stage]],
     fileManagerRoleName: fileManagerIngestRoleName,
     apiGatewayCognitoProps: {

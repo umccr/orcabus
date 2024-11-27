@@ -86,6 +86,11 @@ export const icav2PipelineCacheBucket: Record<AppStage, string> = {
   [AppStage.PROD]: 'pipeline-prod-cache-503977275616-ap-southeast-2',
 };
 
+// The test inventory bucket for dev.
+export const fileManagerInventoryBucket: Record<AppStage.BETA, string> = {
+  [AppStage.BETA]: 'filemanager-inventory-test',
+};
+
 // The archive bucket. Noting that this is only present for prod data.
 export const icav2ArchiveAnalysisBucket: Record<AppStage.PROD, string> = {
   [AppStage.PROD]: 'archive-prod-analysis-503977275616-ap-southeast-2',
@@ -143,8 +148,8 @@ export const eventDlqNameFMAnnotator = 'orcabus-event-dlq-fmannotator';
 export const serviceUserSecretName = 'orcabus/token-service-user'; // pragma: allowlist secret
 export const jwtSecretName = 'orcabus/token-service-jwt'; // pragma: allowlist secret
 export const icaAccessTokenSecretName = 'IcaSecretsPortal'; // pragma: allowlist secret
-
 export const fileManagerIngestRoleName = 'orcabus-file-manager-ingest-role';
+export const dataMoverRoleName = 'orcabus-data-mover-role';
 
 /*
 Resources required for BaseSpace TES stack

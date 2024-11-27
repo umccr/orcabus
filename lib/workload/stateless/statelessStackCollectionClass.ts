@@ -80,6 +80,7 @@ import {
   OraDecompressionManagerStackProps,
 } from './stacks/ora-decompression-manager/deploy';
 import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
+import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -105,6 +106,7 @@ export interface StatelessStackCollectionProps {
   workflowManagerStackProps: WorkflowManagerStackProps;
   stackyMcStackFaceProps: GlueStackProps;
   fmAnnotatorProps: FMAnnotatorConfigurableProps;
+  dataMigrateProps: DataMigrateStackProps;
   pgDDProps?: PgDDStackProps;
 }
 
@@ -133,6 +135,7 @@ export class StatelessStackCollection {
   readonly workflowManagerStack: Stack;
   readonly stackyMcStackFaceStack: Stack;
   readonly fmAnnotator: Stack;
+  readonly dataMigrate: Stack;
   readonly pgDDStack: Stack;
 
   constructor(
@@ -311,6 +314,10 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'FMAnnotatorStack'),
       ...statelessConfiguration.fmAnnotatorProps,
       domainName: fileManagerStack.domainName,
+    });
+    this.fmAnnotator = new DataMigrateStack(scope, 'DataMigrateStack', {
+      ...this.createTemplateProps(env, 'DataMigrateStack'),
+      ...statelessConfiguration.dataMigrateProps,
     });
 
     if (statelessConfiguration.pgDDProps) {

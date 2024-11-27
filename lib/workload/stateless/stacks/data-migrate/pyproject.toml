@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "data-migrate"
+version = "0.1.0"
+description = "A service to migrate data between locations and buckets."
+authors = ["Marko malenic <mmalenic1@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "data_mover" }]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+click = "^8"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+dm = "data_mover.cli:cli"

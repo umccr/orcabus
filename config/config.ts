@@ -64,6 +64,7 @@ import {
 } from './stacks/oraCompressionPipelineManager';
 import { getOraDecompressionManagerStackProps } from './stacks/oraDecompressionPipelineManager';
 import { getPgDDProps } from './stacks/pgDD';
+import { getDataMigrateStackProps } from './stacks/dataMigrate';
 
 interface EnvironmentConfig {
   name: string;
@@ -131,6 +132,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       workflowManagerStackProps: getWorkflowManagerStackProps(stage),
       stackyMcStackFaceProps: getGlueStackProps(stage),
       fmAnnotatorProps: getFmAnnotatorProps(),
+      dataMigrateProps: getDataMigrateStackProps(stage),
       pgDDProps: getPgDDProps(stage),
     },
   };
