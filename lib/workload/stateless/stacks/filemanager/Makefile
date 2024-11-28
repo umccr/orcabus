@@ -73,18 +73,17 @@ restore:
 	@docker compose exec -T postgres pg_restore -U filemanager -d filemanager
 
 ## Targets related to top-level database management and S3.
-apply-schema:
-	@for file in database/migrations/*; do \
-  	 	docker exec -e PGPASSWORD=orcabus -it orcabus_db psql -h $(FILEMANAGER_DATABASE_HOST) -U orcabus -d filemanager -c "$$(cat $$file)"; \
-  	 done
 reset-db:
 	@docker exec -e PGPASSWORD=orcabus -it orcabus_db psql -h $(FILEMANAGER_DATABASE_HOST) -U orcabus -d orcabus -c "DROP DATABASE IF EXISTS filemanager;" && \
 	docker exec -e PGPASSWORD=orcabus -it orcabus_db psql -h $(FILEMANAGER_DATABASE_HOST) -U orcabus -d orcabus -c "CREATE DATABASE filemanager;"
+	for file in database/migrations/*; do \
+  	 	docker exec -e PGPASSWORD=orcabus -it orcabus_db psql -h $(FILEMANAGER_DATABASE_HOST) -U orcabus -d filemanager -c "$$(cat $$file)"; \
+  	done
 s3-dump-upload:
 	@aws s3 cp data/fm_s3_objects_100000.csv.gz s3://orcabus-test-data-843407916570-ap-southeast-2/file-manager/fm_s3_objects_100000.csv.gz
 s3-dump-download:
 	@aws s3 cp s3://orcabus-test-data-843407916570-ap-southeast-2/file-manager/fm_s3_objects_100000.csv.gz data/fm_s3_objects_100000.csv.gz
-db-load-data: reset-db apply-schema
+db-load-data: reset-db
 	@gunzip -c data/fm_s3_objects_100000.csv.gz | \
      docker exec -i orcabus_db psql -U orcabus -d filemanager -c "copy s3_object from stdin with (format csv, header);"
 s3-dump-download-if-not-exists:

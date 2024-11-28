@@ -79,6 +79,7 @@ import {
   OraDecompressionManagerStack,
   OraDecompressionManagerStackProps,
 } from './stacks/ora-decompression-manager/deploy';
+import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 
 import { WebSocketApiStackProps, WebSocketApiStack } from './stacks/client-websocket-conn/deploy';
 
@@ -107,6 +108,7 @@ export interface StatelessStackCollectionProps {
   stackyMcStackFaceProps: GlueStackProps;
   fmAnnotatorProps: FMAnnotatorConfigurableProps;
   websocketApiStackProps: WebSocketApiStackProps;
+  pgDDProps?: PgDDStackProps;
 }
 
 export class StatelessStackCollection {
@@ -135,6 +137,7 @@ export class StatelessStackCollection {
   readonly stackyMcStackFaceStack: Stack;
   readonly fmAnnotator: Stack;
   readonly websocketApiStack: Stack;
+  readonly pgDDStack: Stack;
 
   constructor(
     scope: Construct,
@@ -318,6 +321,12 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'WebSocketApiStack'),
       ...statelessConfiguration.websocketApiStackProps,
     });
+    if (statelessConfiguration.pgDDProps) {
+      this.pgDDStack = new PgDDStack(scope, 'PgDDStack', {
+        ...this.createTemplateProps(env, 'PgDDStack'),
+        ...statelessConfiguration.pgDDProps,
+      });
+    }
   }
 
   /**

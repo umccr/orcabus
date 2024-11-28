@@ -1,0 +1,7 @@
+deploy
+.env
+.env.example
+.gitignore
+README.md
+data
+.ruff_cache

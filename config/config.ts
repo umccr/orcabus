@@ -64,6 +64,7 @@ import {
 } from './stacks/oraCompressionPipelineManager';
 import { getOraDecompressionManagerStackProps } from './stacks/oraDecompressionPipelineManager';
 import { getWebSocketApiStackProps } from './stacks/clientWebsocketApi';
+import { getPgDDProps } from './stacks/pgDD';
 interface EnvironmentConfig {
   name: string;
   region: string;
@@ -131,6 +132,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       stackyMcStackFaceProps: getGlueStackProps(stage),
       fmAnnotatorProps: getFmAnnotatorProps(),
       websocketApiStackProps: getWebSocketApiStackProps(stage),
+      pgDDProps: getPgDDProps(stage),
     },
   };
 

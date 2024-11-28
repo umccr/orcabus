@@ -4,7 +4,7 @@
   "States": {
     "Convert Fastq List Row GZ URIs to Array": {
       "Type": "Pass",
-      "Next": "Decompress GZIP Files",
+      "Next": "Wait for Task Availability",
       "Parameters": {
         "gzip_files_map": [
           {
@@ -18,6 +18,16 @@
         ]
       },
       "ResultPath": "$.fastq_list_row_as_map"
+    },
+    "Wait for Task Availability": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${__ecs_task_rate_limit_sfn_arn__}",
+        "Input": {}
+      },
+      "Next": "Decompress GZIP Files",
+      "ResultPath": null
     },
     "Decompress GZIP Files": {
       "Type": "Map",
@@ -71,8 +81,15 @@
               {
                 "ErrorEquals": ["ECS.AmazonECSException"],
                 "BackoffRate": 2,
-                "IntervalSeconds": 300,
-                "MaxAttempts": 3,
+                "IntervalSeconds": 3600,
+                "MaxAttempts": 5,
+                "JitterStrategy": "FULL"
+              },
+              {
+                "ErrorEquals": ["States.TaskFailed"],
+                "BackoffRate": 2,
+                "IntervalSeconds": 3600,
+                "MaxAttempts": 5,
                 "JitterStrategy": "FULL"
               }
             ],

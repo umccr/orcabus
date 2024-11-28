@@ -1,0 +1,38 @@
+{
+  "Comment": "Task Backoff SFN",
+  "StartAt": "ListTasks",
+  "States": {
+    "ListTasks": {
+      "Type": "Task",
+      "Parameters": {
+        "Cluster": "${__cluster_arn__}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:ecs:listTasks",
+      "ResultSelector": {
+        "num_tasks_running.$": "States.ArrayLength($.TaskArns)"
+      },
+      "ResultPath": "$.get_num_tasks_step",
+      "Next": "Over 400 tasks running"
+    },
+    "Over 400 tasks running": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.get_num_tasks_step.num_tasks_running",
+          "NumericGreaterThan": 400,
+          "Next": "Sleep a minute",
+          "Comment": "More than 400 tasks running"
+        }
+      ],
+      "Default": "Success"
+    },
+    "Sleep a minute": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "ListTasks"
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}

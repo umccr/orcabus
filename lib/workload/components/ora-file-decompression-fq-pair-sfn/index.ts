@@ -77,6 +77,45 @@ export class OraDecompressionConstruct extends Construct {
       }),
     });
 
+    // Set up the step function for rate limiting the number of tasks running simultaneously
+    const rateLimitStateMachine = new sfn.StateMachine(this, 'RateLimitStateMachine', {
+      stateMachineName: `${props.sfnPrefix}-ecs-limiter-sfn`,
+      definitionBody: sfn.DefinitionBody.fromFile(
+        path.join(
+          __dirname,
+          'step_functions_templates/ecs_task_rate_limiters_sfn_template.asl.json'
+        )
+      ),
+      definitionSubstitutions: {
+        __cluster_arn__: cluster.clusterArn,
+      },
+    });
+
+    // Allow the rate limit state machine to list the ECS tasks
+    // in the cluster
+    rateLimitStateMachine.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: ['*'],
+        actions: ['ecs:ListTasks'],
+        conditions: {
+          ArnEquals: {
+            'ecs:cluster': cluster.clusterArn,
+          },
+        },
+      })
+    );
+
+    NagSuppressions.addResourceSuppressions(
+      rateLimitStateMachine,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Give permissions to resources *, to list tasks with condition on ecs cluster',
+        },
+      ],
+      true
+    );
+
     // Set up step function
     // Build state machine object
     this.sfnObject = new sfn.StateMachine(this, 'state_machine', {
@@ -96,8 +135,39 @@ export class OraDecompressionConstruct extends Construct {
         __ora_container_name__: oraDecompressionContainer.containerName,
         __subnets__: cluster.vpc.privateSubnets.map((subnet) => subnet.subnetId).join(','),
         __sg_group__: securityGroup.securityGroupId,
+        /* Child step functions */
+        __ecs_task_rate_limit_sfn_arn__: rateLimitStateMachine.stateMachineArn,
       },
     });
+
+    // Grant permissions to the state machine
+    rateLimitStateMachine.grantStartExecution(this.sfnObject);
+    rateLimitStateMachine.grantRead(this.sfnObject);
+
+    // Because we run a nested state machine, we need to add the permissions to the state machine role
+    // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
+    this.sfnObject.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
+        ],
+        actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
+      })
+    );
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      this.sfnObject,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     // Allow step function to run the ECS task
     taskDefinition.grantRun(this.sfnObject);

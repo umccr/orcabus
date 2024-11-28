@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "pg-dd"
+version = "0.1.0"
+description = "A serivce to dump postgres databases to S3."
+authors = ["Marko malenic <mmalenic1@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "pg_dd" }]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+boto3 = "^1"
+psycopg = { version = "^3", extras = ["binary"] }
+python-dotenv = "^1"
+libumccr = "^0.4"
+mypy-boto3-s3 = "^1"
+click = "^8"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1"
+ruff = "^0.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+cli = "pg_dd.cli:cli"
