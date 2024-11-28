@@ -81,6 +81,8 @@ import {
 } from './stacks/ora-decompression-manager/deploy';
 import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 
+import { WebSocketApiStackProps, WebSocketApiStack } from './stacks/client-websocket-conn/deploy';
+
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
   sequenceRunManagerStackProps: SequenceRunManagerStackProps;
@@ -105,6 +107,7 @@ export interface StatelessStackCollectionProps {
   workflowManagerStackProps: WorkflowManagerStackProps;
   stackyMcStackFaceProps: GlueStackProps;
   fmAnnotatorProps: FMAnnotatorConfigurableProps;
+  websocketApiStackProps: WebSocketApiStackProps;
   pgDDProps?: PgDDStackProps;
 }
 
@@ -133,6 +136,7 @@ export class StatelessStackCollection {
   readonly workflowManagerStack: Stack;
   readonly stackyMcStackFaceStack: Stack;
   readonly fmAnnotator: Stack;
+  readonly websocketApiStack: Stack;
   readonly pgDDStack: Stack;
 
   constructor(
@@ -313,6 +317,10 @@ export class StatelessStackCollection {
       domainName: fileManagerStack.domainName,
     });
 
+    this.websocketApiStack = new WebSocketApiStack(scope, 'WebSocketApiStack', {
+      ...this.createTemplateProps(env, 'WebSocketApiStack'),
+      ...statelessConfiguration.websocketApiStackProps,
+    });
     if (statelessConfiguration.pgDDProps) {
       this.pgDDStack = new PgDDStack(scope, 'PgDDStack', {
         ...this.createTemplateProps(env, 'PgDDStack'),
