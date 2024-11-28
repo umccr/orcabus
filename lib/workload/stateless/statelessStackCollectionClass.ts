@@ -315,7 +315,7 @@ export class StatelessStackCollection {
       ...statelessConfiguration.fmAnnotatorProps,
       domainName: fileManagerStack.domainName,
     });
-    this.fmAnnotator = new DataMigrateStack(scope, 'DataMigrateStack', {
+    this.dataMigrate = new DataMigrateStack(scope, 'DataMigrateStack', {
       ...this.createTemplateProps(env, 'DataMigrateStack'),
       ...statelessConfiguration.dataMigrateProps,
     });

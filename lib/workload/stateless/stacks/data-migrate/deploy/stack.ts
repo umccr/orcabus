@@ -1,20 +1,28 @@
 import { Duration, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import path from 'path';
-import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
+import { IVpc, SecurityGroup, SubnetType, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import {
   AssetImage,
   Cluster,
-  ContainerDefinition,
   CpuArchitecture,
   FargateTaskDefinition,
   LogDriver,
 } from 'aws-cdk-lib/aws-ecs';
 import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
-import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { EcsFargateLaunchTarget, EcsRunTask } from 'aws-cdk-lib/aws-stepfunctions-tasks';
-import { IntegrationPattern } from 'aws-cdk-lib/aws-stepfunctions';
+import {
+  ChainDefinitionBody,
+  IntegrationPattern,
+  JsonPath,
+  Pass,
+  StateMachine,
+  Succeed,
+  Timeout,
+} from 'aws-cdk-lib/aws-stepfunctions';
+import { startExecution } from 'aws-cdk-lib/custom-resources/lib/provider-framework/runtime/outbound';
 
 /**
  * Props for the data migrate stack.
@@ -63,6 +71,13 @@ export class DataMigrateStack extends Stack {
       roleName: props?.dataMoverRoleName,
       maxSessionDuration: Duration.hours(12),
     });
+    this.role.addToPolicy(
+      new PolicyStatement({
+        resources: ['*'],
+        actions: ['states:SendTaskSuccess', 'states:SendTaskFailure', 'states:SendTaskHeartbeat'],
+      })
+    );
+
     this.addPoliciesForBuckets(this.role, props.readFromBuckets, [
       's3:ListBucket',
       's3:GetObject',
@@ -70,16 +85,24 @@ export class DataMigrateStack extends Stack {
       's3:GetObjectTagging',
       's3:GetObjectVersionTagging',
     ]);
-    this.addPoliciesForBuckets(this.role, props.writeToBuckets, ['s3:PutObject']);
+    this.addPoliciesForBuckets(this.role, props.writeToBuckets, [
+      's3:PutObject',
+      's3:PutObjectTagging',
+      's3:PutObjectVersionTagging',
+      // The bucket being written to also needs to be listed for sync to work.
+      's3:ListBucket',
+    ]);
     this.addPoliciesForBuckets(this.role, props.deleteFromBuckets, ['s3:DeleteObject']);
 
     this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
     this.cluster = new Cluster(this, 'FargateCluster', {
       vpc: this.vpc,
       enableFargateCapacityProviders: true,
+      containerInsights: true,
     });
 
     const entry = path.join(__dirname, '..');
+    const name = 'orcabus-data-migrate-mover';
     const taskDefinition = new FargateTaskDefinition(this, 'TaskDefinition', {
       runtimePlatform: {
         cpuArchitecture: CpuArchitecture.X86_64,
@@ -87,7 +110,7 @@ export class DataMigrateStack extends Stack {
       cpu: 256,
       memoryLimitMiB: 1024,
       taskRole: this.role,
-      family: 'orcabus-data-migrate-mover',
+      family: name,
     });
     const container = taskDefinition.addContainer('DataMoverContainer', {
       stopTimeout: Duration.seconds(120),
@@ -104,23 +127,52 @@ export class DataMigrateStack extends Stack {
     const securityGroup = new SecurityGroup(this, 'SecurityGroup', {
       vpc: this.vpc,
       allowAllOutbound: true,
-      description: 'Security group that allows a filemanager Lambda function to egress out.',
     });
 
-    new EcsRunTask(this, 'Run the data mover', {
-      cluster: this.cluster,
-      taskDefinition: taskDefinition,
-      launchTarget: EcsFargateLaunchTarget,
-      securityGroups: {},
-      subnets: {
-        subnetType: props.vpcSubnetSelection,
+    const startState = new Pass(this, 'StartState');
+    const getCommand = new Pass(this, 'GetCommand', {
+      parameters: {
+        commands: JsonPath.array(
+          JsonPath.stringAt('$.command'),
+          '--source',
+          JsonPath.stringAt('$.source'),
+          '--destination',
+          JsonPath.stringAt('$.destination')
+        ),
       },
-      resultPath: '$.dataMoverResult',
+    });
+    // Todo take input from ArchiveData event portalRunId as command.
+    const task = new EcsRunTask(this, 'RunDataMover', {
+      cluster: this.cluster,
+      taskTimeout: Timeout.duration(Duration.hours(12)),
+      integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
+      taskDefinition: taskDefinition,
+      launchTarget: new EcsFargateLaunchTarget(),
+      securityGroups: [securityGroup],
+      subnets: {
+        subnetType: SubnetType.PRIVATE_WITH_EGRESS,
+      },
       containerOverrides: [
         {
           containerDefinition: container,
+          command: JsonPath.listAt('$.commands'),
+          environment: [
+            {
+              name: 'DM_TASK_TOKEN',
+              value: JsonPath.stringAt('$$.Task.Token'),
+            },
+          ],
         },
       ],
+    });
+    // Todo output a complete event.
+    const finish = new Succeed(this, 'SuccessState');
+
+    new StateMachine(this, 'StateMachine', {
+      stateMachineName: name,
+      definitionBody: ChainDefinitionBody.fromChainable(
+        startState.next(getCommand).next(task).next(finish)
+      ),
     });
   }
 
