@@ -105,7 +105,7 @@ export class DataMigrateStack extends Stack {
     const name = 'orcabus-data-migrate-mover';
     const taskDefinition = new FargateTaskDefinition(this, 'TaskDefinition', {
       runtimePlatform: {
-        cpuArchitecture: CpuArchitecture.X86_64,
+        cpuArchitecture: CpuArchitecture.ARM64,
       },
       cpu: 256,
       memoryLimitMiB: 1024,
@@ -115,7 +115,7 @@ export class DataMigrateStack extends Stack {
     const container = taskDefinition.addContainer('DataMoverContainer', {
       stopTimeout: Duration.seconds(120),
       image: new AssetImage(entry, {
-        platform: Platform.LINUX_AMD64,
+        platform: Platform.LINUX_ARM64,
       }),
       readonlyRootFilesystem: true,
       logging: LogDriver.awsLogs({
