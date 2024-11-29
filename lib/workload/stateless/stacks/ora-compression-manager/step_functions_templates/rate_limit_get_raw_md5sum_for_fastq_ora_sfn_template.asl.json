@@ -30,7 +30,7 @@
     "Sleep 5 mins": {
       "Type": "Wait",
       "Seconds": 300,
-      "Next": "Over 10 executions running"
+      "Next": "ListExecutions"
     },
     "Success": {
       "Type": "Succeed"
