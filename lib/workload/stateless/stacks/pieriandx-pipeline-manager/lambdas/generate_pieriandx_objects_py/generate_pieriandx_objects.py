@@ -215,8 +215,7 @@ def handler(event, context):
     run_id = "__".join(
         [
             event.get("instrument_run_id"),
-            event.get("case_metadata").get("caseAccessionNumber"),
-            event.get('portal_run_id')
+            event.get("case_metadata").get("caseAccessionNumber")
         ]
     )
 
