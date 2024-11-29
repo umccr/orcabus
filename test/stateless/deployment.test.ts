@@ -217,6 +217,58 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       );
       break;
 
+    case 'DataMigrateStack':
+      NagSuppressions.addResourceSuppressions(
+        stack,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason: "'*' is required to access buckets for moving data.",
+            appliesTo: [
+              'Resource::arn:aws:s3:::org.umccr.data.oncoanalyser/*',
+              'Resource::arn:aws:s3:::pipeline-prod-cache-503977275616-ap-southeast-2/*',
+              'Resource::arn:aws:s3:::archive-prod-analysis-503977275616-ap-southeast-2/*',
+              'Resource::arn:aws:s3:::archive-prod-fastq-503977275616-ap-southeast-2/*',
+            ],
+          },
+        ],
+        true
+      );
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/DataMigrateStack/StateMachine/Role/DefaultPolicy/Resource`,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason: '* is required to SendTaskSuccess/SendTaskFailure',
+          },
+        ],
+        true
+      );
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/DataMigrateStack/Role/DefaultPolicy/Resource`,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason: '* is required to SendTaskSuccess/SendTaskFailure',
+          },
+        ],
+        true
+      );
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/DataMigrateStack/TaskDefinition/ExecutionRole/DefaultPolicy/Resource`,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason: '* is required to SendTaskSuccess/SendTaskFailure',
+          },
+        ],
+        true
+      );
+      break;
+
     default:
       break;
   }
