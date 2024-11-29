@@ -32,6 +32,7 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
     triggerSource: 'orcabus.instrumentrunmanager',
     triggerStatus: 'LibraryInSamplesheet',
     triggerDetailType: 'SamplesheetMetadataUnion',
+    triggerSampleType: 'ctdna',
     triggerAssayType: {
       v1: 'cttso',
       v2: 'cttsov2',
@@ -93,6 +94,12 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
           payload: {
             data: {
               library: {
+                type: [
+                  {
+                    'equals-ignore-case':
+                      this.Cttsov2InitialiseLibraryAndFastqListRowMap.triggerSampleType,
+                  },
+                ],
                 assay: [
                   {
                     'equals-ignore-case':
