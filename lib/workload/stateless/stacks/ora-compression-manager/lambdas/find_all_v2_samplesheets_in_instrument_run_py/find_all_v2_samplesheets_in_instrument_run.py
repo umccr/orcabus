@@ -17,7 +17,7 @@ Returns in the following format:
 import typing
 from io import StringIO
 import boto3
-from typing import List, Dict
+from typing import List, Dict, Optional
 from os import environ
 import pandas as pd
 
@@ -76,6 +76,20 @@ def set_icav2_env_vars():
         environ["ICAV2_ACCESS_TOKEN_SECRET_ID"]
     )
 
+def get_rgid(
+    sample_id: str,
+    lane: int,
+    instrument_run_id: str,
+    index1: str,
+    index2: Optional[str] = None,
+):
+    """
+    Generate the rgid
+    """
+    if index2 is None:
+        return f"{index1}.{lane}.{sample_id}.{instrument_run_id}"
+    return f"{index1}.{index2}.{lane}.{sample_id}.{instrument_run_id}"
+
 
 def handler(event, context):
     """
@@ -85,6 +99,9 @@ def handler(event, context):
 
     instrument_run_folder_uri = event["instrument_run_folder_uri"]
     instrument_run_id = event["instrument_run_id"]
+    filter_lane = event.get("filter_lane", None)
+    if filter_lane is None:
+        filter_lane = 1
 
     # Get the project data obj
     instrument_run_folder_obj: ProjectData = convert_uri_to_project_data_obj(
@@ -121,10 +138,23 @@ def handler(event, context):
 
         # Convert each item in the bclconvert data section to rgids
         for bclconvert_iter_ in samplesheet_data_dict["bclconvert_data"]:
+            # Add in rgids if the lane is not specified
+            if bclconvert_iter_.get('lane', None) is None:
+                bclconvert_iter_['lane'] = filter_lane
+            # Skip if the lane is specified and does not match the filter lane
+            elif bclconvert_iter_['lane'] != filter_lane:
+                continue
+
             rgids_list.append(
                 {
-                    "rgid": f"{bclconvert_iter_['index']}.{bclconvert_iter_['index2']}.{bclconvert_iter_.get('lane', 1)}.{bclconvert_iter_['sample_id']}.{instrument_run_id}",
-                    "rgid_partial": f"{bclconvert_iter_.get('lane', 1)}.{bclconvert_iter_['sample_id']}",
+                    "rgid": get_rgid(
+                        index1=bclconvert_iter_["index"],
+                        index2=bclconvert_iter_.get("index2", None),
+                        lane=bclconvert_iter_["lane"],
+                        sample_id=bclconvert_iter_["sample_id"],
+                        instrument_run_id=instrument_run_id,
+                    ),
+                    "rgid_partial": f"{bclconvert_iter_['lane']}.{bclconvert_iter_['sample_id']}",
                 }
             )
 

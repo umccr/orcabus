@@ -1,8 +1,8 @@
 {
   "Comment": "A description of my state machine",
-  "StartAt": "Convert Fastq List Row GZ URIs to Array",
+  "StartAt": "Convert Fastq List Row GZ Pair URIs to Array",
   "States": {
-    "Convert Fastq List Row GZ URIs to Array": {
+    "Convert Fastq List Row GZ Pair URIs to Array": {
       "Type": "Pass",
       "Next": "Wait for Task Availability",
       "Parameters": {
@@ -39,8 +39,27 @@
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Validate ORA File",
+        "StartAt": "Check if fileUri is not Null",
         "States": {
+          "Check if fileUri is not Null": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Variable": "$.fastqMap.input_uri",
+                "IsNull": true,
+                "Next": "Set null outputs"
+              }
+            ],
+            "Default": "Validate ORA File"
+          },
+          "Set null outputs": {
+            "Type": "Pass",
+            "End": true,
+            "Result": {
+              "fileUri": null,
+              "md5sum": null
+            }
+          },
           "Validate ORA File": {
             "Type": "Task",
             "Resource": "arn:aws:states:::ecs:runTask.sync",
