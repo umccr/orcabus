@@ -5,7 +5,8 @@
     "ListTasks": {
       "Type": "Task",
       "Parameters": {
-        "Cluster": "${__cluster_arn__}"
+        "Cluster": "${__cluster_arn__}",
+        "MaxItems": 1000
       },
       "Resource": "arn:aws:states:::aws-sdk:ecs:listTasks",
       "ResultSelector": {
