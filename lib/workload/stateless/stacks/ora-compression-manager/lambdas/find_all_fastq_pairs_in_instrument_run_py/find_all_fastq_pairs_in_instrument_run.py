@@ -26,7 +26,7 @@ from wrapica.project_data import (
     convert_uri_to_project_data_obj,
     ProjectData, convert_project_data_obj_to_uri
 )
-from wrapica.enums import DataType, UriType
+from wrapica.enums import DataType
 
 if typing.TYPE_CHECKING:
     from mypy_boto3_ssm import SSMClient
@@ -87,6 +87,11 @@ def handler(event, context):
 
     instrument_run_folder_uri = event["instrument_run_folder_uri"]
     instrument_run_id = event["instrument_run_id"]
+    get_lanes_only = event.get("get_lanes_only", None)
+    lane_num = event.get("filter_lane", None)
+
+    if get_lanes_only is None:
+        get_lanes_only = False
 
     # Get the project data obj
     instrument_run_folder_obj: ProjectData = convert_uri_to_project_data_obj(
@@ -118,14 +123,10 @@ def handler(event, context):
         fastq_gz_project_data_obj_list
     ))
 
-    # Check if the number of R1 and R2 files are the same
-    if len(r1_files) != len(r2_files):
-        raise ValueError("Number of R1 and R2 files are not the same")
-
     # Create the fastq pair list
     fastq_pair_list = []
 
-    for r1_file, r2_file in zip(r1_files, r2_files):
+    for r1_file in r1_files:
         rgid_regex_match = FASTQ_REGEX_OBJ.fullmatch(r1_file.data.details.name)
 
         sample_id = rgid_regex_match.group(1)
@@ -137,18 +138,49 @@ def handler(event, context):
         if lane is None:
             lane = "1"
 
-        fastq_pair_list.append({
-            "rgid_partial": f"{lane}.{sample_id}",
-            "read_1_file_uri": convert_project_data_obj_to_uri(r1_file),
-            "read_2_file_uri": convert_project_data_obj_to_uri(r2_file)
-        })
+        # Find the corresponding R2 file
+        try:
+            r2_file = next(filter(
+                lambda x: x.data.details.name == r1_file.data.details.name.replace("_R1_001.fastq.gz", "_R2_001.fastq.gz"),
+                r2_files
+            ))
+
+            fastq_pair_list.append({
+                "rgid_partial": f"{lane}.{sample_id}",
+                "read_1_file_uri": convert_project_data_obj_to_uri(r1_file),
+                "read_2_file_uri": convert_project_data_obj_to_uri(r2_file)
+            })
+        except StopIteration:
+            fastq_pair_list.append({
+                "rgid_partial": f"{lane}.{sample_id}",
+                "read_1_file_uri": convert_project_data_obj_to_uri(r1_file),
+                "read_2_file_uri": None
+            })
 
     # Assert that the all rgid_partial are unique
     assert \
         len(pd.DataFrame(fastq_pair_list)['rgid_partial'].unique().tolist()) == len(fastq_pair_list), \
         "rgid_partial are not unique"
 
-    return fastq_pair_list
+    if get_lanes_only:
+        return {
+            "lanes_list": list(
+                set(map(
+                    lambda fastq_pair_iter_: int(fastq_pair_iter_['rgid_partial'].split('.')[0]),
+                    fastq_pair_list
+                ))
+            )
+        }
+
+    if lane_num is None:
+        return fastq_pair_list
+    else:
+        return list(
+            filter(
+                lambda fastq_pair_iter_: int(fastq_pair_iter_['rgid_partial'].split('.')[0]) == lane_num,
+                fastq_pair_list
+            )
+        )
 
 
 # if __name__ == "__main__":

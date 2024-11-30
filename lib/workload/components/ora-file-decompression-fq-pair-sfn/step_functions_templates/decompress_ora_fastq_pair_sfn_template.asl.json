@@ -70,8 +70,25 @@
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Run Validation Only",
+        "StartAt": "Is read uri null",
         "States": {
+          "Is read uri null": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Variable": "$.fastqMap.input_uri",
+                "IsNull": true,
+                "Next": "Set Null outputs",
+                "Comment": "URI is null"
+              }
+            ],
+            "Default": "Run Validation Only"
+          },
+          "Set Null outputs": {
+            "Type": "Pass",
+            "End": true,
+            "ResultPath": null
+          },
           "Run Validation Only": {
             "Type": "Choice",
             "Choices": [
@@ -139,7 +156,8 @@
                 "JitterStrategy": "FULL"
               }
             ],
-            "End": true
+            "End": true,
+            "ResultPath": null
           },
           "Decompress ORA File": {
             "Type": "Task",
@@ -185,7 +203,8 @@
               }
             },
             "TimeoutSeconds": 7200,
-            "End": true
+            "End": true,
+            "ResultPath": null
           }
         }
       },

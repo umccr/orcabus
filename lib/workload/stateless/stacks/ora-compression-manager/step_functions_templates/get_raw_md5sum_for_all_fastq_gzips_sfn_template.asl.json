@@ -20,7 +20,7 @@
             "Parameters": {
               "TableName": "${__table_name__}",
               "Key": {
-                "id.$": "$.rgid_pair.rgid",
+                "id.$": "$.rgid_pair",
                 "id_type": "${__fastq_list_row_table_partition_name__}"
               }
             },
@@ -51,7 +51,7 @@
             "Parameters": {
               "TableName": "${__table_name__}",
               "Key": {
-                "id.$": "$.rgid_pair.rgid",
+                "id.$": "$.rgid_pair",
                 "id_type": "${__fastq_list_row_table_partition_name__}"
               },
               "UpdateExpression": "SET read1_raw_md5sum = :read1RawMd5sum, read2_raw_md5sum = :read2RawMd5sum",
