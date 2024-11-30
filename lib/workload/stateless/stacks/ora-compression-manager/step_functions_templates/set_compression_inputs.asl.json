@@ -255,7 +255,7 @@
                 "Update Cache URI for rgid": {
                   "Type": "Pass",
                   "Parameters": {
-                    "cache_uri.$": "States.Format('{}{}/', $.cache_uri_prefix, $.get_fastq_pair_obj_step.fastq_pair_obj.rgid)"
+                    "cache_uri.$": "States.Format('{}{}/', $.cache_uri_prefix, States.Hash($.get_fastq_pair_obj_step.fastq_pair_obj.rgid, 'SHA-1'))"
                   },
                   "ResultPath": "$.get_cache_uri_step",
                   "Next": "Initialise RGID"
