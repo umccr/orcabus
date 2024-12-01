@@ -247,21 +247,39 @@
         "alignment_bams.$": "$.[1].alignment_bams"
       },
       "ResultPath": "$.extract_inputs",
-      "Next": "Launch Holmes Extract"
+      "Next": "Run Extraction over all bam files"
     },
-    "Launch Holmes Extract": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::states:startExecution.sync:2",
-      "Parameters": {
-        "StateMachineArn.$": "$.extract_inputs.extract_arn",
-        "Input": {
-          "subjectIdentifier.$": "$.extract_inputs.individual_id",
-          "libraryIdentifier.$": "$.payload.data.library.libraryId",
-          "indexes.$": "$.extract_inputs.alignment_bams",
-          "reference": "${__reference_name__}"
+    "Run Extraction over all bam files": {
+      "Type": "Map",
+      "ItemsPath": "$.extract_inputs.alignment_bams",
+      "ItemSelector": {
+        "alignment_bam.$": "$$.Map.Item.Value",
+        "individual_id.$": "$.extract_inputs.individual_id",
+        "library_id.$": "$.payload.data.library.libraryId"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Launch Holmes Extract",
+        "States": {
+          "Launch Holmes Extract": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::states:startExecution.sync:2",
+            "Parameters": {
+              "StateMachineArn.$": "$.extract_inputs.extract_arn",
+              "Input": {
+                "individualId.$": "$.individual_id",
+                "libraryId.$": "$.library_id",
+                "index.$": "$.alignment_bam",
+                "reference": "${__reference_name__}"
+              }
+            },
+            "ResultPath": "$.launch_holmes_extract_step",
+            "End": true
+          }
         }
       },
-      "ResultPath": "$.launch_holmes_extract_step",
       "Next": "Holmes Extract Complete"
     },
     "Holmes Extract Complete": {

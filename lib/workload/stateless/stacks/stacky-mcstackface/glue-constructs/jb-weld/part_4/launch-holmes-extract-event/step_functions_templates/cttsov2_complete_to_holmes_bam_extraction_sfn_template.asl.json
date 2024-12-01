@@ -188,9 +188,9 @@
       "Parameters": {
         "StateMachineArn.$": "$.extract_inputs.extract_arn",
         "Input": {
-          "subjectIdentifier.$": "$.extract_inputs.individual_id",
-          "libraryIdentifier.$": "$.workflow_inputs.linkedLibraries[0].libraryId",
-          "indexes.$": "States.Array($.extract_inputs.alignment_bam)",
+          "individualId.$": "$.extract_inputs.individual_id",
+          "libraryId.$": "$.workflow_inputs.linkedLibraries[0].libraryId",
+          "index.$": "$.extract_inputs.alignment_bam",
           "reference": "${__reference_name__}"
         }
       },
