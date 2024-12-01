@@ -6,7 +6,7 @@
       "Type": "Task",
       "Parameters": {
         "Cluster": "${__cluster_arn__}",
-        "MaxItems": 401
+        "MaxResults": 401
       },
       "Resource": "arn:aws:states:::aws-sdk:ecs:listTasks",
       "ResultSelector": {
