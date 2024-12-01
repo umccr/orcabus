@@ -90,6 +90,7 @@
           "instrument_run_folder_uri.$": "$.analysis_outputs_step.output_json.instrumentRunOraOutputUri"
         }
       },
+      "ResultPath": null,
       "End": true
     }
   }

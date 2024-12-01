@@ -6,7 +6,7 @@
       "Type": "Task",
       "Parameters": {
         "Cluster": "${__cluster_arn__}",
-        "MaxResults": 401
+        "MaxResults": 100
       },
       "Resource": "arn:aws:states:::aws-sdk:ecs:listTasks",
       "ResultSelector": {
@@ -20,7 +20,7 @@
       "Choices": [
         {
           "Variable": "$.get_num_tasks_step.num_tasks_running",
-          "NumericGreaterThan": 400,
+          "NumericGreaterThan": 99,
           "Next": "Sleep a minute",
           "Comment": "More than 400 tasks running"
         }
