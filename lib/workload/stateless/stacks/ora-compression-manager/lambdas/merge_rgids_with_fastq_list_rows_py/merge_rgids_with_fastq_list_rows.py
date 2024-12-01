@@ -34,8 +34,7 @@ if typing.TYPE_CHECKING:
 
 # Constants
 # index.index2.lane.rgsm.instrument_run_id
-RGID_PARTIAL_REGEX = re.compile(r"\w+\.\w+\.(\d+.\w+).\w+")
-
+RGID_PARTIAL_REGEX = re.compile(r"\w+\.(?:\w+\.)?(\d+.\w+).\w+")
 
 # AWS things
 def get_ssm_client() -> 'SSMClient':
@@ -231,4 +230,82 @@ def handler(event, context):
 #     # ]
 
 
-
+# if __name__ == "__main__":
+#     # Test the handler function
+#     import json
+#     environ["AWS_PROFILE"] = "umccr-production"
+#     environ["ICAV2_ACCESS_TOKEN_SECRET_ID"] = "ICAv2JWTKey-umccr-prod-service-production"
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "rgids_list": [
+#                         "AACGTGAT.1.NTC_SsCRE211028VD_L2101268.211104_A00130_0182_BHLNYCDSX2",
+#                         "AACTGTAG.TGCGGCGT.4.PRJ210975_L2101293.211104_A00130_0182_BHLNYCDSX2",
+#                         "AAGATACT.ATGTAAGT.1.PRJ210951_L2101226.211104_A00130_0182_BHLNYCDSX2",
+#                         "ACGACTACCA.TTAGGGTCGT.1.PRJ211018_LPRJ211018.211104_A00130_0182_BHLNYCDSX2",
+#                         "ACTCGTGT.GTTCCAAT.4.PRJ210972_L2101283.211104_A00130_0182_BHLNYCDSX2",
+#                         "ATAACGCC.TGAACCTG.1.MDX210286_L2101126_topup.211104_A00130_0182_BHLNYCDSX2",
+#                         "ATGGCATG.GGTACCTT.2.PRJ210954_L2101228.211104_A00130_0182_BHLNYCDSX2",
+#                         "ATGGCTTGTG.CACAACATTC.1.PRJ211015_LPRJ211015.211104_A00130_0182_BHLNYCDSX2",
+#                         "ATTGTGAA.GCAATGCA.3.PRJ210969_L2101282.211104_A00130_0182_BHLNYCDSX2",
+#                         "CAATCCCGAC.TACTACTCGG.1.PRJ211014_LPRJ211014.211104_A00130_0182_BHLNYCDSX2",
+#                         "CCTTCACC.GGAGCGTC.3.PRJ210948_L2101280.211104_A00130_0182_BHLNYCDSX2",
+#                         "CGCGCACTTA.AGAATACAGG.1.PRJ211019_LPRJ211019.211104_A00130_0182_BHLNYCDSX2",
+#                         "GATCTATC.AGCCTCAT.2.PRJ210963_L2101234.211104_A00130_0182_BHLNYCDSX2",
+#                         "GCCACAGG.ATGGCATG.3.PRJ210968_L2101281.211104_A00130_0182_BHLNYCDSX2",
+#                         "GCGCAAGC.CGGCGTGA.1.PRJ210950_L2101225.211104_A00130_0182_BHLNYCDSX2",
+#                         "GCTACAAAGC.AGGGCACGTG.1.PRJ211020_LPRJ211020.211104_A00130_0182_BHLNYCDSX2",
+#                         "GGAGCGTC.GCACGGAC.2.PRJ210953_L2101227.211104_A00130_0182_BHLNYCDSX2",
+#                         "GTCTACAC.ACCTTGGC.4.PRJ210973_L2101284.211104_A00130_0182_BHLNYCDSX2",
+#                         "GTCTGTCA.2.MDX210310_L2101265.211104_A00130_0182_BHLNYCDSX2",
+#                         "TCCGTTGGAT.GCGAGAACGT.1.PRJ211017_LPRJ211017.211104_A00130_0182_BHLNYCDSX2",
+#                         "TGAAGAGA.2.MDX210311_L2101266.211104_A00130_0182_BHLNYCDSX2",
+#                         "TGCGCGGTTT.TTTATCCTTG.1.PRJ211013_LPRJ211013.211104_A00130_0182_BHLNYCDSX2",
+#                         "TTCACGCA.4.PTC_SsCRE211028VD_L2101267.211104_A00130_0182_BHLNYCDSX2",
+#                         "TTCCTGTT.AAGATACT.3.PRJ210947_L2101279.211104_A00130_0182_BHLNYCDSX2",
+#                         "TTCTCGATGA.GTGCCCGACA.1.PRJ211016_LPRJ211016.211104_A00130_0182_BHLNYCDSX2"
+#                     ],
+#                     "instrument_run_folder_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/ora-compression/211104_A00130_0182_BHLNYCDSX2/20241122ab8a58de/"
+#                 },
+#                 None,
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # [
+#     #     {
+#     #         "rglb": "UnknownLibrary",
+#     #         "rgsm": "PRJ211015_LPRJ211015",
+#     #         "lane": 1,
+#     #         "rgid": "ATGGCTTGTG.CACAACATTC.1.PRJ211015_LPRJ211015.211104_A00130_0182_BHLNYCDSX2",
+#     #         "read_1_file_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/ora-compression/211104_A00130_0182_BHLNYCDSX2/20241122ab8a58de/10X_10X-5prime-expression/PRJ211015_LPRJ211015_S3_L001_R1_001.fastq.ora",
+#     #         "read_2_file_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/ora-compression/211104_A00130_0182_BHLNYCDSX2/20241122ab8a58de/10X_10X-5prime-expression/PRJ211015_LPRJ211015_S3_L001_R2_001.fastq.ora"
+#     #     },
+#     #     {
+#     #         "rglb": "UnknownLibrary",
+#     #         "rgsm": "PRJ211018_LPRJ211018",
+#     #         "lane": 1,
+#     #         "rgid": "ACGACTACCA.TTAGGGTCGT.1.PRJ211018_LPRJ211018.211104_A00130_0182_BHLNYCDSX2",
+#     #         "read_1_file_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/ora-compression/211104_A00130_0182_BHLNYCDSX2/20241122ab8a58de/10X_10X-5prime-expression/PRJ211018_LPRJ211018_S6_L001_R1_001.fastq.ora",
+#     #         "read_2_file_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/ora-compression/211104_A00130_0182_BHLNYCDSX2/20241122ab8a58de/10X_10X-5prime-expression/PRJ211018_LPRJ211018_S6_L001_R2_001.fastq.ora"
+#     #     },
+#     #     ...
+#     #     {
+#     #         "rglb": "UnknownLibrary",
+#     #         "rgsm": "NTC_SsCRE211028VD_L2101268",
+#     #         "lane": 1,
+#     #         "rgid": "AACGTGAT.1.NTC_SsCRE211028VD_L2101268.211104_A00130_0182_BHLNYCDSX2",
+#     #         "read_1_file_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/ora-compression/211104_A00130_0182_BHLNYCDSX2/20241122ab8a58de/exome_AgSsCRE/NTC_SsCRE211028VD_L2101268_S4_L001_R1_001.fastq.ora",
+#     #         "read_2_file_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/ora-compression/211104_A00130_0182_BHLNYCDSX2/20241122ab8a58de/exome_AgSsCRE/NTC_SsCRE211028VD_L2101268_S4_L001_R2_001.fastq.ora"
+#     #     },
+#     #     {
+#     #         "rglb": "UnknownLibrary",
+#     #         "rgsm": "PTC_SsCRE211028VD_L2101267",
+#     #         "lane": 4,
+#     #         "rgid": "TTCACGCA.4.PTC_SsCRE211028VD_L2101267.211104_A00130_0182_BHLNYCDSX2",
+#     #         "read_1_file_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/ora-compression/211104_A00130_0182_BHLNYCDSX2/20241122ab8a58de/exome_AgSsCRE/PTC_SsCRE211028VD_L2101267_S3_L004_R1_001.fastq.ora",
+#     #         "read_2_file_uri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/ora-compression/211104_A00130_0182_BHLNYCDSX2/20241122ab8a58de/exome_AgSsCRE/PTC_SsCRE211028VD_L2101267_S3_L004_R2_001.fastq.ora"
+#     #     }
+#     # ]
