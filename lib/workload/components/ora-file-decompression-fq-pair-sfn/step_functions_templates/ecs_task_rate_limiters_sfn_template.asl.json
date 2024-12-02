@@ -9,6 +9,13 @@
         "MaxResults": 100
       },
       "Resource": "arn:aws:states:::aws-sdk:ecs:listTasks",
+      "Catch": [
+        {
+          "ErrorEquals": ["Ecs.EcsException"],
+          "Next": "Sleep a minute",
+          "ResultPath": null
+        }
+      ],
       "ResultSelector": {
         "num_tasks_running.$": "States.ArrayLength($.TaskArns)"
       },

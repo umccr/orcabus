@@ -33,6 +33,7 @@
         "rgids_list.$": "$$.Map.Item.Value",
         "instrument_run_folder_uri.$": "$.instrument_run_folder_uri"
       },
+      "MaxConcurrency": 2,
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
