@@ -22,7 +22,7 @@
       "Type": "Pass",
       "Next": "For each rgid partition",
       "Parameters": {
-        "rgid_partitions.$": "States.ArrayPartition($.get_rgids_from_db_step.rgids, 4)"
+        "rgid_partitions.$": "States.ArrayPartition($.get_rgids_from_db_step.rgids, 50)"
       },
       "ResultPath": "$.partition_rgid_array_step"
     },
@@ -136,6 +136,7 @@
           }
         }
       },
+      "ResultPath": null,
       "End": true
     }
   }
