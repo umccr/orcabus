@@ -255,7 +255,8 @@
       "ItemSelector": {
         "alignment_bam.$": "$$.Map.Item.Value",
         "individual_id.$": "$.extract_inputs.individual_id",
-        "library_id.$": "$.payload.data.library.libraryId"
+        "library_id.$": "$.payload.data.library.libraryId",
+        "extract_arn.$": "$.extract_inputs.extract_arn"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
@@ -267,7 +268,7 @@
             "Type": "Task",
             "Resource": "arn:aws:states:::states:startExecution.sync:2",
             "Parameters": {
-              "StateMachineArn.$": "$.extract_inputs.extract_arn",
+              "StateMachineArn.$": "$.extract_arn",
               "Input": {
                 "individualId.$": "$.individual_id",
                 "libraryId.$": "$.library_id",
