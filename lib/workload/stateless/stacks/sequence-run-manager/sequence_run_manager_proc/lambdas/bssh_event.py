@@ -13,7 +13,7 @@ from sequence_run_manager_proc.domain.sequence import (
     SequenceRule,
     SequenceRuleError,
 )
-from sequence_run_manager_proc.services import sequence_srv
+from sequence_run_manager_proc.services import sequence_srv, sequence_state_srv
 
 from libumccr import libjson
 from libumccr.aws import libeb
@@ -109,6 +109,7 @@ def event_handler(event, context):
     if sequence_domain.state_has_changed:
         try:
             SequenceRule(sequence_domain.sequence).must_not_emergency_stop()
+            sequence_state_srv.create_sequence_state_from_bssh_event(event_details)
             entry = sequence_domain.to_put_events_request_entry(
                     event_bus_name=event_bus_name,
             )
@@ -118,7 +119,7 @@ def event_handler(event, context):
             reason = f"Aborted pipeline due to {se}"
             logger.warning(reason)
 
-    # Dispatch all event entries in one-go! libeb will take care of batching them up for efficiency.
+    # Dispatch event entry using libeb.
     if entry:
         libeb.emit_event(entry)
 
