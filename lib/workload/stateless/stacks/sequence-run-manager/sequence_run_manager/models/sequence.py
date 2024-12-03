@@ -62,7 +62,7 @@ class SequenceManager(OrcaBusBaseManager):
 
 class Sequence(OrcaBusBaseModel):
     # primary key
-    id = models.BigAutoField(primary_key=True)
+    orcabus_id_prefix = 'seq.'
 
     # mandatory non-nullable base fields
     instrument_run_id = models.CharField(
