@@ -20,4 +20,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-dm = "data_mover.cli:cli"
+dm = "data_mover.cli:main"
