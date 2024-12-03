@@ -9,6 +9,15 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
+def main():
+    try:
+        cli(standalone_mode=False)
+        sys.exit(0)
+    except Exception as e:
+        DataMover.send_failure(str(e))
+        sys.exit(1)
+
+
 @click.group()
 def cli():
     pass
@@ -58,9 +67,4 @@ def copy(source, destination):
 
 
 if __name__ == "__main__":
-    try:
-        cli(standalone_mode=False)
-        sys.exit(0)
-    except Exception as e:
-        DataMover.send_failure(str(e))
-        sys.exit(1)
+    main()

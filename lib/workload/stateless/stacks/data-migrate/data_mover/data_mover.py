@@ -41,14 +41,15 @@ class DataMover:
             out = subprocess.run(
                 ["aws", "s3", "sync", self.source, self.destination],
                 check=True,
-                # 1 day
                 timeout=self.timeout,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
             )
-            self.logger.info(out.stdout)
+            self.logger.info(str(out.stdout))
 
-            self.output += out.stdout or ""
+            self.output += str(out.stdout) or ""
 
-        if out.stdout is not None:
+        if out.stdout != b"":
             raise Exception("failed to sync - non-empty output")
 
     def delete(self):
@@ -60,12 +61,13 @@ class DataMover:
         out = subprocess.run(
             ["aws", "s3", "rm", "--recursive", self.source],
             check=True,
-            # 1 day
             timeout=self.timeout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         )
-        self.logger.info(out.stdout)
+        self.logger.info(str(out.stdout))
 
-        self.output += out.stdout or ""
+        self.output += str(out.stdout) or ""
 
     def send_output(self):
         """
