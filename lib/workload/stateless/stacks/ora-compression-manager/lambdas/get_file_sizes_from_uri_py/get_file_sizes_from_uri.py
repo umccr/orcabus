@@ -67,30 +67,37 @@ def handler(event, context):
     set_icav2_env_vars()
 
     # Get the file uri
-    file_uri = event["file_uri"]
+    file_uris = event["file_uris"]
 
     # Get the file size
     return {
-        "file_size": convert_uri_to_project_data_obj(file_uri).data.details.file_size_in_bytes
+        "file_sizes": list(
+            map(
+                lambda file_uri_iter_: convert_uri_to_project_data_obj(file_uri_iter_).data.details.file_size_in_bytes,
+                file_uris
+            )
+        )
     }
 
 
-# if __name__ == "__main__":
-#     import json
-#     environ['AWS_PROFILE'] = 'umccr-development'
-#     environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
-#     print(
-#         json.dumps(
-#             handler(
-#                 {
-#                     "file_uri": "icav2://development/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Reports/SampleSheet.csv"
-#                 },
-#                 None
-#             ),
-#             indent=4
-#         )
-#     )
-#
-#     # {
-#     #     "file_size": 3662
-#     # }
+if __name__ == "__main__":
+    import json
+    environ['AWS_PROFILE'] = 'umccr-development'
+    environ['ICAV2_ACCESS_TOKEN_SECRET_ID'] = "ICAv2JWTKey-umccr-prod-service-dev"
+    print(
+        json.dumps(
+            handler(
+                {
+                    "file_uris": [
+                        "icav2://development/primary/241024_A00130_0336_BHW7MVDSXC/20241030c613872c/Reports/SampleSheet.csv"
+                   ]
+                },
+                None
+            ),
+            indent=4
+        )
+    )
+
+    # {
+    #     "file_size": 3662
+    # }

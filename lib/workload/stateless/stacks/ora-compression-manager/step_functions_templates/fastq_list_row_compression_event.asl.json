@@ -48,55 +48,36 @@
               "file_uris.$": "States.Array($.get_rgid_db_step.Item.read1_gz_file_uri.S, $.get_rgid_db_step.Item.read2_gz_file_uri.S, $.get_rgid_db_step.Item.read1_ora_file_uri.S, $.get_rgid_db_step.Item.read2_ora_file_uri.S)"
             },
             "ResultPath": "$.get_uri_step",
-            "Next": "Get File Sizes for R1, R2 inputs and outputs"
+            "Next": "Get File Size"
           },
-          "Get File Sizes for R1, R2 inputs and outputs": {
-            "Type": "Map",
-            "ItemsPath": "$.get_uri_step.file_uris",
-            "ItemSelector": {
-              "file_uri.$": "$$.Map.Item.Value"
-            },
-            "ItemProcessor": {
-              "ProcessorConfig": {
-                "Mode": "INLINE"
-              },
-              "StartAt": "Get File Size",
-              "States": {
-                "Get File Size": {
-                  "Type": "Task",
-                  "Resource": "arn:aws:states:::lambda:invoke",
-                  "Parameters": {
-                    "FunctionName": "${__get_file_size_lambda_function_arn__}",
-                    "Payload": {
-                      "file_uri.$": "$.file_uri"
-                    }
-                  },
-                  "Retry": [
-                    {
-                      "ErrorEquals": [
-                        "Lambda.ServiceException",
-                        "Lambda.AWSLambdaException",
-                        "Lambda.SdkClientException",
-                        "Lambda.TooManyRequestsException"
-                      ],
-                      "IntervalSeconds": 1,
-                      "MaxAttempts": 3,
-                      "BackoffRate": 2,
-                      "JitterStrategy": "FULL"
-                    }
-                  ],
-                  "End": true,
-                  "ResultSelector": {
-                    "file_size.$": "$.Payload.file_size"
-                  }
-                }
+          "Get File Size": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "${__get_file_sizes_lambda_function_arn__}",
+              "Payload": {
+                "file_uris.$": "$.get_uri_step.file_uris"
               }
             },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
             "ResultSelector": {
-              "read_1_gz_file_size.$": "$.[0].file_size",
-              "read_2_gz_file_size.$": "$.[1].file_size",
-              "read_1_ora_file_size.$": "$.[2].file_size",
-              "read_2_ora_file_size.$": "$.[3].file_size"
+              "read_1_gz_file_size.$": "$.Payload.file_sizes[0]",
+              "read_2_gz_file_size.$": "$.Payload.file_sizes[1]",
+              "read_1_ora_file_size.$": "$.Payload.file_sizes[2]",
+              "read_2_ora_file_size.$": "$.Payload.file_sizes[3]"
             },
             "ResultPath": "$.get_file_sizes_step",
             "Next": "Add file sizes to db"

@@ -594,10 +594,10 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
     // Add the get file sizes lambda function
     const getFileSizesLambdaObj = new PythonFunction(this, 'get_file_sizes_lambda', {
       runtime: Runtime.PYTHON_3_12,
-      entry: path.join(__dirname, '../lambdas/get_file_size_from_uri_py'),
+      entry: path.join(__dirname, '../lambdas/get_file_sizes_from_uri_py'),
       architecture: Architecture.ARM_64,
       handler: 'handler',
-      index: 'get_file_size_from_uri.py',
+      index: 'get_file_sizes_from_uri.py',
       environment: {
         ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
       },
@@ -629,7 +629,7 @@ export class OraCompressionIcav2PipelineManagerStack extends cdk.Stack {
           __event_bus_name__: eventBusObj.eventBusName,
           __detail_type__: this.globals.outputCompressionDetailType,
           /* Lambdas */
-          __get_file_size_lambda_function_arn__: getFileSizesLambdaObj.currentVersion.functionArn,
+          __get_file_sizes_lambda_function_arn__: getFileSizesLambdaObj.currentVersion.functionArn,
         },
       }
     );

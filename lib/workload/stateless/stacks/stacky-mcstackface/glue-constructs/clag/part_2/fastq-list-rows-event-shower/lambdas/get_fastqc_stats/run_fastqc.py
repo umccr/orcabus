@@ -13,7 +13,6 @@ import typing
 import logging
 import tempfile
 from os import environ
-import shutil
 import subprocess
 
 # Wrapica
