@@ -17,33 +17,65 @@ from sequence_run_manager_proc.services import sequence_srv
 
 from libumccr import libjson
 from libumccr.aws import libeb
-from libica.app import ENSEventType
+# from libica.app import ENSEventType
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-IMPLEMENTED_ENS_TYPES = [
-    ENSEventType.BSSH_RUNS.value,
-]
+# IMPLEMENTED_ENS_TYPES = [
+#     ENSEventType.BSSH_RUNS.value,
+# ]
 
-PRODUCED_BY_BSSH = ["BaseSpaceSequenceHub"]
+# PRODUCED_BY_BSSH = ["BaseSpaceSequenceHub"]
 
 
-def sqs_handler(event, context):
+def event_handler(event, context):
     """event payload dict
 
     Here is how to generate an example event. See README for more.
         python manage.py generate_mock_bssh_event | jq
+        
+    example event:
+    {
+    "version": "0",
+    "id": f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454",  # Random UUID
+    "detail-type": "Event from aws:sqs",
+    "source": "Pipe IcaEventPipeConstru-xxxxxxxx",
+    "account": "444444444444",
+    "time": "2024-11-02T21:58:22Z",
+    "region": "ap-southeast-2",
+    "resources": [],
+    "detail": {
+        "ica-event": {
+            "gdsFolderPath": "",
+            "gdsVolumeName": "bssh.123456789fabcdefghijkl",
+            "v1pre3Id": "444555555555",
+            "dateModified": "2024-11-02T21:58:13.7451620Z",
+            "acl": [
+                "wid:12345678-debe-3f9f-8b92-21244f46822c",
+                "tid:Yxmm......"
+            ],
+            "flowcellBarcode": "HVJJJJJJ",
+            "icaProjectId": "12345678-53ba-47a5-854d-e6b53101adb7",
+            "sampleSheetName": "SampleSheet.V2.134567.csv",
+            "apiUrl": "https://api.aps2.sh.basespace.illumina.com/v2/runs/r.4Wz-ABCDEFGHIJKLM-A",
+            "name": "222222_A01052_1234_BHVJJJJJJ",
+            "id": "r.4Wz-ABCDEFGHIJKLMN-A",
+            "instrumentRunId": "222222_A01052_1234_BHVJJJJJJ",
+            "status": "PendingAnalysis"
+            }
+        }
+    }
 
-    This Lambda is to be subscribed to SQS for BSSH event through ICA v1 ENS
-    https://illumina.gitbook.io/ica-v1/events/e-deliverytargets
+    This Lambda is to be subscribed to Orcabus Eventbridge rule for BSSH event through ICA v2 sqs event pipe
+    https://help.ica.illumina.com/project/p-notifications#delivery-targets
+    https://illumina.gitbook.io/ica-v1/events/e-deliverytargets (deprecated)
 
     OrcaBus SRM BSSH Event High Level:
-        - through ICA v1 ENS, we subscribe to `bssh.runs` using SQS queue created at our AWS
-        - in our SQS queue, we hook this Lambda as event trigger and process the event
-        - now, when `bssh.runs` event with `statuschanged` status arrive...
-            - this SQS event envelope may contain multiple `Records`
-            - we parse these `Records`, transform and persist them into our internal OrcaBus SRM `Sequence` entity model
+        - through ICA v2 sqs event pipe, we subscribe to Orcabus Eventbridge with specific rule
+        - this Lambda is to be hooked to this Eventbridge rule to process the event
+        - now, when `ica-event` event with `instrumentRunId` and `statuschanged` status arrive...
+            - we parse these `ica-event` payload, transform and persist them into our internal OrcaBus SRM `Sequence` entity model
             - after persisted into database, we again transform into our internal `SequenceRunStateChange` domain event
             - this domain event schema is what we consented and published in our EventBus event schema registry
             - we then dispatch our domain events into the channel in batching manner for efficiency
@@ -58,51 +90,37 @@ def sqs_handler(event, context):
     :param context:
     :return:
     """
+    assert os.environ["EVENT_BUS_NAME"] is not None, "EVENT_BUS_NAME must be set"
+    
     logger.info("Start processing BSSH ENS event")
     logger.info(libjson.dumps(event))
 
-    messages = event["Records"]
     event_bus_name = os.environ["EVENT_BUS_NAME"]
 
-    entries = list()
+    # Extract relevant fields from the event payload
+    event_details = event.get("detail", {}).get("ica-event", {})
 
-    for message in messages:
-        event_type = message["messageAttributes"]["type"]["stringValue"]
-        produced_by = message["messageAttributes"]["producedby"]["stringValue"]
+    # Create or update Sequence record from BSSH Run event payload
+    sequence_domain: SequenceDomain = (
+        sequence_srv.create_or_update_sequence_from_bssh_event(event_details)
+    )
 
-        if event_type not in IMPLEMENTED_ENS_TYPES:
-            logger.warning(f"Skipping unsupported ENS type: {event_type}")
-            continue
-
-        if produced_by not in PRODUCED_BY_BSSH:
-            raise ValueError(f"Unrecognised BSSH event produced_by: {produced_by}")
-
-        if event_type == ENSEventType.BSSH_RUNS.value:
-            payload = {}
-            payload.update(libjson.loads(message["body"]))
-
-            # Create or update Sequence record from BSSH Run event payload
-            sequence_domain: SequenceDomain = (
-                sequence_srv.create_or_update_sequence_from_bssh_event(payload)
+    # Detect SequenceRunStateChange
+    if sequence_domain.state_has_changed:
+        try:
+            SequenceRule(sequence_domain.sequence).must_not_emergency_stop()
+            entry = sequence_domain.to_put_events_request_entry(
+                    event_bus_name=event_bus_name,
             )
-
-            # Detect SequenceRunStateChange
-            if sequence_domain.state_has_changed:
-                try:
-                    SequenceRule(sequence_domain.sequence).must_not_emergency_stop()
-                    entry = sequence_domain.to_put_events_request_entry(
-                        event_bus_name=event_bus_name,
-                    )
-                    entries.append(entry)
-                except SequenceRuleError as se:
-                    # FIXME emit custom event for this? something to tackle later. log & skip for now
-                    reason = f"Aborted pipeline due to {se}"
-                    logger.warning(reason)
-                    continue
+                    
+        except SequenceRuleError as se:
+            # FIXME emit custom event for this? something to tackle later. log & skip for now
+            reason = f"Aborted pipeline due to {se}"
+            logger.warning(reason)
 
     # Dispatch all event entries in one-go! libeb will take care of batching them up for efficiency.
-    if entries:
-        libeb.dispatch_events(entries)
+    if entry:
+        libeb.emit_event(entry)
 
     resp_msg = {
         "message": f"BSSH ENS event processing complete",

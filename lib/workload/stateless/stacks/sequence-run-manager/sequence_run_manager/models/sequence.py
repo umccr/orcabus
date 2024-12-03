@@ -30,7 +30,8 @@ class SequenceStatus(models.TextChoices):
     def from_seq_run_status(cls, value):
         """
         See Run Status
-        https://support.illumina.com/help/BaseSpace_Sequence_Hub/Source/Informatics/BS/Statuses_swBS.htm
+        https://help.basespace.illumina.com/automate/statuses
+        https://support.illumina.com/help/BaseSpace_Sequence_Hub/Source/Informatics/BS/Statuses_swBS.htm (deprecated)
 
         Note that we don't necessary support all these statuses. In the following check, those values come
         from observed values from our BSSH run events.

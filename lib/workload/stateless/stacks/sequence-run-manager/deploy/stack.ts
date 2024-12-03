@@ -3,7 +3,8 @@ import * as cdk from 'aws-cdk-lib';
 import { aws_lambda, aws_secretsmanager, Duration, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
-import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
+import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
+import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
@@ -140,20 +141,36 @@ export class SequenceRunManagerStack extends Stack {
     });
 
     this.mainBus.grantPutEventsTo(procSqsFn);
-    // this.setupEventRule(procSqsFn);  // TODO comment this out for now
+    this.setupEventRule(procSqsFn); // TODO comment this out for now
   }
 
-  // private setupEventRule(fn: aws_lambda.Function) {
-  //   const eventRule = new Rule(this, this.id + 'EventRule', {
-  //     ruleName: this.id + 'EventRule',
-  //     description: 'Rule to send {event_type.value} events to the {handler.function_name} Lambda',
-  //     eventBus: this.props.mainBus,
-  //   });
-  //
-  //   eventRule.addTarget(new aws_events_targets.LambdaFunction(fn));
-  //   eventRule.addEventPattern({
-  //     source: ['ORCHESTRATOR'], // FIXME complete source to destination event mapping
-  //     detailType: ['SequenceRunStateChange'],
-  //   });
-  // }
+  private setupEventRule(fn: aws_lambda.Function) {
+    /**
+     * For 
+     
+    */
+    const eventRule = new Rule(this, this.stackName + 'EventRule', {
+      ruleName: this.stackName + 'EventRule',
+      description: 'Rule to send {event_type.value} events to the {handler.function_name} Lambda',
+      eventBus: this.mainBus,
+    });
+    eventRule.addEventPattern({
+      detailType: ['Event from aws:sqs'],
+      detail: {
+        'ica-event': {
+          // only for mandatory fields
+          gdsFolderPath: [{ exists: true }],
+          gdsVolumeName: [{ prefix: 'bssh' }],
+          instrumentRunId: [{ exists: true }],
+          dateModified: [{ exists: true }],
+          // optional fields (flowcell barcode, sample sheet name, reagent barcode, ica project id, api url, name)
+          acl: [{ prefix: 'wid:' }, { prefix: 'tid:' }],
+          id: [{ exists: true }],
+          status: [{ exists: true }],
+        },
+      },
+    });
+
+    eventRule.addTarget(new LambdaFunction(fn));
+  }
 }
