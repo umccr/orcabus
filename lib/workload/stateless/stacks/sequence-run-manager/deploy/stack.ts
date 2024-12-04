@@ -134,7 +134,7 @@ export class SequenceRunManagerStack extends Stack {
      */
     const procSqsFn = this.createPythonFunction('ProcHandler', {
       index: 'sequence_run_manager_proc/lambdas/bssh_event.py',
-      handler: 'sqs_handler',
+      handler: 'event_handler',
       timeout: Duration.minutes(2),
       memorySize: 512,
       reservedConcurrentExecutions: 1,
@@ -146,9 +146,12 @@ export class SequenceRunManagerStack extends Stack {
 
   private setupEventRule(fn: aws_lambda.Function) {
     /**
-     * For 
-     
-    */
+     * For sequence run manager, we are using orcabus events ( source from BSSH ENS event pipe) to trigger the lambda function.
+     * event rule to filter the events that we are interested in.
+     * event pattern: see below
+     * process lambda will record the event to the database, and emit the 'SequenceRunStateChange' event to the event bus.
+     *
+     */
     const eventRule = new Rule(this, this.stackName + 'EventRule', {
       ruleName: this.stackName + 'EventRule',
       description: 'Rule to send {event_type.value} events to the {handler.function_name} Lambda',
@@ -158,11 +161,12 @@ export class SequenceRunManagerStack extends Stack {
       detailType: ['Event from aws:sqs'],
       detail: {
         'ica-event': {
-          // only for mandatory fields
+          // mandatory fields (gdsFolderPath, gdsVolumeName(starts with bssh), instrumentRunId, dateModified)
           gdsFolderPath: [{ exists: true }],
           gdsVolumeName: [{ prefix: 'bssh' }],
           instrumentRunId: [{ exists: true }],
           dateModified: [{ exists: true }],
+
           // optional fields (flowcell barcode, sample sheet name, reagent barcode, ica project id, api url, name)
           acl: [{ prefix: 'wid:' }, { prefix: 'tid:' }],
           id: [{ exists: true }],
