@@ -12,9 +12,9 @@ api_base = f"{api_namespace}/{api_version}/"
 
 router = OptionalSlashDefaultRouter()
 router.register(r"sequence", SequenceViewSet, basename="sequence")
+router.register("sequence/(?P<orcabus_id>[^/.]+)/state", StateViewSet, basename="sequence-state")
+router.register("sequence/(?P<orcabus_id>[^/.]+)/comment", CommentViewSet, basename="sequence-comment")
 
-router.register(r"sequence/(?P<orcabus_id>[^/.]+)/state", StateViewSet, basename="sequence-state")
-router.register(r"sequence/(?P<orcabus_id>[^/.]+)/comment", CommentViewSet, basename="sequence-comment")
 urlpatterns = [
     path(f"{api_base}", include(router.urls)),
 ]

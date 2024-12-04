@@ -7,120 +7,50 @@ import six
 
 class SequenceRunStateChange(object):
     _types = {
-        'id': 'int',
+        'endTime': 'Object',
+        'id': 'str',
         'instrumentRunId': 'str',
-        'runVolumeName': 'str',
-        'runFolderPath': 'str',
         'runDataUri': 'str',
+        'runFolderPath': 'str',
+        'runVolumeName': 'str',
         'sampleSheetName': 'str',
         'startTime': 'datetime',
-        'endTime': 'datetime',
         'status': 'str'
     }
 
     _attribute_map = {
+        'endTime': 'endTime',
         'id': 'id',
         'instrumentRunId': 'instrumentRunId',
-        'runVolumeName': 'runVolumeName',
-        'runFolderPath': 'runFolderPath',
         'runDataUri': 'runDataUri',
+        'runFolderPath': 'runFolderPath',
+        'runVolumeName': 'runVolumeName',
         'sampleSheetName': 'sampleSheetName',
         'startTime': 'startTime',
-        'endTime': 'endTime',
         'status': 'status'
     }
 
-    def __init__(self, id=None, instrumentRunId=None, runVolumeName=None, runFolderPath=None, runDataUri=None,
-                 sampleSheetName=None, startTime=None, endTime=None, status=None):  # noqa: E501
+    def __init__(self, endTime=None, id=None, instrumentRunId=None, runDataUri=None, runFolderPath=None, runVolumeName=None, sampleSheetName=None, startTime=None, status=None):  # noqa: E501
+        self._endTime = None
         self._id = None
         self._instrumentRunId = None
-        self._runVolumeName = None
-        self._runFolderPath = None
         self._runDataUri = None
+        self._runFolderPath = None
+        self._runVolumeName = None
         self._sampleSheetName = None
         self._startTime = None
-        self._endTime = None
         self._status = None
         self.discriminator = None
+        self.endTime = endTime
         self.id = id
         self.instrumentRunId = instrumentRunId
-        self.runVolumeName = runVolumeName
-        self.runFolderPath = runFolderPath
         self.runDataUri = runDataUri
+        self.runFolderPath = runFolderPath
+        self.runVolumeName = runVolumeName
         self.sampleSheetName = sampleSheetName
         self.startTime = startTime
-        self.endTime = endTime
         self.status = status
 
-    @property
-    def id(self):
-
-        return self._id
-
-    @id.setter
-    def id(self, id):
-
-        self._id = id
-
-    @property
-    def instrumentRunId(self):
-
-        return self._instrumentRunId
-
-    @instrumentRunId.setter
-    def instrumentRunId(self, instrumentRunId):
-
-        self._instrumentRunId = instrumentRunId
-
-    @property
-    def runVolumeName(self):
-
-        return self._runVolumeName
-
-    @runVolumeName.setter
-    def runVolumeName(self, runVolumeName):
-
-        self._runVolumeName = runVolumeName
-
-    @property
-    def runFolderPath(self):
-
-        return self._runFolderPath
-
-    @runFolderPath.setter
-    def runFolderPath(self, runFolderPath):
-
-        self._runFolderPath = runFolderPath
-
-    @property
-    def runDataUri(self):
-
-        return self._runDataUri
-
-    @runDataUri.setter
-    def runDataUri(self, runDataUri):
-
-        self._runDataUri = runDataUri
-
-    @property
-    def sampleSheetName(self):
-
-        return self._sampleSheetName
-
-    @sampleSheetName.setter
-    def sampleSheetName(self, sampleSheetName):
-
-        self._sampleSheetName = sampleSheetName
-
-    @property
-    def startTime(self):
-
-        return self._startTime
-
-    @startTime.setter
-    def startTime(self, startTime):
-
-        self._startTime = startTime
 
     @property
     def endTime(self):
@@ -130,7 +60,93 @@ class SequenceRunStateChange(object):
     @endTime.setter
     def endTime(self, endTime):
 
+
         self._endTime = endTime
+
+
+    @property
+    def id(self):
+
+        return self._id
+
+    @id.setter
+    def id(self, id):
+
+
+        self._id = id
+
+
+    @property
+    def instrumentRunId(self):
+
+        return self._instrumentRunId
+
+    @instrumentRunId.setter
+    def instrumentRunId(self, instrumentRunId):
+
+
+        self._instrumentRunId = instrumentRunId
+
+
+    @property
+    def runDataUri(self):
+
+        return self._runDataUri
+
+    @runDataUri.setter
+    def runDataUri(self, runDataUri):
+
+
+        self._runDataUri = runDataUri
+
+
+    @property
+    def runFolderPath(self):
+
+        return self._runFolderPath
+
+    @runFolderPath.setter
+    def runFolderPath(self, runFolderPath):
+
+
+        self._runFolderPath = runFolderPath
+
+
+    @property
+    def runVolumeName(self):
+
+        return self._runVolumeName
+
+    @runVolumeName.setter
+    def runVolumeName(self, runVolumeName):
+
+
+        self._runVolumeName = runVolumeName
+
+
+    @property
+    def sampleSheetName(self):
+
+        return self._sampleSheetName
+
+    @sampleSheetName.setter
+    def sampleSheetName(self, sampleSheetName):
+
+
+        self._sampleSheetName = sampleSheetName
+
+
+    @property
+    def startTime(self):
+
+        return self._startTime
+
+    @startTime.setter
+    def startTime(self, startTime):
+
+
+        self._startTime = startTime
+
 
     @property
     def status(self):
@@ -139,6 +155,7 @@ class SequenceRunStateChange(object):
 
     @status.setter
     def status(self, status):
+
 
         self._status = status
 
@@ -182,3 +199,4 @@ class SequenceRunStateChange(object):
 
     def __ne__(self, other):
         return not self == other
+

@@ -8,6 +8,7 @@ class StateViewSet(GenericViewSet):
     serializer_class = StateSerializer
     search_fields = State.get_base_fields()
     orcabus_id_prefix = State.orcabus_id_prefix
+    http_method_names = ['get']
     pagination_class = None
 
     def get_queryset(self):
