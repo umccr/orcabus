@@ -104,6 +104,7 @@ def event_handler(event, context):
     sequence_domain: SequenceDomain = (
         sequence_srv.create_or_update_sequence_from_bssh_event(event_details)
     )
+    entry = None
 
     # Detect SequenceRunStateChange
     if sequence_domain.state_has_changed:
