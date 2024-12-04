@@ -58,7 +58,7 @@
       ],
       "properties": {
         "id": {
-          "type": "integer"
+          "type": "string"
         },
         "instrumentRunId": {
           "type": "string"

@@ -3,7 +3,7 @@ import logging
 from django.test import TestCase
 from django.utils.timezone import now
 
-from sequence_run_manager.models.sequence import Sequence
+from sequence_run_manager.models.sequence import Sequence, SequenceStatus
 from sequence_run_manager.urls.base import api_base
 
 logger = logging.getLogger()
@@ -19,7 +19,7 @@ class SequenceViewSetTestCase(TestCase):
             run_volume_name="gds_name",
             run_folder_path="/to/gds/folder/path",
             run_data_uri="gds://gds_name/to/gds/folder/path",
-            status="Complete",
+            status=SequenceStatus.from_seq_run_status("Complete"),
             start_time=now(),
             sample_sheet_name="SampleSheet.csv",
             sequence_run_id="r.AAAAAA",

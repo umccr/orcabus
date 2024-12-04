@@ -34,6 +34,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
             "tid:<82_char_string>"
         ],
         "flowcellBarcode": "BARCODEEE",
+        "icaProjectId": "123456-6789-aaaa-bbbb-abcdefghijk",
         "sampleSheetName": "SampleSheet.csv",
         "apiUrl": "https://api.aps2.sh.basespace.illumina.com/v2/runs/r.ACGTlKjDgEy099ioQOeOWg",
         "name": "200508_A01052_0001_BH5LY7ACGT",
@@ -48,14 +49,19 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
     gds_folder_path = payload["gdsFolderPath"]
     gds_volume_name = payload["gdsVolumeName"]
     date_modified = payload["dateModified"]
-
+    
+    # key to retrieve further details of icav2 bssh event
+    ica_project_id = payload.get("icaProjectId")
+    api_url = payload.get("apiUrl")
+    v1pre3_id = payload.get("v1pre3Id")
+    
     # optional
     run_id = payload.get("id")
     name = payload.get("name")
     sample_sheet_name = payload.get("sampleSheetName")
     reagent_barcode = payload.get("reagentBarcode")
     flowcell_barcode = payload.get("flowcellBarcode")
-
+    
     # --- start mapping to internal Sequence model
 
     # status must exist in payload
@@ -92,6 +98,10 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         seq.sample_sheet_name = sample_sheet_name
         seq.sequence_run_id = run_id
         seq.sequence_run_name = name
+        
+        seq.v1pre3_id = v1pre3_id
+        seq.ica_project_id = ica_project_id
+        seq.api_url = api_url
 
         # seq.sample_sheet_config = liborca.get_samplesheet_json_from_file(
         #     gds_volume=gds_volume_name,

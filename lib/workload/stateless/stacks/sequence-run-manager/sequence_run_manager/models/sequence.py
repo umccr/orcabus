@@ -63,6 +63,14 @@ class SequenceManager(OrcaBusBaseManager):
 class Sequence(OrcaBusBaseModel):
     # primary key
     orcabus_id_prefix = 'seq.'
+    
+    # must have (run_folder_path) or (v1pre3_id and ica_project_id and api_url)
+    # NOTE: we use this to retrieve further details for icav2 bssh event
+    # for reference: https://github.com/umccr/orcabus/pull/748#issuecomment-2516246960
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=models.Q(run_folder_path__isnull=False) | models.Q(v1pre3_id__isnull=False, ica_project_id__isnull=False, api_url__isnull=False), name='check_run_folder_path_or_bssh_keys_not_null')
+        ]
 
     # mandatory non-nullable base fields
     instrument_run_id = models.CharField(
@@ -96,6 +104,9 @@ class Sequence(OrcaBusBaseModel):
         max_length=255, null=True, blank=True
     )  # legacy `name`
 
+    v1pre3_id = models.CharField(max_length=255, null=True, blank=True)
+    ica_project_id = models.CharField(max_length=255, null=True, blank=True)
+    api_url = models.TextField(null=True, blank=True)
     # run_config = models.JSONField(null=True, blank=True)  # TODO could be it's own model
     # sample_sheet_config = models.JSONField(null=True, blank=True)  # TODO could be it's own model
 
@@ -103,7 +114,7 @@ class Sequence(OrcaBusBaseModel):
 
     def __str__(self):
         return (
-            f"ID '{self.id}', "
+            f"ID '{self.orcabus_id}', "
             f"Sequence Run ID '{self.sequence_run_id}', "
             f"Sequence Run Name '{self.sequence_run_name}', "
             f"Run Data URI '{self.run_data_uri}', "
