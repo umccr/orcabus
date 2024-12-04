@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 
 from app.models import Sample
@@ -13,15 +13,26 @@ class SampleViewSet(BaseViewSet):
     queryset = Sample.objects.all()
     orcabus_id_prefix = Sample.orcabus_id_prefix
 
+    def get_queryset(self):
+        qs = self.queryset
+        query_params = self.get_query_params()
+
+        is_empty_lib = query_params.getlist("is_empty_library", None)
+        if is_empty_lib:
+            query_params.pop("is_empty_library")
+            qs = qs.filter(library=None)
+
+        return Sample.objects.get_by_keyword(qs, **query_params)
+
     @extend_schema(parameters=[
-        SampleSerializer
+        SampleSerializer,
+        OpenApiParameter(name='is_empty_library',
+                         description="Filter where it is not linked to a library.",
+                         required=False,
+                         type=bool),
     ])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
-
-    def get_queryset(self):
-        query_params = self.get_query_params()
-        return Sample.objects.get_by_keyword(**query_params)
 
     @extend_schema(responses=SampleHistorySerializer(many=True), description="Retrieve the history of this model")
     @action(detail=True, methods=['get'], url_name='history', url_path='history')

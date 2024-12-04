@@ -1,5 +1,6 @@
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
+from rest_framework.viewsets import ModelViewSet
 
 from app.models import Subject, Library
 from app.serializers.subject import SubjectSerializer, SubjectDetailSerializer, SubjectHistorySerializer
@@ -32,6 +33,11 @@ class SubjectViewSet(BaseViewSet):
 
             qs = qs.filter(library__orcabus_id=library_orcabus_id)
 
+        is_empty_lib = query_params.getlist("is_empty_library", None)
+        if is_empty_lib:
+            query_params.pop("is_empty_library")
+            qs = qs.filter(library=None)
+
         return Subject.objects.get_by_keyword(qs, **query_params)
 
     @extend_schema(parameters=[
@@ -44,6 +50,10 @@ class SubjectViewSet(BaseViewSet):
                          description="Filter based on 'orcabus_id' of the library associated with the subject.",
                          required=False,
                          type=str),
+        OpenApiParameter(name='is_empty_library',
+                         description="Filter where it is not linked to a library.",
+                         required=False,
+                         type=bool),
     ])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
