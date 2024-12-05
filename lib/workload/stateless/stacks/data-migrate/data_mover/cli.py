@@ -16,6 +16,7 @@ def main():
         sys.exit(0)
     except Exception as e:
         DataMover.send_failure(str(e))
+        logger.error(str(e))
         sys.exit(1)
 
 
