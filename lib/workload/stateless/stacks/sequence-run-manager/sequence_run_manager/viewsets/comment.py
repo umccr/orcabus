@@ -9,8 +9,7 @@ from sequence_run_manager.models.comment import Comment
 from sequence_run_manager.models.sequence import Sequence
 from sequence_run_manager.serializers.comment import CommentSerializer
 
-
-class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
+class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin, GenericViewSet):
     serializer_class = CommentSerializer
     search_fields = Comment.get_base_fields()
     orcabus_id_prefix = Comment.orcabus_id_prefix
