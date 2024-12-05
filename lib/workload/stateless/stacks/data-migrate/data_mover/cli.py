@@ -5,6 +5,7 @@ import click
 
 from data_mover.data_mover import DataMover
 
+logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -42,7 +43,7 @@ def move(source, destination):
     data_mover = DataMover(source, destination, logger=logger)
     data_mover.sync()
     data_mover.delete()
-    data_mover.send_output()
+    data_mover.send_output(command="move")
 
 
 @cli.command()
@@ -63,7 +64,7 @@ def copy(source, destination):
     """
     data_mover = DataMover(source, destination, logger=logger)
     data_mover.sync()
-    data_mover.send_output()
+    data_mover.send_output(command="copy")
 
 
 if __name__ == "__main__":

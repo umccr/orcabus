@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import subprocess
+from typing import Literal
 
 import boto3
 from mypy_boto3_stepfunctions import SFNClient
@@ -26,7 +27,6 @@ class DataMover:
         self.repeat = repeat
         self.timeout = timeout
         self.logger = logger
-        self.output = ""
 
     def sync(self):
         """
@@ -45,9 +45,7 @@ class DataMover:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
             )
-            self.logger.info(str(out.stdout))
-
-            self.output += str(out.stdout) or ""
+            self.logger.info(out.stdout.decode())
 
         if out.stdout != b"":
             raise Exception("failed to sync - non-empty output")
@@ -65,11 +63,9 @@ class DataMover:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
-        self.logger.info(str(out.stdout))
+        self.logger.info(out.stdout.decode())
 
-        self.output += str(out.stdout) or ""
-
-    def send_output(self):
+    def send_output(self, command: Literal["copy", "move"] = "copy"):
         """
         Send successful task response with the output.
         """
@@ -77,7 +73,14 @@ class DataMover:
         if task_token is not None:
             client: SFNClient = boto3.client("stepfunctions")
             client.send_task_success(
-                taskToken=task_token, output=json.dumps(self.output)
+                taskToken=task_token,
+                output=json.dumps(
+                    {
+                        "command": command,
+                        "source": self.source,
+                        "destination": self.destination,
+                    }
+                ),
             )
 
     @staticmethod
