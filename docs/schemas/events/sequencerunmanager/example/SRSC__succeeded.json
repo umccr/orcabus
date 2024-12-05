@@ -8,7 +8,7 @@
   "region": "ap-southeast-2",
   "resources": [],
   "detail": {
-    "id": 1,
+    "id": "seq.0123456ABCDEFG",
     "instrumentRunId": "540424_A01001_0193_BBBBBBDRX5",
     "runVolumeName": "bssh.abcdefgh1234567899fa94fe79523959",
     "runFolderPath": "/Runs/540424_A01001_0193_BBBBBBDRX5_r.88888888ASU26EYuyeJHew",

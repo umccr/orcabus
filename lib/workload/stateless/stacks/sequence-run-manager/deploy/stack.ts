@@ -3,7 +3,8 @@ import * as cdk from 'aws-cdk-lib';
 import { aws_lambda, aws_secretsmanager, Duration, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
-import { EventBus, IEventBus } from 'aws-cdk-lib/aws-events';
+import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
+import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
@@ -133,27 +134,47 @@ export class SequenceRunManagerStack extends Stack {
      */
     const procSqsFn = this.createPythonFunction('ProcHandler', {
       index: 'sequence_run_manager_proc/lambdas/bssh_event.py',
-      handler: 'sqs_handler',
+      handler: 'event_handler',
       timeout: Duration.minutes(2),
       memorySize: 512,
       reservedConcurrentExecutions: 1,
     });
 
     this.mainBus.grantPutEventsTo(procSqsFn);
-    // this.setupEventRule(procSqsFn);  // TODO comment this out for now
+    this.setupEventRule(procSqsFn); // TODO comment this out for now
   }
 
-  // private setupEventRule(fn: aws_lambda.Function) {
-  //   const eventRule = new Rule(this, this.id + 'EventRule', {
-  //     ruleName: this.id + 'EventRule',
-  //     description: 'Rule to send {event_type.value} events to the {handler.function_name} Lambda',
-  //     eventBus: this.props.mainBus,
-  //   });
-  //
-  //   eventRule.addTarget(new aws_events_targets.LambdaFunction(fn));
-  //   eventRule.addEventPattern({
-  //     source: ['ORCHESTRATOR'], // FIXME complete source to destination event mapping
-  //     detailType: ['SequenceRunStateChange'],
-  //   });
-  // }
+  private setupEventRule(fn: aws_lambda.Function) {
+    /**
+     * For sequence run manager, we are using orcabus events ( source from BSSH ENS event pipe) to trigger the lambda function.
+     * event rule to filter the events that we are interested in.
+     * event pattern: see below
+     * process lambda will record the event to the database, and emit the 'SequenceRunStateChange' event to the event bus.
+     *
+     */
+    const eventRule = new Rule(this, this.stackName + 'EventRule', {
+      ruleName: this.stackName + 'EventRule',
+      description: 'Rule to send {event_type.value} events to the {handler.function_name} Lambda',
+      eventBus: this.mainBus,
+    });
+    eventRule.addEventPattern({
+      detailType: ['Event from aws:sqs'],
+      detail: {
+        'ica-event': {
+          // mandatory fields (gdsFolderPath, gdsVolumeName(starts with bssh), instrumentRunId, dateModified)
+          gdsFolderPath: [{ exists: true }],
+          gdsVolumeName: [{ prefix: 'bssh' }],
+          instrumentRunId: [{ exists: true }],
+          dateModified: [{ exists: true }],
+
+          // optional fields (flowcell barcode, sample sheet name, reagent barcode, ica project id, api url, name)
+          acl: [{ prefix: 'wid:' }, { prefix: 'tid:' }],
+          id: [{ exists: true }],
+          status: [{ exists: true }],
+        },
+      },
+    });
+
+    eventRule.addTarget(new LambdaFunction(fn));
+  }
 }

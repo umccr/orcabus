@@ -49,7 +49,7 @@ class SequenceDomain:
             raise SequenceRuleError("Sequence status is null or not loaded yet")
 
         return SequenceRunStateChange(
-            id=self.sequence.id,
+            id=Sequence.orcabus_id_prefix + self.sequence.orcabus_id,
             instrumentRunId=self.sequence.instrument_run_id,
             runVolumeName=self.sequence.run_volume_name,
             runFolderPath=self.sequence.run_folder_path,

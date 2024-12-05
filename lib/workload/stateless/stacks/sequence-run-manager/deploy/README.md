@@ -17,10 +17,10 @@ Hot-deploy against dev:
 export AWS_PROFILE=umccr-dev-admin
 
 yarn cdk-stateless list
-yarn cdk-stateless synth -e OrcaBusStatelessPipeline/BetaDeployment/SequenceRunManagerStack
-yarn cdk-stateless diff -e OrcaBusStatelessPipeline/BetaDeployment/SequenceRunManagerStack
-yarn cdk-stateless deploy -e OrcaBusStatelessPipeline/BetaDeployment/SequenceRunManagerStack
-yarn cdk-stateless destroy -e OrcaBusStatelessPipeline/BetaDeployment/SequenceRunManagerStack
+yarn cdk-stateless synth -e OrcaBusStatelessPipeline/OrcaBusBeta/SequenceRunManagerStack
+yarn cdk-stateless diff -e OrcaBusStatelessPipeline/OrcaBusBeta/SequenceRunManagerStack
+yarn cdk-stateless deploy -e OrcaBusStatelessPipeline/OrcaBusBeta/SequenceRunManagerStack
+yarn cdk-stateless destroy -e OrcaBusStatelessPipeline/OrcaBusBeta/SequenceRunManagerStack
 ```
 
 CloudFormation template:

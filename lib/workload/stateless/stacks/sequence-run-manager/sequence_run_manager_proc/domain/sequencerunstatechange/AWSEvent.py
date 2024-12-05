@@ -19,8 +19,8 @@ class AWSEvent(object):
     }
 
     _attribute_map = {
-        'detail': 'detail',
         'account': 'account',
+        'detail': 'detail',
         'detail_type': 'detail-type',
         'id': 'id',
         'region': 'region',
@@ -30,10 +30,9 @@ class AWSEvent(object):
         'version': 'version'
     }
 
-    def __init__(self, detail=None, account=None, detail_type=None, id=None, region=None, resources=None, source=None,
-                 time=None, version=None):  # noqa: E501
-        self._detail = None
+    def __init__(self, account=None, detail=None, detail_type=None, id=None, region=None, resources=None, source=None, time=None, version=None):  # noqa: E501
         self._account = None
+        self._detail = None
         self._detail_type = None
         self._id = None
         self._region = None
@@ -42,8 +41,8 @@ class AWSEvent(object):
         self._time = None
         self._version = None
         self.discriminator = None
-        self.detail = detail
         self.account = account
+        self.detail = detail
         self.detail_type = detail_type
         self.id = id
         self.region = region
@@ -52,15 +51,6 @@ class AWSEvent(object):
         self.time = time
         self.version = version
 
-    @property
-    def detail(self):
-
-        return self._detail
-
-    @detail.setter
-    def detail(self, detail):
-
-        self._detail = detail
 
     @property
     def account(self):
@@ -70,7 +60,21 @@ class AWSEvent(object):
     @account.setter
     def account(self, account):
 
+
         self._account = account
+
+
+    @property
+    def detail(self):
+
+        return self._detail
+
+    @detail.setter
+    def detail(self, detail):
+
+
+        self._detail = detail
+
 
     @property
     def detail_type(self):
@@ -80,7 +84,9 @@ class AWSEvent(object):
     @detail_type.setter
     def detail_type(self, detail_type):
 
+
         self._detail_type = detail_type
+
 
     @property
     def id(self):
@@ -90,7 +96,9 @@ class AWSEvent(object):
     @id.setter
     def id(self, id):
 
+
         self._id = id
+
 
     @property
     def region(self):
@@ -100,7 +108,9 @@ class AWSEvent(object):
     @region.setter
     def region(self, region):
 
+
         self._region = region
+
 
     @property
     def resources(self):
@@ -110,7 +120,9 @@ class AWSEvent(object):
     @resources.setter
     def resources(self, resources):
 
+
         self._resources = resources
+
 
     @property
     def source(self):
@@ -120,7 +132,9 @@ class AWSEvent(object):
     @source.setter
     def source(self, source):
 
+
         self._source = source
+
 
     @property
     def time(self):
@@ -130,7 +144,9 @@ class AWSEvent(object):
     @time.setter
     def time(self, time):
 
+
         self._time = time
+
 
     @property
     def version(self):
@@ -139,6 +155,7 @@ class AWSEvent(object):
 
     @version.setter
     def version(self, version):
+
 
         self._version = version
 
@@ -182,3 +199,4 @@ class AWSEvent(object):
 
     def __ne__(self, other):
         return not self == other
+
