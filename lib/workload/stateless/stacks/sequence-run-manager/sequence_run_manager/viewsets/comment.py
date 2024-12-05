@@ -40,7 +40,7 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Li
 
         # Add workflow_run_id to the request data
         mutable_data = request.data.copy()
-        mutable_data['target_id'] = seq_orcabus_id
+        mutable_data['association_id'] = seq_orcabus_id
         
         serializer = self.get_serializer(data=mutable_data)
         serializer.is_valid(raise_exception=True)
