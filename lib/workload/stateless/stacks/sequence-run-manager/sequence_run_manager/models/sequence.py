@@ -80,8 +80,8 @@ class Sequence(OrcaBusBaseModel):
         null=False, blank=False
     )  # legacy `gds_volume_name`
     run_folder_path = models.TextField(
-        null=False, blank=False
-    )  # legacy `gds_folder_path`
+        null=True, blank=True
+    )  # legacy `gds_folder_path`, nullable as ICAv2 event upgrade
     run_data_uri = models.TextField(
         null=False, blank=False
     )  # must be absolute path, including URI scheme/protocol

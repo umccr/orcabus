@@ -123,6 +123,24 @@ export class SequenceRunManagerStack extends Stack {
       integration: apiIntegration,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.GET),
     });
+
+    new HttpRoute(this, 'PostHttpRoute', {
+      httpApi: httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.POST),
+    });
+
+    new HttpRoute(this, 'PatchHttpRoute', {
+      httpApi: httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.PATCH),
+    });
+
+    new HttpRoute(this, 'DeleteHttpRoute', {
+      httpApi: httpApi,
+      integration: apiIntegration,
+      routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.DELETE),
+    });
   }
 
   private createProcSqsHandler() {
