@@ -1,21 +1,24 @@
 from abc import ABC
 
+from rest_framework.mixins import DestroyModelMixin
+
 from app.pagination import StandardResultsSetPagination
 
 from django.shortcuts import get_object_or_404
 
-from rest_framework import filters
+from rest_framework import filters, status
 from rest_framework.response import Response
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 
 
-class BaseViewSet(ReadOnlyModelViewSet, ABC):
+class BaseViewSet(ModelViewSet, ABC):
     lookup_value_regex = "[^/]+"  # This is to allow for special characters in the URL
     orcabus_id_prefix = ''
     ordering_fields = "__all__"
     ordering = ["-orcabus_id"]
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def retrieve(self, request, *args, **kwargs):
         """
