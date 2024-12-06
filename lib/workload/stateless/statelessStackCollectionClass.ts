@@ -323,7 +323,7 @@ export class StatelessStackCollection {
       ...statelessConfiguration.dataMigrateProps,
     });
     this.htsgetStack = new HtsgetStack(scope, 'HtsgetStack', {
-      ...this.createTemplateProps(env, 'DataMigrateStack'),
+      ...this.createTemplateProps(env, 'HtsgetStack'),
       ...statelessConfiguration.htsgetProps,
       role: fileManagerStack.role,
     });
