@@ -8,7 +8,7 @@ import {
 import { CfnStage, CorsHttpMethod, DomainName, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { IStringParameter, StringParameter } from 'aws-cdk-lib/aws-ssm';
-import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { CrossAccountDestination, LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Function } from 'aws-cdk-lib/aws-lambda';
@@ -99,6 +99,7 @@ export class ApiGatewayConstruct extends Construct {
           CorsHttpMethod.OPTIONS,
           CorsHttpMethod.POST,
           CorsHttpMethod.PATCH,
+          CorsHttpMethod.DELETE,
         ],
         allowOrigins: props.corsAllowOrigins,
         maxAge: Duration.days(10),
