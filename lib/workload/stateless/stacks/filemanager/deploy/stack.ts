@@ -46,6 +46,7 @@ export class Filemanager extends Stack {
   private readonly securityGroup: ISecurityGroup;
   private readonly queue: IQueue;
   readonly domainName: string;
+  readonly role: Role;
 
   constructor(scope: Construct, id: string, props: FilemanagerProps) {
     super(scope, id, props);
@@ -64,7 +65,7 @@ export class Filemanager extends Stack {
       props.databaseClusterEndpointHostParameter
     );
 
-    const role = this.createRole(props.fileManagerRoleName);
+    this.role = this.createRole(props.fileManagerRoleName);
     if (props?.migrateDatabase) {
       const migrateFunction = new MigrateFunction(this, 'MigrateFunction', {
         vpc: this.vpc,
@@ -91,10 +92,10 @@ export class Filemanager extends Stack {
       )
     );
 
-    this.createIngestFunction(props, role);
-    this.createInventoryFunction(props, role);
+    this.createIngestFunction(props);
+    this.createInventoryFunction(props);
 
-    this.domainName = this.createApiFunction(props, role);
+    this.domainName = this.createApiFunction(props);
   }
 
   private createRole(name: string) {
@@ -107,14 +108,14 @@ export class Filemanager extends Stack {
   /**
    * Lambda function definitions and surrounding infrastructure.
    */
-  private createIngestFunction(props: FilemanagerProps, role: Role) {
+  private createIngestFunction(props: FilemanagerProps) {
     return new IngestFunction(this, 'IngestFunction', {
       vpc: this.vpc,
       host: this.host,
       securityGroup: this.securityGroup,
       eventSources: [this.queue],
       buckets: props.eventSourceBuckets,
-      role,
+      role: this.role,
       ...props,
     });
   }
@@ -122,27 +123,27 @@ export class Filemanager extends Stack {
   /**
    * Create the inventory function.
    */
-  private createInventoryFunction(props: FilemanagerProps, role: Role) {
+  private createInventoryFunction(props: FilemanagerProps) {
     return new InventoryFunction(this, 'InventoryFunction', {
       vpc: this.vpc,
       host: this.host,
       securityGroup: this.securityGroup,
       port: props.port,
       buckets: props.inventorySourceBuckets,
-      role,
+      role: this.role,
     });
   }
 
   /**
    * Query function and API Gateway fronting the function. Returns the configured domain name.
    */
-  private createApiFunction(props: FilemanagerProps, role: Role): string {
+  private createApiFunction(props: FilemanagerProps): string {
     let apiLambda = new ApiFunction(this, 'ApiFunction', {
       vpc: this.vpc,
       host: this.host,
       securityGroup: this.securityGroup,
       buckets: [...props.eventSourceBuckets, ...props.inventorySourceBuckets],
-      role,
+      role: this.role,
       ...props,
     });
 

@@ -81,6 +81,7 @@ import {
 } from './stacks/ora-decompression-manager/deploy';
 import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
+import { HtsgetStack, HtsgetStackConfigurableProps } from './stacks/htsget/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -107,6 +108,7 @@ export interface StatelessStackCollectionProps {
   stackyMcStackFaceProps: GlueStackProps;
   fmAnnotatorProps: FMAnnotatorConfigurableProps;
   dataMigrateProps: DataMigrateStackProps;
+  htsgetProps: HtsgetStackConfigurableProps;
   pgDDProps?: PgDDStackProps;
 }
 
@@ -136,6 +138,7 @@ export class StatelessStackCollection {
   readonly stackyMcStackFaceStack: Stack;
   readonly fmAnnotator: Stack;
   readonly dataMigrate: Stack;
+  readonly htsgetStack: Stack;
   readonly pgDDStack: Stack;
 
   constructor(
@@ -318,6 +321,11 @@ export class StatelessStackCollection {
     this.dataMigrate = new DataMigrateStack(scope, 'DataMigrateStack', {
       ...this.createTemplateProps(env, 'DataMigrateStack'),
       ...statelessConfiguration.dataMigrateProps,
+    });
+    this.htsgetStack = new HtsgetStack(scope, 'HtsgetStack', {
+      ...this.createTemplateProps(env, 'DataMigrateStack'),
+      ...statelessConfiguration.htsgetProps,
+      role: fileManagerStack.role,
     });
 
     if (statelessConfiguration.pgDDProps) {
