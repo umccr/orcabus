@@ -99,6 +99,7 @@ export class ApiGatewayConstruct extends Construct {
           CorsHttpMethod.OPTIONS,
           CorsHttpMethod.POST,
           CorsHttpMethod.PATCH,
+          CorsHttpMethod.DELETE,
         ],
         allowOrigins: props.corsAllowOrigins,
         maxAge: Duration.days(10),
