@@ -110,6 +110,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
           '/SharedStack/EventBusConstruct/UniversalEventArchiveBucket/Resource',
           '/SharedStack/EventBusConstruct/UniversalEventArchiver/UniversalEventArchiver/ServiceRole/Resource',
           '/SharedStack/EventBusConstruct/UniversalEventArchiver/UniversalEventArchiver/ServiceRole/DefaultPolicy/Resource',
+          '/SharedStack/DatabaseConstruct/Cluster/MonitoringRole/Resource',
         ],
         [
           {
