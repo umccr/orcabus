@@ -293,6 +293,13 @@ export const dragenIcav2ReferenceUriMappingSSMParameterPath =
 //     }
 //   ]
 // '
+export const dragenIcav2OraReferenceUriSSMParameterPath =
+  '/icav2/umccr-prod/dragen_ora_reference_uri';
+
+// Deployed under dev // FIXME
+// 'icav2://reference-data/dragen-ora/v2/ora_reference_v2.tar.gz
+//
+
 export const icav2GencodeAnnotationUriMappingSSMParameterPath =
   '/icav2/umccr-prod/wts_qc_annotation_mapping';
 
