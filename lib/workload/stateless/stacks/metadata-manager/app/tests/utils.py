@@ -1,3 +1,5 @@
+from django.core.exceptions import ObjectDoesNotExist
+
 from app.models import Subject, Sample, Library, Project, Contact, Individual
 from app.tests.factories import LibraryFactory, IndividualFactory, SubjectFactory, SampleFactory, \
     ProjectFactory, ContactFactory
@@ -35,3 +37,11 @@ def insert_mock_1():
 
     subject.individual_set.add(individual)
     subject.save()
+
+
+def is_obj_exists(obj, **kwargs):
+    try:
+        obj.objects.get(**kwargs)
+        return True
+    except ObjectDoesNotExist:
+        return False

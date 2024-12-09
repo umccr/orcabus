@@ -21,7 +21,7 @@ class BaseViewSet(ModelViewSet, ABC):
     ordering = ["-orcabus_id"]
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    http_method_names = ['get', 'post', 'patch', 'delete']
+    http_method_names = ['get', 'patch', 'delete']
 
     def retrieve(self, request, *args, **kwargs):
         """
