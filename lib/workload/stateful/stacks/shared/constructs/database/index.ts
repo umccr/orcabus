@@ -89,6 +89,10 @@ export type ConfigurableDatabaseProps = MonitoringProps & {
    * The schedule (in Duration) that will rotate the master secret
    */
   secretRotationSchedule: Duration;
+  /**
+   * RDS aurora automated backup retention (in Duration)
+   */
+  backupRetention: Duration;
 };
 
 /**
@@ -161,6 +165,10 @@ export class DatabaseConstruct extends Construct {
       writer: rds.ClusterInstance.serverlessV2('WriterClusterInstance', {
         enablePerformanceInsights: props.enablePerformanceInsights,
       }),
+
+      backup: {
+        retention: props.backupRetention,
+      },
     });
 
     new sm.SecretRotation(this, 'MasterDbSecretRotation', {

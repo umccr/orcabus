@@ -155,6 +155,7 @@ const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps =
         enhancedMonitoringInterval: Duration.seconds(60),
         enablePerformanceInsights: true,
         removalPolicy: RemovalPolicy.DESTROY,
+        backupRetention: Duration.days(1),
       };
     case AppStage.GAMMA:
       return {
@@ -165,6 +166,7 @@ const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps =
         enhancedMonitoringInterval: Duration.seconds(60),
         enablePerformanceInsights: true,
         removalPolicy: RemovalPolicy.DESTROY,
+        backupRetention: Duration.days(1),
       };
     case AppStage.PROD:
       return {
@@ -172,7 +174,10 @@ const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps =
         numberOfInstance: 1,
         minACU: 0.5,
         maxACU: 16,
+        enhancedMonitoringInterval: Duration.seconds(60),
+        enablePerformanceInsights: true,
         removalPolicy: RemovalPolicy.RETAIN,
+        backupRetention: Duration.days(7),
       };
   }
 };
