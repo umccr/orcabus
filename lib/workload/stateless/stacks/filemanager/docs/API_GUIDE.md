@@ -235,7 +235,28 @@ There is also no way to POST an attribute linking rule, which can be used to upd
 as they are received by filemanager. See [ATTRIBUTE_LINKING.md][attribute-linking] for a discussion on some approaches
 for this. The likely solution will involve merging the above wildcard matching logic with attribute rules.
 
+## Htsget
+
+Htsget support is enabled under the `htsget.file` subdomain, see [here] for more details. For each current object
+returned by the filemanager, it can be reached via htsget by combining the key and the bucket in the query path:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://htsget-file.dev.umccr.org/reads/<filemanager_bucket>/<filemanager_key>" | jq
+```
+
+For example, fetching a current object:
+
+```sh
+export RESULT=$(curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3?bucket=umccr-temp-dev&key=*analysis*.bam&rowsPerPage=1&currentState=true" | jq)
+export BUCKET=$(echo $RESULT | jq -r '.results[] | .bucket')
+export KEY=$(echo $RESULT | jq -r '.results[] | .key')
+
+# Note that you must remove the file extension.
+curl -H "Authorization: Bearer $TOKEN" "https://htsget-file.dev.umccr.org/reads/${BUCKET}/${KEY%.*}" | jq
+```
+
 [json-patch]: https://jsonpatch.com/
 [qs]: https://github.com/ljharb/qs
 [s3-events]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventNotifications.html
 [attribute-linking]: ATTRIBUTE_LINKING.md
+[here]: ../../htsget/README.md
