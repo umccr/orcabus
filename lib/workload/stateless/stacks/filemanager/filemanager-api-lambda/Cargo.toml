@@ -13,6 +13,5 @@ tracing = { version = "0.1" }
 axum = "0.7"
 
 lambda_http = "0.13"
-lambda_runtime = "0.13"
 
 filemanager = { path = "../filemanager" }

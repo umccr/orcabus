@@ -61,7 +61,7 @@ mod tests {
     use axum::body::Body;
     use axum::http::{Method, Request};
     use sqlx::PgPool;
-    use tower::ServiceExt;
+    use tower::util::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::handlers::aws::tests::test_receive_and_ingest_with;

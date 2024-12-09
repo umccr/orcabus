@@ -111,7 +111,7 @@ mod tests {
     use axum::body::Body;
     use axum::http::StatusCode;
     use sqlx::PgPool;
-    use tower::ServiceExt;
+    use tower::util::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::routes::router;

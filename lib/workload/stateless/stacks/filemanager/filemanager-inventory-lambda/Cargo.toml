@@ -9,7 +9,6 @@ rust-version.workspace = true
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros"] }
-tracing = { version = "0.1" }
 
 lambda_runtime = "0.13"
 

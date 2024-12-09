@@ -26,7 +26,7 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["f
 
 # Database
 sqlx = { version = "0.8", default-features = false, features = ["postgres", "runtime-tokio", "tls-rustls", "chrono", "uuid", "macros"] }
-sea-orm = { version = "1.1.0-rc.1", default-features = false, features = [
+sea-orm = { version = "1.1", default-features = false, features = [
     "sqlx-postgres",
     "runtime-tokio-rustls",
     "macros",
@@ -41,20 +41,19 @@ axum = "0.7"
 axum-extra = "0.9"
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid", "url"] }
 utoipa-swagger-ui = { version = "8", features = ["axum", "debug-embed", "url"] }
-tower = "0.4"
-tower-http = { version = "0.5", features = ["trace", "cors"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["trace", "cors"] }
 serde_qs = { version = "0.13", features = ["axum"] }
-json-patch = "2"
+json-patch = "3"
 
 # General
 chrono = { version = "0.4", features = ["serde"] }
-thiserror = "1"
+thiserror = "2"
 uuid = { version = "1", features = ["v7"] }
 mockall = "0.13"
 mockall_double = "0.3"
 itertools = "0.13"
 url = { version = "2", features = ["serde"] }
-bytes = "1.6"
 envy = "0.4"
 rand = "0.8"
 parse-size = "1"
@@ -66,10 +65,10 @@ csv = "1"
 flate2 = "1"
 md5 = "0.7"
 hex = "0.4"
-parquet = { version = "52", features = ["async"] }
-arrow = { version = "52", features = ["chrono-tz"] }
-arrow-json = "52"
-orc-rust = "0.3"
+parquet = { version = "53", features = ["async"] }
+arrow = { version = "53", features = ["chrono-tz"] }
+arrow-json = "53"
+orc-rust = "0.5"
 
 # AWS
 aws-sdk-sqs = "1"
@@ -91,7 +90,4 @@ aws-sdk-s3 = { version = "1", features = ["test-util"] }
 filemanager = { path = ".", features = ["migrate"] }
 
 [build-dependencies]
-filemanager-build = { path = "../filemanager-build" }
-miette = { version = "7", features = ["fancy"] }
 tokio = { version = "1", features = ["macros"] }
-dotenvy = "0.15"

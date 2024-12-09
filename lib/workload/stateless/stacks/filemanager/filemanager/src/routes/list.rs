@@ -353,7 +353,7 @@ pub(crate) mod tests {
     use serde_json::{from_slice, json};
     use sqlx::PgPool;
     use std::collections::HashMap;
-    use tower::ServiceExt;
+    use tower::util::ServiceExt;
     use uuid::Uuid;
 
     use crate::clients::aws::s3;

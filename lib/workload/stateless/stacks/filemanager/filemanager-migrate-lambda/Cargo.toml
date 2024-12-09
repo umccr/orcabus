@@ -7,9 +7,6 @@ authors.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-
 tokio = { version = "1", features = ["macros"] }
 tracing = { version = "0.1" }
 
@@ -18,7 +15,3 @@ aws-sdk-cloudformation = "1"
 lambda_runtime = "0.13"
 
 filemanager = { path = "../filemanager", features = ["migrate"] }
-
-[dev-dependencies]
-
-serde_json = "1.0"

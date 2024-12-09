@@ -207,7 +207,7 @@ mod tests {
     use axum::http::{Method, StatusCode};
     use axum::response::IntoResponse;
     use sqlx::PgPool;
-    use tower::ServiceExt;
+    use tower::util::ServiceExt;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::env::Config;
