@@ -19,11 +19,11 @@ pub struct Model {
     pub key: String,
     #[sea_orm(column_type = "Text")]
     pub version_id: String,
-    pub event_time: Option<DateTimeWithTimeZone>,
+    pub event_time: Option<chrono::DateTime<chrono::FixedOffset>>,
     pub size: Option<i64>,
     #[sea_orm(column_type = "Text", nullable)]
     pub sha256: Option<String>,
-    pub last_modified_date: Option<DateTimeWithTimeZone>,
+    pub last_modified_date: Option<chrono::DateTime<chrono::FixedOffset>>,
     #[sea_orm(column_type = "Text", nullable)]
     pub e_tag: Option<String>,
     pub storage_class: Option<StorageClass>,
@@ -33,7 +33,7 @@ pub struct Model {
     pub number_duplicate_events: i64,
     #[sea_orm(column_type = "JsonBinary", nullable)]
     pub attributes: Option<Json>,
-    pub deleted_date: Option<DateTimeWithTimeZone>,
+    pub deleted_date: Option<chrono::DateTime<chrono::FixedOffset>>,
     #[sea_orm(column_type = "Text", nullable)]
     pub deleted_sequencer: Option<String>,
     pub number_reordered: i64,

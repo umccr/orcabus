@@ -117,7 +117,7 @@ impl ListS3Params {
     get,
     path = "/s3",
     responses(
-        (status = OK, description = "The collection of s3_objects", body = ListResponseS3),
+        (status = OK, description = "The collection of s3_objects", body = ListResponse<S3>),
         ErrorStatusCode,
     ),
     params(Pagination, WildcardParams, ListS3Params, S3ObjectsFilter),
@@ -210,7 +210,7 @@ pub async fn count_s3(
     get,
     path = "/s3/presign",
     responses(
-        (status = OK, description = "The list of presigned urls", body = ListResponseUrl),
+        (status = OK, description = "The list of presigned urls", body = ListResponse<Url>),
         ErrorStatusCode,
     ),
     params(Pagination, WildcardParams, PresignedParams, S3ObjectsFilter),
@@ -271,7 +271,7 @@ pub async fn presign_s3(
     get,
     path = "/s3/attributes",
     responses(
-        (status = OK, description = "The collection of s3_objects", body = ListResponseS3),
+        (status = OK, description = "The collection of s3_objects", body = ListResponse<S3>),
         ErrorStatusCode,
     ),
     params(Pagination, WildcardParams, ListS3Params, AttributesOnlyFilter),
@@ -369,23 +369,6 @@ pub(crate) mod tests {
     use crate::routes::presign::tests::assert_presigned_params;
 
     use super::*;
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
-        let entries = EntriesBuilder::default()
-            .with_shuffle(true)
-            .build(state.database_client())
-            .await
-            .unwrap()
-            .s3_objects;
-
-        let query = percent_encode("key[a]=123".as_bytes(), NON_ALPHANUMERIC).to_string();
-        let result: ListResponse<S3> = response_from_get(state, &format!("/s3?{query}")).await;
-        assert_eq!(result.links(), &Links::new(None, None));
-        assert_eq!(result.results(), entries);
-        assert_eq!(result.pagination().count, 10);
-    }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api(pool: PgPool) {

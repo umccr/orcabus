@@ -12,6 +12,7 @@ use crate::database::entities::sea_orm_active_enums::EventType;
 use crate::database::entities::sea_orm_active_enums::StorageClass;
 use crate::routes::error::ErrorResponse;
 use crate::routes::filter::wildcard::Wildcard;
+use crate::routes::filter::*;
 use crate::routes::get::*;
 use crate::routes::ingest::*;
 use crate::routes::list::*;
@@ -28,6 +29,16 @@ pub struct DateTimeWithTimeZone(pub DateTime<FixedOffset>);
 #[derive(ToSchema)]
 #[schema(value_type = Value)]
 pub struct Json(pub Value);
+
+/// A newtype equivalent to a `url::Url`.
+#[derive(ToSchema)]
+#[schema(value_type = Url)]
+pub struct Url(pub url::Url);
+
+/// A newtype equivalent to a `uuid::Uuid`.
+#[derive(ToSchema)]
+#[schema(value_type = Uuid)]
+pub struct Uuid(pub uuid::Uuid);
 
 /// API docs.
 #[derive(Debug, OpenApi)]
@@ -54,14 +65,19 @@ pub struct Json(pub Value);
             DateTimeWithTimeZone,
             Wildcard,
             Json,
-            ListResponseS3,
-            ListResponseUrl,
+            ListResponse<Url>,
+            ListResponse<S3>,
             ContentDisposition,
             PaginatedResponse,
             Pagination,
             Links,
             PatchBody,
             Patch,
+            Join,
+            FilterJoin<Wildcard>,
+            FilterJoin<StorageClass>,
+            FilterJoin<i64>,
+            FilterJoin<Uuid>
         )
     ),
     modifiers(&SecurityAddon),

@@ -18,7 +18,7 @@ use crate::database::entities::s3_object;
 use crate::error::Error::{OverflowError, QueryError};
 use crate::error::{Error, Result};
 use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
-use crate::routes::filter::{FilterJoin, Join, S3ObjectsFilter};
+use crate::routes::filter::{FilterJoinMerged, Join, S3ObjectsFilter};
 use crate::routes::list::ListCount;
 use crate::routes::pagination::{ListResponse, Pagination};
 
@@ -77,7 +77,7 @@ where
     }
 
     /// Join a series expressions with an 'or' or 'and' statement.
-    pub fn join<T, F, I>(input: FilterJoin<I>, mut map: F) -> Result<Option<Condition>>
+    pub fn join<T, F, I>(input: FilterJoinMerged<I>, mut map: F) -> Result<Option<Condition>>
     where
         T: Into<ConditionExpression>,
         F: FnMut(I) -> Result<T>,

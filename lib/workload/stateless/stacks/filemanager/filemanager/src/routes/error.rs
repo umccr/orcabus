@@ -55,17 +55,7 @@ impl Display for ErrorResponse {
 #[derive(Debug, IntoResponses, Error)]
 pub enum ErrorStatusCode {
     #[response(status = BAD_REQUEST)]
-    #[error(transparent)]
-    QueryRejection(#[from] QueryRejection),
-    #[response(status = BAD_REQUEST)]
-    #[error(transparent)]
-    QsQueryRejection(#[from] QsQueryRejection),
-    #[response(status = BAD_REQUEST)]
-    #[error(transparent)]
-    PathRejection(#[from] PathRejection),
-    #[response(status = BAD_REQUEST)]
-    #[error(transparent)]
-    JsonRejection(#[from] JsonRejection),
+    Rejection(u16, ErrorResponse),
     #[response(
         status = NOT_FOUND,
         description = "the resource or route could not be found",
@@ -86,16 +76,48 @@ pub enum ErrorStatusCode {
     BadRequest(ErrorResponse),
 }
 
+impl From<QueryRejection> for ErrorStatusCode {
+    fn from(rejection: QueryRejection) -> Self {
+        Self::Rejection(
+            rejection.status().as_u16(),
+            ErrorResponse::new(rejection.body_text()),
+        )
+    }
+}
+
+impl From<QsQueryRejection> for ErrorStatusCode {
+    fn from(rejection: QsQueryRejection) -> Self {
+        let message = rejection.to_string();
+        let status = rejection.into_response().status();
+        Self::Rejection(status.as_u16(), ErrorResponse::new(message))
+    }
+}
+
+impl From<PathRejection> for ErrorStatusCode {
+    fn from(rejection: PathRejection) -> Self {
+        Self::Rejection(
+            rejection.status().as_u16(),
+            ErrorResponse::new(rejection.body_text()),
+        )
+    }
+}
+
+impl From<JsonRejection> for ErrorStatusCode {
+    fn from(rejection: JsonRejection) -> Self {
+        Self::Rejection(
+            rejection.status().as_u16(),
+            ErrorResponse::new(rejection.body_text()),
+        )
+    }
+}
+
 impl Display for ErrorStatusCode {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             ErrorStatusCode::BadRequest(err) => Display::fmt(err, f),
             ErrorStatusCode::NotFound(err) => Display::fmt(err, f),
             ErrorStatusCode::InternalServerError(err) => Display::fmt(err, f),
-            ErrorStatusCode::QueryRejection(rejection) => Display::fmt(rejection, f),
-            ErrorStatusCode::QsQueryRejection(rejection) => Display::fmt(rejection, f),
-            ErrorStatusCode::PathRejection(rejection) => Display::fmt(rejection, f),
-            ErrorStatusCode::JsonRejection(rejection) => Display::fmt(rejection, f),
+            ErrorStatusCode::Rejection(_, message) => Display::fmt(message, f),
         }
     }
 }
@@ -108,23 +130,9 @@ impl IntoResponse for ErrorStatusCode {
                 (StatusCode::INTERNAL_SERVER_ERROR, extract::Json(err))
             }
             ErrorStatusCode::NotFound(err) => (StatusCode::NOT_FOUND, extract::Json(err)),
-            ErrorStatusCode::QueryRejection(rejection) => (
-                rejection.status(),
-                extract::Json(ErrorResponse::new(rejection.body_text())),
-            ),
-            ErrorStatusCode::QsQueryRejection(rejection) => {
-                let message = rejection.to_string();
-                let status = rejection.into_response().status();
-
-                (status, extract::Json(ErrorResponse::new(message)))
-            }
-            ErrorStatusCode::PathRejection(rejection) => (
-                rejection.status(),
-                extract::Json(ErrorResponse::new(rejection.body_text())),
-            ),
-            ErrorStatusCode::JsonRejection(rejection) => (
-                rejection.status(),
-                extract::Json(ErrorResponse::new(rejection.body_text())),
+            ErrorStatusCode::Rejection(status, err) => (
+                StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+                extract::Json(err),
             ),
         };
 
