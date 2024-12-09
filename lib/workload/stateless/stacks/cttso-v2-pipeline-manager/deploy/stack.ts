@@ -11,6 +11,7 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
 import { DockerImageCode, DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
+import { OraDecompressionConstruct } from '../../../../components/ora-file-decompression-fq-pair-sfn';
 
 export interface Cttsov2Icav2PipelineManagerConfig {
   /* ICAv2 Pipeline analysis essentials */
@@ -64,6 +65,16 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       {
         icav2JwtSecretParameterObj: icav2AccessTokenSecretObj,
         stateMachineName: `${props.stateMachinePrefix}-icav2-copy-files-sfn`,
+      }
+    );
+
+    // Get the ora decompression construct
+    const oraDecompressionStateMachineObj = new OraDecompressionConstruct(
+      this,
+      'ora_decompression_state_machine_obj',
+      {
+        icav2AccessTokenSecretId: icav2AccessTokenSecretObj.secretName,
+        sfnPrefix: props.stateMachinePrefix,
       }
     );
 
@@ -148,6 +159,40 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
         architecture: lambda.Architecture.ARM_64,
         index: 'check_num_running_sfns.py',
         handler: 'handler',
+      }
+    );
+
+    const checkFastqListRowIsOraLambdaObj = new PythonFunction(
+      this,
+      'check_fastq_list_row_is_ora_lambda_python_function',
+      {
+        entry: path.join(__dirname, '../lambdas/check_fastq_list_row_is_ora_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'check_fastq_list_row_is_ora.py',
+        handler: 'handler',
+        memorySize: 1024,
+        timeout: Duration.seconds(60),
+        environment: {
+          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
+        },
+      }
+    );
+
+    const convertOraToCacheUriGzPathLambdaObj = new PythonFunction(
+      this,
+      'convert_ora_to_cache_uri_gz_path_lambda_python_function',
+      {
+        entry: path.join(__dirname, '../lambdas/convert_ora_to_cache_uri_gz_path_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'convert_ora_to_cache_uri_gz_path.py',
+        handler: 'handler',
+        memorySize: 1024,
+        timeout: Duration.seconds(60),
+        environment: {
+          ICAV2_ACCESS_TOKEN_SECRET_ID: icav2AccessTokenSecretObj.secretName,
+        },
       }
     );
 
@@ -245,12 +290,15 @@ export class Cttsov2Icav2PipelineManagerStack extends cdk.Stack {
       dynamodbTableObj: dynamodbTableObj,
       icav2AccessTokenSecretObj: icav2AccessTokenSecretObj,
       icav2CopyFilesStateMachineObj: icav2CopyFilesStateMachineObj.icav2CopyFilesSfnObj,
+      oraDecompressionStateMachineObj: oraDecompressionStateMachineObj.sfnObject,
       pipelineIdSsmObj: pipelineIdSsmObjList,
       /* Lambdas paths */
       uploadSamplesheetToCacheDirLambdaObj: uploadSamplesheetToCacheDirLambdaObj, // __dirname + '/../../../lambdas/upload_samplesheet_to_cache_dir_py'
       generateCopyManifestDictLambdaObj: generateCopyManifestDictLambdaObj, // __dirname + '/../../../lambdas/generate_copy_manifest_dict_py'
       getRandomNumberLambdaObj: getRandomNumberLambdaObj,
       checkNumRunningSfnsLambdaObj: checkNumRunningSfns,
+      convertOraToCacheUriGzPathLambdaObj: convertOraToCacheUriGzPathLambdaObj,
+      checkFastqListRowIsOraLambdaObj: checkFastqListRowIsOraLambdaObj,
       deleteCacheUriLambdaObj: deleteCacheUriLambdaFunction,
       setOutputJsonLambdaObj: setOutputJsonLambdaFunction,
       getVcfsLambdaObj: getVcfsLambdaFunction,

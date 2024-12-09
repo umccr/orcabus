@@ -89,6 +89,28 @@ else
     exit 1
   fi
 
+  # If the estimated gz file size is -1, we need to do a double extraction
+  # Since we do not have the space to store the gz file and then upload it
+  if [[ "${ESTIMATED_GZ_FILE_SIZE}" == "-1" ]]; then
+    echo "$(date -Iseconds): Estimated file gz file size is -1, we need to do a double extraction to get the file size" 1>&2
+    ESTIMATED_GZ_FILE_SIZE="$( \
+      wget \
+        --quiet \
+        --output-document - \
+        "$(  \
+          python3 scripts/get_icav2_download_url.py \
+          "${INPUT_URI}"
+        )" | \
+      /usr/local/bin/orad \
+        --gzip \
+        --stdout \
+        --ora-reference "${ORADATA_PATH}" \
+        - | \
+      wc -c \
+    )"
+    echo "$(date -Iseconds): Estimated gz file size is ${ESTIMATED_GZ_FILE_SIZE}" 1>&2
+  fi
+
   # Set AWS credentials access for aws s3 cp
   echo "$(date -Iseconds): Collecting the AWS S3 Access credentials" 1>&2
   aws_s3_access_creds_json_str="$( \
@@ -144,5 +166,4 @@ else
   )
   echo "$(date -Iseconds): Stream and upload of decompression complete" 1>&2
 fi
-
 
