@@ -11,6 +11,7 @@ from workflow_manager.viewsets.state import StateViewSet
 from workflow_manager.viewsets.workflow_run_action import WorkflowRunActionViewSet
 # from workflow_manager.viewsets.library import LibraryViewSet
 from workflow_manager.viewsets.workflow_run_comment import WorkflowRunCommentViewSet
+from workflow_manager.viewsets.workflow_run_stats import WorkflowRunStatsViewSet
 from workflow_manager.settings.base import API_VERSION
 
 api_namespace = "api"
@@ -18,6 +19,8 @@ api_version = API_VERSION
 api_base = f"{api_namespace}/{api_version}/"
 
 router = OptionalSlashDefaultRouter()
+
+router.register("workflowrun/stats", WorkflowRunStatsViewSet, basename="workflowrun_list_all") # put it before workflowrun, as it will match the workflowrun/list_all/ url
 router.register(r"analysis", AnalysisViewSet, basename="analysis")
 router.register(r"analysisrun", AnalysisRunViewSet, basename="analysisrun")
 router.register(r"analysiscontext", AnalysisContextViewSet, basename="analysiscontext")
