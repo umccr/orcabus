@@ -16,13 +16,12 @@ use thiserror::Error;
 use utoipa::{IntoResponses, ToSchema};
 
 use crate::error::Error;
-use crate::routes::filter;
 
 /// Type alias for a Query with a custom rejection.
 pub type Query<T> = WithRejection<extract::Query<T>, ErrorStatusCode>;
 
 /// Type alias for a QsQuery with a custom rejection.
-pub type QsQuery<T> = WithRejection<filter::extract::QsQuery<T>, ErrorStatusCode>;
+pub type QsQuery<T> = WithRejection<serde_qs::axum::QsQuery<T>, ErrorStatusCode>;
 
 /// Type alias for a Path with a custom rejection.
 pub type Path<T> = WithRejection<extract::Path<T>, ErrorStatusCode>;

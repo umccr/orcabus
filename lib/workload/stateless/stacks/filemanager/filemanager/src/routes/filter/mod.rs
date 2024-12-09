@@ -4,20 +4,15 @@
 use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
 use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
 use sea_orm::prelude::{DateTimeWithTimeZone, Json};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Map;
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::result;
 use std::str::FromStr;
-use serde::de::Error;
-use serde_with::{DisplayFromStr, serde_as, SerializeAs, DeserializeAs};
-use serde_with::de::DeserializeAsWrap;
-use serde_with::ser::SerializeAsWrap;
-use utoipa::IntoParams;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-pub mod extract;
 pub mod wildcard;
 
 /// Capture any parameters and assume that they are top-level attributes fields.
@@ -49,12 +44,12 @@ impl<T> Default for FilterJoin<T> {
 }
 
 /// The logical query join type.
-#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum Join {
     #[default]
-    And,
     Or,
+    And,
 }
 
 impl<T> From<FilterJoinUntagged<T>> for FilterJoin<T> {
@@ -69,17 +64,23 @@ impl<T> From<FilterJoinUntagged<T>> for FilterJoin<T> {
 
 impl<T> From<T> for FilterJoin<T> {
     fn from(one: T) -> Self {
-        Self(HashMap::from_iter(vec![(Join::And, vec![one])]))
+        Self(HashMap::from_iter(vec![(Join::Or, vec![one])]))
     }
 }
 
 impl<T> From<Vec<T>> for FilterJoin<T> {
     fn from(many: Vec<T>) -> Self {
-        Self(HashMap::from_iter(vec![(Join::And, many)]))
+        Self(HashMap::from_iter(vec![(Join::Or, many)]))
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+impl<T> From<HashMap<Join, Vec<T>>> for FilterJoin<T> {
+    fn from(map: HashMap<Join, Vec<T>>) -> Self {
+        Self(map)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, ToSchema, Clone, PartialEq, Eq)]
 #[serde(untagged, rename_all = "camelCase")]
 enum FilterJoinUntagged<T> {
     One(T),
@@ -88,21 +89,24 @@ enum FilterJoinUntagged<T> {
 }
 
 fn filter_join_from_str<'de, D, T>(deserializer: D) -> Result<FilterJoin<T>, D::Error>
-where D: Deserializer<'de>,
+where
+    D: Deserializer<'de>,
     T: FromStr,
-    T::Err: Display {
+    T::Err: Display,
+{
     let value = FilterJoinUntagged::<String>::deserialize(deserializer)?;
     let map_from_str = |one: String| T::from_str(&one).map_err(Error::custom);
-    let map_many_from_str = |many: Vec<String>| many.into_iter().map(map_from_str).collect::<Result<_, _>>();
+    let map_many_from_str =
+        |many: Vec<String>| many.into_iter().map(map_from_str).collect::<Result<_, _>>();
 
     let from_str = match value {
         FilterJoinUntagged::One(one) => FilterJoinUntagged::One(map_from_str(one)?),
         FilterJoinUntagged::Many(many) => FilterJoinUntagged::Many(map_many_from_str(many)?),
-        FilterJoinUntagged::Map(map) => {
-            FilterJoinUntagged::Map(HashMap::from_iter(map.into_iter().map(|(join, many)| {
-                Ok((join, map_many_from_str(many)?))
-            }).collect::<Result<Vec<_>, _>>()?))
-        },
+        FilterJoinUntagged::Map(map) => FilterJoinUntagged::Map(HashMap::from_iter(
+            map.into_iter()
+                .map(|(join, many)| Ok((join, map_many_from_str(many)?)))
+                .collect::<Result<Vec<_>, _>>()?,
+        )),
     };
 
     Ok(from_str.into())
@@ -123,43 +127,43 @@ pub struct S3ObjectsFilter {
     #[param(required = false, value_type = Vec<Wildcard>)]
     pub(crate) bucket: FilterJoin<Wildcard>,
     /// Query by key. Supports wildcards.
-    /// Repeated parameters are joined with an `and` conditions by default.
+    /// Repeated parameters are joined with an `or` conditions by default.
     #[param(required = false, value_type = Vec<Wildcard>)]
     pub(crate) key: FilterJoin<Wildcard>,
     /// Query by version_id. Supports wildcards.
-    /// Repeated parameters are joined with an `and` conditions by default.
+    /// Repeated parameters are joined with an `or` conditions by default.
     #[param(required = false, value_type = Vec<Wildcard>)]
     pub(crate) version_id: FilterJoin<Wildcard>,
     /// Query by event_time. Supports wildcards.
-    /// Repeated parameters are joined with an `and` conditions by default.
+    /// Repeated parameters are joined with an `or` conditions by default.
     #[param(required = false, value_type = Vec<Wildcard>)]
     pub(crate) event_time: FilterJoin<WildcardEither<DateTimeWithTimeZone>>,
     /// Query by size.
-    /// Repeated parameters are joined with an `and` conditions by default.
+    /// Repeated parameters are joined with an `or` conditions by default.
     #[serde(deserialize_with = "filter_join_from_str")]
     #[param(required = false, value_type = Vec<i64>)]
     pub(crate) size: FilterJoin<i64>,
     /// Query by the sha256 checksum.
-    /// Repeated parameters are joined with an `and` conditions by default.
+    /// Repeated parameters are joined with an `or` conditions by default.
     #[param(required = false, value_type = Vec<Wildcard>)]
     pub(crate) sha256: FilterJoin<String>,
     /// Query by the last modified date. Supports wildcards.
-    /// Repeated parameters are joined with an `and` conditions by default.
+    /// Repeated parameters are joined with an `or` conditions by default.
     #[param(required = false, value_type = Vec<Wildcard>)]
     pub(crate) last_modified_date: FilterJoin<WildcardEither<DateTimeWithTimeZone>>,
     /// Query by the e_tag.
-    /// Repeated parameters are joined with an `and` conditions by default.
+    /// Repeated parameters are joined with an `or` conditions by default.
     #[param(required = false, value_type = Vec<Wildcard>)]
     pub(crate) e_tag: FilterJoin<String>,
     /// Query by the storage class.
-    /// Repeated parameters are joined with an `and` conditions by default.
+    /// Repeated parameters are joined with an `or` conditions by default.
     #[param(required = false, value_type = Vec<StorageClass>)]
     pub(crate) storage_class: FilterJoin<StorageClass>,
     /// Query by the object delete marker.
     #[param(required = false)]
     pub(crate) is_delete_marker: Option<bool>,
     /// Query by the ingest id that objects get tagged with.
-    /// Repeated parameters are joined with an `and` conditions by default.
+    /// Repeated parameters are joined with an `or` conditions by default.
     #[param(required = false, value_type = Vec<Uuid>)]
     pub(crate) ingest_id: FilterJoin<Uuid>,
     /// Query by JSON attributes. Supports nested syntax to access inner
@@ -173,11 +177,9 @@ pub struct S3ObjectsFilter {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::routes::filter::wildcard::Wildcard;
     use serde_json::json;
-    use extract::tests::get_result;
-
-    use super::*;
 
     #[test]
     fn deserialize_empty_params() {
@@ -186,9 +188,9 @@ mod tests {
         assert_eq!(params, Default::default());
     }
 
-    #[tokio::test]
-    async fn deserialize_single_params() {
-        let qs = "/?\
+    #[test]
+    fn deserialize_single_params() {
+        let qs = "\
         eventType=Deleted&\
         key=key1&\
         bucket=bucket1&\
@@ -203,7 +205,7 @@ mod tests {
         ingestId=00000000-0000-0000-0000-000000000000&\
         attributes[attributeId]=id\
         ";
-        let params: S3ObjectsFilter = get_result(qs).await;
+        let params: S3ObjectsFilter = serde_qs::from_str(qs).unwrap();
 
         assert_eq!(
             params,
@@ -248,67 +250,111 @@ mod tests {
         ";
         let params: S3ObjectsFilter = serde_qs::from_str(qs).unwrap();
 
-        assert_many_params(params);
+        assert_many_params(params, Join::Or);
     }
 
     #[test]
     fn deserialize_many_params_and() {
         let qs = "\
         eventType=Created&\
-        key[and]=key1&key[and]=key2&\
-        bucket[and]=bucket1&bucket[and]=bucket2&\
-        versionId[and]=version_id1&versionId[and]=version_id2&\
-        eventTime[and]=1970-01-02T00:00:00Z&eventTime[and]=1970-01-02T00:00:01Z&\
-        size[and]=4&size[and]=5&\
-        sha256[and]=sha256&sha256[and]=sha1&\
-        lastModifiedDate[and]=1970-01-02T00:00:00Z&lastModifiedDate[and]=1970-01-02T00:00:01Z&\
-        eTag[and]=eTag1&eTag[and]=eTag2&\
-        storageClass[and]=DeepArchive&storageClass[and]=Glacier&\
+        key[and][]=key1&key[and][]=key2&\
+        bucket[and][]=bucket1&bucket[and][]=bucket2&\
+        versionId[and][]=version_id1&versionId[and][]=version_id2&\
+        eventTime[and][]=1970-01-02T00:00:00Z&eventTime[and][]=1970-01-02T00:00:01Z&\
+        size[and][]=4&size[and][]=5&\
+        sha256[and][]=sha256&sha256[and][]=sha1&\
+        lastModifiedDate[and][]=1970-01-02T00:00:00Z&lastModifiedDate[and][]=1970-01-02T00:00:01Z&\
+        eTag[and][]=eTag1&eTag[and][]=eTag2&\
+        storageClass[and][]=DeepArchive&storageClass[and][]=Glacier&\
         isDeleteMarker=true&\
-        ingestId[and]=00000000-0000-0000-0000-000000000000&ingestId[and]=FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF&\
+        ingestId[and][]=00000000-0000-0000-0000-000000000000&ingestId[and][]=FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF&\
         attributes[attributeId]=id1\
         ";
         let params: S3ObjectsFilter = serde_qs::from_str(qs).unwrap();
 
-        assert_many_params(params);
+        assert_many_params(params, Join::And);
     }
 
-    fn assert_many_params(params: S3ObjectsFilter) {
+    #[test]
+    fn deserialize_many_params_or() {
+        let qs = "\
+        eventType=Created&\
+        key[or][]=key1&key[or][]=key2&\
+        bucket[or][]=bucket1&bucket[or][]=bucket2&\
+        versionId[or][]=version_id1&versionId[or][]=version_id2&\
+        eventTime[or][]=1970-01-02T00:00:00Z&eventTime[or][]=1970-01-02T00:00:01Z&\
+        size[or][]=4&size[or][]=5&\
+        sha256[or][]=sha256&sha256[or][]=sha1&\
+        lastModifiedDate[or][]=1970-01-02T00:00:00Z&lastModifiedDate[or][]=1970-01-02T00:00:01Z&\
+        eTag[or][]=eTag1&eTag[or][]=eTag2&\
+        storageClass[or][]=DeepArchive&storageClass[or][]=Glacier&\
+        isDeleteMarker=true&\
+        ingestId[or][]=00000000-0000-0000-0000-000000000000&ingestId[or][]=FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF&\
+        attributes[attributeId]=id1\
+        ";
+        let params: S3ObjectsFilter = serde_qs::from_str(qs).unwrap();
+
+        assert_many_params(params, Join::Or);
+    }
+
+    fn assert_many_params(params: S3ObjectsFilter, join: Join) {
+        let date: FilterJoin<_> = HashMap::from_iter(vec![(
+            join,
+            vec![
+                WildcardEither::Or("1970-01-02T00:00:00Z".parse().unwrap()),
+                WildcardEither::Or("1970-01-02T00:00:01Z".parse().unwrap()),
+            ],
+        )])
+        .into();
+
         assert_eq!(
             params,
             S3ObjectsFilter {
                 event_type: Some(EventType::Created),
-                key: vec![
-                    Wildcard::new("key1".to_string()),
-                    Wildcard::new("key2".to_string())
-                ]
-                    .into(),
-                bucket: vec![
-                    Wildcard::new("bucket1".to_string()),
-                    Wildcard::new("bucket2".to_string())
-                ]
-                    .into(),
-                version_id: vec![
-                    Wildcard::new("version_id1".to_string()),
-                    Wildcard::new("version_id2".to_string())
-                ]
-                    .into(),
-                event_time: vec![
-                    WildcardEither::Or("1970-01-02T00:00:00Z".parse().unwrap()),
-                    WildcardEither::Or("1970-01-02T00:00:01Z".parse().unwrap())
-                ]
-                    .into(),
-                size: vec![4, 5].into(),
-                sha256: vec!["sha256".to_string(), "sha1".to_string()].into(),
-                last_modified_date: vec![
-                    WildcardEither::Or("1970-01-02T00:00:00Z".parse().unwrap()),
-                    WildcardEither::Or("1970-01-02T00:00:01Z".parse().unwrap())
-                ]
-                    .into(),
-                e_tag: vec!["eTag1".to_string(), "eTag2".to_string()].into(),
-                storage_class: vec![StorageClass::DeepArchive, StorageClass::Glacier].into(),
+                key: HashMap::from_iter(vec![(
+                    join,
+                    vec![
+                        Wildcard::new("key1".to_string()),
+                        Wildcard::new("key2".to_string())
+                    ]
+                )])
+                .into(),
+                bucket: HashMap::from_iter(vec![(
+                    join,
+                    vec![
+                        Wildcard::new("bucket1".to_string()),
+                        Wildcard::new("bucket2".to_string())
+                    ]
+                )])
+                .into(),
+                version_id: HashMap::from_iter(vec![(
+                    join,
+                    vec![
+                        Wildcard::new("version_id1".to_string()),
+                        Wildcard::new("version_id2".to_string())
+                    ]
+                )])
+                .into(),
+                event_time: date.clone(),
+                size: HashMap::from_iter(vec![(join, vec![4, 5])]).into(),
+                sha256: HashMap::from_iter(vec![(
+                    join,
+                    vec!["sha256".to_string(), "sha1".to_string()]
+                )])
+                .into(),
+                last_modified_date: date,
+                e_tag: HashMap::from_iter(vec![(
+                    join,
+                    vec!["eTag1".to_string(), "eTag2".to_string()]
+                )])
+                .into(),
+                storage_class: HashMap::from_iter(vec![(
+                    join,
+                    vec![StorageClass::DeepArchive, StorageClass::Glacier]
+                )])
+                .into(),
                 is_delete_marker: Some(true),
-                ingest_id: vec![Uuid::nil(), Uuid::max()].into(),
+                ingest_id: HashMap::from_iter(vec![(join, vec![Uuid::nil(), Uuid::max()])]).into(),
                 attributes: Some(json!({"attributeId": "id1"}))
             }
         );

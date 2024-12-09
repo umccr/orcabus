@@ -15,7 +15,7 @@ use crate::queries::update::UpdateQueryBuilder;
 use crate::routes::error::{ErrorStatusCode, Json, Path, QsQuery, Query};
 use crate::routes::filter::S3ObjectsFilter;
 use crate::routes::list::{ListS3Params, WildcardParams};
-use crate::routes::{filter, AppState};
+use crate::routes::AppState;
 
 /// The attributes to update for the request. This updates attributes according to JSON patch.
 /// See [JSON patch](https://jsonpatch.com/) and [RFC6902](https://datatracker.ietf.org/doc/html/rfc6902/).
@@ -126,7 +126,7 @@ pub async fn update_s3_collection_attributes(
     state: State<AppState>,
     WithRejection(extract::Query(wildcard), _): Query<WildcardParams>,
     WithRejection(extract::Query(list), _): Query<ListS3Params>,
-    WithRejection(filter::extract::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
+    WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
     WithRejection(extract::Json(patch), _): Json<PatchBody>,
 ) -> Result<extract::Json<Vec<S3>>> {
     let txn = state.database_client().connection_ref().begin().await?;

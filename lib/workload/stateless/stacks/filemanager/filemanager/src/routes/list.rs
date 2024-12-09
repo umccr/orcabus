@@ -25,7 +25,7 @@ use crate::routes::filter::{AttributesOnlyFilter, S3ObjectsFilter};
 use crate::routes::header::HeaderParser;
 use crate::routes::pagination::{ListResponse, Pagination};
 use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
-use crate::routes::{filter, AppState};
+use crate::routes::AppState;
 
 /// The return value for count operations showing the number of records in the database.
 #[derive(Debug, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
@@ -129,7 +129,7 @@ pub async fn list_s3(
     WithRejection(extract::Query(pagination), _): Query<Pagination>,
     WithRejection(extract::Query(wildcard), _): Query<WildcardParams>,
     WithRejection(extract::Query(list), _): Query<ListS3Params>,
-    WithRejection(filter::extract::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
+    WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<S3>>> {
     let txn = state.database_client().connection_ref().begin().await?;
@@ -165,7 +165,7 @@ pub async fn list_s3(
         state,
         WithRejection(extract::Query(wildcard), PhantomData),
         WithRejection(extract::Query(list), PhantomData),
-        WithRejection(filter::extract::QsQuery(filter_all), PhantomData),
+        WithRejection(serde_qs::axum::QsQuery(filter_all), PhantomData),
     )
     .await?;
     let response = response
@@ -193,7 +193,7 @@ pub async fn count_s3(
     state: State<AppState>,
     WithRejection(extract::Query(wildcard), _): Query<WildcardParams>,
     WithRejection(extract::Query(list), _): Query<ListS3Params>,
-    WithRejection(filter::extract::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
+    WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
     let response =
         ListQueryBuilder::<_, s3_object::Entity>::new(state.database_client.connection_ref())
@@ -283,7 +283,7 @@ pub async fn attributes_s3(
     pagination: Query<Pagination>,
     wildcard: Query<WildcardParams>,
     list: Query<ListS3Params>,
-    WithRejection(filter::extract::QsQuery(attributes_only), _): QsQuery<AttributesOnlyFilter>,
+    WithRejection(serde_qs::axum::QsQuery(attributes_only), _): QsQuery<AttributesOnlyFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<S3>>> {
     let mut filter = S3ObjectsFilter::from(attributes_only);
@@ -305,7 +305,7 @@ pub async fn attributes_s3(
         pagination,
         wildcard,
         list,
-        WithRejection(filter::extract::QsQuery(filter), PhantomData),
+        WithRejection(serde_qs::axum::QsQuery(filter), PhantomData),
         request,
     )
     .await
@@ -352,6 +352,7 @@ pub(crate) mod tests {
     use serde::de::DeserializeOwned;
     use serde_json::{from_slice, json};
     use sqlx::PgPool;
+    use std::collections::HashMap;
     use tower::ServiceExt;
     use uuid::Uuid;
 
@@ -671,6 +672,49 @@ pub(crate) mod tests {
             result.results(),
             vec![entries[3].clone(), entries[4].clone()]
         );
+        assert_eq!(result.pagination().count, 2);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_multiple_filters_same_key(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .with_keys(HashMap::from_iter(vec![
+                (0, "overlap".to_string()),
+                (1, "overlap".to_string()),
+                (2, "overlap".to_string()),
+                (3, "overlap".to_string()),
+                (4, "overlap".to_string()),
+                (5, "overlap".to_string()),
+            ]))
+            .with_prefixes(HashMap::from_iter(vec![
+                (0, "prefix".to_string()),
+                (1, "prefix".to_string()),
+                (2, "prefix".to_string()),
+                (3, "prefix".to_string()),
+            ]))
+            .with_suffixes(HashMap::from_iter(vec![
+                (0, "suffix".to_string()),
+                (1, "suffix".to_string()),
+                (4, "suffix".to_string()),
+                (5, "suffix".to_string()),
+            ]))
+            .build(state.database_client())
+            .await
+            .unwrap()
+            .s3_objects;
+
+        let result: ListResponse<S3> = response_from_get(
+            state,
+            "/s3?currentState=false&key[and][]=prefixover*&key[and][]=*rlapsuffix",
+        )
+        .await;
+        let mut expected_first = entries[0].clone();
+        expected_first.is_current_state = false;
+        let mut expected_second = entries[1].clone();
+        expected_second.is_current_state = false;
+        assert_eq!(result.results(), vec![expected_first, expected_second]);
         assert_eq!(result.pagination().count, 2);
     }
 

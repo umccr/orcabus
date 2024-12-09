@@ -461,6 +461,7 @@ pub(crate) mod tests {
     use sea_orm::DatabaseConnection;
     use serde_json::json;
     use sqlx::PgPool;
+    use std::collections::HashMap;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
@@ -666,10 +667,54 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                key: vec![
-                    Wildcard::new("0".to_string()),
-                    Wildcard::new("1".to_string()),
-                ]
+                key: HashMap::from_iter(vec![(
+                    Join::Or,
+                    vec![
+                        Wildcard::new("0".to_string()),
+                        Wildcard::new("1".to_string()),
+                    ],
+                )])
+                .into(),
+                ..Default::default()
+            },
+            true,
+        )
+        .await;
+        assert_eq!(result, vec![entries[0].clone(), entries[1].clone()]);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_multiple_filters_same_key(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .with_prefixes(HashMap::from_iter(vec![
+                (0, "prefix".to_string()),
+                (1, "prefix".to_string()),
+                (2, "prefix".to_string()),
+                (3, "prefix".to_string()),
+            ]))
+            .with_suffixes(HashMap::from_iter(vec![
+                (0, "suffix".to_string()),
+                (1, "suffix".to_string()),
+                (4, "suffix".to_string()),
+                (5, "suffix".to_string()),
+            ]))
+            .build(&client)
+            .await
+            .unwrap()
+            .s3_objects;
+
+        let result = filter_all_s3_from(
+            &client,
+            S3ObjectsFilter {
+                key: HashMap::from_iter(vec![(
+                    Join::And,
+                    vec![
+                        Wildcard::new("*suffix".to_string()),
+                        Wildcard::new("prefix*".to_string()),
+                    ],
+                )])
                 .into(),
                 ..Default::default()
             },
