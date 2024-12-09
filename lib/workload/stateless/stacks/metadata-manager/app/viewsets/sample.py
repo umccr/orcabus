@@ -17,9 +17,9 @@ class SampleViewSet(BaseViewSet):
         qs = self.queryset
         query_params = self.get_query_params()
 
-        is_empty_lib = query_params.getlist("is_empty_library", None)
-        if is_empty_lib:
-            query_params.pop("is_empty_library")
+        is_library_none = query_params.getlist("is_library_none", None)
+        if is_library_none:
+            query_params.pop("is_library_none")
             qs = qs.filter(library=None)
 
         return Sample.objects.get_by_keyword(qs, **query_params)
@@ -34,7 +34,7 @@ class SampleViewSet(BaseViewSet):
     @extend_schema(
         parameters=[
             SampleSerializer,
-            OpenApiParameter(name='is_empty_library',
+            OpenApiParameter(name='is_library_none',
                              description="Filter where it is not linked to a library.",
                              required=False,
                              type=bool),

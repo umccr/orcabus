@@ -32,9 +32,9 @@ class SubjectViewSet(BaseViewSet):
 
             qs = qs.filter(library__orcabus_id=library_orcabus_id)
 
-        is_empty_lib = query_params.getlist("is_empty_library", None)
-        if is_empty_lib:
-            query_params.pop("is_empty_library")
+        is_library_none = query_params.getlist("is_library_none", None)
+        if is_library_none:
+            query_params.pop("is_library_none")
             qs = qs.filter(library=None)
 
         return Subject.objects.get_by_keyword(qs, **query_params)
@@ -59,7 +59,7 @@ class SubjectViewSet(BaseViewSet):
                              description="Filter based on 'orcabus_id' of the library associated with the subject.",
                              required=False,
                              type=str),
-            OpenApiParameter(name='is_empty_library',
+            OpenApiParameter(name='is_library_none',
                              description="Filter where it is not linked to a library.",
                              required=False,
                              type=bool),
