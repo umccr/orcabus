@@ -303,7 +303,7 @@ impl<'a> Collecter<'a> {
 
         // Get the attributes from the old record to update the new record with.
         let filter = S3ObjectsFilter {
-            ingest_id: vec![ingest_id],
+            ingest_id: vec![ingest_id].into(),
             ..Default::default()
         };
         let moved_object = ListQueryBuilder::new(database_client.connection_ref())
@@ -362,7 +362,7 @@ impl From<BuildError> for Error {
 }
 
 #[async_trait]
-impl<'a> Collect for Collecter<'a> {
+impl Collect for Collecter<'_> {
     async fn collect(mut self) -> Result<EventSource> {
         let (client, database_client, events, config) = self.into_inner();
 

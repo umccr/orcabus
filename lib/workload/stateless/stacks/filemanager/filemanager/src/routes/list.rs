@@ -117,7 +117,7 @@ impl ListS3Params {
     get,
     path = "/s3",
     responses(
-        (status = OK, description = "The collection of s3_objects", body = ListResponseS3),
+        (status = OK, description = "The collection of s3_objects", body = ListResponse<S3>),
         ErrorStatusCode,
     ),
     params(Pagination, WildcardParams, ListS3Params, S3ObjectsFilter),
@@ -210,7 +210,7 @@ pub async fn count_s3(
     get,
     path = "/s3/presign",
     responses(
-        (status = OK, description = "The list of presigned urls", body = ListResponseUrl),
+        (status = OK, description = "The list of presigned urls", body = ListResponse<Url>),
         ErrorStatusCode,
     ),
     params(Pagination, WildcardParams, PresignedParams, S3ObjectsFilter),
@@ -271,7 +271,7 @@ pub async fn presign_s3(
     get,
     path = "/s3/attributes",
     responses(
-        (status = OK, description = "The collection of s3_objects", body = ListResponseS3),
+        (status = OK, description = "The collection of s3_objects", body = ListResponse<S3>),
         ErrorStatusCode,
     ),
     params(Pagination, WildcardParams, ListS3Params, AttributesOnlyFilter),
@@ -352,7 +352,8 @@ pub(crate) mod tests {
     use serde::de::DeserializeOwned;
     use serde_json::{from_slice, json};
     use sqlx::PgPool;
-    use tower::ServiceExt;
+    use std::collections::HashMap;
+    use tower::util::ServiceExt;
     use uuid::Uuid;
 
     use crate::clients::aws::s3;
@@ -654,6 +655,49 @@ pub(crate) mod tests {
             result.results(),
             vec![entries[3].clone(), entries[4].clone()]
         );
+        assert_eq!(result.pagination().count, 2);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_multiple_filters_same_key(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .with_keys(HashMap::from_iter(vec![
+                (0, "overlap".to_string()),
+                (1, "overlap".to_string()),
+                (2, "overlap".to_string()),
+                (3, "overlap".to_string()),
+                (4, "overlap".to_string()),
+                (5, "overlap".to_string()),
+            ]))
+            .with_prefixes(HashMap::from_iter(vec![
+                (0, "prefix".to_string()),
+                (1, "prefix".to_string()),
+                (2, "prefix".to_string()),
+                (3, "prefix".to_string()),
+            ]))
+            .with_suffixes(HashMap::from_iter(vec![
+                (0, "suffix".to_string()),
+                (1, "suffix".to_string()),
+                (4, "suffix".to_string()),
+                (5, "suffix".to_string()),
+            ]))
+            .build(state.database_client())
+            .await
+            .unwrap()
+            .s3_objects;
+
+        let result: ListResponse<S3> = response_from_get(
+            state,
+            "/s3?currentState=false&key[and][]=prefixover*&key[and][]=*rlapsuffix",
+        )
+        .await;
+        let mut expected_first = entries[0].clone();
+        expected_first.is_current_state = false;
+        let mut expected_second = entries[1].clone();
+        expected_second.is_current_state = false;
+        assert_eq!(result.results(), vec![expected_first, expected_second]);
         assert_eq!(result.pagination().count, 2);
     }
 

@@ -1,6 +1,7 @@
 //! This module handles all logic related to querying the file manager through APIs/events.
 //!
 
+use std::collections::HashMap;
 use std::ops::Add;
 
 use crate::database::aws::ingester::Ingester;
@@ -41,32 +42,38 @@ impl Entries {
     /// Create an entries tuple from the arguments.
     pub async fn initialize_database(
         client: &Client,
-        n: usize,
-        shuffle: bool,
-        bucket_divisor: usize,
-        key_divisor: usize,
-        ingest_id: Option<Uuid>,
+        builder: EntriesBuilder,
     ) -> Result<Vec<S3Object>> {
         let mut output = vec![];
 
-        let mut entries: Vec<(_, _)> = (0..n)
+        let mut entries: Vec<(_, _)> = (0..builder.n)
             .map(|index| {
                 let uuid = UuidGenerator::generate();
-                let ingest_id = ingest_id.unwrap_or_else(UuidGenerator::generate);
+                let ingest_id = builder.ingest_id.unwrap_or_else(UuidGenerator::generate);
                 (
-                    Self::generate_entry(index, bucket_divisor, key_divisor, ingest_id, uuid),
-                    Self::generate_event_message(
+                    Self::generate_entry(
                         index,
-                        bucket_divisor,
-                        key_divisor,
+                        (builder.bucket_divisor, builder.key_divisor),
                         ingest_id,
                         uuid,
+                        builder.values.get(&index).map(|k| k.to_string()),
+                        builder.prefixes.get(&index).map(|k| k.as_str()),
+                        builder.suffixes.get(&index).map(|k| k.as_str()),
+                    ),
+                    Self::generate_event_message(
+                        index,
+                        (builder.bucket_divisor, builder.key_divisor),
+                        ingest_id,
+                        uuid,
+                        builder.values.get(&index).map(|k| k.to_string()),
+                        builder.prefixes.get(&index).map(|k| k.as_str()),
+                        builder.suffixes.get(&index).map(|k| k.as_str()),
                     ),
                 )
             })
             .collect();
 
-        if shuffle {
+        if builder.shuffle {
             entries.shuffle(&mut thread_rng());
         }
 
@@ -84,10 +91,12 @@ impl Entries {
     /// Generate a single record entry using the index.
     pub fn generate_entry(
         index: usize,
-        bucket_divisor: usize,
-        key_divisor: usize,
+        divisors: (usize, usize),
         ingest_id: Uuid,
         uuid: Uuid,
+        key: Option<String>,
+        prefix: Option<&str>,
+        suffix: Option<&str>,
     ) -> ActiveS3Object {
         let event = EventType::from_repr((index % (EventType::COUNT - 1)) as u8)
             .unwrap_or(EventType::Created);
@@ -103,9 +112,11 @@ impl Entries {
             s3_object_id: Set(uuid),
             ingest_id: Set(Some(ingest_id)),
             event_type: Set(event.clone()),
-            bucket: Set((index / bucket_divisor).to_string()),
-            key: Set((index / key_divisor).to_string()),
-            version_id: Set((index / key_divisor).to_string()),
+            bucket: Set((index / divisors.0).to_string()),
+            key: Set(prefix.unwrap_or_default().to_string()
+                + &key.unwrap_or_else(|| (index / divisors.1).to_string())
+                + suffix.unwrap_or_default()),
+            version_id: Set((index / divisors.1).to_string()),
             event_time: date(),
             size: Set(Some(index as i64)),
             sha256: Set(Some(index.to_string())),
@@ -126,10 +137,12 @@ impl Entries {
     /// Generate a single record event message.
     pub fn generate_event_message(
         index: usize,
-        bucket_divisor: usize,
-        key_divisor: usize,
+        divisors: (usize, usize),
         ingest_id: Uuid,
         uuid: Uuid,
+        key: Option<String>,
+        prefix: Option<&str>,
+        suffix: Option<&str>,
     ) -> FlatS3EventMessage {
         let event = message::EventType::from_repr(index % (EventType::COUNT - 1))
             .unwrap_or(message::EventType::Created);
@@ -144,9 +157,11 @@ impl Entries {
         FlatS3EventMessage {
             s3_object_id: uuid,
             sequencer: Some(index.to_string()),
-            bucket: (index / bucket_divisor).to_string(),
-            key: (index / key_divisor).to_string(),
-            version_id: (index / key_divisor).to_string(),
+            bucket: (index / divisors.0).to_string(),
+            key: prefix.unwrap_or_default().to_string()
+                + &key.unwrap_or_else(|| (index / divisors.1).to_string())
+                + suffix.unwrap_or_default(),
+            version_id: (index / divisors.1).to_string(),
             size: Some(index as i64),
             e_tag: Some(index.to_string()),
             sha256: Some(index.to_string()),
@@ -167,11 +182,14 @@ impl Entries {
 /// Generate entries into the filemanager database.
 #[derive(Debug)]
 pub struct EntriesBuilder {
-    n: usize,
-    bucket_divisor: usize,
-    key_divisor: usize,
-    shuffle: bool,
-    ingest_id: Option<Uuid>,
+    pub(crate) n: usize,
+    pub(crate) bucket_divisor: usize,
+    pub(crate) key_divisor: usize,
+    pub(crate) shuffle: bool,
+    pub(crate) ingest_id: Option<Uuid>,
+    pub(crate) values: HashMap<usize, String>,
+    pub(crate) prefixes: HashMap<usize, String>,
+    pub(crate) suffixes: HashMap<usize, String>,
 }
 
 impl EntriesBuilder {
@@ -205,17 +223,27 @@ impl EntriesBuilder {
         self
     }
 
+    /// Set the prefixes on some keys.
+    pub fn with_prefixes(mut self, prefixes: HashMap<usize, String>) -> Self {
+        self.prefixes = prefixes;
+        self
+    }
+
+    /// Set the suffixes on some keys.
+    pub fn with_suffixes(mut self, suffixes: HashMap<usize, String>) -> Self {
+        self.suffixes = suffixes;
+        self
+    }
+
+    /// Set the value of some keys.
+    pub fn with_keys(mut self, keys: HashMap<usize, String>) -> Self {
+        self.values = keys;
+        self
+    }
+
     /// Build the entries and initialize the database.
     pub async fn build(self, client: &Client) -> Result<Entries> {
-        let mut entries = Entries::initialize_database(
-            client,
-            self.n,
-            self.shuffle,
-            self.bucket_divisor,
-            self.key_divisor,
-            self.ingest_id,
-        )
-        .await?;
+        let mut entries = Entries::initialize_database(client, self).await?;
 
         // Return the correct ordering for test purposes
         entries.sort_by(|a, b| a.sequencer.cmp(&b.sequencer));
@@ -232,6 +260,9 @@ impl Default for EntriesBuilder {
             key_divisor: 1,
             shuffle: false,
             ingest_id: None,
+            values: Default::default(),
+            prefixes: Default::default(),
+            suffixes: Default::default(),
         }
     }
 }

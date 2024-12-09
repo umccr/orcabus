@@ -141,12 +141,24 @@ curl --get -H "Authorization: Bearer $TOKEN" --data-urlencode "attributes[portal
 
 ## Multiple keys
 
-The API supports querying using multiple keys with the same name. This represents an `or` condition in the SQL query, where
+The API supports querying using multiple keys with the same name. This represents an `or` condition in the SQL query by default, where
 records are fetched if any of the keys match. For example, the following finds records where the bucket is either `bucket1`
 or `bucket2`:
 
 ```sh
 curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3?bucket[]=bucket1&bucket[]=bucket2" | jq
+```
+
+To be more explicit, pass in `or` as a keyword when querying. For example, the following is equivalent:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3?bucket[or][]=bucket1&bucket[or][]=bucket2" | jq
+```
+
+To express an `and` condition in the SQL query instead, use the `and` keyword:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3?bucket[and][]=bucket1&bucket[and][]=bucket2" | jq
 ```
 
 Multiple keys are also supported on attributes. For example, the following finds records where the `portalRunId` is
@@ -159,9 +171,10 @@ curl --get -H "Authorization: Bearer $TOKEN" \
 "https://file.dev.umccr.org/api/v1/s3" | jq
 ```
 
-Note that the extra `[]` is required in the query parameters to specify multiple keys with the same name. Specifying
-multiple of the same key without `[]` results in an error. It is also an error to specify some keys with `[]` and some
-without for keys with the same name.
+Note that the extra `[]` is required in the query parameters to specify multiple keys with the same name. It is also
+required to place the extra `[]` when explicitly specifying `or` or `and` conditions. Specifying  multiple of the same
+key without `[]` results in an error. It is also an error to specify some keys with `[]` and some without for keys with
+the same name.
 
 ## Updating records
 
@@ -226,7 +239,6 @@ curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/pre
 There are some missing features in the query API which are planned, namely:
 
 * There is no way to compare values with `>`, `>=`, `<`, `<=`.
-* There is no way to express `and` or `or` conditions in the API (except for multiple keys representing `or` conditions).
 
 There are also some feature missing for attribute linking. For example, there is no way
 to capture matching wildcard groups which can later be used in the JSON patch body.

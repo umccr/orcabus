@@ -18,7 +18,7 @@ use crate::database::entities::s3_object;
 use crate::error::Error::{OverflowError, QueryError};
 use crate::error::{Error, Result};
 use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
-use crate::routes::filter::S3ObjectsFilter;
+use crate::routes::filter::{FilterJoinMerged, Join, S3ObjectsFilter};
 use crate::routes::list::ListCount;
 use crate::routes::pagination::{ListResponse, Pagination};
 
@@ -76,19 +76,39 @@ where
         Ok(self)
     }
 
-    /// Join a series expressions with an or statement.
-    pub fn join_or<T: Into<ConditionExpression>>(
-        conditions: impl Iterator<Item = Result<T>>,
-    ) -> Result<Option<Condition>> {
-        let mut or_condition = Condition::any();
-        for condition in conditions {
-            or_condition = or_condition.add(condition?);
-        }
+    /// Join a series expressions with an 'or' or 'and' statement.
+    pub fn join<T, F, I>(input: FilterJoinMerged<I>, mut map: F) -> Result<Option<Condition>>
+    where
+        T: Into<ConditionExpression>,
+        F: FnMut(I) -> Result<T>,
+    {
+        let conditions = input
+            .0
+            .into_iter()
+            .map(|(join, input)| {
+                let condition = match join {
+                    Join::And => Condition::all(),
+                    Join::Or => Condition::any(),
+                };
 
-        if or_condition.is_empty() {
+                let mapped = input
+                    .into_iter()
+                    .map(&mut map)
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(mapped
+                    .into_iter()
+                    .fold(condition, |acc, element| acc.add(element)))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        if conditions.is_empty() {
             Ok(None)
         } else {
-            Ok(Some(or_condition))
+            Ok(Some(
+                conditions
+                    .into_iter()
+                    .fold(Condition::all(), |acc, element| acc.add(element)),
+            ))
         }
     }
 
@@ -104,74 +124,57 @@ where
                     .event_type
                     .map(|v| s3_object::Column::EventType.eq(v)),
             )
-            .add_option(Self::join_or(filter.bucket.into_iter().map(|v| {
+            .add_option(Self::join(filter.bucket, |v| {
                 Self::filter_operation(
                     Expr::col(s3_object::Column::Bucket),
                     WildcardEither::Wildcard::<String>(v),
                     case_sensitive,
                 )
-            }))?)
-            .add_option(Self::join_or(filter.key.into_iter().map(|v| {
+            })?)
+            .add_option(Self::join(filter.key, |v| {
                 Self::filter_operation(
                     Expr::col(s3_object::Column::Key),
                     WildcardEither::Wildcard::<String>(v),
                     case_sensitive,
                 )
-            }))?)
-            .add_option(Self::join_or(filter.version_id.into_iter().map(|v| {
+            })?)
+            .add_option(Self::join(filter.version_id, |v| {
                 Self::filter_operation(
                     Expr::col(s3_object::Column::VersionId),
                     WildcardEither::Wildcard::<String>(v),
                     case_sensitive,
                 )
-            }))?)
-            .add_option(Self::join_or(filter.event_time.into_iter().map(|v| {
+            })?)
+            .add_option(Self::join(filter.event_time, |v| {
                 Self::filter_operation(Expr::col(s3_object::Column::EventTime), v, case_sensitive)
-            }))?)
-            .add_option(Self::join_or(
-                filter
-                    .size
-                    .into_iter()
-                    .map(|v| Ok(s3_object::Column::Size.eq(v))),
-            )?)
-            .add_option(Self::join_or(
-                filter
-                    .sha256
-                    .into_iter()
-                    .map(|v| Ok(s3_object::Column::Sha256.eq(v))),
-            )?)
-            .add_option(Self::join_or(filter.last_modified_date.into_iter().map(
-                |v| {
-                    Self::filter_operation(
-                        Expr::col(s3_object::Column::LastModifiedDate),
-                        v,
-                        case_sensitive,
-                    )
-                },
-            ))?)
-            .add_option(Self::join_or(
-                filter
-                    .e_tag
-                    .into_iter()
-                    .map(|v| Ok(s3_object::Column::ETag.eq(v))),
-            )?)
-            .add_option(Self::join_or(
-                filter
-                    .storage_class
-                    .into_iter()
-                    .map(|v| Ok(s3_object::Column::StorageClass.eq(v))),
-            )?)
+            })?)
+            .add_option(Self::join(filter.size, |v| {
+                Ok(s3_object::Column::Size.eq(v))
+            })?)
+            .add_option(Self::join(filter.sha256, |v| {
+                Ok(s3_object::Column::Sha256.eq(v))
+            })?)
+            .add_option(Self::join(filter.last_modified_date, |v| {
+                Self::filter_operation(
+                    Expr::col(s3_object::Column::LastModifiedDate),
+                    v,
+                    case_sensitive,
+                )
+            })?)
+            .add_option(Self::join(filter.e_tag, |v| {
+                Ok(s3_object::Column::ETag.eq(v))
+            })?)
+            .add_option(Self::join(filter.storage_class, |v| {
+                Ok(s3_object::Column::StorageClass.eq(v))
+            })?)
             .add_option(
                 filter
                     .is_delete_marker
                     .map(|v| s3_object::Column::IsDeleteMarker.eq(v)),
             )
-            .add_option(Self::join_or(
-                filter
-                    .ingest_id
-                    .into_iter()
-                    .map(|v| Ok(s3_object::Column::IngestId.eq(v))),
-            )?);
+            .add_option(Self::join(filter.ingest_id, |v| {
+                Ok(s3_object::Column::IngestId.eq(v))
+            })?);
 
         if current_state {
             condition = condition
@@ -458,6 +461,7 @@ pub(crate) mod tests {
     use sea_orm::DatabaseConnection;
     use serde_json::json;
     use sqlx::PgPool;
+    use std::collections::HashMap;
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
@@ -563,7 +567,7 @@ pub(crate) mod tests {
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .filter_all(
                 S3ObjectsFilter {
-                    size: vec![14],
+                    size: vec![14].into(),
                     ..Default::default()
                 },
                 true,
@@ -577,7 +581,7 @@ pub(crate) mod tests {
         let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .filter_all(
                 S3ObjectsFilter {
-                    size: vec![4],
+                    size: vec![4].into(),
                     ..Default::default()
                 },
                 true,
@@ -640,8 +644,8 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                bucket: vec![Wildcard::new("0".to_string())],
-                key: vec![Wildcard::new("1".to_string())],
+                bucket: vec![Wildcard::new("0".to_string())].into(),
+                key: vec![Wildcard::new("1".to_string())].into(),
                 ..Default::default()
             },
             true,
@@ -663,10 +667,55 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                key: vec![
-                    Wildcard::new("0".to_string()),
-                    Wildcard::new("1".to_string()),
-                ],
+                key: HashMap::from_iter(vec![(
+                    Join::Or,
+                    vec![
+                        Wildcard::new("0".to_string()),
+                        Wildcard::new("1".to_string()),
+                    ],
+                )])
+                .into(),
+                ..Default::default()
+            },
+            true,
+        )
+        .await;
+        assert_eq!(result, vec![entries[0].clone(), entries[1].clone()]);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_multiple_filters_same_key(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .with_prefixes(HashMap::from_iter(vec![
+                (0, "prefix".to_string()),
+                (1, "prefix".to_string()),
+                (2, "prefix".to_string()),
+                (3, "prefix".to_string()),
+            ]))
+            .with_suffixes(HashMap::from_iter(vec![
+                (0, "suffix".to_string()),
+                (1, "suffix".to_string()),
+                (4, "suffix".to_string()),
+                (5, "suffix".to_string()),
+            ]))
+            .build(&client)
+            .await
+            .unwrap()
+            .s3_objects;
+
+        let result = filter_all_s3_from(
+            &client,
+            S3ObjectsFilter {
+                key: HashMap::from_iter(vec![(
+                    Join::And,
+                    vec![
+                        Wildcard::new("*suffix".to_string()),
+                        Wildcard::new("prefix*".to_string()),
+                    ],
+                )])
+                .into(),
                 ..Default::default()
             },
             true,
@@ -732,7 +781,7 @@ pub(crate) mod tests {
                 attributes: Some(json!({
                     "attributeId": "1"
                 })),
-                key: vec![Wildcard::new("2".to_string())],
+                key: vec![Wildcard::new("2".to_string())].into(),
                 ..Default::default()
             },
             true,
@@ -746,7 +795,7 @@ pub(crate) mod tests {
                 attributes: Some(json!({
                     "attributeId": "3"
                 })),
-                key: vec![Wildcard::new("3".to_string())],
+                key: vec![Wildcard::new("3".to_string())].into(),
                 ..Default::default()
             },
             true,
@@ -904,7 +953,8 @@ pub(crate) mod tests {
             S3ObjectsFilter {
                 event_time: vec![WildcardEither::Wildcard(Wildcard::new(
                     "1970-01-0*".to_string(),
-                ))],
+                ))]
+                .into(),
                 ..Default::default()
             },
             true,
@@ -926,7 +976,7 @@ pub(crate) mod tests {
         let result = filter_all_s3_from(
             &client,
             S3ObjectsFilter {
-                bucket: vec![Wildcard::new("0*".to_string())],
+                bucket: vec![Wildcard::new("0*".to_string())].into(),
                 ..Default::default()
             },
             false,

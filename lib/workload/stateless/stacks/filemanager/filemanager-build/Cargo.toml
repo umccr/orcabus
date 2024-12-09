@@ -7,14 +7,13 @@ authors.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-thiserror = "1"
+thiserror = "2"
 clap_builder = "4"
 clap = "4"
 dotenvy = "0.15"
 sea-orm-cli = { version = "1.1.0-rc.1", default-features = false, features = ["cli", "codegen", "runtime-tokio-rustls"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "process"] }
 miette = { version = "7", features = ["fancy"] }
-serde = { version = "1", features = ["derive"] }
 quote = "1"
 syn = { version = "2", features = ["full", "extra-traits", "parsing", "visit-mut"] }
 prettyplease = "0.2"

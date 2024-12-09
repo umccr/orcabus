@@ -10,31 +10,44 @@ use crate::Result;
 use heck::AsPascalCase;
 use prettyplease::unparse;
 use quote::format_ident;
+use std::collections::HashMap;
 use std::fs::{read_dir, read_to_string, write};
 use std::path::Path;
 use syn::visit_mut::VisitMut;
-use syn::{parse_file, parse_quote, Ident, ItemStruct};
+use syn::{parse_file, parse_quote, Ident, ItemStruct, Type};
 use tokio::process::Command;
 
 /// OpenAPI definition generator implementing `VisitMut`.
 #[derive(Debug)]
 pub struct GenerateOpenAPI<'a> {
     model_ident: &'a Ident,
+    override_types: &'a HashMap<Type, Type>,
     name: &'a str,
 }
 
-impl<'a> VisitMut for GenerateOpenAPI<'a> {
+impl VisitMut for GenerateOpenAPI<'_> {
     fn visit_item_struct_mut(&mut self, i: &mut ItemStruct) {
         if &i.ident == self.model_ident {
             let path_ident: Ident = format_ident!("{}", self.name);
             i.attrs.push(parse_quote! { #[schema(as = #path_ident)] });
         }
+
+        i.fields.iter_mut().for_each(|field| {
+            if self.override_types.contains_key(&field.ty) {
+                field.ty = self.override_types[&field.ty].clone();
+            }
+        })
     }
 }
 
 /// Generate OpenAPI utoipa definitions on top of the sea-orm entities.
 pub async fn generate_openapi(out_dir: &Path) -> Result<()> {
     let model_ident: Ident = parse_quote! { Model };
+    let override_types: HashMap<Type, Type> = HashMap::from_iter(vec![(
+        parse_quote! { Option<DateTimeWithTimeZone> },
+        parse_quote! { Option<chrono::DateTime<chrono::FixedOffset>> },
+    )]);
+
     for path in read_dir(out_dir)? {
         let path = path?.path();
 
@@ -54,6 +67,7 @@ pub async fn generate_openapi(out_dir: &Path) -> Result<()> {
 
         GenerateOpenAPI {
             model_ident: &model_ident,
+            override_types: &override_types,
             name,
         }
         .visit_file_mut(&mut tokens);

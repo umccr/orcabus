@@ -4,11 +4,13 @@
 use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
 use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
 use sea_orm::prelude::{DateTimeWithTimeZone, Json};
-use serde::{Deserialize, Serialize};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Map;
-use serde_with::serde_as;
-use serde_with::{DisplayFromStr, OneOrMany};
-use utoipa::IntoParams;
+use std::collections::HashMap;
+use std::fmt::Display;
+use std::str::FromStr;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 pub mod wildcard;
@@ -29,10 +31,97 @@ impl From<AttributesOnlyFilter> for S3ObjectsFilter {
     }
 }
 
+/// Specifies how to join multiple queries with the same key. Either with
+/// 'or' or 'and' logic.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase", from = "FilterJoin<T>")]
+pub struct FilterJoinMerged<T>(pub HashMap<Join, Vec<T>>);
+
+impl<T> Default for FilterJoinMerged<T> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+
+/// The logical query join type.
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, ToSchema, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub enum Join {
+    #[default]
+    Or,
+    And,
+}
+
+impl<T> From<FilterJoin<T>> for FilterJoinMerged<T> {
+    fn from(join: FilterJoin<T>) -> Self {
+        match join {
+            FilterJoin::One(one) => one.into(),
+            FilterJoin::Many(many) => many.into(),
+            FilterJoin::Map(map) => Self(map),
+        }
+    }
+}
+
+impl<T> From<T> for FilterJoinMerged<T> {
+    fn from(one: T) -> Self {
+        Self(HashMap::from_iter(vec![(Join::Or, vec![one])]))
+    }
+}
+
+impl<T> From<Vec<T>> for FilterJoinMerged<T> {
+    fn from(many: Vec<T>) -> Self {
+        Self(HashMap::from_iter(vec![(Join::Or, many)]))
+    }
+}
+
+impl<T> From<HashMap<Join, Vec<T>>> for FilterJoinMerged<T> {
+    fn from(map: HashMap<Join, Vec<T>>) -> Self {
+        Self(map)
+    }
+}
+
+/// Specifies how to join multiple queries with the same key. Either with
+/// 'or' or 'and' logic. The default is combining using `or` logic for multiple
+/// keys. For example, use `?key[]=123&key[]=456` to query where `key=123`
+/// or `key=456`. The same query can be expressed more explicitly as
+/// `?key[or][]=123&key[or][]=456`. `and` logic can be expressed using the `and`
+/// keyword. For example, use`?key[and][]=*123*&key[and][]=*345` to query where
+/// the key contains `123` and ends with `345`.
+#[derive(Serialize, Deserialize, Debug, ToSchema, Clone, PartialEq, Eq)]
+#[serde(untagged, rename_all = "camelCase")]
+pub enum FilterJoin<T> {
+    One(T),
+    Many(Vec<T>),
+    Map(HashMap<Join, Vec<T>>),
+}
+
+fn filter_join_from_str<'de, D, T>(deserializer: D) -> Result<FilterJoinMerged<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: FromStr,
+    T::Err: Display,
+{
+    let value = FilterJoin::<String>::deserialize(deserializer)?;
+    let map_from_str = |one: String| T::from_str(&one).map_err(Error::custom);
+    let map_many_from_str =
+        |many: Vec<String>| many.into_iter().map(map_from_str).collect::<Result<_, _>>();
+
+    let from_str = match value {
+        FilterJoin::One(one) => FilterJoin::One(map_from_str(one)?),
+        FilterJoin::Many(many) => FilterJoin::Many(map_many_from_str(many)?),
+        FilterJoin::Map(map) => FilterJoin::Map(HashMap::from_iter(
+            map.into_iter()
+                .map(|(join, many)| Ok((join, map_many_from_str(many)?)))
+                .collect::<Result<Vec<_>, _>>()?,
+        )),
+    };
+
+    Ok(from_str.into())
+}
+
 /// The available fields to filter `s3_object` queries by. Each query parameter represents
 /// an `and` clause in the SQL statement. Nested query string style syntax is supported on
 /// JSON attributes. Wildcards are supported on some of the fields.
-#[serde_as]
 #[derive(Serialize, Deserialize, Debug, Default, IntoParams, Clone, PartialEq, Eq)]
 #[serde(default, rename_all = "camelCase")]
 #[into_params(parameter_in = Query)]
@@ -41,58 +130,59 @@ pub struct S3ObjectsFilter {
     #[param(required = false)]
     pub(crate) event_type: Option<EventType>,
     /// Query by bucket. Supports wildcards.
-    /// Repeated parameters are joined with an `or` condition.
-    #[serde_as(as = "OneOrMany<_>")]
-    #[param(required = false)]
-    pub(crate) bucket: Vec<Wildcard>,
+    /// Repeated parameters with `[]` are joined with an `or` conditions by default.
+    /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    pub(crate) bucket: FilterJoinMerged<Wildcard>,
     /// Query by key. Supports wildcards.
-    /// Repeated parameters are joined with an `or` condition.
-    #[serde_as(as = "OneOrMany<_>")]
-    #[param(required = false)]
-    pub(crate) key: Vec<Wildcard>,
+    /// Repeated parameters with `[]` are joined with an `or` conditions by default.
+    /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    pub(crate) key: FilterJoinMerged<Wildcard>,
     /// Query by version_id. Supports wildcards.
-    /// Repeated parameters are joined with an `or` condition.
-    #[serde_as(as = "OneOrMany<_>")]
-    #[param(required = false)]
-    pub(crate) version_id: Vec<Wildcard>,
+    /// Repeated parameters with `[]` are joined with an `or` conditions by default.
+    /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    pub(crate) version_id: FilterJoinMerged<Wildcard>,
     /// Query by event_time. Supports wildcards.
-    /// Repeated parameters are joined with an `or` condition.
-    #[serde_as(as = "OneOrMany<_>")]
-    #[param(required = false, value_type = Wildcard)]
-    pub(crate) event_time: Vec<WildcardEither<DateTimeWithTimeZone>>,
+    /// Repeated parameters with `[]` are joined with an `or` conditions by default.
+    /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    pub(crate) event_time: FilterJoinMerged<WildcardEither<DateTimeWithTimeZone>>,
     /// Query by size.
-    /// Repeated parameters are joined with an `or` condition.
-    #[serde_as(as = "OneOrMany<DisplayFromStr>")]
-    #[param(required = false)]
-    pub(crate) size: Vec<i64>,
+    /// Repeated parameters with `[]` are joined with an `or` conditions by default.
+    /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[serde(deserialize_with = "filter_join_from_str")]
+    #[param(required = false, value_type = FilterJoin<i64>)]
+    pub(crate) size: FilterJoinMerged<i64>,
     /// Query by the sha256 checksum.
-    /// Repeated parameters are joined with an `or` condition.
-    #[serde_as(as = "OneOrMany<_>")]
-    #[param(required = false)]
-    pub(crate) sha256: Vec<String>,
+    /// Repeated parameters with `[]` are joined with an `or` conditions by default.
+    /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    pub(crate) sha256: FilterJoinMerged<String>,
     /// Query by the last modified date. Supports wildcards.
-    /// Repeated parameters are joined with an `or` condition.
-    #[serde_as(as = "OneOrMany<_>")]
-    #[param(required = false, value_type = Wildcard)]
-    pub(crate) last_modified_date: Vec<WildcardEither<DateTimeWithTimeZone>>,
+    /// Repeated parameters with `[]` are joined with an `or` conditions by default.
+    /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    pub(crate) last_modified_date: FilterJoinMerged<WildcardEither<DateTimeWithTimeZone>>,
     /// Query by the e_tag.
-    /// Repeated parameters are joined with an `or` condition.
-    #[serde_as(as = "OneOrMany<_>")]
-    #[param(required = false)]
-    pub(crate) e_tag: Vec<String>,
+    /// Repeated parameters with `[]` are joined with an `or` conditions by default.
+    /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    pub(crate) e_tag: FilterJoinMerged<String>,
     /// Query by the storage class.
-    /// Repeated parameters are joined with an `or` condition.
-    #[serde_as(as = "OneOrMany<_>")]
-    #[param(required = false)]
-    pub(crate) storage_class: Vec<StorageClass>,
+    /// Repeated parameters with `[]` are joined with an `or` conditions by default.
+    /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[param(required = false, value_type = FilterJoin<StorageClass>)]
+    pub(crate) storage_class: FilterJoinMerged<StorageClass>,
     /// Query by the object delete marker.
     #[param(required = false)]
     pub(crate) is_delete_marker: Option<bool>,
     /// Query by the ingest id that objects get tagged with.
-    /// Repeated parameters are joined with an `or` condition.
-    #[serde_as(as = "OneOrMany<_>")]
-    #[param(required = false)]
-    pub(crate) ingest_id: Vec<Uuid>,
+    /// Repeated parameters with `[]` are joined with an `or` conditions by default.
+    /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[param(required = false, value_type = FilterJoin<Uuid>)]
+    pub(crate) ingest_id: FilterJoinMerged<Uuid>,
     /// Query by JSON attributes. Supports nested syntax to access inner
     /// fields, e.g. `attributes[attribute_id]=...`. This only deserializes
     /// into string fields, and does not support other JSON types. E.g.
@@ -104,10 +194,9 @@ pub struct S3ObjectsFilter {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::routes::filter::wildcard::Wildcard;
     use serde_json::json;
-
-    use super::*;
 
     #[test]
     fn deserialize_empty_params() {
@@ -139,19 +228,21 @@ mod tests {
             params,
             S3ObjectsFilter {
                 event_type: Some(EventType::Deleted),
-                key: vec![Wildcard::new("key1".to_string())],
-                bucket: vec![Wildcard::new("bucket1".to_string())],
-                version_id: vec![Wildcard::new("version_id1".to_string())],
-                event_time: vec![WildcardEither::Or("1970-01-02T00:00:00Z".parse().unwrap())],
-                size: vec![4],
-                sha256: vec!["sha256".to_string()],
+                key: vec![Wildcard::new("key1".to_string())].into(),
+                bucket: vec![Wildcard::new("bucket1".to_string())].into(),
+                version_id: vec![Wildcard::new("version_id1".to_string())].into(),
+                event_time: vec![WildcardEither::Or("1970-01-02T00:00:00Z".parse().unwrap())]
+                    .into(),
+                size: vec![4].into(),
+                sha256: vec!["sha256".to_string()].into(),
                 last_modified_date: vec![WildcardEither::Or(
                     "1970-01-02T00:00:00Z".parse().unwrap()
-                )],
-                e_tag: vec!["eTag".to_string()],
-                storage_class: vec![StorageClass::DeepArchive],
+                )]
+                .into(),
+                e_tag: vec!["eTag".to_string()].into(),
+                storage_class: vec![StorageClass::DeepArchive].into(),
                 is_delete_marker: Some(true),
-                ingest_id: vec![Uuid::nil()],
+                ingest_id: vec![Uuid::nil()].into(),
                 attributes: Some(json!({"attributeId": "id"}))
             }
         );
@@ -176,36 +267,111 @@ mod tests {
         ";
         let params: S3ObjectsFilter = serde_qs::from_str(qs).unwrap();
 
+        assert_many_params(params, Join::Or);
+    }
+
+    #[test]
+    fn deserialize_many_params_and() {
+        let qs = "\
+        eventType=Created&\
+        key[and][]=key1&key[and][]=key2&\
+        bucket[and][]=bucket1&bucket[and][]=bucket2&\
+        versionId[and][]=version_id1&versionId[and][]=version_id2&\
+        eventTime[and][]=1970-01-02T00:00:00Z&eventTime[and][]=1970-01-02T00:00:01Z&\
+        size[and][]=4&size[and][]=5&\
+        sha256[and][]=sha256&sha256[and][]=sha1&\
+        lastModifiedDate[and][]=1970-01-02T00:00:00Z&lastModifiedDate[and][]=1970-01-02T00:00:01Z&\
+        eTag[and][]=eTag1&eTag[and][]=eTag2&\
+        storageClass[and][]=DeepArchive&storageClass[and][]=Glacier&\
+        isDeleteMarker=true&\
+        ingestId[and][]=00000000-0000-0000-0000-000000000000&ingestId[and][]=FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF&\
+        attributes[attributeId]=id1\
+        ";
+        let params: S3ObjectsFilter = serde_qs::from_str(qs).unwrap();
+
+        assert_many_params(params, Join::And);
+    }
+
+    #[test]
+    fn deserialize_many_params_or() {
+        let qs = "\
+        eventType=Created&\
+        key[or][]=key1&key[or][]=key2&\
+        bucket[or][]=bucket1&bucket[or][]=bucket2&\
+        versionId[or][]=version_id1&versionId[or][]=version_id2&\
+        eventTime[or][]=1970-01-02T00:00:00Z&eventTime[or][]=1970-01-02T00:00:01Z&\
+        size[or][]=4&size[or][]=5&\
+        sha256[or][]=sha256&sha256[or][]=sha1&\
+        lastModifiedDate[or][]=1970-01-02T00:00:00Z&lastModifiedDate[or][]=1970-01-02T00:00:01Z&\
+        eTag[or][]=eTag1&eTag[or][]=eTag2&\
+        storageClass[or][]=DeepArchive&storageClass[or][]=Glacier&\
+        isDeleteMarker=true&\
+        ingestId[or][]=00000000-0000-0000-0000-000000000000&ingestId[or][]=FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF&\
+        attributes[attributeId]=id1\
+        ";
+        let params: S3ObjectsFilter = serde_qs::from_str(qs).unwrap();
+
+        assert_many_params(params, Join::Or);
+    }
+
+    fn assert_many_params(params: S3ObjectsFilter, join: Join) {
+        let date: FilterJoinMerged<_> = HashMap::from_iter(vec![(
+            join,
+            vec![
+                WildcardEither::Or("1970-01-02T00:00:00Z".parse().unwrap()),
+                WildcardEither::Or("1970-01-02T00:00:01Z".parse().unwrap()),
+            ],
+        )])
+        .into();
+
         assert_eq!(
             params,
             S3ObjectsFilter {
                 event_type: Some(EventType::Created),
-                key: vec![
-                    Wildcard::new("key1".to_string()),
-                    Wildcard::new("key2".to_string())
-                ],
-                bucket: vec![
-                    Wildcard::new("bucket1".to_string()),
-                    Wildcard::new("bucket2".to_string())
-                ],
-                version_id: vec![
-                    Wildcard::new("version_id1".to_string()),
-                    Wildcard::new("version_id2".to_string())
-                ],
-                event_time: vec![
-                    WildcardEither::Or("1970-01-02T00:00:00Z".parse().unwrap()),
-                    WildcardEither::Or("1970-01-02T00:00:01Z".parse().unwrap())
-                ],
-                size: vec![4, 5],
-                sha256: vec!["sha256".to_string(), "sha1".to_string()],
-                last_modified_date: vec![
-                    WildcardEither::Or("1970-01-02T00:00:00Z".parse().unwrap()),
-                    WildcardEither::Or("1970-01-02T00:00:01Z".parse().unwrap())
-                ],
-                e_tag: vec!["eTag1".to_string(), "eTag2".to_string()],
-                storage_class: vec![StorageClass::DeepArchive, StorageClass::Glacier],
+                key: HashMap::from_iter(vec![(
+                    join,
+                    vec![
+                        Wildcard::new("key1".to_string()),
+                        Wildcard::new("key2".to_string())
+                    ]
+                )])
+                .into(),
+                bucket: HashMap::from_iter(vec![(
+                    join,
+                    vec![
+                        Wildcard::new("bucket1".to_string()),
+                        Wildcard::new("bucket2".to_string())
+                    ]
+                )])
+                .into(),
+                version_id: HashMap::from_iter(vec![(
+                    join,
+                    vec![
+                        Wildcard::new("version_id1".to_string()),
+                        Wildcard::new("version_id2".to_string())
+                    ]
+                )])
+                .into(),
+                event_time: date.clone(),
+                size: HashMap::from_iter(vec![(join, vec![4, 5])]).into(),
+                sha256: HashMap::from_iter(vec![(
+                    join,
+                    vec!["sha256".to_string(), "sha1".to_string()]
+                )])
+                .into(),
+                last_modified_date: date,
+                e_tag: HashMap::from_iter(vec![(
+                    join,
+                    vec!["eTag1".to_string(), "eTag2".to_string()]
+                )])
+                .into(),
+                storage_class: HashMap::from_iter(vec![(
+                    join,
+                    vec![StorageClass::DeepArchive, StorageClass::Glacier]
+                )])
+                .into(),
                 is_delete_marker: Some(true),
-                ingest_id: vec![Uuid::nil(), Uuid::max()],
+                ingest_id: HashMap::from_iter(vec![(join, vec![Uuid::nil(), Uuid::max()])]).into(),
                 attributes: Some(json!({"attributeId": "id1"}))
             }
         );

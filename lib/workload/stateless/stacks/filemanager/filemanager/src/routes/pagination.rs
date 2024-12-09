@@ -8,14 +8,12 @@ use serde::{Deserialize, Deserializer, Serialize};
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::database::entities::s3_object::Model as S3;
 use crate::error::Error::OverflowError;
 use crate::error::{Error, Result};
 
 /// The response type for list operations.
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[aliases(ListResponseS3 = ListResponse<S3>, ListResponseUrl = ListResponse<Url>)]
 pub struct ListResponse<M> {
     /// Links to next and previous page.
     pub(crate) links: Links,
