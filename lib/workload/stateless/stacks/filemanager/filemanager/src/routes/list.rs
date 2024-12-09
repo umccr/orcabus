@@ -25,7 +25,7 @@ use crate::routes::filter::{AttributesOnlyFilter, S3ObjectsFilter};
 use crate::routes::header::HeaderParser;
 use crate::routes::pagination::{ListResponse, Pagination};
 use crate::routes::presign::{PresignedParams, PresignedUrlBuilder};
-use crate::routes::AppState;
+use crate::routes::{filter, AppState};
 
 /// The return value for count operations showing the number of records in the database.
 #[derive(Debug, Deserialize, Serialize, ToSchema, Eq, PartialEq)]
@@ -129,7 +129,7 @@ pub async fn list_s3(
     WithRejection(extract::Query(pagination), _): Query<Pagination>,
     WithRejection(extract::Query(wildcard), _): Query<WildcardParams>,
     WithRejection(extract::Query(list), _): Query<ListS3Params>,
-    WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
+    WithRejection(filter::extract::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<S3>>> {
     let txn = state.database_client().connection_ref().begin().await?;
@@ -165,7 +165,7 @@ pub async fn list_s3(
         state,
         WithRejection(extract::Query(wildcard), PhantomData),
         WithRejection(extract::Query(list), PhantomData),
-        WithRejection(serde_qs::axum::QsQuery(filter_all), PhantomData),
+        WithRejection(filter::extract::QsQuery(filter_all), PhantomData),
     )
     .await?;
     let response = response
@@ -193,7 +193,7 @@ pub async fn count_s3(
     state: State<AppState>,
     WithRejection(extract::Query(wildcard), _): Query<WildcardParams>,
     WithRejection(extract::Query(list), _): Query<ListS3Params>,
-    WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
+    WithRejection(filter::extract::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
     let response =
         ListQueryBuilder::<_, s3_object::Entity>::new(state.database_client.connection_ref())
@@ -283,7 +283,7 @@ pub async fn attributes_s3(
     pagination: Query<Pagination>,
     wildcard: Query<WildcardParams>,
     list: Query<ListS3Params>,
-    WithRejection(serde_qs::axum::QsQuery(attributes_only), _): QsQuery<AttributesOnlyFilter>,
+    WithRejection(filter::extract::QsQuery(attributes_only), _): QsQuery<AttributesOnlyFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<S3>>> {
     let mut filter = S3ObjectsFilter::from(attributes_only);
@@ -305,7 +305,7 @@ pub async fn attributes_s3(
         pagination,
         wildcard,
         list,
-        WithRejection(serde_qs::axum::QsQuery(filter), PhantomData),
+        WithRejection(filter::extract::QsQuery(filter), PhantomData),
         request,
     )
     .await
@@ -368,6 +368,23 @@ pub(crate) mod tests {
     use crate::routes::presign::tests::assert_presigned_params;
 
     use super::*;
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await
+            .unwrap()
+            .s3_objects;
+
+        let query = percent_encode("key[a]=123".as_bytes(), NON_ALPHANUMERIC).to_string();
+        let result: ListResponse<S3> = response_from_get(state, &format!("/s3?{query}")).await;
+        assert_eq!(result.links(), &Links::new(None, None));
+        assert_eq!(result.results(), entries);
+        assert_eq!(result.pagination().count, 10);
+    }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api(pool: PgPool) {

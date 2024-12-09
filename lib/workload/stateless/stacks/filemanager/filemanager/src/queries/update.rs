@@ -493,7 +493,8 @@ pub(crate) mod tests {
                 S3ObjectsFilter {
                     event_time: vec![WildcardEither::Wildcard(Wildcard::new(
                         "1970-01-0*".to_string(),
-                    ))],
+                    ))]
+                    .into(),
                     ..Default::default()
                 },
                 true,

@@ -23,7 +23,7 @@ pub struct GenerateOpenAPI<'a> {
     name: &'a str,
 }
 
-impl<'a> VisitMut for GenerateOpenAPI<'a> {
+impl VisitMut for GenerateOpenAPI<'_> {
     fn visit_item_struct_mut(&mut self, i: &mut ItemStruct) {
         if &i.ident == self.model_ident {
             let path_ident: Ident = format_ident!("{}", self.name);

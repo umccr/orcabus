@@ -59,6 +59,7 @@ envy = "0.4"
 rand = "0.8"
 parse-size = "1"
 humantime = "2"
+percent-encoding = "2"
 
 # Inventory
 csv = "1"
@@ -81,7 +82,6 @@ aws_lambda_events = "0.15"
 
 [dev-dependencies]
 lazy_static = "1"
-percent-encoding = "2"
 
 aws-smithy-runtime-api = "1"
 aws-smithy-mocks-experimental = "0.2"
