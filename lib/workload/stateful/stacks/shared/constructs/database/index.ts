@@ -4,6 +4,8 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as sm from 'aws-cdk-lib/aws-secretsmanager';
+import * as backup from 'aws-cdk-lib/aws-backup';
+import * as events from 'aws-cdk-lib/aws-events';
 import { SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { DatabaseCluster } from 'aws-cdk-lib/aws-rds';
 
@@ -90,9 +92,17 @@ export type ConfigurableDatabaseProps = MonitoringProps & {
    */
   secretRotationSchedule: Duration;
   /**
+   * Tier 1 backup - using built-in RDS system capability
+   *
    * RDS aurora automated backup retention (in Duration)
    */
   backupRetention: Duration;
+  /**
+   * Tier 2 backup - leveraging another AWS Backup service is intentional redundancy
+   *
+   * Create long term tier-2 RDS aurora backup using AWS Backup service (in boolean)
+   */
+  createT2BackupRetention?: boolean;
 };
 
 /**
@@ -199,5 +209,44 @@ export class DatabaseConstruct extends Construct {
       description: 'orcabus rds writer cluster endpoint host',
       parameterName: props.clusterEndpointHostParameterName,
     });
+
+    /**
+     * See compliance rule
+     * https://trello.com/c/RFnECxRa
+     * https://github.com/umccr/orcabus/issues/178
+     *
+     * Backup weekly and keep it for 6 weeks
+     * Cron At 17:00 on every Sunday UTC = AEST/AEDT 3AM/4AM on every Monday
+     * cron(0 17 ? * SUN *)
+     */
+    if (props.createT2BackupRetention) {
+      const t2BackupVault = new backup.BackupVault(this, 'OrcaBusDatabaseTier2BackupVault', {
+        backupVaultName: 'OrcaBusDatabaseTier2BackupVault',
+        removalPolicy: RemovalPolicy.RETAIN,
+      });
+
+      const t2BackupPlan = new backup.BackupPlan(this, 'OrcaBusDatabaseTier2BackupPlan', {
+        backupPlanName: 'OrcaBusDatabaseTier2BackupPlan',
+        backupVault: t2BackupVault,
+      });
+      t2BackupPlan.applyRemovalPolicy(RemovalPolicy.RETAIN);
+
+      // https://github.com/aws/aws-cdk/blob/main/packages/aws-cdk-lib/aws-backup/lib/rule.ts
+      t2BackupPlan.addRule(
+        new backup.BackupPlanRule({
+          ruleName: 'Weekly',
+          scheduleExpression: events.Schedule.cron({
+            hour: '17',
+            minute: '0',
+            weekDay: 'SUN',
+          }),
+          deleteAfter: Duration.days(42),
+        })
+      );
+
+      t2BackupPlan.addSelection('OrcaBusDatabaseTier2BackupSelection', {
+        resources: [backup.BackupResource.fromRdsServerlessCluster(this.cluster)],
+      });
+    }
   }
 }
