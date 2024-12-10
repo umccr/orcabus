@@ -65,6 +65,24 @@ export class LambdaAPIConstruct extends Construct {
       integration: apiIntegration,
       routeKey: HttpRouteKey.with(`/api/${this.API_VERSION}/{PROXY+}`, HttpMethod.GET),
     });
+    new HttpRoute(this, 'PostHttpRoute', {
+      httpApi: apiGW.httpApi,
+      integration: apiIntegration,
+      authorizer: apiGW.authStackHttpLambdaAuthorizer,
+      routeKey: HttpRouteKey.with(`/api/${this.API_VERSION}/{PROXY+}`, HttpMethod.POST),
+    });
+    new HttpRoute(this, 'PatchHttpRoute', {
+      httpApi: apiGW.httpApi,
+      integration: apiIntegration,
+      authorizer: apiGW.authStackHttpLambdaAuthorizer,
+      routeKey: HttpRouteKey.with(`/api/${this.API_VERSION}/{PROXY+}`, HttpMethod.PATCH),
+    });
+    new HttpRoute(this, 'DeleteHttpRoute', {
+      httpApi: apiGW.httpApi,
+      integration: apiIntegration,
+      authorizer: apiGW.authStackHttpLambdaAuthorizer,
+      routeKey: HttpRouteKey.with(`/api/${this.API_VERSION}/{PROXY+}`, HttpMethod.DELETE),
+    });
 
     // Add permission, HTTP route, and env-var for the sync lambdas
 

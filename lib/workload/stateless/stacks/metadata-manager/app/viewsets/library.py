@@ -8,9 +8,10 @@ from .base import BaseViewSet
 
 
 class LibraryViewSet(BaseViewSet):
-    serializer_class = LibraryDetailSerializer
+    serializer_class = LibrarySerializer
+    detail_serializer_class = LibraryDetailSerializer
     search_fields = Library.get_base_fields()
-    queryset = Library.objects.select_related('sample').select_related('subject').prefetch_related('project_set').all()
+    queryset = Library.objects.all()
     orcabus_id_prefix = Library.orcabus_id_prefix
 
     def get_queryset(self):
@@ -35,22 +36,35 @@ class LibraryViewSet(BaseViewSet):
         # Continue filtering by the keys inside the library model
         return Library.objects.get_by_keyword(qs, **query_params)
 
-    @extend_schema(parameters=[
-        LibrarySerializer,
-        OpenApiParameter(name='coverage[lte]',
-                         description="Filter based on 'coverage' that is less than or equal to the given value.",
-                         required=False,
-                         type=float),
-        OpenApiParameter(name='coverage[gte]',
-                         description="Filter based on 'coverage' that is greater than or equal to the given value.",
-                         required=False,
-                         type=float),
-        OpenApiParameter(name='project_id',
-                         description="Filter where the associated the project has the given 'project_id'.",
-                         required=False,
-                         type=float),
-    ])
+    @extend_schema(responses=LibraryDetailSerializer(many=False))
+    def retrieve(self, request, *args, **kwargs):
+        self.serializer_class = LibraryDetailSerializer
+        self.queryset = Library.objects.select_related('sample').select_related('subject').prefetch_related(
+            'project_set').all()
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[
+            LibrarySerializer,
+            OpenApiParameter(name='coverage[lte]',
+                             description="Filter based on 'coverage' that is less than or equal to the given value.",
+                             required=False,
+                             type=float),
+            OpenApiParameter(name='coverage[gte]',
+                             description="Filter based on 'coverage' that is greater than or equal to the given value.",
+                             required=False,
+                             type=float),
+            OpenApiParameter(name='project_id',
+                             description="Filter where the associated the project has the given 'project_id'.",
+                             required=False,
+                             type=float),
+        ],
+        responses=LibraryDetailSerializer(many=True),
+    )
     def list(self, request, *args, **kwargs):
+        self.serializer_class = LibraryDetailSerializer
+        self.queryset = Library.objects.select_related('sample').select_related('subject').prefetch_related(
+            'project_set').all()
         return super().list(request, *args, **kwargs)
 
     @extend_schema(responses=LibraryHistorySerializer(many=True), description="Retrieve the history of this model")

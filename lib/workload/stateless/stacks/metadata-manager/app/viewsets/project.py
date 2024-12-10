@@ -8,15 +8,26 @@ from .base import BaseViewSet
 
 
 class ProjectViewSet(BaseViewSet):
-    serializer_class = ProjectDetailSerializer
+    serializer_class = ProjectSerializer
     search_fields = Project.get_base_fields()
-    queryset = Project.objects.prefetch_related("contact_set").all()
+    queryset = Project.objects.all()
     orcabus_id_prefix = Project.orcabus_id_prefix
 
-    @extend_schema(parameters=[
-        ProjectSerializer
-    ])
+    @extend_schema(responses=ProjectDetailSerializer(many=False))
+    def retrieve(self, request, *args, **kwargs):
+        self.serializer_class = ProjectDetailSerializer
+        self.queryset = Project.objects.prefetch_related("contact_set").all()
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[
+            ProjectSerializer
+        ],
+        responses=ProjectDetailSerializer(many=True),
+    )
     def list(self, request, *args, **kwargs):
+        self.serializer_class = ProjectDetailSerializer
+        self.queryset = Project.objects.prefetch_related("contact_set").all()
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
