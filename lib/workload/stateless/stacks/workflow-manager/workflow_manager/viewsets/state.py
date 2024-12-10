@@ -23,7 +23,7 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
     """
     valid_states_map = {
         'RESOLVED': ['FAILED'],
-        'DEPRECATED': ['SUCCEED']
+        'DEPRECATED': ['SUCCEEDED']
     }
 
     def get_queryset(self):
@@ -58,7 +58,8 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
         data = request.data.copy()
         data['timestamp'] = timezone.now()
         data['workflow_run'] = wfr_orcabus_id
-
+        data['status'] = request_status
+        
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()

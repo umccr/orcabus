@@ -59,6 +59,7 @@ class WorkflowRunCountByStatusSerializer(serializers.Serializer):
     failed = serializers.IntegerField()
     resolved = serializers.IntegerField()
     ongoing = serializers.IntegerField()
+    deprecated = serializers.IntegerField()
 
     def update(self, instance, validated_data):
         pass
