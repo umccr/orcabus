@@ -296,7 +296,7 @@ export const dragenIcav2ReferenceUriMappingSSMParameterPath =
 export const dragenIcav2OraReferenceUriSSMParameterPath =
   '/icav2/umccr-prod/dragen_ora_reference_uri';
 
-// Deployed under dev // FIXME
+// Deployed in dev/stg and prod
 // 'icav2://reference-data/dragen-ora/v2/ora_reference_v2.tar.gz
 //
 
@@ -354,7 +354,7 @@ TN Stateless stack
 */
 
 // Deployed under dev/stg/prod
-export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 6ce2b636-ba2f-4004-8065-f3557f286c98
+export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 988af91b-d707-49ed-9107-8994f75cef12
 export const tnIcav2PipelineWorkflowType = 'tumor-normal';
 export const tnIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const tnIcav2ServiceVersion = '2024.07.01';
