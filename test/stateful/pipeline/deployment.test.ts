@@ -111,6 +111,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
           '/SharedStack/EventBusConstruct/UniversalEventArchiver/UniversalEventArchiver/ServiceRole/Resource',
           '/SharedStack/EventBusConstruct/UniversalEventArchiver/UniversalEventArchiver/ServiceRole/DefaultPolicy/Resource',
           '/SharedStack/DatabaseConstruct/Cluster/MonitoringRole/Resource',
+          '/SharedStack/DatabaseConstruct/OrcaBusDatabaseTier2BackupPlan/OrcaBusDatabaseTier2BackupSelection/Role/Resource',
         ],
         [
           {

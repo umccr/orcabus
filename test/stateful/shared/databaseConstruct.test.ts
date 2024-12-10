@@ -65,3 +65,54 @@ test('Test other SG Allow Ingress to DB SG', () => {
     },
   });
 });
+
+test('Test tier-2 backup created for DBCluster and it is compliance in production configuration', () => {
+  const prodConfig = getEnvironmentConfig(AppStage.PROD);
+  if (!prodConfig) throw new Error('No construct config for the test');
+
+  expect(prodConfig).toBeTruthy();
+  const dbProps = prodConfig.stackProps.statefulConfig.sharedStackProps.databaseProps;
+
+  new DatabaseConstruct(stack, 'TestDatabaseConstruct', {
+    vpc,
+    ...dbProps,
+  });
+  const template = Template.fromStack(stack);
+
+  template.hasResourceProperties('AWS::RDS::DBCluster', {
+    DBClusterIdentifier: 'orcabus-db',
+    DatabaseName: 'orcabus',
+    DBClusterParameterGroupName: dbProps.parameterGroupName,
+    ServerlessV2ScalingConfiguration: {
+      MaxCapacity: dbProps.maxACU,
+      MinCapacity: dbProps.minACU,
+    },
+  });
+
+  // Assert that we are compliance with long term tier-2 backup plan
+
+  template.hasResource('AWS::Backup::BackupVault', {
+    DeletionPolicy: 'Retain',
+  });
+  template.hasResourceProperties('AWS::Backup::BackupVault', {
+    BackupVaultName: 'OrcaBusDatabaseTier2BackupVault',
+  });
+
+  template.hasResource('AWS::Backup::BackupPlan', {
+    DeletionPolicy: 'Retain',
+  });
+  template.hasResourceProperties('AWS::Backup::BackupPlan', {
+    BackupPlan: {
+      BackupPlanName: 'OrcaBusDatabaseTier2BackupPlan',
+      BackupPlanRule: [
+        {
+          Lifecycle: {
+            DeleteAfterDays: 42,
+          },
+          RuleName: 'Weekly',
+          ScheduleExpression: 'cron(0 17 ? * SUN *)',
+        },
+      ],
+    },
+  });
+});
