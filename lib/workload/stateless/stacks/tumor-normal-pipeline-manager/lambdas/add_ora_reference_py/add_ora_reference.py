@@ -3,6 +3,7 @@
 """
 Add ora reference
 """
+from pathlib import Path
 from typing import Dict, Optional, List
 
 
@@ -24,9 +25,11 @@ def handler(event, context) -> Dict[str, bool]:
     # If tumorFastqListRows is None and fastqListRows is None, return false
     if tumor_fastq_list_rows is None and normal_fastq_list_rows is None:
         return {
-            "add_ora_step": False
+            "add_ora_step": False,
+            "is_hybrid": False
         }
 
+    add_ora_step = False
     for fastq_list_row_iter in [tumor_fastq_list_rows, normal_fastq_list_rows]:
         if fastq_list_row_iter is not None:
             # If fastqListRows is not None, return true
@@ -39,13 +42,28 @@ def handler(event, context) -> Dict[str, bool]:
                         for row in fastq_list_row_iter
                     ]
             ):
-                return {
-                    "add_ora_step": True
-                }
+                add_ora_step = True
+
+    # Check if hybrid
+    endings = []
+    for fastq_list_row_iter in [tumor_fastq_list_rows, normal_fastq_list_rows]:
+        if fastq_list_row_iter is not None:
+            endings.extend(
+                list(set(list(map(
+                    lambda fastq_list_row_: Path(fastq_list_row_.get("read1FileUri")).suffix,
+                    fastq_list_row_iter
+                ))))
+            )
+
+    if len(list(set(endings))) > 1:
+        is_hybrid = True
+    else:
+        is_hybrid = False
 
     # Got to here? Return false
     return {
-        "add_ora_step": False
+        "add_ora_step": add_ora_step,
+        "is_hybrid": is_hybrid
     }
 
 
@@ -95,9 +113,10 @@ def handler(event, context) -> Dict[str, bool]:
 #     )
 #
 #     # {
-#     #     "add_ora_step": false
+#     #     "add_ora_step": false,
+#     #     "is_hybrid": false
 #     # }
-
+#
 # if __name__ == "__main__":
 #     import json
 #
@@ -144,5 +163,6 @@ def handler(event, context) -> Dict[str, bool]:
 #     )
 #
 #     # {
-#     #     "add_ora_step": true
+#     #     "add_ora_step": true,
+#     #     "is_hybrid": true
 #     # }

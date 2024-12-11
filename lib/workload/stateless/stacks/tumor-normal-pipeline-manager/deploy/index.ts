@@ -14,6 +14,8 @@ import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import { PythonLambdaFastqListRowsToCwlInputConstruct } from '../../../../components/python-lambda-fastq-list-rows-to-cwl-input';
 import { WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct } from '../../../../components/sfn-icav2-ready-event-handler';
 import { Icav2AnalysisEventHandlerConstruct } from '../../../../components/sfn-icav2-state-change-event-handler';
+import { OraDecompressionConstruct } from '../../../../components/ora-file-decompression-fq-pair-sfn';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface TnIcav2PipelineManagerConfig {
   /* ICAv2 Pipeline analysis essentials */
@@ -127,6 +129,16 @@ export class TnIcav2PipelineManagerStack extends cdk.Stack {
       }
     );
 
+    // Get the ora decompression construct
+    const oraDecompressionStateMachineObj = new OraDecompressionConstruct(
+      this,
+      'ora_decompression_state_machine_obj',
+      {
+        icav2AccessTokenSecretId: this.icav2AccessTokenSecretObj.secretName,
+        sfnPrefix: `${props.stateMachinePrefix}-ora-to-gz`,
+      }
+    ).sfnObject;
+
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
     const configureInputsSfn = new sfn.StateMachine(
       this,
@@ -153,6 +165,9 @@ export class TnIcav2PipelineManagerStack extends cdk.Stack {
             getBooleanParametersFromEventInputLambdaObj.currentVersion.functionArn,
           __add_ora_reference_lambda_function_arn__:
             addOraReferenceLambdaObj.currentVersion.functionArn,
+          /* Step functions */
+          __ora_fastq_list_row_decompression_sfn_arn__:
+            oraDecompressionStateMachineObj.stateMachineArn,
         },
       }
     );
@@ -173,6 +188,35 @@ export class TnIcav2PipelineManagerStack extends cdk.Stack {
     [referenceSsmObj, oraReferenceSsmObj].forEach((ssmObj) => {
       ssmObj.grantRead(configureInputsSfn);
     });
+
+    // Allow state machine to invoke the ora decompression state machine
+    oraDecompressionStateMachineObj.grantStartExecution(configureInputsSfn);
+    oraDecompressionStateMachineObj.grantRead(configureInputsSfn);
+
+    // Because we run a nested state machine, we need to add the permissions to the state machine role
+    // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
+    configureInputsSfn.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
+        ],
+        actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
+      })
+    );
+
+    // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
+    // Polling requires permission for states:DescribeExecution
+    NagSuppressions.addResourceSuppressions(
+      configureInputsSfn,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
 
     /*
     Part 2: Configure the lambdas and outputs step function
@@ -201,7 +245,7 @@ export class TnIcav2PipelineManagerStack extends cdk.Stack {
     );
 
     // Add permissions to lambda
-    this.icav2AccessTokenSecretObj.grantRead(<iam.IRole>setOutputJsonLambdaObj.currentVersion.role);
+    this.icav2AccessTokenSecretObj.grantRead(setOutputJsonLambdaObj.currentVersion);
 
     const configureOutputsSfn = new sfn.StateMachine(this, 'sfn_configure_outputs_json', {
       stateMachineName: `${props.stateMachinePrefix}-configure-outputs-json`,
