@@ -19,7 +19,7 @@ class WorkflowRunBaseSerializer(SerializersBase):
 class WorkflowRunListParamSerializer(OptionalFieldsMixin, WorkflowRunBaseSerializer):
     class Meta:
         model = WorkflowRun
-        fields = "__all__"
+        fields = ["orcabus_id", "workflow", "analysis_run", "workflow_run_name", "portal_run_id", "execution_id", "comment",]
 
 class WorkflowRunSerializer(WorkflowRunBaseSerializer):
     from .workflow import WorkflowMinSerializer

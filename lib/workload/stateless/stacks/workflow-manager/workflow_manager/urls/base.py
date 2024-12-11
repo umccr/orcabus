@@ -20,7 +20,7 @@ api_base = f"{api_namespace}/{api_version}/"
 
 router = OptionalSlashDefaultRouter()
 
-router.register("workflowrun/stats", WorkflowRunStatsViewSet, basename="workflowrun_list_all") # put it before workflowrun, as it will match the workflowrun/list_all/ url
+router.register(r"workflowrun/stats", WorkflowRunStatsViewSet, basename="workflowrun_list_all") # put it before workflowrun, as it will match the workflowrun/list_all/ url
 router.register(r"analysis", AnalysisViewSet, basename="analysis")
 router.register(r"analysisrun", AnalysisRunViewSet, basename="analysisrun")
 router.register(r"analysiscontext", AnalysisContextViewSet, basename="analysiscontext")
@@ -29,7 +29,6 @@ router.register(r"workflowrun", WorkflowRunViewSet, basename="workflowrun")
 router.register(r"workflowrun", WorkflowRunActionViewSet, basename="workflowrun-action")
 router.register(r"payload", PayloadViewSet, basename="payload")
 
-# may no longer need this as it's currently included in the detail response for an individual WorkflowRun record
 router.register(
     "workflowrun/(?P<orcabus_id>[^/.]+)/state",
     StateViewSet,

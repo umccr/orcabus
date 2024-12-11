@@ -1,4 +1,6 @@
-
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
+from rest_framework.decorators import action
 from rest_framework import mixins, status
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
@@ -28,6 +30,11 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
 
     def get_queryset(self):
         return State.objects.filter(workflow_run=self.kwargs["orcabus_id"])
+    
+    @extend_schema(responses=OpenApiTypes.OBJECT, description="Valid states map for new state creation, update")
+    @action(detail=False, methods=['get'], url_name='valid_states_map', url_path='valid_states_map')
+    def get_valid_states_map(self, request, **kwargs):
+        return Response(self.valid_states_map)
     
     def create(self, request, *args, **kwargs):
         """
