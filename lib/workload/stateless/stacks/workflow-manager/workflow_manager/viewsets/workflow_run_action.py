@@ -15,7 +15,7 @@ from workflow_manager.aws_event_bridge.event import emit_wrsc_api_event
 from workflow_manager.models.utils import create_portal_run_id
 from workflow_manager.serializers.library import LibrarySerializer
 from workflow_manager.serializers.payload import PayloadSerializer
-from workflow_manager.serializers.workflow_run_action import AllowedRerunWorkflow, RERUN_INPUT_SERIALIZERS
+from workflow_manager.serializers.workflow_run_action import AllowedRerunWorkflow, RERUN_INPUT_SERIALIZERS, AllowedRerunWorkflowSerializer
 from workflow_manager.models import (
     WorkflowRun,
     State,
@@ -27,6 +27,17 @@ class WorkflowRunActionViewSet(ViewSet):
     queryset = WorkflowRun.objects.prefetch_related('states').all()
     orcabus_id_prefix = WorkflowRun.orcabus_id_prefix
 
+    @extend_schema(responses=AllowedRerunWorkflowSerializer, description="Allowed rerun workflows")
+    @action(detail=True, methods=['get'], url_name='validate_rerun_workflows', url_path='validate_rerun_workflows')
+    def validate_rerun_workflows(self, request, *args, **kwargs):
+        wfl_run = get_object_or_404(self.queryset, pk=kwargs.get('pk'))
+        is_valid = wfl_run.workflow.workflow_name in AllowedRerunWorkflow
+        reponse = {
+            'is_valid': is_valid,
+            'valid_workflows': AllowedRerunWorkflow
+        }
+        return Response(reponse, status=status.HTTP_200_OK)
+    
     @extend_schema(
         request=PolymorphicProxySerializer(
             component_name='WorkflowRunRerun',
@@ -63,7 +74,7 @@ class WorkflowRunActionViewSet(ViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
 
         detail = construct_rerun_eb_detail(wfl_run, serializer.data)
-        emit_wrsc_api_event(detail)
+        # emit_wrsc_api_event(detail)
 
         return Response(detail, status=status.HTTP_200_OK)
 
