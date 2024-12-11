@@ -32,9 +32,18 @@ class WorkflowRunActionViewSet(ViewSet):
     def validate_rerun_workflows(self, request, *args, **kwargs):
         wfl_run = get_object_or_404(self.queryset, pk=kwargs.get('pk'))
         is_valid = wfl_run.workflow.workflow_name in AllowedRerunWorkflow
+        
+        # Get allowed dataset choice for the workflow
+        wfl_name = wfl_run.workflow.workflow_name
+        allowed_dataset_choice = []
+        if wfl_name == AllowedRerunWorkflow.RNASUM.value:
+            allowed_dataset_choice = RERUN_INPUT_SERIALIZERS[wfl_name].allowed_dataset_choice
+        
         reponse = {
             'is_valid': is_valid,
-            'valid_workflows': AllowedRerunWorkflow
+            'allowed_dataset_choice': allowed_dataset_choice,
+            'valid_workflows': AllowedRerunWorkflow,
+            
         }
         return Response(reponse, status=status.HTTP_200_OK)
     
