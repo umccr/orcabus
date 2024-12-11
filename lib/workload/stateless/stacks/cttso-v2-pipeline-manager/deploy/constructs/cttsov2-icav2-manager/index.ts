@@ -122,6 +122,7 @@ export class Cttsov2Icav2PipelineManagerConstruct extends Construct {
     props.icav2CopyFilesStateMachineObj.grantStartExecution(configureInputsSfn);
     props.icav2CopyFilesStateMachineObj.grantRead(configureInputsSfn);
     props.oraDecompressionStateMachineObj.grantStartExecution(configureInputsSfn);
+    props.oraDecompressionStateMachineObj.grantRead(configureInputsSfn);
 
     // Because we run a nested state machine, we need to add the permissions to the state machine role
     // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
