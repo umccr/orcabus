@@ -43,7 +43,6 @@ class WorkflowRunActionViewSet(ViewSet):
             'is_valid': is_valid,
             'allowed_dataset_choice': allowed_dataset_choice,
             'valid_workflows': AllowedRerunWorkflow,
-            
         }
         return Response(reponse, status=status.HTTP_200_OK)
     
@@ -83,7 +82,7 @@ class WorkflowRunActionViewSet(ViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
 
         detail = construct_rerun_eb_detail(wfl_run, serializer.data)
-        # emit_wrsc_api_event(detail)
+        emit_wrsc_api_event(detail)
 
         return Response(detail, status=status.HTTP_200_OK)
 
