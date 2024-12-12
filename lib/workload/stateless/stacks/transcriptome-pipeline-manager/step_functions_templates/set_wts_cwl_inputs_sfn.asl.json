@@ -407,6 +407,72 @@
               }
             }
           }
+        },
+        {
+          "StartAt": "Has ORA Inputs",
+          "States": {
+            "Has ORA Inputs": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${__has_ora_inputs_lambda_function_arn__}",
+                "Payload": {
+                  "event_data_input.$": "$.get_input_parameters_from_event_step.inputs"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "Next": "Need Ora Reference",
+              "ResultSelector": {
+                "add_ora_step.$": "$.Payload.add_ora_step"
+              }
+            },
+            "Need Ora Reference": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.add_ora_step",
+                  "BooleanEquals": true,
+                  "Next": "Get the ORA Reference Version",
+                  "Comment": "Needs ora reference tar"
+                }
+              ],
+              "Default": "Set Output to null"
+            },
+            "Get the ORA Reference Version": {
+              "Type": "Task",
+              "Parameters": {
+                "Name": "${__ora_reference_uri_ssm_parameter_path__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:ssm:getParameter",
+              "ResultSelector": {
+                "ora_reference_tar": {
+                  "class": "File",
+                  "location.$": "$.Parameter.Value"
+                }
+              },
+              "End": true
+            },
+            "Set Output to null": {
+              "Type": "Pass",
+              "End": true,
+              "Result": {
+                "ora_reference_tar": null
+              }
+            }
+          }
         }
       ],
       "ResultPath": "$.configure_inputs_step",
@@ -422,7 +488,8 @@
         "cl_config_sample_names_replace": {
           "sample_names_replace.$": "$.[5].get_qc_reference_samples_version_uri_step.cl_config_sample_names_replace"
         },
-        "boolean_parameters.$": "$.[6].get_boolean_parameters_step.boolean_parameters"
+        "boolean_parameters.$": "$.[6].get_boolean_parameters_step.boolean_parameters",
+        "ora_reference_tar.$": "$.[7].ora_reference_tar"
       }
     },
     "Set Input JSON": {
@@ -439,7 +506,8 @@
           "protein_domains.$": "$.configure_inputs_step.protein_domains_uri",
           "qc_reference_samples.$": "$.configure_inputs_step.qc_reference_samples_list",
           "reference_fasta.$": "$.configure_inputs_step.reference_fasta_uri",
-          "reference_tar.$": "$.configure_inputs_step.reference_tar_uri"
+          "reference_tar.$": "$.configure_inputs_step.reference_tar_uri",
+          "ora_reference_tar.$": "$.configure_inputs_step.ora_reference_tar"
         }
       },
       "ResultPath": "$.set_input_json_step"

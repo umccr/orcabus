@@ -24,6 +24,7 @@ export interface WtsIcav2PipelineManagerConfig {
   gencodeAnnotationUriSsmPath: string; // "/icav2/umccr-prod/gencode-annotation-uri" // FIXME
   arribaUriSsmPath: string; // "/icav2/umccr-prod/arriba-uri" // FIXME
   wtsQcReferenceSamplesSsmPath: string; // "/icav2/umccr-prod/wts-qc-reference-samples" // FIXME
+  oraReferenceUriSsmPath: string; // // FIXME
   /* Defaults */
   defaultDragenReferenceVersion: string; // v9-r3
   defaultFastaReferenceVersion: string; // hg38
@@ -90,6 +91,13 @@ export class WtsIcav2PipelineManagerStack extends cdk.Stack {
       props.dragenReferenceUriSsmPath
     );
 
+    // ORA Reference
+    const oraReferenceSsmObj = ssm.StringParameter.fromStringParameterName(
+      this,
+      props.oraReferenceUriSsmPath,
+      props.oraReferenceUriSsmPath
+    );
+
     // Fasta Reference
     const fastaReferenceSsmObj = ssm.StringParameter.fromStringParameterName(
       this,
@@ -146,6 +154,21 @@ export class WtsIcav2PipelineManagerStack extends cdk.Stack {
       }
     );
 
+    // Lambda function to check fastq list rows for ora inputs
+    const hasOraInputsLambdaObj = new PythonFunction(
+      this,
+      'add_ora_reference_lambda_python_function',
+      {
+        entry: path.join(__dirname, '../lambdas/has_ora_inputs_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'has_ora_inputs.py',
+        handler: 'handler',
+        memorySize: 1024,
+        timeout: Duration.seconds(60),
+      }
+    );
+
     // Specify the statemachine and replace the arn placeholders with the lambda arns defined above
     const configureInputsSfn = new sfn.StateMachine(
       this,
@@ -167,6 +190,7 @@ export class WtsIcav2PipelineManagerStack extends cdk.Stack {
           __annotation_version_uri_ssm_parameter_name__: annotationSsmObj.parameterName,
           __qc_reference_samples_version_uri_ssm_parameter_name__:
             wtsQcReferenceSamplesSsmObj.parameterName,
+          __ora_reference_uri_ssm_parameter_path__: oraReferenceSsmObj.parameterName,
 
           /* Defaults */
           __default_reference_version__: props.defaultDragenReferenceVersion,
@@ -180,6 +204,7 @@ export class WtsIcav2PipelineManagerStack extends cdk.Stack {
             convertFastqListRowsToCwlInputObjectsLambdaObj.currentVersion.functionArn,
           __get_boolean_parameters_lambda_function_arn__:
             getBooleanParametersFromEventInputLambdaObj.currentVersion.functionArn,
+          __has_ora_inputs_lambda_function_arn__: hasOraInputsLambdaObj.currentVersion.functionArn,
         },
       }
     );
@@ -188,6 +213,7 @@ export class WtsIcav2PipelineManagerStack extends cdk.Stack {
     [
       convertFastqListRowsToCwlInputObjectsLambdaObj,
       getBooleanParametersFromEventInputLambdaObj,
+      hasOraInputsLambdaObj,
     ].forEach((lambdaObj) => {
       lambdaObj.currentVersion.grantInvoke(configureInputsSfn);
     });
@@ -202,6 +228,7 @@ export class WtsIcav2PipelineManagerStack extends cdk.Stack {
       arribaSsmObj,
       annotationSsmObj,
       wtsQcReferenceSamplesSsmObj,
+      oraReferenceSsmObj,
     ].forEach((ssmObj) => {
       ssmObj.grantRead(configureInputsSfn);
     });

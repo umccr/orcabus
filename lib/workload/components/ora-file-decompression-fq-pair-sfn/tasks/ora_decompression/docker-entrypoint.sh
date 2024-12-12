@@ -102,7 +102,8 @@ else
           "${INPUT_URI}"
         )" | \
       /usr/local/bin/orad \
-        --gzip \
+        --gz \
+        --gz-level 1 \
         --stdout \
         --ora-reference "${ORADATA_PATH}" \
         - | \
@@ -139,7 +140,8 @@ else
     --gz \
     --gz-level 1 \
     --stdout \
-    --ora-reference "${ORADATA_PATH}" | \
+    --ora-reference "${ORADATA_PATH}" \
+    - | \
   (
     AWS_ACCESS_KEY_ID="$( \
       jq -r '.AWS_ACCESS_KEY_ID' <<< "${aws_s3_access_creds_json_str}"

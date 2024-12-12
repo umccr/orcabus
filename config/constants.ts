@@ -430,7 +430,7 @@ WTS Stateless stack
 */
 
 // Deployed under dev/stg/prod
-export const wtsIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wts_4.2.4_pipeline_id'; // 1e53ae07-08a6-458b-9fa3-9cf7430409a0
+export const wtsIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wts_4.2.4_pipeline_id'; // 73e21ce0-60d7-4e3e-b130-88aff78d500d
 export const wtsIcav2PipelineWorkflowType = 'wts';
 export const wtsIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const wtsIcav2ServiceVersion = '2024.07.01';

@@ -24,6 +24,7 @@ import {
   icav2FastaReferenceUriMappingSSMParameterPath,
   icav2GencodeAnnotationUriMappingSSMParameterPath,
   icav2WtsQcReferenceSamplesUriMappingSSMParameterPath,
+  dragenIcav2OraReferenceUriSSMParameterPath,
 } from '../constants';
 import { WtsIcav2PipelineManagerConfig } from '../../lib/workload/stateless/stacks/transcriptome-pipeline-manager/deploy';
 import { WtsIcav2PipelineTableConfig } from '../../lib/workload/stateful/stacks/wts-dynamo-db/deploy/stack';
@@ -65,6 +66,7 @@ export const getWtsIcav2PipelineManagerStackProps = (
     fastaReferenceUriSsmPath: icav2FastaReferenceUriMappingSSMParameterPath,
     gencodeAnnotationUriSsmPath: icav2GencodeAnnotationUriMappingSSMParameterPath,
     wtsQcReferenceSamplesSsmPath: icav2WtsQcReferenceSamplesUriMappingSSMParameterPath,
+    oraReferenceUriSsmPath: dragenIcav2OraReferenceUriSSMParameterPath,
     /* Default Versions */
     defaultArribaVersion: wtsDefaultArribaVersion,
     defaultDragenReferenceVersion: wtsDefaultDragenReferenceVersion,

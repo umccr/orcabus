@@ -175,7 +175,8 @@
                         "read1GzOutputFileUri.$": "$.get_ora_cache_uri_step.read_1_gz_output_uri",
                         "read2GzOutputFileUri.$": "$.get_ora_cache_uri_step.read_2_gz_output_uri",
                         "read1EstimatedGzFileSize": -1,
-                        "read2EstimatedGzFileSize": -1
+                        "read2EstimatedGzFileSize": -1,
+                        "validationOnly.$": false
                       }
                     },
                     "End": true

@@ -120,7 +120,7 @@
                               "Type": "Map",
                               "ItemsPath": "$.get_input_parameters_from_event_step.inputs.tumorFastqListRows",
                               "ItemSelector": {
-                                "fastq_list_rows.$": "$$.Map.Item.Value",
+                                "fastq_list_row.$": "$$.Map.Item.Value",
                                 "cache_uri_prefix.$": "$.get_input_parameters_from_event_step.engineParameters.cacheUri",
                                 "is_hybrid_run.$": "$.add_ora_step_path.is_hybrid"
                               },
@@ -128,13 +128,13 @@
                                 "ProcessorConfig": {
                                   "Mode": "INLINE"
                                 },
-                                "StartAt": "Is ORA",
+                                "StartAt": "Is ORA (T)",
                                 "States": {
-                                  "Is ORA": {
+                                  "Is ORA (T)": {
                                     "Type": "Pass",
                                     "Next": "Is Hybrid Run and Ora Fastq (T)",
                                     "Parameters": {
-                                      "read_1_file_suffix.$": "States.ArrayGetItem(States.StringSplit($.fastq_list_row.read1FileUri, '.'), -1)"
+                                      "read_1_file_suffix.$": "States.ArrayGetItem(States.StringSplit($.fastq_list_row.read1FileUri, '.'), States.MathAdd(States.ArrayLength(States.StringSplit($.fastq_list_row.read1FileUri, '.')), -1))"
                                     },
                                     "ResultPath": "$.get_r1_suffix_step"
                                   },
@@ -144,7 +144,7 @@
                                       {
                                         "And": [
                                           {
-                                            "Variable": "$.is_hybrid",
+                                            "Variable": "$.is_hybrid_run",
                                             "BooleanEquals": true
                                           },
                                           {
@@ -162,8 +162,8 @@
                                     "Type": "Pass",
                                     "Next": "Decompress ORA (T)",
                                     "Parameters": {
-                                      "read1FileUri": "States.Format('{}{}/{}_read1_ora_decompressed.fastq.gz', $.cache_prefix, States.Hash($.fastq_list_row.rgid), $.fastq_list_row.rgsm)",
-                                      "read2FileUri": "States.Format('{}{}/{}_read2_ora_decompressed.fastq.gz', $.cache_prefix, States.Hash($.fastq_list_row.rgid), $.fastq_list_row.rgsm)"
+                                      "read1FileUri.$": "States.Format('{}{}/{}_read1_ora_decompressed.fastq.gz', $.cache_uri_prefix, States.Hash($.fastq_list_row.rgid, 'SHA-1'), $.fastq_list_row.rgsm)",
+                                      "read2FileUri.$": "States.Format('{}{}/{}_read2_ora_decompressed.fastq.gz', $.cache_uri_prefix, States.Hash($.fastq_list_row.rgid, 'SHA-1'), $.fastq_list_row.rgsm)"
                                     },
                                     "ResultPath": "$.get_gzip_outputs_step"
                                   },
@@ -185,7 +185,8 @@
                                         "read1GzOutputFileUri.$": "$.get_gzip_outputs_step.read1FileUri",
                                         "read2GzOutputFileUri.$": "$.get_gzip_outputs_step.read2FileUri",
                                         "read1EstimatedGzFileSize": -1,
-                                        "read2EstimatedGzFileSize": -1
+                                        "read2EstimatedGzFileSize": -1,
+                                        "validationOnly": false
                                       }
                                     },
                                     "Next": "Set New FQLR (T)",
@@ -202,7 +203,7 @@
                               },
                               "Next": "Convert Fastq List Rows to CWL Input Objects (T)",
                               "ResultSelector": {
-                                "fastq_list_rows.$": "$[*].fastq_list_rows"
+                                "fastq_list_rows.$": "$[*].fastq_list_row"
                               }
                             },
                             "Convert Fastq List Rows to CWL Input Objects (T)": {
@@ -231,7 +232,6 @@
                               "ResultSelector": {
                                 "fastq_list_rows.$": "$.Payload.fastq_list_rows"
                               },
-                              "ResultPath": "$.convert_tumor_fastq_list_rows_to_cwl_input_objects_step",
                               "End": true
                             }
                           }
@@ -243,7 +243,7 @@
                               "Type": "Map",
                               "ItemsPath": "$.get_input_parameters_from_event_step.inputs.fastqListRows",
                               "ItemSelector": {
-                                "fastq_list_rows.$": "$$.Map.Item.Value",
+                                "fastq_list_row.$": "$$.Map.Item.Value",
                                 "cache_uri_prefix.$": "$.get_input_parameters_from_event_step.engineParameters.cacheUri",
                                 "is_hybrid_run.$": "$.add_ora_step_path.is_hybrid"
                               },
@@ -251,13 +251,13 @@
                                 "ProcessorConfig": {
                                   "Mode": "INLINE"
                                 },
-                                "StartAt": "Is ORA",
+                                "StartAt": "Is ORA (N)",
                                 "States": {
-                                  "Is ORA": {
+                                  "Is ORA (N)": {
                                     "Type": "Pass",
                                     "Next": "Is Hybrid Run and Ora Fastq (N)",
                                     "Parameters": {
-                                      "read_1_file_suffix.$": "States.ArrayGetItem(States.StringSplit($.fastq_list_row.read1FileUri, '.'), -1)"
+                                      "read_1_file_suffix.$": "States.ArrayGetItem(States.StringSplit($.fastq_list_row.read1FileUri, '.'), States.MathAdd(States.ArrayLength(States.StringSplit($.fastq_list_row.read1FileUri, '.')), -1))"
                                     },
                                     "ResultPath": "$.get_r1_suffix_step"
                                   },
@@ -267,7 +267,7 @@
                                       {
                                         "And": [
                                           {
-                                            "Variable": "$.is_hybrid",
+                                            "Variable": "$.is_hybrid_run",
                                             "BooleanEquals": true
                                           },
                                           {
@@ -285,8 +285,8 @@
                                     "Type": "Pass",
                                     "Next": "Decompress ORA (N)",
                                     "Parameters": {
-                                      "read1FileUri": "States.Format('{}{}/{}_read1_ora_decompressed.fastq.gz', $.cache_prefix, States.Hash($.fastq_list_row.rgid), $.fastq_list_row.rgsm)",
-                                      "read2FileUri": "States.Format('{}{}/{}_read2_ora_decompressed.fastq.gz', $.cache_prefix, States.Hash($.fastq_list_row.rgid), $.fastq_list_row.rgsm)"
+                                      "read1FileUri.$": "States.Format('{}{}/{}_read1_ora_decompressed.fastq.gz', $.cache_uri_prefix, States.Hash($.fastq_list_row.rgid, 'SHA-1'), $.fastq_list_row.rgsm)",
+                                      "read2FileUri.$": "States.Format('{}{}/{}_read2_ora_decompressed.fastq.gz', $.cache_uri_prefix, States.Hash($.fastq_list_row.rgid, 'SHA-1'), $.fastq_list_row.rgsm)"
                                     },
                                     "ResultPath": "$.get_gzip_outputs_step"
                                   },
@@ -308,7 +308,8 @@
                                         "read1GzOutputFileUri.$": "$.get_gzip_outputs_step.read1FileUri",
                                         "read2GzOutputFileUri.$": "$.get_gzip_outputs_step.read2FileUri",
                                         "read1EstimatedGzFileSize": -1,
-                                        "read2EstimatedGzFileSize": -1
+                                        "read2EstimatedGzFileSize": -1,
+                                        "validationOnly": false
                                       }
                                     },
                                     "Next": "Set New FQLR (N)",
@@ -325,7 +326,7 @@
                               },
                               "Next": "Convert Fastq List Rows to CWL Input Objects (N)",
                               "ResultSelector": {
-                                "fastq_list_rows.$": "$[*].fastq_list_rows"
+                                "fastq_list_rows.$": "$[*].fastq_list_row"
                               }
                             },
                             "Convert Fastq List Rows to CWL Input Objects (N)": {
@@ -333,7 +334,7 @@
                               "Resource": "arn:aws:states:::lambda:invoke",
                               "Parameters": {
                                 "Payload": {
-                                  "fastq_list_rows.$": "$.get_input_parameters_from_event_step.inputs.fastqListRows"
+                                  "fastq_list_rows.$": "$.fastq_list_rows"
                                 },
                                 "FunctionName": "${__convert_fastq_list_rows_lambda_function_arn__}"
                               },
@@ -351,7 +352,6 @@
                                   "BackoffRate": 2
                                 }
                               ],
-                              "ResultPath": "$.convert_fastq_list_rows_to_cwl_input_objects_step",
                               "ResultSelector": {
                                 "fastq_list_rows.$": "$.Payload.fastq_list_rows"
                               },
