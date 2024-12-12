@@ -69,7 +69,8 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
                 ~Q(states__status="FAILED") &
                 ~Q(states__status="ABORTED") &
                 ~Q(states__status="SUCCEEDED") &
-                ~Q(states__status="RESOLVED")
+                ~Q(states__status="RESOLVED") &
+                ~Q(states__status="DEPRECATED")
             )
         
         if status:
@@ -131,6 +132,11 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
             states__status="RESOLVED"
         ).count()
         
+        deprecated_count = annotate_queryset.filter(
+            states__timestamp=F('latest_state_time'),
+            states__status="DEPRECATED"
+        ).count()
+        
         ongoing_count = base_queryset.filter(
             ~Q(states__status="FAILED") &
             ~Q(states__status="ABORTED") &
@@ -143,6 +149,7 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
             'aborted': aborted_count,
             'failed': failed_count,
             'resolved': resolved_count,
+            'deprecated': deprecated_count,
             'ongoing': ongoing_count
         }, status=200)
         

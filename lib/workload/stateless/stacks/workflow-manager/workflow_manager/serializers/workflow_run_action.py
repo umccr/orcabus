@@ -6,7 +6,11 @@ from rest_framework import serializers
 
 class AllowedRerunWorkflow(StrEnum):
     RNASUM = "rnasum"
-
+    
+class AllowedRerunWorkflowSerializer(serializers.Serializer):
+    is_valid = serializers.BooleanField()
+    allowed_dataset_choice = serializers.ListField(child=serializers.CharField())
+    valid_workflows = serializers.ListField(child=serializers.CharField())
 
 class BaseRerunInputSerializer(serializers.Serializer):
 
