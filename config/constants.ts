@@ -354,7 +354,7 @@ TN Stateless stack
 */
 
 // Deployed under dev/stg/prod
-export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 6ce2b636-ba2f-4004-8065-f3557f286c98
+export const tnIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/tumor_normal_4.2.4_pipeline_id'; // 7d3cb608-80e0-4ecf-a67e-ef524e9bfb8b
 export const tnIcav2PipelineWorkflowType = 'tumor-normal';
 export const tnIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const tnIcav2ServiceVersion = '2024.07.01';
@@ -430,7 +430,7 @@ WTS Stateless stack
 */
 
 // Deployed under dev/stg/prod
-export const wtsIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wts_4.2.4_pipeline_id'; // 1e53ae07-08a6-458b-9fa3-9cf7430409a0
+export const wtsIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wts_4.2.4_pipeline_id'; // 73e21ce0-60d7-4e3e-b130-88aff78d500d
 export const wtsIcav2PipelineWorkflowType = 'wts';
 export const wtsIcav2PipelineWorkflowTypeVersion = '4.2.4';
 export const wtsIcav2ServiceVersion = '2024.07.01';

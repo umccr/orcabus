@@ -41,7 +41,7 @@
                     }
                   ],
                   "Comment": "Fastq List Row Inputs",
-                  "Next": "Handle FQLR"
+                  "Next": "Add ORA Reference Bool / Is Hybrid Input"
                 },
                 {
                   "And": [
@@ -74,6 +74,36 @@
               ],
               "Default": "Fail"
             },
+            "Add ORA Reference Bool / Is Hybrid Input": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "Payload": {
+                  "event_data_input.$": "$.get_input_parameters_from_event_step.inputs"
+                },
+                "FunctionName": "${__add_ora_reference_lambda_function_arn__}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "ResultSelector": {
+                "add_ora_step.$": "$.Payload.add_ora_step",
+                "is_hybrid.$": "$.Payload.is_hybrid"
+              },
+              "ResultPath": "$.add_ora_step_path",
+              "Next": "Handle FQLR"
+            },
             "Handle FQLR": {
               "Type": "Parallel",
               "Branches": [
@@ -84,15 +114,105 @@
                       "Type": "Parallel",
                       "Branches": [
                         {
-                          "StartAt": "Convert Fastq List Rows to CWL Input Objects (Tumor)",
+                          "StartAt": "For each fastq list row (T)",
                           "States": {
-                            "Convert Fastq List Rows to CWL Input Objects (Tumor)": {
+                            "For each fastq list row (T)": {
+                              "Type": "Map",
+                              "ItemsPath": "$.get_input_parameters_from_event_step.inputs.tumorFastqListRows",
+                              "ItemSelector": {
+                                "fastq_list_row.$": "$$.Map.Item.Value",
+                                "cache_uri_prefix.$": "$.get_input_parameters_from_event_step.engineParameters.cacheUri",
+                                "is_hybrid_run.$": "$.add_ora_step_path.is_hybrid"
+                              },
+                              "ItemProcessor": {
+                                "ProcessorConfig": {
+                                  "Mode": "INLINE"
+                                },
+                                "StartAt": "Is ORA (T)",
+                                "States": {
+                                  "Is ORA (T)": {
+                                    "Type": "Pass",
+                                    "Next": "Is Hybrid Run and Ora Fastq (T)",
+                                    "Parameters": {
+                                      "read_1_file_suffix.$": "States.ArrayGetItem(States.StringSplit($.fastq_list_row.read1FileUri, '.'), States.MathAdd(States.ArrayLength(States.StringSplit($.fastq_list_row.read1FileUri, '.')), -1))"
+                                    },
+                                    "ResultPath": "$.get_r1_suffix_step"
+                                  },
+                                  "Is Hybrid Run and Ora Fastq (T)": {
+                                    "Type": "Choice",
+                                    "Choices": [
+                                      {
+                                        "And": [
+                                          {
+                                            "Variable": "$.is_hybrid_run",
+                                            "BooleanEquals": true
+                                          },
+                                          {
+                                            "Variable": "$.get_r1_suffix_step.read_1_file_suffix",
+                                            "StringEquals": "ora"
+                                          }
+                                        ],
+                                        "Next": "Set GZIP Outputs (T)",
+                                        "Comment": "Is ORA and hybrid fastq format inputs"
+                                      }
+                                    ],
+                                    "Default": "Pass (T)"
+                                  },
+                                  "Set GZIP Outputs (T)": {
+                                    "Type": "Pass",
+                                    "Next": "Decompress ORA (T)",
+                                    "Parameters": {
+                                      "read1FileUri.$": "States.Format('{}{}/{}_read1_ora_decompressed.fastq.gz', $.cache_uri_prefix, States.Hash($.fastq_list_row.rgid, 'SHA-1'), $.fastq_list_row.rgsm)",
+                                      "read2FileUri.$": "States.Format('{}{}/{}_read2_ora_decompressed.fastq.gz', $.cache_uri_prefix, States.Hash($.fastq_list_row.rgid, 'SHA-1'), $.fastq_list_row.rgsm)"
+                                    },
+                                    "ResultPath": "$.get_gzip_outputs_step"
+                                  },
+                                  "Pass (T)": {
+                                    "Type": "Pass",
+                                    "End": true,
+                                    "Parameters": {
+                                      "fastq_list_row.$": "$.fastq_list_row"
+                                    }
+                                  },
+                                  "Decompress ORA (T)": {
+                                    "Type": "Task",
+                                    "Resource": "arn:aws:states:::states:startExecution.sync:2",
+                                    "Parameters": {
+                                      "StateMachineArn": "${__ora_fastq_list_row_decompression_sfn_arn__}",
+                                      "Input": {
+                                        "read1OraFileUri.$": "$.fastq_list_row.read1FileUri",
+                                        "read2OraFileUri.$": "$.fastq_list_row.read2FileUri",
+                                        "read1GzOutputFileUri.$": "$.get_gzip_outputs_step.read1FileUri",
+                                        "read2GzOutputFileUri.$": "$.get_gzip_outputs_step.read2FileUri",
+                                        "read1EstimatedGzFileSize": -1,
+                                        "read2EstimatedGzFileSize": -1,
+                                        "validationOnly": false
+                                      }
+                                    },
+                                    "Next": "Set New FQLR (T)",
+                                    "ResultPath": null
+                                  },
+                                  "Set New FQLR (T)": {
+                                    "Type": "Pass",
+                                    "Parameters": {
+                                      "fastq_list_row.$": "States.JsonMerge($.fastq_list_row, $.get_gzip_outputs_step, false)"
+                                    },
+                                    "End": true
+                                  }
+                                }
+                              },
+                              "Next": "Convert Fastq List Rows to CWL Input Objects (T)",
+                              "ResultSelector": {
+                                "fastq_list_rows.$": "$[*].fastq_list_row"
+                              }
+                            },
+                            "Convert Fastq List Rows to CWL Input Objects (T)": {
                               "Type": "Task",
                               "Resource": "arn:aws:states:::lambda:invoke",
                               "Parameters": {
                                 "FunctionName": "${__convert_fastq_list_rows_lambda_function_arn__}",
                                 "Payload": {
-                                  "fastq_list_rows.$": "$.get_input_parameters_from_event_step.inputs.tumorFastqListRows"
+                                  "fastq_list_rows.$": "$.fastq_list_rows"
                                 }
                               },
                               "Retry": [
@@ -109,23 +229,112 @@
                                   "BackoffRate": 2
                                 }
                               ],
-                              "End": true,
                               "ResultSelector": {
                                 "fastq_list_rows.$": "$.Payload.fastq_list_rows"
                               },
-                              "ResultPath": "$.convert_tumor_fastq_list_rows_to_cwl_input_objects_step"
+                              "End": true
                             }
                           }
                         },
                         {
-                          "StartAt": "Convert Fastq List Rows to CWL Input Objects (Normal)",
+                          "StartAt": "For each fastq list row (N)",
                           "States": {
-                            "Convert Fastq List Rows to CWL Input Objects (Normal)": {
+                            "For each fastq list row (N)": {
+                              "Type": "Map",
+                              "ItemsPath": "$.get_input_parameters_from_event_step.inputs.fastqListRows",
+                              "ItemSelector": {
+                                "fastq_list_row.$": "$$.Map.Item.Value",
+                                "cache_uri_prefix.$": "$.get_input_parameters_from_event_step.engineParameters.cacheUri",
+                                "is_hybrid_run.$": "$.add_ora_step_path.is_hybrid"
+                              },
+                              "ItemProcessor": {
+                                "ProcessorConfig": {
+                                  "Mode": "INLINE"
+                                },
+                                "StartAt": "Is ORA (N)",
+                                "States": {
+                                  "Is ORA (N)": {
+                                    "Type": "Pass",
+                                    "Next": "Is Hybrid Run and Ora Fastq (N)",
+                                    "Parameters": {
+                                      "read_1_file_suffix.$": "States.ArrayGetItem(States.StringSplit($.fastq_list_row.read1FileUri, '.'), States.MathAdd(States.ArrayLength(States.StringSplit($.fastq_list_row.read1FileUri, '.')), -1))"
+                                    },
+                                    "ResultPath": "$.get_r1_suffix_step"
+                                  },
+                                  "Is Hybrid Run and Ora Fastq (N)": {
+                                    "Type": "Choice",
+                                    "Choices": [
+                                      {
+                                        "And": [
+                                          {
+                                            "Variable": "$.is_hybrid_run",
+                                            "BooleanEquals": true
+                                          },
+                                          {
+                                            "Variable": "$.get_r1_suffix_step.read_1_file_suffix",
+                                            "StringEquals": "ora"
+                                          }
+                                        ],
+                                        "Next": "Set GZIP Outputs (N)",
+                                        "Comment": "Is ORA and hybrid fastq format inputs"
+                                      }
+                                    ],
+                                    "Default": "Pass (N)"
+                                  },
+                                  "Set GZIP Outputs (N)": {
+                                    "Type": "Pass",
+                                    "Next": "Decompress ORA (N)",
+                                    "Parameters": {
+                                      "read1FileUri.$": "States.Format('{}{}/{}_read1_ora_decompressed.fastq.gz', $.cache_uri_prefix, States.Hash($.fastq_list_row.rgid, 'SHA-1'), $.fastq_list_row.rgsm)",
+                                      "read2FileUri.$": "States.Format('{}{}/{}_read2_ora_decompressed.fastq.gz', $.cache_uri_prefix, States.Hash($.fastq_list_row.rgid, 'SHA-1'), $.fastq_list_row.rgsm)"
+                                    },
+                                    "ResultPath": "$.get_gzip_outputs_step"
+                                  },
+                                  "Pass (N)": {
+                                    "Type": "Pass",
+                                    "End": true,
+                                    "Parameters": {
+                                      "fastq_list_row.$": "$.fastq_list_row"
+                                    }
+                                  },
+                                  "Decompress ORA (N)": {
+                                    "Type": "Task",
+                                    "Resource": "arn:aws:states:::states:startExecution.sync:2",
+                                    "Parameters": {
+                                      "StateMachineArn": "${__ora_fastq_list_row_decompression_sfn_arn__}",
+                                      "Input": {
+                                        "read1OraFileUri.$": "$.fastq_list_row.read1FileUri",
+                                        "read2OraFileUri.$": "$.fastq_list_row.read2FileUri",
+                                        "read1GzOutputFileUri.$": "$.get_gzip_outputs_step.read1FileUri",
+                                        "read2GzOutputFileUri.$": "$.get_gzip_outputs_step.read2FileUri",
+                                        "read1EstimatedGzFileSize": -1,
+                                        "read2EstimatedGzFileSize": -1,
+                                        "validationOnly": false
+                                      }
+                                    },
+                                    "Next": "Set New FQLR (N)",
+                                    "ResultPath": null
+                                  },
+                                  "Set New FQLR (N)": {
+                                    "Type": "Pass",
+                                    "Parameters": {
+                                      "fastq_list_row.$": "States.JsonMerge($.fastq_list_row, $.get_gzip_outputs_step, false)"
+                                    },
+                                    "End": true
+                                  }
+                                }
+                              },
+                              "Next": "Convert Fastq List Rows to CWL Input Objects (N)",
+                              "ResultSelector": {
+                                "fastq_list_rows.$": "$[*].fastq_list_row"
+                              }
+                            },
+                            "Convert Fastq List Rows to CWL Input Objects (N)": {
                               "Type": "Task",
                               "Resource": "arn:aws:states:::lambda:invoke",
                               "Parameters": {
                                 "Payload": {
-                                  "fastq_list_rows.$": "$.get_input_parameters_from_event_step.inputs.fastqListRows"
+                                  "fastq_list_rows.$": "$.fastq_list_rows"
                                 },
                                 "FunctionName": "${__convert_fastq_list_rows_lambda_function_arn__}"
                               },
@@ -143,7 +352,6 @@
                                   "BackoffRate": 2
                                 }
                               ],
-                              "ResultPath": "$.convert_fastq_list_rows_to_cwl_input_objects_step",
                               "ResultSelector": {
                                 "fastq_list_rows.$": "$.Payload.fastq_list_rows"
                               },
@@ -155,45 +363,16 @@
                       "End": true,
                       "ResultSelector": {
                         "cwl_data_inputs": {
-                          "tumor_fastq_list_rows.$": "$.[0].convert_tumor_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows",
-                          "fastq_list_rows.$": "$.[1].convert_fastq_list_rows_to_cwl_input_objects_step.fastq_list_rows"
+                          "tumor_fastq_list_rows.$": "$.[0].fastq_list_rows",
+                          "fastq_list_rows.$": "$.[1].fastq_list_rows"
                         }
                       }
                     }
                   }
                 },
                 {
-                  "StartAt": "Add ORA Reference Bool",
+                  "StartAt": "Need Ora Reference",
                   "States": {
-                    "Add ORA Reference Bool": {
-                      "Type": "Task",
-                      "Resource": "arn:aws:states:::lambda:invoke",
-                      "Parameters": {
-                        "Payload": {
-                          "event_data_input.$": "$.get_input_parameters_from_event_step.inputs"
-                        },
-                        "FunctionName": "${__add_ora_reference_lambda_function_arn__}"
-                      },
-                      "Retry": [
-                        {
-                          "ErrorEquals": [
-                            "Lambda.ServiceException",
-                            "Lambda.AWSLambdaException",
-                            "Lambda.SdkClientException",
-                            "Lambda.TooManyRequestsException"
-                          ],
-                          "IntervalSeconds": 1,
-                          "MaxAttempts": 3,
-                          "BackoffRate": 2,
-                          "JitterStrategy": "FULL"
-                        }
-                      ],
-                      "ResultSelector": {
-                        "add_ora_step.$": "$.Payload.add_ora_step"
-                      },
-                      "ResultPath": "$.add_ora_step_path",
-                      "Next": "Need Ora Reference"
-                    },
                     "Need Ora Reference": {
                       "Type": "Choice",
                       "Choices": [
