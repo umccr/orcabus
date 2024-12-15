@@ -113,7 +113,12 @@ def get_insert_size_estimate(insert_sizes: List[int]) -> float:
     """
 
     # Get the weighted average
-    # Dont include '0' insert sizes
+    # Dont include '0' insert
+
+    # Prevent ZeroDivisionError
+    if sum(insert_sizes[1:]) == 0:
+        return 0
+
     insert_size_estimate = sum(
         [
             insert_size * insert_size_count
