@@ -1,20 +1,16 @@
 from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer
 
-from .base import SerializersBase
 from app.models import Project, Contact
 
 
-class ProjectBaseSerializer(SerializersBase):
-    prefix = Project.orcabus_id_prefix
-
-
-class ProjectSerializer(ProjectBaseSerializer):
+class ProjectSerializer(ModelSerializer):
     class Meta:
         model = Project
         exclude = ["contact_set"]
 
 
-class ProjectDetailSerializer(ProjectBaseSerializer):
+class ProjectDetailSerializer(ModelSerializer):
     from .contact import ContactSerializer
 
     contact_set = ContactSerializer(many=True, read_only=True)
@@ -24,7 +20,7 @@ class ProjectDetailSerializer(ProjectBaseSerializer):
         fields = "__all__"
 
 
-class ProjectHistorySerializer(ProjectBaseSerializer):
+class ProjectHistorySerializer(ModelSerializer):
     class ContactOrcabusIdSet(serializers.StringRelatedField):
 
         def to_internal_value(self, data):
@@ -38,4 +34,3 @@ class ProjectHistorySerializer(ProjectBaseSerializer):
         fields = "__all__"
 
     contact_set = ContactOrcabusIdSet(many=True, read_only=True)
-

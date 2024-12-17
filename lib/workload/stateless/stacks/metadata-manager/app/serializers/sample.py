@@ -1,18 +1,15 @@
-from .base import SerializersBase
+from rest_framework.serializers import ModelSerializer
+
 from app.models import Sample
 
 
-class SampleBaseSerializer(SerializersBase):
-    prefix = Sample.orcabus_id_prefix
-
-
-class SampleSerializer(SampleBaseSerializer):
+class SampleSerializer(ModelSerializer):
     class Meta:
         model = Sample
         fields = "__all__"
 
 
-class SampleDetailSerializer(SampleBaseSerializer):
+class SampleDetailSerializer(ModelSerializer):
     from .library import LibrarySerializer
 
     class Meta:
@@ -22,7 +19,7 @@ class SampleDetailSerializer(SampleBaseSerializer):
     library_set = LibrarySerializer(many=True, read_only=True)
 
 
-class SampleHistorySerializer(SampleBaseSerializer):
+class SampleHistorySerializer(ModelSerializer):
 
     class Meta:
         model = Sample.history.model

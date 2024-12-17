@@ -1,22 +1,14 @@
-from abc import ABC
-
-from rest_framework import serializers
-
+from rest_framework.serializers import ModelSerializer
 from app.models import Contact
-from .base import SerializersBase
 
 
-class ContactBaseSerializer(SerializersBase):
-    prefix = Contact.orcabus_id_prefix
-
-
-class ContactSerializer(ContactBaseSerializer):
+class ContactSerializer(ModelSerializer):
     class Meta:
         model = Contact
         fields = "__all__"
 
 
-class ContactDetailSerializer(ContactBaseSerializer):
+class ContactDetailSerializer(ModelSerializer):
     from .project import ProjectSerializer
 
     project_set = ProjectSerializer(many=True, read_only=True)
@@ -26,7 +18,7 @@ class ContactDetailSerializer(ContactBaseSerializer):
         fields = "__all__"
 
 
-class ContactHistorySerializer(ContactBaseSerializer):
+class ContactHistorySerializer(ModelSerializer):
     class Meta:
         model = Contact.history.model
         fields = "__all__"

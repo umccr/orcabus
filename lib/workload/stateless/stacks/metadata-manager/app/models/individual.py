@@ -1,5 +1,6 @@
 from django.db import models
 
+from app.fields import OrcaBusIdField
 from app.models.base import BaseModel, BaseManager, BaseHistoricalRecords
 
 
@@ -8,9 +9,9 @@ class IndividualManager(BaseManager):
 
 
 class Individual(BaseModel):
-    orcabus_id_prefix = 'idv.'
     objects = IndividualManager()
 
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='idv')
     individual_id = models.CharField(
         unique=True,
         blank=True,

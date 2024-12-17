@@ -12,11 +12,11 @@ class LibraryViewSet(BaseViewSet):
     detail_serializer_class = LibraryDetailSerializer
     search_fields = Library.get_base_fields()
     queryset = Library.objects.all()
-    orcabus_id_prefix = Library.orcabus_id_prefix
+
 
     def get_queryset(self):
         qs = self.queryset
-        query_params = self.get_query_params()
+        query_params = self.request.query_params.copy()
 
         coverage__lte = query_params.get("coverage[lte]", None)
         if coverage__lte:

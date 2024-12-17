@@ -11,11 +11,10 @@ class SampleViewSet(BaseViewSet):
     serializer_class = SampleSerializer
     search_fields = Sample.get_base_fields()
     queryset = Sample.objects.all()
-    orcabus_id_prefix = Sample.orcabus_id_prefix
 
     def get_queryset(self):
         qs = self.queryset
-        query_params = self.get_query_params()
+        query_params = self.request.query_params.copy()
 
         is_library_none = query_params.getlist("is_library_none", None)
         if is_library_none:

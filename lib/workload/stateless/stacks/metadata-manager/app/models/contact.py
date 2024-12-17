@@ -1,16 +1,16 @@
 from django.db import models
 
+from app.fields import OrcaBusIdField
 from app.models.base import BaseModel, BaseManager, BaseHistoricalRecords
-
 
 class ContactManager(BaseManager):
     pass
 
 
 class Contact(BaseModel):
-    orcabus_id_prefix = 'ctc.'
     objects = ContactManager()
 
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='ctc')
     contact_id = models.CharField(
         unique=True,
         blank=True,

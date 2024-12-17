@@ -11,7 +11,6 @@ class ProjectViewSet(BaseViewSet):
     serializer_class = ProjectSerializer
     search_fields = Project.get_base_fields()
     queryset = Project.objects.all()
-    orcabus_id_prefix = Project.orcabus_id_prefix
 
     @extend_schema(responses=ProjectDetailSerializer(many=False))
     def retrieve(self, request, *args, **kwargs):
@@ -31,7 +30,7 @@ class ProjectViewSet(BaseViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        query_params = self.get_query_params()
+        query_params = self.request.query_params.copy()
         return Project.objects.get_by_keyword(self.queryset, **query_params)
 
     @extend_schema(responses=ProjectHistorySerializer(many=True), description="Retrieve the history of this model")
