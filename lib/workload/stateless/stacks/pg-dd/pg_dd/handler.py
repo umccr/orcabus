@@ -1,11 +1,13 @@
 import json
 import logging
 import os
+import tempfile
+import uuid
 from types import SimpleNamespace
 
 from libumccr.aws import libsm
 
-from pg_dd.pg_dd import PgDDS3
+from pg_dd.pg_dd import PgDDS3, PgDDLocal
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -22,4 +24,7 @@ except Exception as e:
 
 
 def handler(_event, _context):
-    PgDDS3(logger=logger).write_to_bucket()
+    out_dir = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
+
+    PgDDLocal(logger=logger, out_dir=out_dir).write_to_dir()
+    PgDDS3(logger=logger, out_dir=out_dir).write_to_bucket()

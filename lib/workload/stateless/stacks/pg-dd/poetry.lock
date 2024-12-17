@@ -2,17 +2,17 @@
 
 [[package]]
 name = "boto3"
-version = "1.35.69"
+version = "1.35.82"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.35.69-py3-none-any.whl", hash = "sha256:20945912130cca1505f45819cd9b7183a0e376e91a1221a0b1f50c80d35fd7e2"},
-    {file = "boto3-1.35.69.tar.gz", hash = "sha256:40db86c7732a310b282f595251995ecafcbd62009a57e47a22683862e570cc7a"},
+    {file = "boto3-1.35.82-py3-none-any.whl", hash = "sha256:c422b68ae76959b9e23b77eb79e41c3483332f7e1de918d2b083c456d8cf234c"},
+    {file = "boto3-1.35.82.tar.gz", hash = "sha256:2bbaf1551b1ed55770cb437d7040f1abe6742601103695057b30ce6328eef286"},
 ]
 
 [package.dependencies]
-botocore = ">=1.35.69,<1.36.0"
+botocore = ">=1.35.82,<1.36.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -21,13 +21,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.35.69"
+version = "1.35.82"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.35.69-py3-none-any.whl", hash = "sha256:cad8d9305f873404eee4b197d84e60a40975d43cbe1ab63abe893420ddfe6e3c"},
-    {file = "botocore-1.35.69.tar.gz", hash = "sha256:f9f23dd76fb247d9b0e8d411d2995e6f847fc451c026f1e58e300f815b0b36eb"},
+    {file = "botocore-1.35.82-py3-none-any.whl", hash = "sha256:e43b97d8cbf19d35ce3a177f144bd97cc370f0a67d0984c7d7cf105ac198748f"},
+    {file = "botocore-1.35.82.tar.gz", hash = "sha256:78dd7bf8f49616d00073698d7bbaf5a115208fe730b7b7afae4456adddb3552e"},
 ]
 
 [package.dependencies]
@@ -146,13 +146,13 @@ reports = ["lxml"]
 
 [[package]]
 name = "mypy-boto3-s3"
-version = "1.35.69"
-description = "Type annotations for boto3 S3 1.35.69 service generated with mypy-boto3-builder 8.3.1"
+version = "1.35.76.post1"
+description = "Type annotations for boto3 S3 1.35.76 service generated with mypy-boto3-builder 8.6.3"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "mypy_boto3_s3-1.35.69-py3-none-any.whl", hash = "sha256:11a34259983e09d67e4d3a322fd47904a006bbfff19984e4e36a77e30f2014bb"},
-    {file = "mypy_boto3_s3-1.35.69.tar.gz", hash = "sha256:97f7944a84a4a49282825bef1483a25680dcdce75da6017745d709d2cf2aa1c0"},
+    {file = "mypy_boto3_s3-1.35.76.post1-py3-none-any.whl", hash = "sha256:fd4a8734c3bb5a2da52e22258b1836a14aa3460816df25c831790e464334021f"},
+    {file = "mypy_boto3_s3-1.35.76.post1.tar.gz", hash = "sha256:34ac4cacf8acdafa6e71a2810116b2546376f241761f9eec6ac5a9887309372b"},
 ]
 
 [[package]]
@@ -179,6 +179,7 @@ files = [
 
 [package.dependencies]
 psycopg-binary = {version = "3.2.3", optional = true, markers = "implementation_name != \"pypy\" and extra == \"binary\""}
+typing-extensions = {version = ">=4.6", markers = "python_version < \"3.13\""}
 tzdata = {version = "*", markers = "sys_platform == \"win32\""}
 
 [package.extras]
@@ -336,13 +337,13 @@ crt = ["botocore[crt] (>=1.33.2,<2.0a.0)"]
 
 [[package]]
 name = "six"
-version = "1.16.0"
+version = "1.17.0"
 description = "Python 2 and 3 compatibility utilities"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 files = [
-    {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
-    {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
+    {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
+    {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
 ]
 
 [[package]]
@@ -386,5 +387,5 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.13"
-content-hash = "494ad924c9cf531d9b2d699aca8c8777ac36b8bb21de963548fdd0dd4baaa217"
+python-versions = "^3.12"
+content-hash = "7b6452562763ec8f1bcf43ad6f8cfaae7702c8190d90d8ec142eceb5df7294df"

@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{ include = "pg_dd" }]
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = "^3.12"
 boto3 = "^1"
 psycopg = { version = "^3", extras = ["binary"] }
 python-dotenv = "^1"
