@@ -41,7 +41,6 @@ class OrcaBusIdField(UlidField):
         return super().non_db_attrs + ("prefix",)
 
     def from_db_value(self, value, expression, connection):
-        # print('hello from_db_value', value)
         if value and self.prefix != '':
             return f"{self.prefix}.{value}"
         else:

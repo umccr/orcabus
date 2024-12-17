@@ -8,7 +8,6 @@ from workflow_manager.viewsets.base import BaseViewSet
 class PayloadViewSet(BaseViewSet):
     serializer_class = PayloadSerializer
     search_fields = Payload.get_base_fields()
-    orcabus_id_prefix = Payload.orcabus_id_prefix
 
     @extend_schema(parameters=[
         PayloadListParamSerializer
@@ -17,5 +16,5 @@ class PayloadViewSet(BaseViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        query_params = self.get_query_params()
+        query_params = self.request.query_params.copy()
         return Payload.objects.get_by_keyword(self.queryset, **query_params)

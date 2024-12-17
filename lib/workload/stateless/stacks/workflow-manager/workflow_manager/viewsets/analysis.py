@@ -9,7 +9,6 @@ class AnalysisViewSet(BaseViewSet):
     serializer_class = AnalysisDetailSerializer  # use detailed serializer as default
     search_fields = Analysis.get_base_fields()
     queryset = Analysis.objects.prefetch_related("contexts").prefetch_related("workflows").all()
-    orcabus_id_prefix = Analysis.orcabus_id_prefix
 
     @extend_schema(parameters=[
         AnalysisListParamSerializer
@@ -19,5 +18,5 @@ class AnalysisViewSet(BaseViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        query_params = self.get_query_params()
+        query_params = self.request.query_params.copy()
         return Analysis.objects.get_by_keyword(self.queryset, **query_params)

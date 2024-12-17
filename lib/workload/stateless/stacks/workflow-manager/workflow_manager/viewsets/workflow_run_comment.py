@@ -13,7 +13,6 @@ class WorkflowRunCommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin
     serializer_class = WorkflowRunCommentSerializer
     search_fields = WorkflowRunComment.get_base_fields()
     http_method_names = ['get', 'post', 'patch', 'delete']
-    orcabus_id_prefix = WorkflowRunComment.orcabus_id_prefix
     pagination_class = None
 
     def get_queryset(self):

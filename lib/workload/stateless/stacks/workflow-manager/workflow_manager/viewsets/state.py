@@ -13,7 +13,6 @@ from workflow_manager.serializers.state import StateSerializer
 class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin,  GenericViewSet):
     serializer_class = StateSerializer
     search_fields = State.get_base_fields()
-    orcabus_id_prefix = State.orcabus_id_prefix
     http_method_names = ['get', 'post', 'patch']
     pagination_class = None
     

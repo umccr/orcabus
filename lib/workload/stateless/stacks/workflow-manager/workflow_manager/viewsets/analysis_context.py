@@ -8,7 +8,6 @@ from .base import BaseViewSet
 class AnalysisContextViewSet(BaseViewSet):
     serializer_class = AnalysisContextSerializer
     search_fields = AnalysisContext.get_base_fields()
-    orcabus_id_prefix = AnalysisContext.orcabus_id_prefix
 
     @extend_schema(parameters=[
         AnalysisContextListParamSerializer
@@ -17,5 +16,5 @@ class AnalysisContextViewSet(BaseViewSet):
         return super().list(request, *args, **kwargs)
     
     def get_queryset(self):
-        query_params = self.get_query_params()
+        query_params = self.request.query_params.copy()
         return AnalysisContext.objects.get_by_keyword(self.queryset, **query_params)

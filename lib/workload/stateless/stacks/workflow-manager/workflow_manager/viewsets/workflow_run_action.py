@@ -25,7 +25,6 @@ from workflow_manager.models import (
 class WorkflowRunActionViewSet(ViewSet):
     lookup_value_regex = "[^/]+"  # to allow orcabus id prefix
     queryset = WorkflowRun.objects.prefetch_related('states').all()
-    orcabus_id_prefix = WorkflowRun.orcabus_id_prefix
 
     @extend_schema(responses=AllowedRerunWorkflowSerializer, description="Allowed rerun workflows")
     @action(detail=True, methods=['get'], url_name='validate_rerun_workflows', url_path='validate_rerun_workflows')
@@ -39,12 +38,12 @@ class WorkflowRunActionViewSet(ViewSet):
         if wfl_name == AllowedRerunWorkflow.RNASUM.value:
             allowed_dataset_choice = RERUN_INPUT_SERIALIZERS[wfl_name].allowed_dataset_choice
         
-        reponse = {
+        response = {
             'is_valid': is_valid,
             'allowed_dataset_choice': allowed_dataset_choice,
             'valid_workflows': AllowedRerunWorkflow,
         }
-        return Response(reponse, status=status.HTTP_200_OK)
+        return Response(response, status=status.HTTP_200_OK)
     
     @extend_schema(
         request=PolymorphicProxySerializer(
@@ -67,8 +66,6 @@ class WorkflowRunActionViewSet(ViewSet):
         rerun from existing workflow run
         """
         pk = self.kwargs.get('pk')
-        if pk and pk.startswith(self.orcabus_id_prefix):
-            pk = pk[len(self.orcabus_id_prefix):]
         wfl_run = get_object_or_404(self.queryset, pk=pk)
 
         # Only approved workflow_name is allowed

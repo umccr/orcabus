@@ -1,5 +1,6 @@
 from django.db import models
 
+from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.models.analysis import Analysis
 from workflow_manager.models.analysis_context import AnalysisContext
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
@@ -11,8 +12,8 @@ class AnalysisRunManager(OrcaBusBaseManager):
 
 
 class AnalysisRun(OrcaBusBaseModel):
-    orcabus_id_prefix = 'anr.'
 
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='anr')
     analysis_run_name = models.CharField(max_length=255)
     comment = models.CharField(max_length=255, null=True, blank=True)
     status = models.CharField(max_length=255, null=True, blank=True)

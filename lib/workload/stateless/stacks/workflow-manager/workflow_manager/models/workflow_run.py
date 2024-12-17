@@ -1,5 +1,6 @@
 from django.db import models
 
+from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.models.analysis_run import AnalysisRun
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.library import Library
@@ -11,8 +12,7 @@ class WorkflowRunManager(OrcaBusBaseManager):
 
 
 class WorkflowRun(OrcaBusBaseModel):
-    orcabus_id_prefix = 'wfr.'
-
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='wfr')
     portal_run_id = models.CharField(max_length=255, unique=True)
 
     execution_id = models.CharField(max_length=255, null=True, blank=True)
@@ -37,6 +37,7 @@ class WorkflowRun(OrcaBusBaseModel):
     def get_latest_state(self):
         # retrieve all related states and get the latest one
         return self.states.order_by('-timestamp').first()
+
 
 class LibraryAssociationManager(OrcaBusBaseManager):
     pass

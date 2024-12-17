@@ -1,6 +1,7 @@
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
+from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 
 
@@ -10,8 +11,7 @@ class LibraryManager(OrcaBusBaseManager):
 
 class Library(OrcaBusBaseModel):
 
-    orcabus_id_prefix = "lib."
-
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='lib')
     library_id = models.CharField(max_length=255)
 
     objects = LibraryManager()

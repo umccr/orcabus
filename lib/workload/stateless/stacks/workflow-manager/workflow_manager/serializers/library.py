@@ -3,7 +3,7 @@ from workflow_manager.models import Library
 
 
 class LibraryBaseSerializer(SerializersBase):
-    prefix = Library.orcabus_id_prefix
+    pass
 
 
 class LibraryListParamSerializer(OptionalFieldsMixin, LibraryBaseSerializer):
