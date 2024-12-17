@@ -77,7 +77,6 @@ class BaseManager(models.Manager):
 
         try:
             if query_string:
-                print('query_string', query_string)
                 qs = qs.filter(query_string)
         except FieldError as e:
             logger.debug(e)
