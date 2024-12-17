@@ -108,7 +108,9 @@ export class PgDDStack extends Stack {
         PG_DD_DATABASE_SEQUENCE_RUN_MANAGER: 'sequence_run_manager',
         PG_DD_DATABASE_WORKFLOW_MANAGER: 'workflow_manager',
         PG_DD_DATABASE_FILEMANAGER: 'filemanager',
-        PG_DD_DATABASE_FILEMANAGER_SQL: 'select * from s3_object order by sequencer limit 10000',
+        PG_DD_DATABASE_FILEMANAGER_SQL_DUMP:
+          'select * from s3_object order by sequencer limit 10000',
+        PG_DD_DATABASE_FILEMANAGER_SQL_LOAD: 's3_object',
         ...(props.prefix && { PG_DD_PREFIX: props.prefix }),
       },
     });

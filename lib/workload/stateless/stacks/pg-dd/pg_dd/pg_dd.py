@@ -184,9 +184,13 @@ class PgDDLocal(PgDD):
     Commands related to dumping/loading CSV files to a local directory.
     """
 
-    def __init__(self, logger: logging.Logger = logging.getLogger(__name__)):
+    def __init__(
+        self,
+        out_dir=os.getenv("PG_DD_DIR"),
+        logger: logging.Logger = logging.getLogger(__name__),
+    ):
         super().__init__(logger=logger)
-        self.out = os.getenv("PG_DD_DIR")
+        self.out = out_dir
         self.bucket = os.getenv("PG_DD_BUCKET")
         self.prefix = os.getenv("PG_DD_PREFIX")
         self.s3: S3ServiceResource = boto3.resource("s3")
@@ -242,11 +246,15 @@ class PgDDS3(PgDD):
     Commands related to dumping/loading from S3.
     """
 
-    def __init__(self, logger: logging.Logger = logging.getLogger(__name__)):
+    def __init__(
+        self,
+        out_dir=os.getenv("PG_DD_DIR"),
+        logger: logging.Logger = logging.getLogger(__name__),
+    ):
         super().__init__(logger=logger)
         self.bucket = os.getenv("PG_DD_BUCKET")
         self.prefix = os.getenv("PG_DD_PREFIX")
-        self.dir = os.getenv("PG_DD_DIR")
+        self.dir = out_dir
         self.s3: S3ServiceResource = boto3.resource("s3")
 
     def write_to_bucket(self, db: str = None):
