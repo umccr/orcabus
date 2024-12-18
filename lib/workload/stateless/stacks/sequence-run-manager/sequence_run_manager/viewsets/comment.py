@@ -9,10 +9,10 @@ from sequence_run_manager.models.comment import Comment
 from sequence_run_manager.models.sequence import Sequence
 from sequence_run_manager.serializers.comment import CommentSerializer
 
+
 class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin, GenericViewSet):
     serializer_class = CommentSerializer
     search_fields = Comment.get_base_fields()
-    orcabus_id_prefix = Comment.orcabus_id_prefix
     http_method_names = ['get', 'post', 'patch', 'delete']
     pagination_class = None
 
@@ -27,13 +27,13 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Li
 
     def create(self, request, *args, **kwargs):
         seq_orcabus_id = self.kwargs["orcabus_id"]
-        
+
         # Check if the SequenceRun exists
         try:
             Sequence.objects.get(orcabus_id=seq_orcabus_id)
         except Sequence.DoesNotExist:
             return Response({"detail": "SequenceRun not found."}, status=status.HTTP_404_NOT_FOUND)
-        
+
         # Check if created_by and comment are provided
         if not request.data.get('created_by') or not request.data.get('comment'):
             return Response({"detail": "created_by and comment are required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -41,7 +41,7 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Li
         # Add workflow_run_id to the request data
         mutable_data = request.data.copy()
         mutable_data['association_id'] = seq_orcabus_id
-        
+
         serializer = self.get_serializer(data=mutable_data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -54,11 +54,11 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Li
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        
+
         # Check if the user updating the comment is the same as the one who created it
         if instance.created_by != request.data.get('created_by'):
             raise PermissionDenied("You don't have permission to update this comment.")
-        
+
         # Ensure only the comment field can be updated
         if set(request.data.keys()) - {'comment', 'created_by'}:
             return Response({"detail": "Only the comment field can be updated."},
@@ -72,16 +72,16 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Li
 
     def perform_update(self, serializer):
         serializer.save()
-        
+
     @action(detail=True, methods=['delete'])
     def soft_delete(self, request, *args, **kwargs):
         instance = self.get_object()
-        
+
         # Check if the user deleting the comment is the same as the one who created it
         if instance.created_by != request.data.get('created_by'):
             raise PermissionDenied("You don't have permission to delete this comment.")
-        
+
         instance.is_deleted = True
         instance.save()
-        
+
         return Response({"detail": "Comment successfully marked as deleted."}, status=status.HTTP_204_NO_CONTENT)

@@ -16,7 +16,6 @@ class SerializersBase(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation['orcabus_id'] = self.prefix + str(representation['orcabus_id'])
 
         if self.use_camel_case:
             return {to_camel_case(key): value for key, value in representation.items()}

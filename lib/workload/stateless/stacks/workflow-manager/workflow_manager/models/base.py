@@ -1,17 +1,13 @@
 import logging
 import operator
-import ulid
 from functools import reduce
 from typing import List
 
 from django.core.exceptions import FieldError
-from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import Q, ManyToManyField, ForeignKey, ForeignObject, OneToOneField, ForeignObjectRel, \
     ManyToOneRel, ManyToManyRel, OneToOneRel, QuerySet
 from rest_framework.settings import api_settings
-
-from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.pagination import PaginationConstant
 
 logger = logging.getLogger(__name__)
@@ -77,10 +73,6 @@ class OrcaBusBaseManager(models.Manager):
 class OrcaBusBaseModel(models.Model):
     class Meta:
         abstract = True
-
-    orcabus_prefix = ''
-
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix=orcabus_prefix)
 
     def save(self, *args, **kwargs):
         self.full_clean()  # make sure we are validating the inputs (especially the OrcaBus ID)

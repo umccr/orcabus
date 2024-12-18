@@ -30,19 +30,19 @@ router.register(r"workflowrun", WorkflowRunActionViewSet, basename="workflowrun-
 router.register(r"payload", PayloadViewSet, basename="payload")
 
 router.register(
-    "workflowrun/(?P<orcabus_id>[^/.]+)/state",
+    "workflowrun/(?P<orcabus_id>[^/]+)/state",
     StateViewSet,
     basename="workflowrun-state",
 )
 
 # router.register(
-#     "workflowrun/(?P<workflowrun_id>[^/.]+)/library",
+#     "workflowrun/(?P<workflowrun_id>[^/]+)/library",
 #     LibraryViewSet,
 #     basename="workflowrun-library",
 # )
 
 router.register(
-    "workflowrun/(?P<orcabus_id>[^/.]+)/comment",
+    "workflowrun/(?P<orcabus_id>[^/]+)/comment",
     WorkflowRunCommentViewSet,
     basename="workflowrun-comment",
 )
