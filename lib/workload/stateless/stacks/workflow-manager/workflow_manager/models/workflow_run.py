@@ -44,6 +44,7 @@ class LibraryAssociationManager(OrcaBusBaseManager):
 
 
 class LibraryAssociation(OrcaBusBaseModel):
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='lib')
     workflow_run = models.ForeignKey(WorkflowRun, on_delete=models.CASCADE)
     library = models.ForeignKey(Library, on_delete=models.CASCADE)
     association_date = models.DateTimeField()
