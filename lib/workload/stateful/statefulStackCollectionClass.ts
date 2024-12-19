@@ -65,6 +65,10 @@ import {
   OraCompressionIcav2PipelineTable,
   OraCompressionIcav2PipelineTableStackProps,
 } from './stacks/ora-decompression-dynamodb/deploy/stack';
+import {
+  WorkflowTaskTokenTable,
+  WorkflowTaskTokenTableStackProps,
+} from './stacks/workflow-task-token-manager-dynamo-db/deploy';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -86,6 +90,7 @@ export interface StatefulStackCollectionProps {
   pierianDxPipelineTableStackProps: PierianDxPipelineTableStackProps;
   oncoanalyserPipelineTableStackProps: OncoanalyserNfPipelineTableStackProps;
   sashPipelineTableStackProps: SashNfPipelineTableStackProps;
+  workflowTaskTokenTableStackProps: WorkflowTaskTokenTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -110,6 +115,7 @@ export class StatefulStackCollection {
   readonly pierianDxPipelineTableStack: Stack;
   readonly oncoanalyserPipelineTableStack: Stack;
   readonly sashPipelineTableStack: Stack;
+  readonly workflowTaskTokenTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -258,6 +264,15 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'SashNfPipelineTableStack'),
       ...statefulConfiguration.sashPipelineTableStackProps,
     });
+
+    this.workflowTaskTokenTableStack = new WorkflowTaskTokenTable(
+      scope,
+      'WorkflowTaskTokenTableStack',
+      {
+        ...this.createTemplateProps(env, 'WorkflowTaskTokenTableStack'),
+        ...statefulConfiguration.workflowTaskTokenTableStackProps,
+      }
+    );
   }
 
   /**

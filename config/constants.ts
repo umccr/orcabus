@@ -886,3 +886,7 @@ export const oraDecompressionIcav2ReadyEventSource = 'orcabus.workflowmanager';
 export const oraDecompressionIcav2EventSource = 'orcabus.oradecompression';
 export const oraDecompressionIcav2EventDetailType = 'FastqListRowDecompressed';
 export const oraDecompressionStateMachinePrefix = 'oraDecompressionSfn';
+/*
+Workflow Task Token Manager stack
+*/
+export const workflowTaskTokenManagerDynamodbTableName = 'workflowTaskTokenManagerDynamoDBTable';

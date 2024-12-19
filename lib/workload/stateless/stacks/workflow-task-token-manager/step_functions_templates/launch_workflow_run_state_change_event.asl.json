@@ -1,0 +1,61 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "Set variables from inputs",
+  "States": {
+    "Set variables from inputs": {
+      "Type": "Pass",
+      "Next": "Launch event and write to db",
+      "Assign": {
+        "portal_run_id": "{% $states.input.portalRunId %}",
+        "task_token": "{% $states.input.taskToken %}"
+      }
+    },
+    "Launch event and write to db": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Save Portal Run ID and Task Token",
+          "States": {
+            "Save Portal Run ID and Task Token": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Arguments": {
+                "TableName": "${__table_name__}",
+                "Item": {
+                  "id": "{% $portal_run_id %}",
+                  "id_type": "${__portal_run_id_table_partition_name__}",
+                  "task_token": {
+                    "S": "{% $task_token %}"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Launch Workflow Run State Change Event",
+          "States": {
+            "Launch Workflow Run State Change Event": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::events:putEvents",
+              "Arguments": {
+                "Entries": [
+                  {
+                    "Detail": "{% (\n  /*\n  Remove TaskToken from Detail before providing detail object\n  */\n  $each(\n    $states.input, \n    function($v, $k){\n      $k = \"taskToken\" ? {} : {$k: $v}\n    }\n  ) ~> $merge\n) %}",
+                    "DetailType": "${__detail_type__}",
+                    "EventBusName": "${__event_bus_name__}",
+                    "Source": "${__source__}"
+                  }
+                ]
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "End": true
+    }
+  }
+}

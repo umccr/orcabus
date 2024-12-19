@@ -82,6 +82,11 @@ import {
 import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
 import { HtsgetStack, HtsgetStackConfigurableProps } from './stacks/htsget/stack';
+import { getWorkflowTaskTokenManagerTableStackProps } from '../../../config/stacks/workflowTaskTokenManager';
+import {
+  WorkflowTaskTokenManagerStack,
+  WorkflowTaskTokenManagerStackProps,
+} from './stacks/workflow-task-token-manager/deploy';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -110,6 +115,7 @@ export interface StatelessStackCollectionProps {
   dataMigrateProps: DataMigrateStackProps;
   htsgetProps: HtsgetStackConfigurableProps;
   pgDDProps?: PgDDStackProps;
+  workflowTaskTokenManagerStackProps: WorkflowTaskTokenManagerStackProps;
 }
 
 export class StatelessStackCollection {
@@ -140,6 +146,7 @@ export class StatelessStackCollection {
   readonly dataMigrate: Stack;
   readonly htsgetStack: Stack;
   readonly pgDDStack: Stack;
+  readonly workflowTaskTokenManagerStack: Stack;
 
   constructor(
     scope: Construct,
@@ -334,6 +341,14 @@ export class StatelessStackCollection {
         ...statelessConfiguration.pgDDProps,
       });
     }
+    this.workflowTaskTokenManagerStack = new WorkflowTaskTokenManagerStack(
+      scope,
+      'WorkflowTaskTokenManagerStack',
+      {
+        ...this.createTemplateProps(env, 'WorkflowTaskTokenManagerStack'),
+        ...statelessConfiguration.workflowTaskTokenManagerStackProps,
+      }
+    );
   }
 
   /**

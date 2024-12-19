@@ -66,6 +66,10 @@ import { getOraDecompressionManagerStackProps } from './stacks/oraDecompressionP
 import { getPgDDProps } from './stacks/pgDD';
 import { getDataMigrateStackProps } from './stacks/dataMigrate';
 import { getHtsgetProps } from './stacks/htsget';
+import {
+  getWorkflowTaskTokenManagerStackProps,
+  getWorkflowTaskTokenManagerTableStackProps,
+} from './stacks/workflowTaskTokenManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -106,6 +110,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       pierianDxPipelineTableStackProps: getPierianDxPipelineTableStackProps(),
       oncoanalyserPipelineTableStackProps: getOncoanalyserPipelineTableStackProps(),
       sashPipelineTableStackProps: getSashPipelineTableStackProps(),
+      workflowTaskTokenTableStackProps: getWorkflowTaskTokenManagerTableStackProps(),
     },
     statelessConfig: {
       metadataManagerStackProps: getMetadataManagerStackProps(stage),
@@ -136,6 +141,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       dataMigrateProps: getDataMigrateStackProps(stage),
       htsgetProps: getHtsgetProps(stage),
       pgDDProps: getPgDDProps(stage),
+      workflowTaskTokenManagerStackProps: getWorkflowTaskTokenManagerStackProps(),
     },
   };
 
