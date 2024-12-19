@@ -518,7 +518,7 @@
         "input_json.$": "States.JsonMerge($.set_input_json_step.input_json, $.configure_inputs_step.boolean_parameters, false)"
       },
       "ResultPath": "$.merge_boolean_enable_parameters_step",
-      "Next": "Update Database Entry"
+      "Next": "Remove Null objects"
     },
     "Remove Null objects": {
       "QueryLanguage": "JSONata",
