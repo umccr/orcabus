@@ -10,27 +10,16 @@ class SubjectViewSet(BaseViewSet):
     serializer_class = SubjectSerializer
     search_fields = Subject.get_base_fields()
     queryset = Subject.objects.all()
-    orcabus_id_prefix = Subject.orcabus_id_prefix
 
     def get_queryset(self):
 
         qs = self.queryset
-        query_params = self.get_query_params()
+        query_params = self.request.query_params.copy()
 
         library_id = query_params.get("library_id", None)
         if library_id:
             query_params.pop("library_id")
             qs = qs.filter(library__library_id=library_id)
-
-        library_orcabus_id = query_params.get("library_orcabus_id", None)
-        if library_orcabus_id:
-            query_params.pop("library_orcabus_id")
-
-            # Remove '.lib' prefix if present
-            if library_orcabus_id.startswith(Library.orcabus_id_prefix):
-                library_orcabus_id = library_orcabus_id[len(self.orcabus_id_prefix):]
-
-            qs = qs.filter(library__orcabus_id=library_orcabus_id)
 
         is_library_none = query_params.getlist("is_library_none", None)
         if is_library_none:

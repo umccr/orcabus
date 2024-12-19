@@ -1,22 +1,16 @@
 from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer
 
 from app.models import Subject, Individual
-from .base import SerializersBase
 
 
-class SubjectBaseSerializer(SerializersBase):
-    prefix = Subject.orcabus_id_prefix
-
-
-class SubjectSerializer(SubjectBaseSerializer):
-    prefix = Subject.orcabus_id_prefix
-
+class SubjectSerializer(ModelSerializer):
     class Meta:
         model = Subject
         exclude = ["individual_set"]
 
 
-class SubjectDetailSerializer(SubjectBaseSerializer):
+class SubjectDetailSerializer(ModelSerializer):
     from .individual import IndividualSerializer
     from .library import LibrarySerializer
 
@@ -28,13 +22,10 @@ class SubjectDetailSerializer(SubjectBaseSerializer):
     library_set = LibrarySerializer(many=True, read_only=True)
 
 
-class SubjectHistorySerializer(SubjectBaseSerializer):
+class SubjectHistorySerializer(ModelSerializer):
     class IndividualOrcabusIdSet(serializers.StringRelatedField):
         def to_internal_value(self, data):
             raise NotImplementedError()
-
-        def to_representation(self, value):
-            return Individual.orcabus_id_prefix + value.individual.orcabus_id
 
     class Meta:
         model = Subject.history.model

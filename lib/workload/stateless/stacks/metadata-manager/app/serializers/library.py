@@ -1,31 +1,16 @@
-from abc import ABC
-
 from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer
 
 from app.models import Library, Sample, Subject, Project
-from .base import SerializersBase
 
 
-class LibraryBaseSerializer(SerializersBase):
-    prefix = Library.orcabus_id_prefix
-
-
-class LibrarySerializer(LibraryBaseSerializer):
+class LibrarySerializer(ModelSerializer):
     class Meta:
         model = Library
         exclude = ["project_set"]
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
 
-        if representation.get('sample', None):
-            representation['sample'] = Sample.orcabus_id_prefix + representation['sample']
-        if representation.get('subject', None):
-            representation['subject'] = Subject.orcabus_id_prefix + representation['subject']
-        return representation
-
-
-class LibraryDetailSerializer(LibraryBaseSerializer):
+class LibraryDetailSerializer(ModelSerializer):
     from .sample import SampleSerializer
     from .project import ProjectSerializer
     from .subject import SubjectSerializer
@@ -44,9 +29,6 @@ class LibraryHistorySerializer(LibrarySerializer):
     class ProjectOrcabusIdSet(serializers.StringRelatedField):
         def to_internal_value(self, data):
             raise NotImplementedError()
-
-        def to_representation(self, value):
-            return Project.orcabus_id_prefix + value.project.orcabus_id
 
     class Meta:
         model = Library.history.model

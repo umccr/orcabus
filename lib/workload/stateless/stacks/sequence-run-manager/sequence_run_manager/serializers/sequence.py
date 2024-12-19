@@ -5,7 +5,7 @@ from sequence_run_manager.serializers.base import SerializersBase, OptionalField
 
 
 class SequenceBaseSerializer(SerializersBase):
-    orcabus_id_prefix = Sequence.orcabus_id_prefix
+    pass
     
 
 class SequenceListParamSerializer(OptionalFieldsMixin, SequenceBaseSerializer):

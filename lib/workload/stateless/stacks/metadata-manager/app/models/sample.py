@@ -1,6 +1,7 @@
 import ulid
 from django.db import models
 
+from app.fields import OrcaBusIdField
 from app.models.base import BaseModel, BaseManager, BaseHistoricalRecords
 
 
@@ -31,9 +32,9 @@ class SampleManager(BaseManager):
 
 
 class Sample(BaseModel):
-    orcabus_id_prefix = 'smp.'
     objects = SampleManager()
 
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='smp')
     sample_id = models.CharField(
         unique=True,
         blank=True,

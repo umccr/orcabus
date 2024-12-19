@@ -1,5 +1,6 @@
 from django.db import models
 
+from app.fields import OrcaBusIdField
 from app.models.contact import Contact
 from app.models.base import BaseModel, BaseManager, BaseHistoricalRecords
 
@@ -19,9 +20,9 @@ class ProjectContactLink(models.Model):
 
 
 class Project(BaseModel):
-    orcabus_id_prefix = 'prj.'
     objects = ProjectManager()
 
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='prj')
     project_id = models.CharField(
         unique=True,
         blank=True,

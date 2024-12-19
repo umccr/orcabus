@@ -11,7 +11,6 @@ class WorkflowRunViewSet(BaseViewSet):
     serializer_class = WorkflowRunDetailSerializer
     search_fields = WorkflowRun.get_base_fields()
     queryset = WorkflowRun.objects.prefetch_related("libraries").all()
-    orcabus_id_prefix = WorkflowRun.orcabus_id_prefix
 
     @extend_schema(parameters=[WorkflowRunListParamSerializer])
     def list(self, request, *args, **kwargs):

@@ -1,5 +1,6 @@
 from django.db import models
 
+from app.fields import OrcaBusIdField
 from app.models.base import BaseModel, BaseManager, BaseHistoricalRecords
 
 
@@ -17,8 +18,9 @@ class SubjectIndividualLink(models.Model):
 
 
 class Subject(BaseModel):
-    orcabus_id_prefix = 'sbj.'
     objects = SubjectManager()
+
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='sbj')
     subject_id = models.CharField(
         unique=True,
         blank=True,

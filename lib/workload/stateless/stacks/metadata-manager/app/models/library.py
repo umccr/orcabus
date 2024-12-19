@@ -2,6 +2,7 @@ import logging
 
 from django.db import models
 
+from app.fields import OrcaBusIdField
 from app.models.base import BaseManager, BaseModel, BaseHistoricalRecords
 from app.models.subject import Subject
 from app.models.sample import Sample
@@ -64,9 +65,9 @@ class LibraryProjectLink(models.Model):
 
 
 class Library(BaseModel):
-    orcabus_id_prefix = 'lib.'
     objects = LibraryManager()
 
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='lib')
     library_id = models.CharField(
         unique=True,
         blank=True,

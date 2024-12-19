@@ -49,7 +49,7 @@ class SequenceDomain:
             raise SequenceRuleError("Sequence status is null or not loaded yet")
 
         return SequenceRunStateChange(
-            id=Sequence.orcabus_id_prefix + self.sequence.orcabus_id,
+            id=self.sequence.orcabus_id,
             instrumentRunId=self.sequence.instrument_run_id,
             runVolumeName=self.sequence.run_volume_name,
             runFolderPath=self.sequence.run_folder_path,
@@ -69,7 +69,7 @@ class SequenceDomain:
         )
 
     def to_put_events_request_entry(
-        self, event_bus_name: str, trace_header: str = ""
+            self, event_bus_name: str, trace_header: str = ""
     ) -> dict:
         """Convert Domain event with envelope to Entry dict struct of PutEvent API"""
         domain_event_with_envelope = self.to_event_with_envelope()

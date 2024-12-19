@@ -11,10 +11,9 @@ class ContactViewSet(BaseViewSet):
     serializer_class = ContactSerializer
     search_fields = Contact.get_base_fields()
     queryset = Contact.objects.all()
-    orcabus_id_prefix = Contact.orcabus_id_prefix
 
     def get_queryset(self):
-        query_params = super().get_query_params()
+        query_params = self.request.query_params.copy()
         return Contact.objects.get_by_keyword(**query_params)
 
     @extend_schema(responses=ContactDetailSerializer(many=False))
@@ -33,7 +32,6 @@ class ContactViewSet(BaseViewSet):
         self.serializer_class = ContactDetailSerializer
         self.queryset = Contact.objects.prefetch_related('project_set').all()
         return super().list(request, *args, **kwargs)
-
 
     @extend_schema(responses=ContactHistorySerializer(many=True), description="Retrieve the history of this model")
     @action(detail=True, methods=['get'], url_name='history', url_path='history')

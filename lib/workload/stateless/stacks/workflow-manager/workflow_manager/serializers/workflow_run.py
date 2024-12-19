@@ -4,9 +4,8 @@ from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMix
 from workflow_manager.models import WorkflowRun, AnalysisRun
 from workflow_manager.serializers.state import StateMinSerializer
 
-class WorkflowRunBaseSerializer(SerializersBase):
-    prefix = WorkflowRun.orcabus_id_prefix
 
+class WorkflowRunBaseSerializer(SerializersBase):
     # we only want to include the current state
     # all states are available via a dedicated endpoint
     current_state = serializers.SerializerMethodField()
@@ -19,22 +18,18 @@ class WorkflowRunBaseSerializer(SerializersBase):
 class WorkflowRunListParamSerializer(OptionalFieldsMixin, WorkflowRunBaseSerializer):
     class Meta:
         model = WorkflowRun
-        fields = ["orcabus_id", "workflow", "analysis_run", "workflow_run_name", "portal_run_id", "execution_id", "comment",]
+        fields = ["orcabus_id", "workflow", "analysis_run", "workflow_run_name", "portal_run_id", "execution_id",
+                  "comment", ]
+
 
 class WorkflowRunSerializer(WorkflowRunBaseSerializer):
     from .workflow import WorkflowMinSerializer
-    
+
     workflow = WorkflowMinSerializer(read_only=True)
+
     class Meta:
         model = WorkflowRun
         exclude = ["libraries"]
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        # representation['workflow'] = Workflow.orcabus_id_prefix + representation['workflow']
-        if representation['analysis_run']:
-            representation['analysis_run'] = AnalysisRun.orcabus_id_prefix + representation['analysis_run']
-        return representation
 
 
 class WorkflowRunDetailSerializer(WorkflowRunBaseSerializer):

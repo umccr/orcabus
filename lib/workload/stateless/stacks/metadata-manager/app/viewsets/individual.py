@@ -11,7 +11,6 @@ class IndividualViewSet(BaseViewSet):
     serializer_class = IndividualSerializer
     search_fields = Individual.get_base_fields()
     queryset = Individual.objects.all()
-    orcabus_id_prefix = Individual.orcabus_id_prefix
 
     @extend_schema(responses=IndividualDetailSerializer(many=False))
     def retrieve(self, request, *args, **kwargs):
@@ -29,11 +28,10 @@ class IndividualViewSet(BaseViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        query_params = self.get_query_params()
+        query_params = self.request.query_params.copy()
         return Individual.objects.get_by_keyword(self.queryset, **query_params)
 
     @extend_schema(responses=IndividualHistorySerializer(many=True), description="Retrieve the history of this model")
     @action(detail=True, methods=['get'], url_name='history', url_path='history')
     def retrieve_history(self, request, *args, **kwargs):
         return super().retrieve_history(IndividualHistorySerializer)
-

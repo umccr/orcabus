@@ -3,6 +3,7 @@ from typing import List
 
 from django.db import models
 
+from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.payload import Payload
 from workflow_manager.models.workflow_run import WorkflowRun
@@ -88,9 +89,8 @@ class State(OrcaBusBaseModel):
     class Meta:
         unique_together = ["workflow_run", "status", "timestamp"]
 
-    orcabus_id_prefix = 'stt.'
-
     # --- mandatory fields
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='stt')
     status = models.CharField(max_length=255)  # TODO: How and where to enforce conventions?
     timestamp = models.DateTimeField()
     comment = models.CharField(max_length=255, null=True, blank=True)

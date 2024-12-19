@@ -3,12 +3,14 @@ from workflow_manager.models import Workflow
 
 
 class WorkflowBaseSerializer(SerializersBase):
-    prefix = Workflow.orcabus_id_prefix
+    pass
+
 
 class WorkflowListParamSerializer(OptionalFieldsMixin, WorkflowBaseSerializer):
     class Meta:
         model = Workflow
         fields = "__all__"
+
 
 class WorkflowMinSerializer(WorkflowBaseSerializer):
     class Meta:

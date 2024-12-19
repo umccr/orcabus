@@ -23,6 +23,7 @@ from django.db.models import (
 from simple_history.models import HistoricalRecords
 
 from rest_framework.settings import api_settings
+
 from app.pagination import PaginationConstant
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,9 @@ class BaseManager(models.Manager):
         ):
             values = [values]
         return reduce(
-            operator.or_, (Q(**{"%s__iexact" % key: value})
+            # Apparently the `get_prep_value` from the custom fields.py is not called prior hitting the Db but,
+            # the regular `__exact` still execute that function.
+            operator.or_, (Q(**{"%s__exact" % key: value})
                            for value in values)
         )
 
@@ -102,7 +105,6 @@ class BaseManager(models.Manager):
         """
         is_created = False
         is_updated = False
-
         try:
             obj = self.get(**search_key)
             for key, value in data.items():
@@ -125,27 +127,16 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-    orcabus_id = models.CharField(
-        primary_key=True,
-        unique=True,
-        editable=False,
-        blank=False,
-        null=False,
-        validators=[
-            RegexValidator(
-                regex=r'[\w]{26}$',
-                message='ULID is expected to be 26 characters long',
-                code='invalid_orcabus_id'
-            )]
-
-    )
-
     def save(self, *args, **kwargs):
-        if not self.orcabus_id:
-            self.orcabus_id = ulid.new().str
+        # To make django validate the constraint before saving it
         self.full_clean()
 
-        return super(BaseModel, self).save(*args, **kwargs)
+        super(BaseModel, self).save(*args, **kwargs)
+
+        # Reload the object from the database to ensure custom fields like OrcaBusIdField
+        # invoke the `from_db_value` method (which provides the annotation) after saving.
+        self.refresh_from_db()
+
 
     @classmethod
     def get_fields(cls):

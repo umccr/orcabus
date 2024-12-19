@@ -1,14 +1,17 @@
 from django.db import models
 
+from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.workflow_run import WorkflowRun
+
 
 class WorkflowRunCommentManager(OrcaBusBaseManager):
     pass
 
+
 class WorkflowRunComment(OrcaBusBaseModel):
-    orcabus_id_prefix = 'cmt.'
-    
+
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='cmt')
     workflow_run = models.ForeignKey(WorkflowRun, related_name="comments", on_delete=models.CASCADE)
     comment = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,5 +1,6 @@
 from django.db import models
 
+from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 
 
@@ -12,8 +13,7 @@ class Workflow(OrcaBusBaseModel):
         # a combo of this gives us human-readable pipeline id
         unique_together = ["workflow_name", "workflow_version"]
 
-    orcabus_id_prefix = 'wfl.'
-
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='wfl')
     workflow_name = models.CharField(max_length=255)
     workflow_version = models.CharField(max_length=255)
     execution_engine = models.CharField(max_length=255)

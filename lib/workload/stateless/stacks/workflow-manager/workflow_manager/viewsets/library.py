@@ -8,7 +8,6 @@ from workflow_manager.serializers.library import LibrarySerializer
 class LibraryViewSet(BaseViewSet):
     serializer_class = LibrarySerializer
     search_fields = Library.get_base_fields()
-    orcabus_id_prefix = Library.orcabus_id_prefix
 
     @extend_schema(parameters=[
         LibrarySerializer
@@ -17,6 +16,6 @@ class LibraryViewSet(BaseViewSet):
         return super().list(request, *args, **kwargs)
     
     def get_queryset(self):
-        query_params = self.get_query_params()
+        query_params = self.request.query_params.copy()
         qs = Library.objects.filter(workflowrun=self.kwargs["workflowrun_id"])
         return Library.objects.get_by_keyword(qs, **query_params)

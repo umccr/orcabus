@@ -4,6 +4,7 @@ from django.db import models
 from django.db.models import QuerySet
 
 from sequence_run_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
+from sequence_run_manager.fields import OrcaBusIdField
 
 logger = logging.getLogger(__name__)
 
@@ -61,16 +62,18 @@ class SequenceManager(OrcaBusBaseManager):
 
 
 class Sequence(OrcaBusBaseModel):
-    # primary key
-    orcabus_id_prefix = 'seq.'
-    
     # must have (run_folder_path) or (v1pre3_id and ica_project_id and api_url)
     # NOTE: we use this to retrieve further details for icav2 bssh event
     # for reference: https://github.com/umccr/orcabus/pull/748#issuecomment-2516246960
     class Meta:
         constraints = [
-            models.CheckConstraint(check=models.Q(run_folder_path__isnull=False) | models.Q(v1pre3_id__isnull=False, ica_project_id__isnull=False, api_url__isnull=False), name='check_run_folder_path_or_bssh_keys_not_null')
+            models.CheckConstraint(check=models.Q(run_folder_path__isnull=False) | models.Q(v1pre3_id__isnull=False,
+                                                                                            ica_project_id__isnull=False,
+                                                                                            api_url__isnull=False),
+                                   name='check_run_folder_path_or_bssh_keys_not_null')
         ]
+
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='seq')
 
     # mandatory non-nullable base fields
     instrument_run_id = models.CharField(
