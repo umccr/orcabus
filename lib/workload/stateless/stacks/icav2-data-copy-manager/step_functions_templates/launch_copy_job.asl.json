@@ -1,0 +1,111 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "Set variables from inputs",
+  "States": {
+    "Set variables from inputs": {
+      "Type": "Pass",
+      "Next": "Launch Copy Job",
+      "Assign": {
+        "source_uri_list": "{% $states.input.sourceUriList %}",
+        "destination_uri": "{% $states.input.destinationUri %}",
+        "task_token": "{% $states.input.taskToken ? $states.input.taskToken : null %}"
+      }
+    },
+    "Launch Copy Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.input %}",
+      "Arguments": {
+        "FunctionName": "${__launch_copy_job_lambda_function_arn__}",
+        "Payload": {
+          "source_uri_list": "{% $source_uri_list %}",
+          "destination_uri": "{% $destination_uri %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Job ID is None",
+      "Assign": {
+        "job_id": "{% $states.result.Payload.job_id %}"
+      }
+    },
+    "Job ID is None": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Is Task Token Set (No Job ID)",
+          "Condition": "{% $job_id = null %}",
+          "Comment": "Job ID is empty"
+        }
+      ],
+      "Default": "If task token set (With Job ID)"
+    },
+    "Is Task Token Set (No Job ID)": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Send Task Success",
+          "Condition": "{% $task_token != null %}",
+          "Comment": "Task Token Is Set"
+        }
+      ],
+      "Default": "Placeholder 2"
+    },
+    "Placeholder 2": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Send Task Success": {
+      "Type": "Task",
+      "Arguments": {
+        "Output": {},
+        "TaskToken": "{% $task_token %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
+      "End": true
+    },
+    "If task token set (With Job ID)": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Save Job ID and Task Token",
+          "Condition": "{% $task_token != null %}",
+          "Comment": "Task Token Is Set"
+        }
+      ],
+      "Default": "Placeholder"
+    },
+    "Save Job ID and Task Token": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Arguments": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id": "{% $job_id %}",
+          "id_type": "${__job_id_partition_name__}",
+          "task_token": {
+            "S": "{% $task_token %}"
+          }
+        }
+      },
+      "End": true
+    },
+    "Placeholder": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}
