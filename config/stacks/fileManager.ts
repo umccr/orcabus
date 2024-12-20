@@ -9,6 +9,8 @@ import {
   eventSourceQueueName,
   fileManagerIngestRoleName,
   fileManagerInventoryBucket,
+  icav2ArchiveAnalysisBucket,
+  icav2ArchiveFastqBucket,
   icav2PipelineCacheBucket,
   logsApiGatewayConfig,
   oncoanalyserBucket,
@@ -21,6 +23,12 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     inventorySourceBuckets.push(fileManagerInventoryBucket[stage]);
   }
 
+  const eventSourceBuckets = [oncoanalyserBucket[stage], icav2PipelineCacheBucket[stage]];
+  if (stage == AppStage.PROD) {
+    eventSourceBuckets.push(icav2ArchiveAnalysisBucket[stage]);
+    eventSourceBuckets.push(icav2ArchiveFastqBucket[stage]);
+  }
+
   return {
     securityGroupName: computeSecurityGroupName,
     vpcProps,
@@ -29,7 +37,7 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     port: databasePort,
     migrateDatabase: true,
     inventorySourceBuckets,
-    eventSourceBuckets: [oncoanalyserBucket[stage], icav2PipelineCacheBucket[stage]],
+    eventSourceBuckets,
     fileManagerRoleName: fileManagerIngestRoleName,
     apiGatewayCognitoProps: {
       ...cognitoApiGatewayConfig,
