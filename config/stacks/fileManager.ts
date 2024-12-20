@@ -24,6 +24,7 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
   }
 
   const eventSourceBuckets = [oncoanalyserBucket[stage], icav2PipelineCacheBucket[stage]];
+  // Note, that we only archive production data, so we only need access to the archive buckets in prod.
   if (stage == AppStage.PROD) {
     eventSourceBuckets.push(icav2ArchiveAnalysisBucket[stage]);
     eventSourceBuckets.push(icav2ArchiveFastqBucket[stage]);
