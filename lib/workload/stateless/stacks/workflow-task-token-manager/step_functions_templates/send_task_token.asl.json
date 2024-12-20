@@ -1,0 +1,90 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "Get Inputs from Payload",
+  "States": {
+    "Get Inputs from Payload": {
+      "Type": "Pass",
+      "Next": "Get Portal Run ID from DB",
+      "Assign": {
+        "portal_run_id": "{% $states.input.portalRunId %}",
+        "status": "{% $states.input.status %}"
+      }
+    },
+    "Get Portal Run ID from DB": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Arguments": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": "{% $portal_run_id %}",
+          "id_type": "${__portal_run_id_table_partition_name__}"
+        }
+      },
+      "Next": "Portal Run ID in DB",
+      "Assign": {
+        "portal_run_id_in_db": "{% $states.result.Item != null ? true : false %}",
+        "task_token": "{% $states.result.Item != null ? $states.result.Item.task_token.S : null %}"
+      }
+    },
+    "Portal Run ID in DB": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Workflow Run Status",
+          "Condition": "{% $portal_run_id_in_db %}",
+          "Comment": "Portal Run ID in DataBase"
+        }
+      ],
+      "Default": "Not in DB"
+    },
+    "Workflow Run Status": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Send Task Success",
+          "Condition": "{% $status = 'SUCCEEDED' %}",
+          "Comment": "Workflow Run Succeeded"
+        }
+      ],
+      "Default": "Send Task Failure"
+    },
+    "Send Task Success": {
+      "Type": "Task",
+      "Arguments": {
+        "Output": {
+          "status": "{% $status %}"
+        },
+        "TaskToken": "{% $task_token %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
+      "Next": "Delete Portal Run ID from Database"
+    },
+    "Delete Portal Run ID from Database": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:deleteItem",
+      "Arguments": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": "{% $portal_run_id %}",
+          "id_type": "${__portal_run_id_table_partition_name__}"
+        }
+      },
+      "End": true
+    },
+    "Send Task Failure": {
+      "Type": "Task",
+      "Arguments": {
+        "Output": {
+          "status": "{% $status %}"
+        },
+        "TaskToken": "{% $task_token %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskFailure",
+      "Next": "Delete Portal Run ID from Database"
+    },
+    "Not in DB": {
+      "Type": "Succeed"
+    }
+  }
+}
