@@ -23,20 +23,37 @@ use crate::routes::AppState;
 /// In order to apply the patch, JSON body must contain an array with patch operations. The patch operations
 /// are append-only, which means that only "add" and "test" is supported. If a "test" check fails,
 /// a patch operations that isn't "add" or "test" is used, or if a key already exists, a `BAD_REQUEST`
-/// is returned and no records are updated.
+/// is returned and no records are updated. Use `attributes` to update attributes and `ingestId` to
+/// update the ingest id.
 #[derive(Debug, Deserialize, Clone, ToSchema)]
 #[serde(untagged)]
 #[schema(
-    example = json!([
-        { "op": "add", "path": "/attributeId", "value": "attributeId" }
-    ])
+    examples(
+        json!([
+            { "op": "add", "path": "/attributeId", "value": "attributeId" }
+        ]),
+        json!({
+            "attributes": [
+                { "op": "add", "path": "/attributeId", "value": "attributeId" }
+            ]
+        }),
+        json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" }
+            ]
+        })
+    )
 )]
 pub enum PatchBody {
-    Nested {
+    NestedAttributes {
         /// The JSON patch for a record's attributes.
         attributes: Patch,
     },
-    Unnested(Patch),
+    NestedIngestId {
+        /// The JSON patch for a record's ingest_id.
+        ingest_id: Patch,
+    },
+    UnnestedAttributes(Patch),
 }
 
 /// The JSON patch for attributes.
@@ -45,25 +62,39 @@ pub enum PatchBody {
 #[schema(value_type = Value)]
 pub struct Patch(json_patch::Patch);
 
+impl Patch {
+    /// Create a new patch.
+    pub fn new(patch: json_patch::Patch) -> Self {
+        Self(patch)
+    }
+
+    /// Get the inner patch.
+    pub fn into_inner(self) -> json_patch::Patch {
+        self.0
+    }
+}
+
 impl PatchBody {
     /// Create a new attribute body.
     pub fn new(attributes: Patch) -> Self {
-        Self::Unnested(attributes)
+        Self::UnnestedAttributes(attributes)
     }
 
     /// Get the inner map.
     pub fn into_inner(self) -> json_patch::Patch {
         match self {
-            PatchBody::Nested { attributes } => attributes.0,
-            PatchBody::Unnested(attributes) => attributes.0,
+            PatchBody::NestedAttributes { attributes } => attributes.0,
+            PatchBody::NestedIngestId { ingest_id } => ingest_id.0,
+            PatchBody::UnnestedAttributes(attributes) => attributes.0,
         }
     }
 
     /// Get the inner map as a reference
     pub fn get_ref(&self) -> &json_patch::Patch {
         match self {
-            PatchBody::Nested { attributes } => &attributes.0,
-            PatchBody::Unnested(attributes) => &attributes.0,
+            PatchBody::NestedAttributes { attributes } => &attributes.0,
+            PatchBody::NestedIngestId { ingest_id } => &ingest_id.0,
+            PatchBody::UnnestedAttributes(attributes) => &attributes.0,
         }
     }
 }

@@ -8,10 +8,11 @@ use sea_orm::sea_query::{
     WithQuery,
 };
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iterable, ModelTrait, QueryFilter,
-    QueryTrait, StatementBuilder, Value,
+    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iden, Iterable, ModelTrait,
+    QueryFilter, QueryTrait, StatementBuilder, Value,
 };
 use serde_json::json;
+use std::str::FromStr;
 use uuid::Uuid;
 
 use crate::database::entities::s3_object;
@@ -161,6 +162,79 @@ where
             .collect::<Result<Vec<_>>>()
     }
 
+    /// Create an update for the attributes column.
+    fn patch_for_attributes(
+        patch_body: Vec<PatchOperation>,
+        update_col: <<M as ModelTrait>::Entity as EntityTrait>::Column,
+        model: M,
+    ) -> Result<Value> {
+        let mut current = if let Value::Json(json) = model.get(update_col) {
+            let mut json = json.unwrap_or_else(|| Box::new(json!({})));
+            if let &Json::Null = json.as_ref() {
+                json = Box::new(json!({}));
+            }
+            json
+        } else {
+            return Err(QueryError("expected JSON attribute column".to_string()));
+        };
+
+        // Only append-style patching is supported.
+        let operations = Self::verify_patch(patch_body, &current)?;
+
+        // Patch it based on JSON patch.
+        patch(&mut current, operations.as_slice()).map_err(|err| {
+            InvalidQuery(format!(
+                "JSON patch {} operation for {} path failed: {}",
+                err.operation, err.path, err.kind
+            ))
+        })?;
+
+        Ok(Value::Json(Some(current)))
+    }
+
+    /// Create an update for the ingestId column.
+    fn patch_for_ingest_id(
+        patch_body: Vec<PatchOperation>,
+        update_col: <<M as ModelTrait>::Entity as EntityTrait>::Column,
+        model: M,
+    ) -> Result<Value> {
+        if let Value::Uuid(None) = model.get(update_col) {
+        } else {
+            return Err(QueryError(
+                "cannot update `ingestId` unless it is null".to_string(),
+            ));
+        };
+
+        if patch_body.len() != 1 {
+            return Err(QueryError(
+                "expected one patch operation for `ingestId` update".to_string(),
+            ));
+        }
+        if patch_body[0].path() != "/" {
+            return Err(QueryError(
+                "expected `/` path for `ingestId` update".to_string(),
+            ));
+        }
+
+        let uuid = if let PatchOperation::Add(add) = &patch_body[0] {
+            Uuid::from_str(add.value.as_str().ok_or_else(|| {
+                QueryError("expected string value for `ingestId` update".to_string())
+            })?)
+            .map_err(|err| {
+                QueryError(format!(
+                    "failed to parse UUID for `ingestId` update: {}",
+                    err
+                ))
+            })?
+        } else {
+            return Err(QueryError(
+                "expected `add` operation for `ingestId` update".to_string(),
+            ));
+        };
+
+        Ok(Value::Uuid(Some(Box::new(uuid))))
+    }
+
     /// Update the attributes on an object using the attribute patch. This first queries the
     /// required records to update using a previously specified select query in functions like
     /// `Self::for_id` and `Self::filter_all`. It then applies a JSON patch to the attributes of
@@ -180,7 +254,7 @@ where
         self,
         patch_body: PatchBody,
         id_col: <M::Entity as EntityTrait>::Column,
-        attribute_col: <M::Entity as EntityTrait>::Column,
+        update_col: <M::Entity as EntityTrait>::Column,
     ) -> Result<Self> {
         let (conn, select_to_update, mut with_query) = self.into_inner();
         let select = select_to_update.cloned();
@@ -201,33 +275,22 @@ where
                     return Err(QueryError("expected uuid id column".to_string()));
                 };
 
-                let mut current = if let Value::Json(json) = model.get(attribute_col) {
-                    let mut json = json.unwrap_or_else(|| Box::new(json!({})));
-                    if let &Json::Null = json.as_ref() {
-                        json = Box::new(json!({}));
+                let update = match patch_body.clone() {
+                    PatchBody::NestedIngestId { ingest_id } => {
+                        Self::patch_for_ingest_id(ingest_id.into_inner().0, update_col, model)?
                     }
-                    json
-                } else {
-                    return Err(QueryError("expected JSON attribute column".to_string()));
+                    PatchBody::UnnestedAttributes(attributes)
+                    | PatchBody::NestedAttributes { attributes } => {
+                        Self::patch_for_attributes(attributes.into_inner().0, update_col, model)?
+                    }
                 };
 
-                // Only append-style patching is supported.
-                let operations = Self::verify_patch(patch_body.clone().into_inner().0, &current)?;
-
-                // Patch it based on JSON patch.
-                patch(&mut current, operations.as_slice()).map_err(|err| {
-                    InvalidQuery(format!(
-                        "JSON patch {} operation for {} path failed: {}",
-                        err.operation, err.path, err.kind
-                    ))
-                })?;
-
-                Ok((Value::Uuid(Some(id)), Value::Json(Some(current))))
+                Ok((Value::Uuid(Some(id)), update))
             })
             .collect::<Result<Vec<_>>>()?;
 
         let cte_id = Alias::new("id");
-        let cte_attributes = Alias::new("attributes");
+        let cte_attributes = Alias::new(update_col.to_string());
         let cte_name = Alias::new("update_with");
 
         // select * from (values ((<id_to_update>, <attributes_to_update>), ...)
@@ -264,7 +327,7 @@ where
         let update = E::update_many()
             .into_query()
             .value(
-                attribute_col,
+                update_col,
                 SimpleExpr::SubQuery(None, Box::new(select_update.into_sub_query_statement())),
             )
             .and_where(id_col.in_subquery(select_in))
