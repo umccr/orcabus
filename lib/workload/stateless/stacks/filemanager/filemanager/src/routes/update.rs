@@ -23,20 +23,38 @@ use crate::routes::AppState;
 /// In order to apply the patch, JSON body must contain an array with patch operations. The patch operations
 /// are append-only, which means that only "add" and "test" is supported. If a "test" check fails,
 /// a patch operations that isn't "add" or "test" is used, or if a key already exists, a `BAD_REQUEST`
-/// is returned and no records are updated.
+/// is returned and no records are updated. Use `attributes` to update attributes and `ingestId` to
+/// update the ingest id.
 #[derive(Debug, Deserialize, Clone, ToSchema)]
 #[serde(untagged)]
 #[schema(
-    example = json!([
-        { "op": "add", "path": "/attributeId", "value": "attributeId" }
-    ])
+    examples(
+        json!([
+            { "op": "add", "path": "/attributeId", "value": "attributeId" }
+        ]),
+        json!({
+            "attributes": [
+                { "op": "add", "path": "/attributeId", "value": "attributeId" }
+            ]
+        }),
+        json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" }
+            ]
+        })
+    )
 )]
 pub enum PatchBody {
-    Nested {
+    NestedAttributes {
         /// The JSON patch for a record's attributes.
         attributes: Patch,
     },
-    Unnested(Patch),
+    NestedIngestId {
+        /// The JSON patch for a record's ingest_id. Only `add` with a `/` path is supported.
+        #[serde(rename = "ingestId")]
+        ingest_id: Patch,
+    },
+    UnnestedAttributes(Patch),
 }
 
 /// The JSON patch for attributes.
@@ -45,25 +63,39 @@ pub enum PatchBody {
 #[schema(value_type = Value)]
 pub struct Patch(json_patch::Patch);
 
+impl Patch {
+    /// Create a new patch.
+    pub fn new(patch: json_patch::Patch) -> Self {
+        Self(patch)
+    }
+
+    /// Get the inner patch.
+    pub fn into_inner(self) -> json_patch::Patch {
+        self.0
+    }
+}
+
 impl PatchBody {
     /// Create a new attribute body.
     pub fn new(attributes: Patch) -> Self {
-        Self::Unnested(attributes)
+        Self::UnnestedAttributes(attributes)
     }
 
     /// Get the inner map.
     pub fn into_inner(self) -> json_patch::Patch {
         match self {
-            PatchBody::Nested { attributes } => attributes.0,
-            PatchBody::Unnested(attributes) => attributes.0,
+            PatchBody::NestedAttributes { attributes } => attributes.0,
+            PatchBody::NestedIngestId { ingest_id } => ingest_id.0,
+            PatchBody::UnnestedAttributes(attributes) => attributes.0,
         }
     }
 
     /// Get the inner map as a reference
     pub fn get_ref(&self) -> &json_patch::Patch {
         match self {
-            PatchBody::Nested { attributes } => &attributes.0,
-            PatchBody::Unnested(attributes) => &attributes.0,
+            PatchBody::NestedAttributes { attributes } => &attributes.0,
+            PatchBody::NestedIngestId { ingest_id } => &ingest_id.0,
+            PatchBody::UnnestedAttributes(attributes) => &attributes.0,
         }
     }
 }
@@ -163,7 +195,7 @@ mod tests {
     use crate::queries::update::tests::{assert_contains, entries_many};
     use crate::queries::update::tests::{
         assert_correct_records, assert_model_contains, assert_wildcard_update,
-        change_attribute_entries, change_attributes, change_many,
+        change_attribute_entries, change_attributes, change_many, update_ingest_ids,
     };
     use crate::queries::EntriesBuilder;
     use crate::routes::list::tests::response_from;
@@ -385,6 +417,126 @@ mod tests {
 
         assert_model_contains(&s3_objects, &entries.s3_objects, 0..1);
         assert_correct_records(state.database_client(), entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_ingest_id(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let client = state.database_client();
+        let mut entries = EntriesBuilder::default().build(client).await.unwrap();
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" },
+            ]
+        });
+
+        change_many(client, &entries, &[0, 1], Some(json!({"attributeId": "1"}))).await;
+        update_ingest_ids(client, &mut entries).await;
+
+        let (_, s3_objects) = response_from::<Vec<S3>>(
+            state.clone(),
+            "/s3?attributes[attributeId]=1&currentState=false",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "1"}));
+        entries.s3_objects[0].ingest_id = Some(Uuid::default());
+        entries.s3_objects[1].ingest_id = Some(Uuid::default());
+
+        assert_contains(&s3_objects, &entries, 0..2);
+        assert_correct_records(client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_ingest_id_single(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let client = state.database_client();
+        let mut entries = EntriesBuilder::default().build(client).await.unwrap();
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" },
+            ]
+        });
+
+        change_many(client, &entries, &[0, 1], Some(json!({"attributeId": "1"}))).await;
+        update_ingest_ids(client, &mut entries).await;
+
+        let (_, s3_objects) = response_from::<S3>(
+            state.clone(),
+            &format!("/s3/{}", entries.s3_objects[0].s3_object_id),
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "1"}));
+        entries.s3_objects[0].ingest_id = Some(Uuid::default());
+        entries.s3_objects[1].ingest_id = None;
+
+        assert_contains(&vec![s3_objects], &entries, 0..1);
+        assert_correct_records(client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_ingest_id_error(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let client = state.database_client();
+        let mut entries = EntriesBuilder::default().build(client).await.unwrap();
+
+        change_many(client, &entries, &[0, 1], Some(json!({"attributeId": "1"}))).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" },
+            ]
+        });
+        assert_ingest_id_error(state.clone(), patch).await;
+
+        update_ingest_ids(client, &mut entries).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
+            ]
+        });
+        assert_ingest_id_error(state.clone(), patch).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/ingestId", "value": "00000000-0000-0000-0000-000000000000" },
+            ]
+        });
+        assert_ingest_id_error(state.clone(), patch).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "replace", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
+            ]
+        });
+        assert_ingest_id_error(state.clone(), patch).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
+            ]
+        });
+        assert_ingest_id_error(state, patch).await;
+    }
+
+    async fn assert_ingest_id_error(state: AppState, patch: Value) {
+        let (code, _) = response_from::<Value>(
+            state,
+            "/s3?attributes[attributeId]=1&currentState=false",
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+        assert!(code.is_client_error() || code.is_server_error());
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]

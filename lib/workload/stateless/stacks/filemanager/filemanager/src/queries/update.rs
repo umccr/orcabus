@@ -8,10 +8,11 @@ use sea_orm::sea_query::{
     WithQuery,
 };
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iterable, ModelTrait, QueryFilter,
-    QueryTrait, StatementBuilder, Value,
+    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iden, Iterable, ModelTrait,
+    QueryFilter, QueryTrait, StatementBuilder, Value,
 };
 use serde_json::json;
+use std::str::FromStr;
 use uuid::Uuid;
 
 use crate::database::entities::s3_object;
@@ -74,12 +75,13 @@ where
 
     /// Update the attributes on an s3_object using the attribute patch.
     pub async fn update_s3_attributes(self, patch: PatchBody) -> Result<Self> {
-        self.update_attributes(
-            patch,
-            s3_object::Column::S3ObjectId,
-            s3_object::Column::Attributes,
-        )
-        .await
+        let col = match patch {
+            PatchBody::NestedIngestId { .. } => s3_object::Column::IngestId,
+            _ => s3_object::Column::Attributes,
+        };
+
+        self.update_attributes(patch, s3_object::Column::S3ObjectId, col)
+            .await
     }
 }
 
@@ -161,6 +163,79 @@ where
             .collect::<Result<Vec<_>>>()
     }
 
+    /// Create an update for the attributes column.
+    fn patch_for_attributes(
+        patch_body: Vec<PatchOperation>,
+        update_col: <<M as ModelTrait>::Entity as EntityTrait>::Column,
+        model: M,
+    ) -> Result<Value> {
+        let mut current = if let Value::Json(json) = model.get(update_col) {
+            let mut json = json.unwrap_or_else(|| Box::new(json!({})));
+            if let &Json::Null = json.as_ref() {
+                json = Box::new(json!({}));
+            }
+            json
+        } else {
+            return Err(QueryError("expected JSON attribute column".to_string()));
+        };
+
+        // Only append-style patching is supported.
+        let operations = Self::verify_patch(patch_body, &current)?;
+
+        // Patch it based on JSON patch.
+        patch(&mut current, operations.as_slice()).map_err(|err| {
+            InvalidQuery(format!(
+                "JSON patch {} operation for {} path failed: {}",
+                err.operation, err.path, err.kind
+            ))
+        })?;
+
+        Ok(Value::Json(Some(current)))
+    }
+
+    /// Create an update for the ingestId column.
+    fn patch_for_ingest_id(
+        patch_body: Vec<PatchOperation>,
+        update_col: <<M as ModelTrait>::Entity as EntityTrait>::Column,
+        model: M,
+    ) -> Result<Value> {
+        if let Value::Uuid(None) = model.get(update_col) {
+        } else {
+            return Err(QueryError(
+                "cannot update `ingestId` unless it is null".to_string(),
+            ));
+        };
+
+        if patch_body.len() != 1 {
+            return Err(QueryError(
+                "expected one patch operation for `ingestId` update".to_string(),
+            ));
+        }
+        if patch_body[0].path() != "/" {
+            return Err(QueryError(
+                "expected `/` path for `ingestId` update".to_string(),
+            ));
+        }
+
+        let uuid = if let PatchOperation::Add(add) = &patch_body[0] {
+            Uuid::from_str(add.value.as_str().ok_or_else(|| {
+                QueryError("expected string value for `ingestId` update".to_string())
+            })?)
+            .map_err(|err| {
+                QueryError(format!(
+                    "failed to parse UUID for `ingestId` update: {}",
+                    err
+                ))
+            })?
+        } else {
+            return Err(QueryError(
+                "expected `add` operation for `ingestId` update".to_string(),
+            ));
+        };
+
+        Ok(Value::Uuid(Some(Box::new(uuid))))
+    }
+
     /// Update the attributes on an object using the attribute patch. This first queries the
     /// required records to update using a previously specified select query in functions like
     /// `Self::for_id` and `Self::filter_all`. It then applies a JSON patch to the attributes of
@@ -180,7 +255,7 @@ where
         self,
         patch_body: PatchBody,
         id_col: <M::Entity as EntityTrait>::Column,
-        attribute_col: <M::Entity as EntityTrait>::Column,
+        update_col: <M::Entity as EntityTrait>::Column,
     ) -> Result<Self> {
         let (conn, select_to_update, mut with_query) = self.into_inner();
         let select = select_to_update.cloned();
@@ -201,33 +276,22 @@ where
                     return Err(QueryError("expected uuid id column".to_string()));
                 };
 
-                let mut current = if let Value::Json(json) = model.get(attribute_col) {
-                    let mut json = json.unwrap_or_else(|| Box::new(json!({})));
-                    if let &Json::Null = json.as_ref() {
-                        json = Box::new(json!({}));
+                let update = match patch_body.clone() {
+                    PatchBody::NestedIngestId { ingest_id } => {
+                        Self::patch_for_ingest_id(ingest_id.into_inner().0, update_col, model)?
                     }
-                    json
-                } else {
-                    return Err(QueryError("expected JSON attribute column".to_string()));
+                    PatchBody::UnnestedAttributes(attributes)
+                    | PatchBody::NestedAttributes { attributes } => {
+                        Self::patch_for_attributes(attributes.into_inner().0, update_col, model)?
+                    }
                 };
 
-                // Only append-style patching is supported.
-                let operations = Self::verify_patch(patch_body.clone().into_inner().0, &current)?;
-
-                // Patch it based on JSON patch.
-                patch(&mut current, operations.as_slice()).map_err(|err| {
-                    InvalidQuery(format!(
-                        "JSON patch {} operation for {} path failed: {}",
-                        err.operation, err.path, err.kind
-                    ))
-                })?;
-
-                Ok((Value::Uuid(Some(id)), Value::Json(Some(current))))
+                Ok((Value::Uuid(Some(id)), update))
             })
             .collect::<Result<Vec<_>>>()?;
 
         let cte_id = Alias::new("id");
-        let cte_attributes = Alias::new("attributes");
+        let cte_attributes = Alias::new(update_col.to_string());
         let cte_name = Alias::new("update_with");
 
         // select * from (values ((<id_to_update>, <attributes_to_update>), ...)
@@ -264,7 +328,7 @@ where
         let update = E::update_many()
             .into_query()
             .value(
-                attribute_col,
+                update_col,
                 SimpleExpr::SubQuery(None, Box::new(select_update.into_sub_query_statement())),
             )
             .and_where(id_col.in_subquery(select_in))
@@ -321,10 +385,10 @@ pub(crate) mod tests {
         ]);
         let results = test_s3_builder_result(
             &client,
-            patch,
             Some(json!({
                 "attributeId": "1"
             })),
+            PatchBody::new(from_value(patch).unwrap()),
         )
         .await;
         assert!(matches!(results, Err(InvalidQuery(_))));
@@ -335,10 +399,10 @@ pub(crate) mod tests {
         ]);
         let results = test_s3_builder_result(
             &client,
-            patch,
             Some(json!({
                 "attributeId": "1"
             })),
+            PatchBody::new(from_value(patch).unwrap()),
         )
         .await;
         assert!(matches!(results, Err(InvalidQuery(_))));
@@ -349,10 +413,10 @@ pub(crate) mod tests {
         ]);
         let results = test_s3_builder_result(
             &client,
-            patch,
             Some(json!({
                 "attributeId": "1"
             })),
+            PatchBody::new(from_value(patch).unwrap()),
         )
         .await;
         assert!(matches!(results, Err(InvalidQuery(_))));
@@ -388,6 +452,99 @@ pub(crate) mod tests {
 
         assert_contains(&results, &entries, 0..2);
         assert_correct_records(&client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_ingest_id(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" },
+            ]
+        });
+
+        change_many(
+            &client,
+            &entries,
+            &[0, 1],
+            Some(json!({"attributeId": "1"})),
+        )
+        .await;
+        update_ingest_ids(&client, &mut entries).await;
+
+        let results = test_s3_builder_result(
+            &client,
+            Some(json!({
+                "attributeId": "1"
+            })),
+            from_value(patch).unwrap(),
+        )
+        .await
+        .unwrap()
+        .all()
+        .await
+        .unwrap();
+
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "1"}));
+        entries.s3_objects[0].ingest_id = Some(Uuid::default());
+        entries.s3_objects[1].ingest_id = Some(Uuid::default());
+
+        assert_contains(&results, &entries, 0..2);
+        assert_correct_records(&client, entries).await;
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn update_ingest_id_error(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
+
+        change_many(
+            &client,
+            &entries,
+            &[0, 1],
+            Some(json!({"attributeId": "1"})),
+        )
+        .await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" },
+            ]
+        });
+        assert_ingest_id_error(&client, patch).await;
+
+        update_ingest_ids(&client, &mut entries).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
+            ]
+        });
+        assert_ingest_id_error(&client, patch).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/ingestId", "value": "00000000-0000-0000-0000-000000000000" },
+            ]
+        });
+        assert_ingest_id_error(&client, patch).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "replace", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
+            ]
+        });
+        assert_ingest_id_error(&client, patch).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
+            ]
+        });
+        assert_ingest_id_error(&client, patch).await;
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -596,10 +753,10 @@ pub(crate) mod tests {
 
         let s3_objects = test_s3_builder_result(
             &client,
-            patch,
             Some(json!({
                 "attributeId": "1"
             })),
+            PatchBody::new(from_value(patch).unwrap()),
         )
         .await;
 
@@ -642,10 +799,22 @@ pub(crate) mod tests {
         assert_correct_records(&client, entries).await;
     }
 
+    async fn assert_ingest_id_error(client: &Client, patch: Value) {
+        assert!(test_s3_builder_result(
+            client,
+            Some(json!({
+                "attributeId": "1"
+            })),
+            from_value(patch).unwrap()
+        )
+        .await
+        .is_err());
+    }
+
     async fn test_s3_builder_result(
         client: &Client,
-        patch: Value,
         attributes: Option<Value>,
+        patch_body: PatchBody,
     ) -> Result<UpdateQueryBuilder<DatabaseConnection, s3_object::Entity>> {
         UpdateQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .filter_all(
@@ -656,7 +825,7 @@ pub(crate) mod tests {
                 true,
                 false,
             )?
-            .update_s3_attributes(PatchBody::new(from_value(patch)?))
+            .update_s3_attributes(patch_body)
             .await
     }
 
@@ -665,12 +834,16 @@ pub(crate) mod tests {
         patch: Value,
         attributes: Option<Value>,
     ) -> Vec<s3_object::Model> {
-        test_s3_builder_result(client, patch, attributes)
-            .await
-            .unwrap()
-            .all()
-            .await
-            .unwrap()
+        test_s3_builder_result(
+            client,
+            attributes,
+            PatchBody::new(from_value(patch).unwrap()),
+        )
+        .await
+        .unwrap()
+        .all()
+        .await
+        .unwrap()
     }
 
     async fn test_update_attributes_for_id(
@@ -706,6 +879,15 @@ pub(crate) mod tests {
                 Some(json!({"attributeId": "1", "anotherAttribute": "1"}));
 
             assert_model_contains(&[results[i / 2].clone()], &entries.s3_objects, i..i + 1);
+        }
+    }
+
+    pub(crate) async fn update_ingest_ids(client: &Client, entries: &mut Entries) {
+        for i in [0, 1] {
+            let mut model: s3_object::ActiveModel =
+                entries.s3_objects[i].clone().into_active_model();
+            model.ingest_id = Set(None);
+            model.update(client.connection_ref()).await.unwrap();
         }
     }
 
