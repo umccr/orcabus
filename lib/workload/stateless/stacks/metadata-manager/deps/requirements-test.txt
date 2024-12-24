@@ -3,8 +3,8 @@
 # Intentionally leave out the boto3 version here. They bump like daily and latest is always fine.
 boto3
 
-pytest==8.3.3
+pytest==8.3.4
 factory_boy==3.3.1
 pytz==2024.2
-mockito==1.5.1
-coverage==7.6.4
+mockito==1.5.3
+coverage==7.6.9
