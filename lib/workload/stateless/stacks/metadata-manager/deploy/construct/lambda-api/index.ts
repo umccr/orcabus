@@ -1,7 +1,12 @@
 import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
 import { Function } from 'aws-cdk-lib/aws-lambda';
-import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
+import {
+  HttpMethod,
+  HttpNoneAuthorizer,
+  HttpRoute,
+  HttpRouteKey,
+} from 'aws-cdk-lib/aws-apigatewayv2';
 import { PythonFunction, PythonFunctionProps } from '@aws-cdk/aws-lambda-python-alpha';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -59,6 +64,13 @@ export class LambdaAPIConstruct extends Construct {
 
     // add some integration to the http api gw
     const apiIntegration = new HttpLambdaIntegration('ApiLambdaIntegration', this.lambda);
+
+    new HttpRoute(this, 'GetSchemaHttpRoute', {
+      httpApi: apiGW.httpApi,
+      integration: apiIntegration,
+      authorizer: new HttpNoneAuthorizer(), // No auth needed for schema
+      routeKey: HttpRouteKey.with(`/api/${this.API_VERSION}/schema/{PROXY+}`, HttpMethod.GET),
+    });
 
     new HttpRoute(this, 'GetHttpRoute', {
       httpApi: apiGW.httpApi,

@@ -1,4 +1,6 @@
 from django.urls import path, include
+from django.urls import path
+from drf_spectacular.views import SpectacularJSONAPIView, SpectacularSwaggerView
 
 from app.routers import OptionalSlashDefaultRouter
 from app.viewsets import LibraryViewSet, SubjectViewSet, SampleViewSet, ProjectViewSet, ContactViewSet, \
@@ -20,6 +22,9 @@ router.register(r"sync", SyncViewSet, basename="sync")
 
 urlpatterns = [
     path(f"{api_base}", include(router.urls)),
+    path('schema/openapi.json', SpectacularJSONAPIView.as_view(), name='schema'),
+    path('schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'),
+         name='swagger-ui'),
 ]
 
 handler500 = "rest_framework.exceptions.server_error"
