@@ -143,6 +143,9 @@ REST_FRAMEWORK = {
     "JSON_UNDERSCOREIZE": {
         'no_underscore_before_number': True,
     },
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
 }
 
 CORS_ORIGIN_ALLOW_ALL = True

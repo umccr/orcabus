@@ -65,11 +65,12 @@ export class LambdaAPIConstruct extends Construct {
     // add some integration to the http api gw
     const apiIntegration = new HttpLambdaIntegration('ApiLambdaIntegration', this.lambda);
 
+    // Routes for API schemas
     new HttpRoute(this, 'GetSchemaHttpRoute', {
       httpApi: apiGW.httpApi,
       integration: apiIntegration,
       authorizer: new HttpNoneAuthorizer(), // No auth needed for schema
-      routeKey: HttpRouteKey.with(`/api/${this.API_VERSION}/schema/{PROXY+}`, HttpMethod.GET),
+      routeKey: HttpRouteKey.with(`/schema/{PROXY+}`, HttpMethod.GET),
     });
 
     new HttpRoute(this, 'GetHttpRoute', {
