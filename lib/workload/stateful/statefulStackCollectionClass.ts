@@ -65,6 +65,10 @@ import {
   OraCompressionIcav2PipelineTable,
   OraCompressionIcav2PipelineTableStackProps,
 } from './stacks/ora-decompression-dynamodb/deploy/stack';
+import {
+  Icav2DataCopyManagerTable,
+  Icav2DataCopyManagerTableStackProps,
+} from './stacks/icav2-data-copy-manager-dynamo-db/deploy';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -86,6 +90,7 @@ export interface StatefulStackCollectionProps {
   pierianDxPipelineTableStackProps: PierianDxPipelineTableStackProps;
   oncoanalyserPipelineTableStackProps: OncoanalyserNfPipelineTableStackProps;
   sashPipelineTableStackProps: SashNfPipelineTableStackProps;
+  icav2DataCopyTableStackProps: Icav2DataCopyManagerTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -110,6 +115,7 @@ export class StatefulStackCollection {
   readonly pierianDxPipelineTableStack: Stack;
   readonly oncoanalyserPipelineTableStack: Stack;
   readonly sashPipelineTableStack: Stack;
+  readonly icav2DataCopyTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -258,6 +264,14 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'SashNfPipelineTableStack'),
       ...statefulConfiguration.sashPipelineTableStackProps,
     });
+    this.icav2DataCopyTableStack = new Icav2DataCopyManagerTable(
+      scope,
+      'Icav2DataCopyManagerTableStack',
+      {
+        ...this.createTemplateProps(env, 'Icav2DataCopyManagerTableStack'),
+        ...statefulConfiguration.icav2DataCopyTableStackProps,
+      }
+    );
   }
 
   /**
