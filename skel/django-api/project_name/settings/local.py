@@ -23,7 +23,6 @@ DATABASES = {
 
 INSTALLED_APPS += (
     "django_extensions",
-    "drf_spectacular",
 )
 
 ROOT_URLCONF = "{{project_name}}.urls.local"

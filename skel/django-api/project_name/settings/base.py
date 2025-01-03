@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "{{project_name}}",
     "aws_xray_sdk.ext.django",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
