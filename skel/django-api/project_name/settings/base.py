@@ -143,6 +143,9 @@ REST_FRAMEWORK = {
     "JSON_UNDERSCOREIZE": {
         'no_underscore_before_number': True,
     },
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
@@ -161,3 +164,33 @@ XRAY_RECORDER = {
 
 # turn off xray more generally and, you can overwrite with env var AWS_XRAY_SDK_ENABLED=true at runtime
 aws_xray_sdk.global_sdk_config.set_sdk_enabled(False)
+
+
+# --- drf-spectacular settings
+
+REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS'] = 'drf_spectacular.openapi.AutoSchema'
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'UMCCR OrcaBus {{project_name}} API',
+    'DESCRIPTION': 'UMCCR OrcaBus {{project_name}} API',
+    'VERSION': API_VERSION,
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SECURITY': [
+        {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
+    ],
+    'CONTACT': {
+        'name': 'UMCCR',
+        'email': 'services@umccr.org'
+    },
+    "LICENSE": {
+        "name": "MIT License",
+    },
+    "EXTERNAL_DOCS": {
+        "description": "Terms of service",
+        "url": "https://umccr.org/",
+    },
+}
