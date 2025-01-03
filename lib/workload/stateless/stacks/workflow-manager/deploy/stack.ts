@@ -13,7 +13,12 @@ import {
 } from 'aws-cdk-lib';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
+import {
+  HttpMethod,
+  HttpNoneAuthorizer,
+  HttpRoute,
+  HttpRouteKey,
+} from 'aws-cdk-lib/aws-apigatewayv2';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
@@ -123,6 +128,14 @@ export class WorkflowManagerStack extends Stack {
     const httpApi = wfmApi.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
+
+    // Routes for API schemas
+    new HttpRoute(this, 'GetSchemaHttpRoute', {
+      httpApi: wfmApi.httpApi,
+      integration: apiIntegration,
+      authorizer: new HttpNoneAuthorizer(), // No auth needed for schema
+      routeKey: HttpRouteKey.with(`/schema/{PROXY+}`, HttpMethod.GET),
+    });
 
     new HttpRoute(this, 'GetHttpRoute', {
       httpApi: httpApi,

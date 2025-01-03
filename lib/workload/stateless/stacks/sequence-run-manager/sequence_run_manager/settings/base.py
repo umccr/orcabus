@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "sequence_run_manager",
     "aws_xray_sdk.ext.django",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -143,6 +144,9 @@ REST_FRAMEWORK = {
     "JSON_UNDERSCOREIZE": {
         'no_underscore_before_number': True,
     },
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
@@ -161,3 +165,37 @@ XRAY_RECORDER = {
 
 # turn off xray more generally and, you can overwrite with env var AWS_XRAY_SDK_ENABLED=true at runtime
 aws_xray_sdk.global_sdk_config.set_sdk_enabled(False)
+
+# --- drf-spectacular settings
+
+REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS'] = 'drf_spectacular.openapi.AutoSchema'
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'UMCCR OrcaBus sequence_run_manager API',
+    'DESCRIPTION': 'UMCCR OrcaBus sequence_run_manager API',
+    'VERSION': API_VERSION,
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SECURITY': [
+        {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
+    ],
+    'CONTACT': {
+        'name': 'UMCCR',
+        'email': 'services@umccr.org'
+    },
+    "LICENSE": {
+        "name": "MIT License",
+    },
+    "EXTERNAL_DOCS": {
+        "description": "Terms of service",
+        "url": "https://umccr.org/",
+    },
+    'CAMELIZE_NAMES': True,
+    'POSTPROCESSING_HOOKS': [
+        'drf_spectacular.contrib.djangorestframework_camel_case.camelize_serializer_fields',
+        'drf_spectacular.hooks.postprocess_schema_enums'
+    ],
+}

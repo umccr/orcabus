@@ -24,49 +24,11 @@ DATABASES = {
 
 INSTALLED_APPS += (
     "django_extensions",
-    "drf_spectacular",
 )
 
 ROOT_URLCONF = "app.urls.local"
 
 RUNSERVER_PLUS_PRINT_SQL_TRUNCATE = sys.maxsize
-
-REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS'] = 'drf_spectacular.openapi.AutoSchema'
-
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'Metadata Manager API',
-    'DESCRIPTION': 'The Metadata Manager API for UMCCR.',
-    'VERSION': '0.0.1',
-    'SERVE_INCLUDE_SCHEMA': False,
-    'SECURITY': [
-        {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT",
-        }
-    ],
-    'CONTACT': {
-        'name': 'UMCCR',
-        'email': 'services@umccr.org'
-    },
-    "LICENSE": {
-        "name": "MIT License",
-    },
-    "EXTERNAL_DOCS": {
-        "description": "Terms of service",
-        "url": "https://umccr.org/",
-    },
-    'CAMELIZE_NAMES': True,
-    'POSTPROCESSING_HOOKS': [
-        'drf_spectacular.contrib.djangorestframework_camel_case.camelize_serializer_fields',
-        'drf_spectacular.hooks.postprocess_schema_enums'
-    ],
-    'SCHEMA_PATH_PREFIX': f'/api/{API_VERSION}/',
-}
-
-REDOC_SETTINGS = {
-    "LAZY_RENDERING": False,
-}
 
 LOGGING = {
     'version': 1,

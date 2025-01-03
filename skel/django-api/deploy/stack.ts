@@ -8,7 +8,7 @@ import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
 import { aws_events_targets, aws_lambda, aws_secretsmanager, Duration, Stack, StackProps } from 'aws-cdk-lib';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpMethod, HttpNoneAuthorizer, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
 import { PostgresManagerStack } from '../../../lib/workload/stateful/stacks/postgres-manager/deploy/stack';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../lib/workload/components/api-gateway';
@@ -116,6 +116,14 @@ export class ProjectNameStack extends Stack {  // FIXME change construct name
     const httpApi = srmApi.httpApi;
 
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
+
+    // Routes for API schemas
+    new HttpRoute(this, 'GetSchemaHttpRoute', {
+      httpApi: srmApi.httpApi,
+      integration: apiIntegration,
+      authorizer: new HttpNoneAuthorizer(), // No auth needed for schema
+      routeKey: HttpRouteKey.with(`/schema/{PROXY+}`, HttpMethod.GET),
+    });
 
     new HttpRoute(this, 'GetHttpRoute', {
       httpApi: httpApi,
