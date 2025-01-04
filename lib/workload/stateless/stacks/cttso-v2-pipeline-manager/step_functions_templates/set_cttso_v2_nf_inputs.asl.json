@@ -314,8 +314,7 @@
       "Next": "Update DB Entry (post-fastq copy)",
       "ResultSelector": {
         "samplesheet_file_id.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_id",
-        "samplesheet_file_uri.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_uri",
-        "copy_job_id.$": "$.[1].copy_fastq_files_to_cache_directory_step.job_id"
+        "samplesheet_file_uri.$": "$.[0].upload_samplesheet_to_cache_path_step.samplesheet_file_uri"
       },
       "ResultPath": "$.copy_files_to_cache_directory_step"
     },
