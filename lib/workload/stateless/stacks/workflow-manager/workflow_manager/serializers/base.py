@@ -13,6 +13,14 @@ class SerializersBase(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         self.use_camel_case = camel_case_data
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        if self.use_camel_case:
+            return {to_camel_case(key): value for key, value in representation.items()}
+        return representation
+
+
 
 class OptionalFieldsMixin:
     def make_fields_optional(self):
