@@ -146,4 +146,4 @@ class WorkflowRunUtil:
 
 def create_portal_run_id() -> str:
     date = datetime.now(timezone.utc)
-    return f"{date.year}{date.month}{date.day}{str(uuid.uuid4())[:8]}"
+    return f"{date.year:04}{date.month:02}{date.day:02}{str(uuid.uuid4())[:8]}"
