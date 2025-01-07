@@ -8,6 +8,7 @@ from django.db.models import QuerySet
 
 from workflow_manager.models import Workflow, WorkflowRun, Analysis, AnalysisContext, AnalysisRun, \
                                     Library, LibraryAssociation, State, Status
+from workflow_manager.models.utils import create_portal_run_id
 from workflow_manager.tests.factories import PayloadFactory, LibraryFactory
 
 # https://docs.djangoproject.com/en/5.0/howto/custom-management-commands/
@@ -512,6 +513,3 @@ def create_workflowrun_for_analysis(analysis_run: AnalysisRun):
                     ready_state.save()
 
 
-def create_portal_run_id() -> str:
-    date = datetime.now(timezone.utc)
-    return f"{date.year}{date.month}{date.day}{str(uuid.uuid4())[:8]}"
