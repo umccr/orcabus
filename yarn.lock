@@ -2687,9 +2687,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"htsget-lambda@npm:^0.6.2":
-  version: 0.6.2
-  resolution: "htsget-lambda@npm:0.6.2"
+"htsget-lambda@npm:^0.7.1":
+  version: 0.7.1
+  resolution: "htsget-lambda@npm:0.7.1"
   dependencies:
     "@iarna/toml": "npm:^3.0.0"
     aws-cdk-lib: "npm:2.164.1"
@@ -2699,7 +2699,7 @@ __metadata:
     source-map-support: "npm:^0.5.21"
   bin:
     htsget_app: bin/htsget-lambda.js
-  checksum: 10/a70f2508b4d78c33d45b960b21b94833087b2e0b46f909202014e7783c3e396f321a2ca8b8c5cb7212acfdf50bd1b1aacde66bc3a0766318efe9cbe6817b6129
+  checksum: 10/f68b0ad3175dde0d3168dc4d84fc1d0a8891fc15ce3cab184f514189f38b865cf52813edb70fd977deb9e2323bfbaccba7e91ac9e2df8263562a0d316df05bb5
   languageName: node
   linkType: hard
 
@@ -4022,7 +4022,7 @@ __metadata:
     eslint: "npm:^9.17.0"
     eslint-config-prettier: "npm:^9.1.0"
     globals: "npm:^15.14.0"
-    htsget-lambda: "npm:^0.6.2"
+    htsget-lambda: "npm:^0.7.1"
     jest: "npm:^29.7.0"
     jest-junit: "npm:^16.0.0"
     prettier: "npm:^3.4.2"
