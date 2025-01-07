@@ -49,6 +49,7 @@ export class HtsgetStack extends Stack {
       vpc: this.vpc,
       role: props.role,
       httpApi: this.apiGateway.httpApi,
+      gitReference: 'htsget-lambda-v0.5.2',
     });
   }
 }
