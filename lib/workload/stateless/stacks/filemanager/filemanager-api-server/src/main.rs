@@ -20,6 +20,7 @@ use filemanager::error::Result;
 use filemanager::handlers::init_tracing_with_format;
 use filemanager::handlers::Format::Pretty;
 use filemanager::queries::EntriesBuilder;
+use filemanager::routes::openapi::SWAGGER_UI_PATH;
 use filemanager::routes::{router, AppState};
 
 /// Run the filemanager API server locally to explore the API.
@@ -115,8 +116,7 @@ async fn main() -> Result<()> {
             .with_key_divisor(key_divisor)
             .with_shuffle(shuffle)
             .build(state.database_client())
-            .await
-            .unwrap();
+            .await?;
     }
 
     if args.migrate {
@@ -132,7 +132,7 @@ async fn main() -> Result<()> {
     let docs = Uri::builder()
         .scheme("http")
         .authority(local_addr.to_string())
-        .path_and_query("/swagger-ui")
+        .path_and_query(SWAGGER_UI_PATH)
         .build()
         .map_err(|err| IoError(io::Error::other(err)))?;
 
