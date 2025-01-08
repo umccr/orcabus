@@ -20,6 +20,9 @@ use crate::routes::pagination::*;
 use crate::routes::presign::ContentDisposition;
 use crate::routes::update::*;
 
+/// The path to the swagger ui.
+pub const SWAGGER_UI_PATH: &str = "/schema/swagger-ui";
+
 /// A newtype equivalent to a `DateTime` with a time zone.
 #[derive(ToSchema)]
 #[schema(value_type = DateTime, format = DateTime)]
@@ -102,7 +105,7 @@ impl Modify for SecurityAddon {
 
 /// Create the swagger ui endpoint.
 pub fn swagger_ui() -> SwaggerUi {
-    SwaggerUi::new("/swagger-ui").url("/schema/openapi.json", ApiDoc::openapi())
+    SwaggerUi::new(SWAGGER_UI_PATH).url("/schema/openapi.json", ApiDoc::openapi())
 }
 
 #[cfg(test)]
@@ -113,6 +116,7 @@ mod tests {
     use sqlx::PgPool;
     use tower::util::ServiceExt;
 
+    use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::routes::router;
     use crate::routes::AppState;
@@ -123,7 +127,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/swagger-ui")
+                    .uri(SWAGGER_UI_PATH)
                     .body(Body::empty())
                     .unwrap(),
             )

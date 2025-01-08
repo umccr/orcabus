@@ -74,6 +74,18 @@ pub enum ErrorStatusCode {
         example = json!({"message": "JSON Error: parsing json"}),
     )]
     BadRequest(ErrorResponse),
+    #[response(
+        status = UNAUTHORIZED,
+        description = "the request lacked valid authentication credentials",
+        example = json!({"message": "Unauthorized"}),
+    )]
+    Unauthorized(ErrorResponse),
+    #[response(
+        status = FORBIDDEN,
+        description = "the request lacked valid permissions for the resource",
+        example = json!({"message": "Forbidden"}),
+    )]
+    Forbidden(ErrorResponse),
 }
 
 impl From<QueryRejection> for ErrorStatusCode {
@@ -117,6 +129,8 @@ impl Display for ErrorStatusCode {
             ErrorStatusCode::BadRequest(err) => Display::fmt(err, f),
             ErrorStatusCode::NotFound(err) => Display::fmt(err, f),
             ErrorStatusCode::InternalServerError(err) => Display::fmt(err, f),
+            ErrorStatusCode::Forbidden(err) => Display::fmt(err, f),
+            ErrorStatusCode::Unauthorized(err) => Display::fmt(err, f),
             ErrorStatusCode::Rejection(_, message) => Display::fmt(message, f),
         }
     }
@@ -130,6 +144,8 @@ impl IntoResponse for ErrorStatusCode {
                 (StatusCode::INTERNAL_SERVER_ERROR, extract::Json(err))
             }
             ErrorStatusCode::NotFound(err) => (StatusCode::NOT_FOUND, extract::Json(err)),
+            ErrorStatusCode::Forbidden(err) => (StatusCode::NOT_FOUND, extract::Json(err)),
+            ErrorStatusCode::Unauthorized(err) => (StatusCode::NOT_FOUND, extract::Json(err)),
             ErrorStatusCode::Rejection(status, err) => (
                 StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
                 extract::Json(err),

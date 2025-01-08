@@ -9,7 +9,12 @@ import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { ProviderFunction } from '../../../../components/provider-function';
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import { IQueue, Queue } from 'aws-cdk-lib/aws-sqs';
-import { HttpMethod, HttpRoute, HttpRouteKey } from 'aws-cdk-lib/aws-apigatewayv2';
+import {
+  HttpMethod,
+  HttpNoneAuthorizer,
+  HttpRoute,
+  HttpRouteKey,
+} from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { InventoryFunction } from './constructs/functions/inventory';
 import { NamedLambdaRole } from '../../../../components/named-lambda-role';
@@ -150,24 +155,31 @@ export class Filemanager extends Stack {
     const apiGateway = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
     const httpApi = apiGateway.httpApi;
 
-    const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiLambda.function);
+    const integration = new HttpLambdaIntegration('ApiIntegration', apiLambda.function);
+
+    new HttpRoute(this, 'GetSchemaHttpRoute', {
+      httpApi,
+      integration,
+      authorizer: new HttpNoneAuthorizer(),
+      routeKey: HttpRouteKey.with(`/schema/{proxy+}`, HttpMethod.GET),
+    });
 
     new HttpRoute(this, 'GetHttpRoute', {
-      httpApi: httpApi,
-      integration: apiIntegration,
+      httpApi,
+      integration,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.GET),
     });
 
     new HttpRoute(this, 'PatchHttpRoute', {
-      httpApi: httpApi,
-      integration: apiIntegration,
+      httpApi,
+      integration,
       authorizer: apiGateway.authStackHttpLambdaAuthorizer,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.PATCH),
     });
 
     new HttpRoute(this, 'PostHttpRoute', {
-      httpApi: httpApi,
-      integration: apiIntegration,
+      httpApi,
+      integration,
       authorizer: apiGateway.authStackHttpLambdaAuthorizer,
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.POST),
     });
