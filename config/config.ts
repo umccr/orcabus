@@ -66,6 +66,7 @@ import { getOraDecompressionManagerStackProps } from './stacks/oraDecompressionP
 import { getPgDDProps } from './stacks/pgDD';
 import { getDataMigrateStackProps } from './stacks/dataMigrate';
 import { getHtsgetProps } from './stacks/htsget';
+import { getSampleSheetCheckerProps } from './stacks/sampleSheetChecker';
 
 interface EnvironmentConfig {
   name: string;
@@ -135,6 +136,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       fmAnnotatorProps: getFmAnnotatorProps(),
       dataMigrateProps: getDataMigrateStackProps(stage),
       htsgetProps: getHtsgetProps(stage),
+      sampleSheetCheckerProps: getSampleSheetCheckerProps(stage),
       pgDDProps: getPgDDProps(stage),
     },
   };

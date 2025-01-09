@@ -82,6 +82,7 @@ import {
 import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
 import { HtsgetStack, HtsgetStackConfigurableProps } from './stacks/htsget/stack';
+import { SampleSheetCheckerStack, SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -109,6 +110,7 @@ export interface StatelessStackCollectionProps {
   fmAnnotatorProps: FMAnnotatorConfigurableProps;
   dataMigrateProps: DataMigrateStackProps;
   htsgetProps: HtsgetStackConfigurableProps;
+  sampleSheetCheckerProps: SampleSheetCheckerStackProps;
   pgDDProps?: PgDDStackProps;
 }
 
@@ -140,6 +142,7 @@ export class StatelessStackCollection {
   readonly dataMigrate: Stack;
   readonly htsgetStack: Stack;
   readonly pgDDStack: Stack;
+  readonly sampleSheetCheckerStack: Stack;
 
   constructor(
     scope: Construct,
@@ -326,6 +329,11 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'HtsgetStack'),
       ...statelessConfiguration.htsgetProps,
       role: fileManagerStack.role,
+    });
+
+    this.sampleSheetCheckerStack = new SampleSheetCheckerStack(scope, 'SampleSheetCheckerStack', {
+      ...this.createTemplateProps(env, 'SampleSheetCheckerStack'),
+      ...statelessConfiguration.sampleSheetCheckerProps,
     });
 
     if (statelessConfiguration.pgDDProps) {
