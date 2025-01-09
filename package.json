@@ -33,7 +33,7 @@
     "constructs": "^10.4.2",
     "core-js-pure": "^3.39.0",
     "dotenv": "^16.4.7",
-    "htsget-lambda": "^0.7.1",
+    "htsget-lambda": "^0.7.2",
     "source-map-support": "^0.5.21",
     "sqs-dlq-monitoring": "^1.2.18"
   },
@@ -42,7 +42,7 @@
     "@types/eslint__js": "^8.42.3",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.2",
-    "aws-cdk": "2.164.1",
+    "aws-cdk": "2.174.1",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "globals": "^15.14.0",
