@@ -886,3 +886,8 @@ export const oraDecompressionIcav2ReadyEventSource = 'orcabus.workflowmanager';
 export const oraDecompressionIcav2EventSource = 'orcabus.oradecompression';
 export const oraDecompressionIcav2EventDetailType = 'FastqListRowDecompressed';
 export const oraDecompressionStateMachinePrefix = 'oraDecompressionSfn';
+
+/*
+ICAv2 ProjectData Copy Manager Stack
+*/
+export const icav2DataCopyManagerDynamodbTableName = 'icav2DataCopyManagerDynamoDBTable';
