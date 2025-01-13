@@ -101,6 +101,10 @@ class Library(BaseModel):
         blank=True,
         null=True
     )
+    override_cycles = models.CharField(
+        blank=True,
+        null=True
+    )
 
     # Relationships
     sample = models.ForeignKey(Sample, on_delete=models.SET_NULL, blank=True, null=True,

@@ -204,6 +204,7 @@ def load_metadata_csv(df: pd.DataFrame, is_emit_eb_events: bool = True, user_id:
                     'type': get_value_from_human_readable_label(LibraryType.choices, record.get('type')),
                     'assay': record.get('assay'),
                     'coverage': sanitize_library_coverage(record.get('coverage')),
+                    'override_cycles': record.get('override_cycles'),
 
                     # relationships
                     'sample_id': sample.orcabus_id,
