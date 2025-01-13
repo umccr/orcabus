@@ -124,6 +124,8 @@ class TrackingSheetSrvUnitTests(TestCase):
         self.assertEqual(result.get("subject").get("update_count"), 0, "no update in subject")
 
         lib_1 = Library.objects.get(library_id=RECORD_1.get("LibraryID"))
+        self.assertEqual(lib_1.override_cycles, RECORD_1.get("OverrideCycles"),
+                         "incorrect value (OverrideCycles) stored")
         self.assertEqual(lib_1.type, RECORD_1.get("Type"), "incorrect value (Type) stored")
         self.assertEqual(lib_1.phenotype, RECORD_1.get("Phenotype"), "incorrect value (Phenotype) stored")
         self.assertEqual(lib_1.assay, RECORD_1.get("Assay"), "incorrect value (Assay) stored")
@@ -295,7 +297,6 @@ class TrackingSheetSrvUnitTests(TestCase):
         self.assertEqual(deleted_lib.count(), 0, 'these library query should all be deleted')
         self.assertEqual(result.get("library").get("delete_count"), 2, "2 library should be deleted")
 
-
     def test_skip_incomplete_records(self) -> None:
         """
         python manage.py test \
@@ -319,7 +320,6 @@ class TrackingSheetSrvUnitTests(TestCase):
                 return False
 
         self.assertFalse(is_library_exists(RECORD_1.get("LibraryID")), "library should not be created")
-
 
     def test_save_choice_from_human_readable_label(self) -> None:
         """

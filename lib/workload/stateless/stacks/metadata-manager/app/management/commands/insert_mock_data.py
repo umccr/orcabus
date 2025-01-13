@@ -43,7 +43,8 @@ def load_mock_from_wfm():
             "assay": "TsqNano",
             "type": "WGS",
             "subject": "SBJ00001",
-            "workflow": "clinical"
+            "workflow": "clinical",
+            "override_cycles": "Y151;I8N2;I8N2;Y151"
         },
         {
             "orcabus_id": "02J5M2JFE1JPYV62RYQEG99CP2",
@@ -52,7 +53,8 @@ def load_mock_from_wfm():
             "assay": "TsqNano",
             "type": "WGS",
             "subject": "SBJ00001",
-            "workflow": "clinical"
+            "workflow": "clinical",
+            "override_cycles": "Y151;I8N2;I8N2;Y151"
         },
         {
             "orcabus_id": "03J5M2JFE1JPYV62RYQEG99CP3",
@@ -61,7 +63,8 @@ def load_mock_from_wfm():
             "assay": "TsqNano",
             "type": "WGS",
             "subject": "SBJ00002",
-            "workflow": "research"
+            "workflow": "research",
+            "override_cycles": "Y151;I8N2;I8N2;Y151"
         },
         {
             "orcabus_id": "04J5M2JFE1JPYV62RYQEG99CP4",
@@ -70,7 +73,8 @@ def load_mock_from_wfm():
             "assay": "TsqNano",
             "type": "WGS",
             "subject": "SBJ00002",
-            "workflow": "research"
+            "workflow": "research",
+            "override_cycles": "Y151;I8N2;I8N2;Y151"
         },
         {
             "orcabus_id": "05J5M2JFE1JPYV62RYQEG99CP5",
@@ -79,7 +83,8 @@ def load_mock_from_wfm():
             "assay": "ctTSOv2",
             "type": "ctDNA",
             "subject": "SBJ00003",
-            "workflow": "clinical"
+            "workflow": "clinical",
+            "override_cycles": "U7N1Y143;I8;I8;U7N1Y143"
         },
         {
             "orcabus_id": "06J5M2JFE1JPYV62RYQEG99CP6",
@@ -88,7 +93,8 @@ def load_mock_from_wfm():
             "assay": "ctTSOv2",
             "type": "ctDNA",
             "subject": "SBJ00003",
-            "workflow": "research"
+            "workflow": "research",
+            "override_cycles": "U7N1Y143;I8;I8;U7N1Y143"
         },
     ]
 
