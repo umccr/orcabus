@@ -11,7 +11,7 @@ WORKDIR /app
 RUN apt -y update && apt -y install curl && \
     curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 # rustfmt is used for code gen.
-RUN cargo binstall -y sccache && cargo binstall -y cargo-chef && rustup component add rustfmt
+RUN cargo binstall -y sccache && cargo binstall -y cargo-chef@0.1.68 && rustup component add rustfmt
 
 FROM chef AS planner
 
