@@ -6,15 +6,13 @@ import {
   logsApiGatewayConfig,
 } from '../constants';
 
-export const getSampleSheetCheckerProps = (
-  stage: AppStage
-): SampleSheetCheckerStackProps => {
+export const getSampleSheetCheckerProps = (stage: AppStage): SampleSheetCheckerStackProps => {
   return {
     apiGatewayConstructProps: {
       ...cognitoApiGatewayConfig,
       corsAllowOrigins: corsAllowOrigins[stage],
       apiGwLogsConfig: logsApiGatewayConfig[stage],
-      apiName: 'SSChecker',
+      apiName: 'SSCheck',
       customDomainNamePrefix: 'sscheck-orcabus',
     },
   };

@@ -1,6 +1,7 @@
-import email
+import base64
 import tempfile
 import logging
+from email.parser import BytesParser
 
 from src.checker import construct_sample_sheet, run_sample_sheet_content_check, run_sample_sheet_check_with_metadata
 from src.http import construct_body, construct_response
@@ -28,13 +29,21 @@ def lambda_handler(event, context):
     # Parse header
     headers = event.get("headers", {})
     origin = headers.get("origin", "")
-    authorization = headers.get("Authorization", "")
-    content_type = headers.get('Content-Type', '')
+    authorization = headers.get("Authorization", headers.get("authorization", ""))
+    content_type = headers.get('Content-Type', headers.get('content-type', ''))
 
     # Parse body payload
-    body = event["body"].encode()
-    ct = "Content-Type: " + content_type + "\n"
-    msg = email.message_from_bytes(ct.encode() + body)
+    if event.get("isBase64Encoded", False):
+        body = base64.b64decode(event["body"])
+    else:
+        body = event["body"].encode()
+    ct = f"Content-Type: {content_type}\n\n".encode()
+    msg = BytesParser().parsebytes(ct + body)
+    if not msg.is_multipart():
+        body = construct_body(check_status="FAIL", error_message="Invalid body",
+                              v2_sample_sheet='')
+        response = construct_response(status_code=400, body=body, origin=origin)
+        return response
 
     multipart_content = {}
     for part in msg.get_payload():
