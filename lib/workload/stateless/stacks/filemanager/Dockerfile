@@ -2,16 +2,20 @@
 # When running this microservice from the Docker Compose root, this Dockerfile
 # will build the image, install dependencies, and start the server
 
-FROM public.ecr.aws/docker/library/rust:1.81 AS chef
+FROM public.ecr.aws/docker/library/rust:1.84 AS chef
+
+ENV SCCACHE_VERSION=0.9.1
+ENV CARGO_CHEF_VERSION=0.1.68
+ENV CARGO_BINSTALL_VERSION=1.10.20
 
 ENV RUSTC_WRAPPER="/usr/local/cargo/bin/sccache"
 
 WORKDIR /app
 
 RUN apt -y update && apt -y install curl && \
-    curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+    curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/v$CARGO_BINSTALL_VERSION/install-from-binstall-release.sh | bash
 # rustfmt is used for code gen.
-RUN cargo binstall -y sccache && cargo binstall -y cargo-chef && rustup component add rustfmt
+RUN cargo binstall -y sccache@$SCCACHE_VERSION && cargo binstall -y cargo-chef@$CARGO_CHEF_VERSION && rustup component add rustfmt
 
 FROM chef AS planner
 
