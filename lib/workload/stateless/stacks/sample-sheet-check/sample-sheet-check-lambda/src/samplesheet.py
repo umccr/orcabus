@@ -480,8 +480,7 @@ class SampleSheet:
             {
                 "library_id": metadata["libraryId"],
                 "sample_id": metadata["sample"]["sampleId"],
-                # FIX ME: This is not in the metadata
-                # "override_cycles": metadata["overrideCycles"],
+                "override_cycles": metadata["overrideCycles"],
                 "assay": metadata["assay"],
                 "type": metadata["type"],
                 "subject_id": metadata["subject"]["subjectId"],
@@ -692,12 +691,12 @@ def check_internal_override_cycles(samplesheet):
     """
     for sample in samplesheet:
         # Check override cycles attribute exists
-        if sample.override_cycles == "":
+        if not sample.override_cycles:
             logger.warning("Could not find override cycles for sample \"{}\"".format(sample.unique_id))
             continue
         index_count = 0
         for cycle_set in sample.override_cycles.split(";"):
-            # Makes sure that the cycles completes a fullmatch
+            # Makes sure that the cycles completes a full match
             if OVERRIDE_CYCLES_OBJS["indexes"].match(cycle_set) is None:
                 logger.debug("Not an index cycle, skipping")
                 continue
@@ -737,7 +736,7 @@ def check_global_override_cycles(samplesheet) -> List:
         if not len(sample.read_cycle_counts) == 0:
             continue
         # for Y151;I8N2;I8N2;Y151 to ["Y151", "I8N2", "I8N2", "Y151"]
-        if sample.override_cycles == "":
+        if not sample.override_cycles:
             logger.warning("Could not find override cycles for sample \"{}\"".format(sample.unique_id))
             continue
         for cycle_set in sample.override_cycles.split(";"):
@@ -759,7 +758,6 @@ def check_global_override_cycles(samplesheet) -> List:
     num_read_index_per_sample = set([len(sample.read_cycle_counts)
                                      for sample in samplesheet
                                      if not len(sample.read_cycle_counts) == 0])
-
     # Check the number of segments for each section are even the same
     if len(num_read_index_per_sample) > 1:
         logger.error("Found an error with override cycles matches")
