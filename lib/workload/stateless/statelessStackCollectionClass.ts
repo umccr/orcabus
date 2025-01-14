@@ -82,7 +82,10 @@ import {
 import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
 import { HtsgetStack, HtsgetStackConfigurableProps } from './stacks/htsget/stack';
-import { SampleSheetCheckerStack, SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
+import {
+  SampleSheetCheckerStack,
+  SampleSheetCheckerStackProps,
+} from './stacks/sample-sheet-check/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
