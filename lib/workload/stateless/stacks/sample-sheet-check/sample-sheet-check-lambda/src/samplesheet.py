@@ -466,7 +466,6 @@ class SampleSheet:
                 library_id_array.append(topup_library_id)
 
         try:
-
             metadata_response = get_metadata_record_from_array_of_field_name(auth_header=auth_header,
                                                                              field_name='library_id',
                                                                              value_list=library_id_array)
@@ -475,7 +474,7 @@ class SampleSheet:
             raise ApiCallError("Fail to fetch metadata api for library id in the sample sheet")
 
         # Convert api result to panda dataframe
-
+        # Replicate what the old portal does
         metadata_response = [
             {
                 "library_id": metadata["libraryId"],

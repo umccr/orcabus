@@ -78,7 +78,7 @@ def set_logger(log_path, log_level=logging.DEBUG):
     formatter = logging.Formatter(LOGGER_STYLE)
 
     # create a file handler
-    file_handler = RotatingFileHandler(filename=log_path, maxBytes=100000000, backupCount=5)
+    file_handler = RotatingFileHandler(filename=log_path, mode='w+', maxBytes=100000000, backupCount=5)
     # Set Level
     file_handler.setLevel(log_level)
     file_handler.setFormatter(formatter)

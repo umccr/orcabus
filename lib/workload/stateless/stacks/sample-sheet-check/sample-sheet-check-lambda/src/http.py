@@ -45,6 +45,7 @@ def construct_response(status_code, body, origin: str):
             'Access-Control-Allow-Headers': 'Content-Type',
             'Access-Control-Allow-Origin': origin,
             'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            'Content-Type': 'application/json',
         },
     }
 

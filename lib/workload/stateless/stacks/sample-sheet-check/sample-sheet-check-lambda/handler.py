@@ -24,13 +24,18 @@ def lambda_handler(event, context):
         An aws resource information
 
     """
-    logger.info(f"Processing (event, context): {event}, {context}")
+    event_copy = event.copy()
+    event_copy['headers'] = event_copy.get('headers', {}).copy()
+    event_copy['headers'].pop('Authorization', None)
+    event_copy['headers'].pop('authorization', None)
+
+    logger.info(f"Processing (event, context): {event_copy}, {context}")
 
     # Parse header
     headers = event.get("headers", {})
     origin = headers.get("origin", "")
     authorization = headers.get("Authorization", headers.get("authorization", ""))
-    content_type = headers.get('Content-Type', headers.get('content-type', ''))
+    content_type = headers.get("Content-Type", headers.get("content-type",""))
 
     # Parse body payload
     if event.get("isBase64Encoded", False):
@@ -58,10 +63,10 @@ def lambda_handler(event, context):
     temporary_data.write(file_data.decode("utf-8"))
     temporary_data.seek(0)
 
-    # Setup Logging
-    set_logger(log_path=LOG_PATH, log_level=log_level)
-
     try:
+        # Setup Logging
+        set_logger(log_path=LOG_PATH, log_level=log_level)
+
         # Construct and run sample sheet checker
         sample_sheet = construct_sample_sheet(temporary_data.name)
         run_sample_sheet_content_check(sample_sheet)

@@ -1,7 +1,6 @@
 import pandas as pd
 
-from src.errors import FileContentError, SimilarIndexError, SampleSheetHeaderError, SampleNameFormatError, \
-    MetaDataError, OverrideCyclesError, GetMetaDataError
+from src.errors import FileContentError
 from src.logger import get_logger
 from src.samplesheet import SampleSheet, check_sample_sheet_for_index_clashes, check_samplesheet_header_metadata, \
     get_years_from_samplesheet, check_metadata_correspondence, check_global_override_cycles, \
@@ -29,7 +28,7 @@ def construct_sample_sheet(sample_sheet_path: str):
         raise FileContentError
 
 
-def run_sample_sheet_content_check(sample_sheet):
+def run_sample_sheet_content_check(sample_sheet: SampleSheet):
     """
     Run check for the samplesheet.
 
@@ -81,13 +80,12 @@ def run_sample_sheet_check_with_metadata(sample_sheet: SampleSheet, auth_header:
     logger.info("Check sample sheet against metadata")
 
     # Run through checks with metadata integrate
-    logger.info('----------set_metadata_by_library_id----------')
+    logger.info('----------set_metadata_from_api----------')
     sample_sheet.set_metadata_from_api(auth_header)
 
     logger.info('----------check_metadata_correspondence----------')
     check_metadata_correspondence(sample_sheet)
 
-    # FIXME: This is not implemented yet (current metadata does not have override cycles)
     logger.info('----------check_global_override_cycles----------')
     check_global_override_cycles(sample_sheet)
     logger.info('----------check_internal_override_cycles----------')

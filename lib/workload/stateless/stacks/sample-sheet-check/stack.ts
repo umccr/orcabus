@@ -7,6 +7,7 @@ import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../componen
 import path from 'path';
 import { Architecture, DockerImageCode, DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 
 export interface SampleSheetCheckerStackProps {
   /**
@@ -31,6 +32,7 @@ export class SampleSheetCheckerStack extends Stack {
       code: DockerImageCode.fromImageAsset(path.join(__dirname, 'sample-sheet-check-lambda'), {
         file: 'lambda.Dockerfile',
       }),
+      logRetention: RetentionDays.TWO_WEEKS,
       architecture: Architecture.ARM_64,
       timeout: Duration.seconds(28),
       memorySize: 1024,
