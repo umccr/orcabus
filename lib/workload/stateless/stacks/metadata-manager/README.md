@@ -61,7 +61,10 @@ on the model of the record.
 
 ## How things work
 
-The metadata loader currently supports two Lambda functions: one for syncing from a tracking sheet and another for syncing from a custom CSV presigned URL. Upon a CREATE or UPDATE operation in the metadata library, the Lambda function will publish events to the `MainOrcabusEventBus` using the schema defined in [MetadataStateChange.schema.json](/docs/schemas/events/metadatamanager/MetadataStateChange.schema.json).
+The metadata loader currently supports two Lambda functions: one for syncing from a tracking sheet and another for
+syncing from a custom CSV presigned URL. Upon a CREATE or UPDATE operation in the metadata library, the Lambda function
+will publish events to the `MainOrcabusEventBus` using the schema defined
+in [MetadataStateChange.schema.json](/docs/schemas/events/metadatamanager/MetadataStateChange.schema.json).
 
 The event data will adhere to the same schema as the OpenAPI schema without nested object.
 
@@ -118,6 +121,7 @@ from the Google tracking sheet and mapping it to its respective model as follows
 | Type               | `Library`    | type               |
 | Coverage (X)       | `Library`    | coverage           |
 | Assay              | `Library`    | assay              |
+| OverrideCycles     | `Library`    | override_cycles    |
 | *ProjectName       | `Project`    | project_id         |
 | *ProjectOwner      | `Contact`    | contact_id         |
 
@@ -130,7 +134,7 @@ Some important notes of the sync:
    will be applied based on their internal IDs (e.g. `library_id`, `subject_id`, etc. ). For the library
    model, the deletion will only occur based on the current year's prefix. For example, syncing the 2024 tracking
    sheet will only query libraries with `library_id` tarting with `L24` to determine whether to delete it.
-3. `LibraryId` is treated as a unique value in the tracking sheet, so for any duplicated value will only recognize 
+3. `LibraryId` is treated as a unique value in the tracking sheet, so for any duplicated value will only recognize
    the last appearance.
 4. In cases where multiple records share the same unique identifier (such as SampleId), only the data from the most
    recent record is stored. For instance, if a SampleId appears twice with differing source values, only the values from
@@ -158,6 +162,7 @@ The application also supports loading data from a custom CSV file. The CSV file 
 | type                 | `Library`    | type               |
 | coverage             | `Library`    | coverage           |
 | assay                | `Library`    | assay              |
+| override_cycles      | `Library`    | override_cycles    |
 | project_name         | `Project`    | project_id         |
 | project_owner        | `Contact`    | contact_id         |
 

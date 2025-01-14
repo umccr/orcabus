@@ -24,6 +24,7 @@ LIBRARY_1 = {
     "quality": "good",
     "type": "WTS",
     "assay": "NebRNA",
+    "override_cycles": "Y151;I8N2;I8N2;Y151",
     "coverage": 6.0,
     'project_owner': 'test_owner',
     'project_name': 'test_project'
@@ -75,7 +76,7 @@ class LibraryFactory(factory.django.DjangoModelFactory):
     type = LIBRARY_1["type"]
     assay = LIBRARY_1["assay"]
     coverage = LIBRARY_1["coverage"]
-
+    override_cycles = LIBRARY_1["override_cycles"]
 
 class ProjectFactory(factory.django.DjangoModelFactory):
     class Meta:
