@@ -1,12 +1,28 @@
 import pandas as pd
 
 from src.errors import FileContentError
-from src.logger import get_logger
+from src.logger import get_logger, set_basic_logger, set_logger
 from src.samplesheet import SampleSheet, check_sample_sheet_for_index_clashes, check_samplesheet_header_metadata, \
     get_years_from_samplesheet, check_metadata_correspondence, check_global_override_cycles, \
     check_internal_override_cycles
 
-logger = get_logger()
+logger = set_basic_logger()
+
+
+def construct_logger(log_path, log_level):
+    """
+    Cosntructing logger for samplesheet.
+
+    Parameters
+    ----------
+    log_path : str
+        The path where the logger lives
+    log_level : str
+        The type of logging desired
+
+    """
+    global logger
+    set_logger(log_path=log_path, log_level=log_level)
 
 
 def construct_sample_sheet(sample_sheet_path: str):

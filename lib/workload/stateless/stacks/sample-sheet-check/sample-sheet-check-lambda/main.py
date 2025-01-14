@@ -7,7 +7,6 @@ from src.checker import construct_sample_sheet, run_sample_sheet_content_check, 
 from src.logger import set_logger
 from src.v2_samplesheet_builder import v1_to_v2_samplesheet
 
-
 def get_argument():
     parser = argparse.ArgumentParser(
         description="Run sample sheet check locally."
@@ -66,7 +65,7 @@ if __name__ == "__main__":
     directory = os.path.dirname(log_path)
     if directory:
         os.makedirs(directory, exist_ok=True)
-    set_logger(log_path=log_path, log_level=logging.ERROR)
+    set_logger(log_path=log_path, log_level=logging.INFO)
 
     # Construct and run sample sheet checker
     sample_sheet = construct_sample_sheet(filepath)

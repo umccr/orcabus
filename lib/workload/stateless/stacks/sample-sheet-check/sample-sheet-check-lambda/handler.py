@@ -3,9 +3,9 @@ import tempfile
 import logging
 from email.parser import BytesParser
 
-from src.checker import construct_sample_sheet, run_sample_sheet_content_check, run_sample_sheet_check_with_metadata
+from src.checker import construct_sample_sheet, run_sample_sheet_content_check, run_sample_sheet_check_with_metadata, \
+    construct_logger
 from src.http import construct_body, construct_response
-from src.logger import set_logger
 from src.v2_samplesheet_builder import v1_to_v2_samplesheet
 
 # Logging
@@ -35,7 +35,7 @@ def lambda_handler(event, context):
     headers = event.get("headers", {})
     origin = headers.get("origin", "")
     authorization = headers.get("Authorization", headers.get("authorization", ""))
-    content_type = headers.get("Content-Type", headers.get("content-type",""))
+    content_type = headers.get("Content-Type", headers.get("content-type", ""))
 
     # Parse body payload
     if event.get("isBase64Encoded", False):
@@ -64,8 +64,7 @@ def lambda_handler(event, context):
     temporary_data.seek(0)
 
     try:
-        # Setup Logging
-        set_logger(log_path=LOG_PATH, log_level=log_level)
+        construct_logger(log_path=LOG_PATH, log_level=log_level)
 
         # Construct and run sample sheet checker
         sample_sheet = construct_sample_sheet(temporary_data.name)

@@ -8,6 +8,7 @@ import path from 'path';
 import { Architecture, DockerImageCode, DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 export interface SampleSheetCheckerStackProps {
   /**
@@ -39,6 +40,14 @@ export class SampleSheetCheckerStack extends Stack {
       environment: {
         DATA_PORTAL_DOMAIN_NAME: domainName,
       },
+      initialPolicy: [
+        // Not enabling logs
+        new PolicyStatement({
+          effect: Effect.DENY,
+          actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
+          resources: ['arn:aws:logs:*:*:*'],
+        }),
+      ],
     });
 
     // add some integration to the http api gw

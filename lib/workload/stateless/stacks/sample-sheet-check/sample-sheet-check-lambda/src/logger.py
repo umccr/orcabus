@@ -2,24 +2,9 @@
 
 import inspect
 import logging
+import os
 from logging.handlers import RotatingFileHandler
 from src.globals import LOGGER_STYLE
-
-
-def construct_logger(log_path, log_level):
-    """
-    Cosntructing logger for samplesheet.
-
-    Parameters
-    ----------
-    log_path : str
-        The path where the logger lives
-    log_level : str
-        The type of logging desired
-
-    """
-    global logger
-    set_logger(log_path=log_path, log_level=log_level)
 
 
 def get_caller_function():
@@ -71,6 +56,11 @@ def set_logger(log_path, log_level=logging.DEBUG):
     Initialise a logger
     :return:
     """
+    if os.path.exists(log_path):
+        os.remove(log_path)
+    with open(log_path, 'w') as f:
+        f.write("")
+
     new_logger = logging.getLogger()
     new_logger.setLevel(log_level)
 
@@ -78,7 +68,7 @@ def set_logger(log_path, log_level=logging.DEBUG):
     formatter = logging.Formatter(LOGGER_STYLE)
 
     # create a file handler
-    file_handler = RotatingFileHandler(filename=log_path, mode='w+', maxBytes=100000000, backupCount=5)
+    file_handler = RotatingFileHandler(filename=log_path, mode='w', maxBytes=100000000, backupCount=5)
     # Set Level
     file_handler.setLevel(log_level)
     file_handler.setFormatter(formatter)
