@@ -138,6 +138,21 @@ function applyNagSuppression(stackId: string, stack: Stack) {
   // for each stack specific
 
   switch (stackId) {
+    case 'SampleSheetCheckerStack':
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/SampleSheetCheckerStack/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/DefaultPolicy/Resource`,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason: 'Used to deny aws logs to be sent to cloudwatch logs. ',
+          },
+        ],
+        true
+      );
+
+      break;
+
     case 'MetadataManagerStack':
       NagSuppressions.addResourceSuppressionsByPath(
         stack,

@@ -1,0 +1,23 @@
+[Header],,,,,,,,,,,
+IEMFileVersion,5,,,,,,,,,,
+Experiment Name,-,,,,,,,,,,
+Date,30/4/2020,,,,,,,,,,
+Workflow,-,,,,,,,,,,
+Application,-,,,,,,,,,,
+Instrument Type,-,,,,,,,,,,
+Assay,-,,,,,,,,,,
+Index Adapters,-,,,,,,,,,,
+Chemistry,-,,,,,,,,,,
+,,,,,,,,,,,
+[Reads],,,,,,,,,,,
+50,,,,,,,,,,,
+50,,,,,,,,,,,
+,,,,,,,,,,,
+[Settings],,,,,,,,,,,
+Adapter,AGATCGG,,,,,,,,,,
+AdapterRead2,AGATCGG,,,,,,,,,,
+,,,,,,,,,,,
+[Data],,,,,,,,,,,
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,Index_Plate_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+3,MDX200001_L2000001,L0000000_topup,,,ABCD,ABCD,ABCD,ABCD,ABCD,ABCD,ABCD
+1,MDX200001_L2000002,L0000000_topup,,,ABCD,ABCD,ABCD,ABCD,ABCD,ABCD,ABCD

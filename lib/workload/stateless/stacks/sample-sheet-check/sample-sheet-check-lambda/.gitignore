@@ -1,0 +1,8 @@
+.venv
+venv
+
+/tests/sample/
+!tests/sample/mock-*
+
+/log/
+SampleSheet_v2.csv
