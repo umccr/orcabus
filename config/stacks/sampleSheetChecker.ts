@@ -7,6 +7,12 @@ import {
 } from '../constants';
 
 export const getSampleSheetCheckerProps = (stage: AppStage): SampleSheetCheckerStackProps => {
+  const metadataDomainNameDict = {
+    [AppStage.BETA]: 'metadata.dev.umccr.org',
+    [AppStage.GAMMA]: 'metadata.stg.umccr.org',
+    [AppStage.PROD]: 'metadata.prod.umccr.org',
+  };
+
   return {
     apiGatewayConstructProps: {
       ...cognitoApiGatewayConfig,
@@ -15,5 +21,6 @@ export const getSampleSheetCheckerProps = (stage: AppStage): SampleSheetCheckerS
       apiName: 'SSCheck',
       customDomainNamePrefix: 'sscheck-orcabus',
     },
+    metadataDomainName: metadataDomainNameDict[stage],
   };
 };

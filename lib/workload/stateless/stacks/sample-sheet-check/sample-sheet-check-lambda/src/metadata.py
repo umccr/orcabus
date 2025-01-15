@@ -4,9 +4,8 @@ from typing import List
 import json
 
 # Grab api constant from environment variable
-DOMAIN_NAME = os.environ.get("DATA_PORTAL_DOMAIN_NAME", "dev.umccr.org")
+METADATA_DOMAIN_NAME = os.environ.get("METADATA_DOMAIN_NAME", "metadata.dev.umccr.org")
 METADATA_API_PATH = 'api/v1/library'
-METADATA_SUBDOMAIN = 'metadata'
 
 
 def get_metadata_record_from_array_of_field_name(auth_header: str, field_name: str,
@@ -37,7 +36,7 @@ def get_metadata_record_from_array_of_field_name(auth_header: str, field_name: s
 
         query_param_string = query_param_string + f'&rowsPerPage=1000'  # Add Rows per page (1000 is the maximum rows)
 
-        url = f"https://{METADATA_SUBDOMAIN.strip('.')}.{DOMAIN_NAME.strip('.')}/{METADATA_API_PATH.strip('/')}/{query_param_string}"
+        url = f"https://{METADATA_DOMAIN_NAME.strip('.')}/{METADATA_API_PATH.strip('/')}/{query_param_string}"
         # Make sure no data is left, looping data until the end
         while url is not None:
             req = urllib.request.Request(url, headers=headers)

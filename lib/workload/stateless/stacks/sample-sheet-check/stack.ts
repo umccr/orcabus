@@ -15,6 +15,10 @@ export interface SampleSheetCheckerStackProps {
    * The props for api-gateway
    */
   apiGatewayConstructProps: ApiGatewayConstructProps;
+  /**
+   * The domain name of the metadata service
+   */
+  metadataDomainName: string;
 }
 
 export class SampleSheetCheckerStack extends Stack {
@@ -27,8 +31,6 @@ export class SampleSheetCheckerStack extends Stack {
       props.apiGatewayConstructProps
     );
 
-    const domainName = StringParameter.valueForStringParameter(this, 'umccr_domain');
-
     const sscheckLambda = new DockerImageFunction(this, 'SSCheckLambda', {
       code: DockerImageCode.fromImageAsset(path.join(__dirname, 'sample-sheet-check-lambda'), {
         file: 'lambda.Dockerfile',
@@ -38,7 +40,7 @@ export class SampleSheetCheckerStack extends Stack {
       timeout: Duration.seconds(28),
       memorySize: 1024,
       environment: {
-        DATA_PORTAL_DOMAIN_NAME: domainName,
+        METADATA_DOMAIN_NAME: props.metadataDomainName,
       },
       initialPolicy: [
         // Not enabling logs
