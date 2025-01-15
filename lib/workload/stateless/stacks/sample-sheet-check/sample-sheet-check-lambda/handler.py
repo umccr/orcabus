@@ -77,7 +77,7 @@ def lambda_handler(event, context):
     except Exception as e:
         body = construct_body(check_status="FAIL", error_message=str(e), log_path=LOG_PATH,
                               v2_sample_sheet='')
-        response = construct_response(status_code=400, body=body, origin=origin)
+        response = construct_response(status_code=200, body=body, origin=origin)
         return response
 
     body = construct_body(check_status='PASS', log_path=LOG_PATH, v2_sample_sheet=v2_sample_sheet_str)
