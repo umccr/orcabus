@@ -124,7 +124,7 @@ def create_secret(service_client, arn, token):
         logger.info("createSecret: Successfully retrieved secret for %s." % arn)
     except service_client.exceptions.ResourceNotFoundException:
         # Generate a random password
-        current_dict['password'] = CognitoTokenService.generate_password()
+        current_dict['password'] = token_srv.generate_password()
         # Put the secret
         service_client.put_secret_value(SecretId=arn, ClientRequestToken=token, SecretString=json.dumps(current_dict), VersionStages=['AWSPENDING'])
         logger.info("createSecret: Successfully put secret for ARN %s and version %s." % (arn, token))

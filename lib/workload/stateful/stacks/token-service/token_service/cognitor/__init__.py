@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-import random
+import secrets
 import string
 from dataclasses import dataclass
+from typing import List
 
 import boto3
 
@@ -13,24 +14,49 @@ class ServiceUserDto:
     email: str
 
 
+SPECIAL_PASSWORD_CHAR_SET = "_-!@#%&."
+
+
 class CognitoTokenService:
 
     def __init__(self, user_pool_id: str, user_pool_app_client_id: str):
         self.client = boto3.client('cognito-idp')
         self.user_pool_id: str = user_pool_id
         self.user_pool_app_client_id: str = user_pool_app_client_id
+        self.password_char_sets: List[str] = [
+            string.ascii_lowercase,
+            string.ascii_uppercase,
+            string.digits,
+            SPECIAL_PASSWORD_CHAR_SET,
+        ]
 
-    @staticmethod
-    def generate_password(length: int = 32) -> str:
+    def generate_password(self, length: int = 32) -> str:
         """
         Must meet the Cognito password requirements policy
         https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-policies.html
         """
         if length < 8:
-            raise ValueError('Length must be at least 8 characters or more better')
-        return ''.join(
-            random.SystemRandom().choice(string.ascii_letters + string.digits + '_-!@#%&.') for _ in range(length)
-        )
+            raise ValueError("Length must be at least 8 characters or more better")
+
+        password = ""
+        while not self.is_password_valid(password):
+            password = "".join(
+                secrets.SystemRandom().choice("".join(self.password_char_sets))
+                for _ in range(length)
+            )
+
+        return password
+
+    def is_password_valid(self, password: str) -> bool:
+        """
+        Check if the password meets the Cognito password requirements policy
+        https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-policies.html
+        """
+        for char_set in self.password_char_sets:
+            if not any(c in char_set for c in password):
+                return False
+
+        return True
 
     def list_users(self, **kwargs) -> dict:
         if 'UserPoolId' in kwargs.keys():

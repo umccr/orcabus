@@ -1,11 +1,12 @@
 import logging
+import string
 import unittest
 from datetime import datetime
 
 import botocore
 from botocore.stub import Stubber
 
-from . import CognitoTokenService, ServiceUserDto
+from . import CognitoTokenService, ServiceUserDto, SPECIAL_PASSWORD_CHAR_SET
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -22,7 +23,7 @@ class CognitorUnitTest(unittest.TestCase):
         self.jjb_dto = ServiceUserDto(
             username='jjb',
             email='<EMAIL>',
-            password=CognitoTokenService.generate_password()
+            password=self.srv.generate_password()
         )
 
         self.mock_client = botocore.session.get_session().create_client('cognito-idp')
@@ -39,10 +40,56 @@ class CognitorUnitTest(unittest.TestCase):
         """
         python -m unittest token_service.cognitor.tests.CognitorUnitTest.test_generate_password
         """
-        passwd = CognitoTokenService.generate_password()
+        passwd = self.srv.generate_password()
         self.assertIsNotNone(passwd)
         self.assertEqual(len(passwd), 32)
+        self.assertTrue(any(c.islower() for c in passwd))
+        self.assertTrue(any(c.isupper() for c in passwd))
+        self.assertTrue(any(c.isdigit() for c in passwd))
+        self.assertTrue(any(c in SPECIAL_PASSWORD_CHAR_SET for c in passwd))
         # print(passwd)
+
+    def test_is_password_valid(self):
+        """
+        python -m unittest token_service.cognitor.tests.CognitorUnitTest.test_is_password_valid
+        """
+        self.assertTrue(
+            self.srv.is_password_valid(
+                string.ascii_lowercase
+                + string.ascii_uppercase
+                + string.digits
+                + SPECIAL_PASSWORD_CHAR_SET
+            )
+        )
+        self.assertFalse(
+            self.srv.is_password_valid(
+                string.ascii_lowercase
+                + string.ascii_uppercase
+                + SPECIAL_PASSWORD_CHAR_SET
+            )
+        )
+        self.assertFalse(
+            self.srv.is_password_valid(
+                string.ascii_lowercase + SPECIAL_PASSWORD_CHAR_SET + string.digits
+            )
+        )
+        self.assertFalse(
+            self.srv.is_password_valid(
+                SPECIAL_PASSWORD_CHAR_SET + string.ascii_uppercase + string.digits
+            )
+        )
+        self.assertFalse(
+            self.srv.is_password_valid(
+                SPECIAL_PASSWORD_CHAR_SET
+                + string.ascii_uppercase
+                + string.ascii_lowercase
+            )
+        )
+        self.assertFalse(
+            self.srv.is_password_valid(
+                string.ascii_lowercase + string.ascii_uppercase + string.digits
+            )
+        )
 
     def test_list_users(self):
         """
