@@ -43,7 +43,7 @@ def lambda_handler(event, context):
         event (dict): Lambda dictionary of event parameters. These keys must include the following:
             - SecretId: The secret ARN or identifier
             - ClientRequestToken: The ClientRequestToken of the secret version
-            - Step: The rotation step (one of createSecret, setSecret, testSecret, or finishSecret)
+            - Step: The rotation step (one of createSecret, setSecret, testSecret, finishSecret or resetPendingSecret)
 
         context (LambdaContext): The Lambda runtime information
 
@@ -90,6 +90,9 @@ def lambda_handler(event, context):
 
     elif step == "finishSecret":
         finish_secret(service_client, arn, token)
+
+    elif step == "resetPendingSecret":
+        reset_pending_secret(service_client, arn, token)
 
     else:
         logger.error("lambda_handler: Invalid step parameter %s for secret %s" % (step, arn))
@@ -252,6 +255,31 @@ def finish_secret(service_client, arn, token):
     # Finalize by staging the secret version current
     service_client.update_secret_version_stage(SecretId=arn, VersionStage="AWSCURRENT", MoveToVersionId=token, RemoveFromVersionId=current_version)
     logger.info("finishSecret: Successfully set AWSCURRENT stage to version %s for secret %s." % (token, arn))
+
+
+def reset_pending_secret(service_client, arn, token):
+    """Clears the pending secret so that a new one can be generated.
+
+    Args:
+        service_client (client): The secrets manager service client
+
+        arn (string): The secret ARN or other identifier
+
+        token (string): The ClientRequestToken associated with the secret version
+
+    """
+    secret = service_client.get_secret_value(
+        SecretId=arn, VersionId=token, VersionStage="AWSPENDING"
+    )
+    version_id = secret["VersionId"]
+
+    service_client.update_secret_version_stage(
+        SecretId=arn, VersionStage="AWSPENDING", RemoveFromVersionId=version_id
+    )
+    logger.info(
+        "resetPendingSecret: Successfully removed AWSPENDING stage from version %s for secret %s."
+        % (token, arn)
+    )
 
 
 # --- module internal functions
