@@ -15,6 +15,8 @@ import {
 
 import { getEnvironmentConfig } from '../../config/config';
 import { AppStage } from '../../config/constants';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { ArnFormat, Stack } from 'aws-cdk-lib';
 
 export class StatelessPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
@@ -26,10 +28,26 @@ export class StatelessPipelineStack extends cdk.Stack {
     const ghRunnerRole = new iam.Role(this, 'GHRunnerRole', {
       assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
     });
+    const name = 'orcabus-codebuild-gh-runner';
+
+    // Based on https://github.com/aws/aws-cdk/blob/2b2443de2f566f1595657f94195d8b61243fb800/packages/aws-cdk-lib/aws-codebuild/lib/project.ts#L1328-L1342
+    const logGroupArn = Stack.of(this).formatArn({
+      service: 'logs',
+      resource: 'log-group',
+      arnFormat: ArnFormat.COLON_RESOURCE_NAME,
+      resourceName: `/aws/codebuild/${name}`,
+    });
+    ghRunnerRole.addToPolicy(
+      new PolicyStatement({
+        resources: [logGroupArn, `${logGroupArn}:*`],
+        actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
+      })
+    );
+
     new codebuild.CfnProject(this, 'GHRunnerCodeBuildProject', {
       // the name here act as a unique id for GH action to know which CodeBuild to use
       // So if you change this, you need to update the GH action .yml file (.github/workflows/prbuild.yml)
-      name: 'orcabus-codebuild-gh-runner',
+      name,
       description: 'GitHub Action Runner in CodeBuild for `orcabus` repository',
       serviceRole: ghRunnerRole.roleArn,
       artifacts: {
@@ -47,7 +65,6 @@ export class StatelessPipelineStack extends cdk.Stack {
         location: 'https://github.com/umccr/orcabus.git',
         reportBuildStatus: false,
       },
-      logsConfig: { cloudWatchLogs: { status: 'DISABLED' } },
       triggers: {
         webhook: true,
         buildType: 'BUILD',
