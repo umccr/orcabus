@@ -1,9 +1,12 @@
 import { Construct } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
+import { ArnFormat, Stack } from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as pipelines from 'aws-cdk-lib/pipelines';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import { ComputeType } from 'aws-cdk-lib/aws-codebuild';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import * as chatbot from 'aws-cdk-lib/aws-chatbot';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codestarnotifications from 'aws-cdk-lib/aws-codestarnotifications';
@@ -15,8 +18,6 @@ import {
 
 import { getEnvironmentConfig } from '../../config/config';
 import { AppStage } from '../../config/constants';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { ArnFormat, Stack } from 'aws-cdk-lib';
 
 export class StatelessPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
@@ -25,51 +26,24 @@ export class StatelessPipelineStack extends cdk.Stack {
     // Define CodeBuild project for GH action runner to use
     // the GH repo defined below already configured to allow CB webhook
     // This is actually not part of the pipeline, so I guess we could move this someday.
-    const ghRunnerRole = new iam.Role(this, 'GHRunnerRole', {
-      assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
-    });
-    const name = 'orcabus-codebuild-gh-runner';
-
-    // Based on https://github.com/aws/aws-cdk/blob/2b2443de2f566f1595657f94195d8b61243fb800/packages/aws-cdk-lib/aws-codebuild/lib/project.ts#L1328-L1342
-    const logGroupArn = Stack.of(this).formatArn({
-      service: 'logs',
-      resource: 'log-group',
-      arnFormat: ArnFormat.COLON_RESOURCE_NAME,
-      resourceName: `/aws/codebuild/${name}`,
-    });
-    ghRunnerRole.addToPolicy(
-      new PolicyStatement({
-        resources: [logGroupArn, `${logGroupArn}:*`],
-        actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
-      })
-    );
-
-    new codebuild.CfnProject(this, 'GHRunnerCodeBuildProject', {
-      // the name here act as a unique id for GH action to know which CodeBuild to use
-      // So if you change this, you need to update the GH action .yml file (.github/workflows/prbuild.yml)
-      name,
+    new codebuild.Project(this, 'GHRunnerCodeBuildProject', {
+      projectName: 'orcabus-codebuild-gh-runner',
       description: 'GitHub Action Runner in CodeBuild for `orcabus` repository',
-      serviceRole: ghRunnerRole.roleArn,
-      artifacts: {
-        type: 'NO_ARTIFACTS',
-      },
       environment: {
-        type: 'ARM_CONTAINER',
-        computeType: 'BUILD_GENERAL1_LARGE',
-        image: 'aws/codebuild/amazonlinux2-aarch64-standard:3.0',
-        privilegedMode: true,
+        buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
+        computeType: ComputeType.LARGE,
+        privileged: true,
       },
-      source: {
-        type: 'GITHUB',
-        gitCloneDepth: 1,
-        location: 'https://github.com/umccr/orcabus.git',
+      source: codebuild.Source.gitHub({
+        cloneDepth: 1,
         reportBuildStatus: false,
-      },
-      triggers: {
+        owner: 'umccr',
+        repo: 'orcabus',
         webhook: true,
-        buildType: 'BUILD',
-        filterGroups: [[{ type: 'EVENT', pattern: 'WORKFLOW_JOB_QUEUED' }]],
-      },
+        webhookFilters: [
+          codebuild.FilterGroup.inEventOf(codebuild.EventAction.WORKFLOW_JOB_QUEUED),
+        ],
+      }),
     });
 
     // A connection where the pipeline get its source code
