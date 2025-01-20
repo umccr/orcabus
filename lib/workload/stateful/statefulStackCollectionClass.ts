@@ -65,6 +65,10 @@ import {
   OraCompressionIcav2PipelineTable,
   OraCompressionIcav2PipelineTableStackProps,
 } from './stacks/ora-decompression-dynamodb/deploy/stack';
+import {
+  FastqManagerTable,
+  FastqManagerTableStackProps,
+} from './stacks/fastq-manager-db/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -86,6 +90,7 @@ export interface StatefulStackCollectionProps {
   pierianDxPipelineTableStackProps: PierianDxPipelineTableStackProps;
   oncoanalyserPipelineTableStackProps: OncoanalyserNfPipelineTableStackProps;
   sashPipelineTableStackProps: SashNfPipelineTableStackProps;
+  fastqManagerTableStackProps: FastqManagerTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -110,6 +115,7 @@ export class StatefulStackCollection {
   readonly pierianDxPipelineTableStack: Stack;
   readonly oncoanalyserPipelineTableStack: Stack;
   readonly sashPipelineTableStack: Stack;
+  readonly fastqManagerTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -257,6 +263,11 @@ export class StatefulStackCollection {
     this.sashPipelineTableStack = new SashNfPipelineTable(scope, 'SashNfPipelineTableStack', {
       ...this.createTemplateProps(env, 'SashNfPipelineTableStack'),
       ...statefulConfiguration.sashPipelineTableStackProps,
+    });
+
+    this.fastqManagerTableStack = new FastqManagerTable(scope, 'FastqManagerTableStack', {
+      ...this.createTemplateProps(env, 'FastqManagerTableStack'),
+      ...statefulConfiguration.fastqManagerTableStackProps,
     });
   }
 

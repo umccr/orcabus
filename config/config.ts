@@ -67,6 +67,7 @@ import { getPgDDProps } from './stacks/pgDD';
 import { getDataMigrateStackProps } from './stacks/dataMigrate';
 import { getHtsgetProps } from './stacks/htsget';
 import { getSampleSheetCheckerProps } from './stacks/sampleSheetChecker';
+import { getFastqManagerStackProps, getFastqManagerTableStackProps } from './stacks/fastqManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -107,6 +108,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       pierianDxPipelineTableStackProps: getPierianDxPipelineTableStackProps(),
       oncoanalyserPipelineTableStackProps: getOncoanalyserPipelineTableStackProps(),
       sashPipelineTableStackProps: getSashPipelineTableStackProps(),
+      fastqManagerTableStackProps: getFastqManagerTableStackProps(),
     },
     statelessConfig: {
       metadataManagerStackProps: getMetadataManagerStackProps(stage),
@@ -138,6 +140,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       htsgetProps: getHtsgetProps(stage),
       sampleSheetCheckerProps: getSampleSheetCheckerProps(stage),
       pgDDProps: getPgDDProps(stage),
+      fastqManagerStackProps: getFastqManagerStackProps(stage),
     },
   };
 

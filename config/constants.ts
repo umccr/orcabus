@@ -42,6 +42,9 @@ export const vpcProps: VpcLookupOptions = {
 export const authStackHttpLambdaAuthorizerParameterName =
   '/orcabus/authorization-stack/http-lambda-authorization-arn';
 
+// The hosted zone name ssm parameter path
+export const hostedZoneNameParameterPath = '/hosted_zone/umccr/name';
+
 // upstream infra: cognito
 export const cognitoPortalAppClientIdParameterName =
   '/data_portal/client/data2/cog_app_client_id_stage';
@@ -886,3 +889,8 @@ export const oraDecompressionIcav2ReadyEventSource = 'orcabus.workflowmanager';
 export const oraDecompressionIcav2EventSource = 'orcabus.oradecompression';
 export const oraDecompressionIcav2EventDetailType = 'FastqListRowDecompressed';
 export const oraDecompressionStateMachinePrefix = 'oraDecompressionSfn';
+
+/*
+Fastq Manager
+*/
+export const fastqManagerTableName = 'fastqManagerDynamoDBTable';

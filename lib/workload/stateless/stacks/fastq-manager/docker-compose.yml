@@ -1,0 +1,34 @@
+services:
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: dynamodb-local
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+    environment:
+      - REGION=us-east-1
+    user: root
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastq-manager
+    ports:
+      - "8001:8001"
+    volumes:
+      - "./app:/code/app"
+    environment:
+      - DYNAMODB_HOST=http://localhost:8000
+      - DYNAMODB_FASTQ_LIST_ROW_TABLE_NAME=fastq_list_row
+      - AWS_ACCESS_KEY_ID=dummyaccesskey
+      - AWS_SECRET_ACCESS_KEY=dummysecretkey
+      - REGION=us-east-1
+      - AWS_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+    depends_on:
+      - dynamodb-local
+    user: root
+    network_mode: host

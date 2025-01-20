@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+
+"""
+Use the metadata tools layer to get the library id from the library orcabus id
+"""
+
+from os import environ
+
+# Metadata imports
+from metadata_tools import (
+    # Orcabus helpers
+    get_orcabus_token,
+    # Library helpers
+    get_library_from_library_id
+)
+
+
+def handler(event, context):
+    """
+    Lambda handler.
+
+    # Use the environment variables to customize the behavior of the function
+    # Based on the use case
+    ENV VAR VALUE is required
+    ENV VAR FROM_ORCABUS or FROM_ID is required
+    ENV VAR CONTEXT is required, one of 'subject', 'sample', 'library', 'project'
+    ENV VAR RETURN_STR or RETURN_OBJ is required
+
+    :param event:
+    :param context:
+    :return:
+    """
+
+    # Get the orcabus token
+    environ['ORCABUS_TOKEN'] = get_orcabus_token()
+
+    # Get value from the event object
+    library_id = event['library_id']
+
+    # Get the library object
+    library_obj = get_library_from_library_id(library_id)
+
+    # Return the library id from the library object
+    return {
+        "orcabus_id": library_obj['orcabusId']
+    }
+
+
+
+# if __name__ == "__main__":
+#     # Import the json module
+#     import json
+#
+#     # Set the environment variables
+#     environ['AWS_PROFILE'] = 'umccr-development'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
+#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
+#
+#     # Set the context variables
+#     environ['CONTEXT'] = 'library'
+#     environ['FROM_ORCABUS'] = ''
+#     environ['RETURN_STR'] = ''
+#
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "library_orcabus_id": "lib.01J8ES92FTH314XSPZDWBA91E2"
+#                 },
+#                 None
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # {
+#     #     "library_id": "L2401469"
+#     # }
