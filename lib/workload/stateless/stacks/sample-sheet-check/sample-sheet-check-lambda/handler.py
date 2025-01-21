@@ -29,7 +29,7 @@ def lambda_handler(event, context):
     event_copy['headers'].pop('Authorization', None)
     event_copy['headers'].pop('authorization', None)
 
-    logger.info(f"Processing (event, context): {event_copy}, {context}")
+    print(f"Processing (event, context): {event_copy}, {context}")
 
     # Parse header
     headers = event.get("headers", {})
@@ -75,7 +75,10 @@ def lambda_handler(event, context):
         v2_sample_sheet_str = v1_to_v2_samplesheet(sample_sheet)
 
     except Exception as e:
-        body = construct_body(check_status="FAIL", error_message=str(e), log_path=LOG_PATH,
+        error_message = str(e)
+        if not error_message:
+            error_message = type(e).__name__
+        body = construct_body(check_status="FAIL", error_message=error_message, log_path=LOG_PATH,
                               v2_sample_sheet='')
         response = construct_response(status_code=200, body=body, origin=origin)
         return response

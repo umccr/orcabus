@@ -62,6 +62,7 @@ def set_logger(log_path, log_level=logging.DEBUG):
         f.write("")
 
     new_logger = logging.getLogger()
+    new_logger.handlers.clear()
     new_logger.setLevel(log_level)
 
     # create a logging format
