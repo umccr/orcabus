@@ -29,7 +29,7 @@ def lambda_handler(event, context):
     event_copy['headers'].pop('Authorization', None)
     event_copy['headers'].pop('authorization', None)
 
-    logger.info(f"Processing (event, context): {event_copy}, {context}")
+    print(f"Processing (event, context): {event_copy}, {context}")
 
     # Parse header
     headers = event.get("headers", {})
