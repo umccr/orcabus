@@ -28,3 +28,29 @@ def handler(event, context):
             ))
         )
     }
+
+
+# if __name__ == "__main__":
+#     from os import environ
+#     import json
+#
+#     environ['AWS_PROFILE'] = 'umccr-development'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
+#     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
+#
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "s3_ingest_id": "0193cdc0-2092-78d1-8d4e-fa5b090fce38"
+#                 },
+#                 None
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # {
+#     #     "s3_uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240424_A01052_0193_BH7JMMDRX5/20240910463b8d5d/Samples/Lane_1/LPRJ240775/LPRJ240775_S1_L001_R1_001.fastq.gz"
+#     # }

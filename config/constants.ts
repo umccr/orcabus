@@ -894,3 +894,4 @@ export const oraDecompressionStateMachinePrefix = 'oraDecompressionSfn';
 Fastq Manager
 */
 export const fastqManagerTableName = 'fastqManagerDynamoDBTable';
+export const fastqManagerIndexes = ['rgid_ext', 'instrument_run_id', 'library_orcabus_id'];

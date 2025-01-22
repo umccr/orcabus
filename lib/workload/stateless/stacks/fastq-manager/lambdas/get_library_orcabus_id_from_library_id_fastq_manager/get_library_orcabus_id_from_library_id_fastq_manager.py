@@ -58,15 +58,11 @@ def handler(event, context):
 #     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
 #
 #     # Set the context variables
-#     environ['CONTEXT'] = 'library'
-#     environ['FROM_ORCABUS'] = ''
-#     environ['RETURN_STR'] = ''
-#
 #     print(
 #         json.dumps(
 #             handler(
 #                 {
-#                     "library_orcabus_id": "lib.01J8ES92FTH314XSPZDWBA91E2"
+#                     "library_id": "LPRJ240775"
 #                 },
 #                 None
 #             ),
@@ -75,5 +71,5 @@ def handler(event, context):
 #     )
 #
 #     # {
-#     #     "library_id": "L2401469"
+#     #     "orcabus_id": "lib.01J9T97T3CZKPB51BQ5PCT968R"
 #     # }

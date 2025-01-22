@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from typing import Optional
+
 """
 Example File Object response
     {
@@ -28,22 +30,29 @@ Example File Object response
 
 
 class FileObject(BaseModel):
+    # Identifier
+    s3ObjectId: str
+
+    # Path attributes
     bucket: str
-    deletedDate: str
-    deletedSequencer: str
+    key: str
+
+    # File attributes
     eTag: str
     eventTime: str
     eventType: str
     ingestId: str
     isCurrentState: bool
     isDeleteMarker: bool
-    key: str
     lastModifiedDate: str
     numberDuplicateEvents: int
     numberReordered: int
-    s3ObjectId: str
     sequencer: str
-    sha256: str
     size: int
     storageClass: str
-    versionId: str
+
+    # Optional attributes
+    deletedDate: Optional[str] = None
+    deletedSequencer: Optional[str] = None
+    versionId: Optional[str] = None
+    sha256: Optional[str] = None

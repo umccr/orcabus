@@ -38,7 +38,8 @@ export class FastqManagerTable extends cdk.Stack {
             name: 'id',
             type: dynamodb.AttributeType.STRING,
           },
-          projectionType: dynamodb.ProjectionType.KEYS_ONLY,
+          projectionType: dynamodb.ProjectionType.INCLUDE,
+          nonKeyAttributes: ['library_orcabus_id', 'instrument_run_id'],
         },
         {
           indexName: 'library_orcabus_id-index',
@@ -50,7 +51,8 @@ export class FastqManagerTable extends cdk.Stack {
             name: 'id',
             type: dynamodb.AttributeType.STRING,
           },
-          projectionType: dynamodb.ProjectionType.KEYS_ONLY,
+          projectionType: dynamodb.ProjectionType.INCLUDE,
+          nonKeyAttributes: ['rgid_ext', 'instrument_run_id'],
         },
         {
           indexName: 'instrument_run_id-index',
@@ -62,7 +64,8 @@ export class FastqManagerTable extends cdk.Stack {
             name: 'id',
             type: dynamodb.AttributeType.STRING,
           },
-          projectionType: dynamodb.ProjectionType.KEYS_ONLY,
+          projectionType: dynamodb.ProjectionType.INCLUDE,
+          nonKeyAttributes: ['rgid_ext', 'library_orcabus_id'],
         },
       ],
     });

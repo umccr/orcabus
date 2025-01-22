@@ -6,6 +6,7 @@ import {
   logsApiGatewayConfig,
   jwtSecretName,
   hostedZoneNameParameterPath,
+  fastqManagerIndexes,
 } from '../constants';
 import { FastqManagerTableConfig } from '../../lib/workload/stateful/stacks/fastq-manager-db/deploy/stack';
 import { FastqManagerStackConfig } from '../../lib/workload/stateless/stacks/fastq-manager/deploy/stack';
@@ -29,5 +30,7 @@ export const getFastqManagerStackProps = (stage: AppStage): FastqManagerStackCon
     },
     orcabusTokenSecretsManagerPath: jwtSecretName,
     hostedZoneNameSsmParameterPath: hostedZoneNameParameterPath,
+    dynamodbTableName: fastqManagerTableName,
+    dynamodbIndexes: fastqManagerIndexes,
   };
 };

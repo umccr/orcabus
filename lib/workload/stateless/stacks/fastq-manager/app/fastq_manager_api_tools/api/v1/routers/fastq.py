@@ -7,9 +7,12 @@ from fastapi.routing import APIRouter, HTTPException
 from dyntastic import A, DoesNotExist
 
 from ....utils import (
-    is_orcabus_ulid, get_library_orcabus_id_from_library_id, convert_body_to_snake_case
+    is_orcabus_ulid, get_library_orcabus_id_from_library_id,
+    sanitise_fastq_orcabus_id
 )
-from ....models import FastqListRow, QcInformation, BoolQueryEnum, FastqPairStorageObject
+from ....models import (
+    FastqListRow, QcInformation, BoolQueryEnum, FastqPairStorageObject, ReadCountInfo, FileCompressionInfo
+)
 
 router = APIRouter()
 
@@ -100,9 +103,7 @@ async def list_fastq(
 
 
 @router.post("/", tags=["fastq"])
-async def create_fastq(fastq: FastqListRow = Depends(convert_body_to_snake_case)) -> Dict:
-    # Search the range key rgid_ext for any existing fastq with the same rgid
-    fastq = FastqListRow(**fastq)
+async def create_fastq(fastq: FastqListRow) -> Dict:
     try:
         assert len(list(FastqListRow.query(
             A.rgid_ext == fastq.rgid_ext, index="rgid_ext-index", load_full_item=True
@@ -115,7 +116,7 @@ async def create_fastq(fastq: FastqListRow = Depends(convert_body_to_snake_case)
 
 
 @router.get("/{fastq_id}", tags=["fastq"])
-async def get_fastq(fastq_id: str):
+async def get_fastq(fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
     try:
         return FastqListRow.get(fastq_id).to_dict()
     except DoesNotExist as e:
@@ -124,26 +125,42 @@ async def get_fastq(fastq_id: str):
 
 # MODIFIED GETS
 @router.get("/{fastq_id}/toCwl", tags=["fastq"])
-async def get_fastq_cwl(fastq_id: str):
+async def get_fastq_cwl(fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
     return FastqListRow.get(fastq_id).to_cwl()
 
 
 @router.get("/{fastq_id}/presign", tags=["fastq"])
-async def get_presigned_url(fastq_id: str):
+async def get_presigned_url(fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
     return FastqListRow.get(fastq_id).presign_uris()
 
 
 # PATCHES
 @router.patch("/{fastq_id}/addQcStats", tags=["fastq"])
-async def add_qc_stats(fastq_id: str, qc_stats: QcInformation):
+async def add_qc_stats(qc_stats: QcInformation, fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
     fastq = FastqListRow.get(fastq_id)
     fastq.qc = qc_stats
     fastq.save()
     return fastq.to_dict()
 
+@router.patch("/{fastq_id}/addReadCount", tags=["fastq"])
+async def add_qc_stats(read_count_info: ReadCountInfo, fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
+    fastq = FastqListRow.get(fastq_id)
+    fastq.read_count = read_count_info.read_count
+    fastq.base_count_est = read_count_info.base_count_est
+    fastq.save()
+    return fastq.to_dict()
+
+@router.patch("/{fastq_id}/addFileCompressionInformation", tags=["fastq"])
+async def add_file_compression(file_compression_info: FileCompressionInfo, fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
+    fastq = FastqListRow.get(fastq_id)
+    fastq.compression_format = file_compression_info.compression_format
+    fastq.gzip_compression_size_in_bytes = file_compression_info.gzip_compression_size_in_bytes
+    fastq.save()
+    return fastq.to_dict()
+
 
 @router.patch("/{fastq_id}/addNtsmUri", tags=["fastq"])
-async def add_ntsm_uri(fastq_id: str, ntsm_uri: str):
+async def add_ntsm_uri(ntsm_uri: str, fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
     fastq = FastqListRow.get(fastq_id)
     fastq.ntsm_uri = ntsm_uri
     fastq.save()
@@ -151,7 +168,7 @@ async def add_ntsm_uri(fastq_id: str, ntsm_uri: str):
 
 
 @router.patch("/{fastq_id}/invalidate", tags=["fastq"])
-async def invalidate_fastq(fastq_id: str):
+async def invalidate_fastq(fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
     fastq = FastqListRow.get(fastq_id)
     fastq.is_valid = False
     fastq.save()
@@ -159,7 +176,7 @@ async def invalidate_fastq(fastq_id: str):
 
 
 @router.patch("/{fastq_id}/validate", tags=["fastq"])
-async def validate_fastq(fastq_id: str):
+async def validate_fastq(fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
     fastq = FastqListRow.get(fastq_id)
     fastq.is_valid = True
     fastq.save()
@@ -167,7 +184,7 @@ async def validate_fastq(fastq_id: str):
 
 
 @router.patch("/{fastq_id}/addFastqPairStorageObject", tags=["fastq"])
-async def archive(fastq_id: str, fastq_pair_storage_object: FastqPairStorageObject = Depends(convert_body_to_snake_case)):
+async def add_fastq_pair_storage_object(fastq_pair_storage_object: FastqPairStorageObject, fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
     fastq = FastqListRow.get(fastq_id)
     # Check that no fastqPairStorageObject exists for this fastq id
     try:
@@ -179,7 +196,7 @@ async def archive(fastq_id: str, fastq_pair_storage_object: FastqPairStorageObje
     return fastq.to_dict()
 
 @router.patch("/{fastq_id}/detachFastqPairStorageObject", tags=["fastq"])
-async def archive(fastq_id: str):
+async def remove_fastq_pair_storage_object(fastq_id: str = Depends(sanitise_fastq_orcabus_id)):
     fastq = FastqListRow.get(fastq_id)
     # Check that the fastqPairStorageObject exists for this fastq id
     try:
@@ -195,7 +212,3 @@ async def archive(fastq_id: str):
 async def delete_fastq(fastq_id: str):
     FastqListRow.get(fastq_id).delete()
     return {"status": "ok"}
-
-
-
-

@@ -66,7 +66,4 @@ def get_presigned_url(s3_object_id: str) -> str:
 
     response = get_response(f"{S3_LIST_ENDPOINT}/presign/{s3_object_id}")
 
-    # Assert we got one result
-    assert len(response) == 1, f"Expected 1 result, got {len(response)}"
-
-    return response[0]
+    return str(response)

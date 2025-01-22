@@ -4,6 +4,8 @@ import { Duration, Stack, StackProps } from 'aws-cdk-lib';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import {
   HttpMethod,
@@ -16,6 +18,7 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { FilemanagerToolsPythonLambdaLayer } from '../../../../components/python-filemanager-tools-layer';
 import * as cdk from 'aws-cdk-lib';
 import { LAMBDA_HELPER_FUNCTION_NAMES } from './constants';
+import { MetadataToolsPythonLambdaLayer } from '../../../../components/python-metadata-tools-layer';
 
 export interface FastqManagerStackConfig {
   /*
@@ -28,6 +31,9 @@ export interface FastqManagerStackConfig {
   */
   orcabusTokenSecretsManagerPath: string;
   hostedZoneNameSsmParameterPath: string;
+
+  dynamodbTableName: string;
+  dynamodbIndexes: string[];
 }
 
 export type FastqManagerStackProps = FastqManagerStackConfig & cdk.StackProps;
@@ -38,16 +44,39 @@ export class FastqManagerStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps & FastqManagerStackProps) {
     super(scope, id, props);
 
+    const dynamodbTable = dynamodb.TableV2.fromTableName(
+      this,
+      'dynamodb_table',
+      props.dynamodbTableName
+    );
+
     // Api handler function
     const lambdaFunction = new PythonFunction(this, 'FastqManagerApi', {
       entry: path.join(__dirname, '../app'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
-      index: 'main.py',
+      index: 'handler.py',
       handler: 'handler',
       timeout: Duration.seconds(60),
       memorySize: 2048,
+      environment: {
+        DYNAMODB_FASTQ_LIST_ROW_TABLE_NAME: dynamodbTable.tableName,
+      },
     });
+
+    // Allow read/write access to the dynamodb table
+    dynamodbTable.grantReadWriteData(lambdaFunction);
+
+    // Grant query permissions on indexes
+    const index_arn_list: string[] = props.dynamodbIndexes.map((index_name) => {
+      return `arn:aws:dynamodb:${this.region}:${this.account}:table/${props.dynamodbTableName}/index/${index_name}-index`;
+    });
+    lambdaFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['dynamodb:Query'],
+        resources: index_arn_list,
+      })
+    );
 
     const apiGateway = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', lambdaFunction);
@@ -63,7 +92,7 @@ export class FastqManagerStack extends Stack {
 
     // Grant lambda helper functions permissions to access resources
     lambdaHelperFunctions.forEach((lambdaHelperFunction) => {
-      lambdaHelperFunction.currentVersion.grantInvoke(lambdaFunction);
+      lambdaHelperFunction.grantInvoke(lambdaFunction);
     });
   }
 
@@ -96,7 +125,7 @@ export class FastqManagerStack extends Stack {
     );
 
     // Create the Metadata tool layer
-    const metadataLayer = new FilemanagerToolsPythonLambdaLayer(this, 'metadata-tools-layer', {
+    const metadataLayer = new MetadataToolsPythonLambdaLayer(this, 'metadata-tools-layer', {
       layerPrefix: 'fqm',
     });
 
@@ -106,6 +135,7 @@ export class FastqManagerStack extends Stack {
       lambdaFunctionObjects.push(
         new PythonFunction(this, lambdaHelperFunctionName, {
           entry: path.join(__dirname, '../lambdas', lambdaHelperFunctionName),
+          functionName: lambdaHelperFunctionName,
           runtime: lambda.Runtime.PYTHON_3_12,
           architecture: lambda.Architecture.ARM_64,
           index: `${lambdaHelperFunctionName}.py`,
