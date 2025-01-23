@@ -19,7 +19,7 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Li
 
     def get_queryset(self):
         return Comment.objects.filter(
-            association_id=self.kwargs["orcabus_id"].split('.')[1],
+            association_id=self.kwargs["orcabus_id"],
             is_deleted=False
         )
 
