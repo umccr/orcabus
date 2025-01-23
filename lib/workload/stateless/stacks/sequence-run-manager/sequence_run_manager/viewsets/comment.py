@@ -41,16 +41,11 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Li
 
         # Add workflow_run_id to the request data
         mutable_data = request.data.copy()
-        mutable_data['association_id'] = seq_orcabus_id.split('.')[1] # remove prefix for association_id
-
-        serializer = self.get_serializer(data=mutable_data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        mutable_data['association_id'] = seq_orcabus_id
+        comment_obj = Comment.objects.create( **mutable_data)
+        serializer = self.get_serializer(comment_obj)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-    def perform_create(self, serializer):
-        serializer.save()  # Assuming you're using email as the user identifier
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
