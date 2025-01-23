@@ -36,3 +36,7 @@ class OptionalFieldsMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.make_fields_optional()
+
+
+class OrcabusIdSerializerMetaMixin:
+    extra_kwargs = {"orcabus_id": {"read_only": True}}

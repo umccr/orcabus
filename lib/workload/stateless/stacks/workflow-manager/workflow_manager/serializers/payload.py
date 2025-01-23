@@ -1,4 +1,4 @@
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
+from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
 from workflow_manager.models import Payload
 
 
@@ -7,12 +7,12 @@ class PayloadBaseSerializer(SerializersBase):
 
 
 class PayloadListParamSerializer(OptionalFieldsMixin, PayloadBaseSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Payload
         fields = "__all__"
 
 
 class PayloadSerializer(PayloadBaseSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Payload
         fields = "__all__"

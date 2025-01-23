@@ -2,10 +2,11 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from app.models import Project, Contact
+from app.serializers.utils import OrcabusIdSerializerMetaMixin
 
 
 class ProjectSerializer(ModelSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Project
         exclude = ["contact_set"]
 
@@ -15,7 +16,7 @@ class ProjectDetailSerializer(ModelSerializer):
 
     contact_set = ContactSerializer(many=True, read_only=True)
 
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Project
         fields = "__all__"
 

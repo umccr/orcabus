@@ -1,10 +1,11 @@
 from rest_framework.serializers import ModelSerializer
 
 from app.models import Sample
+from app.serializers.utils import OrcabusIdSerializerMetaMixin
 
 
 class SampleSerializer(ModelSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Sample
         fields = "__all__"
 
@@ -12,7 +13,7 @@ class SampleSerializer(ModelSerializer):
 class SampleDetailSerializer(ModelSerializer):
     from .library import LibrarySerializer
 
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Sample
         fields = '__all__'
 

@@ -4,6 +4,7 @@ def to_camel_case_key_dict(data: dict) -> dict:
     """
     Convert dictionary keys from snake_case to camelCase.
     """
+
     def snake_to_camel(word):
         components = word.split('_')
         # We capitalize the first letter of each component except the first one
@@ -15,3 +16,7 @@ def to_camel_case_key_dict(data: dict) -> dict:
         new_key = snake_to_camel(key)
         new_data[new_key] = value
     return new_data
+
+
+class OrcabusIdSerializerMetaMixin:
+    extra_kwargs = {"orcabus_id": {"read_only": True}}

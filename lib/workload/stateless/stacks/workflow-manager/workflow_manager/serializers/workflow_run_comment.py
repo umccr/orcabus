@@ -1,4 +1,4 @@
-from workflow_manager.serializers.base import SerializersBase
+from workflow_manager.serializers.base import SerializersBase, OrcabusIdSerializerMetaMixin
 from workflow_manager.models import WorkflowRunComment, WorkflowRun
 
 
@@ -7,12 +7,12 @@ class WorkflowRunCommentBaseSerializer(SerializersBase):
 
 
 class WorkflowRunCommentMinSerializer(WorkflowRunCommentBaseSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = WorkflowRunComment
         fields = ["orcabus_id", "comment", "timestamp"]
 
 
 class WorkflowRunCommentSerializer(WorkflowRunCommentBaseSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = WorkflowRunComment
         fields = "__all__"
