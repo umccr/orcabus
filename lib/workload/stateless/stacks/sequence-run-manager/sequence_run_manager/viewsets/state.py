@@ -9,6 +9,7 @@ class StateViewSet(mixins.ListModelMixin, GenericViewSet):
     serializer_class = StateSerializer
     search_fields = State.get_base_fields()
     pagination_class = None
+    lookup_value_regex = "[^/]+" # to allow id prefix
 
     def get_queryset(self):
         return State.objects.filter(sequence=self.kwargs["orcabus_id"])

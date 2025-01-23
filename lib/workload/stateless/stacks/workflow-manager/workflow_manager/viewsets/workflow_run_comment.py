@@ -14,6 +14,7 @@ class WorkflowRunCommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin
     search_fields = WorkflowRunComment.get_base_fields()
     http_method_names = ['get', 'post', 'patch', 'delete']
     pagination_class = None
+    lookup_value_regex = "[^/]+" # to allow id prefix
 
     def get_queryset(self):
         return WorkflowRunComment.objects.filter(

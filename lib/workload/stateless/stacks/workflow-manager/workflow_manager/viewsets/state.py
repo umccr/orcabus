@@ -15,6 +15,7 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
     search_fields = State.get_base_fields()
     http_method_names = ['get', 'post', 'patch']
     pagination_class = None
+    lookup_value_regex = "[^/]+" # to allow id prefix
     
     """
     valid_states_map for state creation, update

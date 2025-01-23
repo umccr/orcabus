@@ -15,6 +15,7 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Li
     search_fields = Comment.get_base_fields()
     http_method_names = ['get', 'post', 'patch', 'delete']
     pagination_class = None
+    lookup_value_regex = "[^/]+" # to allow id prefix
 
     def get_queryset(self):
         return Comment.objects.filter(
@@ -40,7 +41,7 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Li
 
         # Add workflow_run_id to the request data
         mutable_data = request.data.copy()
-        mutable_data['association_id'] = seq_orcabus_id
+        mutable_data['association_id'] = seq_orcabus_id.split('.')[1] # remove prefix for association_id
 
         serializer = self.get_serializer(data=mutable_data)
         serializer.is_valid(raise_exception=True)
