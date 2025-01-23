@@ -13,6 +13,7 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
     serializer_class = WorkflowRunDetailSerializer
     pagination_class = None  # No pagination by default
     http_method_names = ['get']
+    lookup_value_regex = "[^/]+" # to allow id prefix
     
     def get_queryset(self):
         """
