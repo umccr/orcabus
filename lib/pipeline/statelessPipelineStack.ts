@@ -16,6 +16,7 @@ import {
 
 import { getEnvironmentConfig } from '../../config/config';
 import { AppStage } from '../../config/constants';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 
 export class StatelessPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
@@ -24,8 +25,9 @@ export class StatelessPipelineStack extends cdk.Stack {
     // Define CodeBuild project for GH action runner to use
     // the GH repo defined below already configured to allow CB webhook
     // This is actually not part of the pipeline, so I guess we could move this someday.
+    const projectName = 'orcabus-codebuild-gh-runner';
     new codebuild.Project(this, 'GHRunnerCodeBuildProject', {
-      projectName: 'orcabus-codebuild-gh-runner',
+      projectName,
       description: 'GitHub Action Runner in CodeBuild for `orcabus` repository',
       environment: {
         buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
@@ -42,6 +44,16 @@ export class StatelessPipelineStack extends cdk.Stack {
           codebuild.FilterGroup.inEventOf(codebuild.EventAction.WORKFLOW_JOB_QUEUED),
         ],
       }),
+      logging: {
+        cloudWatch: {
+          enabled: true,
+          logGroup: new LogGroup(this, 'GHRunnerCodeBuildLogGroup', {
+            logGroupName: `/aws/codebuild/${projectName}`,
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            retention: RetentionDays.TWO_WEEKS,
+          }),
+        },
+      },
     });
 
     // A connection where the pipeline get its source code
