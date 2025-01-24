@@ -1,4 +1,4 @@
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
+from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
 from workflow_manager.models import AnalysisRun
 
 
@@ -7,7 +7,7 @@ class AnalysisRunBaseSerializer(SerializersBase):
 
 
 class AnalysisRunListParamSerializer(OptionalFieldsMixin, AnalysisRunBaseSerializer, ):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = AnalysisRun
         fields = "__all__"
 
@@ -20,7 +20,7 @@ class AnalysisRunSerializer(AnalysisRunBaseSerializer):
     storage_context = AnalysisContextMinSerializer(read_only=True)
     compute_context = AnalysisContextMinSerializer(read_only=True)
 
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = AnalysisRun
         exclude = ["libraries"]
 
@@ -35,6 +35,6 @@ class AnalysisRunDetailSerializer(AnalysisRunBaseSerializer):
     storage_context = AnalysisContextSerializer(read_only=True)
     compute_context = AnalysisContextSerializer(read_only=True)
 
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = AnalysisRun
         fields = "__all__"

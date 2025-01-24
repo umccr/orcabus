@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from sequence_run_manager.models import State, Sequence
-from sequence_run_manager.serializers.base import SerializersBase, OptionalFieldsMixin
+from sequence_run_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
 
 
 class StateBaseSerializer(SerializersBase):
@@ -9,6 +9,6 @@ class StateBaseSerializer(SerializersBase):
 
 
 class StateSerializer(StateBaseSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = State
         fields = "__all__"

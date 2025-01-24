@@ -1,4 +1,4 @@
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
+from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
 from workflow_manager.models import Analysis, Workflow, AnalysisContext
 
 
@@ -7,13 +7,13 @@ class AnalysisBaseSerializer(SerializersBase):
 
 
 class AnalysisListParamSerializer(OptionalFieldsMixin, AnalysisBaseSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Analysis
         fields = "__all__"
 
 
 class AnalysisMinSerializer(AnalysisBaseSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Analysis
         fields = ["orcabus_id", "analysis_name", "analysis_version", 'status']
 
@@ -24,7 +24,7 @@ class AnalysisSerializer(AnalysisBaseSerializer):
     mainly used in record listings.
     """
 
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Analysis
         fields = "__all__"
         # exclude = ["contexts", "workflows"]
@@ -42,6 +42,6 @@ class AnalysisDetailSerializer(AnalysisBaseSerializer):
     contexts = AnalysisContextSerializer(many=True, read_only=True)
     workflows = WorkflowMinSerializer(many=True, read_only=True)
 
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Analysis
         fields = "__all__"
