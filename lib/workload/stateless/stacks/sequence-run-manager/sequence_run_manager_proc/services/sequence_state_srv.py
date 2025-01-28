@@ -3,7 +3,7 @@ import logging
 from django.db import transaction
 from django.db.models import QuerySet
 
-from sequence_run_manager.models.sequence import Sequence
+from sequence_run_manager.models.sequence import Sequence, SequenceStatus
 from sequence_run_manager.models.state import State
 
 
@@ -29,7 +29,26 @@ def create_sequence_state_from_bssh_event(payload: dict) -> None:
     instrument_run_id = payload["instrumentRunId"]
     sequence = Sequence.objects.get(instrument_run_id=instrument_run_id)
     
-    # comment for any future usage, None by default
     comment = None
+    
+    # sequence status in SUCCEEDED situation, 
+    # if transition from STARTED to SUCCEEDED, set comment to "Sequence complete"
+    # if transition from FAILED to SUCCEEDED, set comment to "Conversion re-triggered, and sequence completed.'
+    if sequence.status == SequenceStatus.SUCCEEDED:
+        previous_state = State.objects.filter(sequence=sequence).order_by('-timestamp').first()
+        if SequenceStatus.from_seq_run_status(previous_state.status) == SequenceStatus.STARTED:
+            comment = "Sequence completed. Now in state " + status + " ."
+        if SequenceStatus.from_seq_run_status(previous_state.status) == SequenceStatus.FAILED:
+            comment = "Conversion re-triggered, and sequence completed. Now in state " + status + " ."
+    
+    # sequence status in FAILED situation 
+    # if transition from SUCCEEDED to FAILED, set comment to "Sequence completed. But failed in post analysis process."
+    # if transition from STARTED to FAILED, set comment to "Sequence failed. Now in state " + status + " ."
+    if sequence.status == SequenceStatus.FAILED:
+        previous_state = State.objects.filter(sequence=sequence).order_by('-timestamp').first()
+        if SequenceStatus.from_seq_run_status(previous_state.status) == SequenceStatus.SUCCEEDED:
+            comment = "Sequence completed. But failed in post analysis process."
+        else:
+            comment = "Sequence failed. Now in state " + status + " ."
     
     State.objects.create(status=status, timestamp=timestamp, sequence=sequence, comment=comment)
