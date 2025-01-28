@@ -37,32 +37,6 @@ def is_orcabus_ulid(query: str) -> bool:
     """
     return ORCABUS_ULID_REGEX_MATCH.match(query) is not None
 
-def str_to_camel_case(snake_str):
-    components = snake_str.split('_')
-    return components[0] + ''.join(x.title() for x in components[1:])
-
-
-def keys_to_camel_case(obj: Dict) -> Dict:
-    return {str_to_camel_case(k): v for k, v in obj.items()}
-
-
-def to_snake_case(camel_str):
-    return re.sub(r'(?<!^)(?=[A-Z])', '_', camel_str).lower()
-
-
-def convert_keys_to_snake_case(data):
-    if isinstance(data, dict):
-        return {to_snake_case(k): convert_keys_to_snake_case(v) for k, v in data.items()}
-    elif isinstance(data, list):
-        return [convert_keys_to_snake_case(item) for item in data]
-    else:
-        return data
-
-
-async def convert_body_to_snake_case(request: Request):
-    body = await request.json()
-    return convert_keys_to_snake_case(body)
-
 
 async def sanitise_fastq_orcabus_id(fastq_id: str) -> str:
     if ORCABUS_ULID_REGEX_MATCH.match(fastq_id):
@@ -154,3 +128,7 @@ def get_presigned_url_expiry(s3_presigned_url: str) -> datetime:
     expiry_ext = timedelta(seconds=int(query_dict['X-Amz-Expires']))
 
     return (creation_time + expiry_ext).astimezone(tz=timezone.utc)
+
+
+def datetime_to_isoformat(dt: datetime) -> str:
+    return dt.isoformat(sep="T", timespec="seconds").replace("+00:00", "Z")

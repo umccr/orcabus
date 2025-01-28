@@ -1,27 +1,34 @@
 services:
   dynamodb-local:
-    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data -port ${DYNAMODB_PORT}"
     image: "amazon/dynamodb-local:latest"
     container_name: dynamodb-local
     ports:
-      - "8000:8000"
+      - "${DYNAMODB_PORT}:${DYNAMODB_PORT}"
     volumes:
-      - "./docker/dynamodb:/home/dynamodblocal/data"
+      - "./docker/dynamodb:/home/dynamodblocal/data:rw"
     working_dir: /home/dynamodblocal
     environment:
+      - AWS_ACCESS_KEY_ID=dummyaccesskey
+      - AWS_SECRET_ACCESS_KEY=dummysecretkey
       - REGION=us-east-1
-    user: root
+      - AWS_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+    user: "1000:1000"
+    network_mode: host
   fastapi:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        PORT: "${FASTQ_MANAGER_API_PORT}"
     container_name: fastq-manager
     ports:
-      - "8001:8001"
+      - "${FASTQ_MANAGER_API_PORT}:${FASTQ_MANAGER_API_PORT}"
     volumes:
       - "./app:/code/app"
     environment:
-      - DYNAMODB_HOST=http://localhost:8000
+      - DYNAMODB_HOST=http://localhost:${DYNAMODB_PORT}
       - DYNAMODB_FASTQ_LIST_ROW_TABLE_NAME=fastq_list_row
       - AWS_ACCESS_KEY_ID=dummyaccesskey
       - AWS_SECRET_ACCESS_KEY=dummysecretkey
@@ -30,5 +37,5 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
     depends_on:
       - dynamodb-local
-    user: root
+    # Set when required to access localhost for services such as the filemanager
     network_mode: host

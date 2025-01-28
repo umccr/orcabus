@@ -61,6 +61,7 @@ export class FastqManagerStack extends Stack {
       memorySize: 2048,
       environment: {
         DYNAMODB_FASTQ_LIST_ROW_TABLE_NAME: dynamodbTable.tableName,
+        DYNAMODB_HOST: `https://dynamodb.${this.region}.amazonaws.com`,
       },
     });
 

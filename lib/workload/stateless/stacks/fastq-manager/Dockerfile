@@ -1,9 +1,15 @@
 FROM python:3.12
 
+ARG PORT=8457
+
 WORKDIR /code
 
 COPY ./app /code/app
 
 RUN pip install --no-cache-dir --upgrade -r /code/app/requirements.txt
 
-CMD ["fastapi", "run", "app/handler.py", "--port", "8001"]
+ENV PORT=$PORT
+
+EXPOSE $PORT
+
+CMD exec fastapi run app/handler.py --port "${PORT}"
