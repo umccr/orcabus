@@ -17,7 +17,7 @@ export class FastqManagerTable extends cdk.Stack {
     /*
     Initialise dynamodb table
     */
-    const tableObj = new dynamodb.TableV2(this, 'fastq_manager_dynamodb_table', {
+    new dynamodb.TableV2(this, 'fastq_manager_dynamodb_table', {
       /* Either a db_uuid or an icav2 analysis id or a portal run id */
       partitionKey: {
         name: 'id',
