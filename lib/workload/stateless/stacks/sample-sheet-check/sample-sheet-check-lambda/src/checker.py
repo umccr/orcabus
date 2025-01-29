@@ -1,7 +1,7 @@
 import pandas as pd
 
 from src.errors import FileContentError
-from src.logger import get_logger, set_basic_logger, set_logger
+from src.logger import set_basic_logger, set_logger
 from src.samplesheet import SampleSheet, check_sample_sheet_for_index_clashes, check_samplesheet_header_metadata, \
     get_years_from_samplesheet, check_metadata_correspondence, check_global_override_cycles, \
     check_internal_override_cycles

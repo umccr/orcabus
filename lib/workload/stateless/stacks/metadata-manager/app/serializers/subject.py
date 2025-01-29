@@ -2,10 +2,11 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from app.models import Subject, Individual
+from app.serializers.utils import OrcabusIdSerializerMetaMixin
 
 
 class SubjectSerializer(ModelSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Subject
         exclude = ["individual_set"]
 
@@ -14,7 +15,7 @@ class SubjectDetailSerializer(ModelSerializer):
     from .individual import IndividualSerializer
     from .library import LibrarySerializer
 
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Subject
         fields = '__all__'
 

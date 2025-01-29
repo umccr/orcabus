@@ -42,14 +42,6 @@ export class SampleSheetCheckerStack extends Stack {
       environment: {
         METADATA_DOMAIN_NAME: props.metadataDomainName,
       },
-      initialPolicy: [
-        // Not enabling logs
-        new PolicyStatement({
-          effect: Effect.DENY,
-          actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
-          resources: ['arn:aws:logs:*:*:*'],
-        }),
-      ],
     });
 
     // add some integration to the http api gw

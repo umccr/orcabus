@@ -3,6 +3,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as pipelines from 'aws-cdk-lib/pipelines';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import { ComputeType } from 'aws-cdk-lib/aws-codebuild';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as chatbot from 'aws-cdk-lib/aws-chatbot';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
@@ -15,6 +16,8 @@ import {
 
 import { getEnvironmentConfig } from '../../config/config';
 import { AppStage } from '../../config/constants';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { UiOpenAPITestStep } from './component/uiOpenAPITest';
 
 export class StatelessPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
@@ -23,35 +26,34 @@ export class StatelessPipelineStack extends cdk.Stack {
     // Define CodeBuild project for GH action runner to use
     // the GH repo defined below already configured to allow CB webhook
     // This is actually not part of the pipeline, so I guess we could move this someday.
-    const ghRunnerRole = new iam.Role(this, 'GHRunnerRole', {
-      assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
-    });
-    new codebuild.CfnProject(this, 'GHRunnerCodeBuildProject', {
-      // the name here act as a unique id for GH action to know which CodeBuild to use
-      // So if you change this, you need to update the GH action .yml file (.github/workflows/prbuild.yml)
-      name: 'orcabus-codebuild-gh-runner',
+    const projectName = 'orcabus-codebuild-gh-runner';
+    new codebuild.Project(this, 'GHRunnerCodeBuildProject', {
+      projectName,
       description: 'GitHub Action Runner in CodeBuild for `orcabus` repository',
-      serviceRole: ghRunnerRole.roleArn,
-      artifacts: {
-        type: 'NO_ARTIFACTS',
-      },
       environment: {
-        type: 'ARM_CONTAINER',
-        computeType: 'BUILD_GENERAL1_LARGE',
-        image: 'aws/codebuild/amazonlinux2-aarch64-standard:3.0',
-        privilegedMode: true,
+        buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
+        computeType: ComputeType.LARGE,
+        privileged: true,
       },
-      source: {
-        type: 'GITHUB',
-        gitCloneDepth: 1,
-        location: 'https://github.com/umccr/orcabus.git',
+      source: codebuild.Source.gitHub({
+        cloneDepth: 1,
         reportBuildStatus: false,
-      },
-      logsConfig: { cloudWatchLogs: { status: 'DISABLED' } },
-      triggers: {
+        owner: 'umccr',
+        repo: 'orcabus',
         webhook: true,
-        buildType: 'BUILD',
-        filterGroups: [[{ type: 'EVENT', pattern: 'WORKFLOW_JOB_QUEUED' }]],
+        webhookFilters: [
+          codebuild.FilterGroup.inEventOf(codebuild.EventAction.WORKFLOW_JOB_QUEUED),
+        ],
+      }),
+      logging: {
+        cloudWatch: {
+          enabled: true,
+          logGroup: new LogGroup(this, 'GHRunnerCodeBuildLogGroup', {
+            logGroupName: `/aws/codebuild/${projectName}`,
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            retention: RetentionDays.TWO_WEEKS,
+          }),
+        },
       },
     });
 
@@ -192,7 +194,10 @@ export class StatelessPipelineStack extends cdk.Stack {
           region: gammaConfig.region,
         }
       ),
-      { pre: [stripAssetsFromAssembly] } // See above for the reason
+      {
+        pre: [stripAssetsFromAssembly],
+        post: [new UiOpenAPITestStep(this, 'UiOpenAPITestStep', { testStage: AppStage.GAMMA })],
+      }
     );
 
     /**

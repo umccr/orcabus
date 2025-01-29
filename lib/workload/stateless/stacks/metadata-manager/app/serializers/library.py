@@ -2,10 +2,12 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from app.models import Library, Sample, Subject, Project
+from app.serializers.utils import OrcabusIdSerializerMetaMixin
 
 
 class LibrarySerializer(ModelSerializer):
-    class Meta:
+
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Library
         exclude = ["project_set"]
 
@@ -19,8 +21,7 @@ class LibraryDetailSerializer(ModelSerializer):
 
     sample = SampleSerializer(read_only=True)
     subject = SubjectSerializer(read_only=True)
-
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = Library
         fields = "__all__"
 

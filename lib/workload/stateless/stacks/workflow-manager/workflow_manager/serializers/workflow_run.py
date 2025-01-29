@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin
+from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
 from workflow_manager.models import WorkflowRun, AnalysisRun
 from workflow_manager.serializers.state import StateMinSerializer
 
@@ -16,7 +16,7 @@ class WorkflowRunBaseSerializer(SerializersBase):
 
 
 class WorkflowRunListParamSerializer(OptionalFieldsMixin, WorkflowRunBaseSerializer):
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = WorkflowRun
         fields = ["orcabus_id", "workflow", "analysis_run", "workflow_run_name", "portal_run_id", "execution_id",
                   "comment", ]
@@ -27,7 +27,7 @@ class WorkflowRunSerializer(WorkflowRunBaseSerializer):
 
     workflow = WorkflowMinSerializer(read_only=True)
 
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = WorkflowRun
         exclude = ["libraries"]
 
@@ -42,7 +42,7 @@ class WorkflowRunDetailSerializer(WorkflowRunBaseSerializer):
     analysis_run = AnalysisRunSerializer(read_only=True)
     current_state = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta(OrcabusIdSerializerMetaMixin):
         model = WorkflowRun
         fields = "__all__"
 
