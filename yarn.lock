@@ -36,44 +36,45 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-lambda-go-alpha@npm:2.164.1-alpha.0":
-  version: 2.164.1-alpha.0
-  resolution: "@aws-cdk/aws-lambda-go-alpha@npm:2.164.1-alpha.0"
+"@aws-cdk/aws-lambda-go-alpha@npm:2.177.0-alpha.0":
+  version: 2.177.0-alpha.0
+  resolution: "@aws-cdk/aws-lambda-go-alpha@npm:2.177.0-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.164.1
+    aws-cdk-lib: ^2.177.0
     constructs: ^10.0.0
-  checksum: 10/c4ee468ccf2519f9db3b94f6ee1019a01220a55a81cca45f713ebae8d7a41f33258d35a92e1b69628ee3fde4ee52dfd5e481f0250ecd32407b0d1f45d1f5fad3
+  checksum: 10/86405cfd3962f1144e0e96ff78ad6f5b49307f63e335ab715eee714f192f391b058b55fc38850990cb6d1af267f8f3786d7196dfb5973464f5e51a6695228cae
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-lambda-python-alpha@npm:2.164.1-alpha.0":
-  version: 2.164.1-alpha.0
-  resolution: "@aws-cdk/aws-lambda-python-alpha@npm:2.164.1-alpha.0"
+"@aws-cdk/aws-lambda-python-alpha@npm:2.177.0-alpha.0":
+  version: 2.177.0-alpha.0
+  resolution: "@aws-cdk/aws-lambda-python-alpha@npm:2.177.0-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.164.1
+    aws-cdk-lib: ^2.177.0
     constructs: ^10.0.0
-  checksum: 10/556957f770821947bd89ab938ffe19c3a26757b2c9d430e52f82071f7388b816d0a6d9155daf0f8f91791716a0bfe50190aff8b943582c205ca6d00cafe9e7b8
+  checksum: 10/366923416c9f446829bb294d054eaf7eae2fc384aa737fa345819ea5e1b8c606c65fd5216c070e2fbb80bf527da70c70a2d6dfed5ff22b1e6d53bf5f7da6631f
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-pipes-alpha@npm:2.164.1-alpha.0":
-  version: 2.164.1-alpha.0
-  resolution: "@aws-cdk/aws-pipes-alpha@npm:2.164.1-alpha.0"
+"@aws-cdk/aws-pipes-alpha@npm:2.177.0-alpha.0":
+  version: 2.177.0-alpha.0
+  resolution: "@aws-cdk/aws-pipes-alpha@npm:2.177.0-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.164.1
+    "@aws-cdk/aws-kinesisfirehose-alpha": 2.177.0-alpha.0
+    aws-cdk-lib: ^2.177.0
     constructs: ^10.0.0
-  checksum: 10/8c054f366ce015ce1a78a9e164b4e7979b24bf65d06314001054db4de3a9c0ec6ef7291effc39485507507b268b8024796fe72071e66ee64dea5e554a10ec9bb
+  checksum: 10/77a199a66e09dd07e89f29b53edea01604e164fa1679133ff76e873110e0ba26e59e1f360c1062467e154777a9e1c50b417f72e94aa37483653e9902205710f1
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-pipes-sources-alpha@npm:2.164.1-alpha.0":
-  version: 2.164.1-alpha.0
-  resolution: "@aws-cdk/aws-pipes-sources-alpha@npm:2.164.1-alpha.0"
+"@aws-cdk/aws-pipes-sources-alpha@npm:2.177.0-alpha.0":
+  version: 2.177.0-alpha.0
+  resolution: "@aws-cdk/aws-pipes-sources-alpha@npm:2.177.0-alpha.0"
   peerDependencies:
-    "@aws-cdk/aws-pipes-alpha": 2.164.1-alpha.0
-    aws-cdk-lib: ^2.164.1
+    "@aws-cdk/aws-pipes-alpha": 2.177.0-alpha.0
+    aws-cdk-lib: ^2.177.0
     constructs: ^10.0.0
-  checksum: 10/d897bb5394e0e384e3a2f4a429fba42a7887e990da8e62260110faab91dec4500d0da0a56409f16b25e8456d27850ac572141bfaa56bd4e435722698751cae51
+  checksum: 10/2287397bc4640fc11bcb9e8f81140f3e3aa062826f3280a583ce15edfbbacbd232a912ee49d81a66c7b39dc3b349c5afae442e8c8bc9e3ebb221e212f7a79390
   languageName: node
   linkType: hard
 
@@ -572,7 +573,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint/js@npm:9.19.0, @eslint/js@npm:^9.17.0":
+"@eslint/js@npm:9.19.0, @eslint/js@npm:^9.19.0":
   version: 9.19.0
   resolution: "@eslint/js@npm:9.19.0"
   checksum: 10/d8133a83330676d5f0827713af2e9bbf35530631a93520fb59ead6b827a325c54fdd7ad99f2158f895fb393c47bbc55dfdaa945998a647f3b9230f1d5324a626
@@ -1193,7 +1194,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:^22.10.2":
+"@types/node@npm:*, @types/node@npm:^22.12.0":
   version: 22.12.0
   resolution: "@types/node@npm:22.12.0"
   dependencies:
@@ -1527,9 +1528,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aws-cdk@npm:2.174.1":
-  version: 2.174.1
-  resolution: "aws-cdk@npm:2.174.1"
+"aws-cdk@npm:2.177.0":
+  version: 2.177.0
+  resolution: "aws-cdk@npm:2.177.0"
   dependencies:
     fsevents: "npm:2.3.2"
   dependenciesMeta:
@@ -1537,7 +1538,7 @@ __metadata:
       optional: true
   bin:
     cdk: bin/cdk
-  checksum: 10/b790b6b8d70e2edd8f08b051bdb5925e0979388f44d47d898877abea7d7291aa8f17043741fa9f0bfdf86e7ee54a6ca4551bed1e036f03aa2464a1a61bcf787e
+  checksum: 10/994c420a2af73a2df1749942ea667e60208e47f9a0ec2b5eeb379b2fb0d725517235a7823e21a371410930b5e9bc49cdc21d61767c75a94d380ca55677200090
   languageName: node
   linkType: hard
 
@@ -1753,19 +1754,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cargo-lambda-cdk@npm:0.0.22":
-  version: 0.0.22
-  resolution: "cargo-lambda-cdk@npm:0.0.22"
-  dependencies:
-    js-toml: "npm:^0.1.1"
-  peerDependencies:
-    aws-cdk-lib: ^2.63.0
-    constructs: ^10.0.5
-  checksum: 10/0985970a5385d77d22c23b315e8148e1d2c8f2fa70eb5029cc5a001f950ad2ef90e8407274cdad55abcf400f488178181210a97ff71fab4b96d191edc4c51a1b
-  languageName: node
-  linkType: hard
-
-"cargo-lambda-cdk@npm:^0.0.31":
+"cargo-lambda-cdk@npm:0.0.31, cargo-lambda-cdk@npm:^0.0.31":
   version: 0.0.31
   resolution: "cargo-lambda-cdk@npm:0.0.31"
   dependencies:
@@ -1784,7 +1773,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cdk-nag@npm:^2.34.23":
+"cdk-nag@npm:^2.35.3":
   version: 2.35.3
   resolution: "cdk-nag@npm:2.35.3"
   peerDependencies:
@@ -1917,7 +1906,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"core-js-pure@npm:^3.30.2, core-js-pure@npm:^3.39.0":
+"core-js-pure@npm:^3.30.2, core-js-pure@npm:^3.40.0":
   version: 3.40.0
   resolution: "core-js-pure@npm:3.40.0"
   checksum: 10/f539347fd2823a4ea341bb44ff66731ce323e9715f1dccdd618f5f41b72da2b53ebad53a9599b4e946aa820e0001ae09da066cae7e9c76d7692116c181b32dba
@@ -2131,14 +2120,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-config-prettier@npm:^9.1.0":
-  version: 9.1.0
-  resolution: "eslint-config-prettier@npm:9.1.0"
+"eslint-config-prettier@npm:^10.0.1":
+  version: 10.0.1
+  resolution: "eslint-config-prettier@npm:10.0.1"
   peerDependencies:
     eslint: ">=7.0.0"
   bin:
-    eslint-config-prettier: bin/cli.js
-  checksum: 10/411e3b3b1c7aa04e3e0f20d561271b3b909014956c4dba51c878bf1a23dbb8c800a3be235c46c4732c70827276e540b6eed4636d9b09b444fd0a8e07f0fcd830
+    eslint-config-prettier: build/bin/cli.js
+  checksum: 10/ba6875df0fc4fd3c7c6e2ec9c2e6a224462f7afc662f4cf849775c598a3571c1be136a9b683b12971653b3dcf3f31472aaede3076524b46ec9a77582630158e5
   languageName: node
   linkType: hard
 
@@ -2166,7 +2155,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint@npm:^9.17.0":
+"eslint@npm:^9.19.0":
   version: 9.19.0
   resolution: "eslint@npm:9.19.0"
   dependencies:
@@ -3969,34 +3958,34 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "orcabus@workspace:."
   dependencies:
-    "@aws-cdk/aws-lambda-go-alpha": "npm:2.164.1-alpha.0"
-    "@aws-cdk/aws-lambda-python-alpha": "npm:2.164.1-alpha.0"
-    "@aws-cdk/aws-pipes-alpha": "npm:2.164.1-alpha.0"
-    "@aws-cdk/aws-pipes-sources-alpha": "npm:2.164.1-alpha.0"
-    "@eslint/js": "npm:^9.17.0"
+    "@aws-cdk/aws-lambda-go-alpha": "npm:2.177.0-alpha.0"
+    "@aws-cdk/aws-lambda-python-alpha": "npm:2.177.0-alpha.0"
+    "@aws-cdk/aws-pipes-alpha": "npm:2.177.0-alpha.0"
+    "@aws-cdk/aws-pipes-sources-alpha": "npm:2.177.0-alpha.0"
+    "@eslint/js": "npm:^9.19.0"
     "@types/eslint__js": "npm:^8.42.3"
     "@types/jest": "npm:^29.5.14"
-    "@types/node": "npm:^22.10.2"
-    aws-cdk: "npm:2.174.1"
+    "@types/node": "npm:^22.12.0"
+    aws-cdk: "npm:2.177.0"
     aws-cdk-lib: "npm:2.177.0"
-    cargo-lambda-cdk: "npm:0.0.22"
-    cdk-nag: "npm:^2.34.23"
+    cargo-lambda-cdk: "npm:0.0.31"
+    cdk-nag: "npm:^2.35.3"
     constructs: "npm:^10.4.2"
-    core-js-pure: "npm:^3.39.0"
+    core-js-pure: "npm:^3.40.0"
     dotenv: "npm:^16.4.7"
-    eslint: "npm:^9.17.0"
-    eslint-config-prettier: "npm:^9.1.0"
+    eslint: "npm:^9.19.0"
+    eslint-config-prettier: "npm:^10.0.1"
     globals: "npm:^15.14.0"
     htsget-lambda: "npm:^0.7.2"
     jest: "npm:^29.7.0"
     jest-junit: "npm:^16.0.0"
     prettier: "npm:^3.4.2"
     source-map-support: "npm:^0.5.21"
-    sqs-dlq-monitoring: "npm:^1.2.18"
+    sqs-dlq-monitoring: "npm:^1.2.20"
     ts-jest: "npm:^29.2.5"
     ts-node: "npm:^10.9.2"
-    typescript: "npm:^5.7.2"
-    typescript-eslint: "npm:^8.18.2"
+    typescript: "npm:^5.7.3"
+    typescript-eslint: "npm:^8.22.0"
   languageName: unknown
   linkType: soft
 
@@ -4502,7 +4491,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sqs-dlq-monitoring@npm:^1.2.18":
+"sqs-dlq-monitoring@npm:^1.2.20":
   version: 1.2.20
   resolution: "sqs-dlq-monitoring@npm:1.2.20"
   dependencies:
@@ -4789,7 +4778,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript-eslint@npm:^8.18.2":
+"typescript-eslint@npm:^8.22.0":
   version: 8.22.0
   resolution: "typescript-eslint@npm:8.22.0"
   dependencies:
@@ -4803,7 +4792,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.7.2":
+"typescript@npm:^5.7.3":
   version: 5.7.3
   resolution: "typescript@npm:5.7.3"
   bin:
@@ -4813,7 +4802,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5.7.2#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A^5.7.3#optional!builtin<compat/typescript>":
   version: 5.7.3
   resolution: "typescript@patch:typescript@npm%3A5.7.3#optional!builtin<compat/typescript>::version=5.7.3&hash=5786d5"
   bin:
