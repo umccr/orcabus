@@ -36,9 +36,9 @@ def create_sequence_state_from_bssh_event(payload: dict) -> None:
     # if transition from FAILED to SUCCEEDED, set comment to "Conversion re-triggered, and sequence completed.'
     if sequence.status == SequenceStatus.SUCCEEDED:
         previous_state = State.objects.filter(sequence=sequence).order_by('-timestamp').first()
-        if SequenceStatus.from_seq_run_status(previous_state.status) == SequenceStatus.STARTED:
+        if previous_state is not None and SequenceStatus.from_seq_run_status(previous_state.status) == SequenceStatus.STARTED:
             comment = "Sequence completed. Now in state " + status + " ."
-        if SequenceStatus.from_seq_run_status(previous_state.status) == SequenceStatus.FAILED:
+        if previous_state is not None and SequenceStatus.from_seq_run_status(previous_state.status) == SequenceStatus.FAILED:
             comment = "Conversion re-triggered, and sequence completed. Now in state " + status + " ."
     
     # sequence status in FAILED situation 
@@ -46,7 +46,7 @@ def create_sequence_state_from_bssh_event(payload: dict) -> None:
     # if transition from STARTED to FAILED, set comment to "Sequence failed. Now in state " + status + " ."
     if sequence.status == SequenceStatus.FAILED:
         previous_state = State.objects.filter(sequence=sequence).order_by('-timestamp').first()
-        if SequenceStatus.from_seq_run_status(previous_state.status) == SequenceStatus.SUCCEEDED:
+        if previous_state is not None and SequenceStatus.from_seq_run_status(previous_state.status) == SequenceStatus.SUCCEEDED:
             comment = "Sequence completed. But failed in post analysis process."
         else:
             comment = "Sequence failed. Now in state " + status + " ."
