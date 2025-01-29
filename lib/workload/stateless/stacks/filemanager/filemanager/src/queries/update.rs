@@ -112,7 +112,7 @@ where
     }
 }
 
-impl<'a, C, E, M> UpdateQueryBuilder<'a, C, E>
+impl<C, E, M> UpdateQueryBuilder<'_, C, E>
 where
     C: ConnectionTrait,
     E: EntityTrait<Model = M>,

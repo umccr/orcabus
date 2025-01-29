@@ -221,7 +221,7 @@ where
     }
 }
 
-impl<'a, C, E, M> ListQueryBuilder<'a, C, E>
+impl<C, E, M> ListQueryBuilder<'_, C, E>
 where
     C: ConnectionTrait,
     E: EntityTrait<Model = M>,
