@@ -1,13 +1,10 @@
 import { Construct } from 'constructs';
-import { Duration, Stack } from 'aws-cdk-lib';
+import { Duration } from 'aws-cdk-lib';
 import { ISecurityGroup, IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Architecture, Version } from 'aws-cdk-lib/aws-lambda';
 import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 import { RustFunction } from 'cargo-lambda-cdk';
 import path from 'path';
-import { exec } from 'cargo-lambda-cdk/lib/util';
-import { randomUUID } from 'node:crypto';
-import { print } from 'aws-cdk/lib/logging';
 import { PostgresManagerStack } from '../../../../../../stateful/stacks/postgres-manager/deploy/stack';
 import { FILEMANAGER_SERVICE_NAME } from '../../stack';
 import { NamedLambdaRole } from '../../../../../../components/named-lambda-role';
