@@ -199,4 +199,5 @@ SPECTACULAR_SETTINGS = {
         'drf_spectacular.hooks.postprocess_schema_enums'
     ],
     'SCHEMA_PATH_PREFIX': f'/api/{API_VERSION}/',
+    'COMPONENT_SPLIT_REQUEST': True
 }
