@@ -27,7 +27,7 @@
     "@aws-cdk/aws-lambda-python-alpha": "2.164.1-alpha.0",
     "@aws-cdk/aws-pipes-alpha": "2.164.1-alpha.0",
     "@aws-cdk/aws-pipes-sources-alpha": "2.164.1-alpha.0",
-    "aws-cdk-lib": "2.164.1",
+    "aws-cdk-lib": "2.177.0",
     "cargo-lambda-cdk": "0.0.22",
     "cdk-nag": "^2.34.23",
     "constructs": "^10.4.2",
