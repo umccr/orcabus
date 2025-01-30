@@ -1203,6 +1203,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/node@npm:^22.12.0":
+  version: 22.12.0
+  resolution: "@types/node@npm:22.12.0"
+  dependencies:
+    undici-types: "npm:~6.20.0"
+  checksum: 10/aac2b6f6a845ec3540c3d979b3150efe3162165bfda953af10b579df2d1cc4f5c48506922bf6bf661a2e5a7ebb571c5729bf1f9f12488a810bb1a5fa9522ef9d
+  languageName: node
+  linkType: hard
+
 "@types/stack-utils@npm:^2.0.0":
   version: 2.0.3
   resolution: "@types/stack-utils@npm:2.0.3"
@@ -1907,6 +1916,13 @@ __metadata:
   linkType: hard
 
 "core-js-pure@npm:^3.30.2, core-js-pure@npm:^3.40.0":
+  version: 3.40.0
+  resolution: "core-js-pure@npm:3.40.0"
+  checksum: 10/f539347fd2823a4ea341bb44ff66731ce323e9715f1dccdd618f5f41b72da2b53ebad53a9599b4e946aa820e0001ae09da066cae7e9c76d7692116c181b32dba
+  languageName: node
+  linkType: hard
+
+"core-js-pure@npm:^3.40.0":
   version: 3.40.0
   resolution: "core-js-pure@npm:3.40.0"
   checksum: 10/f539347fd2823a4ea341bb44ff66731ce323e9715f1dccdd618f5f41b72da2b53ebad53a9599b4e946aa820e0001ae09da066cae7e9c76d7692116c181b32dba
