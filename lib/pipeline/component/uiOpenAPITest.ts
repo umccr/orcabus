@@ -27,14 +27,15 @@ export class UiOpenAPITestStep extends CodeBuildStep {
       installCommands: [
         'node -v',
         'corepack enable',
-        'yarn --version',
-        'yarn install --immutable',
 
         // Git clone the UI repo for testing
         // since this is a public repo we could clone it directly
         'git --version',
         'git clone --branch main https://github.com/umccr/orca-ui.git',
         'cd orca-ui',
+
+        'yarn --version',
+        'yarn install --immutable',
       ],
       commands: ['set -eu', 'make generate-openapi-types', 'yarn tsc-check'],
       buildEnvironment: {
