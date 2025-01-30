@@ -93,7 +93,7 @@ export class FastqManagerStack extends Stack {
 
     // Grant lambda helper functions permissions to access resources
     lambdaHelperFunctions.forEach((lambdaHelperFunction) => {
-      lambdaHelperFunction.grantInvoke(lambdaFunction);
+      lambdaHelperFunction.currentVersion.grantInvoke(lambdaFunction);
     });
   }
 
