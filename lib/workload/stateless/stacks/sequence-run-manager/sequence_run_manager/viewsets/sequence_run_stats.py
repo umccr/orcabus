@@ -1,18 +1,19 @@
 from rest_framework.viewsets import GenericViewSet
-from rest_framework import mixins
 from rest_framework.decorators import action
+from drf_spectacular.utils import extend_schema
 from rest_framework.response import Response
 from django.db import models
 from django.db.models import Q
 
-from sequence_run_manager.models.sequence import Sequence, SequenceStatus
+from sequence_run_manager.models.sequence import Sequence
+from sequence_run_manager.serializers.sequence import SequenceRunCountByStatusSerializer
 
 
 class SequenceStatsViewSet(GenericViewSet):
     """
     ViewSet for sequence-related statistics
     """
-    
+    @extend_schema(responses=SequenceRunCountByStatusSerializer)
     @action(detail=False, methods=['GET'])
     def status_counts(self, request):
         """Pick up the start_time and end_time from the query params and exclude them from the rest of the query params"""
