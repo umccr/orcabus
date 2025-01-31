@@ -101,12 +101,6 @@ export const icav2ArchiveFastqBucket: Record<AppStage.PROD, string> = {
   [AppStage.PROD]: 'archive-prod-fastq-503977275616-ap-southeast-2',
 };
 
-export const gdsBsRunsUploadLogPath: Record<AppStage, string> = {
-  [AppStage.BETA]: 'gds://development/primary_data/temp/bs_runs_upload_tes/',
-  [AppStage.GAMMA]: 'gds://staging/primary_data/temp/bs_runs_upload_tes/',
-  [AppStage.PROD]: 'gds://production/primary_data/temp/bs_runs_upload_tes/',
-};
-
 /**
  * Validate the secret name so that it doesn't end with 6 characters and a hyphen.
  *
