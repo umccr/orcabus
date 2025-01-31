@@ -42,17 +42,18 @@ class ReadCountInfoCreate(ReadCountInfoBase):
     def model_dump(self, **kwargs) -> 'ReadCountInfoResponse':
         return (
             ReadCountInfoResponse(**super().model_dump(**kwargs)).
-            model_dump(by_alias=True)
+            model_dump(**kwargs)
         )
 
 
-class ReadCountInfoPatch(ReadCountInfoCreate):
-    @model_validator(mode='before')
-    def load_bytes_and_convert_to_camel(cls, values):
-        if isinstance(values, bytes):
-            values = json.loads(values.decode('utf-8'))
-        return {to_camel(k): v for k, v in values.items()}
+class ReadCountInfoPatch(BaseModel):
+    read_count_obj: ReadCountInfoCreate
 
+    def model_dump(self, **kwargs) -> 'ReadCountInfoResponse':
+        return (
+            ReadCountInfoResponse(**dict(self.read_count_obj.model_dump(**kwargs))).
+            model_dump(**kwargs)
+        )
 
 
 class ReadCountInfoData(ReadCountInfoBase):

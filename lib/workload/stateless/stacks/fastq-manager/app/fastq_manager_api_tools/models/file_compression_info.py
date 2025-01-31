@@ -2,7 +2,7 @@
 
 # Standard imports
 import json
-from typing import Self
+from typing import Self, Optional
 from typing import TYPE_CHECKING
 from pydantic import BaseModel, model_validator, ConfigDict
 from pydantic.alias_generators import to_snake, to_camel
@@ -13,7 +13,8 @@ from . import CompressionFormat
 
 class FileCompressionInfoBase(BaseModel):
     compression_format: CompressionFormat
-    gzip_compression_size_in_bytes: int
+    r_1_gzip_compression_size_in_bytes: int
+    r_2_gzip_compression_size_in_bytes: Optional[int] = None
 
 
 class FileCompressionInfoResponse(FileCompressionInfoBase):
@@ -42,23 +43,24 @@ class FileCompressionInfoCreate(FileCompressionInfoBase):
     def model_dump(self, **kwargs) -> 'FileCompressionInfoResponse':
         return (
             FileCompressionInfoResponse(**super().model_dump(**kwargs)).
-            model_dump(by_alias=True)
+            model_dump(**kwargs)
         )
 
 
-class FileCompressionInfoPatch(FileCompressionInfoCreate):
-    @model_validator(mode='before')
-    def load_bytes_and_convert_to_camel(cls, values):
-        if isinstance(values, bytes):
-            values = json.loads(values.decode('utf-8'))
-        return {to_camel(k): v for k, v in values.items()}
+class FileCompressionInfoPatch(BaseModel):
+    file_compression_obj: FileCompressionInfoCreate
+
+    def model_dump(self, **kwargs) -> 'FileCompressionInfoResponse':
+        return (
+            FileCompressionInfoResponse(**dict(self.file_compression_obj.model_dump(**kwargs))).
+            model_dump(**kwargs)
+        )
 
 
 class FileCompressionInfoData(FileCompressionInfoBase):
     @model_validator(mode='before')
     def convert_keys_to_snake_case(cls, values):
         return {to_snake(k): v for k, v in values.items()}
-
 
     def to_dict(self) -> 'FileCompressionInfoResponse':
         """

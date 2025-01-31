@@ -2,23 +2,20 @@
 
 # Imports
 import json
+from os import environ
 import ulid
-import re
-from fastapi import Request
 import boto3
 import typing
-from typing import Dict
 from urllib.parse import urlparse
 from datetime import datetime, timedelta, timezone
 
-
 from .globals import (
     ORCABUS_ULID_REGEX_MATCH,
-    GET_LIBRARY_ORCABUS_ID_FROM_LIBRARY_ID_LAMBDA_FUNCTION_NAME,
-    GET_LIBRARY_ID_FROM_LIBRARY_ORCABUS_ID_LAMBDA_FUNCTION_NAME,
-    GET_PRESIGNED_URL_FROM_S3_INGEST_ID_LAMBDA_FUNCTION_NAME,
-    GET_S3_INGEST_ID_FROM_S3_URI_LAMBDA_FUNCTION_NAME,
-    GET_S3_URI_FROM_S3_INGEST_ID_LAMBDA_FUNCTION_NAME, CONTEXT_PREFIX
+    GET_LIBRARY_ORCABUS_ID_FROM_LIBRARY_ID_LAMBDA_FUNCTION_ARN_ENV_VAR,
+    GET_LIBRARY_ID_FROM_LIBRARY_ORCABUS_ID_LAMBDA_FUNCTION_ARN_ENV_VAR,
+    GET_PRESIGNED_URL_FROM_S3_INGEST_ID_LAMBDA_FUNCTION_ARN_ENV_VAR,
+    GET_S3_INGEST_ID_FROM_S3_URI_LAMBDA_FUNCTION_ARN_ENV_VAR,
+    GET_S3_URI_FROM_S3_INGEST_ID_LAMBDA_FUNCTION_ARN_ENV_VAR, CONTEXT_PREFIX
 )
 
 if typing.TYPE_CHECKING:
@@ -68,7 +65,7 @@ def run_lambda_function(function_name: str, payload: str) -> str:
 def get_library_orcabus_id_from_library_id(library_id: str) -> str:
     return json.loads(
         run_lambda_function(
-            GET_LIBRARY_ORCABUS_ID_FROM_LIBRARY_ID_LAMBDA_FUNCTION_NAME,
+            environ.get(GET_LIBRARY_ORCABUS_ID_FROM_LIBRARY_ID_LAMBDA_FUNCTION_ARN_ENV_VAR),
             json.dumps({"library_id": library_id})
         )
     )['orcabus_id']
@@ -77,7 +74,7 @@ def get_library_orcabus_id_from_library_id(library_id: str) -> str:
 def get_library_id_from_library_orcabus_id(library_orcabus_id: str) -> str:
     return json.loads(
         run_lambda_function(
-            GET_LIBRARY_ID_FROM_LIBRARY_ORCABUS_ID_LAMBDA_FUNCTION_NAME,
+            environ.get(GET_LIBRARY_ID_FROM_LIBRARY_ORCABUS_ID_LAMBDA_FUNCTION_ARN_ENV_VAR),
             json.dumps({"library_orcabus_id": library_orcabus_id})
         )
     )['library_id']
@@ -86,7 +83,7 @@ def get_library_id_from_library_orcabus_id(library_orcabus_id: str) -> str:
 def get_presigned_url_from_s3_ingest_id(s3_ingest_id: str) -> str:
     return json.loads(
         run_lambda_function(
-            GET_PRESIGNED_URL_FROM_S3_INGEST_ID_LAMBDA_FUNCTION_NAME,
+            environ.get(GET_PRESIGNED_URL_FROM_S3_INGEST_ID_LAMBDA_FUNCTION_ARN_ENV_VAR),
             json.dumps({"s3_ingest_id": s3_ingest_id})
         )
     )['presigned_url']
@@ -95,7 +92,7 @@ def get_presigned_url_from_s3_ingest_id(s3_ingest_id: str) -> str:
 def get_s3_ingest_id_from_s3_uri(s3_uri: str) -> str:
     return json.loads(
         run_lambda_function(
-            GET_S3_INGEST_ID_FROM_S3_URI_LAMBDA_FUNCTION_NAME,
+            environ.get(GET_S3_INGEST_ID_FROM_S3_URI_LAMBDA_FUNCTION_ARN_ENV_VAR),
             json.dumps({"s3_uri": s3_uri})
         )
     )['s3_ingest_id']
@@ -104,7 +101,7 @@ def get_s3_ingest_id_from_s3_uri(s3_uri: str) -> str:
 def get_s3_uri_from_s3_ingest_id(s3_ingest_id: str) -> str:
     return json.loads(
         run_lambda_function(
-            GET_S3_URI_FROM_S3_INGEST_ID_LAMBDA_FUNCTION_NAME,
+            environ.get(GET_S3_URI_FROM_S3_INGEST_ID_LAMBDA_FUNCTION_ARN_ENV_VAR),
             json.dumps({"s3_ingest_id": s3_ingest_id})
         )
     )['s3_uri']

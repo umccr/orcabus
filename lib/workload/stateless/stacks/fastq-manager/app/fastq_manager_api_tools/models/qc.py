@@ -10,18 +10,20 @@ from typing import TYPE_CHECKING
 from pydantic import Field, BaseModel, model_validator, ConfigDict
 from pydantic.alias_generators import to_snake, to_camel
 
+from . import FloatDecimal
+
 # Set basic logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class QcInformationBase(BaseModel):
-    insert_size_estimate: Decimal = Field(default=Decimal(0))
-    raw_wgs_coverage_estimate: Decimal = Field(default=Decimal(0))
-    r1_q20_fraction: Decimal = Field(default=Decimal(0))
-    r2_q20_fraction: Decimal = Field(default=Decimal(0))
-    r1_gc_fraction: Decimal = Field(default=Decimal(0))
-    r2_gc_fraction: Decimal = Field(default=Decimal(0))
+    insert_size_estimate: FloatDecimal = Field(default=Decimal(0))
+    raw_wgs_coverage_estimate: FloatDecimal = Field(default=Decimal(0))
+    r_1_q_20_fraction: FloatDecimal = Field(default=Decimal(0))
+    r_2_q_20_fraction: FloatDecimal = Field(default=Decimal(0))
+    r_1_gc_fraction: FloatDecimal = Field(default=Decimal(0))
+    r_2_gc_fraction: FloatDecimal = Field(default=Decimal(0))
 
 
 class QcInformationResponse(QcInformationBase):
@@ -54,12 +56,14 @@ class QcInformationCreate(QcInformationBase):
         )
 
 
-class QcInformationPatch(QcInformationCreate):
-    @model_validator(mode='before')
-    def load_bytes_and_convert_to_camel(cls, values):
-        if isinstance(values, bytes):
-            values = json.loads(values.decode('utf-8'))
-        return {to_camel(k): v for k, v in values.items()}
+class QcInformationPatch(BaseModel):
+    qc_obj: QcInformationCreate
+
+    def model_dump(self, **kwargs) -> 'QcInformationResponse':
+        return (
+            QcInformationResponse(**dict(self.qc_obj.model_dump(**kwargs))).
+            model_dump(**kwargs)
+        )
 
 
 class QcInformationData(QcInformationBase):

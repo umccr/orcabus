@@ -9,7 +9,7 @@ from typing import Optional, Self
 from pydantic.alias_generators import to_camel, to_snake
 
 from fastq_manager_api_tools.globals import CONTEXT_PREFIX
-from fastq_manager_api_tools.models import CompressionFormat, CWLDict, PresignedUrlModel
+from fastq_manager_api_tools.models import CWLDict, PresignedUrlModel
 from fastq_manager_api_tools.models.fastq_pair import FastqPairStorageObjectData, FastqPairStorageObjectResponse, \
     FastqPairStorageObjectCreate
 from fastq_manager_api_tools.models.file_storage import FileStorageObjectData, FileStorageObjectResponse, \
@@ -27,10 +27,9 @@ class FastqListRowBase(BaseModel):
     # We add in the 'id', 'rgid_ext' and 'library_orcabus_id' in the FastqListRow model
     # However the CreateFastqListRow model does not require these fields to be set
     # So we start with the greatest common denominator and extend classes from there
-
     rgid: str  # Usually comprises index+index2.lane
     index: str = None
-    index2: Optional[str] = None
+    index_2: Optional[str] = None
     lane: int = Field(default=1)
     instrument_run_id: str
 
@@ -39,7 +38,7 @@ class FastqListRowBase(BaseModel):
 
     # Storage Metadata - This attaches the filemanager information to the fastq list row pairing
     # There may be duplicates since we have a copy in the cache bucket and the archive storage bucket
-    files: Optional[FastqPairStorageObjectData] = None
+    read_set: Optional[FastqPairStorageObjectData] = None
 
     # QC Information
     qc: Optional[QcInformationData] = None
@@ -50,10 +49,6 @@ class FastqListRowBase(BaseModel):
 
     # Boolean decision-making logic
     is_valid: Optional[bool] = None  # Is the fastq pair valid
-
-    # Compression format information
-    compression_format: Optional[CompressionFormat] = None
-    gzip_compression_size_in_bytes: Optional[int] = None
 
     # Future
     ntsm: Optional[FileStorageObjectData] = None
@@ -82,7 +77,7 @@ class FastqListRowResponse(FastqListRowWithId):
     # Manually configure the sub fields with their own model configurations
     library: LibraryResponse
 
-    files: Optional[FastqPairStorageObjectResponse] = None
+    read_set: Optional[FastqPairStorageObjectResponse] = None
 
     qc: Optional[QcInformationResponse] = None
 
@@ -99,10 +94,10 @@ class FastqListRowResponse(FastqListRowWithId):
         data = super().model_dump(**kwargs)
 
         # Manually serialize the sub fields
-        for field_name in ["library", "files", "qc", "ntsm"]:
+        for field_name in ["library", "read_set", "qc", "ntsm"]:
             field = getattr(self, field_name)
             if field is not None:
-                data[field_name] = field.model_dump()
+                data[to_camel(field_name)] = field.model_dump()
 
         return data
 
@@ -117,7 +112,7 @@ class FastqListRowCreate(FastqListRowBase):
     # Manually configure the sub fields with their own model configurations
     library: LibraryResponse
 
-    files: Optional[FastqPairStorageObjectCreate] = None
+    read_set: Optional[FastqPairStorageObjectCreate] = None
 
     qc: Optional[QcInformationCreate] = None
 
@@ -173,29 +168,29 @@ class FastqListRowData(FastqListRowWithId, Dyntastic):
             "lane": self.lane,
             "read_1": {
                 "class": "File",
-                "location": get_s3_uri_from_s3_ingest_id(self.files.r1.s_3_ingest_id)
+                "location": get_s3_uri_from_s3_ingest_id(self.read_set.r_1.s_3_ingest_id)
             },
             "read_2": {
                 "class": "File",
-                "location": get_s3_uri_from_s3_ingest_id(self.files.r1.s_3_ingest_id)
+                "location": get_s3_uri_from_s3_ingest_id(self.read_set.r_.s_3_ingest_id)
             }
         }
 
     def presign_uris(self) -> PresignedUrlModel:
         # Get all unarchived files
         # Presign the URIs
-        r1_presigned_url = get_presigned_url_from_s3_ingest_id(self.files.r1.s_3_ingest_id)
+        r1_presigned_url = get_presigned_url_from_s3_ingest_id(self.read_set.r_1.s_3_ingest_id)
         presigned_objects = {
             "r1": {
-                "s3Uri": get_s3_uri_from_s3_ingest_id(self.files.r1.s_3_ingest_id),
+                "s3Uri": get_s3_uri_from_s3_ingest_id(self.read_set.r_1.s_3_ingest_id),
                 "presignedUrl": r1_presigned_url,
                 "expiresAt": datetime_to_isoformat(get_presigned_url_expiry(r1_presigned_url))
             }
         }
-        if self.files.r2:
-            r2_presigned_url = get_presigned_url_from_s3_ingest_id(self.files.r2.s_3_ingest_id)
+        if self.read_set.r2:
+            r2_presigned_url = get_presigned_url_from_s3_ingest_id(self.read_set.r2.s_3_ingest_id)
             presigned_objects["r2"] = {
-                "s3Uri": get_s3_uri_from_s3_ingest_id(self.files.r2.s_3_ingest_id),
+                "s3Uri": get_s3_uri_from_s3_ingest_id(self.read_set.r2.s_3_ingest_id),
                 "presignedUrl": r2_presigned_url,
                 "expiresAt": datetime_to_isoformat(r2_presigned_url(r2_presigned_url))
             }

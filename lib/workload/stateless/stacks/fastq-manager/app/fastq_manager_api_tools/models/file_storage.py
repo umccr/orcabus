@@ -69,14 +69,6 @@ class FileStorageObjectCreate(FileStorageObjectBase):
         )
 
 
-class FileStorageObjectUpdate(FileStorageObjectCreate):
-    @model_validator(mode='before')
-    def load_bytes_and_convert_to_camel(cls, values):
-        if isinstance(values, bytes):
-            values = json.loads(values.decode('utf-8'))
-        return {to_camel(k): v for k, v in values.items()}
-
-
 class FileStorageObjectData(FileStorageObjectBase):
     # Convert keys to snake case prior to validation
     @model_validator(mode='before')

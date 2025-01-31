@@ -1,5 +1,8 @@
 from enum import Enum
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Annotated
+from decimal import Decimal
+
+from pydantic import PlainSerializer
 
 
 # Miscellanous Enums
@@ -10,8 +13,8 @@ class CompressionFormat(Enum):
 
 
 class BoolQueryEnum(Enum):
-    TRUE = True
-    FALSE = False
+    TRUE = 'true'
+    FALSE = 'false'
     ALL = 'ALL'
 
 
@@ -43,3 +46,9 @@ class PresignedUrl(TypedDict):
 class PresignedUrlModel(TypedDict):
     r1: PresignedUrl
     r2: Optional[PresignedUrl]
+
+
+FloatDecimal = Annotated[
+    Decimal,
+    PlainSerializer(lambda x: float(x), return_type=float, when_used='json')
+]

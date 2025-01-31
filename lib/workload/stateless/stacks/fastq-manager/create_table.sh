@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 # Check if table exists
 if aws dynamodb describe-table \
   --profile "${AWS_PROFILE}" \
@@ -44,6 +46,10 @@ aws dynamodb create-table \
         {
           "AttributeName": "instrument_run_id",
           "AttributeType": "S"
+        },
+        {
+          "AttributeName": "is_valid",
+          "AttributeType": "S"
         }
       ]
     ' \
@@ -66,7 +72,8 @@ aws dynamodb create-table \
             "ProjectionType": "INCLUDE",
             "NonKeyAttributes": [
               "library_orcabus_id",
-              "instrument_run_id"
+              "instrument_run_id",
+              "is_valid"
             ]
           }
         },
@@ -86,7 +93,8 @@ aws dynamodb create-table \
             "ProjectionType": "INCLUDE",
             "NonKeyAttributes": [
               "rgid_ext",
-              "instrument_run_id"
+              "instrument_run_id",
+              "is_valid"
             ]
           }
         },
@@ -106,7 +114,8 @@ aws dynamodb create-table \
             "ProjectionType": "INCLUDE",
             "NonKeyAttributes": [
               "rgid_ext",
-              "library_orcabus_id"
+              "library_orcabus_id",
+              "is_valid"
             ]
           }
         }

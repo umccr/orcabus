@@ -48,7 +48,7 @@ curl \
       "index2": "CGATGTTC",
       "lane": 1,
       "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
-      "files": {
+      "readSet": {
         "r1": {
           "s3IngestId": "0193cdc0-2092-78d1-8d4e-fa5b090fce38"
         },
@@ -58,8 +58,8 @@ curl \
       },
       "isValid": true,
       "library": {
-          "orcabusId": "lib.01J9T97T3CZKPB51BQ5PCT968R",
-          "libraryId": "LPRJ240775"
+        "orcabusId": "lib.01J9T97T3CZKPB51BQ5PCT968R",
+        "libraryId": "LPRJ240775"
       }
     }
   ' \
@@ -69,7 +69,8 @@ jq
 
 Gives 
 
-```json{
+```json
+{
   "id": "fqr.01JJ3RASC32XCMPG9S77FGVY11",
   "rgid": "CTTGTCGA+CGATGTTC.1",
   "index": "CTTGTCGA",
@@ -80,7 +81,8 @@ Gives
     "orcabusId": "lib.01J9T97T3CZKPB51BQ5PCT968R",
     "libraryId": "LPRJ240775"
   },
-  "files": {
+  "readSet": {
+    "compressionFormat": null,
     "r1": {
       "s3IngestId": "0193cdc0-2092-78d1-8d4e-fa5b090fce38"
     },
@@ -99,9 +101,7 @@ Gives
   "readCount": null,
   "baseCountEst": null,
   "isValid": false,
-  "compressionFormat": null,
-  "gzipCompressionSizeInBytes": null,
-  "ntsmUri": null
+  "ntsm": null
 }
 ```
 
@@ -163,7 +163,10 @@ Gives
     "orcabusId": "lib.01J9T97T3CZKPB51BQ5PCT968R",
     "libraryId": "LPRJ240775"
   },
-  "files": {
+  "readSet": {
+    "compressionFormat": null,
+    "r1GzipCompressionSizeInBytes": null,
+    "r2GzipCompressionSizeInBytes": null,
     "r1": {
       "s3IngestId": "0193cdc0-2092-78d1-8d4e-fa5b090fce38"
     },
@@ -175,9 +178,7 @@ Gives
   "readCount": null,
   "baseCountEst": null,
   "isValid": true,
-  "compressionFormat": null,
-  "gzipCompressionSizeInBytes": null,
-  "ntsmUri": null
+  "ntsm": null
 }
 ```
 
@@ -219,7 +220,10 @@ Yields
     "orcabusId": "lib.01J9T97T3CZKPB51BQ5PCT968R",
     "libraryId": "LPRJ240775"
   },
-  "files": {
+  "readSet": {
+    "compressionFormat": null,
+    "r1GzipCompressionSizeInBytes": null,
+    "r2GzipCompressionSizeInBytes": null,
     "r1": {
       "s3IngestId": "0193cdc0-2092-78d1-8d4e-fa5b090fce38"
     },
@@ -238,9 +242,7 @@ Yields
   "readCount": null,
   "baseCountEst": null,
   "isValid": false,
-  "compressionFormat": null,
-  "gzipCompressionSizeInBytes": null,
-  "ntsmUri": null
+  "ntsm": null
 }
 ```
 
@@ -254,12 +256,12 @@ curl \
   --location \
   --data '
     {
-      "insert_size_estimate": 20, 
-      "raw_wgs_coverage_estimate": 25, 
-      "r1_q20_fraction": 0.99, 
-      "r2_q20_fraction": 0.98, 
-      "r1_gc_fraction": 0.54, 
-      "r2_gc_fraction": 0.50
+      "insertSizeEstimate": 20, 
+      "rawWgsCoverageEstimate": 25, 
+      "r1Q20Fraction": 0.99, 
+      "r2Q20Fraction": 0.98, 
+      "r1GcFraction": 0.54, 
+      "r2GcFraction": 0.50
     }
   ' \
   --url "http://127.0.0.1:8001/api/v1/fastq/fqr.01JJ3RASC32XCMPG9S77FGVY11/addQcStats" | \
@@ -297,7 +299,8 @@ curl \
   --data '
     {
       "compressionFormat": "ORA",
-      "gzipCompressionSizeInBytes": 12345000
+      "r1GzipCompressionSizeInBytes": 12345000,
+      "r2GzipCompressionSizeInBytes": 12345999
     }
   ' \
   --url "https://fastq.dev.umccr.org/api/v1/fastq/fqr.01JJ37C4KA6THTP0XVQDSSJKJQ/addFileCompressionInformation" | \
@@ -315,7 +318,7 @@ curl \
   --header "Authorization: Bearer ${ORCABUS_TOKEN}" \
   --data '
     {
-      "ntsmUri": "s3://path/to/ntsm-file.bin"
+      "ntsm": "s3://path/to/ntsm-file.bin"
     }
   ' \
   --url "https://fastq.dev.umccr.org/api/v1/fastq/fqr.01JJ37C4KA6THTP0XVQDSSJKJQ/addFileCompressionInformation" | \

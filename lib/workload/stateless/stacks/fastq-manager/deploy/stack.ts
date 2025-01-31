@@ -92,8 +92,15 @@ export class FastqManagerStack extends Stack {
     );
 
     // Grant lambda helper functions permissions to access resources
-    lambdaHelperFunctions.forEach((lambdaHelperFunction) => {
+    lambdaHelperFunctions.forEach((lambdaHelperFunction, index) => {
       lambdaHelperFunction.currentVersion.grantInvoke(lambdaFunction);
+      // Add current version of the lambda helper function to the lambda function environment variables
+      // The key should be the name of the lambda helper function in uppercase with the suffix _ARN
+      // The value should be the ARN of the lambda helper function's current version
+      lambdaFunction.addEnvironment(
+        `${LAMBDA_HELPER_FUNCTION_NAMES[index].toUpperCase()}_ARN`,
+        lambdaHelperFunction.currentVersion.functionArn
+      );
     });
   }
 
