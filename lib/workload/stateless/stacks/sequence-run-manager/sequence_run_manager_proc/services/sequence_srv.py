@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import QuerySet
 
 from sequence_run_manager.models.sequence import Sequence, SequenceStatus
+from sequence_run_manager.models.state import State
 from sequence_run_manager_proc.domain.sequence import SequenceDomain
 
 # from data_processors.pipeline.tools import liborca
@@ -113,7 +114,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         # )
 
         seq.save()
-        return SequenceDomain(sequence=seq, state_has_changed=True)
+        return SequenceDomain(sequence=seq, status_has_changed=True, state_has_changed=True)
     else:
         seq: Sequence = qs.get()
         seq_domain = SequenceDomain(sequence=seq)
@@ -125,10 +126,18 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
             seq.status = status
             seq.end_time = end_time
             seq.save()
+            seq_domain.status_has_changed = True
+        else:
+            logger.info(
+                f"[SKIP] Existing Sequence Run Status (instrument_run_id={instrument_run_id}, status={status.value})"
+            )
+
+        state = State.objects.filter(sequence=seq).order_by('-timestamp').first() # get latest state
+        if state is not None and state.status != payload["status"]:
             seq_domain.state_has_changed = True
         else:
             logger.info(
-                f"[SKIP] Existing Sequence state (instrument_run_id={instrument_run_id}, status={status.value})"
+                f"[SKIP] Existing Sequence Run State (instrument_run_id={instrument_run_id}, status={payload['status']})"
             )
 
         return seq_domain

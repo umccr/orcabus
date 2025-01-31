@@ -106,8 +106,12 @@ def event_handler(event, context):
     )
     entry = None
 
-    # Detect SequenceRunStateChange
+    # Create SequenceRunState record from BSSH Run event payload
     if sequence_domain.state_has_changed:
+        sequence_state_srv.create_sequence_state_from_bssh_event(event_details)
+
+    # Detect SequenceRunStatusChange
+    if sequence_domain.status_has_changed:
         try:
             SequenceRule(sequence_domain.sequence).must_not_emergency_stop()
             sequence_state_srv.create_sequence_state_from_bssh_event(event_details)

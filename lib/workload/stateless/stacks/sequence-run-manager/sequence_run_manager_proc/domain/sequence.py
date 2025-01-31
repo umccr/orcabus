@@ -24,7 +24,10 @@ class SequenceDomain:
     # Convention: https://github.com/umccr/orcabus/tree/main/docs/schemas#namespace
     _namespace = "orcabus.sequencerunmanager"
     sequence: Sequence
-    state_has_changed: bool = False
+    
+    #  flag to indicate if state or status has changed
+    state_has_changed: bool = False # reference to State model (uploading, running, new, complete, analyzing, pendinganalysis, ...)
+    status_has_changed: bool = False # reference to Sequence model (STARTED, SUCCEEDED, FAILED, ABORTED)
 
     @property
     def namespace(self) -> str:
