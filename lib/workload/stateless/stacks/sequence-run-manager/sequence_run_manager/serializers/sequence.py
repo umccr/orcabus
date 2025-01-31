@@ -23,4 +23,9 @@ class SequenceSerializer(SequenceBaseSerializer):
         model = Sequence
         fields = "__all__"
         
-    
+class SequenceRunCountByStatusSerializer(serializers.Serializer):
+    all = serializers.IntegerField()
+    started = serializers.IntegerField()
+    succeeded = serializers.IntegerField()
+    failed = serializers.IntegerField()
+    aborted = serializers.IntegerField()
