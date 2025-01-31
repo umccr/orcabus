@@ -7,8 +7,9 @@ use std::sync::Arc;
 use axum::http::header::InvalidHeaderName;
 use axum::http::method::InvalidMethod;
 use axum::http::HeaderValue;
-use axum::Router;
+use axum::{Extension, Router};
 use chrono::Duration;
+use serde_qs::axum::QsQueryConfig;
 use sqlx::PgPool;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
@@ -188,6 +189,7 @@ pub fn api_router(state: AppState) -> Result<Router> {
         .merge(ingest_router())
         .merge(list_router())
         .merge(update_router())
+        .layer(Extension(QsQueryConfig::new(5, false)))
         .layer(cors_layer(state.config())?)
         .layer(TraceLayer::new_for_http())
         .with_state(state))

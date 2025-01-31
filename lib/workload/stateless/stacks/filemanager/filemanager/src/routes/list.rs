@@ -659,6 +659,29 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_s3_multiple_filters_percent_encoded(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await
+            .unwrap()
+            .s3_objects;
+
+        let brackets = percent_encode("[]".as_ref(), NON_ALPHANUMERIC).to_string();
+        let result: ListResponse<S3> = response_from_get(
+            state,
+            &format!("/s3?currentState=false&key{}=3&key{}=4", brackets, brackets),
+        )
+        .await;
+        assert_eq!(
+            result.results(),
+            vec![entries[3].clone(), entries[4].clone()]
+        );
+        assert_eq!(result.pagination().count, 2);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_multiple_filters_same_key(pool: PgPool) {
         let state = AppState::from_pool(pool).await;
         let entries = EntriesBuilder::default()

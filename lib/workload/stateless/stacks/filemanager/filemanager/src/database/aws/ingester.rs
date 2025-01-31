@@ -1172,14 +1172,14 @@ pub(crate) mod tests {
         events
     }
 
-    pub(crate) async fn fetch_results<'a>(client: &Client) -> Vec<PgRow> {
+    pub(crate) async fn fetch_results(client: &Client) -> Vec<PgRow> {
         sqlx::query("select * from s3_object")
             .fetch_all(client.pool())
             .await
             .unwrap()
     }
 
-    pub(crate) async fn fetch_results_ordered<'a>(client: &Client) -> Vec<PgRow> {
+    pub(crate) async fn fetch_results_ordered(client: &Client) -> Vec<PgRow> {
         sqlx::query("select * from s3_object order by sequencer, key, version_id")
             .fetch_all(client.pool())
             .await
