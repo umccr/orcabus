@@ -210,7 +210,7 @@ class PgDDLocal(PgDD):
 
     def load_to_database(self, only_empty: bool = True):
         """
-        Download from S3 CSV files to load.
+        Load CSV files to the database.
         """
 
         def load_files():
@@ -262,7 +262,7 @@ class PgDDS3(PgDD):
         Write the CSV files to the S3 bucket.
         """
 
-        for root, dirs, files in os.walk(self.dir):
+        for root, _, files in os.walk(self.dir):
             for file in files:
                 file = os.path.join(root, file)
                 key = file.removeprefix(self.dir).removeprefix("/")
@@ -277,7 +277,7 @@ class PgDDS3(PgDD):
 
                 s3_object = self.s3.Object(self.bucket, key)
                 with open(file, "rb") as f:
-                    s3_object.put(Body=gzip.compress(f.read()))
+                    s3_object.put(Body=f.read())
 
     def download_local(self, exists_ok: bool = True):
         """
@@ -296,6 +296,6 @@ class PgDDS3(PgDD):
                 continue
 
             s3_object = self.s3.Object(self.bucket, obj.key).get()
-            data = gzip.decompress(s3_object["Body"].read())
+            data = s3_object["Body"].read()
             with open(file, "wb") as f:
                 f.write(data)
