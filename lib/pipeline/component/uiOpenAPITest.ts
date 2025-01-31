@@ -25,6 +25,12 @@ export class UiOpenAPITestStep extends CodeBuildStep {
 
     super(id, {
       installCommands: [
+        // This CodeBuildStep runs inside CodePipeline and sources artifacts from the previous step.
+        // To avoid interference with the `orca-ui` artifact, we delete all existing files and start with a fresh directory.
+        // We use the deployed endpoints to perform the checks.
+        'rm -rf .[^.]*',
+        'rm -rf *',
+
         'node -v',
         'corepack enable',
 
@@ -40,7 +46,7 @@ export class UiOpenAPITestStep extends CodeBuildStep {
       commands: ['set -eu', 'make generate-openapi-types', 'yarn tsc-check'],
       buildEnvironment: {
         computeType: ComputeType.SMALL,
-        buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
+        buildImage: LinuxArmBuildImage.AMAZON_LINUX_2023_STANDARD_3_0,
       },
       partialBuildSpec: BuildSpec.fromObject({
         env: {
@@ -58,7 +64,7 @@ export class UiOpenAPITestStep extends CodeBuildStep {
             },
           },
         },
-        version: '0.2',
+        version: 0.2,
       }),
       logging: {
         cloudWatch: {
