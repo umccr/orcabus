@@ -1,9 +1,16 @@
 {
   "OrcaBus": {
     "actions": {
-      "writeAccess": {
+      "POST /api/v1/workflowrun/{orcabusId}/rerun/{proxy+}": {
         "appliesTo": {
-          "principalTypes": ["User"]
+          "principalTypes": ["User", "CognitoUserGroup"],
+          "resourceTypes": ["Microservice"]
+        }
+      },
+      "POST /api/v1/sync/presigned-csv/{PROXY+}": {
+        "appliesTo": {
+          "principalTypes": ["User", "CognitoUserGroup"],
+          "resourceTypes": ["Microservice"]
         }
       }
     },
@@ -25,6 +32,12 @@
             }
           },
           "type": "Record"
+        }
+      },
+      "Microservice": {
+        "shape": {
+          "type": "Record",
+          "attributes": {}
         }
       }
     }
