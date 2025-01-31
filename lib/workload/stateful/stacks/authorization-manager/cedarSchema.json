@@ -6,6 +6,12 @@
           "principalTypes": ["User", "CognitoUserGroup"],
           "resourceTypes": ["Microservice"]
         }
+      },
+      "POST /api/v1/sync/presigned-csv/{PROXY+}": {
+        "appliesTo": {
+          "principalTypes": ["User", "CognitoUserGroup"],
+          "resourceTypes": ["Microservice"]
+        }
       }
     },
     "entityTypes": {

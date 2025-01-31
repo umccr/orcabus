@@ -21,3 +21,4 @@ Policies are currently assigned based on groups from the Cognito User Pool. The 
 
 - **Admin**: For admins/service users (all actions are granted to this group).
 - **Curators**: For curators (all policies are applied to all curators in this group).
+- **Bioinfo**: For bioinformatics members.

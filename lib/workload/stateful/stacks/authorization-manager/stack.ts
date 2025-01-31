@@ -70,6 +70,10 @@ export class AuthorizationManagerStack extends Stack {
       userPoolId,
       cfnPolicyStore: policyStore,
     });
+    this.setupBioinfoCedarPolicy({
+      userPoolId,
+      cfnPolicyStore: policyStore,
+    });
   }
 
   /**
@@ -186,11 +190,65 @@ export class AuthorizationManagerStack extends Stack {
               resource == OrcaBus::Microservice::"WORKFLOW"
             );
           `,
-          description: 'curators - Permissions for rerun workflowrun in WORKFLOW microservice',
+          description: 'curators - Permissions to rerun workflowrun in WORKFLOW microservice',
         },
       },
       policyStoreId: policyStoreId,
     });
     allowRerunPolicy.node.addDependency(cfnPolicyStore);
+  }
+
+  /**
+   * This sets up all policies for the curators group in the Cognito user pool.
+   * @param userPoolId
+   * @param cfnPolicyStore
+   */
+  private setupBioinfoCedarPolicy({
+    userPoolId,
+    cfnPolicyStore,
+  }: {
+    userPoolId: string;
+    cfnPolicyStore: CfnPolicyStore;
+  }) {
+    const policyStoreId = cfnPolicyStore.attrPolicyStoreId;
+    const principal = `OrcaBus::CognitoUserGroup::"${userPoolId}|bioinfo"`;
+
+    // 1. Policy to allow rerun workflows in the WORKFLOW microservice
+    const allowRerunPolicy = new CfnPolicy(this, 'CognitoBioinfoWorkflowRerunPolicy', {
+      definition: {
+        static: {
+          statement: `
+            permit (
+              principal in ${principal},
+              action in
+                [OrcaBus::Action::"POST /api/v1/workflowrun/{orcabusId}/rerun/{proxy+}"],
+              resource == OrcaBus::Microservice::"WORKFLOW"
+            );
+          `,
+          description: 'bioinfo - Permissions to rerun workflowrun in WORKFLOW microservice',
+        },
+      },
+      policyStoreId: policyStoreId,
+    });
+    allowRerunPolicy.node.addDependency(cfnPolicyStore);
+
+    // 2. Policy to trigger external sync in METADATA microservice
+    const allowModifyMetadataPolicy = new CfnPolicy(this, 'CognitoBioinfoMetadataModifyPolicy', {
+      definition: {
+        static: {
+          statement: `
+            permit (
+              principal in ${principal},
+              action in
+                [OrcaBus::Action::"POST /api/v1/sync/presigned-csv/{PROXY+}"],
+              resource == OrcaBus::Microservice::"METADATA"
+            );
+          `,
+          description: 'bioinfo - Permissions to trigger external sync METADATA microservice',
+        },
+      },
+      policyStoreId: policyStoreId,
+    });
+    allowModifyMetadataPolicy.node.addDependency(cfnPolicyStore);
   }
 }
