@@ -22,3 +22,12 @@ Policies are currently assigned based on groups from the Cognito User Pool. The 
 - **Admin**: For admins/service users (all actions are granted to this group).
 - **Curators**: For curators (all policies are applied to all curators in this group).
 - **Bioinfo**: For bioinformatics members.
+
+### Permissions
+
+| Description                                                                                       | Curators           | Bioinfo            |
+| ------------------------------------------------------------------------------------------------- | ------------------ | ------------------ |
+| Allow rerun workflows in the WORKFLOW microservice                                                | :white_check_mark: | :white_check_mark: |
+| Allow to sync external metadata in the METADATA microservice                                      | :x:                | :white_check_mark: |
+
+`Admin` group will have a wildcard to allow all actions.

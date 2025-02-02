@@ -133,6 +133,8 @@ export class AuthorizationManagerStack extends Stack {
 
   /**
    * This sets up all policies for the admin group in the Cognito user pool.
+   *
+   * NOTE: Please update readme if new policy is modified
    * @param userPoolId
    * @param cfnPolicyStore
    */
@@ -166,6 +168,8 @@ export class AuthorizationManagerStack extends Stack {
 
   /**
    * This sets up all policies for the curators group in the Cognito user pool.
+   *
+   * NOTE: Please update readme if new policy is modified
    * @param userPoolId
    * @param cfnPolicyStore
    */
@@ -200,6 +204,8 @@ export class AuthorizationManagerStack extends Stack {
 
   /**
    * This sets up all policies for the curators group in the Cognito user pool.
+   *
+   * NOTE: Please update readme if new policy is modified
    * @param userPoolId
    * @param cfnPolicyStore
    */
