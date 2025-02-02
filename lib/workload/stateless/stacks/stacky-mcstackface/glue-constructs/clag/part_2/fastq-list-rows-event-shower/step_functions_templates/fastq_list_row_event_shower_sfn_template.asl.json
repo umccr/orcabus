@@ -490,8 +490,6 @@
       "Next": "FastqListRow Event Shower Starting",
       "ResultSelector": {
         "start_fastq_list_row_shower_event_data.$": "$.Payload.start_fastq_list_row_shower_event_data",
-        "project_event_data_list.$": "$.Payload.project_event_data_list",
-        "fastq_list_rows_event_data_list.$": "$.Payload.fastq_list_rows_event_data_list",
         "complete_fastq_list_row_shower_event_data.$": "$.Payload.complete_fastq_list_row_shower_event_data"
       },
       "ResultPath": "$.generate_event_maps_step"
@@ -521,16 +519,33 @@
     },
     "For each Project": {
       "Type": "Map",
-      "ItemsPath": "$.generate_event_maps_step.project_event_data_list",
+      "ItemsPath": "$.get_inputs_step.project_objects_list",
       "ItemSelector": {
-        "project_event_data.$": "$$.Map.Item.Value"
+        "project_obj.$": "$$.Map.Item.Value",
+        "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Generate ProjectData Added Event",
+        "StartAt": "Get Project Event Data Item",
         "States": {
+          "Get Project Event Data Item": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "States.Format('{}__{}', $.project_obj.orcabusId, $.instrument_run_id)",
+                "id_type": "${__project_event_table_partition_name__}"
+              }
+            },
+            "ResultSelector": {
+              "project_event_data.$": "States.StringToJson($.Item.event_data.S)"
+            },
+            "ResultPath": "$.project_event_data",
+            "Next": "Generate ProjectData Added Event"
+          },
           "Generate ProjectData Added Event": {
             "Type": "Task",
             "Resource": "arn:aws:states:::events:putEvents",
@@ -560,13 +575,32 @@
     },
     "For each fastq list row pair": {
       "Type": "Map",
-      "ItemsPath": "$.generate_event_maps_step.fastq_list_rows_event_data_list",
+      "ItemsPath": "$.get_inputs_step.fastq_list_rows",
+      "ItemSelector": {
+        "fastq_list_row_obj.$": "$$.Map.Item.Value",
+        "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId"
+      },
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Get FastqListRow Added Event",
+        "StartAt": "Get FastqListRow Event",
         "States": {
+          "Get FastqListRow Event": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Parameters": {
+              "TableName": "${__table_name__}",
+              "Key": {
+                "id.$": "States.Format('{}__{}', $.fastq_list_row_obj.rgid, $.instrument_run_id)",
+                "id_type": "${__fastq_list_row_event_table_partition_name__}"
+              }
+            },
+            "ResultSelector": {
+              "fastq_list_row_event_data.$": "States.StringToJson($.Item.event_data.S)"
+            },
+            "Next": "Get FastqListRow Added Event"
+          },
           "Get FastqListRow Added Event": {
             "Type": "Task",
             "Resource": "arn:aws:states:::dynamodb:getItem",
@@ -629,11 +663,8 @@
           }
         }
       },
-      "Next": "Wait 5 Seconds",
       "ResultPath": null,
-      "ItemSelector": {
-        "fastq_list_row_event_data.$": "$$.Map.Item.Value"
-      }
+      "Next": "Wait 5 Seconds"
     },
     "Wait 5 Seconds": {
       "Type": "Wait",
