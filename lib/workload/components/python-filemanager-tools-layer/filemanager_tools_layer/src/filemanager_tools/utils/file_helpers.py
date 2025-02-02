@@ -6,13 +6,13 @@ from .request_helpers import get_request_response_results, get_response
 from .globals import S3_LIST_ENDPOINT
 
 
-def get_file_object_from_s3_uri(s3_uri: str, current_state=True) -> FileObject:
+def get_file_object_from_s3_uri(s3_uri: str) -> FileObject:
     s3_bucket, s3_key = get_bucket_key_pair_from_uri(s3_uri)
 
     response = get_request_response_results(S3_LIST_ENDPOINT, {
         "bucket": s3_bucket,
         "key": s3_key,
-        "currentState": current_state
+        "currentState": 'true'
     })
 
     if len(response) == 0:
@@ -20,7 +20,7 @@ def get_file_object_from_s3_uri(s3_uri: str, current_state=True) -> FileObject:
         response = get_request_response_results(S3_LIST_ENDPOINT, {
             "bucket": s3_bucket,
             "key": s3_key,
-            "currentState": False
+            "currentState": 'false'
         })
 
     if len(response) == 0:

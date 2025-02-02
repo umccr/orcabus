@@ -30,8 +30,8 @@ from typing import TYPE_CHECKING
 
 from fastapi.routing import HTTPException
 from pydantic import Field, BaseModel, model_validator, ConfigDict
-from pydantic.alias_generators import to_camel, to_snake
 
+from ..utils import to_snake, to_camel
 
 # Util imports
 from ..utils import (

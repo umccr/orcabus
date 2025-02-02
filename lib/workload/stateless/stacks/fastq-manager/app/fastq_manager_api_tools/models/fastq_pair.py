@@ -1,10 +1,12 @@
 # Standard imports
 from typing import Self, Optional
 from pydantic import BaseModel, model_validator, ConfigDict
-from pydantic.alias_generators import to_camel, to_snake
 
 # Local imports
 from . import CompressionFormat
+from ..utils import (
+    to_snake, to_camel
+)
 
 # Model imports
 from .file_storage import (
@@ -15,6 +17,7 @@ from .file_storage import (
 # Create class for a single fastq storage object
 class FastqStorageObjectBase(FileStorageObjectBase):
     gzip_compression_size_in_bytes: Optional[int] = None
+    raw_md5sum: Optional[str] = None
 
 
 # Define the response, create and data classes
@@ -32,8 +35,8 @@ class FastqStorageObjectData(FastqStorageObjectBase, FileStorageObjectData):
 
 # Base class
 class FastqPairStorageObjectBase(BaseModel):
-    r_1: FastqStorageObjectData
-    r_2: Optional[FastqStorageObjectData] = None
+    r1: FastqStorageObjectData
+    r2: Optional[FastqStorageObjectData] = None
 
     # Compression format information
     compression_format: Optional[CompressionFormat] = None
@@ -41,8 +44,8 @@ class FastqPairStorageObjectBase(BaseModel):
 
 # Response class
 class FastqPairStorageObjectResponse(FastqPairStorageObjectBase):
-    r_1: FastqStorageObjectResponse
-    r_2: Optional[FastqStorageObjectResponse] = None
+    r1: FastqStorageObjectResponse
+    r2: Optional[FastqStorageObjectResponse] = None
 
     model_config = ConfigDict(
         alias_generator=to_camel
@@ -57,9 +60,9 @@ class FastqPairStorageObjectResponse(FastqPairStorageObjectBase):
         data = super().model_dump(**kwargs)
 
         # Serialize r1 and r2
-        data['r_1'] = self.r_1.model_dump(by_alias=True)
-        if self.r_2:
-            data['r_2'] = self.r_2.model_dump(by_alias=True)
+        data['r1'] = self.r1.model_dump(by_alias=True)
+        if self.r2:
+            data['r2'] = self.r2.model_dump(by_alias=True)
         return data
 
 
@@ -67,8 +70,8 @@ class FastqPairStorageObjectCreate(FastqPairStorageObjectBase):
     model_config = ConfigDict(
         alias_generator=to_camel
     )
-    r_1: FastqStorageObjectCreate
-    r_2: Optional[FastqStorageObjectCreate] = None
+    r1: FastqStorageObjectCreate
+    r2: Optional[FastqStorageObjectCreate] = None
 
 
     @model_validator(mode='before')

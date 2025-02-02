@@ -6,8 +6,8 @@ from typing import Self
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, model_validator, ConfigDict
-from pydantic.alias_generators import to_snake, to_camel
 
+from ..utils import to_snake, to_camel
 
 # Custom models for handling patch requests
 class ReadCountInfoBase(BaseModel):

@@ -8,9 +8,10 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from pydantic import Field, BaseModel, model_validator, ConfigDict
-from pydantic.alias_generators import to_snake, to_camel
 
 from . import FloatDecimal
+
+from ..utils import to_camel, to_snake
 
 # Set basic logger
 logging.basicConfig(level=logging.INFO)
@@ -20,10 +21,10 @@ logger = logging.getLogger(__name__)
 class QcInformationBase(BaseModel):
     insert_size_estimate: FloatDecimal = Field(default=Decimal(0))
     raw_wgs_coverage_estimate: FloatDecimal = Field(default=Decimal(0))
-    r_1_q_20_fraction: FloatDecimal = Field(default=Decimal(0))
-    r_2_q_20_fraction: FloatDecimal = Field(default=Decimal(0))
-    r_1_gc_fraction: FloatDecimal = Field(default=Decimal(0))
-    r_2_gc_fraction: FloatDecimal = Field(default=Decimal(0))
+    r1_q20_fraction: FloatDecimal = Field(default=Decimal(0))
+    r2_q20_fraction: FloatDecimal = Field(default=Decimal(0))
+    r1_gc_fraction: FloatDecimal = Field(default=Decimal(0))
+    r2_gc_fraction: FloatDecimal = Field(default=Decimal(0))
 
 
 class QcInformationResponse(QcInformationBase):

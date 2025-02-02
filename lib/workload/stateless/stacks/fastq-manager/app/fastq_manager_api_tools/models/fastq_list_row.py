@@ -6,18 +6,23 @@ from os import environ
 from pydantic import Field, BaseModel, model_validator, ConfigDict, computed_field
 from typing import Optional, Self
 
-from pydantic.alias_generators import to_camel, to_snake
+# Local imports
+from . import CWLDict, PresignedUrlModel
+from ..globals import CONTEXT_PREFIX
+from ..utils import (
+    get_ulid, get_s3_uri_from_s3_ingest_id, \
+    get_presigned_url_from_s3_ingest_id, get_presigned_url_expiry, datetime_to_isoformat,
+    to_snake, to_camel
+)
 
-from fastq_manager_api_tools.globals import CONTEXT_PREFIX
-from fastq_manager_api_tools.models import CWLDict, PresignedUrlModel
-from fastq_manager_api_tools.models.fastq_pair import FastqPairStorageObjectData, FastqPairStorageObjectResponse, \
+from .fastq_pair import FastqPairStorageObjectData, FastqPairStorageObjectResponse, \
     FastqPairStorageObjectCreate
-from fastq_manager_api_tools.models.file_storage import FileStorageObjectData, FileStorageObjectResponse, \
+from .file_storage import FileStorageObjectData, FileStorageObjectResponse, \
     FileStorageObjectCreate
-from fastq_manager_api_tools.models.library import LibraryData, LibraryResponse
-from fastq_manager_api_tools.models.qc import QcInformationData, QcInformationResponse, QcInformationCreate
-from fastq_manager_api_tools.utils import get_ulid, get_s3_uri_from_s3_ingest_id, \
-    get_presigned_url_from_s3_ingest_id, get_presigned_url_expiry, datetime_to_isoformat
+
+from .library import LibraryData, LibraryResponse
+from .qc import QcInformationData, QcInformationResponse, QcInformationCreate
+
 
 
 class FastqListRowBase(BaseModel):
@@ -29,7 +34,7 @@ class FastqListRowBase(BaseModel):
     # So we start with the greatest common denominator and extend classes from there
     rgid: str  # Usually comprises index+index2.lane
     index: str = None
-    index_2: Optional[str] = None
+    index2: Optional[str] = None
     lane: int = Field(default=1)
     instrument_run_id: str
 
@@ -168,31 +173,31 @@ class FastqListRowData(FastqListRowWithId, Dyntastic):
             "lane": self.lane,
             "read_1": {
                 "class": "File",
-                "location": get_s3_uri_from_s3_ingest_id(self.read_set.r_1.s_3_ingest_id)
+                "location": get_s3_uri_from_s3_ingest_id(self.read_set.r1.s3_ingest_id)
             },
             "read_2": {
                 "class": "File",
-                "location": get_s3_uri_from_s3_ingest_id(self.read_set.r_.s_3_ingest_id)
+                "location": get_s3_uri_from_s3_ingest_id(self.read_set.r2.s3_ingest_id)
             }
         }
 
     def presign_uris(self) -> PresignedUrlModel:
         # Get all unarchived files
         # Presign the URIs
-        r1_presigned_url = get_presigned_url_from_s3_ingest_id(self.read_set.r_1.s_3_ingest_id)
+        r1_presigned_url = get_presigned_url_from_s3_ingest_id(self.read_set.r1.s3_ingest_id)
         presigned_objects = {
             "r1": {
-                "s3Uri": get_s3_uri_from_s3_ingest_id(self.read_set.r_1.s_3_ingest_id),
+                "s3Uri": get_s3_uri_from_s3_ingest_id(self.read_set.r1.s3_ingest_id),
                 "presignedUrl": r1_presigned_url,
                 "expiresAt": datetime_to_isoformat(get_presigned_url_expiry(r1_presigned_url))
             }
         }
         if self.read_set.r2:
-            r2_presigned_url = get_presigned_url_from_s3_ingest_id(self.read_set.r2.s_3_ingest_id)
+            r2_presigned_url = get_presigned_url_from_s3_ingest_id(self.read_set.r2.s3_ingest_id)
             presigned_objects["r2"] = {
-                "s3Uri": get_s3_uri_from_s3_ingest_id(self.read_set.r2.s_3_ingest_id),
+                "s3Uri": get_s3_uri_from_s3_ingest_id(self.read_set.r2.s3_ingest_id),
                 "presignedUrl": r2_presigned_url,
-                "expiresAt": datetime_to_isoformat(r2_presigned_url(r2_presigned_url))
+                "expiresAt": datetime_to_isoformat(get_presigned_url_expiry(r2_presigned_url))
             }
 
         return presigned_objects

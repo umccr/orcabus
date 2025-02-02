@@ -27,7 +27,8 @@ FILE_PAYLOAD = {
         "s3IngestId": "0193cdc0-2092-78d1-8d4e-fa5b090fce38"
     },
     "r2": {
-        "s3IngestId": "0193cdc0-4c7a-7e23-8d4d-00561ae2ca59"
+        "s3IngestId": "0193cdc0-4c7a-7e23-8d4d-00561ae2ca59",
+        "rawMd5sum": "d41d8cd98f00b204e9800998ecf8427e"  # pragma: allowlist secret
     }
 }
 
@@ -87,6 +88,10 @@ async def test_add_files_endpoint():
 
             # Assert we have a 200 file_response
             assert file_response.status_code == 200
+
+            # Assert that the raw md5sum exists
+            assert file_response.json()['readSet']['r2']['rawMd5sum'] == FILE_PAYLOAD['r2']['rawMd5sum']
+
         finally:
             if 'fastq_list_row_data' in locals():
                 # Now delete the entry we just created

@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 
 # Standard imports
-import json
 from typing import Self, Optional
 from typing import TYPE_CHECKING
 from pydantic import BaseModel, model_validator, ConfigDict
-from pydantic.alias_generators import to_snake, to_camel
 
 # Local
 from . import CompressionFormat
+from ..utils import to_camel, to_snake
 
 
 class FileCompressionInfoBase(BaseModel):
     compression_format: CompressionFormat
-    r_1_gzip_compression_size_in_bytes: int
-    r_2_gzip_compression_size_in_bytes: Optional[int] = None
+    r1_gzip_compression_size_in_bytes: int
+    r2_gzip_compression_size_in_bytes: Optional[int] = None
 
 
 class FileCompressionInfoResponse(FileCompressionInfoBase):

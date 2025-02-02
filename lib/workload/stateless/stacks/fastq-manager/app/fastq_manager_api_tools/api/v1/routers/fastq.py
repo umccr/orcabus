@@ -211,8 +211,8 @@ async def add_file_compression(fastq_id: str = Depends(sanitise_fastq_orcabus_id
 
     # Add compression info
     fastq.read_set.compression_format = file_compression_info_data.compression_format
-    fastq.read_set.r_1.gzip_compression_size_in_bytes = file_compression_info_data.r_1_gzip_compression_size_in_bytes
-    fastq.read_set.r_2.gzip_compression_size_in_bytes = file_compression_info_data.r_2_gzip_compression_size_in_bytes
+    fastq.read_set.r1.gzip_compression_size_in_bytes = file_compression_info_data.r1_gzip_compression_size_in_bytes
+    fastq.read_set.r2.gzip_compression_size_in_bytes = file_compression_info_data.r2_gzip_compression_size_in_bytes
     fastq.save()
     return fastq.to_dict()
 
