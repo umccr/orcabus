@@ -21,6 +21,8 @@ create type reason as enum (
     'RestoreExpired',
     -- The object's storage class was changed, including changes intelligent tiering classes.
     'StorageClassChanged',
+    -- This event was generated from a crawl operation like S3 inventory.
+    'Crawl',
     -- An unknown reason used for old or manual record creation.
     'Unknown'
 );

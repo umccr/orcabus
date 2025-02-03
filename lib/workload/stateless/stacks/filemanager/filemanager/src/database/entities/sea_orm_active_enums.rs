@@ -12,10 +12,10 @@ use serde::{Deserialize, Serialize};
     Deserialize,
     strum::FromRepr,
     strum::EnumCount,
+    sqlx::Type,
     utoipa::ToSchema,
 )]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "event_type")]
-#[repr(u8)]
 pub enum EventType {
     #[sea_orm(string_value = "Created")]
     Created,
@@ -35,10 +35,49 @@ pub enum EventType {
     Deserialize,
     strum::FromRepr,
     strum::EnumCount,
+    sqlx::Type,
+    utoipa::ToSchema,
+)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "reason")]
+pub enum Reason {
+    #[sea_orm(string_value = "Crawl")]
+    Crawl,
+    #[sea_orm(string_value = "CreatedCompleteMultipartUpload")]
+    CreatedCompleteMultipartUpload,
+    #[sea_orm(string_value = "CreatedCopy")]
+    CreatedCopy,
+    #[sea_orm(string_value = "CreatedPost")]
+    CreatedPost,
+    #[sea_orm(string_value = "CreatedPut")]
+    CreatedPut,
+    #[sea_orm(string_value = "Deleted")]
+    Deleted,
+    #[sea_orm(string_value = "DeletedLifecycle")]
+    DeletedLifecycle,
+    #[sea_orm(string_value = "RestoreExpired")]
+    RestoreExpired,
+    #[sea_orm(string_value = "Restored")]
+    Restored,
+    #[sea_orm(string_value = "StorageClassChanged")]
+    StorageClassChanged,
+    #[sea_orm(string_value = "Unknown")]
+    Unknown,
+}
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    EnumIter,
+    DeriveActiveEnum,
+    Serialize,
+    Deserialize,
+    strum::FromRepr,
+    strum::EnumCount,
+    sqlx::Type,
     utoipa::ToSchema,
 )]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "storage_class")]
-#[repr(u8)]
 pub enum StorageClass {
     #[sea_orm(string_value = "DeepArchive")]
     DeepArchive,

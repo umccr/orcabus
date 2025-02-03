@@ -1,6 +1,7 @@
 //! Raw event message definitions from AWS S3, either through EventBridge or SQS directly.
 //!
 
+use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 use crate::uuid::UuidGenerator;
 use chrono::{DateTime, Utc};
@@ -24,58 +25,154 @@ pub enum EventType {
 pub struct EventTypeData {
     pub event_type: String,
     pub deletion_type: Option<String>,
+    pub reason: Option<String>,
 }
 
 impl EventTypeData {
     /// Create a new event type data.
-    pub fn new(event_type: String, deletion_type: Option<String>) -> Self {
+    pub fn new(event_type: String, deletion_type: Option<String>, reason: Option<String>) -> Self {
         Self {
             event_type,
             deletion_type,
+            reason,
         }
     }
-}
 
-/// The parsed event type with information on whether it is a delete marker.
-#[derive(Debug)]
-pub struct EventTypeDeleteMarker {
-    pub event_type: EventType,
-    pub is_delete_marker: bool,
-}
-
-impl EventTypeDeleteMarker {
-    /// Create a new event type with a delete marker flag.
-    pub fn new(event_type: EventType, is_delete_marker: bool) -> Self {
-        Self {
-            event_type,
-            is_delete_marker,
-        }
-    }
-}
-
-impl From<EventTypeData> for EventTypeDeleteMarker {
-    fn from(event_type: EventTypeData) -> Self {
-        match event_type.event_type {
+    /// Convert this data into the parsed type.
+    ///
+    /// Created events include events that are triggered by APIs like PutObject or CopyObject.
+    /// They also include restore events (including restore expired), and lifecycle storage
+    /// class transitions. This is because for all these events the object remains in S3 and
+    /// it's metadata can be read.
+    ///
+    /// Deleted events include events that are triggered by APIs like DeleteObject, or lifecycle
+    /// expire events. This is because for these events, the object can no longer be accessed in S3.
+    pub fn into_parsed(self) -> EventTypeParsed {
+        match &self.event_type {
             // Regular created event.
             e if e.contains("Object Created") || e.contains("ObjectCreated") => {
-                Self::new(EventType::Created, false)
+                EventTypeParsed::new(EventType::Created, false, self.reason_for_created())
+            }
+            // Restore complete.
+            e if e.contains("Object Restore Completed")
+                || e.contains("ObjectRestore:Completed") =>
+            {
+                EventTypeParsed::new(EventType::Created, false, Reason::Restored)
+            }
+            // Restore expired.
+            e if e.contains("Object Restore Expired") || e.contains("ObjectRestore:Delete") => {
+                EventTypeParsed::new(EventType::Created, false, Reason::RestoreExpired)
+            }
+            // Storage class changed.
+            e if e.contains("Object Storage Class Changed")
+                || e.contains("Object Access Tier Changed")
+                || e.contains("LifecycleTransition")
+                || e.contains("IntelligentTiering") =>
+            {
+                EventTypeParsed::new(EventType::Created, false, Reason::StorageClassChanged)
             }
             // Delete marker created event.
             e if (e.contains("Object Deleted")
-                && event_type
+                && self
                     .deletion_type
+                    .as_ref()
                     .is_some_and(|d| d.contains("Delete Marker Created")))
-                || e.contains("ObjectRemoved:DeleteMarkerCreated") =>
+                || e.contains("ObjectRemoved:DeleteMarkerCreated")
+                || e.contains("LifecycleExpiration:DeleteMarkerCreated") =>
             {
-                Self::new(EventType::Deleted, true)
+                EventTypeParsed::new(EventType::Deleted, true, self.reason_for_deleted())
             }
             // Regular deleted event.
-            e if e.contains("Object Deleted") || e.contains("ObjectRemoved") => {
-                Self::new(EventType::Deleted, false)
+            e if e.contains("Object Deleted")
+                || e.contains("ObjectRemoved")
+                || e.contains("LifecycleExpiration") =>
+            {
+                EventTypeParsed::new(EventType::Deleted, false, self.reason_for_deleted())
             }
             // Anything else.
-            _ => Self::new(EventType::Other, false),
+            _ => EventTypeParsed::new(EventType::Other, false, Reason::Unknown),
         }
+    }
+
+    /// Get the reason for a created event. This does not check if the event is a created event.
+    pub fn reason_for_created(&self) -> Reason {
+        if self.event_type.contains("Put")
+            || self
+                .reason
+                .as_ref()
+                .is_some_and(|r| r.contains("PutObject"))
+        {
+            Reason::CreatedPut
+        } else if self.event_type.contains("Post")
+            || self
+                .reason
+                .as_ref()
+                .is_some_and(|r| r.contains("PostObject"))
+        {
+            Reason::CreatedPost
+        } else if self.event_type.contains("Copy")
+            || self
+                .reason
+                .as_ref()
+                .is_some_and(|r| r.contains("CopyObject"))
+        {
+            Reason::CreatedCopy
+        } else if self.event_type.contains("CompleteMultipartUpload")
+            || self
+                .reason
+                .as_ref()
+                .is_some_and(|r| r.contains("CompleteMultipartUpload"))
+        {
+            Reason::CreatedCompleteMultipartUpload
+        } else {
+            Reason::Unknown
+        }
+    }
+
+    /// Get the reason for a deleted event. This does not check if the event is a deleted event.
+    pub fn reason_for_deleted(&self) -> Reason {
+        if self.event_type.contains("LifecycleExpiration")
+            || self
+                .reason
+                .as_ref()
+                .is_some_and(|r| r.contains("Lifecycle Expiration"))
+        {
+            Reason::DeletedLifecycle
+        } else if self.event_type.contains("Delete")
+            || self
+                .reason
+                .as_ref()
+                .is_some_and(|r| r.contains("DeleteObject"))
+        {
+            Reason::Deleted
+        } else {
+            Reason::Unknown
+        }
+    }
+}
+
+/// The parsed event type with parsed information including the delete marker and reason.
+#[derive(Debug)]
+pub struct EventTypeParsed {
+    pub event_type: EventType,
+    pub is_delete_marker: bool,
+    pub reason: Reason,
+}
+
+impl EventTypeParsed {
+    /// Create a new event type with a delete marker flag and reason.
+    pub fn new(event_type: EventType, is_delete_marker: bool, reason: Reason) -> Self {
+        Self {
+            event_type,
+            is_delete_marker,
+            reason,
+        }
+    }
+}
+
+impl From<EventTypeData> for EventTypeParsed {
+    fn from(event_type: EventTypeData) -> Self {
+        event_type.into_parsed()
     }
 }
 
@@ -127,6 +224,7 @@ pub struct S3Record {
     pub bucket: Bucket,
     pub object: Object,
     pub deletion_type: Option<String>,
+    pub reason: Option<String>,
 }
 
 /// The bucket name in a message.
@@ -161,6 +259,7 @@ impl From<Record> for FlatS3EventMessage {
             bucket,
             object,
             deletion_type,
+            reason,
         } = detail;
 
         let Bucket { name: bucket } = bucket;
@@ -173,10 +272,11 @@ impl From<Record> for FlatS3EventMessage {
             sequencer,
         } = object;
 
-        let EventTypeDeleteMarker {
+        let EventTypeParsed {
             event_type,
             is_delete_marker,
-        } = EventTypeDeleteMarker::from(EventTypeData::new(detail_type, deletion_type));
+            reason,
+        } = EventTypeParsed::from(EventTypeData::new(detail_type, deletion_type, reason));
 
         Self {
             s3_object_id: UuidGenerator::generate(),
@@ -195,6 +295,7 @@ impl From<Record> for FlatS3EventMessage {
             is_current_state: event_type == EventType::Created,
             event_type,
             is_delete_marker,
+            reason,
             ingest_id: None,
             attributes: None,
             number_duplicate_events: 0,

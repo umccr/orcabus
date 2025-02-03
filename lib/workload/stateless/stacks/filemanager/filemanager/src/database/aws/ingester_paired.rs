@@ -103,6 +103,7 @@ impl IngesterPaired {
         .bind(&object_created.version_ids)
         .bind(&object_created.sequencers)
         .bind(&object_created.is_delete_markers)
+        .bind(&object_created.reasons)
         .bind(vec![Other; object_created.s3_object_ids.len()])
         .bind(&object_created.ingest_ids)
         .bind(&object_created.attributes)
@@ -125,6 +126,7 @@ impl IngesterPaired {
         .bind(&object_created.version_ids)
         .bind(&object_created.sequencers)
         .bind(&object_created.is_delete_markers)
+        .bind(&object_created.reasons)
         .bind(vec![Other; object_created.s3_object_ids.len()])
         .bind(&object_created.ingest_ids)
         .bind(&object_created.attributes)
@@ -164,6 +166,7 @@ impl IngesterPaired {
         .bind(&object_deleted.sequencers)
         .bind(vec![1; object_deleted.s3_object_ids.len()])
         .bind(&object_deleted.is_delete_markers)
+        .bind(&object_deleted.reasons)
         .bind(vec![Other; object_deleted.s3_object_ids.len()])
         .fetch_all(&mut *tx)
         .await?;

@@ -12,6 +12,7 @@ insert into s3_object (
     version_id,
     sequencer,
     is_delete_marker,
+    reason,
     event_type,
     ingest_id,
     attributes
@@ -29,9 +30,10 @@ values (
     unnest($10::text[]),
     unnest($11::text[]),
     unnest($12::boolean[]),
-    unnest($13::event_type[]),
-    unnest($14::uuid[]),
-    unnest($15::jsonb[])
+    unnest($13::reason[]),
+    unnest($14::event_type[]),
+    unnest($15::uuid[]),
+    unnest($16::jsonb[])
 ) on conflict on constraint sequencer_unique do update
     set number_duplicate_events = s3_object.number_duplicate_events + 1
     returning s3_object_id, number_duplicate_events;

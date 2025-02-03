@@ -7,7 +7,7 @@ use std::ops::Add;
 use crate::database::aws::ingester::Ingester;
 use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
 use crate::database::entities::s3_object::Model as S3Object;
-use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
+use crate::database::entities::sea_orm_active_enums::{EventType, Reason, StorageClass};
 use crate::database::Client;
 use crate::error::Result;
 use crate::events::aws;
@@ -98,8 +98,8 @@ impl Entries {
         prefix: Option<&str>,
         suffix: Option<&str>,
     ) -> ActiveS3Object {
-        let event = EventType::from_repr((index % (EventType::COUNT - 1)) as u8)
-            .unwrap_or(EventType::Created);
+        let event =
+            EventType::from_repr(index % (EventType::COUNT - 1)).unwrap_or(EventType::Created);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
         let attributes = Some(json!({
             "attributeId": format!("{}", index),
@@ -122,7 +122,7 @@ impl Entries {
             sha256: Set(Some(index.to_string())),
             last_modified_date: date(),
             e_tag: Set(Some(index.to_string())),
-            storage_class: Set(StorageClass::from_repr((index % StorageClass::COUNT) as u8)),
+            storage_class: Set(StorageClass::from_repr(index % StorageClass::COUNT)),
             sequencer: Set(Some(index.to_string())),
             is_delete_marker: Set(false),
             is_current_state: Set(event == EventType::Created),
@@ -131,6 +131,7 @@ impl Entries {
             deleted_date: Set(None),
             deleted_sequencer: Set(None),
             number_reordered: Set(0),
+            reason: Set(Reason::Unknown),
         }
     }
 
@@ -172,6 +173,7 @@ impl Entries {
             event_type: event,
             is_delete_marker: false,
             ingest_id: Some(ingest_id),
+            reason: Reason::Unknown,
             attributes,
             number_duplicate_events: 0,
             number_reordered: 0,

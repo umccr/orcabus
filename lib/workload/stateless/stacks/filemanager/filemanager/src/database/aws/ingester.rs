@@ -49,6 +49,7 @@ impl Ingester {
         .bind(&events.version_ids)
         .bind(&events.sequencers)
         .bind(&events.is_delete_markers)
+        .bind(&events.reasons)
         .bind(&events.event_types)
         .bind(&events.ingest_ids)
         .bind(&events.is_current_state)
@@ -101,6 +102,7 @@ pub(crate) mod tests {
     use uuid::Uuid;
 
     use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::entities::sea_orm_active_enums::Reason;
     use crate::database::{Client, Ingest};
     use crate::events::aws::message::EventType::{Created, Deleted};
     use crate::events::aws::message::{default_version_id, EventType};
@@ -880,7 +882,8 @@ pub(crate) mod tests {
         let message = expected_message(None, default_version_id(), false, Created)
             .with_sha256(None)
             .with_e_tag(None)
-            .with_last_modified_date(None);
+            .with_last_modified_date(None)
+            .with_reason(Reason::Unknown);
         // 720 permutations
         run_permutation_test(&pool, event_permutations, 6, |s3_object_results| {
             assert_row(
@@ -939,7 +942,8 @@ pub(crate) mod tests {
         let message = expected_message(None, "version_id".to_string(), false, Created)
             .with_sha256(None)
             .with_e_tag(None)
-            .with_last_modified_date(None);
+            .with_last_modified_date(None)
+            .with_reason(Reason::Unknown);
         // 720 permutations
         run_permutation_test(&pool, event_permutations, 5, |s3_object_results| {
             assert_row(
@@ -1238,6 +1242,7 @@ pub(crate) mod tests {
             message.is_delete_marker,
             s3_object_results.get::<bool, _>("is_delete_marker")
         );
+        assert_eq!(message.reason, s3_object_results.get::<Reason, _>("reason"));
         assert_eq!(
             message.is_current_state,
             s3_object_results.get::<bool, _>("is_current_state")
@@ -1263,6 +1268,11 @@ pub(crate) mod tests {
             .with_e_tag(Some(EXPECTED_QUOTED_E_TAG.to_string()))
             .with_sha256(Some(EXPECTED_SHA256.to_string()))
             .with_is_delete_marker(is_delete_marker)
+            .with_reason(match event_type {
+                Created => Reason::CreatedPut,
+                Deleted => Reason::Deleted,
+                _ => Reason::Unknown,
+            })
             .with_event_type(event_type)
     }
 
