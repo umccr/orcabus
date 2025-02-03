@@ -155,7 +155,7 @@ pub(crate) mod tests {
     use sqlx::{query, PgPool, Row};
 
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::sea_orm_active_enums::Reason;
+    use crate::database::entities::sea_orm_active_enums::{ArchiveStatus, Reason};
     use crate::events::aws::message::EventType;
     use crate::events::aws::message::EventType::{Created, Deleted};
     use crate::events::aws::tests::{EXPECTED_SEQUENCER_CREATED_ONE, EXPECTED_VERSION_ID};
@@ -241,6 +241,7 @@ pub(crate) mod tests {
         .bind(vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()])
         .bind(vec![false])
         .bind(vec![Reason::Unknown])
+        .bind(vec![None::<ArchiveStatus>])
         .bind(vec![event_type])
         .bind(vec![UuidGenerator::generate()])
         .bind(vec![false])

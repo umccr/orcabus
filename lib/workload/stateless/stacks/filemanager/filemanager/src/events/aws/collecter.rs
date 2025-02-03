@@ -6,6 +6,7 @@ use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::database;
+use crate::database::entities::sea_orm_active_enums::ArchiveStatus;
 use crate::env::Config;
 use crate::error::Error::{S3Error, SQSError, SerdeError};
 use crate::error::{Error, Result};
@@ -216,6 +217,7 @@ impl<'a> Collecter<'a> {
             e_tag,
             checksum_sha256,
             delete_marker,
+            archive_status,
             ..
         } = head;
 
@@ -227,7 +229,8 @@ impl<'a> Collecter<'a> {
             .update_size(content_length)
             .update_e_tag(e_tag)
             .update_sha256(checksum_sha256)
-            .update_delete_marker(delete_marker))
+            .update_delete_marker(delete_marker)
+            .update_archive_status(archive_status.and_then(ArchiveStatus::from_aws)))
     }
 
     /// Gets S3 tags from objects.
@@ -807,6 +810,7 @@ pub(crate) mod tests {
                     .unwrap(),
             )
             .storage_class(types::StorageClass::IntelligentTiering)
+            .archive_status(types::ArchiveStatus::DeepArchiveAccess)
             .checksum_sha256(EXPECTED_SHA256)
             .build()
     }

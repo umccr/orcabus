@@ -50,6 +50,7 @@ impl Ingester {
         .bind(&events.sequencers)
         .bind(&events.is_delete_markers)
         .bind(&events.reasons)
+        .bind(&events.archive_statuses)
         .bind(&events.event_types)
         .bind(&events.ingest_ids)
         .bind(&events.is_current_state)
@@ -102,7 +103,7 @@ pub(crate) mod tests {
     use uuid::Uuid;
 
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::sea_orm_active_enums::Reason;
+    use crate::database::entities::sea_orm_active_enums::{ArchiveStatus, Reason};
     use crate::database::{Client, Ingest};
     use crate::events::aws::message::EventType::{Created, Deleted};
     use crate::events::aws::message::{default_version_id, EventType};
@@ -1243,6 +1244,10 @@ pub(crate) mod tests {
             s3_object_results.get::<bool, _>("is_delete_marker")
         );
         assert_eq!(message.reason, s3_object_results.get::<Reason, _>("reason"));
+        assert_eq!(
+            message.archive_status,
+            s3_object_results.get::<Option<ArchiveStatus>, _>("archive_status")
+        );
         assert_eq!(
             message.is_current_state,
             s3_object_results.get::<bool, _>("is_current_state")

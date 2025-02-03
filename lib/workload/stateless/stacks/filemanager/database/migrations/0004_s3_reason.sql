@@ -1,5 +1,5 @@
 -- Add a reason column that indicates why a new row was added, such as lifecycle
--- transitions or storage class changes.
+-- transitions or storage class changes. Also adds archive type for intelligent tiering.
 
 -- The reason for the s3 object row.
 create type reason as enum (
@@ -27,4 +27,15 @@ create type reason as enum (
     'Unknown'
 );
 
+-- The intelligent tiering archive status.
+create type archive_status as enum (
+    -- The object is in the archive access tier.
+    'ArchiveAccess',
+    -- The object is in the deep archive access tier.
+    'DeepArchiveAccess'
+);
+
+-- Add the reason column defaulting to an unknown value.
 alter table s3_object add column reason reason not null default 'Unknown';
+-- Add the archive status column. This can only have a value if the storage class is also `IntelligentTiering`.
+alter table s3_object add column archive_status archive_status default null;

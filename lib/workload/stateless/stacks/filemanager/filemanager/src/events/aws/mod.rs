@@ -1,6 +1,7 @@
 //! Handles parsing raw S3 event messages and converting them for the database.
 //!
 
+use aws_sdk_s3::types::ArchiveStatus as AwsArchiveStatus;
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use chrono::{DateTime, Utc};
 use itertools::{izip, Itertools};
@@ -10,11 +11,12 @@ use uuid::Uuid;
 
 use message::EventMessage;
 
-use crate::database::entities::sea_orm_active_enums::Reason;
+use crate::database::entities::sea_orm_active_enums::{ArchiveStatus, Reason};
 use crate::events::aws::message::{default_version_id, EventType};
 use crate::events::aws::EventType::{Created, Deleted, Other};
 use crate::uuid::UuidGenerator;
 use sea_orm::prelude::Json;
+use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use strum::{EnumCount, FromRepr};
 
 pub mod collecter;
@@ -75,6 +77,40 @@ impl Default for Reason {
     }
 }
 
+impl ArchiveStatus {
+    pub fn from_aws(archive_status: AwsArchiveStatus) -> Option<Self> {
+        match archive_status {
+            AwsArchiveStatus::ArchiveAccess => Some(Self::ArchiveAccess),
+            AwsArchiveStatus::DeepArchiveAccess => Some(Self::DeepArchiveAccess),
+            _ => None,
+        }
+    }
+}
+
+impl sqlx::Type<sqlx::Postgres> for ArchiveStatus {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("archive_status")
+    }
+}
+
+impl PgHasArrayType for ArchiveStatus {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::array_of("archive_status")
+    }
+}
+
+impl sqlx::Type<sqlx::Postgres> for Reason {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("reason")
+    }
+}
+
+impl PgHasArrayType for Reason {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::array_of("reason")
+    }
+}
+
 /// AWS S3 events with fields transposed. Transposed events are used because this matches the
 /// unnest structure when inserting events into the database. This is convenient to do here so that
 /// the database structs do not have to perform this conversion.
@@ -94,6 +130,7 @@ pub struct TransposedS3EventMessages {
     pub event_types: Vec<EventType>,
     pub is_delete_markers: Vec<bool>,
     pub reasons: Vec<Reason>,
+    pub archive_statuses: Vec<Option<ArchiveStatus>>,
     pub ingest_ids: Vec<Option<Uuid>>,
     pub is_current_state: Vec<bool>,
     pub attributes: Vec<Option<Json>>,
@@ -117,6 +154,7 @@ impl TransposedS3EventMessages {
             event_types: Vec::with_capacity(capacity),
             is_delete_markers: Vec::with_capacity(capacity),
             reasons: Vec::with_capacity(capacity),
+            archive_statuses: Vec::with_capacity(capacity),
             ingest_ids: Vec::with_capacity(capacity),
             is_current_state: Vec::with_capacity(capacity),
             attributes: Vec::with_capacity(capacity),
@@ -140,6 +178,7 @@ impl TransposedS3EventMessages {
             event_type,
             is_delete_marker,
             reason,
+            archive_status,
             ingest_id,
             is_current_state,
             attributes,
@@ -160,6 +199,7 @@ impl TransposedS3EventMessages {
         self.event_types.push(event_type);
         self.is_delete_markers.push(is_delete_marker);
         self.reasons.push(reason);
+        self.archive_statuses.push(archive_status);
         self.ingest_ids.push(ingest_id);
         self.is_current_state.push(is_current_state);
         self.attributes.push(attributes);
@@ -201,6 +241,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
             messages.event_types,
             messages.is_delete_markers,
             messages.reasons,
+            messages.archive_statuses,
             messages.ingest_ids,
             messages.is_current_state,
             messages.attributes,
@@ -221,6 +262,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                 event_type,
                 is_delete_marker,
                 reason,
+                archive_status,
                 ingest_id,
                 is_current_state,
                 attributes,
@@ -240,6 +282,7 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                     event_type,
                     is_delete_marker,
                     reason,
+                    archive_status,
                     ingest_id,
                     is_current_state,
                     attributes,
@@ -476,6 +519,7 @@ pub struct FlatS3EventMessage {
     pub event_type: EventType,
     pub is_delete_marker: bool,
     pub reason: Reason,
+    pub archive_status: Option<ArchiveStatus>,
     pub ingest_id: Option<Uuid>,
     pub is_current_state: bool,
     pub attributes: Option<Json>,
@@ -542,6 +586,14 @@ impl FlatS3EventMessage {
     /// Update the reason if not None.
     pub fn update_reason(mut self, reason: Option<Reason>) -> Self {
         reason.into_iter().for_each(|reason| self.reason = reason);
+        self
+    }
+
+    /// Update the archive status if not None.
+    pub fn update_archive_status(mut self, archive_status: Option<ArchiveStatus>) -> Self {
+        archive_status
+            .into_iter()
+            .for_each(|archive_status| self.archive_status = Some(archive_status));
         self
     }
 
@@ -620,6 +672,12 @@ impl FlatS3EventMessage {
     /// Set the reason.
     pub fn with_reason(mut self, reason: Reason) -> Self {
         self.reason = reason;
+        self
+    }
+
+    /// Set the archive status.
+    pub fn with_archive_status(mut self, archive_status: Option<ArchiveStatus>) -> Self {
+        self.archive_status = archive_status;
         self
     }
 

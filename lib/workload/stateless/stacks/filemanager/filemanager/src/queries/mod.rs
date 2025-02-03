@@ -132,6 +132,7 @@ impl Entries {
             deleted_sequencer: Set(None),
             number_reordered: Set(0),
             reason: Set(Reason::Unknown),
+            archive_status: Set(None),
         }
     }
 
@@ -174,6 +175,7 @@ impl Entries {
             is_delete_marker: false,
             ingest_id: Some(ingest_id),
             reason: Reason::Unknown,
+            archive_status: None,
             attributes,
             number_duplicate_events: 0,
             number_reordered: 0,

@@ -530,6 +530,7 @@ impl From<Record> for FlatS3EventMessage {
             event_type: Created,
             is_delete_marker: is_delete_marker.unwrap_or_default(),
             reason: Reason::Crawl,
+            archive_status: None,
             // This will also represent the current state since it is a created event.
             is_current_state: true,
             ingest_id: None,

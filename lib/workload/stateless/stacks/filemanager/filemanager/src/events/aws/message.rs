@@ -296,6 +296,7 @@ impl From<Record> for FlatS3EventMessage {
             event_type,
             is_delete_marker,
             reason,
+            archive_status: None,
             ingest_id: None,
             attributes: None,
             number_duplicate_events: 0,

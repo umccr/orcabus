@@ -216,7 +216,7 @@ pub(crate) mod tests {
         assert_row, expected_message, fetch_results, remove_version_ids, test_events, test_ingester,
     };
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::sea_orm_active_enums::Reason;
+    use crate::database::entities::sea_orm_active_enums::{ArchiveStatus, Reason};
     use crate::events::aws::collecter::tests::{
         set_s3_client_expectations, set_sqs_client_expectations,
     };
@@ -272,7 +272,8 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 2);
-        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created);
+        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created)
+            .with_archive_status(Some(ArchiveStatus::DeepArchiveAccess));
         assert_row(
             &s3_object_results[1],
             message,
@@ -392,7 +393,8 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 2);
         let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created)
-            .with_is_current_state(false);
+            .with_is_current_state(false)
+            .with_archive_status(Some(ArchiveStatus::DeepArchiveAccess));
         assert_row(
             &s3_object_results[1],
             message,

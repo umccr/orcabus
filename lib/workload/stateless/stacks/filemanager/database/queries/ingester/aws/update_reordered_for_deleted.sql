@@ -100,6 +100,7 @@ select
     is_delete_marker,
     ingest_id,
     reason,
+    archive_status,
     is_current_state,
     attributes,
     -- This is used to simplify re-constructing the FlatS3EventMessages in the Lambda. I.e. this update detected an

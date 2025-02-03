@@ -12,7 +12,30 @@ use serde::{Deserialize, Serialize};
     Deserialize,
     strum::FromRepr,
     strum::EnumCount,
-    sqlx::Type,
+    sqlx::Decode,
+    sqlx::Encode,
+    utoipa::ToSchema,
+)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "archive_status")]
+pub enum ArchiveStatus {
+    #[sea_orm(string_value = "ArchiveAccess")]
+    ArchiveAccess,
+    #[sea_orm(string_value = "DeepArchiveAccess")]
+    DeepArchiveAccess,
+}
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    EnumIter,
+    DeriveActiveEnum,
+    Serialize,
+    Deserialize,
+    strum::FromRepr,
+    strum::EnumCount,
+    sqlx::Decode,
+    sqlx::Encode,
     utoipa::ToSchema,
 )]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "event_type")]
@@ -35,7 +58,8 @@ pub enum EventType {
     Deserialize,
     strum::FromRepr,
     strum::EnumCount,
-    sqlx::Type,
+    sqlx::Decode,
+    sqlx::Encode,
     utoipa::ToSchema,
 )]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "reason")]
@@ -74,7 +98,8 @@ pub enum Reason {
     Deserialize,
     strum::FromRepr,
     strum::EnumCount,
-    sqlx::Type,
+    sqlx::Decode,
+    sqlx::Encode,
     utoipa::ToSchema,
 )]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "storage_class")]
