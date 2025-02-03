@@ -3,7 +3,7 @@ import logging
 from django.db import transaction
 from django.db.models import QuerySet
 
-from sequence_run_manager.models.sequence import Sequence
+from sequence_run_manager.models.sequence import Sequence, SequenceStatus
 from sequence_run_manager.models.state import State
 
 
@@ -29,7 +29,7 @@ def create_sequence_state_from_bssh_event(payload: dict) -> None:
     instrument_run_id = payload["instrumentRunId"]
     sequence = Sequence.objects.get(instrument_run_id=instrument_run_id)
     
-    # comment for any future usage, None by default
+    # None by default
     comment = None
     
     State.objects.create(status=status, timestamp=timestamp, sequence=sequence, comment=comment)
