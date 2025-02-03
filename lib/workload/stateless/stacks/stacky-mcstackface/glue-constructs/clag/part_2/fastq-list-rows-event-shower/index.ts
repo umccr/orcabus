@@ -48,7 +48,9 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
       subject: 'subject',
       library: 'library',
       project: 'project',
+      projectEvent: 'project_event',
       fastqListRow: 'fastq_list_row',
+      fastqListRowEvent: 'fastq_list_row_event',
     },
     // Set Event Triggers
     triggerSource: 'orcabus.workflowmanager',
@@ -106,6 +108,14 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
         handler: 'handler',
         runtime: Runtime.PYTHON_3_12,
         architecture: Architecture.ARM_64,
+        timeout: Duration.seconds(300),
+        environment: {
+          INSTRUMENT_RUN_TABLE_NAME: props.tableObj.tableName,
+          FASTQ_LIST_ROW_EVENT_OBJ_TABLE_PARTITION_NAME:
+            this.newFastqListRowsEventShowerMap.tablePartition.fastqListRowEvent,
+          PROJECT_EVENT_OBJ_TABLE_PARTITION_NAME:
+            this.newFastqListRowsEventShowerMap.tablePartition.projectEvent,
+        },
       }
     );
 
@@ -231,6 +241,10 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
           this.newFastqListRowsEventShowerMap.tablePartition.project,
         __fastq_list_row_table_partition_name__:
           this.newFastqListRowsEventShowerMap.tablePartition.fastqListRow,
+        __project_event_table_partition_name__:
+          this.newFastqListRowsEventShowerMap.tablePartition.projectEvent,
+        __fastq_list_row_event_table_partition_name__:
+          this.newFastqListRowsEventShowerMap.tablePartition.fastqListRowEvent,
 
         /* Lambda functions */
         __decompress_fastq_list_rows_lambda_function_arn__:
@@ -264,6 +278,9 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
     ].forEach((lambda) => {
       lambda.currentVersion.grantInvoke(this.stateMachineObj.role);
     });
+
+    /* Allow 'Generate Event data objs' lambda to write to the dynamodb database */
+    props.tableObj.grantReadWriteData(generateEventDataObjsLambda.currentVersion);
 
     /* Allow state machine to send events */
     props.eventBusObj.grantPutEventsTo(this.stateMachineObj);
