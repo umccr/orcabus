@@ -203,7 +203,8 @@ pub async fn count_s3(
 }
 
 /// Generate AWS presigned URLs for s3_objects according to the parameters.
-/// This route implies `currentState=true` because only existing objects can be presigned.
+/// This route implies `currentState=true` because only existing objects can be presigned. It will
+/// only also return objects that are not in archive storage by setting `isAccessible=true`.
 /// Less presigned URLs may be returned than the amount of objects in the database because some
 /// objects may be over the `FILEMANAGER_API_PRESIGN_LIMIT`.
 #[utoipa::path(
@@ -222,12 +223,13 @@ pub async fn presign_s3(
     pagination: Query<Pagination>,
     wildcard: Query<WildcardParams>,
     WithRejection(extract::Query(presigned), _): Query<PresignedParams>,
-    filter_all: QsQuery<S3ObjectsFilter>,
+    WithRejection(serde_qs::axum::QsQuery(mut filter_all), _): QsQuery<S3ObjectsFilter>,
     request: Request,
 ) -> Result<Json<ListResponse<Url>>> {
     let content_type = HeaderParser::new(request.headers()).parse_header(CONTENT_TYPE)?;
     let content_encoding = HeaderParser::new(request.headers()).parse_header(CONTENT_ENCODING)?;
 
+    filter_all.is_accessible = Some(true);
     let Json(ListResponse {
         links,
         pagination,
@@ -237,7 +239,7 @@ pub async fn presign_s3(
         pagination,
         wildcard,
         WithRejection(extract::Query(ListS3Params::new(true)), PhantomData),
-        filter_all,
+        WithRejection(serde_qs::axum::QsQuery(filter_all), PhantomData),
         request,
     )
     .await?;
@@ -509,6 +511,24 @@ pub(crate) mod tests {
         let query = result.results()[1].query().unwrap();
         assert_presigned_params(query, "inline");
         assert_eq!(result.results()[1].path(), "/2/2");
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn list_api_presign_not_accessible(pool: PgPool) {
+        let state = AppState::from_pool(pool).await;
+
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(state.database_client())
+            .await
+            .unwrap();
+        println!("{:#?}", entries);
+
+        let result: ListResponse<Url> =
+            response_from_get(state, "/s3/presign?key=0&bucket=0").await;
+        assert_eq!(result.links(), &Links::new(None, None,));
+        assert_eq!(0, result.pagination().count);
+        assert_eq!(0, result.results().len());
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]

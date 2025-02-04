@@ -152,7 +152,7 @@ pub trait Migrate {
 pub(crate) mod tests {
     use chrono::{DateTime, Utc};
     use sea_orm::prelude::Json;
-    use sqlx::{query, PgPool, Row};
+    use sqlx::{query, Executor, PgPool, Row};
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::{ArchiveStatus, Reason};
@@ -164,7 +164,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn insert_created(pool: PgPool) {
-        insert_s3_objects(&pool, Created).await;
+        insert_s3_objects(&pool, Created, Some(StorageClass::Standard), None).await;
 
         let inserted = query(
             "select s3_object_id as \"s3_object_id!\",
@@ -176,6 +176,7 @@ pub(crate) mod tests {
                 storage_class as \"storage_class: StorageClass\",
                 version_id,
                 sequencer,
+                is_accessible,
                 number_duplicate_events from s3_object order by sequencer",
         )
         .fetch_all(&pool)
@@ -191,11 +192,12 @@ pub(crate) mod tests {
             inserted[0].get::<Option<DateTime<Utc>>, _>("event_time"),
             Some(DateTime::default())
         );
+        assert!(inserted[0].get::<bool, _>("is_accessible"),);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn insert_deleted(pool: PgPool) {
-        insert_s3_objects(&pool, Deleted).await;
+        insert_s3_objects(&pool, Deleted, Some(StorageClass::Standard), None).await;
 
         let inserted = query(
             "select s3_object_id as \"s3_object_id!\",
@@ -207,6 +209,7 @@ pub(crate) mod tests {
                 storage_class as \"storage_class: StorageClass\",
                 version_id,
                 sequencer,
+                is_accessible,
                 number_duplicate_events from s3_object order by sequencer",
         )
         .fetch_all(&pool)
@@ -222,9 +225,98 @@ pub(crate) mod tests {
             inserted[0].get::<Option<DateTime<Utc>>, _>("event_time"),
             Some(DateTime::default())
         );
+        assert!(!inserted[0].get::<bool, _>("is_accessible"),);
     }
 
-    async fn insert_s3_objects(pool: &PgPool, event_type: EventType) {
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_is_accessible(pool: PgPool) {
+        assert_is_accessible(
+            &pool,
+            Created,
+            Some(StorageClass::GlacierIr),
+            Some(ArchiveStatus::DeepArchiveAccess),
+            true,
+        )
+        .await;
+        assert_is_accessible(
+            &pool,
+            Created,
+            Some(StorageClass::Standard),
+            Some(ArchiveStatus::ArchiveAccess),
+            true,
+        )
+        .await;
+        assert_is_accessible(&pool, Created, Some(StorageClass::StandardIa), None, true).await;
+
+        assert_is_accessible(
+            &pool,
+            Created,
+            Some(StorageClass::IntelligentTiering),
+            None,
+            true,
+        )
+        .await;
+
+        assert_is_accessible(&pool, Deleted, Some(StorageClass::Standard), None, false).await;
+        assert_is_accessible(
+            &pool,
+            Created,
+            Some(StorageClass::IntelligentTiering),
+            Some(ArchiveStatus::DeepArchiveAccess),
+            false,
+        )
+        .await;
+        assert_is_accessible(
+            &pool,
+            Created,
+            Some(StorageClass::IntelligentTiering),
+            Some(ArchiveStatus::ArchiveAccess),
+            false,
+        )
+        .await;
+
+        assert_is_accessible(
+            &pool,
+            Created,
+            Some(StorageClass::Glacier),
+            Some(ArchiveStatus::DeepArchiveAccess),
+            false,
+        )
+        .await;
+        assert_is_accessible(&pool, Created, Some(StorageClass::Glacier), None, false).await;
+        assert_is_accessible(&pool, Created, Some(StorageClass::DeepArchive), None, false).await;
+    }
+
+    async fn assert_is_accessible(
+        pool: &PgPool,
+        event_type: EventType,
+        storage_class: Option<StorageClass>,
+        archive_status: Option<ArchiveStatus>,
+        expected: bool,
+    ) {
+        insert_s3_objects(pool, event_type, storage_class, archive_status).await;
+
+        let inserted = query(
+            "select s3_object_id as \"s3_object_id!\",
+                is_accessible
+                from s3_object order by sequencer",
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+        assert_eq!(inserted.len(), 1);
+        assert_eq!(inserted[0].get::<bool, _>("is_accessible"), expected,);
+
+        pool.execute("truncate s3_object").await.unwrap();
+    }
+
+    async fn insert_s3_objects(
+        pool: &PgPool,
+        event_type: EventType,
+        storage_class: Option<StorageClass>,
+        archive_status: Option<ArchiveStatus>,
+    ) {
         query(include_str!(
             "../../../database/queries/ingester/aws/insert_s3_objects.sql"
         ))
@@ -236,15 +328,15 @@ pub(crate) mod tests {
         .bind(vec![None::<String>])
         .bind(vec![DateTime::<Utc>::default()])
         .bind(vec![None::<String>])
-        .bind(vec![Some(StorageClass::Standard)])
+        .bind(vec![storage_class])
         .bind(vec![EXPECTED_VERSION_ID.to_string()])
         .bind(vec![EXPECTED_SEQUENCER_CREATED_ONE.to_string()])
         .bind(vec![false])
         .bind(vec![Reason::Unknown])
-        .bind(vec![None::<ArchiveStatus>])
-        .bind(vec![event_type])
+        .bind(vec![archive_status])
+        .bind(vec![event_type.clone()])
         .bind(vec![UuidGenerator::generate()])
-        .bind(vec![false])
+        .bind(vec![matches!(event_type, Created)])
         .bind(vec![None::<Json>])
         .fetch_all(pool)
         .await

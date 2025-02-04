@@ -1,7 +1,9 @@
 //! Routing logic for query filtering.
 //!
 
-use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
+use crate::database::entities::sea_orm_active_enums::{
+    ArchiveStatus, EventType, Reason, StorageClass,
+};
 use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
 use sea_orm::prelude::{DateTimeWithTimeZone, Json};
 use serde::de::Error;
@@ -178,6 +180,23 @@ pub struct S3ObjectsFilter {
     /// Query by the object delete marker.
     #[param(required = false)]
     pub(crate) is_delete_marker: Option<bool>,
+    /// Query by the reason, which adds detail for why an event was generated, such as whether it
+    /// was caused by API calls or lifecycle events. repeated parameters with `[]` are joined with
+    /// an `or` conditions by default. Use `[or][]` or `[and][]` to explicitly set the joining logic.
+    #[param(required = false, value_type = FilterJoin<Reason>)]
+    pub(crate) reason: FilterJoinMerged<Reason>,
+    /// Query by the archive status. The archive status can be `DeepArchiveAccess` or `ArchiveAccess`
+    /// if the storage class is also `IntelligentTiering`. Repeated parameters with `[]` are joined
+    /// with an `or` conditions by default. Use `[or][]` or `[and][]` to explicitly set the joining
+    /// logic.
+    #[param(required = false, value_type = FilterJoin<ArchiveStatus>)]
+    pub(crate) archive_status: FilterJoinMerged<ArchiveStatus>,
+    /// Query by whether the storage class allows the object to be retrieved straight away rather
+    /// than restored. Setting this to true will show records with storage classes that are not
+    /// `Glacier` or `DeepArchive`, and don't have `ArchiveAccess` or `DeepArchiveAccess` set if
+    /// they are intelligent tiering.
+    #[param(required = false)]
+    pub(crate) is_accessible: Option<bool>,
     /// Query by the ingest id that objects get tagged with.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
@@ -217,8 +236,11 @@ mod tests {
         sha256=sha256&\
         lastModifiedDate=1970-01-02T00:00:00Z&\
         eTag=eTag&\
-        storageClass=DeepArchive&\
+        storageClass=IntelligentTiering&\
         isDeleteMarker=true&\
+        reason=CreatedPut&\
+        archiveStatus=DeepArchiveAccess&\
+        isAccessible=true&\
         ingestId=00000000-0000-0000-0000-000000000000&\
         attributes[attributeId]=id\
         ";
@@ -240,8 +262,11 @@ mod tests {
                 )]
                 .into(),
                 e_tag: vec!["eTag".to_string()].into(),
-                storage_class: vec![StorageClass::DeepArchive].into(),
+                storage_class: vec![StorageClass::IntelligentTiering].into(),
                 is_delete_marker: Some(true),
+                reason: vec![Reason::CreatedPut].into(),
+                archive_status: vec![ArchiveStatus::DeepArchiveAccess].into(),
+                is_accessible: Some(true),
                 ingest_id: vec![Uuid::nil()].into(),
                 attributes: Some(json!({"attributeId": "id"}))
             }
@@ -261,7 +286,9 @@ mod tests {
         lastModifiedDate[]=1970-01-02T00:00:00Z&lastModifiedDate[]=1970-01-02T00:00:01Z&\
         eTag[]=eTag1&eTag[]=eTag2&\
         storageClass[]=DeepArchive&storageClass[]=Glacier&\
+        reason[]=CreatedPut&reason[]=CreatedPost&\
         isDeleteMarker=true&\
+        isAccessible=false&\
         ingestId[]=00000000-0000-0000-0000-000000000000&ingestId[]=FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF&\
         attributes[attributeId]=id1\
         ";
@@ -283,7 +310,9 @@ mod tests {
         lastModifiedDate[and][]=1970-01-02T00:00:00Z&lastModifiedDate[and][]=1970-01-02T00:00:01Z&\
         eTag[and][]=eTag1&eTag[and][]=eTag2&\
         storageClass[and][]=DeepArchive&storageClass[and][]=Glacier&\
+        reason[and][]=CreatedPut&reason[and][]=CreatedPost&\
         isDeleteMarker=true&\
+        isAccessible=false&\
         ingestId[and][]=00000000-0000-0000-0000-000000000000&ingestId[and][]=FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF&\
         attributes[attributeId]=id1\
         ";
@@ -305,7 +334,9 @@ mod tests {
         lastModifiedDate[or][]=1970-01-02T00:00:00Z&lastModifiedDate[or][]=1970-01-02T00:00:01Z&\
         eTag[or][]=eTag1&eTag[or][]=eTag2&\
         storageClass[or][]=DeepArchive&storageClass[or][]=Glacier&\
+        reason[or][]=CreatedPut&reason[or][]=CreatedPost&\
         isDeleteMarker=true&\
+        isAccessible=false&\
         ingestId[or][]=00000000-0000-0000-0000-000000000000&ingestId[or][]=FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF&\
         attributes[attributeId]=id1\
         ";
@@ -370,7 +401,14 @@ mod tests {
                     vec![StorageClass::DeepArchive, StorageClass::Glacier]
                 )])
                 .into(),
+                reason: HashMap::from_iter(vec![(
+                    join,
+                    vec![Reason::CreatedPut, Reason::CreatedPost]
+                )])
+                .into(),
+                archive_status: HashMap::from_iter(vec![]).into(),
                 is_delete_marker: Some(true),
+                is_accessible: Some(false),
                 ingest_id: HashMap::from_iter(vec![(join, vec![Uuid::nil(), Uuid::max()])]).into(),
                 attributes: Some(json!({"attributeId": "id1"}))
             }

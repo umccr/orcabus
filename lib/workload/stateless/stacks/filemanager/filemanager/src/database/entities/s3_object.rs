@@ -43,6 +43,7 @@ pub struct Model {
     pub is_current_state: bool,
     pub reason: Reason,
     pub archive_status: Option<ArchiveStatus>,
+    pub is_accessible: bool,
 }
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}

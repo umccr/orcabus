@@ -39,3 +39,11 @@ create type archive_status as enum (
 alter table s3_object add column reason reason not null default 'Unknown';
 -- Add the archive status column. This can only have a value if the storage class is also `IntelligentTiering`.
 alter table s3_object add column archive_status archive_status default null;
+-- Convenience column for determining whether an object is immediately accessible.
+alter table s3_object add column is_accessible bool not null generated always as (
+    is_current_state and
+    storage_class is not null and
+    storage_class != 'Glacier' and
+    storage_class != 'DeepArchive' and
+    (storage_class != 'IntelligentTiering' or archive_status is null)
+) stored;

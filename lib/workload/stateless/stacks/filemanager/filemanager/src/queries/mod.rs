@@ -7,7 +7,9 @@ use std::ops::Add;
 use crate::database::aws::ingester::Ingester;
 use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
 use crate::database::entities::s3_object::Model as S3Object;
-use crate::database::entities::sea_orm_active_enums::{EventType, Reason, StorageClass};
+use crate::database::entities::sea_orm_active_enums::{
+    ArchiveStatus, EventType, Reason, StorageClass,
+};
 use crate::database::Client;
 use crate::error::Result;
 use crate::events::aws;
@@ -108,6 +110,7 @@ impl Entries {
             }
         }));
 
+        let storage_class = StorageClass::from_repr(index % StorageClass::COUNT);
         ActiveS3Object {
             s3_object_id: Set(uuid),
             ingest_id: Set(Some(ingest_id)),
@@ -122,7 +125,15 @@ impl Entries {
             sha256: Set(Some(index.to_string())),
             last_modified_date: date(),
             e_tag: Set(Some(index.to_string())),
-            storage_class: Set(StorageClass::from_repr(index % StorageClass::COUNT)),
+            is_accessible: Set(event == EventType::Created
+                && storage_class != Some(StorageClass::DeepArchive)
+                && storage_class != Some(StorageClass::Glacier)),
+            archive_status: Set(if storage_class == Some(StorageClass::IntelligentTiering) {
+                Some(ArchiveStatus::DeepArchiveAccess)
+            } else {
+                None
+            }),
+            storage_class: Set(storage_class),
             sequencer: Set(Some(index.to_string())),
             is_delete_marker: Set(false),
             is_current_state: Set(event == EventType::Created),
@@ -132,7 +143,6 @@ impl Entries {
             deleted_sequencer: Set(None),
             number_reordered: Set(0),
             reason: Set(Reason::Unknown),
-            archive_status: Set(None),
         }
     }
 
@@ -156,6 +166,7 @@ impl Entries {
             }
         }));
 
+        let storage_class = aws::StorageClass::from_repr(index % StorageClass::COUNT);
         FlatS3EventMessage {
             s3_object_id: uuid,
             sequencer: Some(index.to_string()),
@@ -167,7 +178,12 @@ impl Entries {
             size: Some(index as i64),
             e_tag: Some(index.to_string()),
             sha256: Some(index.to_string()),
-            storage_class: aws::StorageClass::from_repr(index % StorageClass::COUNT),
+            archive_status: if storage_class == Some(aws::StorageClass::IntelligentTiering) {
+                Some(ArchiveStatus::DeepArchiveAccess)
+            } else {
+                None
+            },
+            storage_class,
             last_modified_date: date(),
             event_time: date(),
             is_current_state: event == message::EventType::Created,
@@ -175,7 +191,6 @@ impl Entries {
             is_delete_marker: false,
             ingest_id: Some(ingest_id),
             reason: Reason::Unknown,
-            archive_status: None,
             attributes,
             number_duplicate_events: 0,
             number_reordered: 0,

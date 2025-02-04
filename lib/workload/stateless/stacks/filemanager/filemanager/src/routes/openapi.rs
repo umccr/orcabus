@@ -8,7 +8,9 @@ use utoipa::{openapi, Modify, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::database::entities::s3_object::Model as S3;
+use crate::database::entities::sea_orm_active_enums::ArchiveStatus;
 use crate::database::entities::sea_orm_active_enums::EventType;
+use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::database::entities::sea_orm_active_enums::StorageClass;
 use crate::routes::error::ErrorResponse;
 use crate::routes::filter::wildcard::Wildcard;
@@ -61,6 +63,8 @@ pub struct Uuid(pub uuid::Uuid);
         schemas(
             S3,
             StorageClass,
+            ArchiveStatus,
+            Reason,
             EventType,
             ErrorResponse,
             ListCount,
