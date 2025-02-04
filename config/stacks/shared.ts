@@ -92,17 +92,26 @@ const getComputeConstructProps = (): ComputeProps => {
 };
 
 const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
+  const eventTypes = [
+    'Object Created',
+    'Object Deleted',
+    'Object Restore Completed',
+    'Object Restore Expired',
+    'Object Storage Class Changed',
+    'Object Access Tier Changed',
+  ];
+
   const props = {
     queueName: eventSourceQueueName,
     maxReceiveCount: 3,
     rules: [
       {
         bucket: oncoanalyserBucket[stage],
-        eventTypes: ['Object Created', 'Object Deleted'],
+        eventTypes,
       },
       {
         bucket: icav2PipelineCacheBucket[stage],
-        eventTypes: ['Object Created', 'Object Deleted'],
+        eventTypes,
         key: [{ 'anything-but': { wildcard: 'byob-icav2/*/cache/*' } }],
       },
     ],
@@ -111,11 +120,11 @@ const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
   if (stage === AppStage.PROD) {
     props.rules.push({
       bucket: icav2ArchiveAnalysisBucket[stage],
-      eventTypes: ['Object Created', 'Object Deleted'],
+      eventTypes,
     });
     props.rules.push({
       bucket: icav2ArchiveFastqBucket[stage],
-      eventTypes: ['Object Created', 'Object Deleted'],
+      eventTypes,
     });
   }
 
