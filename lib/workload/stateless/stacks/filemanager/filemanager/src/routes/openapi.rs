@@ -84,7 +84,9 @@ pub struct Uuid(pub uuid::Uuid);
             FilterJoin<Wildcard>,
             FilterJoin<StorageClass>,
             FilterJoin<i64>,
-            FilterJoin<Uuid>
+            FilterJoin<Uuid>,
+            FilterJoin<Reason>,
+            FilterJoin<ArchiveStatus>
         )
     ),
     modifiers(&SecurityAddon),
