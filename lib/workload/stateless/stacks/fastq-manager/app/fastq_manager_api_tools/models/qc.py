@@ -3,7 +3,6 @@
 # Standard imports
 from typing import Self
 import logging
-import json
 from decimal import Decimal
 from typing import TYPE_CHECKING
 

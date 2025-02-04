@@ -1,6 +1,4 @@
-from pydantic import BaseModel
-
-from typing import Optional
+from typing import Optional, TypedDict
 
 """
 Example File Object response
@@ -29,7 +27,7 @@ Example File Object response
 """
 
 
-class FileObject(BaseModel):
+class FileObject(TypedDict):
     # Identifier
     s3ObjectId: str
 
@@ -52,7 +50,7 @@ class FileObject(BaseModel):
     storageClass: str
 
     # Optional attributes
-    deletedDate: Optional[str] = None
-    deletedSequencer: Optional[str] = None
-    versionId: Optional[str] = None
-    sha256: Optional[str] = None
+    deletedDate: Optional[str]
+    deletedSequencer: Optional[str]
+    versionId: Optional[str]
+    sha256: Optional[str]

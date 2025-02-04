@@ -6,14 +6,17 @@ Helper functions for a subject
 """
 
 # Standard imports
-from typing import List, Union, Dict
+from typing import List
+from requests import HTTPError
 
-from .globals import SUBJECT_ENDPOINT
 # Local imports
+from .errors import SubjectNotFoundError
+from .globals import SUBJECT_ENDPOINT
+from .models import Subject, Sample, LibraryDetail
 from .requests_helpers import get_request_response_results
 
 
-def get_subject_from_subject_id(subject_id: str) -> Dict:
+def get_subject_from_subject_id(subject_id: str) -> Subject:
     """
     Get subject from the subject id
     :param subject_id:
@@ -25,11 +28,26 @@ def get_subject_from_subject_id(subject_id: str) -> Dict:
     }
 
     # Get subject
-    return get_request_response_results(SUBJECT_ENDPOINT, params)[0]
+    try:
+        query_results = get_request_response_results(SUBJECT_ENDPOINT, params)
+        assert len(query_results) == 1
+        return query_results[0]
+    except (HTTPError, AssertionError):
+        raise SubjectNotFoundError(
+            subject_id=subject_id
+        )
 
 
+def get_subject_orcabus_id_from_subject_id(subject_id: str) -> str:
+    """
+    Get the subject orcabus id from the subject id
+    :param subject_id:
+    :return:
+    """
+    return get_subject_from_subject_id(subject_id)['orcabusId']
 
-def get_subject_from_subject_orcabus_id(subject_orcabus_id: str) -> Dict:
+
+def get_subject_from_subject_orcabus_id(subject_orcabus_id: str) -> Subject:
     """
     Get subject from the subject id
     :param subject_orcabus_id:
@@ -42,52 +60,47 @@ def get_subject_from_subject_orcabus_id(subject_orcabus_id: str) -> Dict:
     }
 
     # Get subject
-    return get_request_response_results(SUBJECT_ENDPOINT, params)[0]
+    try:
+        query_results = get_request_response_results(SUBJECT_ENDPOINT, params)
+        assert len(query_results) == 1
+        return query_results[0]
+    except (HTTPError, AssertionError):
+        raise SubjectNotFoundError(
+            subject_orcabus_id=subject_orcabus_id
+        )
 
 
-def list_samples_in_subject(subject_id: Union[str, int]) -> List[Dict]:
+def list_samples_in_subject(subject_orcabus_id: str) -> List[Sample]:
     """
     Given a subject id, list the samples in the subject
-    :param subject_id:
+    :param subject_orcabus_id:
     :return:
     """
-    from metadata_tools import get_all_samples
-
-    # Get ID For Subject
-    subject = get_subject_from_subject_id(subject_id)
+    from .. import get_sample_from_sample_orcabus_id
 
     # Get the subject
-    return list(
-        filter(
-            lambda sample_iter:
-            subject.get("id") == sample_iter.get("subjects")[0]
-            if "subjects" in sample_iter.keys()
-            else
-            sample_iter.get("subject") == subject.get("id"),
-            get_all_samples()
-        )
-    )
+    return list(map(
+        # For each subject, get libraries in subject
+        lambda library_iter_: get_sample_from_sample_orcabus_id(library_iter_['sample']['orcabusId']),
+        # Get list of subject orcabus ids
+        list_libraries_in_subject(subject_orcabus_id)
+    ))
 
 
-def list_libraries_in_subject(subject_id: str) -> List[Dict]:
+def list_libraries_in_subject(subject_orcabus_id: str) -> List[LibraryDetail]:
     """
     Given a subject id, return the list of library objects in the subject
-    :param subject_id:
+    :param subject_orcabus_id:
     :return:
     """
-    from .sample_helpers import list_libraries_in_sample
-
-    library_list = []
-
-    samples_list = list_samples_in_subject(subject_id)
-
-    for sample_iter in samples_list:
-        library_list.extend(list_libraries_in_sample(sample_iter.get("id")))
-
-    return library_list
+    # Get ID For Subject
+    subject = get_subject_from_subject_orcabus_id(subject_orcabus_id)
+    
+    # Get the subject
+    return subject.get("librarySet", [])
 
 
-def get_all_subjects() -> List[Dict]:
+def get_all_subjects() -> List[Subject]:
     """
     Get all subjects
     :return:

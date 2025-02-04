@@ -27,6 +27,8 @@ build: dynamodb_up
 	@sleep 2
 	AWS_PROFILE=local AWS_ENDPOINT_URL="$(FASTQ_MANAGER_DYNAMODB_HOST)" TABLE_NAME="$(DYNAMODB_FASTQ_LIST_ROW_TABLE_NAME)" bash -o xtrace create_table.sh
 up: build
+	rsync --archive --delete ../../../components/python-metadata-tools-layer/metadata_tools_layer/ docker/metadata_tools_layer/
+	rsync --archive --delete ../../../components/python-filemanager-tools-layer/filemanager_tools_layer/ docker/filemanager_tools_layer/
 	@DYNAMODB_PORT=$(FASTQ_MANAGER_DYNAMODB_PORT) FASTQ_MANAGER_API_PORT=$(FASTQ_MANAGER_API_PORT) docker compose --project-name "$(FASTQ_MANAGER_DOCKER_PROJECT_NAME)" up --wait --force-recreate --detach fastapi
 
 # Down

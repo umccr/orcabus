@@ -27,16 +27,15 @@ need to use the model_validator to convert the keys to camel case before validat
 # Standard imports
 from typing import Self
 from typing import TYPE_CHECKING
-
 from fastapi.routing import HTTPException
 from pydantic import Field, BaseModel, model_validator, ConfigDict
 
+# Layer imports
+from metadata_tools import get_library_id_from_library_orcabus_id, get_library_orcabus_id_from_library_id
+
+# Local imports
 from ..utils import to_snake, to_camel
 
-# Util imports
-from ..utils import (
-    get_library_id_from_library_orcabus_id,
-)
 
 class LibraryBase(BaseModel):
     orcabus_id: str = Field(default="")
@@ -69,7 +68,7 @@ class LibraryData(LibraryBase):
         elif self.library_id == "":
             self.library_id = get_library_id_from_library_orcabus_id(self.orcabus_id)
         elif self.orcabus_id == "":
-            self.orcabus_id = get_library_id_from_library_orcabus_id(self.library_id)
+            self.orcabus_id = get_library_orcabus_id_from_library_id(self.library_id)
         return self
 
     def to_dict(self) -> 'LibraryResponse':

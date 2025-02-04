@@ -15,11 +15,12 @@ we only keep the s3_ingest_id in the database, and if we need the s3 uri we quer
 from typing import Optional, Self
 from typing import TYPE_CHECKING
 
-from pydantic import Field, BaseModel, model_validator, ConfigDict
+from pydantic import Field, BaseModel, model_validator, ConfigDict, computed_field
 
+from filemanager_tools import get_ingest_id_from_s3_uri
 # Util imports
+from ..cache import S3_INGEST_ID_URI_MAP_CACHE
 from ..utils import (
-    get_s3_ingest_id_from_s3_uri,
     to_snake, to_camel
 )
 
@@ -32,6 +33,11 @@ class FileStorageObjectResponse(FileStorageObjectBase):
     model_config = ConfigDict(
         alias_generator=to_camel
     )
+
+    @computed_field
+    def s3_uri(self) -> Optional[str]:
+        # If the s3 uri is not in the cache, return None
+        return S3_INGEST_ID_URI_MAP_CACHE.get(self.s3_ingest_id, None)
 
     @model_validator(mode='before')
     def convert_keys_to_camel(cls, values):
@@ -58,7 +64,7 @@ class FileStorageObjectCreate(FileStorageObjectBase):
     def set_s3_ingest_id(self) -> Self:
         # Set the s3 ingest id if not provided to be from the s3 uri
         if not self.s3_ingest_id:
-            self.s3_ingest_id = get_s3_ingest_id_from_s3_uri(self.s3_uri)
+            self.s3_ingest_id = get_ingest_id_from_s3_uri(self.s3_uri)
         return self
 
     def model_dump(self, **kwargs) -> 'FileStorageObjectResponse':

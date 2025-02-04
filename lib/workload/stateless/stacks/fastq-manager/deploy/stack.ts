@@ -17,7 +17,6 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { FilemanagerToolsPythonLambdaLayer } from '../../../../components/python-filemanager-tools-layer';
 import * as cdk from 'aws-cdk-lib';
-import { LAMBDA_HELPER_FUNCTION_NAMES } from './constants';
 import { MetadataToolsPythonLambdaLayer } from '../../../../components/python-metadata-tools-layer';
 
 export interface FastqManagerStackConfig {
@@ -50,6 +49,34 @@ export class FastqManagerStack extends Stack {
       props.dynamodbTableName
     );
 
+    // Create the FileManager Tool Layer
+    const fileManagerLayer = new FilemanagerToolsPythonLambdaLayer(
+      this,
+      'filemanager-tools-layer',
+      {
+        layerPrefix: 'fqm',
+      }
+    );
+
+    // Create the Metadata tool layer
+    const metadataLayer = new MetadataToolsPythonLambdaLayer(this, 'metadata-tools-layer', {
+      layerPrefix: 'fqm',
+    });
+
+    /*
+    Collect the required secret and ssm parameters for getting metadata
+    */
+    const hostnameSsmParameterObj = ssm.StringParameter.fromStringParameterName(
+      this,
+      'hostname_ssm_parameter',
+      props.hostedZoneNameSsmParameterPath
+    );
+    const orcabusTokenSecretObj = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'orcabus_token_secret',
+      props.orcabusTokenSecretsManagerPath
+    );
+
     // Api handler function
     const lambdaFunction = new PythonFunction(this, 'FastqManagerApi', {
       entry: path.join(__dirname, '../app'),
@@ -62,8 +89,15 @@ export class FastqManagerStack extends Stack {
       environment: {
         DYNAMODB_FASTQ_LIST_ROW_TABLE_NAME: dynamodbTable.tableName,
         DYNAMODB_HOST: `https://dynamodb.${this.region}.amazonaws.com`,
+        HOSTNAME_SSM_PARAMETER: hostnameSsmParameterObj.parameterName,
+        ORCABUS_TOKEN_SECRET_ID: orcabusTokenSecretObj.secretName,
       },
+      layers: [metadataLayer.lambdaLayerVersionObj, fileManagerLayer.lambdaLayerVersionObj],
     });
+
+    // Give lambda function permissions to secrets and ssm parameters
+    orcabusTokenSecretObj.grantRead(lambdaFunction);
+    hostnameSsmParameterObj.grantRead(lambdaFunction);
 
     // Allow read/write access to the dynamodb table
     dynamodbTable.grantReadWriteData(lambdaFunction);
@@ -84,88 +118,6 @@ export class FastqManagerStack extends Stack {
 
     // Routes for API schemas
     this.add_http_routes(apiGateway, apiIntegration);
-
-    // Build lambda helper functions
-    const lambdaHelperFunctions = this.add_lambda_helper_functions(
-      props.hostedZoneNameSsmParameterPath,
-      props.orcabusTokenSecretsManagerPath
-    );
-
-    // Grant lambda helper functions permissions to access resources
-    lambdaHelperFunctions.forEach((lambdaHelperFunction, index) => {
-      lambdaHelperFunction.currentVersion.grantInvoke(lambdaFunction);
-      // Add current version of the lambda helper function to the lambda function environment variables
-      // The key should be the name of the lambda helper function in uppercase with the suffix _ARN
-      // The value should be the ARN of the lambda helper function's current version
-      lambdaFunction.addEnvironment(
-        `${LAMBDA_HELPER_FUNCTION_NAMES[index].toUpperCase()}_ARN`,
-        lambdaHelperFunction.currentVersion.functionArn
-      );
-    });
-  }
-
-  // Add lambda helper functions
-  private add_lambda_helper_functions(
-    hostnameSsmParameterPath: string,
-    orcabusTokenSecretId: string
-  ): PythonFunction[] {
-    /*
-    Collect the required secret and ssm parameters for getting metadata
-    */
-    const hostnameSsmParameterObj = ssm.StringParameter.fromStringParameterName(
-      this,
-      'hostname_ssm_parameter',
-      hostnameSsmParameterPath
-    );
-    const orcabusTokenSecretObj = secretsmanager.Secret.fromSecretNameV2(
-      this,
-      'orcabus_token_secret',
-      orcabusTokenSecretId
-    );
-
-    // Create the FileManager Tool Layer
-    const fileManagerLayer = new FilemanagerToolsPythonLambdaLayer(
-      this,
-      'filemanager-tools-layer',
-      {
-        layerPrefix: 'fqm',
-      }
-    );
-
-    // Create the Metadata tool layer
-    const metadataLayer = new MetadataToolsPythonLambdaLayer(this, 'metadata-tools-layer', {
-      layerPrefix: 'fqm',
-    });
-
-    // Iterate through LAMBDA_HELPER_FUNCTION_NAMES and generate a lambda function for each
-    const lambdaFunctionObjects: PythonFunction[] = [];
-    for (const lambdaHelperFunctionName of LAMBDA_HELPER_FUNCTION_NAMES) {
-      lambdaFunctionObjects.push(
-        new PythonFunction(this, lambdaHelperFunctionName, {
-          entry: path.join(__dirname, '../lambdas', lambdaHelperFunctionName),
-          functionName: lambdaHelperFunctionName,
-          runtime: lambda.Runtime.PYTHON_3_12,
-          architecture: lambda.Architecture.ARM_64,
-          index: `${lambdaHelperFunctionName}.py`,
-          handler: 'handler',
-          timeout: Duration.seconds(60),
-          memorySize: 2048,
-          environment: {
-            HOSTNAME_SSM_PARAMETER: hostnameSsmParameterObj.parameterName,
-            ORCABUS_TOKEN_SECRET_ID: orcabusTokenSecretObj.secretName,
-          },
-          layers: [fileManagerLayer.lambdaLayerVersionObj, metadataLayer.lambdaLayerVersionObj],
-        })
-      );
-    }
-
-    // Add permissions to each of the lambda function objects
-    lambdaFunctionObjects.forEach((lambdaFunctionObject) => {
-      hostnameSsmParameterObj.grantRead(lambdaFunctionObject.currentVersion);
-      orcabusTokenSecretObj.grantRead(lambdaFunctionObject.currentVersion);
-    });
-
-    return lambdaFunctionObjects;
   }
 
   // Add the http routes to the API Gateway

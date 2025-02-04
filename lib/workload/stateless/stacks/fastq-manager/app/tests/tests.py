@@ -72,6 +72,39 @@ async def test_post_endpoint():
 
 
 @pytest.mark.asyncio
+async def test_query_by_library_id_endpoint():
+    from fastq_manager_api_tools.models.fastq_list_row import FastqListRowData
+    async with httpx.AsyncClient() as client:
+        try:
+            logger.info("Creating object on endpoint")
+            response = await client.post("http://localhost:8457/api/v1/fastq", json=CREATE_DATA_PAYLOAD)
+            response_data = response.json()
+            fastq_list_row_data = FastqListRowData(**response_data)
+            assert isinstance(fastq_list_row_data, FastqListRowData)
+
+            logger.info("Query object on endpoint")
+            query_response = await client.get("http://localhost:8457/api/v1/fastq",
+                params={
+                    "library[]": [
+                        CREATE_DATA_PAYLOAD['library']['orcabusId']
+                    ]
+                }
+            )
+            response_data = query_response.json()
+            assert len(response_data) == 1
+            print(response_data)
+            fastq_list_row_data = FastqListRowData(**response_data[0])
+            assert isinstance(fastq_list_row_data, FastqListRowData)
+        finally:
+            if 'fastq_list_row_data' in locals():
+                logger.info("Deleting object on endpoint we just created")
+                delete_response = await client.delete(f"http://localhost:8457/api/v1/fastq/{fastq_list_row_data.id}")
+                # Assert we have a 200 delete_response
+                assert delete_response.status_code == 200
+
+
+
+@pytest.mark.asyncio
 async def test_add_files_endpoint():
     from fastq_manager_api_tools.models.fastq_list_row import FastqListRowData
     async with httpx.AsyncClient() as client:

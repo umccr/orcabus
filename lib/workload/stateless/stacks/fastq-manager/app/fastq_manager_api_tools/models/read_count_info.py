@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
 # Standard imports
-import json
 from typing import Self
 from typing import TYPE_CHECKING
-
 from pydantic import BaseModel, model_validator, ConfigDict
 
+# Local imports
 from ..utils import to_snake, to_camel
 
 # Custom models for handling patch requests
