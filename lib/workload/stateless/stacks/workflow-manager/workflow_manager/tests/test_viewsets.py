@@ -54,7 +54,8 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         payload = wfl_run.states.get(status='READY').payload
         payload.data = {
             "inputs": {
-                "someUri": "s3://random/prefix/"
+                "someUri": "s3://random/prefix/",
+                "dataset": "BRCA"
             },
             "engineParameters": {
                 "sourceUri": f"s3:/bucket/{wfl_run.portal_run_id}/",
@@ -73,6 +74,14 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "INVALID_CHOICE"})
         self.assertIn(response.status_code, [400], 'Invalid payload expected')
 
-        response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "BRCA"})
+        response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
         self.assertIn(response.status_code, [200], 'Expected a successful response')
         self.assertTrue(wfl_run.portal_run_id not in str(response.content), 'expect old portal_rub_id replaced')
+
+        response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "BRCA"})
+        self.assertIn(response.status_code, [400], 'Rerun duplication with same input error expected')
+
+        response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun",
+                                    data={"dataset": "BRCA", "allow_duplication": True})
+        self.assertIn(response.status_code, [200],
+                      'Rerun with same input allowed when `allow_duplication` is set to True')
