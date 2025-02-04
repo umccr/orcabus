@@ -92,7 +92,6 @@ async def test_query_by_library_id_endpoint():
             )
             response_data = query_response.json()
             assert len(response_data) == 1
-            print(response_data)
             fastq_list_row_data = FastqListRowData(**response_data[0])
             assert isinstance(fastq_list_row_data, FastqListRowData)
         finally:

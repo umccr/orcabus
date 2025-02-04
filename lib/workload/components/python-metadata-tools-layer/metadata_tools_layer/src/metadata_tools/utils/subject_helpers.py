@@ -95,7 +95,7 @@ def list_libraries_in_subject(subject_orcabus_id: str) -> List[LibraryDetail]:
     """
     # Get ID For Subject
     subject = get_subject_from_subject_orcabus_id(subject_orcabus_id)
-    
+
     # Get the subject
     return subject.get("librarySet", [])
 

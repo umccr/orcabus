@@ -243,9 +243,6 @@ class FastqListRowListResponse(BaseModel):
         for row in (r1_s3_list_dict + r2_s3_list_dict):
             update_cache(row['ingestId'], row['uri'])
 
-        print(S3_INGEST_ID_URI_MAP_CACHE)
-        print("FOO BAR FOO")
-
         # Now re-dump the fastq list rows
         return list(map(lambda fastq_list_row_iter_: fastq_list_row_iter_.to_dict(), self.fastq_list_rows))
 
