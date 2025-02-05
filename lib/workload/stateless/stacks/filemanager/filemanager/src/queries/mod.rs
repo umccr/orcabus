@@ -73,6 +73,7 @@ impl Entries {
 
                 if let Some(ref reason) = builder.reason {
                     entry.reason = Set(reason.clone());
+                    entry.is_accessible = Unchanged(Default::default());
                     event_message.reason = reason.clone();
                 }
 
@@ -130,6 +131,9 @@ impl Entries {
             sha256: Set(Some(index.to_string())),
             last_modified_date: date(),
             e_tag: Set(Some(index.to_string())),
+            is_accessible: Set(event == EventType::Created
+                && storage_class != Some(StorageClass::DeepArchive)
+                && storage_class != Some(StorageClass::Glacier)),
             archive_status: Set(if storage_class == Some(StorageClass::IntelligentTiering) {
                 Some(ArchiveStatus::DeepArchiveAccess)
             } else {
@@ -145,7 +149,6 @@ impl Entries {
             deleted_sequencer: Set(None),
             number_reordered: Set(0),
             reason: Set(Reason::Unknown),
-            is_accessible: Unchanged(Default::default()),
         }
     }
 
