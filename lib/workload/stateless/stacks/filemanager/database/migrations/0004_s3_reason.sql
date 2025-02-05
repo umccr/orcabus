@@ -44,6 +44,6 @@ alter table s3_object add column is_accessible bool not null generated always as
     is_current_state and
     storage_class is not null and
     storage_class != 'Glacier' and
-    storage_class != 'DeepArchive' and
+    (storage_class != 'DeepArchive' or reason = 'Restored') and
     (storage_class != 'IntelligentTiering' or archive_status is null)
 ) stored;

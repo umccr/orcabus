@@ -475,6 +475,7 @@ pub(crate) mod tests {
     use std::collections::HashMap;
 
     use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::entities::s3_object::Entity;
     use crate::database::entities::sea_orm_active_enums::{
         ArchiveStatus, EventType, Reason, StorageClass,
     };
@@ -665,7 +666,32 @@ pub(crate) mod tests {
         let result = builder.all().await.unwrap();
         assert_eq!(result, vec![entries[3].clone()]);
 
-        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+        let builder = builder_is_accessible(&client);
+        let result = builder.all().await.unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_is_accessible_restored(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .with_reason(Reason::Restored)
+            .build(&client)
+            .await
+            .unwrap()
+            .s3_objects;
+
+        let builder = builder_is_accessible(&client);
+        let result = builder.all().await.unwrap();
+
+        let mut expected = entries[0].clone();
+        expected.is_accessible = true;
+        assert_eq!(result, vec![expected]);
+    }
+
+    fn builder_is_accessible(client: &Client) -> ListQueryBuilder<DatabaseConnection, Entity> {
+        ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
             .filter_all(
                 S3ObjectsFilter {
                     bucket: vec![Wildcard::new("0".to_string())].into(),
@@ -676,10 +702,7 @@ pub(crate) mod tests {
                 true,
                 true,
             )
-            .unwrap();
-
-        let result = builder.all().await.unwrap();
-        assert!(result.is_empty());
+            .unwrap()
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]

@@ -18,8 +18,7 @@ use crate::uuid::UuidGenerator;
 use chrono::{DateTime, Days};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use sea_orm::Set;
-use sea_orm::TryIntoModel;
+use sea_orm::{Set, TryIntoModel, Unchanged};
 use serde_json::json;
 use strum::EnumCount;
 use uuid::Uuid;
@@ -52,26 +51,32 @@ impl Entries {
             .map(|index| {
                 let uuid = UuidGenerator::generate();
                 let ingest_id = builder.ingest_id.unwrap_or_else(UuidGenerator::generate);
-                (
-                    Self::generate_entry(
-                        index,
-                        (builder.bucket_divisor, builder.key_divisor),
-                        ingest_id,
-                        uuid,
-                        builder.values.get(&index).map(|k| k.to_string()),
-                        builder.prefixes.get(&index).map(|k| k.as_str()),
-                        builder.suffixes.get(&index).map(|k| k.as_str()),
-                    ),
-                    Self::generate_event_message(
-                        index,
-                        (builder.bucket_divisor, builder.key_divisor),
-                        ingest_id,
-                        uuid,
-                        builder.values.get(&index).map(|k| k.to_string()),
-                        builder.prefixes.get(&index).map(|k| k.as_str()),
-                        builder.suffixes.get(&index).map(|k| k.as_str()),
-                    ),
-                )
+
+                let mut entry = Self::generate_entry(
+                    index,
+                    (builder.bucket_divisor, builder.key_divisor),
+                    ingest_id,
+                    uuid,
+                    builder.values.get(&index).map(|k| k.to_string()),
+                    builder.prefixes.get(&index).map(|k| k.as_str()),
+                    builder.suffixes.get(&index).map(|k| k.as_str()),
+                );
+                let mut event_message = Self::generate_event_message(
+                    index,
+                    (builder.bucket_divisor, builder.key_divisor),
+                    ingest_id,
+                    uuid,
+                    builder.values.get(&index).map(|k| k.to_string()),
+                    builder.prefixes.get(&index).map(|k| k.as_str()),
+                    builder.suffixes.get(&index).map(|k| k.as_str()),
+                );
+
+                if let Some(ref reason) = builder.reason {
+                    entry.reason = Set(reason.clone());
+                    event_message.reason = reason.clone();
+                }
+
+                (entry, event_message)
             })
             .collect();
 
@@ -125,9 +130,6 @@ impl Entries {
             sha256: Set(Some(index.to_string())),
             last_modified_date: date(),
             e_tag: Set(Some(index.to_string())),
-            is_accessible: Set(event == EventType::Created
-                && storage_class != Some(StorageClass::DeepArchive)
-                && storage_class != Some(StorageClass::Glacier)),
             archive_status: Set(if storage_class == Some(StorageClass::IntelligentTiering) {
                 Some(ArchiveStatus::DeepArchiveAccess)
             } else {
@@ -143,6 +145,7 @@ impl Entries {
             deleted_sequencer: Set(None),
             number_reordered: Set(0),
             reason: Set(Reason::Unknown),
+            is_accessible: Unchanged(Default::default()),
         }
     }
 
@@ -209,6 +212,7 @@ pub struct EntriesBuilder {
     pub(crate) values: HashMap<usize, String>,
     pub(crate) prefixes: HashMap<usize, String>,
     pub(crate) suffixes: HashMap<usize, String>,
+    pub(crate) reason: Option<Reason>,
 }
 
 impl EntriesBuilder {
@@ -260,6 +264,12 @@ impl EntriesBuilder {
         self
     }
 
+    /// Set the reason for the event
+    pub fn with_reason(mut self, reason: Reason) -> Self {
+        self.reason = Some(reason);
+        self
+    }
+
     /// Build the entries and initialize the database.
     pub async fn build(self, client: &Client) -> Result<Entries> {
         let mut entries = Entries::initialize_database(client, self).await?;
@@ -282,6 +292,7 @@ impl Default for EntriesBuilder {
             values: Default::default(),
             prefixes: Default::default(),
             suffixes: Default::default(),
+            reason: None,
         }
     }
 }
