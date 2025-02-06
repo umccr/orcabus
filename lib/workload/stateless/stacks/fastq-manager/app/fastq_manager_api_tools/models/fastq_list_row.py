@@ -216,6 +216,9 @@ class FastqListRowListResponse(BaseModel):
     fastq_list_rows: List[FastqListRowData]
 
     def model_dump(self, **kwargs) -> List[FastqListRowResponse]:
+        if len(self.fastq_list_rows) == 0:
+            return []
+
         # Collect the s3 ingest ids for the fastq list rows
         fastqs_with_readsets = list(filter(
             lambda fastq_list_row_iter_: fastq_list_row_iter_.read_set is not None,
