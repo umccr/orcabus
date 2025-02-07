@@ -1,6 +1,7 @@
 //! Handles parsing raw S3 event messages and converting them for the database.
 //!
 
+use aws_sdk_s3::types::ArchiveStatus as AwsArchiveStatus;
 use aws_sdk_s3::types::StorageClass as AwsStorageClass;
 use chrono::{DateTime, Utc};
 use itertools::{izip, Itertools};
@@ -10,10 +11,12 @@ use uuid::Uuid;
 
 use message::EventMessage;
 
+use crate::database::entities::sea_orm_active_enums::{ArchiveStatus, Reason};
 use crate::events::aws::message::{default_version_id, EventType};
 use crate::events::aws::EventType::{Created, Deleted, Other};
 use crate::uuid::UuidGenerator;
 use sea_orm::prelude::Json;
+use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use strum::{EnumCount, FromRepr};
 
 pub mod collecter;
@@ -68,6 +71,46 @@ impl StorageClass {
     }
 }
 
+impl Default for Reason {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
+impl ArchiveStatus {
+    pub fn from_aws(archive_status: AwsArchiveStatus) -> Option<Self> {
+        match archive_status {
+            AwsArchiveStatus::ArchiveAccess => Some(Self::ArchiveAccess),
+            AwsArchiveStatus::DeepArchiveAccess => Some(Self::DeepArchiveAccess),
+            _ => None,
+        }
+    }
+}
+
+impl sqlx::Type<sqlx::Postgres> for ArchiveStatus {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("archive_status")
+    }
+}
+
+impl PgHasArrayType for ArchiveStatus {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::array_of("archive_status")
+    }
+}
+
+impl sqlx::Type<sqlx::Postgres> for Reason {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("reason")
+    }
+}
+
+impl PgHasArrayType for Reason {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::array_of("reason")
+    }
+}
+
 /// AWS S3 events with fields transposed. Transposed events are used because this matches the
 /// unnest structure when inserting events into the database. This is convenient to do here so that
 /// the database structs do not have to perform this conversion.
@@ -86,6 +129,8 @@ pub struct TransposedS3EventMessages {
     pub last_modified_dates: Vec<Option<DateTime<Utc>>>,
     pub event_types: Vec<EventType>,
     pub is_delete_markers: Vec<bool>,
+    pub reasons: Vec<Reason>,
+    pub archive_statuses: Vec<Option<ArchiveStatus>>,
     pub ingest_ids: Vec<Option<Uuid>>,
     pub is_current_state: Vec<bool>,
     pub attributes: Vec<Option<Json>>,
@@ -93,7 +138,6 @@ pub struct TransposedS3EventMessages {
 
 impl TransposedS3EventMessages {
     /// Create a new transposed S3 event messages vector with the given capacity.
-    /// TODO: There was a S3 messaging spec about how long those fields are supposed to be?
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             s3_object_ids: Vec::with_capacity(capacity),
@@ -109,6 +153,8 @@ impl TransposedS3EventMessages {
             last_modified_dates: Vec::with_capacity(capacity),
             event_types: Vec::with_capacity(capacity),
             is_delete_markers: Vec::with_capacity(capacity),
+            reasons: Vec::with_capacity(capacity),
+            archive_statuses: Vec::with_capacity(capacity),
             ingest_ids: Vec::with_capacity(capacity),
             is_current_state: Vec::with_capacity(capacity),
             attributes: Vec::with_capacity(capacity),
@@ -131,6 +177,8 @@ impl TransposedS3EventMessages {
             last_modified_date,
             event_type,
             is_delete_marker,
+            reason,
+            archive_status,
             ingest_id,
             is_current_state,
             attributes,
@@ -150,6 +198,8 @@ impl TransposedS3EventMessages {
         self.last_modified_dates.push(last_modified_date);
         self.event_types.push(event_type);
         self.is_delete_markers.push(is_delete_marker);
+        self.reasons.push(reason);
+        self.archive_statuses.push(archive_status);
         self.ingest_ids.push(ingest_id);
         self.is_current_state.push(is_current_state);
         self.attributes.push(attributes);
@@ -190,6 +240,8 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
             messages.last_modified_dates,
             messages.event_types,
             messages.is_delete_markers,
+            messages.reasons,
+            messages.archive_statuses,
             messages.ingest_ids,
             messages.is_current_state,
             messages.attributes,
@@ -209,6 +261,8 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                 last_modified_date,
                 event_type,
                 is_delete_marker,
+                reason,
+                archive_status,
                 ingest_id,
                 is_current_state,
                 attributes,
@@ -227,6 +281,8 @@ impl From<TransposedS3EventMessages> for FlatS3EventMessages {
                     event_time,
                     event_type,
                     is_delete_marker,
+                    reason,
+                    archive_status,
                     ingest_id,
                     is_current_state,
                     attributes,
@@ -462,6 +518,8 @@ pub struct FlatS3EventMessage {
     pub event_time: Option<DateTime<Utc>>,
     pub event_type: EventType,
     pub is_delete_marker: bool,
+    pub reason: Reason,
+    pub archive_status: Option<ArchiveStatus>,
     pub ingest_id: Option<Uuid>,
     pub is_current_state: bool,
     pub attributes: Option<Json>,
@@ -522,6 +580,20 @@ impl FlatS3EventMessage {
         delete_marker
             .into_iter()
             .for_each(|is_delete_marker| self.is_delete_marker = is_delete_marker);
+        self
+    }
+
+    /// Update the reason if not None.
+    pub fn update_reason(mut self, reason: Option<Reason>) -> Self {
+        reason.into_iter().for_each(|reason| self.reason = reason);
+        self
+    }
+
+    /// Update the archive status if not None.
+    pub fn update_archive_status(mut self, archive_status: Option<ArchiveStatus>) -> Self {
+        archive_status
+            .into_iter()
+            .for_each(|archive_status| self.archive_status = Some(archive_status));
         self
     }
 
@@ -597,6 +669,18 @@ impl FlatS3EventMessage {
         self
     }
 
+    /// Set the reason.
+    pub fn with_reason(mut self, reason: Reason) -> Self {
+        self.reason = reason;
+        self
+    }
+
+    /// Set the archive status.
+    pub fn with_archive_status(mut self, archive_status: Option<ArchiveStatus>) -> Self {
+        self.archive_status = archive_status;
+        self
+    }
+
     /// Set the move id.
     pub fn with_ingest_id(mut self, ingest_id: Option<Uuid>) -> Self {
         self.ingest_id = ingest_id;
@@ -636,13 +720,13 @@ impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use chrono::{DateTime, Utc};
-    use serde_json::{json, Value};
-
-    use crate::events::aws::message::Message;
+    use crate::database::entities::sea_orm_active_enums::Reason;
+    use crate::events::aws::message::{Message, Record};
     use crate::events::aws::{
         EventType, FlatS3EventMessage, FlatS3EventMessages, TransposedS3EventMessages,
     };
+    use chrono::{DateTime, Utc};
+    use serde_json::{json, Value};
 
     pub(crate) const EXPECTED_SEQUENCER_CREATED_ZERO: &str = "0055AED6DCD90281E3"; // pragma: allowlist secret
     pub(crate) const EXPECTED_SEQUENCER_CREATED_ONE: &str = "0055AED6DCD90281E4"; // pragma: allowlist secret
@@ -860,6 +944,131 @@ pub(crate) mod tests {
             "key",
             EXPECTED_SEQUENCER_DELETED_TWO,
         );
+    }
+
+    #[test]
+    fn test_events_reason() {
+        assert_eq!(
+            format_reason_sqs("ObjectCreated:Put").reasons,
+            vec![Reason::CreatedPut]
+        );
+        assert_eq!(
+            format_reason_event_bridge("Object Created", "PutObject").reasons,
+            vec![Reason::CreatedPut]
+        );
+
+        assert_eq!(
+            format_reason_sqs("ObjectCreated:Post").reasons,
+            vec![Reason::CreatedPost]
+        );
+        assert_eq!(
+            format_reason_event_bridge("Object Created", "PostObject").reasons,
+            vec![Reason::CreatedPost]
+        );
+
+        assert_eq!(
+            format_reason_sqs("ObjectCreated:Copy").reasons,
+            vec![Reason::CreatedCopy]
+        );
+        assert_eq!(
+            format_reason_event_bridge("Object Created", "CopyObject").reasons,
+            vec![Reason::CreatedCopy]
+        );
+
+        assert_eq!(
+            format_reason_sqs("ObjectCreated:CompleteMultipartUpload").reasons,
+            vec![Reason::CreatedCompleteMultipartUpload]
+        );
+        assert_eq!(
+            format_reason_event_bridge("Object Created", "CompleteMultipartUpload").reasons,
+            vec![Reason::CreatedCompleteMultipartUpload]
+        );
+
+        assert_eq!(
+            format_reason_sqs("ObjectRemoved:Delete").reasons,
+            vec![Reason::Deleted]
+        );
+        assert_eq!(
+            format_reason_sqs("ObjectRemoved:DeleteMarkerCreated").reasons,
+            vec![Reason::Deleted]
+        );
+        assert_eq!(
+            format_reason_event_bridge("Object Deleted", "DeleteObject").reasons,
+            vec![Reason::Deleted]
+        );
+
+        assert_eq!(
+            format_reason_sqs("LifecycleExpiration:Delete").reasons,
+            vec![Reason::DeletedLifecycle]
+        );
+        assert_eq!(
+            format_reason_sqs("LifecycleExpiration:DeleteMarkerCreated").reasons,
+            vec![Reason::DeletedLifecycle]
+        );
+        assert_eq!(
+            format_reason_event_bridge("Object Deleted", "Lifecycle Expiration").reasons,
+            vec![Reason::DeletedLifecycle]
+        );
+
+        assert_eq!(
+            format_reason_sqs("ObjectRestore:Completed").reasons,
+            vec![Reason::Restored]
+        );
+        assert_eq!(
+            format_reason_event_bridge("Object Restore Completed", "").reasons,
+            vec![Reason::Restored]
+        );
+
+        assert_eq!(
+            format_reason_sqs("ObjectRestore:Delete").reasons,
+            vec![Reason::RestoreExpired]
+        );
+        assert_eq!(
+            format_reason_event_bridge("Object Restore Expired", "").reasons,
+            vec![Reason::RestoreExpired]
+        );
+
+        assert_eq!(
+            format_reason_sqs("LifecycleTransition").reasons,
+            vec![Reason::StorageClassChanged]
+        );
+        assert_eq!(
+            format_reason_event_bridge("Object Storage Class Changed", "").reasons,
+            vec![Reason::StorageClassChanged]
+        );
+        assert_eq!(
+            format_reason_sqs("IntelligentTiering").reasons,
+            vec![Reason::StorageClassChanged]
+        );
+        assert_eq!(
+            format_reason_event_bridge("Object Access Tier Changed", "").reasons,
+            vec![Reason::StorageClassChanged]
+        );
+    }
+
+    fn format_reason_sqs(reason: &str) -> TransposedS3EventMessages {
+        let mut object = expected_sqs_record(false);
+        object["eventName"] = json!(reason);
+
+        expected_events(
+            json!({
+               "Records": [
+                    object
+               ]
+            })
+            .to_string(),
+        )
+    }
+
+    fn format_reason_event_bridge(detail: &str, reason: &str) -> TransposedS3EventMessages {
+        let mut object = expected_event_bridge_record(false);
+        object["detail-type"] = json!(detail);
+        object["detail"]["reason"] = json!(reason);
+
+        let events: Record = serde_json::from_value(object).unwrap();
+        let flat_messages = FlatS3EventMessages::from(events);
+
+        flat_messages.into()
     }
 
     pub(crate) fn expected_flat_events(records: String) -> FlatS3EventMessages {

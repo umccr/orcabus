@@ -167,10 +167,21 @@ where
             .add_option(Self::join(filter.storage_class, |v| {
                 Ok(s3_object::Column::StorageClass.eq(v))
             })?)
+            .add_option(Self::join(filter.archive_status, |v| {
+                Ok(s3_object::Column::ArchiveStatus.eq(v))
+            })?)
+            .add_option(Self::join(filter.reason, |v| {
+                Ok(s3_object::Column::Reason.eq(v))
+            })?)
             .add_option(
                 filter
                     .is_delete_marker
                     .map(|v| s3_object::Column::IsDeleteMarker.eq(v)),
+            )
+            .add_option(
+                filter
+                    .is_accessible
+                    .map(|v| s3_object::Column::IsAccessible.eq(v)),
             )
             .add_option(Self::join(filter.ingest_id, |v| {
                 Ok(s3_object::Column::IngestId.eq(v))
@@ -464,7 +475,10 @@ pub(crate) mod tests {
     use std::collections::HashMap;
 
     use crate::database::aws::migration::tests::MIGRATOR;
-    use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
+    use crate::database::entities::s3_object::Entity;
+    use crate::database::entities::sea_orm_active_enums::{
+        ArchiveStatus, EventType, Reason, StorageClass,
+    };
     use crate::database::Client;
     use crate::queries::update::tests::{change_many, entries_many, null_attributes};
     use crate::queries::EntriesBuilder;
@@ -606,6 +620,89 @@ pub(crate) mod tests {
         let result = builder.all().await.unwrap();
 
         assert_eq!(result, entries);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_is_accessible(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await
+            .unwrap()
+            .s3_objects;
+
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+            .filter_all(
+                S3ObjectsFilter {
+                    bucket: vec![Wildcard::new("0".to_string())].into(),
+                    key: vec![Wildcard::new("0".to_string())].into(),
+                    is_accessible: Some(false),
+                    reason: vec![Reason::Unknown].into(),
+                    ..Default::default()
+                },
+                true,
+                true,
+            )
+            .unwrap();
+
+        let result = builder.all().await.unwrap();
+        assert_eq!(result, vec![entries[0].clone()]);
+
+        let builder = ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+            .filter_all(
+                S3ObjectsFilter {
+                    bucket: vec![Wildcard::new("1".to_string())].into(),
+                    key: vec![Wildcard::new("3".to_string())].into(),
+                    is_accessible: Some(false),
+                    archive_status: vec![ArchiveStatus::DeepArchiveAccess].into(),
+                    ..Default::default()
+                },
+                true,
+                false,
+            )
+            .unwrap();
+
+        let result = builder.all().await.unwrap();
+        assert_eq!(result, vec![entries[3].clone()]);
+
+        let builder = builder_is_accessible(&client);
+        let result = builder.all().await.unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_s3_is_accessible_restored(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .with_reason(Reason::Restored)
+            .build(&client)
+            .await
+            .unwrap()
+            .s3_objects;
+
+        let builder = builder_is_accessible(&client);
+        let result = builder.all().await.unwrap();
+
+        let mut expected = entries[0].clone();
+        expected.is_accessible = true;
+        assert_eq!(result, vec![expected]);
+    }
+
+    fn builder_is_accessible(client: &Client) -> ListQueryBuilder<DatabaseConnection, Entity> {
+        ListQueryBuilder::<_, s3_object::Entity>::new(client.connection_ref())
+            .filter_all(
+                S3ObjectsFilter {
+                    bucket: vec![Wildcard::new("0".to_string())].into(),
+                    key: vec![Wildcard::new("0".to_string())].into(),
+                    is_accessible: Some(true),
+                    ..Default::default()
+                },
+                true,
+                true,
+            )
+            .unwrap()
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]

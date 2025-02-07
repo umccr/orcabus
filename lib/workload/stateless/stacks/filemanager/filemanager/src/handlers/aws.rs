@@ -216,6 +216,7 @@ pub(crate) mod tests {
         assert_row, expected_message, fetch_results, remove_version_ids, test_events, test_ingester,
     };
     use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::entities::sea_orm_active_enums::{ArchiveStatus, Reason};
     use crate::events::aws::collecter::tests::{
         set_s3_client_expectations, set_sqs_client_expectations,
     };
@@ -271,7 +272,8 @@ pub(crate) mod tests {
         let s3_object_results = fetch_results(&ingester).await;
 
         assert_eq!(s3_object_results.len(), 2);
-        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created);
+        let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created)
+            .with_archive_status(Some(ArchiveStatus::DeepArchiveAccess));
         assert_row(
             &s3_object_results[1],
             message,
@@ -324,9 +326,14 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_inventory_ingestion_reorder_created(pool: PgPool) {
+        let mut events = remove_version_ids(test_events(Some(Created)));
+        events
+            .reasons
+            .iter_mut()
+            .for_each(|reason| *reason = Reason::Crawl);
+
         let (s3_object_results, message) =
-            test_inventory_ingestion_reorder(pool, remove_version_ids(test_events(Some(Created))))
-                .await;
+            test_inventory_ingestion_reorder(pool, remove_version_ids(events)).await;
         assert_row(
             &s3_object_results[3],
             message.clone().with_is_current_state(false),
@@ -345,6 +352,11 @@ pub(crate) mod tests {
     async fn test_inventory_ingestion_reorder_delete_event(pool: PgPool) {
         let mut events = remove_version_ids(test_events(Some(Created)));
         events.sequencers[0] = Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string());
+        events
+            .reasons
+            .iter_mut()
+            .for_each(|reason| *reason = Reason::Crawl);
+
         let (s3_object_results, message) = test_inventory_ingestion_reorder(pool, events).await;
         assert_row(
             &s3_object_results[3],
@@ -381,7 +393,8 @@ pub(crate) mod tests {
 
         assert_eq!(s3_object_results.len(), 2);
         let message = expected_message(Some(0), EXPECTED_VERSION_ID.to_string(), false, Created)
-            .with_is_current_state(false);
+            .with_is_current_state(false)
+            .with_archive_status(Some(ArchiveStatus::DeepArchiveAccess));
         assert_row(
             &s3_object_results[1],
             message,
@@ -421,6 +434,10 @@ pub(crate) mod tests {
         // Ingested a deleted event on the same bucket, key and version_id should automatically binds
         // to the inventory record.
         let mut events = remove_version_ids(test_events(Some(Deleted)));
+        events
+            .reasons
+            .iter_mut()
+            .for_each(|reason| *reason = Reason::Crawl);
 
         events.keys = vec!["inventory_test/key1".to_string()];
         let ingester = test_ingester(pool.clone());
@@ -469,7 +486,8 @@ pub(crate) mod tests {
                 .with_e_tag(Some(EXPECTED_QUOTED_E_TAG.to_string()))
                 .with_last_modified_date(Some(DateTime::default()))
                 .with_sha256(Some(EXPECTED_SHA256.to_string()))
-                .with_is_current_state(false),
+                .with_is_current_state(false)
+                .with_reason(Reason::Crawl),
         )
     }
 
@@ -531,7 +549,8 @@ pub(crate) mod tests {
             .with_version_id(default_version_id())
             .with_last_modified_date(Some(last_modified.parse().unwrap()))
             .with_e_tag(Some(e_tag.to_string()))
-            .with_is_current_state(is_current_state);
+            .with_is_current_state(is_current_state)
+            .with_reason(Reason::Crawl);
 
         assert_row(row, message, Some("".to_string()), None);
     }

@@ -7,7 +7,9 @@ use std::ops::Add;
 use crate::database::aws::ingester::Ingester;
 use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
 use crate::database::entities::s3_object::Model as S3Object;
-use crate::database::entities::sea_orm_active_enums::{EventType, StorageClass};
+use crate::database::entities::sea_orm_active_enums::{
+    ArchiveStatus, EventType, Reason, StorageClass,
+};
 use crate::database::Client;
 use crate::error::Result;
 use crate::events::aws;
@@ -16,8 +18,7 @@ use crate::uuid::UuidGenerator;
 use chrono::{DateTime, Days};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use sea_orm::Set;
-use sea_orm::TryIntoModel;
+use sea_orm::{Set, TryIntoModel, Unchanged};
 use serde_json::json;
 use strum::EnumCount;
 use uuid::Uuid;
@@ -50,26 +51,33 @@ impl Entries {
             .map(|index| {
                 let uuid = UuidGenerator::generate();
                 let ingest_id = builder.ingest_id.unwrap_or_else(UuidGenerator::generate);
-                (
-                    Self::generate_entry(
-                        index,
-                        (builder.bucket_divisor, builder.key_divisor),
-                        ingest_id,
-                        uuid,
-                        builder.values.get(&index).map(|k| k.to_string()),
-                        builder.prefixes.get(&index).map(|k| k.as_str()),
-                        builder.suffixes.get(&index).map(|k| k.as_str()),
-                    ),
-                    Self::generate_event_message(
-                        index,
-                        (builder.bucket_divisor, builder.key_divisor),
-                        ingest_id,
-                        uuid,
-                        builder.values.get(&index).map(|k| k.to_string()),
-                        builder.prefixes.get(&index).map(|k| k.as_str()),
-                        builder.suffixes.get(&index).map(|k| k.as_str()),
-                    ),
-                )
+
+                let mut entry = Self::generate_entry(
+                    index,
+                    (builder.bucket_divisor, builder.key_divisor),
+                    ingest_id,
+                    uuid,
+                    builder.values.get(&index).map(|k| k.to_string()),
+                    builder.prefixes.get(&index).map(|k| k.as_str()),
+                    builder.suffixes.get(&index).map(|k| k.as_str()),
+                );
+                let mut event_message = Self::generate_event_message(
+                    index,
+                    (builder.bucket_divisor, builder.key_divisor),
+                    ingest_id,
+                    uuid,
+                    builder.values.get(&index).map(|k| k.to_string()),
+                    builder.prefixes.get(&index).map(|k| k.as_str()),
+                    builder.suffixes.get(&index).map(|k| k.as_str()),
+                );
+
+                if let Some(ref reason) = builder.reason {
+                    entry.reason = Set(reason.clone());
+                    entry.is_accessible = Unchanged(Default::default());
+                    event_message.reason = reason.clone();
+                }
+
+                (entry, event_message)
             })
             .collect();
 
@@ -98,8 +106,8 @@ impl Entries {
         prefix: Option<&str>,
         suffix: Option<&str>,
     ) -> ActiveS3Object {
-        let event = EventType::from_repr((index % (EventType::COUNT - 1)) as u8)
-            .unwrap_or(EventType::Created);
+        let event =
+            EventType::from_repr(index % (EventType::COUNT - 1)).unwrap_or(EventType::Created);
         let date = || Set(Some(DateTime::default().add(Days::new(index as u64))));
         let attributes = Some(json!({
             "attributeId": format!("{}", index),
@@ -108,6 +116,7 @@ impl Entries {
             }
         }));
 
+        let storage_class = StorageClass::from_repr(index % StorageClass::COUNT);
         ActiveS3Object {
             s3_object_id: Set(uuid),
             ingest_id: Set(Some(ingest_id)),
@@ -122,7 +131,15 @@ impl Entries {
             sha256: Set(Some(index.to_string())),
             last_modified_date: date(),
             e_tag: Set(Some(index.to_string())),
-            storage_class: Set(StorageClass::from_repr((index % StorageClass::COUNT) as u8)),
+            is_accessible: Set(event == EventType::Created
+                && storage_class != Some(StorageClass::DeepArchive)
+                && storage_class != Some(StorageClass::Glacier)),
+            archive_status: Set(if storage_class == Some(StorageClass::IntelligentTiering) {
+                Some(ArchiveStatus::DeepArchiveAccess)
+            } else {
+                None
+            }),
+            storage_class: Set(storage_class),
             sequencer: Set(Some(index.to_string())),
             is_delete_marker: Set(false),
             is_current_state: Set(event == EventType::Created),
@@ -131,6 +148,7 @@ impl Entries {
             deleted_date: Set(None),
             deleted_sequencer: Set(None),
             number_reordered: Set(0),
+            reason: Set(Reason::Unknown),
         }
     }
 
@@ -154,6 +172,7 @@ impl Entries {
             }
         }));
 
+        let storage_class = aws::StorageClass::from_repr(index % StorageClass::COUNT);
         FlatS3EventMessage {
             s3_object_id: uuid,
             sequencer: Some(index.to_string()),
@@ -165,13 +184,19 @@ impl Entries {
             size: Some(index as i64),
             e_tag: Some(index.to_string()),
             sha256: Some(index.to_string()),
-            storage_class: aws::StorageClass::from_repr(index % StorageClass::COUNT),
+            archive_status: if storage_class == Some(aws::StorageClass::IntelligentTiering) {
+                Some(ArchiveStatus::DeepArchiveAccess)
+            } else {
+                None
+            },
+            storage_class,
             last_modified_date: date(),
             event_time: date(),
             is_current_state: event == message::EventType::Created,
             event_type: event,
             is_delete_marker: false,
             ingest_id: Some(ingest_id),
+            reason: Reason::Unknown,
             attributes,
             number_duplicate_events: 0,
             number_reordered: 0,
@@ -190,6 +215,7 @@ pub struct EntriesBuilder {
     pub(crate) values: HashMap<usize, String>,
     pub(crate) prefixes: HashMap<usize, String>,
     pub(crate) suffixes: HashMap<usize, String>,
+    pub(crate) reason: Option<Reason>,
 }
 
 impl EntriesBuilder {
@@ -241,6 +267,12 @@ impl EntriesBuilder {
         self
     }
 
+    /// Set the reason for the event
+    pub fn with_reason(mut self, reason: Reason) -> Self {
+        self.reason = Some(reason);
+        self
+    }
+
     /// Build the entries and initialize the database.
     pub async fn build(self, client: &Client) -> Result<Entries> {
         let mut entries = Entries::initialize_database(client, self).await?;
@@ -263,6 +295,7 @@ impl Default for EntriesBuilder {
             values: Default::default(),
             prefixes: Default::default(),
             suffixes: Default::default(),
+            reason: None,
         }
     }
 }

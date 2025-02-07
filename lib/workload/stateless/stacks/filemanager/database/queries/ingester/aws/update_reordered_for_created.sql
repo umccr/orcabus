@@ -18,9 +18,11 @@ with input as (
         $10::text[],
         $11::text[],
         $12::boolean[],
-        $13::event_type[],
-        $14::uuid[],
-        $15::jsonb[]
+        $13::reason[],
+        $14::archive_status[],
+        $15::event_type[],
+        $16::uuid[],
+        $17::jsonb[]
     ) as input (
         s3_object_id,
         bucket,
@@ -34,6 +36,8 @@ with input as (
         version_id,
         created_sequencer,
         is_delete_marker,
+        reason,
+        archive_status,
         event_type,
         ingest_id,
         attributes
@@ -55,6 +59,8 @@ current_objects as (
         input.e_tag as input_e_tag,
         input.storage_class as input_storage_class,
         input.is_delete_marker as input_is_delete_marker,
+        input.reason as input_reason,
+        input.archive_status as input_archive_status,
         input.event_type as input_event_type,
         input.ingest_id as input_ingest_id
     from s3_object
@@ -103,6 +109,8 @@ update as (
         last_modified_date = objects_to_update.input_last_modified_date,
         e_tag = objects_to_update.input_e_tag,
         is_delete_marker = objects_to_update.input_is_delete_marker,
+        reason = objects_to_update.input_reason,
+        archive_status = objects_to_update.input_archive_status,
         storage_class = objects_to_update.input_storage_class,
         event_type = objects_to_update.input_event_type,
         ingest_id = objects_to_update.input_ingest_id,
@@ -133,6 +141,8 @@ select
     number_duplicate_events,
     size,
     is_delete_marker,
+    reason,
+    archive_status,
     ingest_id,
     is_current_state,
     attributes,

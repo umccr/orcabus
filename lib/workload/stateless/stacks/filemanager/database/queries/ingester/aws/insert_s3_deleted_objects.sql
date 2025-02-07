@@ -13,6 +13,8 @@ insert into s3_object (
     deleted_sequencer,
     number_reordered,
     is_delete_marker,
+    reason,
+    archive_status,
     event_type
 )
 values (
@@ -29,7 +31,9 @@ values (
     unnest($11::text[]),
     unnest($12::bigint[]),
     unnest($13::boolean[]),
-    unnest($14::event_type[])
+    unnest($14::reason[]),
+    unnest($15::archive_status[]),
+    unnest($16::event_type[])
 ) on conflict on constraint deleted_sequencer_unique do update
     set number_duplicate_events = s3_object.number_duplicate_events + 1
     returning s3_object_id, number_duplicate_events;

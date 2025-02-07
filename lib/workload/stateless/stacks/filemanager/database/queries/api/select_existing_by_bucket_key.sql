@@ -33,6 +33,8 @@ select
     number_duplicate_events,
     size,
     is_delete_marker,
+    reason,
+    archive_status,
     event_type,
     ingest_id,
     attributes,

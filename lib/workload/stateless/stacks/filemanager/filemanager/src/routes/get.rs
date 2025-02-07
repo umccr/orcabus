@@ -12,7 +12,6 @@ use uuid::Uuid;
 
 use crate::database::entities::s3_object;
 use crate::database::entities::s3_object::Model as S3;
-use crate::database::entities::sea_orm_active_enums::EventType;
 use crate::error::Error::ExpectedSomeValue;
 use crate::error::Result;
 use crate::queries::get::GetQueryBuilder;
@@ -57,8 +56,8 @@ pub async fn get_s3_by_id(state: State<AppState>, id: Path<Uuid>) -> Result<Json
 }
 
 /// Generate AWS presigned URLs for a single S3 object using its `s3_object_id`.
-/// This route will not return an object if it has been deleted from the database, or its size
-/// is greater than `FILEMANAGER_API_PRESIGN_LIMIT`.
+/// This route will not return an object if it is not a current record, or it's storage class is
+/// not accessible because it is archived, or its size is greater than `FILEMANAGER_API_PRESIGN_LIMIT`.
 #[utoipa::path(
     get,
     path = "/s3/presign/{id}",
@@ -80,8 +79,9 @@ pub async fn presign_s3_by_id(
 
     let Json(response) = get_s3_from_connection(&txn, id).await?;
 
-    // If this is a deleted object, then it can never be current.
-    if response.event_type == EventType::Deleted {
+    // If this object is not current or it's not accessible because it's archived, return an
+    // empty response.
+    if !response.is_current_state || !response.is_accessible {
         txn.commit().await?;
         return Ok(Json(None));
     }
@@ -186,7 +186,7 @@ mod tests {
         let client = mock_client!(
             aws_sdk_s3,
             RuleMode::Sequential,
-            &[&mock_get_object("0", "0", b""),]
+            &[&mock_get_object("2", "1", b""),]
         );
 
         let state = AppState::from_pool(pool)
@@ -200,15 +200,23 @@ mod tests {
             .unwrap();
 
         let result = response_from_get::<Option<Url>>(
-            state,
-            &format!("/s3/presign/{}", entries.s3_objects[0].s3_object_id),
+            state.clone(),
+            &format!("/s3/presign/{}", entries.s3_objects[2].s3_object_id),
         )
         .await
         .unwrap();
 
         let query = result.query().unwrap();
         assert_presigned_params(query, "inline");
-        assert_eq!(result.path(), "/0/0");
+        assert_eq!(result.path(), "/1/2");
+
+        // Not accessible because of storage class.
+        let result = response_from_get::<Option<Url>>(
+            state,
+            &format!("/s3/presign/{}", entries.s3_objects[0].s3_object_id),
+        )
+        .await;
+        assert!(result.is_none());
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -216,7 +224,7 @@ mod tests {
         let client = mock_client!(
             aws_sdk_s3,
             RuleMode::Sequential,
-            &[&mock_get_object("0", "0", b""),]
+            &[&mock_get_object("2", "1", b""),]
         );
 
         let state = AppState::from_pool(pool)
@@ -233,15 +241,15 @@ mod tests {
             state,
             &format!(
                 "/s3/presign/{}?responseContentDisposition=attachment",
-                entries.s3_objects[0].s3_object_id
+                entries.s3_objects[2].s3_object_id
             ),
         )
         .await
         .unwrap();
 
         let query = result.query().unwrap();
-        assert_presigned_params(query, "attachment%3B%20filename%3D%220%22");
-        assert_eq!(result.path(), "/0/0");
+        assert_presigned_params(query, "attachment%3B%20filename%3D%222%22");
+        assert_eq!(result.path(), "/1/2");
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]

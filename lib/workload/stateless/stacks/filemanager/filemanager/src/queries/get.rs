@@ -43,7 +43,7 @@ mod tests {
     use super::*;
 
     #[sqlx::test(migrator = "MIGRATOR")]
-    async fn test_list_s3(pool: PgPool) {
+    async fn test_get_s3(pool: PgPool) {
         let client = Client::from_pool(pool);
         let entries = EntriesBuilder::default()
             .build(&client)

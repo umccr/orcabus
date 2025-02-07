@@ -26,6 +26,7 @@ use std::result;
 
 #[double]
 use crate::clients::aws::s3::Client;
+use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::error::Error::S3Error;
 use crate::error::{Error, Result};
 use crate::events::aws::message::{default_version_id, quote_e_tag, EventType::Created};
@@ -528,6 +529,8 @@ impl From<Record> for FlatS3EventMessage {
             // Anything in an inventory report is always a created event.
             event_type: Created,
             is_delete_marker: is_delete_marker.unwrap_or_default(),
+            reason: Reason::Crawl,
+            archive_status: None,
             // This will also represent the current state since it is a created event.
             is_current_state: true,
             ingest_id: None,
