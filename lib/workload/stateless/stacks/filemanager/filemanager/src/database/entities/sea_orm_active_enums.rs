@@ -38,6 +38,30 @@ pub enum ArchiveStatus {
     sqlx::Encode,
     utoipa::ToSchema,
 )]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "crawl_status")]
+pub enum CrawlStatus {
+    #[sea_orm(string_value = "Completed")]
+    Completed,
+    #[sea_orm(string_value = "Failed")]
+    Failed,
+    #[sea_orm(string_value = "InProgress")]
+    InProgress,
+}
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    EnumIter,
+    DeriveActiveEnum,
+    Serialize,
+    Deserialize,
+    strum::FromRepr,
+    strum::EnumCount,
+    sqlx::Decode,
+    sqlx::Encode,
+    utoipa::ToSchema,
+)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "event_type")]
 pub enum EventType {
     #[sea_orm(string_value = "Created")]

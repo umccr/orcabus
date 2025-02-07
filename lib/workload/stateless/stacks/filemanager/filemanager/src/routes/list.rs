@@ -56,7 +56,7 @@ pub struct WildcardParams {
     /// Setting this true means that an SQL `like` statement is used, and false
     /// means `ilike` is used.
     #[serde(default = "default_case_sensitivity")]
-    #[param(nullable, default = true)]
+    #[param(nullable = false, required = false, default = true)]
     pub(crate) case_sensitive: bool,
 }
 
@@ -96,7 +96,7 @@ pub struct ListS3Params {
     /// in the following order: `Created` -> `Deleted` -> `Created`. Then setting
     /// `?current_state=true` would return only the last `Created` event.
     #[serde(default = "default_case_sensitivity")]
-    #[param(nullable, default = true)]
+    #[param(nullable = false, required = false, default = true)]
     current_state: bool,
 }
 
@@ -960,13 +960,13 @@ pub(crate) mod tests {
             state.database_client(),
             &entries,
             &[0, 1],
-            Some(json!({"attributeId": Uuid::default()})),
+            Some(json!({ "attributeId": Uuid::default() })),
         )
         .await;
         entries_many(
             &mut entries,
             &[0, 1],
-            json!({"attributeId": Uuid::default()}),
+            json!({ "attributeId": Uuid::default() }),
         );
 
         let s3_objects: ListResponse<S3> = response_from_get(

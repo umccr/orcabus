@@ -1050,14 +1050,7 @@ pub(crate) mod tests {
         let mut object = expected_sqs_record(false);
         object["eventName"] = json!(reason);
 
-        expected_events(
-            json!({
-               "Records": [
-                    object
-               ]
-            })
-            .to_string(),
-        )
+        expected_events(json!({ "Records": [object] }).to_string())
     }
 
     fn format_reason_event_bridge(detail: &str, reason: &str) -> TransposedS3EventMessages {
