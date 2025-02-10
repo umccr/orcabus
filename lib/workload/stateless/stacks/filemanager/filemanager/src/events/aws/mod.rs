@@ -20,6 +20,7 @@ use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use strum::{EnumCount, FromRepr};
 
 pub mod collecter;
+pub mod crawl;
 pub mod inventory;
 pub mod message;
 
@@ -718,6 +719,12 @@ impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
     }
 }
 
+/// The sequencer value for an inventory event. This is the lowest possible sequencer value
+/// so that any deleted event can bind to the inventory or crawl records.
+pub fn empty_sequencer() -> String {
+    String::new()
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::database::entities::sea_orm_active_enums::Reason;
@@ -869,7 +876,27 @@ pub(crate) mod tests {
         is_delete_marker: bool,
         is_current_state: bool,
     ) {
-        assert_eq!(event.event_time, Some(DateTime::<Utc>::default()));
+        assert_eq!(event.event_time, Some(Default::default()));
+        assert_flat_without_time(
+            event,
+            event_type,
+            sequencer,
+            size,
+            version_id,
+            is_delete_marker,
+            is_current_state,
+        );
+    }
+
+    pub(crate) fn assert_flat_without_time(
+        event: FlatS3EventMessage,
+        event_type: &EventType,
+        sequencer: Option<String>,
+        size: Option<i64>,
+        version_id: String,
+        is_delete_marker: bool,
+        is_current_state: bool,
+    ) {
         assert_eq!(&event.event_type, event_type);
         assert_eq!(event.bucket, "bucket");
         assert_eq!(event.key, "key");

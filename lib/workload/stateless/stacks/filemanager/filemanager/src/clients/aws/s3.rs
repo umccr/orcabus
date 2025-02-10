@@ -9,6 +9,7 @@ use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
 use aws_sdk_s3::operation::get_object_tagging::{GetObjectTaggingError, GetObjectTaggingOutput};
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::operation::list_buckets::{ListBucketsError, ListBucketsOutput};
+use aws_sdk_s3::operation::list_objects_v2::{ListObjectsV2Error, ListObjectsV2Output};
 use aws_sdk_s3::operation::put_object_tagging::{PutObjectTaggingError, PutObjectTaggingOutput};
 use aws_sdk_s3::presigning::{PresignedRequest, PresigningConfig};
 use aws_sdk_s3::types::ChecksumMode::Enabled;
@@ -17,6 +18,9 @@ use chrono::Duration;
 use mockall::automock;
 
 use crate::clients::aws::config::Config;
+
+/// Maximum number of iterations for list objects.
+pub const MAX_LIST_ITERATIONS: usize = 1000000;
 
 pub type Result<T, E> = result::Result<T, SdkError<E>>;
 
@@ -79,6 +83,52 @@ impl Client {
     /// Execute the `ListBuckets` operation.
     pub async fn list_buckets(&self) -> Result<ListBucketsOutput, ListBucketsError> {
         self.inner.list_buckets().send().await
+    }
+
+    /// Execute the `ListObjectsV2` operation, and handle pagination to produce all possible
+    /// records.
+    pub async fn list_objects(
+        &self,
+        bucket: &str,
+        prefix: Option<String>,
+    ) -> Result<ListObjectsV2Output, ListObjectsV2Error> {
+        let list = |token| async {
+            self.inner
+                .list_objects_v2()
+                .bucket(bucket)
+                .set_prefix(prefix.clone())
+                .set_continuation_token(token)
+                .send()
+                .await
+        };
+
+        let mut result = list(None).await?;
+
+        for _ in 0..MAX_LIST_ITERATIONS {
+            if !result
+                .is_truncated()
+                .is_some_and(|is_truncated| is_truncated)
+            {
+                break;
+            }
+
+            let mut next = list(result.next_continuation_token).await?;
+
+            next.contents
+                .get_or_insert_default()
+                .extend(result.contents.unwrap_or_default());
+            next.common_prefixes
+                .get_or_insert_default()
+                .extend(result.common_prefixes.unwrap_or_default());
+            next.key_count =
+                Some(next.key_count.unwrap_or_default() + result.key_count.unwrap_or_default());
+            next.max_keys =
+                Some(next.max_keys.unwrap_or_default() + result.max_keys.unwrap_or_default());
+
+            result = next;
+        }
+
+        Ok(result)
     }
 
     /// Execute the `HeadObject` operation.

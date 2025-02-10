@@ -1,9 +1,10 @@
 //! Errors used by the filemanager crate.
 //!
 
-use std::{io, result};
-
+use aws_sdk_s3::error::SdkError;
+use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Error;
 use sea_orm::{DbErr, RuntimeErr};
+use std::{io, result};
 use thiserror::Error;
 use url::ParseError;
 use uuid::Uuid;
@@ -77,5 +78,11 @@ impl From<envy::Error> for Error {
 impl From<ParseError> for Error {
     fn from(error: ParseError) -> Self {
         Self::ParseError(error.to_string())
+    }
+}
+
+impl From<SdkError<ListObjectsV2Error>> for Error {
+    fn from(error: SdkError<ListObjectsV2Error>) -> Self {
+        Self::S3Error(error.into_service_error().to_string())
     }
 }

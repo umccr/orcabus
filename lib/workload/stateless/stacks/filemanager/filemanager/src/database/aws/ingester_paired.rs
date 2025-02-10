@@ -10,7 +10,7 @@ use crate::env::Config;
 use crate::error::Result;
 use crate::events::aws::inventory::Inventory;
 use crate::events::aws::message::EventType::Other;
-use crate::events::aws::{Events, TransposedS3EventMessages};
+use crate::events::aws::{empty_sequencer, Events, TransposedS3EventMessages};
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 
 /// An ingester for S3 events.
@@ -53,9 +53,7 @@ impl IngesterPaired {
                 .position(|reprocess| reprocess.s3_object_id == object.s3_object_id)
             {
                 let reprocess = reprocess.remove(pos);
-                if reprocess.sequencer.is_none()
-                    || reprocess.sequencer == Some(Inventory::inventory_sequencer())
-                {
+                if reprocess.sequencer.is_none() || reprocess.sequencer == Some(empty_sequencer()) {
                     // No re-processing if the sequencer was never set. Or if this event was null from an S3 inventory.
                     return false;
                 } else {

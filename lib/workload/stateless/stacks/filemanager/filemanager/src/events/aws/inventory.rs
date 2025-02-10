@@ -30,7 +30,7 @@ use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::error::Error::S3Error;
 use crate::error::{Error, Result};
 use crate::events::aws::message::{default_version_id, quote_e_tag, EventType::Created};
-use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
+use crate::events::aws::{empty_sequencer, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::uuid::UuidGenerator;
 
 const DEFAULT_CSV_MANIFEST: &str =
@@ -271,12 +271,6 @@ impl Inventory {
         .collect();
 
         Ok(inventories)
-    }
-
-    /// The sequencer value for an inventory event. This is the lowest possible sequencer value
-    /// so that any deleted event can bind to the inventory records.
-    pub fn inventory_sequencer() -> String {
-        String::new()
     }
 }
 
@@ -521,7 +515,7 @@ impl From<Record> for FlatS3EventMessage {
             e_tag: e_tag.map(quote_e_tag),
             // Set this to the empty string so that any deleted events after this can bind to this
             // created event, as they are always greater than this event.
-            sequencer: Some(Inventory::inventory_sequencer()),
+            sequencer: Some(empty_sequencer()),
             version_id: version_id.unwrap_or_else(default_version_id),
             storage_class,
             last_modified_date,

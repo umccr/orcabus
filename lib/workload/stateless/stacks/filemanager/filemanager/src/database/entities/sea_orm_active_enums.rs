@@ -90,6 +90,8 @@ pub enum EventType {
 pub enum Reason {
     #[sea_orm(string_value = "Crawl")]
     Crawl,
+    #[sea_orm(string_value = "CrawlRestored")]
+    CrawlRestored,
     #[sea_orm(string_value = "CreatedCompleteMultipartUpload")]
     CreatedCompleteMultipartUpload,
     #[sea_orm(string_value = "CreatedCopy")]
