@@ -18,7 +18,7 @@ create table s3_crawl (
     -- The prefix of objects to ingest.
     prefix text default null,
     -- How long the crawl took. This will only be set when the status is 'Completed'.
-    execution_time interval default null,
+    execution_time_seconds int default null,
     -- The number of objects that were ingested. This will only be set when the status is 'Completed'.
     n_objects bigint default null
 );

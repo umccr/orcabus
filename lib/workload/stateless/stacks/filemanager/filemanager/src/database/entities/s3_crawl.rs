@@ -17,7 +17,7 @@ pub struct Model {
     pub bucket: String,
     #[sea_orm(column_type = "Text", nullable)]
     pub prefix: Option<String>,
-    pub execution_time: Option<String>,
+    pub execution_time_seconds: Option<i32>,
     pub n_objects: Option<i64>,
 }
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

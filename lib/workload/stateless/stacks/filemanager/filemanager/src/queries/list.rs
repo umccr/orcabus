@@ -14,9 +14,10 @@ use sea_orm::{
 use tracing::trace;
 use url::Url;
 
-use crate::database::entities::s3_object;
+use crate::database::entities::{s3_crawl, s3_object};
 use crate::error::Error::{OverflowError, QueryError};
 use crate::error::{Error, Result};
+use crate::routes::filter::crawl::S3CrawlFilter;
 use crate::routes::filter::wildcard::{Wildcard, WildcardEither};
 use crate::routes::filter::{FilterJoinMerged, Join, S3ObjectsFilter};
 use crate::routes::list::ListCount;
@@ -74,42 +75,6 @@ where
         self.trace_query("filter_all");
 
         Ok(self)
-    }
-
-    /// Join a series expressions with an 'or' or 'and' statement.
-    pub fn join<T, F, I>(input: FilterJoinMerged<I>, mut map: F) -> Result<Option<Condition>>
-    where
-        T: Into<ConditionExpression>,
-        F: FnMut(I) -> Result<T>,
-    {
-        let conditions = input
-            .0
-            .into_iter()
-            .map(|(join, input)| {
-                let condition = match join {
-                    Join::And => Condition::all(),
-                    Join::Or => Condition::any(),
-                };
-
-                let mapped = input
-                    .into_iter()
-                    .map(&mut map)
-                    .collect::<Result<Vec<_>>>()?;
-                Ok(mapped
-                    .into_iter()
-                    .fold(condition, |acc, element| acc.add(element)))
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        if conditions.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(
-                conditions
-                    .into_iter()
-                    .fold(Condition::all(), |acc, element| acc.add(element)),
-            ))
-        }
     }
 
     /// Create a condition to filter a query.
@@ -206,6 +171,74 @@ where
     }
 }
 
+impl<'a, C> ListQueryBuilder<'a, C, s3_crawl::Entity>
+where
+    C: ConnectionTrait,
+{
+    /// Create a new query builder.
+    pub fn new(connection: &'a C) -> Self {
+        Self {
+            connection,
+            select: Self::for_crawl(),
+        }
+    }
+
+    /// Define a select query for finding values from s3 crawl rows.
+    pub fn for_crawl() -> Select<s3_crawl::Entity> {
+        s3_crawl::Entity::find()
+            .order_by_asc(s3_crawl::Column::Status)
+            .order_by_asc(s3_crawl::Column::Bucket)
+            .order_by_asc(s3_crawl::Column::Prefix)
+    }
+
+    /// Filter records by all fields in the filter variable.
+    ///
+    /// This creates a query which is similar to:
+    ///
+    /// ```sql
+    /// select * from s3_crawl
+    /// where status = filter.status and
+    ///     bucket = filter.bucket and
+    ///     ...;
+    /// ```
+    pub fn filter_all(mut self, filter: S3CrawlFilter, case_sensitive: bool) -> Result<Self> {
+        self.select = self
+            .select
+            .filter(Self::filter_condition(filter, case_sensitive)?);
+
+        self.trace_query("filter_all");
+
+        Ok(self)
+    }
+
+    /// Create a condition to filter a query.
+    pub fn filter_condition(filter: S3CrawlFilter, case_sensitive: bool) -> Result<Condition> {
+        let condition = Condition::all()
+            .add_option(Self::join(filter.bucket, |v| {
+                Self::filter_operation(
+                    Expr::col(s3_crawl::Column::Bucket),
+                    WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
+                )
+            })?)
+            .add_option(Self::join(filter.prefix, |v| {
+                Self::filter_operation(
+                    Expr::col(s3_crawl::Column::Prefix),
+                    WildcardEither::Wildcard::<String>(v),
+                    case_sensitive,
+                )
+            })?)
+            .add_option(Self::join(filter.started, |v| {
+                Self::filter_operation(Expr::col(s3_crawl::Column::Started), v, case_sensitive)
+            })?)
+            .add_option(Self::join(filter.status, |v| {
+                Ok(s3_crawl::Column::Status.eq(v))
+            })?);
+
+        Ok(condition)
+    }
+}
+
 impl<'a, C, E> From<(&'a C, Select<E>)> for ListQueryBuilder<'a, C, E>
 where
     C: ConnectionTrait,
@@ -229,6 +262,42 @@ where
     /// Get a copy of this query builder
     pub fn cloned(&self) -> Self {
         (self.connection, self.select.clone()).into()
+    }
+
+    /// Join a series expressions with an 'or' or 'and' statement.
+    pub fn join<T, F, I>(input: FilterJoinMerged<I>, mut map: F) -> Result<Option<Condition>>
+    where
+        T: Into<ConditionExpression>,
+        F: FnMut(I) -> Result<T>,
+    {
+        let conditions = input
+            .0
+            .into_iter()
+            .map(|(join, input)| {
+                let condition = match join {
+                    Join::And => Condition::all(),
+                    Join::Or => Condition::any(),
+                };
+
+                let mapped = input
+                    .into_iter()
+                    .map(&mut map)
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(mapped
+                    .into_iter()
+                    .fold(condition, |acc, element| acc.add(element)))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        if conditions.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(
+                conditions
+                    .into_iter()
+                    .fold(Condition::all(), |acc, element| acc.add(element)),
+            ))
+        }
     }
 }
 
@@ -475,9 +544,10 @@ pub(crate) mod tests {
     use std::collections::HashMap;
 
     use crate::database::aws::migration::tests::MIGRATOR;
+    use crate::database::entities::s3_crawl::Model;
     use crate::database::entities::s3_object::Entity;
     use crate::database::entities::sea_orm_active_enums::{
-        ArchiveStatus, EventType, Reason, StorageClass,
+        ArchiveStatus, CrawlStatus, EventType, Reason, StorageClass,
     };
     use crate::database::Client;
     use crate::queries::update::tests::{change_many, entries_many, null_attributes};
@@ -620,6 +690,49 @@ pub(crate) mod tests {
         let result = builder.all().await.unwrap();
 
         assert_eq!(result, entries);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_crawl(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await
+            .unwrap()
+            .s3_crawl;
+
+        let builder = ListQueryBuilder::<_, s3_crawl::Entity>::new(client.connection_ref());
+        let results = builder.all().await.unwrap();
+
+        assert_crawl_entries(&entries, &results);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn test_list_crawl_filter(pool: PgPool) {
+        let client = Client::from_pool(pool);
+        let entries = EntriesBuilder::default()
+            .with_shuffle(true)
+            .build(&client)
+            .await
+            .unwrap()
+            .s3_crawl;
+
+        let result = ListQueryBuilder::<_, s3_crawl::Entity>::new(client.connection_ref())
+            .filter_all(
+                S3CrawlFilter {
+                    bucket: vec![Wildcard::new("0".to_string())].into(),
+                    prefix: vec![Wildcard::new("1".to_string())].into(),
+                    ..Default::default()
+                },
+                false,
+            )
+            .unwrap()
+            .all()
+            .await
+            .unwrap();
+
+        assert_eq!(result, vec![entries[1].clone()]);
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
@@ -1305,5 +1418,18 @@ pub(crate) mod tests {
             .all()
             .await
             .unwrap()
+    }
+
+    pub(crate) fn assert_crawl_entries(entries: &[Model], results: &[Model]) {
+        assert_eq!(results.len(), entries.len());
+        for result in results {
+            assert_eq!(
+                result,
+                entries
+                    .iter()
+                    .find(|entry| entry.s3_crawl_id == result.s3_crawl_id)
+                    .unwrap()
+            );
+        }
     }
 }

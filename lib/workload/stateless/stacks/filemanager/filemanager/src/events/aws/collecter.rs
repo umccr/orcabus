@@ -6,6 +6,7 @@ use crate::clients::aws::s3::Client as S3Client;
 #[double]
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::database;
+use crate::database::entities::s3_object;
 use crate::database::entities::sea_orm_active_enums::ArchiveStatus;
 use crate::env::Config;
 use crate::error::Error::{S3Error, SQSError, SerdeError};
@@ -309,12 +310,13 @@ impl<'a> Collecter<'a> {
             ingest_id: vec![ingest_id].into(),
             ..Default::default()
         };
-        let moved_object = ListQueryBuilder::new(database_client.connection_ref())
-            .filter_all(filter, true, false)?
-            .one()
-            .await
-            .ok()
-            .flatten();
+        let moved_object =
+            ListQueryBuilder::<_, s3_object::Entity>::new(database_client.connection_ref())
+                .filter_all(filter, true, false)?
+                .one()
+                .await
+                .ok()
+                .flatten();
 
         // Update the new record with the attributes if possible, or return the new record without
         // the attributes if not possible.

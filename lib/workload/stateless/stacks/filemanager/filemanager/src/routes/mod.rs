@@ -20,6 +20,7 @@ use crate::database;
 use crate::env::Config;
 use crate::error::Error::ApiConfigurationError;
 use crate::error::Result;
+use crate::routes::crawl::crawl_router;
 use crate::routes::error::fallback;
 use crate::routes::get::*;
 use crate::routes::ingest::ingest_router;
@@ -190,6 +191,7 @@ pub fn api_router(state: AppState) -> Result<Router> {
         .merge(ingest_router())
         .merge(list_router())
         .merge(update_router())
+        .merge(crawl_router())
         .layer(Extension(QsQueryConfig::new(5, false)))
         .layer(cors_layer(state.config())?)
         .layer(TraceLayer::new_for_http())

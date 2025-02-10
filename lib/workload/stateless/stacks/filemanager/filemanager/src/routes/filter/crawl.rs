@@ -10,10 +10,10 @@ use serde::{Deserialize, Serialize};
 use utoipa::IntoParams;
 
 /// Parameters for listing data for previous and in progress crawls.
-#[derive(Serialize, Deserialize, Debug, Default, IntoParams)]
+#[derive(Serialize, Deserialize, Debug, Default, IntoParams, Clone)]
 #[serde(default, rename_all = "camelCase")]
 #[into_params(parameter_in = Query)]
-pub struct CrawlListParams {
+pub struct S3CrawlFilter {
     /// List using the bucket. Supports wildcards.
     #[param(nullable = false, required = false, value_type = FilterJoin<Wildcard>)]
     pub(crate) bucket: FilterJoinMerged<Wildcard>,
@@ -34,7 +34,7 @@ pub struct CrawlListParams {
     pub(crate) status: FilterJoinMerged<CrawlStatus>,
 }
 
-impl CrawlListParams {
+impl S3CrawlFilter {
     /// Create the crawl params
     pub fn new(
         bucket: FilterJoinMerged<Wildcard>,
