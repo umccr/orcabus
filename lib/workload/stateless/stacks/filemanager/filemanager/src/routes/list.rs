@@ -7,7 +7,7 @@ use axum::routing::get;
 use axum::{extract, Json, Router};
 use axum_extra::extract::WithRejection;
 use itertools::Itertools;
-use sea_orm::TransactionTrait;
+use sea_orm::{ConnectionTrait, TransactionTrait};
 use serde::{Deserialize, Serialize};
 use serde_json::to_value;
 use std::collections::HashSet;
@@ -15,12 +15,13 @@ use std::marker::PhantomData;
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::database::entities::s3_object;
 use crate::database::entities::s3_object::Model as S3;
+use crate::database::entities::{s3_crawl, s3_object};
 use crate::error::Error::MissingHostHeader;
 use crate::error::Result;
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::error::{ErrorStatusCode, QsQuery, Query};
+use crate::routes::filter::crawl::S3CrawlFilter;
 use crate::routes::filter::{AttributesOnlyFilter, S3ObjectsFilter};
 use crate::routes::header::HeaderParser;
 use crate::routes::pagination::{ListResponse, Pagination};
@@ -143,26 +144,13 @@ pub async fn list_s3(
     let url = if let Some(url) = state.config().api_links_url() {
         url
     } else {
-        let mut host = HeaderParser::new(request.headers())
-            .parse_header(HOST)?
-            .ok_or_else(|| MissingHostHeader)?;
-
-        // A `HOST` is not a valid URL yet.
-        if !host.starts_with("https://") && !host.starts_with("http://") {
-            if state.use_tls_links() {
-                host = format!("https://{}", host);
-            } else {
-                host = format!("http://{}", host);
-            }
-        }
-
-        &host.parse()?
+        &HeaderParser::parse_host_url(&request, state.use_tls_links())?
     };
 
     let url = url.join(&request.uri().to_string())?;
 
-    let Json(count) = count_s3(
-        state,
+    let Json(count) = count_s3_with_connection(
+        &txn,
         WithRejection(extract::Query(wildcard), PhantomData),
         WithRejection(extract::Query(list), PhantomData),
         WithRejection(serde_qs::axum::QsQuery(filter_all), PhantomData),
@@ -191,13 +179,30 @@ pub async fn list_s3(
 )]
 pub async fn count_s3(
     state: State<AppState>,
+    wildcard: Query<WildcardParams>,
+    list: Query<ListS3Params>,
+    filter_all: QsQuery<S3ObjectsFilter>,
+) -> Result<Json<ListCount>> {
+    count_s3_with_connection(
+        state.database_client().connection_ref(),
+        wildcard,
+        list,
+        filter_all,
+    )
+    .await
+}
+
+async fn count_s3_with_connection<C: ConnectionTrait>(
+    connection: &C,
     WithRejection(extract::Query(wildcard), _): Query<WildcardParams>,
     WithRejection(extract::Query(list), _): Query<ListS3Params>,
     WithRejection(serde_qs::axum::QsQuery(filter_all), _): QsQuery<S3ObjectsFilter>,
 ) -> Result<Json<ListCount>> {
-    let response =
-        ListQueryBuilder::<_, s3_object::Entity>::new(state.database_client.connection_ref())
-            .filter_all(filter_all, wildcard.case_sensitive(), list.current_state)?;
+    let response = ListQueryBuilder::<_, s3_object::Entity>::new(connection).filter_all(
+        filter_all,
+        wildcard.case_sensitive(),
+        list.current_state,
+    )?;
 
     Ok(Json(response.to_list_count().await?))
 }
