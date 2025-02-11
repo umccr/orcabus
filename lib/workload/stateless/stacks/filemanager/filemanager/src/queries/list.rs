@@ -547,7 +547,7 @@ pub(crate) mod tests {
     use crate::database::entities::s3_crawl::Model;
     use crate::database::entities::s3_object::Entity;
     use crate::database::entities::sea_orm_active_enums::{
-        ArchiveStatus, CrawlStatus, EventType, Reason, StorageClass,
+        ArchiveStatus, EventType, Reason, StorageClass,
     };
     use crate::database::Client;
     use crate::queries::update::tests::{change_many, entries_many, null_attributes};

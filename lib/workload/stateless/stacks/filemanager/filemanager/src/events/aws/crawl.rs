@@ -1,19 +1,15 @@
 //! Crawl S3 using list operations and ingest into the database.
 //!
 
-#[double]
 use crate::clients::aws::s3::Client;
 use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::error::Result;
-use crate::events::aws::message::{
-    default_version_id, quote_e_tag, Bucket, EventType, EventTypeData, EventTypeParsed, Record,
-    S3Record,
-};
+use crate::events::aws::message::{default_version_id, quote_e_tag, EventType};
+
 use crate::events::aws::{empty_sequencer, FlatS3EventMessage, FlatS3EventMessages};
 use crate::uuid::UuidGenerator;
 use aws_sdk_s3::types::Object;
 use chrono::Utc;
-use mockall_double::double;
 
 /// Represents crawl operations.
 #[derive(Debug)]
@@ -105,35 +101,12 @@ pub(crate) mod tests {
     use crate::events::aws::tests::assert_flat_without_time;
     use crate::events::aws::tests::EXPECTED_QUOTED_E_TAG;
     use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Output;
-    use chrono::DateTime;
-    use mockall::predicate::eq;
-    use uuid::Uuid;
+    use aws_smithy_mocks_experimental::{mock, mock_client};
+    use aws_smithy_mocks_experimental::{Rule, RuleMode};
 
     #[tokio::test]
     async fn crawl_messages() {
-        let mut client = Client::default();
-        client
-            .expect_list_objects()
-            .with(eq("bucket"), eq(Some("prefix".to_string())))
-            .once()
-            .returning(move |_, _| {
-                Ok(ListObjectsV2Output::builder()
-                    .contents(
-                        Object::builder()
-                            .key("key")
-                            .size(1)
-                            .e_tag(EXPECTED_QUOTED_E_TAG)
-                            .build(),
-                    )
-                    .contents(
-                        Object::builder()
-                            .key("key")
-                            .size(2)
-                            .e_tag(EXPECTED_QUOTED_E_TAG)
-                            .build(),
-                    )
-                    .build())
-            });
+        let client = list_object_expectations(&[]);
 
         let result = Crawl::new(client)
             .crawl_s3("bucket", Some("prefix".to_string()))
@@ -159,5 +132,38 @@ pub(crate) mod tests {
             false,
             true,
         );
+    }
+
+    pub(crate) fn list_object_expectations(rules: &[Rule]) -> Client {
+        Client::new(mock_client!(
+            aws_sdk_s3,
+            RuleMode::MatchAny,
+            &[
+                &[mock!(aws_sdk_s3::Client::list_objects_v2)
+                    .match_requests(
+                        |req| req.bucket() == Some("bucket") && req.prefix() == Some("prefix")
+                    )
+                    .then_output(move || {
+                        ListObjectsV2Output::builder()
+                            .contents(
+                                Object::builder()
+                                    .key("key")
+                                    .size(1)
+                                    .e_tag(EXPECTED_QUOTED_E_TAG)
+                                    .build(),
+                            )
+                            .contents(
+                                Object::builder()
+                                    .key("key")
+                                    .size(2)
+                                    .e_tag(EXPECTED_QUOTED_E_TAG)
+                                    .build(),
+                            )
+                            .build()
+                    }),],
+                rules
+            ]
+            .concat()
+        ))
     }
 }

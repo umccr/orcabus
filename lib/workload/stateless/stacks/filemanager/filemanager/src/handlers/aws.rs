@@ -5,13 +5,10 @@ use std::collections::HashSet;
 
 use aws_lambda_events::sqs::SqsEvent;
 use itertools::Itertools;
-use mockall_double::double;
 use sea_orm::DatabaseConnection;
 use tracing::{debug, trace};
 
-#[double]
 use crate::clients::aws::s3::Client as S3Client;
-#[double]
 use crate::clients::aws::sqs::Client as SQSClient;
 use crate::database::aws::credentials::IamGeneratorBuilder;
 use crate::database::aws::query::Query;
@@ -217,9 +214,7 @@ pub(crate) mod tests {
     };
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::{ArchiveStatus, Reason};
-    use crate::events::aws::collecter::tests::{
-        set_s3_client_expectations, set_sqs_client_expectations,
-    };
+    use crate::events::aws::collecter::tests::{s3_client_expectations, sqs_client_expectations};
     use crate::events::aws::inventory::tests::{
         csv_manifest_from_key_expectations, EXPECTED_LAST_MODIFIED_ONE,
         EXPECTED_LAST_MODIFIED_THREE, EXPECTED_LAST_MODIFIED_TWO, EXPECTED_QUOTED_E_TAG_KEY_2,
@@ -249,9 +244,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_ingest_event(pool: PgPool) {
-        let mut s3_client = S3Client::default();
-
-        set_s3_client_expectations(&mut s3_client);
+        let s3_client = s3_client_expectations();
 
         let event = SqsEvent {
             records: vec![SqsMessage {
@@ -381,11 +374,8 @@ pub(crate) mod tests {
         F: FnOnce(SQSClient, S3Client) -> Fut,
         Fut: Future<Output = ()>,
     {
-        let mut sqs_client = SQSClient::default();
-        let mut s3_client = S3Client::default();
-
-        set_sqs_client_expectations(&mut sqs_client);
-        set_s3_client_expectations(&mut s3_client);
+        let sqs_client = sqs_client_expectations();
+        let s3_client = s3_client_expectations();
 
         f(sqs_client, s3_client).await;
 

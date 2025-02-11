@@ -4,14 +4,9 @@
 use axum::extract::State;
 use axum::routing::post;
 use axum::{Json, Router};
-use mockall_double::double;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[double]
-use crate::clients::aws::s3::Client as S3Client;
-#[double]
-use crate::clients::aws::sqs::Client as SQSClient;
 use crate::error::Result;
 use crate::handlers::aws::receive_and_ingest;
 use crate::routes::error::ErrorStatusCode;
@@ -38,8 +33,8 @@ pub struct IngestCount {
 )]
 pub async fn ingest_from_sqs(state: State<AppState>) -> Result<Json<IngestCount>> {
     let n_records = receive_and_ingest(
-        S3Client::with_defaults().await,
-        SQSClient::with_defaults().await,
+        state.s3_client().clone(),
+        state.sqs_client().clone(),
         None::<String>,
         &state.database_client,
         &state.config,
@@ -67,8 +62,6 @@ mod tests {
     use crate::handlers::aws::tests::test_receive_and_ingest_with;
     use crate::routes::{api_router, AppState};
 
-    use super::*;
-
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_from_sqs_api(pool: PgPool) {
         let mut state = AppState::from_pool(pool).await;
@@ -77,11 +70,10 @@ mod tests {
             .sqs_url
             .get_or_insert("url".to_string());
 
-        test_receive_and_ingest_with(state.database_client(), |sqs_client, s3_client| async {
-            let sqs_ctx = SQSClient::with_defaults_context();
-            sqs_ctx.expect().return_once(|| sqs_client);
-            let s3_ctx = S3Client::with_defaults_context();
-            s3_ctx.expect().return_once(|| s3_client);
+        let database = state.database_client().clone();
+        test_receive_and_ingest_with(&database, |sqs_client, s3_client| async {
+            state.sqs_client = Arc::new(sqs_client);
+            state.s3_client = Arc::new(s3_client);
 
             let app = api_router(state.clone()).unwrap();
             app.oneshot(

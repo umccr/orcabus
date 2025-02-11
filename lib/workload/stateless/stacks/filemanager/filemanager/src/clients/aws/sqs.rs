@@ -7,19 +7,17 @@ use aws_sdk_sqs as sqs;
 use aws_sdk_sqs::error::SdkError;
 use aws_sdk_sqs::operation::receive_message::{ReceiveMessageError, ReceiveMessageOutput};
 use aws_sdk_sqs::operation::send_message::{SendMessageError, SendMessageOutput};
-use mockall::automock;
 
 use crate::clients::aws::config::Config;
 
 pub type Result<T, E> = result::Result<T, SdkError<E>>;
 
 /// A wrapper around an SQS client which can be mocked.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Client {
     inner: sqs::Client,
 }
 
-#[automock]
 impl Client {
     /// Create a new S3 client.
     pub fn new(inner: sqs::Client) -> Self {

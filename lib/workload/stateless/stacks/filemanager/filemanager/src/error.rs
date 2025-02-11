@@ -4,6 +4,7 @@
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Error;
 use sea_orm::{DbErr, RuntimeErr};
+use std::num::TryFromIntError;
 use std::{io, result};
 use thiserror::Error;
 use url::ParseError;
@@ -49,6 +50,8 @@ pub enum Error {
     #[cfg(feature = "migrate")]
     #[error("SQL migrate error: `{0}`")]
     MigrateError(String),
+    #[error("Crawl error: `{0}`")]
+    CrawlError(String),
 }
 
 impl From<sqlx::Error> for Error {
@@ -84,5 +87,11 @@ impl From<ParseError> for Error {
 impl From<SdkError<ListObjectsV2Error>> for Error {
     fn from(error: SdkError<ListObjectsV2Error>) -> Self {
         Self::S3Error(error.into_service_error().to_string())
+    }
+}
+
+impl From<TryFromIntError> for Error {
+    fn from(error: TryFromIntError) -> Self {
+        Self::ConversionError(error.to_string())
     }
 }

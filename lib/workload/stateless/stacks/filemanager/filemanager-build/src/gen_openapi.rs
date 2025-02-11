@@ -10,7 +10,6 @@ use crate::Result;
 use heck::AsPascalCase;
 use prettyplease::unparse;
 use quote::format_ident;
-use std::collections::HashMap;
 use std::fs::{read_dir, read_to_string, write};
 use std::path::Path;
 use syn::visit_mut::VisitMut;

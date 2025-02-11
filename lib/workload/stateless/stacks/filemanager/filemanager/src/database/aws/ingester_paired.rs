@@ -8,7 +8,6 @@ use tracing::{debug, trace};
 use crate::database::{Client, CredentialGenerator};
 use crate::env::Config;
 use crate::error::Result;
-use crate::events::aws::inventory::Inventory;
 use crate::events::aws::message::EventType::Other;
 use crate::events::aws::{empty_sequencer, Events, TransposedS3EventMessages};
 use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};

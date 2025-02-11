@@ -2,6 +2,7 @@
 //!
 
 use crate::database::entities::sea_orm_active_enums::CrawlStatus;
+use crate::routes::crawl::CrawlRequest;
 use chrono::{DateTime, FixedOffset};
 use serde_json::Value;
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
@@ -90,7 +91,8 @@ pub struct Uuid(pub uuid::Uuid);
             FilterJoin<Reason>,
             FilterJoin<ArchiveStatus>,
             FilterJoin<CrawlStatus>,
-            Crawl
+            Crawl,
+            CrawlRequest
         )
     ),
     modifiers(&SecurityAddon),

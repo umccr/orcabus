@@ -732,7 +732,6 @@ pub(crate) mod tests {
     use crate::events::aws::{
         EventType, FlatS3EventMessage, FlatS3EventMessages, TransposedS3EventMessages,
     };
-    use chrono::{DateTime, Utc};
     use serde_json::{json, Value};
 
     pub(crate) const EXPECTED_SEQUENCER_CREATED_ZERO: &str = "0055AED6DCD90281E3"; // pragma: allowlist secret

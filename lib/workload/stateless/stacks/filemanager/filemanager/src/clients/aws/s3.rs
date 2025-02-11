@@ -15,7 +15,6 @@ use aws_sdk_s3::presigning::{PresignedRequest, PresigningConfig};
 use aws_sdk_s3::types::ChecksumMode::Enabled;
 use aws_sdk_s3::types::Tagging;
 use chrono::Duration;
-use mockall::automock;
 
 use crate::clients::aws::config::Config;
 
@@ -25,7 +24,7 @@ pub const MAX_LIST_ITERATIONS: usize = 1000000;
 pub type Result<T, E> = result::Result<T, SdkError<E>>;
 
 /// A wrapper around an S3 client which can be mocked.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Client {
     inner: s3::Client,
 }
@@ -68,7 +67,6 @@ impl ResponseHeaders {
     }
 }
 
-#[automock]
 impl Client {
     /// Create a new S3 client.
     pub fn new(inner: s3::Client) -> Self {

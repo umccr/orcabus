@@ -292,7 +292,7 @@ pub(crate) mod tests {
         let insert_query = |bucket, prefix, status| {
             format!(
                 "insert into s3_crawl (s3_crawl_id, status, bucket, prefix) values (
-                    '{}',                
+                    '{}',
                     '{}',
                     '{}',
                     '{}'

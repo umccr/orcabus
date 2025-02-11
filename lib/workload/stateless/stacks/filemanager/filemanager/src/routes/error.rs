@@ -75,6 +75,12 @@ pub enum ErrorStatusCode {
     )]
     BadRequest(ErrorResponse),
     #[response(
+        status = CONFLICT,
+        description = "the request could not be processed right now",
+        example = json!({"message": "Crawl error: another crawl on the bucket is already in progress"}),
+    )]
+    Conflict(ErrorResponse),
+    #[response(
         status = UNAUTHORIZED,
         description = "the request lacked valid authentication credentials",
         example = json!({"message": "Unauthorized"}),
@@ -127,6 +133,7 @@ impl Display for ErrorStatusCode {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             ErrorStatusCode::BadRequest(err) => Display::fmt(err, f),
+            ErrorStatusCode::Conflict(err) => Display::fmt(err, f),
             ErrorStatusCode::NotFound(err) => Display::fmt(err, f),
             ErrorStatusCode::InternalServerError(err) => Display::fmt(err, f),
             ErrorStatusCode::Forbidden(err) => Display::fmt(err, f),
@@ -140,6 +147,7 @@ impl IntoResponse for ErrorStatusCode {
     fn into_response(self) -> Response {
         let response = match self {
             ErrorStatusCode::BadRequest(err) => (StatusCode::BAD_REQUEST, extract::Json(err)),
+            ErrorStatusCode::Conflict(err) => (StatusCode::CONFLICT, extract::Json(err)),
             ErrorStatusCode::InternalServerError(err) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, extract::Json(err))
             }
