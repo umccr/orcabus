@@ -145,7 +145,7 @@ pub async fn crawl_sync_s3(
     // If there is a crawl in progress already, then this is an error.
     if let Some(in_progress) = in_progress {
         // Just in case the crawl has been running too long, fail it here.
-        let diff = in_progress.started.signed_duration_since(Utc::now());
+        let diff = Utc::now().signed_duration_since(in_progress.started);
         if diff < TimeDelta::zero() || diff > TimeDelta::minutes(MAX_CRAWL_TIME_MINUTES) {
             let mut to_update = in_progress.into_active_model();
             to_update.status = Set(CrawlStatus::Failed);

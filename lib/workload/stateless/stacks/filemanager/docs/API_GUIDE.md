@@ -286,6 +286,24 @@ export KEY=$(echo $RESULT | jq -r '.results[] | .key')
 curl -H "Authorization: Bearer $TOKEN" "https://htsget-file.dev.umccr.org/reads/${BUCKET}/${KEY%.*}" | jq
 ```
 
+## Crawl
+
+Sometimes records get out of sync because of new features or bugs. In this case, there is a crawl POST API endpoint that
+can be used to list all objects in a bucket, and ingest them. This will correct the existing records in the database:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" -X POST \
+  --data '{ "prefix": "crawl_prefix", "bucket": "bucket" }' \
+  -H "Content-Type: application/json" "https://file.dev.umccr.org/api/v1/s3/crawl" | jq
+```
+
+The crawl API is either async under `/api/v1/s3/crawl`, or sync under `/api/v1/s3/crawl/sync`. In progress or completed
+crawls can be queried using the crawl status API:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" "https://file.dev.umccr.org/api/v1/s3/crawl/status" | jq
+```
+
 [json-patch]: https://jsonpatch.com/
 [qs]: https://github.com/ljharb/qs
 [s3-events]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventNotifications.html
