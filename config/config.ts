@@ -8,7 +8,6 @@ import { getPostgresManagerStackProps } from './stacks/postgresManager';
 import { getMetadataManagerStackProps } from './stacks/metadataManager';
 import { getSequenceRunManagerStackProps } from './stacks/sequenceRunManager';
 import { getFileManagerStackProps } from './stacks/fileManager';
-import { getBsRunsUploadManagerStackProps } from './stacks/bsRunsUploadManager';
 import { getBsshIcav2FastqCopyManagerStackProps } from './stacks/bsshIcav2FastqCopyManager';
 import {
   getCttsov2Icav2PipelineManagerStackProps,
@@ -112,7 +111,6 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       metadataManagerStackProps: getMetadataManagerStackProps(stage),
       sequenceRunManagerStackProps: getSequenceRunManagerStackProps(stage),
       fileManagerStackProps: getFileManagerStackProps(stage),
-      bsRunsUploadManagerStackProps: getBsRunsUploadManagerStackProps(stage),
       bsshIcav2FastqCopyManagerStackProps: getBsshIcav2FastqCopyManagerStackProps(stage),
       bclconvertInteropQcIcav2PipelineManagerStackProps:
         getBclconvertInteropQcIcav2PipelineManagerStackProps(stage),

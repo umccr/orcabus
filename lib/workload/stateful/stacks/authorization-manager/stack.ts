@@ -33,6 +33,13 @@ export class AuthorizationManagerStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps & AuthorizationManagerStackProps) {
     super(scope, id, props);
 
+    // Grab the user pool ID from SSM
+    const userPoolId = StringParameter.fromStringParameterName(
+      this,
+      'CognitoUserPoolIdStringParameter',
+      props.cognito.userPoolIdParameterName
+    ).stringValue;
+
     // Amazon Verified Permission
     const policyStore = new CfnPolicyStore(this, 'VerifiedPermissionPolicyStore', {
       validationSettings: { mode: 'STRICT' },
@@ -43,6 +50,7 @@ export class AuthorizationManagerStack extends Stack {
     });
 
     this.setupCognitoIntegrationAndPolicy({
+      userPoolId,
       cognito: props.cognito,
       policyStoreId: policyStore.attrPolicyStoreId,
     });
@@ -51,6 +59,20 @@ export class AuthorizationManagerStack extends Stack {
       policyStoreARN: policyStore.attrArn,
       policyStoreId: policyStore.attrPolicyStoreId,
       authStackHttpLambdaAuthorizerParameterName: props.authStackHttpLambdaAuthorizerParameterName,
+    });
+
+    // Create a policies for respective groups
+    this.setupAdminCedarPolicy({
+      userPoolId,
+      cfnPolicyStore: policyStore,
+    });
+    this.setupCuratorsCedarPolicy({
+      userPoolId,
+      cfnPolicyStore: policyStore,
+    });
+    this.setupBioinfoCedarPolicy({
+      userPoolId,
+      cfnPolicyStore: policyStore,
     });
   }
 
@@ -62,45 +84,21 @@ export class AuthorizationManagerStack extends Stack {
    * @param props Cognito properties
    */
   private setupCognitoIntegrationAndPolicy(props: {
+    userPoolId: string;
     policyStoreId: string;
     cognito: CognitoConfig;
   }) {
-    // Grab the user pool ID from SSM
-    const userPoolId = StringParameter.fromStringParameterName(
-      this,
-      'CognitoUserPoolIdStringParameter',
-      props.cognito.userPoolIdParameterName
-    ).stringValue;
-
     // Allow the policy store to source the identity from existing Cognito User Pool Id
     new CfnIdentitySource(this, 'VerifiedPermissionIdentitySource', {
       configuration: {
         cognitoUserPoolConfiguration: {
-          userPoolArn: `arn:aws:cognito-idp:${props.cognito.region}:${props.cognito.accountNumber}:userpool/${userPoolId}`,
+          userPoolArn: `arn:aws:cognito-idp:${props.cognito.region}:${props.cognito.accountNumber}:userpool/${props.userPoolId}`,
           groupConfiguration: {
             groupEntityType: 'OrcaBus::CognitoUserGroup', // Refer to './cedarSchema.json'
           },
         },
       },
       principalEntityType: 'OrcaBus::User',
-      policyStoreId: props.policyStoreId,
-    });
-
-    // Create a static policy that allow user from the admin group to allow all actions
-    new CfnPolicy(this, 'CognitoPortalAdminPolicy', {
-      definition: {
-        static: {
-          statement: `
-            permit (
-              principal in OrcaBus::CognitoUserGroup::"${userPoolId}|admin",
-              action,
-              resource
-            );
-          `,
-          description:
-            'Allow all action for all resource for user in the admin cognito user pool group',
-        },
-      },
       policyStoreId: props.policyStoreId,
     });
   }
@@ -131,5 +129,132 @@ export class AuthorizationManagerStack extends Stack {
         'ARN of the HTTP lambda authorizer that allow access defined in Amazon Verified Permission',
       stringValue: lambdaAuth.functionArn,
     });
+  }
+
+  /**
+   * This sets up all policies for the admin group in the Cognito user pool.
+   *
+   * NOTE: Please update readme if new policy is modified
+   * @param userPoolId
+   * @param cfnPolicyStore
+   */
+  private setupAdminCedarPolicy({
+    userPoolId,
+    cfnPolicyStore,
+  }: {
+    userPoolId: string;
+    cfnPolicyStore: CfnPolicyStore;
+  }) {
+    const policyStoreId = cfnPolicyStore.attrPolicyStoreId;
+
+    // 1. Policy to allow everything for the admin group
+    const allowAllPolicy = new CfnPolicy(this, 'CognitoPortalAdminPolicy', {
+      definition: {
+        static: {
+          statement: `
+            permit (
+              principal in OrcaBus::CognitoUserGroup::"${userPoolId}|admin",
+              action,
+              resource
+            );
+          `,
+          description: 'admin - Allow all action for all resource for the admin cognito group',
+        },
+      },
+      policyStoreId: policyStoreId,
+    });
+    allowAllPolicy.node.addDependency(cfnPolicyStore);
+  }
+
+  /**
+   * This sets up all policies for the curators group in the Cognito user pool.
+   *
+   * NOTE: Please update readme if new policy is modified
+   * @param userPoolId
+   * @param cfnPolicyStore
+   */
+  private setupCuratorsCedarPolicy({
+    userPoolId,
+    cfnPolicyStore,
+  }: {
+    userPoolId: string;
+    cfnPolicyStore: CfnPolicyStore;
+  }) {
+    const policyStoreId = cfnPolicyStore.attrPolicyStoreId;
+
+    // 1. Policy to allow rerun workflows in the WORKFLOW microservice
+    const allowRerunPolicy = new CfnPolicy(this, 'CognitoPortalCuratorsPolicy', {
+      definition: {
+        static: {
+          statement: `
+            permit (
+              principal in OrcaBus::CognitoUserGroup::"${userPoolId}|curators",
+              action in
+                [OrcaBus::Action::"POST /api/v1/workflowrun/{orcabusId}/rerun/{proxy+}"],
+              resource == OrcaBus::Microservice::"WORKFLOW"
+            );
+          `,
+          description: 'curators - Permissions to rerun workflowrun in WORKFLOW microservice',
+        },
+      },
+      policyStoreId: policyStoreId,
+    });
+    allowRerunPolicy.node.addDependency(cfnPolicyStore);
+  }
+
+  /**
+   * This sets up all policies for the curators group in the Cognito user pool.
+   *
+   * NOTE: Please update readme if new policy is modified
+   * @param userPoolId
+   * @param cfnPolicyStore
+   */
+  private setupBioinfoCedarPolicy({
+    userPoolId,
+    cfnPolicyStore,
+  }: {
+    userPoolId: string;
+    cfnPolicyStore: CfnPolicyStore;
+  }) {
+    const policyStoreId = cfnPolicyStore.attrPolicyStoreId;
+    const principal = `OrcaBus::CognitoUserGroup::"${userPoolId}|bioinfo"`;
+
+    // 1. Policy to allow rerun workflows in the WORKFLOW microservice
+    const allowRerunPolicy = new CfnPolicy(this, 'CognitoBioinfoWorkflowRerunPolicy', {
+      definition: {
+        static: {
+          statement: `
+            permit (
+              principal in ${principal},
+              action in
+                [OrcaBus::Action::"POST /api/v1/workflowrun/{orcabusId}/rerun/{proxy+}"],
+              resource == OrcaBus::Microservice::"WORKFLOW"
+            );
+          `,
+          description: 'bioinfo - Permissions to rerun workflowrun in WORKFLOW microservice',
+        },
+      },
+      policyStoreId: policyStoreId,
+    });
+    allowRerunPolicy.node.addDependency(cfnPolicyStore);
+
+    // 2. Policy to trigger external sync in METADATA microservice
+    const allowModifyMetadataPolicy = new CfnPolicy(this, 'CognitoBioinfoMetadataModifyPolicy', {
+      definition: {
+        static: {
+          statement: `
+            permit (
+              principal in ${principal},
+              action in
+                [OrcaBus::Action::"POST /api/v1/sync/presigned-csv/{PROXY+}"],
+              resource == OrcaBus::Microservice::"METADATA"
+            );
+          `,
+          description: 'bioinfo - Permissions to trigger external sync METADATA microservice',
+        },
+      },
+      policyStoreId: policyStoreId,
+    });
+    allowModifyMetadataPolicy.node.addDependency(cfnPolicyStore);
   }
 }

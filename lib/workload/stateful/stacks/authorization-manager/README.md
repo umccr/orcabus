@@ -11,13 +11,23 @@ The current stack deploys AWS Verified Permissions, defining an identity source 
 - **UMCCR Cognito User Pool**
 
   Sourced from the UMCCR Cognito User Pool, defined in the infrastructure Terraform repository. The AWS Cognito User Pool
-  is expected to have an `admin` group, which will be used in the policy. Note that the JWT must be generated with the
+  is expected to have groups, which will be used in the policy. Note that the JWT must be generated with the
   latest token containing the proper Cognito group claims for it to work. This also applies when a user is removed from
   the group; the JWT must expire to become invalid.
 
-### Policy
+### Group
 
-- **AdminPolicy**
+Policies are currently assigned based on groups from the Cognito User Pool. The policies are defined in `stack.ts` within the class where the function is named `setup{GROUP_NAME}CedarPolicy`.
 
-  A static policy defined in the stack that allows anyone in the `admin` group of the Cognito user pool to perform any
-  action. This essentially checks if a user is in the `admin` group, integrated with the Cognito setup.
+- **Admin**: For admins/service users (all actions are granted to this group).
+- **Curators**: For curators (all policies are applied to all curators in this group).
+- **Bioinfo**: For bioinformatics members.
+
+### Permissions
+
+| Description                                                                                       | Curators           | Bioinfo            |
+| ------------------------------------------------------------------------------------------------- | ------------------ | ------------------ |
+| Allow rerun workflows in the WORKFLOW microservice                                                | :white_check_mark: | :white_check_mark: |
+| Allow to sync external metadata in the METADATA microservice                                      | :x:                | :white_check_mark: |
+
+`Admin` group will have a wildcard to allow all actions.

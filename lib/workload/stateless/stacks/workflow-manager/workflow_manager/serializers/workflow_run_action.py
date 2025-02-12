@@ -15,6 +15,9 @@ class AllowedRerunWorkflowSerializer(serializers.Serializer):
 
 
 class BaseRerunInputSerializer(serializers.Serializer):
+    # Reruns with the same input (duplicate reruns) should not be allowed unless this flag is set to True
+    allow_duplication = serializers.BooleanField(default=False, required=False,
+                                                 help_text='Allow rerun with the same previous input (duplicate rerun)')
 
     def update(self, instance, validated_data):
         pass

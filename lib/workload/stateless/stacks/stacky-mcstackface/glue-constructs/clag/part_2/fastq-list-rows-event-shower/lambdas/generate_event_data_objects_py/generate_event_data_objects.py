@@ -3,10 +3,49 @@
 """
 Given a set of fastq list rows, generate a set of event maps for each fastq file,
 along with a create event shower as well
-"""
 
+Write these to the dynamodb database, rather than as an output as we cannot control how large the number
+of samples will be and this may overload the size.
+"""
 # Imports
-from typing import Dict
+import typing
+from typing import Dict, List
+from os import environ
+import boto3
+import json
+
+if typing.TYPE_CHECKING:
+    from mypy_boto3_dynamodb import DynamoDBClient
+
+# Table name
+DYNAMODB_TABLE_NAME_ENV_VAR = "INSTRUMENT_RUN_TABLE_NAME"
+
+# Table partitions
+FASTQ_LIST_ROW_EVENT_OBJ_PARTITION_ENV_VAR = "FASTQ_LIST_ROW_EVENT_OBJ_TABLE_PARTITION_NAME"
+PROJECT_EVENT_OBJ_PARTITION_ENV_VAR = "PROJECT_EVENT_OBJ_TABLE_PARTITION_NAME"
+
+
+def get_dynamodb_db_client() -> 'DynamoDBClient':
+    return boto3.client('dynamodb')
+
+
+def get_table_name() -> str:
+    return environ.get(DYNAMODB_TABLE_NAME_ENV_VAR)
+
+
+def put_item(
+        id: str,
+        id_type: str,  # This is the database partition
+        event_data: Dict,
+):
+    get_dynamodb_db_client().put_item(
+        TableName=get_table_name(),
+        Item={
+            'id': {'S': id},
+            'id_type': {'S': id_type},
+            'event_data': {'S': json.dumps(event_data, separators=(',', ':'))},
+        }
+    )
 
 
 def pascal_to_camel_case(pascal_str: str) -> str:
@@ -30,9 +69,6 @@ def pascal_to_camel_case(pascal_str: str) -> str:
 def generate_fastq_list_row_event(fastq_list_row: Dict, library: Dict, instrument_run_id: str) -> Dict:
     """
     Generate the fastq list row event
-
-    :param num_readcount_obj_list:
-    :param qc_obj_list:
     :param library:
     :param fastq_list_row:
     :param instrument_run_id:
@@ -46,6 +82,108 @@ def generate_fastq_list_row_event(fastq_list_row: Dict, library: Dict, instrumen
         },
         "fastqListRow": fastq_list_row,
     }
+
+
+def get_fastq_list_row_dynamodb_put_objects(
+        instrument_run_id: str,
+        library_obj_list: List[Dict[str, str]],
+        fastq_list_rows: List[Dict[str, str]]
+):
+    return list(
+        map(
+            lambda fastq_list_row_iter_: {
+                "id": f"{fastq_list_row_iter_['rgid']}__{instrument_run_id}",
+                "id_type": environ.get(FASTQ_LIST_ROW_EVENT_OBJ_PARTITION_ENV_VAR),
+                "event_data": generate_fastq_list_row_event(
+                    fastq_list_row_iter_,
+                    next(
+                        filter(
+                            lambda library_iter_: library_iter_['libraryId'] == fastq_list_row_iter_['rgsm'],
+                            library_obj_list
+                        )
+                    ),
+                    instrument_run_id
+                )
+            },
+            fastq_list_rows
+        )
+    )
+
+
+def get_libraries_in_project(
+        project_obj: Dict[str, str],
+        fastq_list_row_event_data_list: List[Dict[str, str]],
+        library_obj_list: List[Dict[str, str]]
+):
+    return list(
+        map(
+            lambda library_obj_iter: {
+                "library": {
+                    "orcabusId": library_obj_iter.get("orcabusId"),
+                    "libraryId": library_obj_iter.get("libraryId"),
+                },
+                "fastqPairs": list(
+                    map(
+                        lambda fastq_list_row_event_data_iter: (
+                            fastq_list_row_event_data_iter.get("fastqListRow")
+                        ),
+                        filter(
+                            lambda fastq_list_row_event_data_iter: (
+                                    fastq_list_row_event_data_iter.get("library").get("libraryId") ==
+                                    library_obj_iter.get("libraryId")
+                            ),
+                            fastq_list_row_event_data_list
+                        )
+                    )
+                )
+            },
+            filter(
+                lambda library_obj_iter_: (
+                    any(
+                        map(
+                            lambda project_obj_iter_: (
+                                    library_obj_iter_.get("orcabusId") ==
+                                    project_obj_iter_
+                            ),
+                            project_obj.get("librarySet")
+                        )
+                    )
+                ),
+                library_obj_list
+            )
+        )
+    )
+
+
+def get_project_dynamodb_put_objects(
+        instrument_run_id: str,
+        project_obj_list: List[Dict[str, str]],
+        fastq_list_row_event_data_list: List[Dict[str, str]],
+        library_obj_list: List[Dict[str, str]]
+):
+    return list(
+        map(
+            lambda project_obj_iter_: {
+                "id": f"{project_obj_iter_.get('orcabusId')}__{instrument_run_id}",
+                "id_type": environ.get(PROJECT_EVENT_OBJ_PARTITION_ENV_VAR),
+                "event_data": {
+                    "instrumentRunId": instrument_run_id,
+                    "project": dict(
+                        filter(
+                            lambda kv: not kv[0] == 'librarySet',
+                            project_obj_iter_.items()
+                        )
+                    ),
+                    "libraryFastqSet": get_libraries_in_project(
+                        project_obj=project_obj_iter_,
+                        fastq_list_row_event_data_list=fastq_list_row_event_data_list,
+                        library_obj_list=library_obj_list
+                    )
+                }
+            },
+            project_obj_list
+        )
+    )
 
 
 def handler(event, context):
@@ -62,24 +200,8 @@ def handler(event, context):
     project_obj_list = event['project_objs']
     instrument_run_id = event['instrument_run_id']
 
-    # Generate the fastq list row events
-    fastq_list_row_event_data_list = list(
-        map(
-            lambda fastq_list_row_iter_: generate_fastq_list_row_event(
-                fastq_list_row_iter_,
-                next(
-                    filter(
-                        lambda library_iter_: library_iter_['libraryId'] == fastq_list_row_iter_['rgsm'],
-                        library_obj_list
-                    )
-                ),
-                instrument_run_id
-            ),
-            fastq_list_rows
-        )
-    )
-
     # Generate the start and complete shower event data
+    # These are returned in the response
     start_fastq_list_row_shower_event_data = {
         "instrumentRunId": instrument_run_id,
     }
@@ -88,70 +210,47 @@ def handler(event, context):
         "instrumentRunId": instrument_run_id,
     }
 
-    project_event_data_list = []
-    for project_obj_iter_ in project_obj_list:
-        library_objects_in_project = list(
+    # Generate the fastq list row events
+    # We place these into dynamodb since we have no control of the size
+    # Of the data we need may be returning
+    fastq_list_row_dynamodb_obj_list = get_fastq_list_row_dynamodb_put_objects(
+        instrument_run_id=instrument_run_id,
+        fastq_list_rows=fastq_list_rows,
+        library_obj_list=library_obj_list
+    )
+
+    # Write fastq list row event details to database
+    project_dynamodb_obj_list = get_project_dynamodb_put_objects(
+        instrument_run_id=instrument_run_id,
+        project_obj_list=project_obj_list,
+        fastq_list_row_event_data_list=list(
             map(
-                lambda library_obj_iter: {
-                    "library": {
-                        "orcabusId": library_obj_iter.get("orcabusId"),
-                        "libraryId": library_obj_iter.get("libraryId"),
-                    },
-                    "fastqPairs": list(
-                        map(
-                            lambda fastq_list_row_event_data_iter: (
-                                fastq_list_row_event_data_iter.get("fastqListRow")
-                            ),
-                            filter(
-                                lambda fastq_list_row_event_data_iter: (
-                                        fastq_list_row_event_data_iter.get("library").get("libraryId") ==
-                                        library_obj_iter.get("libraryId")
-                                ),
-                                fastq_list_row_event_data_list
-                            )
-                        )
-                    )
-                },
-                filter(
-                    lambda library_obj_iter_: (
-                        any(
-                            map(
-                                lambda project_obj_iter_: (
-                                        library_obj_iter_.get("orcabusId") ==
-                                        project_obj_iter_
-                                ),
-                                project_obj_iter_.get("librarySet")
-                            )
-                        )
-                    ),
-                    library_obj_list
-                )
+                lambda fastq_list_row_dynamodb_iter_: fastq_list_row_dynamodb_iter_.get("event_data"),
+                fastq_list_row_dynamodb_obj_list
             )
-        )
+        ),
+        library_obj_list=library_obj_list
+    )
 
-        # Get project object
-        project_obj = dict(
-            filter(
-                lambda kv: not kv[0] == 'librarySet',
-                project_obj_iter_.items()
-            )
+    # Write fastq list row event objs to database
+    _ = list(
+        map(
+            lambda fastq_list_row_dynamodb_iter_: put_item(**fastq_list_row_dynamodb_iter_),
+            fastq_list_row_dynamodb_obj_list
         )
+    )
 
-        project_event_data_list.append(
-            {
-                "event_data": {
-                    "instrumentRunId": instrument_run_id,
-                    "project": project_obj,
-                    "libraryFastqSet": library_objects_in_project
-                }
-            }
+    # Write project event objs to database
+    _ = list(
+        map(
+            lambda project_dynamodb_iter_: put_item(**project_dynamodb_iter_),
+            project_dynamodb_obj_list
         )
+    )
 
     # Return the event data
     return {
         "start_fastq_list_row_shower_event_data": start_fastq_list_row_shower_event_data,
-        "project_event_data_list": project_event_data_list,
-        "fastq_list_rows_event_data_list": fastq_list_row_event_data_list,
         "complete_fastq_list_row_shower_event_data": complete_fastq_list_row_shower_event_data,
     }
 
@@ -159,681 +258,154 @@ def handler(event, context):
 # Test the function
 # if __name__ == "__main__":
 #     import json
-#
+#     environ["AWS_PROFILE"] = 'umccr-production'
+#     environ["INSTRUMENT_RUN_TABLE_NAME"] = "stacky-instrument-run-table"
+#     environ["FASTQ_LIST_ROW_EVENT_OBJ_TABLE_PARTITION_NAME"] = "fastq_list_row_event"
+#     environ["PROJECT_EVENT_OBJ_TABLE_PARTITION_NAME"] = "project_event"
 #     print(
 #         json.dumps(
 #             handler(
 #                 {
 #                     "library_objs": [
 #                         {
-#                             "orcabusId": "lib.01J8ES4MPZ5B201R50K42XXM4M",
-#                             "libraryId": "L2400102",
-#                             "phenotype": "tumor",
-#                             "workflow": "research",
-#                             "quality": "borderline",
-#                             "type": "WGS",
-#                             "assay": "ctTSO",
-#                             "coverage": 50
+#                             "orcabusId": "lib.01JBMVXZJ8NCWRG81HT6PGGY9A",
+#                             "libraryId": "LPRJ241015",
+#                             "workflow": "qc",
+#                             "type": "BiModal",
+#                             "assay": "BM-5L",
+#                             "coverage": 60
 #                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4XNYFP38JMDV7GMV0V3V",
-#                             "libraryId": "L2400159",
-#                             "phenotype": "tumor",
-#                             "workflow": "manual",
-#                             "quality": "good",
-#                             "type": "ctDNA",
-#                             "assay": "ctTSOv2",
-#                             "coverage": 38.6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4XQG3MPBW94TTVT4STVG",
-#                             "libraryId": "L2400160",
-#                             "phenotype": "tumor",
-#                             "workflow": "manual",
-#                             "quality": "good",
-#                             "type": "ctDNA",
-#                             "assay": "ctTSOv2",
-#                             "coverage": 38.6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4XSS97XNRS8DH0B1RJRG",
-#                             "libraryId": "L2400161",
-#                             "phenotype": "tumor",
-#                             "workflow": "manual",
-#                             "quality": "good",
-#                             "type": "ctDNA",
-#                             "assay": "ctTSOv2",
-#                             "coverage": 38.6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4XXF6NMEJMM5M4GWS6KH",
-#                             "libraryId": "L2400162",
-#                             "phenotype": "tumor",
-#                             "workflow": "manual",
-#                             "quality": "good",
-#                             "type": "ctDNA",
-#                             "assay": "ctTSOv2",
-#                             "coverage": 38.6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4XZD7T2VRPVQ1GSVZ11X",
-#                             "libraryId": "L2400163",
-#                             "phenotype": "tumor",
-#                             "workflow": "manual",
-#                             "quality": "good",
-#                             "type": "ctDNA",
-#                             "assay": "ctTSOv2",
-#                             "coverage": 38.6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4Y1AKAHYD9EW0TW4FBCP",
-#                             "libraryId": "L2400164",
-#                             "phenotype": "tumor",
-#                             "workflow": "manual",
-#                             "quality": "good",
-#                             "type": "ctDNA",
-#                             "assay": "ctTSOv2",
-#                             "coverage": 38.6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4Y3ZKRX3C5JAHA5NBXV1",
-#                             "libraryId": "L2400165",
-#                             "phenotype": "tumor",
-#                             "workflow": "manual",
-#                             "quality": "good",
-#                             "type": "ctDNA",
-#                             "assay": "ctTSOv2",
-#                             "coverage": 38.6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4Y5D52202JVBXHJ9Q9WF",
-#                             "libraryId": "L2400166",
-#                             "phenotype": "negative-control",
-#                             "workflow": "manual",
-#                             "quality": "good",
-#                             "type": "ctDNA",
-#                             "assay": "ctTSOv2",
-#                             "coverage": 0.1
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4ZDRQAP2BN3SDYYV5PKW",
-#                             "libraryId": "L2400191",
-#                             "phenotype": "normal",
-#                             "workflow": "research",
-#                             "quality": "good",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 40
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4ZMY0G1H9MDN7K2TH9Y6",
-#                             "libraryId": "L2400195",
-#                             "phenotype": "tumor",
-#                             "workflow": "research",
-#                             "quality": "good",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 80
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4ZP88X2E17X5X1FRMTPK",
-#                             "libraryId": "L2400196",
-#                             "phenotype": "tumor",
-#                             "workflow": "research",
-#                             "quality": "good",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 80
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4ZST489C712CG3R9NQSQ",
-#                             "libraryId": "L2400197",
-#                             "phenotype": "tumor",
-#                             "workflow": "research",
-#                             "quality": "good",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 80
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES4ZVWA2CGBHJVKAS3Y0G9",
-#                             "libraryId": "L2400198",
-#                             "phenotype": "tumor",
-#                             "workflow": "research",
-#                             "quality": "good",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 80
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES51V0RSVT6C7WQR72QQED",
-#                             "libraryId": "L2400231",
-#                             "phenotype": "tumor",
-#                             "workflow": "clinical",
-#                             "quality": "poor",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 100
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES52889Q8826P5SH9HDPP0",
-#                             "libraryId": "L2400238",
-#                             "phenotype": "normal",
-#                             "workflow": "clinical",
-#                             "quality": "good",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 40
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES52ANMRT3B7Y96T1Y3RY8",
-#                             "libraryId": "L2400239",
-#                             "phenotype": "normal",
-#                             "workflow": "clinical",
-#                             "quality": "good",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 40
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES52C3N585BGGY4VNXHC83",
-#                             "libraryId": "L2400240",
-#                             "phenotype": "tumor",
-#                             "workflow": "clinical",
-#                             "quality": "poor",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 100
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES52DHAPZM6FZ0VZK89PRT",
-#                             "libraryId": "L2400241",
-#                             "phenotype": "negative-control",
-#                             "workflow": "control",
-#                             "quality": "good",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 0.1
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES52F2ZHRXQY1AT1N1F81F",
-#                             "libraryId": "L2400242",
-#                             "phenotype": "normal",
-#                             "workflow": "control",
-#                             "quality": "good",
-#                             "type": "WGS",
-#                             "assay": "TsqNano",
-#                             "coverage": 15
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES52XYMVGRB1Q458THNG4T",
-#                             "libraryId": "L2400249",
-#                             "phenotype": "tumor",
-#                             "workflow": "control",
-#                             "quality": "good",
-#                             "type": "WTS",
-#                             "assay": "NebRNA",
-#                             "coverage": 1
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES52Z2KTVVKZ2ZGVQ6YC10",
-#                             "libraryId": "L2400250",
-#                             "phenotype": "tumor",
-#                             "workflow": "research",
-#                             "quality": "good",
-#                             "type": "WTS",
-#                             "assay": "NebRNA",
-#                             "coverage": 6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES530H895X4WA3NQ6CY2QV",
-#                             "libraryId": "L2400251",
-#                             "phenotype": "tumor",
-#                             "workflow": "research",
-#                             "quality": "good",
-#                             "type": "WTS",
-#                             "assay": "NebRNA",
-#                             "coverage": 6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES5320EWBNNYDGXF2SYJBD",
-#                             "libraryId": "L2400252",
-#                             "phenotype": "tumor",
-#                             "workflow": "research",
-#                             "quality": "good",
-#                             "type": "WTS",
-#                             "assay": "NebRNA",
-#                             "coverage": 6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES533DJZZNPP9MXYR5TRC0",
-#                             "libraryId": "L2400253",
-#                             "phenotype": "tumor",
-#                             "workflow": "research",
-#                             "quality": "good",
-#                             "type": "WTS",
-#                             "assay": "NebRNA",
-#                             "coverage": 6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES534XGBFYDVYV8ZG6SYS0",
-#                             "libraryId": "L2400254",
-#                             "phenotype": "tumor",
-#                             "workflow": "research",
-#                             "quality": "borderline",
-#                             "type": "WTS",
-#                             "assay": "NebRNA",
-#                             "coverage": 6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES536AB5A5PBJ8S45SZP7Q",
-#                             "libraryId": "L2400255",
-#                             "phenotype": "tumor",
-#                             "workflow": "clinical",
-#                             "quality": "very-poor",
-#                             "type": "WTS",
-#                             "assay": "NebRNA",
-#                             "coverage": 6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES537S0W1AX9PQPST13GM9",
-#                             "libraryId": "L2400256",
-#                             "phenotype": "tumor",
-#                             "workflow": "clinical",
-#                             "quality": "very-poor",
-#                             "type": "WTS",
-#                             "assay": "NebRNA",
-#                             "coverage": 6
-#                         },
-#                         {
-#                             "orcabusId": "lib.01J8ES5395KETT9T2NJSVNDKNP",
-#                             "libraryId": "L2400257",
-#                             "phenotype": "negative-control",
-#                             "workflow": "control",
-#                             "quality": "good",
-#                             "type": "WTS",
-#                             "assay": "NebRNA",
-#                             "coverage": 0.1
-#                         }
+#                         ...
 #                     ],
 #                     "project_objs": [
 #                         {
 #                             "name": None,
 #                             "description": None,
 #                             "librarySet": [
-#                                 "lib.01J8ES4MPZ5B201R50K42XXM4M"
-#                             ],
-#                             "projectId": "PO",
-#                             "orcabusId": "prj.01J8ES4EBXK08WDWB97BSCX1C9"
-#                         },
-#                         {
-#                             "name": None,
-#                             "description": None,
-#                             "librarySet": [
-#                                 "lib.01J8ES51V0RSVT6C7WQR72QQED",
-#                                 "lib.01J8ES52889Q8826P5SH9HDPP0",
-#                                 "lib.01J8ES52ANMRT3B7Y96T1Y3RY8",
-#                                 "lib.01J8ES52C3N585BGGY4VNXHC83",
-#                                 "lib.01J8ES536AB5A5PBJ8S45SZP7Q",
-#                                 "lib.01J8ES537S0W1AX9PQPST13GM9"
-#                             ],
-#                             "projectId": "CUP",
-#                             "orcabusId": "prj.01J8ES4EZAA5YMHX82664GJQB3"
-#                         },
-#                         {
-#                             "name": None,
-#                             "description": None,
-#                             "librarySet": [
-#                                 "lib.01J8ES52DHAPZM6FZ0VZK89PRT",
-#                                 "lib.01J8ES52F2ZHRXQY1AT1N1F81F",
-#                                 "lib.01J8ES52XYMVGRB1Q458THNG4T",
-#                                 "lib.01J8ES5395KETT9T2NJSVNDKNP"
+#                                 "lib.01JBMTZJ78561JM9QF6NKTPM03",
+#                                 "lib.01JBMTZMTW947JKQ6DV6JCZGYH",
+#                                 "lib.01JBMV04AC83KWVGMV2AZHYA00",
+#                                 "lib.01JBMV04KN763N47H52Q5QG2RB",
+#                                 "lib.01JBMV04QXP5XZ9ZQCYDPNZ872",
+#                                 "lib.01JBMV04TSSY28J55GSFHK95XF",
+#                                 "lib.01JBMV0515911AYC0PGD20GJJK",
+#                                 "lib.01JBMV0BH1NNB3TD8WX4CNR3JS",
+#                                 "lib.01JBMV0BKV31SC02HX91VZ4SE6",
+#                                 "lib.01JBMV0C9151207GKCMK7SP9QY",
+#                                 "lib.01JBMV0CA4XNM65QRP8BW81X2E",
+#                                 "lib.01JBMV22VWG42HJVG4MXTFM4E2",
+#                                 "lib.01JBMV26C7P15437FKKZR26R3Z",
+#                                 "lib.01JBMV26KERNPZ0X78FR0ZXZYK",
+#                                 "lib.01JBMVGBDTGJ59Z4XBN9BT44KG",
+#                                 "lib.01JBMVGBET032CHSM22VRET5CX",
+#                                 "lib.01JBMVGBHTZ6EDRDFF1WDP31AK",
+#                                 "lib.01JBMVGBKTNE562YM1JD6JHKPX",
+#                                 "lib.01JBMVGCX2ZWFV8D4TGGKBN3H6",
+#                                 "lib.01JBMVGD2XY32XM7B7SQKXM46X",
+#                                 "lib.01JBMVGDCJTSZYXCWX3F8M6GSD",
+#                                 "lib.01JBMVGDDEF5EDWWFXN1T5BV4T",
+#                                 "lib.01JBMVGMX9YKS1Z5NMW1RY44ZM",
+#                                 "lib.01JBMVGN0BZRDGH0FCYV44Y11A",
+#                                 "lib.01JBMVGNNXP2VQDPVNJC1KYA5T",
+#                                 "lib.01JBMVGNQQGXD3JCHCTG466BVN",
+#                                 "lib.01JBMVGPF9BW9MCJ3741S78GA2",
+#                                 "lib.01JBMVGPG95C36J7RM577KMWAN",
+#                                 "lib.01JBMVGPKFZ62Y8AWT84KDNH13",
+#                                 "lib.01JBMVGPPGZH0146F95QZF6ESX",
+#                                 "lib.01JBMVHJJY3ZH7ZNH76S9KVKRM",
+#                                 "lib.01JBMVHJM5Q6FMKPYH26TN0CR6",
+#                                 "lib.01JBMVHJRC4FEHV70QQMDS2Y8C",
+#                                 "lib.01JBMVHJWKHC2VNNM39E8NQ4Y6",
+#                                 "lib.01JBMVHKYFFREY2DDEFHRYYD9D",
+#                                 "lib.01JBMVHM1BAHTMV6W1C4G4Z718",
+#                                 "lib.01JBMVHMD3AK91PRV4B72RCE75",
+#                                 "lib.01JBMVHMW9H1GCXPEDFCF0HPJN",
+#                                 "lib.01JBMVHMY76XD502E0TA4N9VXP",
+#                                 "lib.01JBMVHN2846GR2FB8662TEYTE",
+#                                 "lib.01JBMVHPZQ8QXEJ1MZWS3FMSXN",
+#                                 "lib.01JBMVHQ2CZFXE9XVDBKVBSDYH",
+#                                 "lib.01JBMVHQSQTCT2BM5TNVXAWPZD",
+#                                 "lib.01JBMVHQTSYSSWB19XB0CQRQQB",
+#                                 "lib.01JBMVYYDYWY6EC22QWJCNS05P",
+#                                 "lib.01JBMVYYF0513DNBMWD9E76FNA",
+#                                 "lib.01JBMVYYG0FETK52P956V65FAA",
+#                                 "lib.01JBMVYYPG7PQ3DFZA3490YB5K",
+#                                 "lib.01JBMW0AF20EACKCKPZ2KDDEVA",
+#                                 "lib.01JBMW0AG2F271247S3FGFPPMD",
+#                                 "lib.01JBMW0AY90EZASFKF5SQWTPYK",
+#                                 "lib.01JBMW0AZCWJAAX4C33BY912EX",
+#                                 "lib.01JBMW0B0GKXEDMF0ECJ54P1N7",
+#                                 "lib.01JBMW0B5SMV496ZYX9G1DPDHE",
+#                                 "lib.01JC0QB21QDVJYBSC38KB8A1W5",
+#                                 "lib.01JC0QB260AH48ZMYZGD6YKXKA",
+#                                 "lib.01JC0QB2KENB0Z3GA5QN9243KC",
+#                                 "lib.01JC0QB2MG0N7P319FFA9K8DC2",
+#                                 "lib.01JCG5QXMVVKZN9VDBFHY7PB7Y",
+#                                 "lib.01JCG5QXP50C0J9HPWE3883ADC",
+#                                 "lib.01JCG5QXRZWZ8A2HCJY00454NA",
+#                                 "lib.01JCG5QXWPPWKQA2ZHBCHP1YQE",
+#                                 "lib.01JCZM3FSACVYPVBD4AG94K4TE",
+#                                 "lib.01JCZM3FVEN1HZYG58X5JB4YWH",
+#                                 "lib.01JCZM3GA1VQXVHRZG14D53XKQ",
+#                                 "lib.01JCZM3GCHRNYTJ5720HKMFP8R",
+#                                 "lib.01JCZM3GEEV55D33Q68EJ86GQ7",
+#                                 "lib.01JCZM3GYQFA1MJG9ZRS42SGPZ",
+#                                 "lib.01JCZM3HEJHBC7Y2WY46HSVPK5",
+#                                 "lib.01JCZM3HGP9E3GCF64FGNW09VD",
+#                                 "lib.01JDPSP5XGVRH7X95FXVTVH4QF",
+#                                 "lib.01JDPSP61V9YZAZM62FHAS87F9",
+#                                 "lib.01JDPSP72WNMEEY6SHBSC9QV0N",
+#                                 "lib.01JDPSP75G2W4KDPAECWT100CP",
+#                                 "lib.01JE681VW076VYJZEQ4P5MVQES",
+#                                 "lib.01JE681VXATSQ279T1SATDPAP3",
+#                                 "lib.01JE681WGCCCE96HH3M2MC9PZ2",
+#                                 "lib.01JE681WNV28G589BFFZJES33B",
+#                                 "lib.01JER8VVQB4R6Q993EK85S79C8",
+#                                 "lib.01JER8VVWQ8VWN56DQGR9R7CK0",
+#                                 "lib.01JER8VW9E5KVH4ZB4E3TSC266",
+#                                 "lib.01JER8VWBKJZKNAH5KERPQ0P55",
+#                                 "lib.01JFA9M635CVWDC2FCX0QE340B",
+#                                 "lib.01JFA9M65HCNHDJDYH63F6J9XX",
+#                                 "lib.01JFA9M67XT8P4D1NM1S1YXKYQ",
+#                                 "lib.01JFA9M6PD17DFECEHNKB3Z913",
+#                                 "lib.01JFA9M7498FG6XJ8RFC65W9Z5",
+#                                 "lib.01JFA9M7FJJD8F5J5SRGA1MKK5",
+#                                 "lib.01JFCW0WTDX071Q8F98D19YYWM",
+#                                 "lib.01JFFEDF0TT0CZQVCGHDYKRGC7",
+#                                 "lib.01JGXSH42PVH0213YGY7K990KH",
+#                                 "lib.01JGXSH44PYTTBJ14CSYSWQ94K",
+#                                 "lib.01JHJCPCP55SA462E11Y3VQHQ8",
+#                                 "lib.01JHJCPCQNTJRA8TM49XPV010E",
+#                                 "lib.01JHJCPDBSXN6SAHYZ2M6M8DDP",
+#                                 "lib.01JHJCPDEVPVHMEYJNY0MZ23QC",
+#                                 "lib.01JJ1V2NA2C0TGWY00ANCPKX43",
+#                                 "lib.01JJ1V2NVMVSDA2MPK92ZJQFE5",
+#                                 "lib.01JJ1V2PBY00FF39QR518YCCFX",
+#                                 "lib.01JJ1V2PDFGR2MXNKRF6TRBYTZ",
+#                                 "lib.01JJ1V2PNRY848A2X73193QHSQ",
+#                                 "lib.01JJ1V2PQEB8F8S6XXKCCTCKNA",
+#                                 "lib.01JJPE8DJ9DXVX1DFN6JQT4G3T",
+#                                 "lib.01JJPE8DM1SF57DVFPSJZ5EHK6",
+#                                 "lib.01JJPE8DYC9YHA85MVBH71EZD5",
+#                                 "lib.01JJPE8E2M15FGB8CXEF6J59VB"
 #                             ],
 #                             "projectId": "Control",
-#                             "orcabusId": "prj.01J8ES4FC6DVW20AR33FBX2SA8"
+#                             "orcabusId": "prj.01JBMTCMSYMREZ7CYAT5SHTEJJ"
 #                         },
-#                         {
-#                             "name": None,
-#                             "description": None,
-#                             "librarySet": [
-#                                 "lib.01J8ES52Z2KTVVKZ2ZGVQ6YC10",
-#                                 "lib.01J8ES530H895X4WA3NQ6CY2QV",
-#                                 "lib.01J8ES5320EWBNNYDGXF2SYJBD",
-#                                 "lib.01J8ES533DJZZNPP9MXYR5TRC0",
-#                                 "lib.01J8ES534XGBFYDVYV8ZG6SYS0"
-#                             ],
-#                             "projectId": "BPOP-retro",
-#                             "orcabusId": "prj.01J8ES4FH3XMPZQNDJ9J000BXX"
-#                         },
-#                         {
-#                             "name": None,
-#                             "description": None,
-#                             "librarySet": [
-#                                 "lib.01J8ES4XNYFP38JMDV7GMV0V3V",
-#                                 "lib.01J8ES4XQG3MPBW94TTVT4STVG",
-#                                 "lib.01J8ES4XSS97XNRS8DH0B1RJRG",
-#                                 "lib.01J8ES4XXF6NMEJMM5M4GWS6KH",
-#                                 "lib.01J8ES4XZD7T2VRPVQ1GSVZ11X",
-#                                 "lib.01J8ES4Y1AKAHYD9EW0TW4FBCP",
-#                                 "lib.01J8ES4Y3ZKRX3C5JAHA5NBXV1",
-#                                 "lib.01J8ES4Y5D52202JVBXHJ9Q9WF"
-#                             ],
-#                             "projectId": "Testing",
-#                             "orcabusId": "prj.01J8ES4XMWD0DH7MDRNER5TZS1"
-#                         },
-#                         {
-#                             "name": None,
-#                             "description": None,
-#                             "librarySet": [
-#                                 "lib.01J8ES4ZDRQAP2BN3SDYYV5PKW",
-#                                 "lib.01J8ES4ZMY0G1H9MDN7K2TH9Y6",
-#                                 "lib.01J8ES4ZP88X2E17X5X1FRMTPK",
-#                                 "lib.01J8ES4ZST489C712CG3R9NQSQ",
-#                                 "lib.01J8ES4ZVWA2CGBHJVKAS3Y0G9"
-#                             ],
-#                             "projectId": "CAVATAK",
-#                             "orcabusId": "prj.01J8ES4ZAWHH3FKYA2CFHSMZ4B"
-#                         }
+#                         ...
 #                     ],
 #                     "fastq_list_rows": [
 #                         {
-#                             "rgid": "GAATTCGT.TTATGAGT.1.240229_A00130_0288_BH5HM2DSXC.L2400102",
-#                             "rgsm": "L2400102",
-#                             "rglb": "L2400102",
+#                             "rgid": "CGTACAGGAA.AGAGAACCTA.1.250131_A01052_0253_AH5FY3DSXF.LPRJ250045",
+#                             "rgsm": "LPRJ250045",
+#                             "rglb": "LPRJ250045",
 #                             "lane": 1,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400102/L2400102_S1_L001_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400102/L2400102_S1_L001_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GAGAATGGTT.TTGCTGCCGA.1.240229_A00130_0288_BH5HM2DSXC.L2400159",
-#                             "rgsm": "L2400159",
-#                             "rglb": "L2400159",
-#                             "lane": 1,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400159/L2400159_S2_L001_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400159/L2400159_S2_L001_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "AGAGGCAACC.CCATCATTAG.1.240229_A00130_0288_BH5HM2DSXC.L2400160",
-#                             "rgsm": "L2400160",
-#                             "rglb": "L2400160",
-#                             "lane": 1,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400160/L2400160_S3_L001_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400160/L2400160_S3_L001_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "CCATCATTAG.AGAGGCAACC.1.240229_A00130_0288_BH5HM2DSXC.L2400161",
-#                             "rgsm": "L2400161",
-#                             "rglb": "L2400161",
-#                             "lane": 1,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400161/L2400161_S4_L001_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400161/L2400161_S4_L001_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GATAGGCCGA.GCCATGTGCG.1.240229_A00130_0288_BH5HM2DSXC.L2400162",
-#                             "rgsm": "L2400162",
-#                             "rglb": "L2400162",
-#                             "lane": 1,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400162/L2400162_S5_L001_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400162/L2400162_S5_L001_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "ATGGTTGACT.AGGACAGGCC.1.240229_A00130_0288_BH5HM2DSXC.L2400163",
-#                             "rgsm": "L2400163",
-#                             "rglb": "L2400163",
-#                             "lane": 1,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "TATTGCGCTC.CCTAACACAG.1.240229_A00130_0288_BH5HM2DSXC.L2400164",
-#                             "rgsm": "L2400164",
-#                             "rglb": "L2400164",
-#                             "lane": 1,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400164/L2400164_S7_L001_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400164/L2400164_S7_L001_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "TTCTACATAC.TTACAGTTAG.1.240229_A00130_0288_BH5HM2DSXC.L2400166",
-#                             "rgsm": "L2400166",
-#                             "rglb": "L2400166",
-#                             "lane": 1,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400166/L2400166_S8_L001_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400166/L2400166_S8_L001_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "ATGAGGCC.CAATTAAC.2.240229_A00130_0288_BH5HM2DSXC.L2400195",
-#                             "rgsm": "L2400195",
-#                             "rglb": "L2400195",
-#                             "lane": 2,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400195/L2400195_S9_L002_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400195/L2400195_S9_L002_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "ACTAAGAT.CCGCGGTT.2.240229_A00130_0288_BH5HM2DSXC.L2400196",
-#                             "rgsm": "L2400196",
-#                             "rglb": "L2400196",
-#                             "lane": 2,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400196/L2400196_S10_L002_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400196/L2400196_S10_L002_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GTCGGAGC.TTATAACC.2.240229_A00130_0288_BH5HM2DSXC.L2400197",
-#                             "rgsm": "L2400197",
-#                             "rglb": "L2400197",
-#                             "lane": 2,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400197/L2400197_S11_L002_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400197/L2400197_S11_L002_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "TCGTAGTG.CCAAGTCT.2.240229_A00130_0288_BH5HM2DSXC.L2400231",
-#                             "rgsm": "L2400231",
-#                             "rglb": "L2400231",
-#                             "lane": 2,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400231/L2400231_S12_L002_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400231/L2400231_S12_L002_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GGAGCGTC.GCACGGAC.2.240229_A00130_0288_BH5HM2DSXC.L2400238",
-#                             "rgsm": "L2400238",
-#                             "rglb": "L2400238",
-#                             "lane": 2,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400238/L2400238_S13_L002_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400238/L2400238_S13_L002_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "ATGGCATG.GGTACCTT.2.240229_A00130_0288_BH5HM2DSXC.L2400239",
-#                             "rgsm": "L2400239",
-#                             "rglb": "L2400239",
-#                             "lane": 2,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400239/L2400239_S14_L002_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400239/L2400239_S14_L002_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GCAATGCA.AACGTTCC.2.240229_A00130_0288_BH5HM2DSXC.L2400240",
-#                             "rgsm": "L2400240",
-#                             "rglb": "L2400240",
-#                             "lane": 2,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400240/L2400240_S15_L002_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400240/L2400240_S15_L002_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "ATGAGGCC.CAATTAAC.3.240229_A00130_0288_BH5HM2DSXC.L2400195",
-#                             "rgsm": "L2400195",
-#                             "rglb": "L2400195",
-#                             "lane": 3,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400195/L2400195_S9_L003_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400195/L2400195_S9_L003_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "ACTAAGAT.CCGCGGTT.3.240229_A00130_0288_BH5HM2DSXC.L2400196",
-#                             "rgsm": "L2400196",
-#                             "rglb": "L2400196",
-#                             "lane": 3,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400196/L2400196_S10_L003_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400196/L2400196_S10_L003_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GTCGGAGC.TTATAACC.3.240229_A00130_0288_BH5HM2DSXC.L2400197",
-#                             "rgsm": "L2400197",
-#                             "rglb": "L2400197",
-#                             "lane": 3,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400197/L2400197_S11_L003_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400197/L2400197_S11_L003_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "TCGTAGTG.CCAAGTCT.3.240229_A00130_0288_BH5HM2DSXC.L2400231",
-#                             "rgsm": "L2400231",
-#                             "rglb": "L2400231",
-#                             "lane": 3,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400231/L2400231_S12_L003_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400231/L2400231_S12_L003_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GGAGCGTC.GCACGGAC.3.240229_A00130_0288_BH5HM2DSXC.L2400238",
-#                             "rgsm": "L2400238",
-#                             "rglb": "L2400238",
-#                             "lane": 3,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400238/L2400238_S13_L003_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400238/L2400238_S13_L003_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "ATGGCATG.GGTACCTT.3.240229_A00130_0288_BH5HM2DSXC.L2400239",
-#                             "rgsm": "L2400239",
-#                             "rglb": "L2400239",
-#                             "lane": 3,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400239/L2400239_S14_L003_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400239/L2400239_S14_L003_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GCAATGCA.AACGTTCC.3.240229_A00130_0288_BH5HM2DSXC.L2400240",
-#                             "rgsm": "L2400240",
-#                             "rglb": "L2400240",
-#                             "lane": 3,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400240/L2400240_S15_L003_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400240/L2400240_S15_L003_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "ACGCCTTGTT.ACGTTCCTTA.4.240229_A00130_0288_BH5HM2DSXC.L2400165",
-#                             "rgsm": "L2400165",
-#                             "rglb": "L2400165",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400165/L2400165_S16_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400165/L2400165_S16_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GCACGGAC.TGCGAGAC.4.240229_A00130_0288_BH5HM2DSXC.L2400191",
-#                             "rgsm": "L2400191",
-#                             "rglb": "L2400191",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400191/L2400191_S17_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400191/L2400191_S17_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GTCGGAGC.TTATAACC.4.240229_A00130_0288_BH5HM2DSXC.L2400197",
-#                             "rgsm": "L2400197",
-#                             "rglb": "L2400197",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400197/L2400197_S11_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400197/L2400197_S11_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "CTTGGTAT.GGACTTGG.4.240229_A00130_0288_BH5HM2DSXC.L2400198",
-#                             "rgsm": "L2400198",
-#                             "rglb": "L2400198",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400198/L2400198_S18_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400198/L2400198_S18_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GTTCCAAT.GCAGAATT.4.240229_A00130_0288_BH5HM2DSXC.L2400241",
-#                             "rgsm": "L2400241",
-#                             "rglb": "L2400241",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400241/L2400241_S19_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400241/L2400241_S19_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "ACCTTGGC.ATGAGGCC.4.240229_A00130_0288_BH5HM2DSXC.L2400242",
-#                             "rgsm": "L2400242",
-#                             "rglb": "L2400242",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400242/L2400242_S20_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400242/L2400242_S20_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "AGTTTCGA.CCTACGAT.4.240229_A00130_0288_BH5HM2DSXC.L2400249",
-#                             "rgsm": "L2400249",
-#                             "rglb": "L2400249",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400249/L2400249_S21_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400249/L2400249_S21_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GAACCTCT.GTCTGCGC.4.240229_A00130_0288_BH5HM2DSXC.L2400250",
-#                             "rgsm": "L2400250",
-#                             "rglb": "L2400250",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400250/L2400250_S22_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400250/L2400250_S22_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GCCCAGTG.CCGCAATT.4.240229_A00130_0288_BH5HM2DSXC.L2400251",
-#                             "rgsm": "L2400251",
-#                             "rglb": "L2400251",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400251/L2400251_S23_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400251/L2400251_S23_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "TGACAGCT.CCCGTAGG.4.240229_A00130_0288_BH5HM2DSXC.L2400252",
-#                             "rgsm": "L2400252",
-#                             "rglb": "L2400252",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400252/L2400252_S24_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400252/L2400252_S24_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "CATCACCC.ATATAGCA.4.240229_A00130_0288_BH5HM2DSXC.L2400253",
-#                             "rgsm": "L2400253",
-#                             "rglb": "L2400253",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400253/L2400253_S25_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400253/L2400253_S25_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "CTGGAGTA.GTTCGGTT.4.240229_A00130_0288_BH5HM2DSXC.L2400254",
-#                             "rgsm": "L2400254",
-#                             "rglb": "L2400254",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400254/L2400254_S26_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400254/L2400254_S26_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GATCCGGG.AAGCAGGT.4.240229_A00130_0288_BH5HM2DSXC.L2400255",
-#                             "rgsm": "L2400255",
-#                             "rglb": "L2400255",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400255/L2400255_S27_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400255/L2400255_S27_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "AACACCTG.CGCATGGG.4.240229_A00130_0288_BH5HM2DSXC.L2400256",
-#                             "rgsm": "L2400256",
-#                             "rglb": "L2400256",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400256/L2400256_S28_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400256/L2400256_S28_L004_R2_001.fastq.gz"
-#                         },
-#                         {
-#                             "rgid": "GTGACGTT.TCCCAGAT.4.240229_A00130_0288_BH5HM2DSXC.L2400257",
-#                             "rgsm": "L2400257",
-#                             "rglb": "L2400257",
-#                             "lane": 4,
-#                             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400257/L2400257_S29_L004_R1_001.fastq.gz",
-#                             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400257/L2400257_S29_L004_R2_001.fastq.gz"
+#                             "read1FileUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/primary/250131_A01052_0253_AH5FY3DSXF/202502018d52a554/Samples/Lane_1/LPRJ250045/LPRJ250045_S1_L001_R1_001.fastq.gz",
+#                             "read2FileUri": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/production/primary/250131_A01052_0253_AH5FY3DSXF/202502018d52a554/Samples/Lane_1/LPRJ250045/LPRJ250045_S1_L001_R2_001.fastq.gz"
 #                         }
+#                         ...
 #                     ],
-#                     "instrument_run_id": "240229_A00130_0288_BH5HM2DSXC"
+#                     "instrument_run_id": "250131_A01052_0253_AH5FY3DSXF"
 #                 },
 #                 None
 #             )
@@ -844,1174 +416,9 @@ def handler(event, context):
 #
 #     # {
 #     #     "start_fastq_list_row_shower_event_data": {
-#     #         "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
+#     #         "instrumentRunId": "250131_A01052_0253_AH5FY3DSXF"
 #     #     },
-#     #     "project_event_data_list": [
-#     #         {
-#     #             "event_data": {
-#     #                 "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #                 "project": {
-#     #                     "name": null,
-#     #                     "description": null,
-#     #                     "projectId": "PO",
-#     #                     "orcabusId": "prj.01J8ES4EBXK08WDWB97BSCX1C9"
-#     #                 },
-#     #                 "libraryFastqSet": [
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4MPZ5B201R50K42XXM4M",
-#     #                             "libraryId": "L2400102"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GAATTCGT.TTATGAGT.1.240229_A00130_0288_BH5HM2DSXC.L2400102",
-#     #                                 "rgsm": "L2400102",
-#     #                                 "rglb": "L2400102",
-#     #                                 "lane": 1,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400102/L2400102_S1_L001_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400102/L2400102_S1_L001_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     }
-#     #                 ]
-#     #             }
-#     #         },
-#     #         {
-#     #             "event_data": {
-#     #                 "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #                 "project": {
-#     #                     "name": null,
-#     #                     "description": null,
-#     #                     "projectId": "CUP",
-#     #                     "orcabusId": "prj.01J8ES4EZAA5YMHX82664GJQB3"
-#     #                 },
-#     #                 "libraryFastqSet": [
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES51V0RSVT6C7WQR72QQED",
-#     #                             "libraryId": "L2400231"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "TCGTAGTG.CCAAGTCT.2.240229_A00130_0288_BH5HM2DSXC.L2400231",
-#     #                                 "rgsm": "L2400231",
-#     #                                 "rglb": "L2400231",
-#     #                                 "lane": 2,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400231/L2400231_S12_L002_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400231/L2400231_S12_L002_R2_001.fastq.gz"
-#     #                             },
-#     #                             {
-#     #                                 "rgid": "TCGTAGTG.CCAAGTCT.3.240229_A00130_0288_BH5HM2DSXC.L2400231",
-#     #                                 "rgsm": "L2400231",
-#     #                                 "rglb": "L2400231",
-#     #                                 "lane": 3,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400231/L2400231_S12_L003_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400231/L2400231_S12_L003_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES52889Q8826P5SH9HDPP0",
-#     #                             "libraryId": "L2400238"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GGAGCGTC.GCACGGAC.2.240229_A00130_0288_BH5HM2DSXC.L2400238",
-#     #                                 "rgsm": "L2400238",
-#     #                                 "rglb": "L2400238",
-#     #                                 "lane": 2,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400238/L2400238_S13_L002_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400238/L2400238_S13_L002_R2_001.fastq.gz"
-#     #                             },
-#     #                             {
-#     #                                 "rgid": "GGAGCGTC.GCACGGAC.3.240229_A00130_0288_BH5HM2DSXC.L2400238",
-#     #                                 "rgsm": "L2400238",
-#     #                                 "rglb": "L2400238",
-#     #                                 "lane": 3,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400238/L2400238_S13_L003_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400238/L2400238_S13_L003_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES52ANMRT3B7Y96T1Y3RY8",
-#     #                             "libraryId": "L2400239"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "ATGGCATG.GGTACCTT.2.240229_A00130_0288_BH5HM2DSXC.L2400239",
-#     #                                 "rgsm": "L2400239",
-#     #                                 "rglb": "L2400239",
-#     #                                 "lane": 2,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400239/L2400239_S14_L002_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400239/L2400239_S14_L002_R2_001.fastq.gz"
-#     #                             },
-#     #                             {
-#     #                                 "rgid": "ATGGCATG.GGTACCTT.3.240229_A00130_0288_BH5HM2DSXC.L2400239",
-#     #                                 "rgsm": "L2400239",
-#     #                                 "rglb": "L2400239",
-#     #                                 "lane": 3,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400239/L2400239_S14_L003_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400239/L2400239_S14_L003_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES52C3N585BGGY4VNXHC83",
-#     #                             "libraryId": "L2400240"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GCAATGCA.AACGTTCC.2.240229_A00130_0288_BH5HM2DSXC.L2400240",
-#     #                                 "rgsm": "L2400240",
-#     #                                 "rglb": "L2400240",
-#     #                                 "lane": 2,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400240/L2400240_S15_L002_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400240/L2400240_S15_L002_R2_001.fastq.gz"
-#     #                             },
-#     #                             {
-#     #                                 "rgid": "GCAATGCA.AACGTTCC.3.240229_A00130_0288_BH5HM2DSXC.L2400240",
-#     #                                 "rgsm": "L2400240",
-#     #                                 "rglb": "L2400240",
-#     #                                 "lane": 3,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400240/L2400240_S15_L003_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400240/L2400240_S15_L003_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES536AB5A5PBJ8S45SZP7Q",
-#     #                             "libraryId": "L2400255"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GATCCGGG.AAGCAGGT.4.240229_A00130_0288_BH5HM2DSXC.L2400255",
-#     #                                 "rgsm": "L2400255",
-#     #                                 "rglb": "L2400255",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400255/L2400255_S27_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400255/L2400255_S27_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES537S0W1AX9PQPST13GM9",
-#     #                             "libraryId": "L2400256"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "AACACCTG.CGCATGGG.4.240229_A00130_0288_BH5HM2DSXC.L2400256",
-#     #                                 "rgsm": "L2400256",
-#     #                                 "rglb": "L2400256",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400256/L2400256_S28_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400256/L2400256_S28_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     }
-#     #                 ]
-#     #             }
-#     #         },
-#     #         {
-#     #             "event_data": {
-#     #                 "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #                 "project": {
-#     #                     "name": null,
-#     #                     "description": null,
-#     #                     "projectId": "Control",
-#     #                     "orcabusId": "prj.01J8ES4FC6DVW20AR33FBX2SA8"
-#     #                 },
-#     #                 "libraryFastqSet": [
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES52DHAPZM6FZ0VZK89PRT",
-#     #                             "libraryId": "L2400241"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GTTCCAAT.GCAGAATT.4.240229_A00130_0288_BH5HM2DSXC.L2400241",
-#     #                                 "rgsm": "L2400241",
-#     #                                 "rglb": "L2400241",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400241/L2400241_S19_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400241/L2400241_S19_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES52F2ZHRXQY1AT1N1F81F",
-#     #                             "libraryId": "L2400242"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "ACCTTGGC.ATGAGGCC.4.240229_A00130_0288_BH5HM2DSXC.L2400242",
-#     #                                 "rgsm": "L2400242",
-#     #                                 "rglb": "L2400242",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400242/L2400242_S20_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400242/L2400242_S20_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES52XYMVGRB1Q458THNG4T",
-#     #                             "libraryId": "L2400249"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "AGTTTCGA.CCTACGAT.4.240229_A00130_0288_BH5HM2DSXC.L2400249",
-#     #                                 "rgsm": "L2400249",
-#     #                                 "rglb": "L2400249",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400249/L2400249_S21_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400249/L2400249_S21_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES5395KETT9T2NJSVNDKNP",
-#     #                             "libraryId": "L2400257"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GTGACGTT.TCCCAGAT.4.240229_A00130_0288_BH5HM2DSXC.L2400257",
-#     #                                 "rgsm": "L2400257",
-#     #                                 "rglb": "L2400257",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400257/L2400257_S29_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400257/L2400257_S29_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     }
-#     #                 ]
-#     #             }
-#     #         },
-#     #         {
-#     #             "event_data": {
-#     #                 "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #                 "project": {
-#     #                     "name": null,
-#     #                     "description": null,
-#     #                     "projectId": "BPOP-retro",
-#     #                     "orcabusId": "prj.01J8ES4FH3XMPZQNDJ9J000BXX"
-#     #                 },
-#     #                 "libraryFastqSet": [
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES52Z2KTVVKZ2ZGVQ6YC10",
-#     #                             "libraryId": "L2400250"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GAACCTCT.GTCTGCGC.4.240229_A00130_0288_BH5HM2DSXC.L2400250",
-#     #                                 "rgsm": "L2400250",
-#     #                                 "rglb": "L2400250",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400250/L2400250_S22_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400250/L2400250_S22_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES530H895X4WA3NQ6CY2QV",
-#     #                             "libraryId": "L2400251"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GCCCAGTG.CCGCAATT.4.240229_A00130_0288_BH5HM2DSXC.L2400251",
-#     #                                 "rgsm": "L2400251",
-#     #                                 "rglb": "L2400251",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400251/L2400251_S23_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400251/L2400251_S23_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES5320EWBNNYDGXF2SYJBD",
-#     #                             "libraryId": "L2400252"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "TGACAGCT.CCCGTAGG.4.240229_A00130_0288_BH5HM2DSXC.L2400252",
-#     #                                 "rgsm": "L2400252",
-#     #                                 "rglb": "L2400252",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400252/L2400252_S24_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400252/L2400252_S24_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES533DJZZNPP9MXYR5TRC0",
-#     #                             "libraryId": "L2400253"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "CATCACCC.ATATAGCA.4.240229_A00130_0288_BH5HM2DSXC.L2400253",
-#     #                                 "rgsm": "L2400253",
-#     #                                 "rglb": "L2400253",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400253/L2400253_S25_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400253/L2400253_S25_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES534XGBFYDVYV8ZG6SYS0",
-#     #                             "libraryId": "L2400254"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "CTGGAGTA.GTTCGGTT.4.240229_A00130_0288_BH5HM2DSXC.L2400254",
-#     #                                 "rgsm": "L2400254",
-#     #                                 "rglb": "L2400254",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400254/L2400254_S26_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400254/L2400254_S26_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     }
-#     #                 ]
-#     #             }
-#     #         },
-#     #         {
-#     #             "event_data": {
-#     #                 "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #                 "project": {
-#     #                     "name": null,
-#     #                     "description": null,
-#     #                     "projectId": "Testing",
-#     #                     "orcabusId": "prj.01J8ES4XMWD0DH7MDRNER5TZS1"
-#     #                 },
-#     #                 "libraryFastqSet": [
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4XNYFP38JMDV7GMV0V3V",
-#     #                             "libraryId": "L2400159"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GAGAATGGTT.TTGCTGCCGA.1.240229_A00130_0288_BH5HM2DSXC.L2400159",
-#     #                                 "rgsm": "L2400159",
-#     #                                 "rglb": "L2400159",
-#     #                                 "lane": 1,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400159/L2400159_S2_L001_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400159/L2400159_S2_L001_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4XQG3MPBW94TTVT4STVG",
-#     #                             "libraryId": "L2400160"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "AGAGGCAACC.CCATCATTAG.1.240229_A00130_0288_BH5HM2DSXC.L2400160",
-#     #                                 "rgsm": "L2400160",
-#     #                                 "rglb": "L2400160",
-#     #                                 "lane": 1,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400160/L2400160_S3_L001_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400160/L2400160_S3_L001_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4XSS97XNRS8DH0B1RJRG",
-#     #                             "libraryId": "L2400161"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "CCATCATTAG.AGAGGCAACC.1.240229_A00130_0288_BH5HM2DSXC.L2400161",
-#     #                                 "rgsm": "L2400161",
-#     #                                 "rglb": "L2400161",
-#     #                                 "lane": 1,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400161/L2400161_S4_L001_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400161/L2400161_S4_L001_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4XXF6NMEJMM5M4GWS6KH",
-#     #                             "libraryId": "L2400162"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GATAGGCCGA.GCCATGTGCG.1.240229_A00130_0288_BH5HM2DSXC.L2400162",
-#     #                                 "rgsm": "L2400162",
-#     #                                 "rglb": "L2400162",
-#     #                                 "lane": 1,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400162/L2400162_S5_L001_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400162/L2400162_S5_L001_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4XZD7T2VRPVQ1GSVZ11X",
-#     #                             "libraryId": "L2400163"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "ATGGTTGACT.AGGACAGGCC.1.240229_A00130_0288_BH5HM2DSXC.L2400163",
-#     #                                 "rgsm": "L2400163",
-#     #                                 "rglb": "L2400163",
-#     #                                 "lane": 1,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4Y1AKAHYD9EW0TW4FBCP",
-#     #                             "libraryId": "L2400164"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "TATTGCGCTC.CCTAACACAG.1.240229_A00130_0288_BH5HM2DSXC.L2400164",
-#     #                                 "rgsm": "L2400164",
-#     #                                 "rglb": "L2400164",
-#     #                                 "lane": 1,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400164/L2400164_S7_L001_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400164/L2400164_S7_L001_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4Y3ZKRX3C5JAHA5NBXV1",
-#     #                             "libraryId": "L2400165"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "ACGCCTTGTT.ACGTTCCTTA.4.240229_A00130_0288_BH5HM2DSXC.L2400165",
-#     #                                 "rgsm": "L2400165",
-#     #                                 "rglb": "L2400165",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400165/L2400165_S16_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400165/L2400165_S16_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4Y5D52202JVBXHJ9Q9WF",
-#     #                             "libraryId": "L2400166"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "TTCTACATAC.TTACAGTTAG.1.240229_A00130_0288_BH5HM2DSXC.L2400166",
-#     #                                 "rgsm": "L2400166",
-#     #                                 "rglb": "L2400166",
-#     #                                 "lane": 1,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400166/L2400166_S8_L001_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400166/L2400166_S8_L001_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     }
-#     #                 ]
-#     #             }
-#     #         },
-#     #         {
-#     #             "event_data": {
-#     #                 "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #                 "project": {
-#     #                     "name": null,
-#     #                     "description": null,
-#     #                     "projectId": "CAVATAK",
-#     #                     "orcabusId": "prj.01J8ES4ZAWHH3FKYA2CFHSMZ4B"
-#     #                 },
-#     #                 "libraryFastqSet": [
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4ZDRQAP2BN3SDYYV5PKW",
-#     #                             "libraryId": "L2400191"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GCACGGAC.TGCGAGAC.4.240229_A00130_0288_BH5HM2DSXC.L2400191",
-#     #                                 "rgsm": "L2400191",
-#     #                                 "rglb": "L2400191",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400191/L2400191_S17_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400191/L2400191_S17_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4ZMY0G1H9MDN7K2TH9Y6",
-#     #                             "libraryId": "L2400195"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "ATGAGGCC.CAATTAAC.2.240229_A00130_0288_BH5HM2DSXC.L2400195",
-#     #                                 "rgsm": "L2400195",
-#     #                                 "rglb": "L2400195",
-#     #                                 "lane": 2,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400195/L2400195_S9_L002_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400195/L2400195_S9_L002_R2_001.fastq.gz"
-#     #                             },
-#     #                             {
-#     #                                 "rgid": "ATGAGGCC.CAATTAAC.3.240229_A00130_0288_BH5HM2DSXC.L2400195",
-#     #                                 "rgsm": "L2400195",
-#     #                                 "rglb": "L2400195",
-#     #                                 "lane": 3,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400195/L2400195_S9_L003_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400195/L2400195_S9_L003_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4ZP88X2E17X5X1FRMTPK",
-#     #                             "libraryId": "L2400196"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "ACTAAGAT.CCGCGGTT.2.240229_A00130_0288_BH5HM2DSXC.L2400196",
-#     #                                 "rgsm": "L2400196",
-#     #                                 "rglb": "L2400196",
-#     #                                 "lane": 2,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400196/L2400196_S10_L002_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400196/L2400196_S10_L002_R2_001.fastq.gz"
-#     #                             },
-#     #                             {
-#     #                                 "rgid": "ACTAAGAT.CCGCGGTT.3.240229_A00130_0288_BH5HM2DSXC.L2400196",
-#     #                                 "rgsm": "L2400196",
-#     #                                 "rglb": "L2400196",
-#     #                                 "lane": 3,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400196/L2400196_S10_L003_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400196/L2400196_S10_L003_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4ZST489C712CG3R9NQSQ",
-#     #                             "libraryId": "L2400197"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "GTCGGAGC.TTATAACC.2.240229_A00130_0288_BH5HM2DSXC.L2400197",
-#     #                                 "rgsm": "L2400197",
-#     #                                 "rglb": "L2400197",
-#     #                                 "lane": 2,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400197/L2400197_S11_L002_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400197/L2400197_S11_L002_R2_001.fastq.gz"
-#     #                             },
-#     #                             {
-#     #                                 "rgid": "GTCGGAGC.TTATAACC.3.240229_A00130_0288_BH5HM2DSXC.L2400197",
-#     #                                 "rgsm": "L2400197",
-#     #                                 "rglb": "L2400197",
-#     #                                 "lane": 3,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400197/L2400197_S11_L003_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400197/L2400197_S11_L003_R2_001.fastq.gz"
-#     #                             },
-#     #                             {
-#     #                                 "rgid": "GTCGGAGC.TTATAACC.4.240229_A00130_0288_BH5HM2DSXC.L2400197",
-#     #                                 "rgsm": "L2400197",
-#     #                                 "rglb": "L2400197",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400197/L2400197_S11_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400197/L2400197_S11_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     },
-#     #                     {
-#     #                         "library": {
-#     #                             "orcabusId": "lib.01J8ES4ZVWA2CGBHJVKAS3Y0G9",
-#     #                             "libraryId": "L2400198"
-#     #                         },
-#     #                         "fastqPairs": [
-#     #                             {
-#     #                                 "rgid": "CTTGGTAT.GGACTTGG.4.240229_A00130_0288_BH5HM2DSXC.L2400198",
-#     #                                 "rgsm": "L2400198",
-#     #                                 "rglb": "L2400198",
-#     #                                 "lane": 4,
-#     #                                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400198/L2400198_S18_L004_R1_001.fastq.gz",
-#     #                                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400198/L2400198_S18_L004_R2_001.fastq.gz"
-#     #                             }
-#     #                         ]
-#     #                     }
-#     #                 ]
-#     #             }
-#     #         }
-#     #     ],
-#     #     "fastq_list_rows_event_data_list": [
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400102",
-#     #                 "orcabusId": "lib.01J8ES4MPZ5B201R50K42XXM4M"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GAATTCGT.TTATGAGT.1.240229_A00130_0288_BH5HM2DSXC.L2400102",
-#     #                 "rgsm": "L2400102",
-#     #                 "rglb": "L2400102",
-#     #                 "lane": 1,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400102/L2400102_S1_L001_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400102/L2400102_S1_L001_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400159",
-#     #                 "orcabusId": "lib.01J8ES4XNYFP38JMDV7GMV0V3V"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GAGAATGGTT.TTGCTGCCGA.1.240229_A00130_0288_BH5HM2DSXC.L2400159",
-#     #                 "rgsm": "L2400159",
-#     #                 "rglb": "L2400159",
-#     #                 "lane": 1,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400159/L2400159_S2_L001_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400159/L2400159_S2_L001_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400160",
-#     #                 "orcabusId": "lib.01J8ES4XQG3MPBW94TTVT4STVG"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "AGAGGCAACC.CCATCATTAG.1.240229_A00130_0288_BH5HM2DSXC.L2400160",
-#     #                 "rgsm": "L2400160",
-#     #                 "rglb": "L2400160",
-#     #                 "lane": 1,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400160/L2400160_S3_L001_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400160/L2400160_S3_L001_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400161",
-#     #                 "orcabusId": "lib.01J8ES4XSS97XNRS8DH0B1RJRG"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "CCATCATTAG.AGAGGCAACC.1.240229_A00130_0288_BH5HM2DSXC.L2400161",
-#     #                 "rgsm": "L2400161",
-#     #                 "rglb": "L2400161",
-#     #                 "lane": 1,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400161/L2400161_S4_L001_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400161/L2400161_S4_L001_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400162",
-#     #                 "orcabusId": "lib.01J8ES4XXF6NMEJMM5M4GWS6KH"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GATAGGCCGA.GCCATGTGCG.1.240229_A00130_0288_BH5HM2DSXC.L2400162",
-#     #                 "rgsm": "L2400162",
-#     #                 "rglb": "L2400162",
-#     #                 "lane": 1,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400162/L2400162_S5_L001_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400162/L2400162_S5_L001_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400163",
-#     #                 "orcabusId": "lib.01J8ES4XZD7T2VRPVQ1GSVZ11X"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "ATGGTTGACT.AGGACAGGCC.1.240229_A00130_0288_BH5HM2DSXC.L2400163",
-#     #                 "rgsm": "L2400163",
-#     #                 "rglb": "L2400163",
-#     #                 "lane": 1,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400163/L2400163_S6_L001_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400163/L2400163_S6_L001_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400164",
-#     #                 "orcabusId": "lib.01J8ES4Y1AKAHYD9EW0TW4FBCP"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "TATTGCGCTC.CCTAACACAG.1.240229_A00130_0288_BH5HM2DSXC.L2400164",
-#     #                 "rgsm": "L2400164",
-#     #                 "rglb": "L2400164",
-#     #                 "lane": 1,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400164/L2400164_S7_L001_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400164/L2400164_S7_L001_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400166",
-#     #                 "orcabusId": "lib.01J8ES4Y5D52202JVBXHJ9Q9WF"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "TTCTACATAC.TTACAGTTAG.1.240229_A00130_0288_BH5HM2DSXC.L2400166",
-#     #                 "rgsm": "L2400166",
-#     #                 "rglb": "L2400166",
-#     #                 "lane": 1,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400166/L2400166_S8_L001_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_1/L2400166/L2400166_S8_L001_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400195",
-#     #                 "orcabusId": "lib.01J8ES4ZMY0G1H9MDN7K2TH9Y6"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "ATGAGGCC.CAATTAAC.2.240229_A00130_0288_BH5HM2DSXC.L2400195",
-#     #                 "rgsm": "L2400195",
-#     #                 "rglb": "L2400195",
-#     #                 "lane": 2,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400195/L2400195_S9_L002_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400195/L2400195_S9_L002_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400196",
-#     #                 "orcabusId": "lib.01J8ES4ZP88X2E17X5X1FRMTPK"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "ACTAAGAT.CCGCGGTT.2.240229_A00130_0288_BH5HM2DSXC.L2400196",
-#     #                 "rgsm": "L2400196",
-#     #                 "rglb": "L2400196",
-#     #                 "lane": 2,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400196/L2400196_S10_L002_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400196/L2400196_S10_L002_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400197",
-#     #                 "orcabusId": "lib.01J8ES4ZST489C712CG3R9NQSQ"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GTCGGAGC.TTATAACC.2.240229_A00130_0288_BH5HM2DSXC.L2400197",
-#     #                 "rgsm": "L2400197",
-#     #                 "rglb": "L2400197",
-#     #                 "lane": 2,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400197/L2400197_S11_L002_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400197/L2400197_S11_L002_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400231",
-#     #                 "orcabusId": "lib.01J8ES51V0RSVT6C7WQR72QQED"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "TCGTAGTG.CCAAGTCT.2.240229_A00130_0288_BH5HM2DSXC.L2400231",
-#     #                 "rgsm": "L2400231",
-#     #                 "rglb": "L2400231",
-#     #                 "lane": 2,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400231/L2400231_S12_L002_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400231/L2400231_S12_L002_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400238",
-#     #                 "orcabusId": "lib.01J8ES52889Q8826P5SH9HDPP0"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GGAGCGTC.GCACGGAC.2.240229_A00130_0288_BH5HM2DSXC.L2400238",
-#     #                 "rgsm": "L2400238",
-#     #                 "rglb": "L2400238",
-#     #                 "lane": 2,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400238/L2400238_S13_L002_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400238/L2400238_S13_L002_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400239",
-#     #                 "orcabusId": "lib.01J8ES52ANMRT3B7Y96T1Y3RY8"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "ATGGCATG.GGTACCTT.2.240229_A00130_0288_BH5HM2DSXC.L2400239",
-#     #                 "rgsm": "L2400239",
-#     #                 "rglb": "L2400239",
-#     #                 "lane": 2,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400239/L2400239_S14_L002_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400239/L2400239_S14_L002_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400240",
-#     #                 "orcabusId": "lib.01J8ES52C3N585BGGY4VNXHC83"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GCAATGCA.AACGTTCC.2.240229_A00130_0288_BH5HM2DSXC.L2400240",
-#     #                 "rgsm": "L2400240",
-#     #                 "rglb": "L2400240",
-#     #                 "lane": 2,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400240/L2400240_S15_L002_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_2/L2400240/L2400240_S15_L002_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400195",
-#     #                 "orcabusId": "lib.01J8ES4ZMY0G1H9MDN7K2TH9Y6"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "ATGAGGCC.CAATTAAC.3.240229_A00130_0288_BH5HM2DSXC.L2400195",
-#     #                 "rgsm": "L2400195",
-#     #                 "rglb": "L2400195",
-#     #                 "lane": 3,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400195/L2400195_S9_L003_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400195/L2400195_S9_L003_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400196",
-#     #                 "orcabusId": "lib.01J8ES4ZP88X2E17X5X1FRMTPK"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "ACTAAGAT.CCGCGGTT.3.240229_A00130_0288_BH5HM2DSXC.L2400196",
-#     #                 "rgsm": "L2400196",
-#     #                 "rglb": "L2400196",
-#     #                 "lane": 3,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400196/L2400196_S10_L003_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400196/L2400196_S10_L003_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400197",
-#     #                 "orcabusId": "lib.01J8ES4ZST489C712CG3R9NQSQ"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GTCGGAGC.TTATAACC.3.240229_A00130_0288_BH5HM2DSXC.L2400197",
-#     #                 "rgsm": "L2400197",
-#     #                 "rglb": "L2400197",
-#     #                 "lane": 3,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400197/L2400197_S11_L003_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400197/L2400197_S11_L003_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400231",
-#     #                 "orcabusId": "lib.01J8ES51V0RSVT6C7WQR72QQED"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "TCGTAGTG.CCAAGTCT.3.240229_A00130_0288_BH5HM2DSXC.L2400231",
-#     #                 "rgsm": "L2400231",
-#     #                 "rglb": "L2400231",
-#     #                 "lane": 3,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400231/L2400231_S12_L003_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400231/L2400231_S12_L003_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400238",
-#     #                 "orcabusId": "lib.01J8ES52889Q8826P5SH9HDPP0"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GGAGCGTC.GCACGGAC.3.240229_A00130_0288_BH5HM2DSXC.L2400238",
-#     #                 "rgsm": "L2400238",
-#     #                 "rglb": "L2400238",
-#     #                 "lane": 3,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400238/L2400238_S13_L003_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400238/L2400238_S13_L003_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400239",
-#     #                 "orcabusId": "lib.01J8ES52ANMRT3B7Y96T1Y3RY8"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "ATGGCATG.GGTACCTT.3.240229_A00130_0288_BH5HM2DSXC.L2400239",
-#     #                 "rgsm": "L2400239",
-#     #                 "rglb": "L2400239",
-#     #                 "lane": 3,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400239/L2400239_S14_L003_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400239/L2400239_S14_L003_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400240",
-#     #                 "orcabusId": "lib.01J8ES52C3N585BGGY4VNXHC83"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GCAATGCA.AACGTTCC.3.240229_A00130_0288_BH5HM2DSXC.L2400240",
-#     #                 "rgsm": "L2400240",
-#     #                 "rglb": "L2400240",
-#     #                 "lane": 3,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400240/L2400240_S15_L003_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_3/L2400240/L2400240_S15_L003_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400165",
-#     #                 "orcabusId": "lib.01J8ES4Y3ZKRX3C5JAHA5NBXV1"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "ACGCCTTGTT.ACGTTCCTTA.4.240229_A00130_0288_BH5HM2DSXC.L2400165",
-#     #                 "rgsm": "L2400165",
-#     #                 "rglb": "L2400165",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400165/L2400165_S16_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400165/L2400165_S16_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400191",
-#     #                 "orcabusId": "lib.01J8ES4ZDRQAP2BN3SDYYV5PKW"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GCACGGAC.TGCGAGAC.4.240229_A00130_0288_BH5HM2DSXC.L2400191",
-#     #                 "rgsm": "L2400191",
-#     #                 "rglb": "L2400191",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400191/L2400191_S17_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400191/L2400191_S17_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400197",
-#     #                 "orcabusId": "lib.01J8ES4ZST489C712CG3R9NQSQ"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GTCGGAGC.TTATAACC.4.240229_A00130_0288_BH5HM2DSXC.L2400197",
-#     #                 "rgsm": "L2400197",
-#     #                 "rglb": "L2400197",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400197/L2400197_S11_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400197/L2400197_S11_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400198",
-#     #                 "orcabusId": "lib.01J8ES4ZVWA2CGBHJVKAS3Y0G9"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "CTTGGTAT.GGACTTGG.4.240229_A00130_0288_BH5HM2DSXC.L2400198",
-#     #                 "rgsm": "L2400198",
-#     #                 "rglb": "L2400198",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400198/L2400198_S18_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400198/L2400198_S18_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400241",
-#     #                 "orcabusId": "lib.01J8ES52DHAPZM6FZ0VZK89PRT"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GTTCCAAT.GCAGAATT.4.240229_A00130_0288_BH5HM2DSXC.L2400241",
-#     #                 "rgsm": "L2400241",
-#     #                 "rglb": "L2400241",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400241/L2400241_S19_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400241/L2400241_S19_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400242",
-#     #                 "orcabusId": "lib.01J8ES52F2ZHRXQY1AT1N1F81F"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "ACCTTGGC.ATGAGGCC.4.240229_A00130_0288_BH5HM2DSXC.L2400242",
-#     #                 "rgsm": "L2400242",
-#     #                 "rglb": "L2400242",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400242/L2400242_S20_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400242/L2400242_S20_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400249",
-#     #                 "orcabusId": "lib.01J8ES52XYMVGRB1Q458THNG4T"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "AGTTTCGA.CCTACGAT.4.240229_A00130_0288_BH5HM2DSXC.L2400249",
-#     #                 "rgsm": "L2400249",
-#     #                 "rglb": "L2400249",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400249/L2400249_S21_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400249/L2400249_S21_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400250",
-#     #                 "orcabusId": "lib.01J8ES52Z2KTVVKZ2ZGVQ6YC10"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GAACCTCT.GTCTGCGC.4.240229_A00130_0288_BH5HM2DSXC.L2400250",
-#     #                 "rgsm": "L2400250",
-#     #                 "rglb": "L2400250",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400250/L2400250_S22_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400250/L2400250_S22_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400251",
-#     #                 "orcabusId": "lib.01J8ES530H895X4WA3NQ6CY2QV"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GCCCAGTG.CCGCAATT.4.240229_A00130_0288_BH5HM2DSXC.L2400251",
-#     #                 "rgsm": "L2400251",
-#     #                 "rglb": "L2400251",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400251/L2400251_S23_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400251/L2400251_S23_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400252",
-#     #                 "orcabusId": "lib.01J8ES5320EWBNNYDGXF2SYJBD"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "TGACAGCT.CCCGTAGG.4.240229_A00130_0288_BH5HM2DSXC.L2400252",
-#     #                 "rgsm": "L2400252",
-#     #                 "rglb": "L2400252",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400252/L2400252_S24_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400252/L2400252_S24_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400253",
-#     #                 "orcabusId": "lib.01J8ES533DJZZNPP9MXYR5TRC0"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "CATCACCC.ATATAGCA.4.240229_A00130_0288_BH5HM2DSXC.L2400253",
-#     #                 "rgsm": "L2400253",
-#     #                 "rglb": "L2400253",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400253/L2400253_S25_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400253/L2400253_S25_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400254",
-#     #                 "orcabusId": "lib.01J8ES534XGBFYDVYV8ZG6SYS0"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "CTGGAGTA.GTTCGGTT.4.240229_A00130_0288_BH5HM2DSXC.L2400254",
-#     #                 "rgsm": "L2400254",
-#     #                 "rglb": "L2400254",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400254/L2400254_S26_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400254/L2400254_S26_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400255",
-#     #                 "orcabusId": "lib.01J8ES536AB5A5PBJ8S45SZP7Q"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GATCCGGG.AAGCAGGT.4.240229_A00130_0288_BH5HM2DSXC.L2400255",
-#     #                 "rgsm": "L2400255",
-#     #                 "rglb": "L2400255",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400255/L2400255_S27_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400255/L2400255_S27_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400256",
-#     #                 "orcabusId": "lib.01J8ES537S0W1AX9PQPST13GM9"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "AACACCTG.CGCATGGG.4.240229_A00130_0288_BH5HM2DSXC.L2400256",
-#     #                 "rgsm": "L2400256",
-#     #                 "rglb": "L2400256",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400256/L2400256_S28_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400256/L2400256_S28_L004_R2_001.fastq.gz"
-#     #             }
-#     #         },
-#     #         {
-#     #             "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC",
-#     #             "library": {
-#     #                 "libraryId": "L2400257",
-#     #                 "orcabusId": "lib.01J8ES5395KETT9T2NJSVNDKNP"
-#     #             },
-#     #             "fastqListRow": {
-#     #                 "rgid": "GTGACGTT.TCCCAGAT.4.240229_A00130_0288_BH5HM2DSXC.L2400257",
-#     #                 "rgsm": "L2400257",
-#     #                 "rglb": "L2400257",
-#     #                 "lane": 4,
-#     #                 "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400257/L2400257_S29_L004_R1_001.fastq.gz",
-#     #                 "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/240229_A00130_0288_BH5HM2DSXC/202409108ed29dcc/Samples/Lane_4/L2400257/L2400257_S29_L004_R2_001.fastq.gz"
-#     #             }
-#     #         }
-#     #     ],
 #     #     "complete_fastq_list_row_shower_event_data": {
-#     #         "instrumentRunId": "240229_A00130_0288_BH5HM2DSXC"
+#     #         "instrumentRunId": "250131_A01052_0253_AH5FY3DSXF"
 #     #     }
 #     # }
