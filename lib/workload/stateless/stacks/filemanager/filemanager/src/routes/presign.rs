@@ -1,12 +1,15 @@
 //! Logic for the presigned url route.
 //!
 
+use aws_sdk_s3::presigning::PresignedRequest;
+use chrono::Duration;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::clients::aws::s3;
 use crate::clients::aws::s3::ResponseHeaders;
+use crate::clients::aws::secrets_manager::SecretsManagerCredentials;
+use crate::clients::aws::{config, s3};
 use crate::database::entities::s3_object;
 use crate::env::Config;
 use crate::error::Error::PresignedUrlError;
@@ -58,6 +61,29 @@ pub struct PresignedUrlBuilder<'a> {
     object_size: Option<i64>,
 }
 
+/// Config for response headers.
+#[derive(Debug)]
+pub struct ResponseHeadersConfig {
+    content_disposition: ContentDisposition,
+    content_type: Option<String>,
+    content_encoding: Option<String>,
+}
+
+impl ResponseHeadersConfig {
+    /// Create a new response headers config.
+    pub fn new(
+        content_disposition: ContentDisposition,
+        content_type: Option<String>,
+        content_encoding: Option<String>,
+    ) -> Self {
+        Self {
+            content_disposition,
+            content_type,
+            content_encoding,
+        }
+    }
+}
+
 impl<'a> PresignedUrlBuilder<'a> {
     /// Create a builder.
     pub fn new(s3_client: &'a s3::Client, config: &'a Config) -> Self {
@@ -81,9 +107,8 @@ impl<'a> PresignedUrlBuilder<'a> {
         key: &str,
         bucket: &str,
         version_id: &str,
-        response_content_disposition: ContentDisposition,
-        response_content_type: Option<String>,
-        response_content_encoding: Option<String>,
+        response_headers: ResponseHeadersConfig,
+        access_key_secret_id: Option<&str>,
     ) -> Result<Option<Url>> {
         let less_than_limit = if let Some(size) = self.object_size {
             if let Some(limit) = self.config.api_presign_limit() {
@@ -96,31 +121,52 @@ impl<'a> PresignedUrlBuilder<'a> {
         };
 
         if less_than_limit {
-            let content_disposition = match response_content_disposition {
+            let content_disposition = match response_headers.content_disposition {
                 ContentDisposition::Inline => "inline",
                 ContentDisposition::Attachment => &format!("attachment; filename=\"{key}\""),
             };
+            let headers = ResponseHeaders::new(
+                content_disposition.to_string(),
+                response_headers.content_type,
+                response_headers.content_encoding,
+            );
+            let expires_in = self.config.api_presign_expiry();
 
-            let presign = self
-                .s3_client
-                .presign_url(
-                    key,
-                    bucket,
-                    version_id,
-                    ResponseHeaders::new(
-                        content_disposition.to_string(),
-                        response_content_type,
-                        response_content_encoding,
-                    ),
-                    self.config.api_presign_expiry(),
-                )
-                .await
-                .map_err(|err| PresignedUrlError(err.into_service_error().to_string()))?;
+            // Grab the secret if it is configured.
+            let client = if let Some(secret) = access_key_secret_id {
+                // Construct a new client to use only once-off for pre-signing.
+                let config =
+                    config::Config::from_provider(SecretsManagerCredentials::new(secret).await?)
+                        .await
+                        .load();
+                &s3::Client::new(aws_sdk_s3::Client::new(&config))
+            } else {
+                self.s3_client
+            };
+
+            let presign =
+                Self::presign_with_client(client, key, bucket, version_id, headers, expires_in)
+                    .await?;
 
             Ok(Some(presign.uri().parse()?))
         } else {
             Ok(None)
         }
+    }
+
+    /// Presign using the S3 client.
+    async fn presign_with_client(
+        client: &s3::Client,
+        key: &str,
+        bucket: &str,
+        version_id: &str,
+        headers: ResponseHeaders,
+        expires_in: Duration,
+    ) -> Result<PresignedRequest> {
+        client
+            .presign_url(key, bucket, version_id, headers, expires_in)
+            .await
+            .map_err(|err| PresignedUrlError(err.into_service_error().to_string()))
     }
 
     /// Generate a presigned url from a database model.
@@ -130,6 +176,7 @@ impl<'a> PresignedUrlBuilder<'a> {
         response_content_disposition: ContentDisposition,
         response_content_type: Option<String>,
         response_content_encoding: Option<String>,
+        access_key_secret_id: Option<&str>,
     ) -> Result<Option<Url>> {
         let builder = Self::new(state.s3_client(), state.config()).set_object_size(model.size);
 
@@ -138,9 +185,12 @@ impl<'a> PresignedUrlBuilder<'a> {
                 &model.key,
                 &model.bucket,
                 &model.version_id,
-                response_content_disposition,
-                response_content_type,
-                response_content_encoding,
+                ResponseHeadersConfig::new(
+                    response_content_disposition,
+                    response_content_type,
+                    response_content_encoding,
+                ),
+                access_key_secret_id,
             )
             .await?
         {
@@ -156,12 +206,11 @@ pub(crate) mod tests {
     use aws_smithy_mocks_experimental::{mock_client, RuleMode};
     use chrono::Duration;
 
+    use super::*;
     use crate::clients::aws::s3;
     use crate::env::Config;
     use crate::events::aws::message::default_version_id;
     use crate::routes::list::tests::mock_get_object;
-
-    use super::*;
 
     #[tokio::test]
     async fn presign() {
@@ -178,8 +227,7 @@ pub(crate) mod tests {
                 "0",
                 "1",
                 &default_version_id(),
-                ContentDisposition::Inline,
-                None,
+                ResponseHeadersConfig::new(ContentDisposition::Inline, None, None),
                 None,
             )
             .await
@@ -197,8 +245,7 @@ pub(crate) mod tests {
                 "0",
                 "1",
                 &default_version_id(),
-                ContentDisposition::Inline,
-                None,
+                ResponseHeadersConfig::new(ContentDisposition::Inline, None, None),
                 None,
             )
             .await
@@ -226,9 +273,12 @@ pub(crate) mod tests {
                 "0",
                 "1",
                 &default_version_id(),
-                ContentDisposition::Inline,
-                Some("application/json".to_string()),
-                Some("gzip".to_string()),
+                ResponseHeadersConfig::new(
+                    ContentDisposition::Inline,
+                    Some("application/json".to_string()),
+                    Some("gzip".to_string()),
+                ),
+                None,
             )
             .await
             .unwrap()
@@ -254,8 +304,7 @@ pub(crate) mod tests {
                 "0",
                 "1",
                 &default_version_id(),
-                ContentDisposition::Attachment,
-                None,
+                ResponseHeadersConfig::new(ContentDisposition::Attachment, None, None),
                 None,
             )
             .await
@@ -286,8 +335,7 @@ pub(crate) mod tests {
                 "0",
                 "1",
                 &default_version_id(),
-                ContentDisposition::Inline,
-                None,
+                ResponseHeadersConfig::new(ContentDisposition::Inline, None, None),
                 None,
             )
             .await
@@ -314,8 +362,7 @@ pub(crate) mod tests {
                 "0",
                 "1",
                 &default_version_id(),
-                ContentDisposition::Inline,
-                None,
+                ResponseHeadersConfig::new(ContentDisposition::Inline, None, None),
                 None,
             )
             .await

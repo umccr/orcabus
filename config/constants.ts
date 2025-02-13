@@ -141,8 +141,17 @@ export const eventDlqNameFMAnnotator = 'orcabus-event-dlq-fmannotator';
 
 export const serviceUserSecretName = 'orcabus/token-service-user'; // pragma: allowlist secret
 export const jwtSecretName = 'orcabus/token-service-jwt'; // pragma: allowlist secret
+validateSecretName(jwtSecretName);
+
 export const icaAccessTokenSecretName = 'IcaSecretsPortal'; // pragma: allowlist secret
+validateSecretName(icaAccessTokenSecretName);
+
 export const fileManagerIngestRoleName = 'orcabus-file-manager-ingest-role';
+export const accessKeySecretName = 'orcabus/access-key-user'; // pragma: allowlist secret
+validateSecretName(accessKeySecretName);
+
+export const accessKeySecretUserName = 'orcabus-access-key-user'; // pragma: allowlist secret
+
 export const dataMoverRoleName = 'orcabus-data-mover-role';
 
 /*

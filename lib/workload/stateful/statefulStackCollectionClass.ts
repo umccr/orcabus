@@ -65,6 +65,7 @@ import {
   OraCompressionIcav2PipelineTable,
   OraCompressionIcav2PipelineTableStackProps,
 } from './stacks/ora-decompression-dynamodb/deploy/stack';
+import { AccessKeySecret, AccessKeySecretStackProps } from './stacks/access-key-secret';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -86,6 +87,7 @@ export interface StatefulStackCollectionProps {
   pierianDxPipelineTableStackProps: PierianDxPipelineTableStackProps;
   oncoanalyserPipelineTableStackProps: OncoanalyserNfPipelineTableStackProps;
   sashPipelineTableStackProps: SashNfPipelineTableStackProps;
+  accessKeySecretStackProps: AccessKeySecretStackProps;
 }
 
 export class StatefulStackCollection {
@@ -110,6 +112,7 @@ export class StatefulStackCollection {
   readonly pierianDxPipelineTableStack: Stack;
   readonly oncoanalyserPipelineTableStack: Stack;
   readonly sashPipelineTableStack: Stack;
+  readonly accessKeySecretStack: Stack;
 
   constructor(
     scope: Construct,
@@ -257,6 +260,11 @@ export class StatefulStackCollection {
     this.sashPipelineTableStack = new SashNfPipelineTable(scope, 'SashNfPipelineTableStack', {
       ...this.createTemplateProps(env, 'SashNfPipelineTableStack'),
       ...statefulConfiguration.sashPipelineTableStackProps,
+    });
+
+    this.accessKeySecretStack = new AccessKeySecret(scope, 'AccessKeySecret', {
+      ...this.createTemplateProps(env, 'AccessKeySecret'),
+      ...statefulConfiguration.accessKeySecretStackProps,
     });
   }
 

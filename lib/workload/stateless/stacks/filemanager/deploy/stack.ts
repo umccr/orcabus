@@ -34,6 +34,7 @@ export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & 
   migrateDatabase?: boolean;
   securityGroupName: string;
   fileManagerRoleName: string;
+  accessKeySecretArn: string;
   apiGatewayCognitoProps: ApiGatewayConstructProps;
 };
 
