@@ -1,7 +1,7 @@
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 
-from app.models import Library
+from app.models import Library, Subject
 from app.serializers.library import LibrarySerializer, LibraryDetailSerializer, LibraryHistorySerializer
 
 from .base import BaseViewSet
@@ -10,7 +10,8 @@ from .base import BaseViewSet
 class LibraryViewSet(BaseViewSet):
     serializer_class = LibrarySerializer
     detail_serializer_class = LibraryDetailSerializer
-    search_fields = Library.get_base_fields()
+    # Will allow filter by the SBJXXXXX ID which is from the individual_set
+    search_fields = [*Library.get_base_fields(),'subject__individual_set__individual_id']
     queryset = Library.objects.all()
 
 
@@ -32,6 +33,16 @@ class LibraryViewSet(BaseViewSet):
         if project_id_list:
             query_params.pop("project_id")
             qs = qs.filter(project_set__project_id__in=project_id_list)
+
+        # This is a temporary solution to quickly retrieve libraries based on the individual_id (the SBJXXX ID) as it is commonly used.
+        # This approach may be improved in the future.
+        individual_id_list = query_params.getlist("individual_id", None)
+        if individual_id_list:
+            query_params.pop("individual_id")
+
+            # Find the related subject with the individual_id
+            f_sbj = Subject.objects.filter(individual_set__individual_id__in=individual_id_list)
+            qs = qs.filter(subject__in=f_sbj)
 
         # Continue filtering by the keys inside the library model
         return Library.objects.get_by_keyword(qs, **query_params)
@@ -58,6 +69,10 @@ class LibraryViewSet(BaseViewSet):
                              description="Filter where the associated the project has the given 'project_id'.",
                              required=False,
                              type=float),
+            OpenApiParameter(name='individual_id',
+                             description="Filter based on 'individual_id' linked to this library (E.g. SBJXXXXX).",
+                             required=False,
+                             type=str),
         ],
         responses=LibraryDetailSerializer(many=True),
     )

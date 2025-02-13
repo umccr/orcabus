@@ -11,6 +11,15 @@ class SubjectSerializer(ModelSerializer):
         exclude = ["individual_set"]
 
 
+class SubjectIndividualSerializer(ModelSerializer):
+    from .individual import IndividualSerializer
+
+    class Meta(OrcabusIdSerializerMetaMixin):
+        model = Subject
+        fields = '__all__'
+
+    individual_set = IndividualSerializer(many=True, read_only=True)
+
 class SubjectDetailSerializer(ModelSerializer):
     from .individual import IndividualSerializer
     from .library import LibrarySerializer
