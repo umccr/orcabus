@@ -108,7 +108,7 @@ cd ../../../../../
 
 ```
 yarn test --- test/stateful/token-service/
-yarn test --- test/stateful/token-service/tokenServiceConstruct.test.ts
+yarn test --- test/stateful/token-service/accessKeyUser.test.ts
 yarn test --- test/stateful/
 ```
 

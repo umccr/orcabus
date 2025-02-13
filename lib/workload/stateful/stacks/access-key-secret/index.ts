@@ -43,6 +43,7 @@ export class AccessKeySecret extends Stack {
     });
 
     this._secret = new Secret(this, 'Secret', {
+      secretName: props.secretName,
       description: 'Contains an access key for an IAM user to perform long-lived actions',
       secretObjectValue: {
         accessKeyId: SecretValue.unsafePlainText(accessKey.accessKeyId),
