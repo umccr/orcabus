@@ -287,6 +287,44 @@ pub(crate) mod tests {
         assert_is_accessible(&pool, Created, Some(StorageClass::DeepArchive), None, false).await;
     }
 
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn insert_s3_crawl(pool: PgPool) {
+        let insert_query = |bucket, prefix, status| {
+            format!(
+                "insert into s3_crawl (s3_crawl_id, status, bucket, prefix) values (
+                    '{}',
+                    '{}',
+                    '{}',
+                    '{}'
+                )",
+                UuidGenerator::generate(),
+                status,
+                bucket,
+                prefix
+            )
+        };
+
+        // InProgress inserts on different buckets are okay, or inserts with other statuses.
+        query(&insert_query("bucket1", "prefix1", "InProgress"))
+            .execute(&pool)
+            .await
+            .unwrap();
+        query(&insert_query("bucket1", "prefix2", "Completed"))
+            .execute(&pool)
+            .await
+            .unwrap();
+        query(&insert_query("bucket2", "prefix1", "InProgress"))
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // InProgress inserts on the same bucket should be an error.
+        let result = query(&insert_query("bucket1", "prefix2", "InProgress"))
+            .execute(&pool)
+            .await;
+        assert!(result.is_err())
+    }
+
     async fn assert_is_accessible(
         pool: &PgPool,
         event_type: EventType,

@@ -12,7 +12,6 @@ use csv::{ReaderBuilder, StringRecord, Trim};
 use flate2::read::MultiGzDecoder;
 use futures::future::join_all;
 use futures::{Stream, TryStreamExt};
-use mockall_double::double;
 use orc_rust::error::OrcError;
 use orc_rust::ArrowReaderBuilder;
 use parquet::arrow::ParquetRecordBatchStreamBuilder;
@@ -24,13 +23,12 @@ use std::hash::{Hash, Hasher};
 use std::io::{BufReader, Cursor, Read};
 use std::result;
 
-#[double]
 use crate::clients::aws::s3::Client;
 use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::error::Error::S3Error;
 use crate::error::{Error, Result};
 use crate::events::aws::message::{default_version_id, quote_e_tag, EventType::Created};
-use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
+use crate::events::aws::{empty_sequencer, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::uuid::UuidGenerator;
 
 const DEFAULT_CSV_MANIFEST: &str =
@@ -271,12 +269,6 @@ impl Inventory {
         .collect();
 
         Ok(inventories)
-    }
-
-    /// The sequencer value for an inventory event. This is the lowest possible sequencer value
-    /// so that any deleted event can bind to the inventory records.
-    pub fn inventory_sequencer() -> String {
-        String::new()
     }
 }
 
@@ -521,7 +513,7 @@ impl From<Record> for FlatS3EventMessage {
             e_tag: e_tag.map(quote_e_tag),
             // Set this to the empty string so that any deleted events after this can bind to this
             // created event, as they are always greater than this event.
-            sequencer: Some(Inventory::inventory_sequencer()),
+            sequencer: Some(empty_sequencer()),
             version_id: version_id.unwrap_or_else(default_version_id),
             storage_class,
             last_modified_date,
@@ -578,16 +570,16 @@ impl From<Vec<DiffMessages>> for FlatS3EventMessages {
 pub(crate) mod tests {
     use std::collections::HashSet;
 
-    use aws_sdk_s3::operation::get_object::GetObjectOutput;
-    use aws_sdk_s3::primitives::ByteStream;
-    use chrono::Days;
-    use flate2::read::GzEncoder;
-    use mockall::predicate::eq;
-    use serde_json::json;
-    use serde_json::Value;
-
+    use crate::events::aws::collecter::tests::mock_s3;
     use crate::events::aws::inventory::Manifest;
     use crate::events::aws::tests::EXPECTED_E_TAG;
+    use aws_sdk_s3::operation::get_object::GetObjectOutput;
+    use aws_sdk_s3::primitives::ByteStream;
+    use aws_smithy_mocks_experimental::{mock, Rule};
+    use chrono::Days;
+    use flate2::read::GzEncoder;
+    use serde_json::json;
+    use serde_json::Value;
 
     use super::*;
 
@@ -663,27 +655,30 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn parse_csv_manifest_from_checksum() {
-        let (mut client, checksum) = test_csv_manifest(None, csv_data_empty_string());
+        let (_, checksum) = test_csv_manifest(None, csv_data_empty_string(), &[]);
 
         let bytes = csv_manifest_to_json(checksum);
         let checksum = format!("{}\n", hex::encode(md5::compute(bytes.as_slice()).0))
             .as_bytes()
             .to_vec();
-        set_client_manifest_expectations(&mut client, bytes);
-
-        client
-            .expect_get_object()
-            .with(
-                eq("manifest.checksum"),
-                eq(MANIFEST_BUCKET),
-                eq(default_version_id()),
-            )
-            .once()
-            .returning(move |_, _, _| {
-                Ok(GetObjectOutput::builder()
-                    .body(ByteStream::from(checksum.clone()))
-                    .build())
-            });
+        let (client, _) = test_csv_manifest(
+            None,
+            csv_data_empty_string(),
+            &[
+                set_client_manifest_expectations(bytes),
+                mock!(aws_sdk_s3::Client::get_object)
+                    .match_requests(move |req| {
+                        req.key() == Some("manifest.checksum")
+                            && req.bucket() == Some(MANIFEST_BUCKET)
+                            && req.version_id() == Some(&default_version_id())
+                    })
+                    .then_output(move || {
+                        GetObjectOutput::builder()
+                            .body(ByteStream::from(checksum.clone()))
+                            .build()
+                    }),
+            ],
+        );
 
         let inventory = Inventory::new(client);
         let result = inventory
@@ -777,8 +772,7 @@ pub(crate) mod tests {
         reader.read_to_end(&mut bytes).unwrap();
 
         let checksum = hex::encode(md5::compute(bytes.as_slice()).0);
-        let mut client = Client::default();
-        set_client_expectations(&InventoryFormat::Csv, &mut client, bytes);
+        let client = set_client_expectations(&InventoryFormat::Csv, bytes, &[]);
 
         let inventory = Inventory::new(client);
         let result = inventory
@@ -839,7 +833,7 @@ pub(crate) mod tests {
         schema: Option<String>,
         use_checksum: bool,
     ) {
-        let (client, checksum) = test_csv_manifest(headers, data);
+        let (client, checksum) = test_csv_manifest(headers, data, &[]);
 
         let checksum = if use_checksum { Some(checksum) } else { None };
 
@@ -853,12 +847,15 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn csv_manifest_from_key_expectations() -> Client {
-        let (mut client, checksum) = test_csv_manifest(None, csv_data_empty_string());
+        let (_, checksum) = test_csv_manifest(None, csv_data_empty_string(), &[]);
 
         let bytes = csv_manifest_to_json(checksum);
-        set_client_manifest_expectations(&mut client, bytes);
-
-        client
+        test_csv_manifest(
+            None,
+            csv_data_empty_string(),
+            &[set_client_manifest_expectations(bytes)],
+        )
+        .0
     }
 
     fn csv_manifest_to_json(checksum: String) -> Vec<u8> {
@@ -869,20 +866,18 @@ pub(crate) mod tests {
         .unwrap()
     }
 
-    fn set_client_manifest_expectations(s3_client: &mut Client, data: Vec<u8>) {
-        s3_client
-            .expect_get_object()
-            .with(
-                eq("manifest.json"),
-                eq(MANIFEST_BUCKET),
-                eq(default_version_id()),
-            )
-            .once()
-            .returning(move |_, _, _| {
-                Ok(GetObjectOutput::builder()
+    fn set_client_manifest_expectations(data: Vec<u8>) -> Rule {
+        mock!(aws_sdk_s3::Client::get_object)
+            .match_requests(move |req| {
+                req.key() == Some("manifest.json")
+                    && req.bucket() == Some(MANIFEST_BUCKET)
+                    && req.version_id() == Some(&default_version_id())
+            })
+            .then_output(move || {
+                GetObjectOutput::builder()
                     .body(ByteStream::from(data.clone()))
-                    .build())
-            });
+                    .build()
+            })
     }
 
     fn csv_data_empty_string() -> String {
@@ -909,7 +904,11 @@ pub(crate) mod tests {
         .to_string()
     }
 
-    fn test_csv_manifest(headers: Option<&str>, mut data: String) -> (Client, String) {
+    fn test_csv_manifest(
+        headers: Option<&str>,
+        mut data: String,
+        expectations: &[Rule],
+    ) -> (Client, String) {
         if let Some(headers) = headers {
             data = format!("{}\n{}", headers, data);
         }
@@ -919,32 +918,35 @@ pub(crate) mod tests {
         reader.read_to_end(&mut bytes).unwrap();
 
         let checksum = hex::encode(md5::compute(bytes.as_slice()).0);
-        let mut client = Client::default();
-        set_client_expectations(&InventoryFormat::Csv, &mut client, bytes);
+        let client = set_client_expectations(&InventoryFormat::Csv, bytes, expectations);
 
         (client, checksum)
     }
 
     fn set_client_expectations(
         file_format: &InventoryFormat,
-        s3_client: &mut Client,
         data: Vec<u8>,
-    ) {
-        let ending = ending_from_format(file_format);
+        expectations: &[Rule],
+    ) -> Client {
+        let ending = ending_from_format(file_format).to_string();
 
-        s3_client
-            .expect_get_object()
-            .with(
-                eq(format!("{}{}", MANIFEST_KEY, ending)),
-                eq(MANIFEST_BUCKET),
-                eq(default_version_id()),
-            )
-            .once()
-            .returning(move |_, _, _| {
-                Ok(GetObjectOutput::builder()
-                    .body(ByteStream::from(data.clone()))
-                    .build())
-            });
+        mock_s3(
+            &[
+                &[mock!(aws_sdk_s3::Client::get_object)
+                    .match_requests(move |req| {
+                        req.key() == Some(&format!("{}{}", MANIFEST_KEY, ending))
+                            && req.bucket() == Some(MANIFEST_BUCKET)
+                            && req.version_id() == Some(&default_version_id())
+                    })
+                    .then_output(move || {
+                        GetObjectOutput::builder()
+                            .body(ByteStream::from(data.clone()))
+                            .build()
+                    })],
+                expectations,
+            ]
+            .concat(),
+        )
     }
 
     fn expected_json_manifest(format: &InventoryFormat) -> Value {

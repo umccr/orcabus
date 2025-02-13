@@ -85,6 +85,7 @@ lazy_static = "1"
 aws-smithy-runtime-api = "1"
 aws-smithy-mocks-experimental = "0.2"
 aws-sdk-s3 = { version = "1", features = ["test-util"] }
+aws-sdk-sqs = { version = "1", features = ["test-util"] }
 
 # The migrate feature is required to run sqlx tests
 filemanager = { path = ".", features = ["migrate"] }

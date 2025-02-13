@@ -15,6 +15,7 @@ use std::str::FromStr;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
+pub mod crawl;
 pub mod wildcard;
 
 /// Capture any parameters and assume that they are top-level attributes fields.
@@ -129,85 +130,85 @@ where
 #[into_params(parameter_in = Query)]
 pub struct S3ObjectsFilter {
     /// Query by event type.
-    #[param(required = false)]
+    #[param(nullable = false, required = false)]
     pub(crate) event_type: Option<EventType>,
     /// Query by bucket. Supports wildcards.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
-    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<Wildcard>)]
     pub(crate) bucket: FilterJoinMerged<Wildcard>,
     /// Query by key. Supports wildcards.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
-    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<Wildcard>)]
     pub(crate) key: FilterJoinMerged<Wildcard>,
     /// Query by version_id. Supports wildcards.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
-    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<Wildcard>)]
     pub(crate) version_id: FilterJoinMerged<Wildcard>,
     /// Query by event_time. Supports wildcards.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
-    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<Wildcard>)]
     pub(crate) event_time: FilterJoinMerged<WildcardEither<DateTimeWithTimeZone>>,
     /// Query by size.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
     #[serde(deserialize_with = "filter_join_from_str")]
-    #[param(required = false, value_type = FilterJoin<i64>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<i64>)]
     pub(crate) size: FilterJoinMerged<i64>,
     /// Query by the sha256 checksum.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
-    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<Wildcard>)]
     pub(crate) sha256: FilterJoinMerged<String>,
     /// Query by the last modified date. Supports wildcards.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
-    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<Wildcard>)]
     pub(crate) last_modified_date: FilterJoinMerged<WildcardEither<DateTimeWithTimeZone>>,
     /// Query by the e_tag.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
-    #[param(required = false, value_type = FilterJoin<Wildcard>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<Wildcard>)]
     pub(crate) e_tag: FilterJoinMerged<String>,
     /// Query by the storage class.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
-    #[param(required = false, value_type = FilterJoin<StorageClass>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<StorageClass>)]
     pub(crate) storage_class: FilterJoinMerged<StorageClass>,
     /// Query by the object delete marker.
-    #[param(required = false)]
+    #[param(nullable = false, required = false)]
     pub(crate) is_delete_marker: Option<bool>,
     /// Query by the reason, which adds detail for why an event was generated, such as whether it
     /// was caused by API calls or lifecycle events. repeated parameters with `[]` are joined with
     /// an `or` conditions by default. Use `[or][]` or `[and][]` to explicitly set the joining logic.
-    #[param(required = false, value_type = FilterJoin<Reason>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<Reason>)]
     pub(crate) reason: FilterJoinMerged<Reason>,
     /// Query by the archive status. The archive status can be `DeepArchiveAccess` or `ArchiveAccess`
     /// if the storage class is also `IntelligentTiering`. Repeated parameters with `[]` are joined
     /// with an `or` conditions by default. Use `[or][]` or `[and][]` to explicitly set the joining
     /// logic.
-    #[param(required = false, value_type = FilterJoin<ArchiveStatus>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<ArchiveStatus>)]
     pub(crate) archive_status: FilterJoinMerged<ArchiveStatus>,
     /// Query by whether the storage class allows the object to be retrieved straight away rather
     /// than restored. Setting this to true will show records with storage classes that are not
     /// `Glacier` or `DeepArchive`, and don't have `ArchiveAccess` or `DeepArchiveAccess` set if
     /// they are intelligent tiering.
-    #[param(required = false)]
+    #[param(nullable = false, required = false)]
     pub(crate) is_accessible: Option<bool>,
     /// Query by the ingest id that objects get tagged with.
     /// Repeated parameters with `[]` are joined with an `or` conditions by default.
     /// Use `[or][]` or `[and][]` to explicitly set the joining logic.
-    #[param(required = false, value_type = FilterJoin<Uuid>)]
+    #[param(nullable = false, required = false, value_type = FilterJoin<Uuid>)]
     pub(crate) ingest_id: FilterJoinMerged<Uuid>,
     /// Query by JSON attributes. Supports nested syntax to access inner
     /// fields, e.g. `attributes[attribute_id]=...`. This only deserializes
     /// into string fields, and does not support other JSON types. E.g.
     /// `attributes[attribute_id]=1` converts to `{ "attribute_id" = "1" }`
     /// rather than `{ "attribute_id" = 1 }`. Supports wildcards.
-    #[param(required = false)]
+    #[param(nullable = false, required = false)]
     pub(crate) attributes: Option<Json>,
 }
 

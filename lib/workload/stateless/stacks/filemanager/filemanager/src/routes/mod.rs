@@ -4,22 +4,26 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use crate::database::entities::s3_crawl::Model as Crawl;
 use axum::http::header::InvalidHeaderName;
 use axum::http::method::InvalidMethod;
 use axum::http::HeaderValue;
-use axum::{Extension, Router};
+use axum::{Extension, Json, Router};
 use chrono::Duration;
 use serde_qs::axum::QsQueryConfig;
 use sqlx::PgPool;
+use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::trace;
 
-use crate::clients::aws::s3;
+use crate::clients::aws::{s3, sqs};
 use crate::database;
 use crate::env::Config;
-use crate::error::Error::ApiConfigurationError;
+use crate::error::Error::{ApiConfigurationError, CrawlError};
 use crate::error::Result;
+use crate::routes::crawl::crawl_router;
 use crate::routes::error::fallback;
 use crate::routes::get::*;
 use crate::routes::ingest::ingest_router;
@@ -27,6 +31,7 @@ use crate::routes::list::*;
 use crate::routes::openapi::swagger_ui;
 use crate::routes::update::update_router;
 
+pub mod crawl;
 pub mod error;
 pub mod filter;
 pub mod get;
@@ -38,14 +43,19 @@ pub mod pagination;
 pub mod presign;
 pub mod update;
 
+/// The join handle crawl task.
+pub type CrawlTask = JoinHandle<Result<Json<Crawl>>>;
+
 /// App state containing database client.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AppState {
     database_client: database::Client,
     config: Arc<Config>,
     s3_client: Arc<s3::Client>,
+    sqs_client: Arc<sqs::Client>,
     use_tls_links: bool,
     params_field_names: Arc<HashSet<String>>,
+    crawl_task: Arc<Mutex<Option<CrawlTask>>>,
 }
 
 impl AppState {
@@ -54,14 +64,17 @@ impl AppState {
         database_client: database::Client,
         config: Arc<Config>,
         s3_client: Arc<s3::Client>,
+        sqs_client: Arc<sqs::Client>,
         use_tls_links: bool,
     ) -> Self {
         Self {
             database_client,
             config,
             s3_client,
+            sqs_client,
             use_tls_links,
             params_field_names: Arc::new(attributes_s3_field_names()),
+            crawl_task: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -71,6 +84,7 @@ impl AppState {
             database::Client::from_pool(pool),
             Default::default(),
             Arc::new(s3::Client::with_defaults().await),
+            Arc::new(sqs::Client::with_defaults().await),
             false,
         )
     }
@@ -115,14 +129,29 @@ impl AppState {
         &self.config
     }
 
-    /// Get the database client.
+    /// Get the s3 client.
     pub fn s3_client(&self) -> &s3::Client {
         &self.s3_client
+    }
+
+    /// Get the sqs client.
+    pub fn sqs_client(&self) -> &sqs::Client {
+        &self.sqs_client
     }
 
     /// Get the links TLS setting.
     pub fn use_tls_links(&self) -> bool {
         self.use_tls_links
+    }
+
+    /// Get the crawl task result.
+    pub async fn into_crawl_result(self) -> Result<Json<Crawl>> {
+        let mut task = self.crawl_task.lock().await;
+        let task = task
+            .take()
+            .ok_or_else(|| CrawlError("missing task".to_string()))?;
+
+        task.await.map_err(|err| CrawlError(err.to_string()))?
     }
 }
 
@@ -189,6 +218,7 @@ pub fn api_router(state: AppState) -> Result<Router> {
         .merge(ingest_router())
         .merge(list_router())
         .merge(update_router())
+        .merge(crawl_router())
         .layer(Extension(QsQueryConfig::new(5, false)))
         .layer(cors_layer(state.config())?)
         .layer(TraceLayer::new_for_http())

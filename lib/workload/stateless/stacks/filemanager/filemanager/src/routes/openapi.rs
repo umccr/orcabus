@@ -1,12 +1,15 @@
 //! OpenApi related models and code.
 //!
 
+use crate::database::entities::sea_orm_active_enums::CrawlStatus;
+use crate::routes::crawl::CrawlRequest;
 use chrono::{DateTime, FixedOffset};
 use serde_json::Value;
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{openapi, Modify, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
+use crate::database::entities::s3_crawl::Model as Crawl;
 use crate::database::entities::s3_object::Model as S3;
 use crate::database::entities::sea_orm_active_enums::ArchiveStatus;
 use crate::database::entities::sea_orm_active_enums::EventType;
@@ -86,7 +89,10 @@ pub struct Uuid(pub uuid::Uuid);
             FilterJoin<i64>,
             FilterJoin<Uuid>,
             FilterJoin<Reason>,
-            FilterJoin<ArchiveStatus>
+            FilterJoin<ArchiveStatus>,
+            FilterJoin<CrawlStatus>,
+            Crawl,
+            CrawlRequest
         )
     ),
     modifiers(&SecurityAddon),

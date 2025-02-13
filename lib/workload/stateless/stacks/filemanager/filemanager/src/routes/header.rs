@@ -1,11 +1,13 @@
 //! Functions related to parsing header information.
 //!
 
+use crate::error::Error::{MissingHostHeader, ParseError};
+use crate::error::{Error, Result};
+use aws_lambda_events::http::header::HOST;
+use axum::extract::Request;
 use axum::http::header::AsHeaderName;
 use axum::http::HeaderMap;
-
-use crate::error::Error::ParseError;
-use crate::error::{Error, Result};
+use url::Url;
 
 pub struct HeaderParser<'a> {
     headers: &'a HeaderMap,
@@ -30,5 +32,23 @@ impl<'a> HeaderParser<'a> {
                 )
             })
             .transpose()
+    }
+
+    /// Parse a request into a URL based on the HOST.
+    pub fn parse_host_url(request: &Request, use_tls_links: bool) -> Result<Url> {
+        let mut host = HeaderParser::new(request.headers())
+            .parse_header(HOST)?
+            .ok_or_else(|| MissingHostHeader)?;
+
+        // A `HOST` is not a valid URL yet.
+        if !host.starts_with("https://") && !host.starts_with("http://") {
+            if use_tls_links {
+                host = format!("https://{}", host);
+            } else {
+                host = format!("http://{}", host);
+            }
+        }
+
+        Ok(host.parse()?)
     }
 }

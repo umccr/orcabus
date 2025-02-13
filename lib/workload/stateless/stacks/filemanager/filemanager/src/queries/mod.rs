@@ -5,10 +5,12 @@ use std::collections::HashMap;
 use std::ops::Add;
 
 use crate::database::aws::ingester::Ingester;
+use crate::database::entities::s3_crawl::ActiveModel as ActiveS3Crawl;
+use crate::database::entities::s3_crawl::Model as S3Crawl;
 use crate::database::entities::s3_object::ActiveModel as ActiveS3Object;
 use crate::database::entities::s3_object::Model as S3Object;
 use crate::database::entities::sea_orm_active_enums::{
-    ArchiveStatus, EventType, Reason, StorageClass,
+    ArchiveStatus, CrawlStatus, EventType, Reason, StorageClass,
 };
 use crate::database::Client;
 use crate::error::Result;
@@ -18,7 +20,7 @@ use crate::uuid::UuidGenerator;
 use chrono::{DateTime, Days};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use sea_orm::{Set, TryIntoModel, Unchanged};
+use sea_orm::{ActiveModelTrait, Set, TryIntoModel, Unchanged};
 use serde_json::json;
 use strum::EnumCount;
 use uuid::Uuid;
@@ -31,11 +33,16 @@ pub mod update;
 #[derive(Debug)]
 pub struct Entries {
     pub s3_objects: Vec<S3Object>,
+    pub s3_crawl: Vec<S3Crawl>,
 }
 
-impl From<Vec<S3Object>> for Entries {
-    fn from(s3_objects: Vec<S3Object>) -> Self {
-        Self { s3_objects }
+impl From<Vec<(S3Object, S3Crawl)>> for Entries {
+    fn from(objects: Vec<(S3Object, S3Crawl)>) -> Self {
+        let (s3_objects, s3_crawl) = objects.into_iter().unzip();
+        Self {
+            s3_objects,
+            s3_crawl,
+        }
     }
 }
 
@@ -44,10 +51,10 @@ impl Entries {
     pub async fn initialize_database(
         client: &Client,
         builder: EntriesBuilder,
-    ) -> Result<Vec<S3Object>> {
+    ) -> Result<Vec<(S3Object, S3Crawl)>> {
         let mut output = vec![];
 
-        let mut entries: Vec<(_, _)> = (0..builder.n)
+        let mut entries: Vec<(_, _, _)> = (0..builder.n)
             .map(|index| {
                 let uuid = UuidGenerator::generate();
                 let ingest_id = builder.ingest_id.unwrap_or_else(UuidGenerator::generate);
@@ -70,6 +77,14 @@ impl Entries {
                     builder.prefixes.get(&index).map(|k| k.as_str()),
                     builder.suffixes.get(&index).map(|k| k.as_str()),
                 );
+                let crawl_entry = Self::generate_crawl_entry(
+                    index,
+                    (builder.bucket_divisor, builder.key_divisor),
+                    uuid,
+                    builder.values.get(&index).map(|k| k.to_string()),
+                    builder.prefixes.get(&index).map(|k| k.as_str()),
+                    builder.suffixes.get(&index).map(|k| k.as_str()),
+                );
 
                 if let Some(ref reason) = builder.reason {
                     entry.reason = Set(reason.clone());
@@ -77,7 +92,7 @@ impl Entries {
                     event_message.reason = reason.clone();
                 }
 
-                (entry, event_message)
+                (entry, event_message, crawl_entry)
             })
             .collect();
 
@@ -85,15 +100,40 @@ impl Entries {
             entries.shuffle(&mut thread_rng());
         }
 
-        for (s3_object, message) in entries {
+        for (s3_object, message, crawl) in entries {
             Ingester::new(client.clone())
                 .ingest_events(FlatS3EventMessages(vec![message]).into())
                 .await?;
 
-            output.push(s3_object.try_into_model()?);
+            crawl.clone().insert(client.connection_ref()).await?;
+            output.push((s3_object.try_into_model()?, crawl.try_into_model()?));
         }
 
         Ok(output)
+    }
+
+    /// Create an entries tuple and return S3 objects.
+    pub async fn initialize_database_s3(
+        client: &Client,
+        builder: EntriesBuilder,
+    ) -> Result<Vec<S3Object>> {
+        Ok(Self::initialize_database(client, builder)
+            .await?
+            .into_iter()
+            .map(|(s3, _)| s3)
+            .collect())
+    }
+
+    /// Create an entries tuple and return S3 crawls.
+    pub async fn initialize_database_crawl(
+        client: &Client,
+        builder: EntriesBuilder,
+    ) -> Result<Vec<S3Crawl>> {
+        Ok(Self::initialize_database(client, builder)
+            .await?
+            .into_iter()
+            .map(|(_, crawl)| crawl)
+            .collect())
     }
 
     /// Generate a single record entry using the index.
@@ -149,6 +189,31 @@ impl Entries {
             deleted_sequencer: Set(None),
             number_reordered: Set(0),
             reason: Set(Reason::Unknown),
+        }
+    }
+
+    /// Generate a single record entry using the index.
+    pub fn generate_crawl_entry(
+        index: usize,
+        divisors: (usize, usize),
+        uuid: Uuid,
+        key: Option<String>,
+        prefix: Option<&str>,
+        suffix: Option<&str>,
+    ) -> ActiveS3Crawl {
+        ActiveS3Crawl {
+            s3_crawl_id: Set(uuid),
+            status: Set(CrawlStatus::from_repr(index % (CrawlStatus::COUNT - 1))
+                .unwrap_or(CrawlStatus::InProgress)),
+            started: Set(DateTime::default().add(Days::new(index as u64))),
+            bucket: Set((index / divisors.0).to_string()),
+            prefix: Set(Some(
+                prefix.unwrap_or_default().to_string()
+                    + &key.unwrap_or_else(|| (index / divisors.1).to_string())
+                    + suffix.unwrap_or_default(),
+            )),
+            execution_time_seconds: Set(Some(index as i32)),
+            n_objects: Set(Some(index as i64)),
         }
     }
 
@@ -278,7 +343,7 @@ impl EntriesBuilder {
         let mut entries = Entries::initialize_database(client, self).await?;
 
         // Return the correct ordering for test purposes
-        entries.sort_by(|a, b| a.sequencer.cmp(&b.sequencer));
+        entries.sort_by(|a, b| a.0.sequencer.cmp(&b.0.sequencer));
 
         Ok(entries.into())
     }

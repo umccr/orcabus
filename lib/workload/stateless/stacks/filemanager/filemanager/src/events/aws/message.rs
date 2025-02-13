@@ -462,10 +462,7 @@ mod tests {
     fn deserialize_sqs_message_delete_marker() {
         let mut record = expected_sqs_record(false);
         record["eventName"] = json!("ObjectRemoved:DeleteMarkerCreated");
-        let message = json!({
-           "Records": [record]
-        })
-        .to_string();
+        let message = json!({ "Records": [record] }).to_string();
 
         let result: FlatS3EventMessages = serde_json::from_str(&message).unwrap();
         let first_message = result.into_inner().first().unwrap().clone();
@@ -482,10 +479,7 @@ mod tests {
     }
 
     fn test_deserialize_sqs_message(record: Value) {
-        let message = json!({
-           "Records": [record]
-        })
-        .to_string();
+        let message = json!({ "Records": [record] }).to_string();
 
         let result: FlatS3EventMessages = serde_json::from_str(&message).unwrap();
         let first_message = result.into_inner().first().unwrap().clone();

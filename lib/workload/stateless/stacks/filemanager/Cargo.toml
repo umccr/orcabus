@@ -15,4 +15,4 @@ members = [
 license = "MIT"
 edition = "2021"
 authors = ["Marko Malenic <mmalenic1@gmail.com>", "Roman Valls Guimera <brainstorm@nopcode.org>"]
-rust-version = "1.76"
+rust-version = "1.83"
