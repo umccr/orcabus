@@ -262,8 +262,8 @@ export class StatefulStackCollection {
       ...statefulConfiguration.sashPipelineTableStackProps,
     });
 
-    this.accessKeySecretStack = new AccessKeySecret(scope, 'AccessKeySecret', {
-      ...this.createTemplateProps(env, 'AccessKeySecret'),
+    this.accessKeySecretStack = new AccessKeySecret(scope, 'AccessKeySecretStack', {
+      ...this.createTemplateProps(env, 'AccessKeySecretStack'),
       ...statefulConfiguration.accessKeySecretStackProps,
     });
   }
