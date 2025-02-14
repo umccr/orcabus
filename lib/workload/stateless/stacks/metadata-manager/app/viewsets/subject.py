@@ -8,7 +8,7 @@ from .base import BaseViewSet
 
 class SubjectViewSet(BaseViewSet):
     serializer_class = SubjectSerializer
-    search_fields = Subject.get_base_fields()
+    search_fields = [*Subject.get_base_fields(), 'library__library_id','individual_set__individual_id']
     queryset = Subject.objects.all()
 
     def get_queryset(self):
@@ -25,6 +25,13 @@ class SubjectViewSet(BaseViewSet):
         if is_library_none:
             query_params.pop("is_library_none")
             qs = qs.filter(library=None)
+
+        # This is a temporary solution to quickly retrieve subject based on the individual_id (the SBJXXX ID) as it is commonly used.
+        # This approach may be improved in the future.
+        individual_id_list = query_params.getlist("individual_id", None)
+        if individual_id_list:
+            query_params.pop("individual_id")
+            qs = qs.filter(individual_set__individual_id__in=individual_id_list)
 
         return Subject.objects.get_by_keyword(qs, **query_params)
 
@@ -52,6 +59,10 @@ class SubjectViewSet(BaseViewSet):
                              description="Filter where it is not linked to a library.",
                              required=False,
                              type=bool),
+            OpenApiParameter(name='individual_id',
+                             description="Filter based on 'individual_id' linked to this library (E.g. SBJXXXXX).",
+                             required=False,
+                             type=str),
         ],
         responses=SubjectDetailSerializer(many=True),
     )
