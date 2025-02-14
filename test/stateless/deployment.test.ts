@@ -204,6 +204,19 @@ function applyNagSuppression(stackId: string, stack: Stack) {
         [
           {
             id: 'AwsSolutions-IAM5',
+            reason: "'*' is required to access any version of the specific user access key secret.",
+            appliesTo: [
+              'Resource::arn:aws:secretsmanager:ap-southeast-2:472057503814:secret:orcabus/access-key-user-*',
+            ],
+          },
+        ],
+        true
+      );
+      NagSuppressions.addResourceSuppressions(
+        stack,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
             reason:
               "'*' is required to access the inventory manifest and data files by the inventory function.",
             appliesTo: ['Resource::arn:aws:s3:::filemanager-inventory-test/*'],
@@ -211,6 +224,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
         ],
         true
       );
+
       NagSuppressions.addResourceSuppressionsByPath(
         stack,
         `/FileManagerStack/MigrateProviderFunction/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource`,
