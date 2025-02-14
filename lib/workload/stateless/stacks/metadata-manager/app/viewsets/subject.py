@@ -26,7 +26,7 @@ class SubjectViewSet(BaseViewSet):
             query_params.pop("is_library_none")
             qs = qs.filter(library=None)
 
-        # This is a temporary solution to quickly retrieve libraries based on the individual_id (the SBJXXX ID) as it is commonly used.
+        # This is a temporary solution to quickly retrieve subject based on the individual_id (the SBJXXX ID) as it is commonly used.
         # This approach may be improved in the future.
         individual_id_list = query_params.getlist("individual_id", None)
         if individual_id_list:
