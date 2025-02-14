@@ -10,8 +10,7 @@ from .base import BaseViewSet
 class LibraryViewSet(BaseViewSet):
     serializer_class = LibrarySerializer
     detail_serializer_class = LibraryDetailSerializer
-    # Will allow filter by the SBJXXXXX ID which is from the individual_set
-    search_fields = [*Library.get_base_fields(),'subject__individual_set__individual_id']
+    search_fields = Library.get_base_fields()
     queryset = Library.objects.all()
 
 
