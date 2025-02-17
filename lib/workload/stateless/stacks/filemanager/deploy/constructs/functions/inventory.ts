@@ -36,6 +36,7 @@ export class InventoryFunction extends fn.Function {
 
     this.addPoliciesForBuckets(props.buckets, [
       ...fn.Function.getObjectActions(),
+      ...fn.Function.getObjectVersionActions(),
       ...fn.Function.objectTaggingActions(),
     ]);
   }

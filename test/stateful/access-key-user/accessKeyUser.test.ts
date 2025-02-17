@@ -1,7 +1,11 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { getEnvironmentConfig } from '../../../config/config';
-import { accessKeySecretName, accessKeySecretUserName, AppStage } from '../../../config/constants';
+import {
+  fileManagerPresignUserSecret,
+  fileManagerPresignUser,
+  AppStage,
+} from '../../../config/constants';
 import { AccessKeySecret } from '../../../lib/workload/stateful/stacks/access-key-secret';
 
 const constructConfig = getEnvironmentConfig(AppStage.BETA)!;
@@ -21,10 +25,10 @@ describe('AccessKeySecret', () => {
     const template = Template.fromStack(stack);
 
     template.hasResourceProperties('AWS::SecretsManager::Secret', {
-      Name: accessKeySecretName,
+      Name: fileManagerPresignUserSecret,
     });
     template.hasResourceProperties('AWS::IAM::User', {
-      UserName: accessKeySecretUserName,
+      UserName: fileManagerPresignUser,
     });
   });
 });

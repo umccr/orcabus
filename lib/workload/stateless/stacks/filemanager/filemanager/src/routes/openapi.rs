@@ -55,11 +55,9 @@ pub struct Uuid(pub uuid::Uuid);
     paths(
         list_s3,
         presign_s3,
-        presign_long_s3,
         attributes_s3,
         get_s3_by_id,
         presign_s3_by_id,
-        presign_long_s3_by_id,
         count_s3,
         ingest_from_sqs,
         update_s3_attributes,

@@ -147,10 +147,10 @@ export const icaAccessTokenSecretName = 'IcaSecretsPortal'; // pragma: allowlist
 validateSecretName(icaAccessTokenSecretName);
 
 export const fileManagerIngestRoleName = 'orcabus-file-manager-ingest-role';
-export const accessKeySecretName = 'orcabus/access-key-user'; // pragma: allowlist secret
-validateSecretName(accessKeySecretName);
+export const fileManagerPresignUserSecret = 'orcabus/file-manager-presign-user'; // pragma: allowlist secret
+validateSecretName(fileManagerPresignUserSecret);
 
-export const accessKeySecretUserName = 'orcabus-access-key-user'; // pragma: allowlist secret
+export const fileManagerPresignUser = 'orcabus-file-manager-presign-user'; // pragma: allowlist secret
 
 export const dataMoverRoleName = 'orcabus-data-mover-role';
 

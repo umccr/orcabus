@@ -106,7 +106,6 @@ impl<'a> PresignedUrlBuilder<'a> {
         &self,
         key: &str,
         bucket: &str,
-        version_id: &str,
         response_headers: ResponseHeadersConfig,
         access_key_secret_id: Option<&str>,
     ) -> Result<Option<Url>> {
@@ -145,8 +144,7 @@ impl<'a> PresignedUrlBuilder<'a> {
             };
 
             let presign =
-                Self::presign_with_client(client, key, bucket, version_id, headers, expires_in)
-                    .await?;
+                Self::presign_with_client(client, key, bucket, headers, expires_in).await?;
 
             Ok(Some(presign.uri().parse()?))
         } else {
@@ -159,12 +157,11 @@ impl<'a> PresignedUrlBuilder<'a> {
         client: &s3::Client,
         key: &str,
         bucket: &str,
-        version_id: &str,
         headers: ResponseHeaders,
         expires_in: Duration,
     ) -> Result<PresignedRequest> {
         client
-            .presign_url(key, bucket, version_id, headers, expires_in)
+            .presign_url(key, bucket, None, headers, expires_in)
             .await
             .map_err(|err| PresignedUrlError(err.into_service_error().to_string()))
     }
@@ -184,7 +181,6 @@ impl<'a> PresignedUrlBuilder<'a> {
             .presign_url(
                 &model.key,
                 &model.bucket,
-                &model.version_id,
                 ResponseHeadersConfig::new(
                     response_content_disposition,
                     response_content_type,
@@ -209,7 +205,6 @@ pub(crate) mod tests {
     use super::*;
     use crate::clients::aws::s3;
     use crate::env::Config;
-    use crate::events::aws::message::default_version_id;
     use crate::routes::list::tests::mock_get_object;
 
     #[tokio::test]
@@ -226,7 +221,6 @@ pub(crate) mod tests {
             .presign_url(
                 "0",
                 "1",
-                &default_version_id(),
                 ResponseHeadersConfig::new(ContentDisposition::Inline, None, None),
                 None,
             )
@@ -235,7 +229,7 @@ pub(crate) mod tests {
             .unwrap();
 
         let query = url.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=43200"));
+        assert!(query.contains("X-Amz-Expires=604800"));
         assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(url.path(), "/1/0");
 
@@ -244,7 +238,6 @@ pub(crate) mod tests {
             .presign_url(
                 "0",
                 "1",
-                &default_version_id(),
                 ResponseHeadersConfig::new(ContentDisposition::Inline, None, None),
                 None,
             )
@@ -253,7 +246,7 @@ pub(crate) mod tests {
             .unwrap();
 
         let query = url.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=43200"));
+        assert!(query.contains("X-Amz-Expires=604800"));
         assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(url.path(), "/1/0");
     }
@@ -272,7 +265,6 @@ pub(crate) mod tests {
             .presign_url(
                 "0",
                 "1",
-                &default_version_id(),
                 ResponseHeadersConfig::new(
                     ContentDisposition::Inline,
                     Some("application/json".to_string()),
@@ -303,7 +295,6 @@ pub(crate) mod tests {
             .presign_url(
                 "0",
                 "1",
-                &default_version_id(),
                 ResponseHeadersConfig::new(ContentDisposition::Attachment, None, None),
                 None,
             )
@@ -312,7 +303,7 @@ pub(crate) mod tests {
             .unwrap();
 
         let query = url.query().unwrap();
-        assert!(query.contains("X-Amz-Expires=43200"));
+        assert!(query.contains("X-Amz-Expires=604800"));
         assert!(query.contains("response-content-disposition=attachment%3B%20filename%3D%220%22"));
         assert_eq!(url.path(), "/1/0");
     }
@@ -334,7 +325,6 @@ pub(crate) mod tests {
             .presign_url(
                 "0",
                 "1",
-                &default_version_id(),
                 ResponseHeadersConfig::new(ContentDisposition::Inline, None, None),
                 None,
             )
@@ -361,7 +351,6 @@ pub(crate) mod tests {
             .presign_url(
                 "0",
                 "1",
-                &default_version_id(),
                 ResponseHeadersConfig::new(ContentDisposition::Inline, None, None),
                 None,
             )
@@ -376,7 +365,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn assert_presigned_params(query: &str, content_disposition: &str) {
-        assert!(query.contains("X-Amz-Expires=43200"));
+        assert!(query.contains("X-Amz-Expires=604800"));
         assert!(query.contains(&format!(
             "response-content-disposition={content_disposition}"
         )));

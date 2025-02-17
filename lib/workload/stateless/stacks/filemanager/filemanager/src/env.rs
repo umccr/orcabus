@@ -55,8 +55,8 @@ pub struct Config {
     pub(crate) access_key_secret_id: Option<String>,
 }
 
-/// Default presigned URL expiry time, 12 hours.
-pub const DEFAULT_PRESIGN_EXPIRY: Duration = Duration::hours(12);
+/// Default presigned URL expiry time, 7 days.
+pub const DEFAULT_PRESIGN_EXPIRY: Duration = Duration::days(7);
 
 fn parse_limit<'de, D>(deserializer: D) -> result::Result<Option<u64>, D::Error>
 where

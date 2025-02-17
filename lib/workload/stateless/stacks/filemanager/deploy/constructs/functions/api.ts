@@ -39,6 +39,9 @@ export class ApiFunction extends fn.Function {
       })
     );
 
-    this.addPoliciesForBuckets(props.buckets, fn.Function.getObjectActions());
+    this.addPoliciesForBuckets(props.buckets, [
+      ...fn.Function.getObjectActions(),
+      ...fn.Function.getObjectVersionActions(),
+    ]);
   }
 }

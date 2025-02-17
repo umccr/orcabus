@@ -1,6 +1,6 @@
 import { FilemanagerConfig } from '../../lib/workload/stateless/stacks/filemanager/deploy/stack';
 import {
-  accessKeySecretName,
+  fileManagerPresignUserSecret,
   accountIdAlias,
   AppStage,
   cognitoApiGatewayConfig,
@@ -49,7 +49,7 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     databaseClusterEndpointHostParameter: dbClusterEndpointHostParameterName,
     port: databasePort,
     migrateDatabase: true,
-    accessKeySecretArn: `arn:aws:secretsmanager:${region}:${accountIdAlias[stage]}:secret:${accessKeySecretName}`, // pragma: allowlist secret
+    accessKeySecretArn: `arn:aws:secretsmanager:${region}:${accountIdAlias[stage]}:secret:${fileManagerPresignUserSecret}`, // pragma: allowlist secret
     inventorySourceBuckets,
     eventSourceBuckets,
     fileManagerRoleName: fileManagerIngestRoleName,

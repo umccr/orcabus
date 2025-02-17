@@ -117,7 +117,8 @@ async fn presign_url_by_id(
 
 /// Generate AWS presigned URLs for a single S3 object using its `s3_object_id`.
 /// This route will not return an object if it is not a current record, or it's storage class is
-/// not accessible because it is archived, or its size is greater than `FILEMANAGER_API_PRESIGN_LIMIT`.
+/// not accessible because it is archived, or its size is greater than
+/// `FILEMANAGER_API_PRESIGN_LIMIT`. Presigned URLs live for up to 7 days.
 #[utoipa::path(
     get,
     path = "/s3/presign/{id}",
@@ -135,34 +136,11 @@ pub async fn presign_s3_by_id(
     presigned: Query<PresignedParams>,
     request: Request,
 ) -> Result<Json<Option<Url>>> {
-    // Presigning with an access key is only supported on the long-lived version of this route.
-    presign_url_by_id(state, id, presigned, request, None).await
-}
-
-/// Generate AWS long-lived presigned URLs for a single object that can last up to 7 days.
-/// Prefer to use `/s3/presign/{id}` for regular presigned URLs. The logic and options of this route
-/// are the same as `/s3/presign/{id}`.
-#[utoipa::path(
-    get,
-    path = "/s3/presign/long/{id}",
-    responses(
-        (status = OK, description = "The long-lived presigned url for the object with the id", body = Option<Url>),
-        ErrorStatusCode,
-    ),
-    params(PresignedParams),
-    context_path = "/api/v1",
-    tag = "get",
-)]
-pub async fn presign_long_s3_by_id(
-    state: State<AppState>,
-    id: Path<Uuid>,
-    presigned: Query<PresignedParams>,
-    request: Request,
-) -> Result<Json<Option<Url>>> {
     let access_key_secret_id = state
         .config()
         .access_key_secret_id()
         .map(|secret| secret.to_string());
+    // Always presign with access key if it's available.
     presign_url_by_id(state, id, presigned, request, access_key_secret_id).await
 }
 
@@ -171,7 +149,6 @@ pub fn get_router() -> Router<AppState> {
     Router::new()
         .route("/s3/:id", get(get_s3_by_id))
         .route("/s3/presign/:id", get(presign_s3_by_id))
-        .route("/s3/presign/long/:id", get(presign_long_s3_by_id))
 }
 
 #[cfg(test)]
