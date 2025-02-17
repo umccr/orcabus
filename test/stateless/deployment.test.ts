@@ -206,7 +206,7 @@ function applyNagSuppression(stackId: string, stack: Stack) {
             id: 'AwsSolutions-IAM5',
             reason: "'*' is required to access any version of the specific user access key secret.",
             appliesTo: [
-              'Resource::arn:aws:secretsmanager:ap-southeast-2:472057503814:secret:orcabus/access-key-user-*',
+              'Resource::arn:aws:secretsmanager:ap-southeast-2:472057503814:secret:orcabus/file-manager-presign-user-*',
             ],
           },
         ],
