@@ -30,7 +30,7 @@ pub struct Client {
 }
 
 /// Override settings related to response headers.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResponseHeaders {
     content_disposition: String,
     content_type: Option<String>,

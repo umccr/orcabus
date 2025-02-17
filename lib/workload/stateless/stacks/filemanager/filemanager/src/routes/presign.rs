@@ -3,6 +3,7 @@
 
 use aws_sdk_s3::presigning::PresignedRequest;
 use chrono::Duration;
+use reqwest::ClientBuilder;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
@@ -57,6 +58,7 @@ pub enum ContentDisposition {
 /// A builder for presigned urls.
 pub struct PresignedUrlBuilder<'a> {
     s3_client: &'a s3::Client,
+    http_client: reqwest::Client,
     config: &'a Config,
     object_size: Option<i64>,
 }
@@ -86,12 +88,15 @@ impl ResponseHeadersConfig {
 
 impl<'a> PresignedUrlBuilder<'a> {
     /// Create a builder.
-    pub fn new(s3_client: &'a s3::Client, config: &'a Config) -> Self {
-        Self {
+    pub fn new(s3_client: &'a s3::Client, config: &'a Config) -> Result<Self> {
+        Ok(Self {
             s3_client,
             config,
+            http_client: ClientBuilder::new()
+                .build()
+                .map_err(|err| PresignedUrlError(err.to_string()))?,
             object_size: None,
-        }
+        })
     }
 
     /// Construct with the current object size.
@@ -144,12 +149,36 @@ impl<'a> PresignedUrlBuilder<'a> {
             };
 
             let presign =
-                Self::presign_with_client(client, key, bucket, headers, expires_in).await?;
+                Self::presign_with_client(client, key, bucket, headers.clone(), expires_in).await?;
 
-            Ok(Some(presign.uri().parse()?))
+            let uri = match self.test_url(presign).await {
+                // Url is working.
+                Some(uri) => Some(uri),
+                // Try again with the role if the access key was set and failed.
+                None if access_key_secret_id.is_some() => {
+                    let presign =
+                        Self::presign_with_client(self.s3_client, key, bucket, headers, expires_in)
+                            .await?;
+                    self.test_url(presign).await
+                }
+                // Otherwise, it doesn't work.
+                None => None,
+            };
+
+            Ok(uri.map(|uri| uri.uri().parse()).transpose()?)
         } else {
             Ok(None)
         }
+    }
+
+    /// Test that the URL works.
+    async fn test_url(&self, request: PresignedRequest) -> Option<PresignedRequest> {
+        self.http_client
+            .head(request.uri())
+            .send()
+            .await
+            .map(|_| request)
+            .ok()
     }
 
     /// Presign using the S3 client.
@@ -175,7 +204,7 @@ impl<'a> PresignedUrlBuilder<'a> {
         response_content_encoding: Option<String>,
         access_key_secret_id: Option<&str>,
     ) -> Result<Option<Url>> {
-        let builder = Self::new(state.s3_client(), state.config()).set_object_size(model.size);
+        let builder = Self::new(state.s3_client(), state.config())?.set_object_size(model.size);
 
         if let Some(presigned) = builder
             .presign_url(
@@ -216,7 +245,9 @@ pub(crate) mod tests {
         ));
         let config = Default::default();
 
-        let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(None);
+        let builder = PresignedUrlBuilder::new(&client, &config)
+            .unwrap()
+            .set_object_size(None);
         let url = builder
             .presign_url(
                 "0",
@@ -233,7 +264,9 @@ pub(crate) mod tests {
         assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(url.path(), "/1/0");
 
-        let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(Some(2));
+        let builder = PresignedUrlBuilder::new(&client, &config)
+            .unwrap()
+            .set_object_size(Some(2));
         let url = builder
             .presign_url(
                 "0",
@@ -260,7 +293,9 @@ pub(crate) mod tests {
         ));
         let config = Default::default();
 
-        let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(None);
+        let builder = PresignedUrlBuilder::new(&client, &config)
+            .unwrap()
+            .set_object_size(None);
         let url = builder
             .presign_url(
                 "0",
@@ -290,7 +325,9 @@ pub(crate) mod tests {
         ));
         let config = Default::default();
 
-        let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(None);
+        let builder = PresignedUrlBuilder::new(&client, &config)
+            .unwrap()
+            .set_object_size(None);
         let url = builder
             .presign_url(
                 "0",
@@ -320,7 +357,9 @@ pub(crate) mod tests {
             ..Default::default()
         };
 
-        let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(Some(2));
+        let builder = PresignedUrlBuilder::new(&client, &config)
+            .unwrap()
+            .set_object_size(Some(2));
         let url = builder
             .presign_url(
                 "0",
@@ -346,7 +385,9 @@ pub(crate) mod tests {
             ..Default::default()
         };
 
-        let builder = PresignedUrlBuilder::new(&client, &config).set_object_size(Some(2));
+        let builder = PresignedUrlBuilder::new(&client, &config)
+            .unwrap()
+            .set_object_size(Some(2));
         let url = builder
             .presign_url(
                 "0",
