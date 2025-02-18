@@ -1,6 +1,7 @@
 import os
 import json
 import pandas as pd
+from django.db.models import Q
 from django.utils.timezone import override
 from libumccr.aws import libeb
 
@@ -213,8 +214,11 @@ class TrackingSheetSrvUnitTests(TestCase):
         persist_lab_metadata(metadata_pd, SHEET_YEAR)
 
         original_lib = Library.objects.get(library_id=RECORD_1.get("LibraryID"))
-        self.assertIsNotNone(original_lib)
+        self.assertIsNotNone(original_lib, "Original library should be created")
         self.assertEqual(original_lib.override_cycles, test_override_cycles, "Latest record is expected to be stored")
+
+        dup_libraries = Library.objects.all().filter(Q(library_id__icontains="_rerun") | Q(library_id__icontains="_topup"))
+        self.assertEqual(dup_libraries.count(), 0, "Topup and rerun libraries should NOT exist")
 
     def test_new_df_in_different_year(self) -> None:
         """
