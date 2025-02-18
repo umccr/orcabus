@@ -205,29 +205,15 @@ async fn count_s3_with_connection<C: ConnectionTrait>(
     Ok(Json(response.to_list_count().await?))
 }
 
-/// Generate AWS presigned URLs for s3_objects according to the parameters.
-/// This route implies `currentState=true` because only existing objects can be presigned. It will
-/// only also return objects that are not in archive storage by setting `isAccessible=true`.
-/// Less presigned URLs may be returned than the amount of objects in the database because some
-/// objects may be over the `FILEMANAGER_API_PRESIGN_LIMIT`.
-#[utoipa::path(
-    get,
-    path = "/s3/presign",
-    responses(
-        (status = OK, description = "The list of presigned urls", body = ListResponse<Url>),
-        ErrorStatusCode,
-    ),
-    params(Pagination, WildcardParams, PresignedParams, S3ObjectsFilter),
-    context_path = "/api/v1",
-    tag = "list",
-)]
-pub async fn presign_s3(
+/// Implementation of the presign URL route.
+async fn presign_url(
     state: State<AppState>,
     pagination: Query<Pagination>,
     wildcard: Query<WildcardParams>,
     WithRejection(extract::Query(presigned), _): Query<PresignedParams>,
     WithRejection(serde_qs::axum::QsQuery(mut filter_all), _): QsQuery<S3ObjectsFilter>,
     request: Request,
+    access_key_secret_id: Option<String>,
 ) -> Result<Json<ListResponse<Url>>> {
     let content_type = HeaderParser::new(request.headers()).parse_header(CONTENT_TYPE)?;
     let content_encoding = HeaderParser::new(request.headers()).parse_header(CONTENT_ENCODING)?;
@@ -248,6 +234,7 @@ pub async fn presign_s3(
     .await?;
 
     let mut urls = Vec::with_capacity(results.len());
+
     for result in results {
         if let Some(presigned) = PresignedUrlBuilder::presign_from_model(
             &state,
@@ -255,6 +242,7 @@ pub async fn presign_s3(
             presigned.response_content_disposition(),
             content_type.clone(),
             content_encoding.clone(),
+            access_key_secret_id.as_deref(),
         )
         .await?
         {
@@ -262,8 +250,48 @@ pub async fn presign_s3(
         }
     }
 
-    let response = ListResponse::new(links, pagination, urls);
-    Ok(Json(response))
+    Ok(Json(ListResponse::new(links, pagination, urls)))
+}
+
+/// Generate AWS presigned URLs for s3_objects according to the parameters.
+/// This route implies `currentState=true` because only existing objects can be presigned. It will
+/// only also return objects that are not in archive storage by setting `isAccessible=true`.
+/// Fewer presigned URLs may be returned than the amount of objects in the database because some
+/// objects may be over the `FILEMANAGER_API_PRESIGN_LIMIT`. Presigned URLs live for up to 7 days.
+#[utoipa::path(
+    get,
+    path = "/s3/presign",
+    responses(
+        (status = OK, description = "The list of presigned urls", body = ListResponse<Url>),
+        ErrorStatusCode,
+    ),
+    params(Pagination, WildcardParams, PresignedParams, S3ObjectsFilter),
+    context_path = "/api/v1",
+    tag = "list",
+)]
+pub async fn presign_s3(
+    state: State<AppState>,
+    pagination: Query<Pagination>,
+    wildcard: Query<WildcardParams>,
+    presigned: Query<PresignedParams>,
+    filter_all: QsQuery<S3ObjectsFilter>,
+    request: Request,
+) -> Result<Json<ListResponse<Url>>> {
+    let access_key_secret_id = state
+        .config()
+        .access_key_secret_id()
+        .map(|secret| secret.to_string());
+    // Always presign with the secret access key if it's available.
+    presign_url(
+        state,
+        pagination,
+        wildcard,
+        presigned,
+        filter_all,
+        request,
+        access_key_secret_id,
+    )
+    .await
 }
 
 /// List all S3 objects according to a set of attribute filter parameters.
@@ -506,7 +534,7 @@ pub(crate) mod tests {
         assert_eq!(2, result.pagination().count);
 
         let query = result.results()[0].query().unwrap();
-        assert!(query.contains("X-Amz-Expires=43200"));
+        assert!(query.contains("X-Amz-Expires=604800"));
         assert_presigned_params(query, "inline");
 
         assert_eq!(result.results()[0].path(), "/0/0");
@@ -563,7 +591,7 @@ pub(crate) mod tests {
         assert_eq!(2, result.pagination().count);
 
         let query = result.results()[0].query().unwrap();
-        assert!(query.contains("X-Amz-Expires=43200"));
+        assert!(query.contains("X-Amz-Expires=604800"));
         assert_presigned_params(query, "attachment%3B%20filename%3D%220%22");
         assert_eq!(result.results()[0].path(), "/0/0");
 
@@ -602,7 +630,7 @@ pub(crate) mod tests {
         assert_eq!(2, result.pagination().count);
 
         let query = result.results()[0].query().unwrap();
-        assert!(query.contains("X-Amz-Expires=43200"));
+        assert!(query.contains("X-Amz-Expires=604800"));
         assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(result.results()[0].path(), "/0/0");
     }

@@ -51,10 +51,12 @@ pub struct Config {
     pub(crate) api_cors_allow_methods: Vec<String>,
     #[serde(rename = "filemanager_api_cors_allow_headers")]
     pub(crate) api_cors_allow_headers: Vec<String>,
+    #[serde(rename = "filemanager_access_key_secret_id")]
+    pub(crate) access_key_secret_id: Option<String>,
 }
 
-/// Default presigned URL expiry time, 12 hours.
-pub const DEFAULT_PRESIGN_EXPIRY: Duration = Duration::hours(12);
+/// Default presigned URL expiry time, 7 days.
+pub const DEFAULT_PRESIGN_EXPIRY: Duration = Duration::days(7);
 
 fn parse_limit<'de, D>(deserializer: D) -> result::Result<Option<u64>, D::Error>
 where
@@ -100,6 +102,7 @@ impl Default for Config {
                 Method::PATCH.to_string(),
             ],
             api_cors_allow_headers: vec![AUTHORIZATION.to_string()],
+            access_key_secret_id: None,
         }
     }
 }
@@ -196,6 +199,11 @@ impl Config {
         self.api_cors_allow_headers.as_slice()
     }
 
+    /// Get the access key secret id.
+    pub fn access_key_secret_id(&self) -> Option<&str> {
+        self.access_key_secret_id.as_deref()
+    }
+
     /// Get the value from an optional, or else try and get a different value, unwrapping into a Result.
     pub fn value_or_else<T>(value: Option<T>, or_else: Option<T>) -> Result<T> {
         value
@@ -236,6 +244,7 @@ mod tests {
             ),
             ("FILEMANAGER_API_CORS_ALLOW_METHODS", "GET,POST"),
             ("FILEMANAGER_API_CORS_ALLOW_HEADERS", "Authorization,Accept"),
+            ("FILEMANAGER_ACCESS_KEY_SECRET_ID", "id"),
         ]
         .into_iter()
         .map(|(key, value)| (key.to_string(), value.to_string()));
@@ -262,7 +271,8 @@ mod tests {
                     "127.0.0.1".to_string()
                 ]),
                 api_cors_allow_methods: vec!["GET".to_string(), "POST".to_string()],
-                api_cors_allow_headers: vec!["Authorization".to_string(), "Accept".to_string()]
+                api_cors_allow_headers: vec!["Authorization".to_string(), "Accept".to_string()],
+                access_key_secret_id: Some("id".to_string())
             }
         )
     }

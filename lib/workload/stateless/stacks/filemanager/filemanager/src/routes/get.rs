@@ -55,25 +55,13 @@ pub async fn get_s3_by_id(state: State<AppState>, id: Path<Uuid>) -> Result<Json
     get_s3_from_connection(state.database_client().connection_ref(), id).await
 }
 
-/// Generate AWS presigned URLs for a single S3 object using its `s3_object_id`.
-/// This route will not return an object if it is not a current record, or it's storage class is
-/// not accessible because it is archived, or its size is greater than `FILEMANAGER_API_PRESIGN_LIMIT`.
-#[utoipa::path(
-    get,
-    path = "/s3/presign/{id}",
-    responses(
-        (status = OK, description = "The presigned url for the object with the id", body = Option<Url>),
-        ErrorStatusCode,
-    ),
-    params(PresignedParams),
-    context_path = "/api/v1",
-    tag = "get",
-)]
-pub async fn presign_s3_by_id(
+/// Implementation of presigning a single URL by id.
+async fn presign_url_by_id(
     state: State<AppState>,
     id: Path<Uuid>,
-    WithRejection(extract::Query(presigned), _): Query<PresignedParams>,
+    presigned: Query<PresignedParams>,
     request: Request,
+    access_key_secret_id: Option<String>,
 ) -> Result<Json<Option<Url>>> {
     let txn = state.database_client().connection_ref().begin().await?;
 
@@ -117,6 +105,7 @@ pub async fn presign_s3_by_id(
                     presigned.response_content_disposition(),
                     content_type,
                     content_encoding,
+                    access_key_secret_id.as_deref(),
                 )
                 .await?,
             ));
@@ -124,6 +113,35 @@ pub async fn presign_s3_by_id(
     }
 
     Ok(Json(None))
+}
+
+/// Generate AWS presigned URLs for a single S3 object using its `s3_object_id`.
+/// This route will not return an object if it is not a current record, or it's storage class is
+/// not accessible because it is archived, or its size is greater than
+/// `FILEMANAGER_API_PRESIGN_LIMIT`. Presigned URLs live for up to 7 days.
+#[utoipa::path(
+    get,
+    path = "/s3/presign/{id}",
+    responses(
+        (status = OK, description = "The presigned url for the object with the id", body = Option<Url>),
+        ErrorStatusCode,
+    ),
+    params(PresignedParams),
+    context_path = "/api/v1",
+    tag = "get",
+)]
+pub async fn presign_s3_by_id(
+    state: State<AppState>,
+    id: Path<Uuid>,
+    presigned: Query<PresignedParams>,
+    request: Request,
+) -> Result<Json<Option<Url>>> {
+    let access_key_secret_id = state
+        .config()
+        .access_key_secret_id()
+        .map(|secret| secret.to_string());
+    // Always presign with access key if it's available.
+    presign_url_by_id(state, id, presigned, request, access_key_secret_id).await
 }
 
 /// The router for getting object records.

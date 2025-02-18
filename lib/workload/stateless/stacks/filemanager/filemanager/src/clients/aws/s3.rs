@@ -30,7 +30,7 @@ pub struct Client {
 }
 
 /// Override settings related to response headers.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResponseHeaders {
     content_disposition: String,
     content_type: Option<String>,
@@ -202,7 +202,7 @@ impl Client {
         &self,
         key: &str,
         bucket: &str,
-        version_id: &str,
+        version_id: Option<String>,
         response_headers: ResponseHeaders,
         expires_in: Duration,
     ) -> Result<PresignedRequest, GetObjectError> {
@@ -213,7 +213,7 @@ impl Client {
             .set_response_content_encoding(response_headers.content_encoding)
             .key(key)
             .bucket(bucket)
-            .version_id(version_id)
+            .set_version_id(version_id)
             .presigned(
                 PresigningConfig::expires_in(
                     expires_in

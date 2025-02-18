@@ -15,6 +15,7 @@ use crate::database::entities::sea_orm_active_enums::ArchiveStatus;
 use crate::database::entities::sea_orm_active_enums::EventType;
 use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::database::entities::sea_orm_active_enums::StorageClass;
+use crate::routes::crawl::*;
 use crate::routes::error::ErrorResponse;
 use crate::routes::filter::wildcard::Wildcard;
 use crate::routes::filter::*;
@@ -61,6 +62,11 @@ pub struct Uuid(pub uuid::Uuid);
         ingest_from_sqs,
         update_s3_attributes,
         update_s3_collection_attributes,
+        crawl_s3,
+        crawl_sync_s3,
+        list_crawl_s3,
+        count_crawl_s3,
+        get_crawl_s3_by_id
     ),
     components(
         schemas(

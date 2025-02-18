@@ -5,7 +5,7 @@ use aws_config::{defaults, BehaviorVersion, SdkConfig};
 use aws_credential_types::provider::error::CredentialsError;
 use aws_credential_types::provider::ProvideCredentials;
 use aws_credential_types::Credentials;
-use mockall::automock;
+use std::fmt::Debug;
 
 /// A wrapper around a config loader.
 #[derive(Debug)]
@@ -13,7 +13,6 @@ pub struct Config {
     inner: SdkConfig,
 }
 
-#[automock]
 impl Config {
     /// Create a new config.
     pub fn new(inner: SdkConfig) -> Self {
@@ -23,6 +22,16 @@ impl Config {
     /// Load the config.
     pub fn load(self) -> SdkConfig {
         self.inner
+    }
+
+    /// Use the custom credentials provider.
+    pub async fn from_provider(provider: impl ProvideCredentials + 'static) -> Self {
+        Self::new(
+            defaults(BehaviorVersion::latest())
+                .credentials_provider(provider)
+                .load()
+                .await,
+        )
     }
 
     /// Get the provided credentials from the config.

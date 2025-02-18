@@ -163,21 +163,35 @@ export class Function extends Construct {
    * Add policies for 's3:List*' and 's3:Get*' on the buckets to this function's role.
    */
   addPoliciesForBuckets(buckets: string[], actions: string[]) {
-    buckets.map((bucket) => {
-      this.addToPolicy(
-        new PolicyStatement({
-          actions,
-          resources: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
-        })
-      );
+    Function.formatPoliciesForBucket(buckets, actions).forEach((policy) => {
+      this.addToPolicy(policy);
     });
   }
 
   /**
    * Get policy actions for fetching objects.
    */
+  static getObjectVersionActions(): string[] {
+    return ['s3:GetObjectVersion'];
+  }
+
+  /**
+   * Get policy actions for versioned objects.
+   */
   static getObjectActions(): string[] {
-    return ['s3:ListBucket', 's3:GetObject', 's3:GetObjectVersion'];
+    return ['s3:ListBucket', 's3:GetObject'];
+  }
+
+  /**
+   * Format a set of buckets and actions into policy statements.
+   */
+  static formatPoliciesForBucket(buckets: string[], actions: string[]): PolicyStatement[] {
+    return buckets.map((bucket) => {
+      return new PolicyStatement({
+        actions,
+        resources: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
+      });
+    });
   }
 
   /**

@@ -1,5 +1,7 @@
 import { FilemanagerConfig } from '../../lib/workload/stateless/stacks/filemanager/deploy/stack';
 import {
+  fileManagerPresignUserSecret,
+  accountIdAlias,
   AppStage,
   cognitoApiGatewayConfig,
   computeSecurityGroupName,
@@ -14,21 +16,31 @@ import {
   icav2PipelineCacheBucket,
   logsApiGatewayConfig,
   oncoanalyserBucket,
+  region,
   vpcProps,
 } from '../constants';
 
-export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => {
-  const inventorySourceBuckets = [];
-  if (stage == AppStage.BETA) {
-    inventorySourceBuckets.push(fileManagerInventoryBucket[stage]);
-  }
-
+export const fileManagerBuckets = (stage: AppStage): string[] => {
   const eventSourceBuckets = [oncoanalyserBucket[stage], icav2PipelineCacheBucket[stage]];
   // Note, that we only archive production data, so we only need access to the archive buckets in prod.
   if (stage == AppStage.PROD) {
     eventSourceBuckets.push(icav2ArchiveAnalysisBucket[stage]);
     eventSourceBuckets.push(icav2ArchiveFastqBucket[stage]);
   }
+  return eventSourceBuckets;
+};
+
+export const fileManagerInventoryBuckets = (stage: AppStage): string[] => {
+  const inventorySourceBuckets = [];
+  if (stage == AppStage.BETA) {
+    inventorySourceBuckets.push(fileManagerInventoryBucket[stage]);
+  }
+  return inventorySourceBuckets;
+};
+
+export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => {
+  const inventorySourceBuckets = fileManagerInventoryBuckets(stage);
+  const eventSourceBuckets = fileManagerBuckets(stage);
 
   return {
     securityGroupName: computeSecurityGroupName,
@@ -37,6 +49,7 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
     databaseClusterEndpointHostParameter: dbClusterEndpointHostParameterName,
     port: databasePort,
     migrateDatabase: true,
+    accessKeySecretArn: `arn:aws:secretsmanager:${region}:${accountIdAlias[stage]}:secret:${fileManagerPresignUserSecret}`, // pragma: allowlist secret
     inventorySourceBuckets,
     eventSourceBuckets,
     fileManagerRoleName: fileManagerIngestRoleName,

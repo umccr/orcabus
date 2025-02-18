@@ -52,6 +52,8 @@ pub enum Error {
     MigrateError(String),
     #[error("Crawl error: `{0}`")]
     CrawlError(String),
+    #[error("Secrets manager error: `{0}`")]
+    SecretsManagerError(String),
 }
 
 impl From<sqlx::Error> for Error {

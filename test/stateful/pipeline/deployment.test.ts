@@ -189,6 +189,27 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       );
       break;
 
+    case 'AccessKeySecretStack':
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        [
+          '/AccessKeySecretStack/User/DefaultPolicy/Resource',
+          '/AccessKeySecretStack/Secret/Resource',
+        ],
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              'Wildcard is required to have read-only access to the bucket for pre-signing URLs.',
+          },
+          {
+            id: 'AwsSolutions-SMG4',
+            reason: 'Automatic secret rotation is a todo.',
+          },
+        ]
+      );
+      break;
+
     default:
       break;
   }

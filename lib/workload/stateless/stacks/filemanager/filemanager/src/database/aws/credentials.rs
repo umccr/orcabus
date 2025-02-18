@@ -8,10 +8,8 @@ use async_trait::async_trait;
 use aws_sigv4::http_request::SignatureLocation::QueryParams;
 use aws_sigv4::http_request::{sign, SignableBody, SignableRequest, SigningSettings};
 use aws_sigv4::sign::v4::SigningParams;
-use mockall_double::double;
 use url::Url;
 
-#[double]
 use crate::clients::aws::config::Config;
 use crate::database::CredentialGenerator;
 use crate::env::Config as EnvConfig;
@@ -176,15 +174,13 @@ impl CredentialGenerator for IamGenerator {
 
 #[cfg(test)]
 mod tests {
+    use crate::database::aws::credentials::Config;
     use std::borrow::Cow;
     use std::collections::HashMap;
     use std::future::Future;
 
-    use aws_credential_types::Credentials;
-
-    use crate::clients::aws::config::MockConfig;
-
     use super::*;
+    use aws_credential_types::Credentials;
 
     #[tokio::test]
     async fn generate_iam_token() {
@@ -225,21 +221,14 @@ mod tests {
         F: FnOnce(Config) -> Fut,
         Fut: Future<Output = IamGenerator>,
     {
-        let mut config = MockConfig::default();
-
-        config.expect_provide_credentials().once().returning(|| {
-            Some(Ok(Credentials::new(
-                "access-key-id",
-                "secret-access-key",
-                Some("session-token".to_string()),
-                Some(SystemTime::UNIX_EPOCH),
-                "provider-name",
-            )))
-        });
-        config
-            .expect_region()
-            .once()
-            .returning(|| Some("ap-southeast-2".to_string()));
+        let config = Config::from_provider(Credentials::new(
+            "access-key-id",
+            "secret-access-key",
+            Some("session-token".to_string()),
+            Some(SystemTime::UNIX_EPOCH),
+            "provider-name",
+        ))
+        .await;
 
         let generator = create_generator(config).await;
         // Add the scheme back in so that the url can be parsed.
