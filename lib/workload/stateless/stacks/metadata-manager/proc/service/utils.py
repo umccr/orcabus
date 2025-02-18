@@ -23,7 +23,7 @@ def clean_model_history(minutes: int = None):
     call_command("clean_duplicate_history", "--auto", minutes=minutes, stdout=open(os.devnull, 'w'))
 
 
-def sanitize_lab_metadata_df(df: pd.DataFrame):
+def sanitize_lab_metadata_df(df: pd.DataFrame) -> pd.DataFrame:
     """
     sanitize record by renaming columns, and clean df cells
     """
@@ -36,6 +36,11 @@ def sanitize_lab_metadata_df(df: pd.DataFrame):
 
     # dropping column that has empty column heading
     df = df.drop('', axis='columns', errors='ignore')
+
+    # We are now removing and '_rerun' or '_topup' postfix from libraries
+    # See https://github.com/umccr/orcabus/issues/865
+    df['library_id'] = df['library_id'].str.replace(r'_rerun\d*$', '', regex=True)
+    df['library_id'] = df['library_id'].str.replace(r'_topup\d*$', '', regex=True)
 
     df = df.reset_index(drop=True)
     return df
