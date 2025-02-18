@@ -23,9 +23,9 @@ __metadata:
   linkType: hard
 
 "@aws-cdk/asset-kubectl-v20@npm:^2.1.3":
-  version: 2.1.3
-  resolution: "@aws-cdk/asset-kubectl-v20@npm:2.1.3"
-  checksum: 10/1d24c3ceaefa3ded3727e3353d48509a7a87ef99d88ce778e7739f21aa3f145233c8fea21ae93a42133a31d45599057a313847ad59d5cdc983904b51b6c2e761
+  version: 2.1.4
+  resolution: "@aws-cdk/asset-kubectl-v20@npm:2.1.4"
+  checksum: 10/2fac2872da5ffd628522e5e9d8600ac6e1e295609f7e77e208f931e2fd1a0c88a638b5b0c4c2c1d01ef3c1986a7e13551fe06dc7f8a927fd234bade4775e5736
   languageName: node
   linkType: hard
 
@@ -632,13 +632,6 @@ __metadata:
   version: 0.4.1
   resolution: "@humanwhocodes/retry@npm:0.4.1"
   checksum: 10/39fafc7319e88f61befebd5e1b4f0136534ea6a9bd10d74366698187bd63544210ec5d79a87ed4d91297f1cc64c4c53d45fb0077a2abfdce212cf0d3862d5f04
-  languageName: node
-  linkType: hard
-
-"@iarna/toml@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@iarna/toml@npm:3.0.0"
-  checksum: 10/c52161263aaed8c548befd868b1522506e4ea55cf51267f386a6acb468cedc05ab3e80a8b8dffca52344d553cdaea6dff89473ed2655f1fca4dd307561cddcf6
   languageName: node
   linkType: hard
 
@@ -1763,7 +1756,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cargo-lambda-cdk@npm:0.0.31, cargo-lambda-cdk@npm:^0.0.31":
+"cargo-lambda-cdk@npm:^0.0.31":
   version: 0.0.31
   resolution: "cargo-lambda-cdk@npm:0.0.31"
   dependencies:
@@ -2677,17 +2670,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"htsget-lambda@npm:^0.7.2":
-  version: 0.7.2
-  resolution: "htsget-lambda@npm:0.7.2"
+"htsget-lambda@npm:^0.8.4":
+  version: 0.8.4
+  resolution: "htsget-lambda@npm:0.8.4"
   dependencies:
-    "@iarna/toml": "npm:^3.0.0"
     cargo-lambda-cdk: "npm:^0.0.31"
   peerDependencies:
     aws-cdk-lib: ^2.112.0
   bin:
     htsget_app: bin/htsget-lambda.js
-  checksum: 10/e313d4885be65b48a717d10b47389da2d850d4159a28e1ba4ca66ec009f1989ceec32f79e8f9f0957f7d541795dd02f252bc6c7d206b5a5df814f56f89864227
+  checksum: 10/a022b2062beb8137242b8a27385b70ce5e228502ce5e1098c0ac82f67ff39925d910dee15fea1d02448671c4a2be252b10dd1e432c3af0ae6d069226a83e96c4
   languageName: node
   linkType: hard
 
@@ -3977,7 +3969,7 @@ __metadata:
     "@types/node": "npm:^22.12.0"
     aws-cdk: "npm:2.177.0"
     aws-cdk-lib: "npm:2.177.0"
-    cargo-lambda-cdk: "npm:0.0.31"
+    cargo-lambda-cdk: "npm:^0.0.31"
     cdk-nag: "npm:^2.35.3"
     constructs: "npm:^10.4.2"
     core-js-pure: "npm:^3.40.0"
@@ -3985,7 +3977,7 @@ __metadata:
     eslint: "npm:^9.19.0"
     eslint-config-prettier: "npm:^10.0.1"
     globals: "npm:^15.14.0"
-    htsget-lambda: "npm:^0.7.2"
+    htsget-lambda: "npm:^0.8.4"
     jest: "npm:^29.7.0"
     jest-junit: "npm:^16.0.0"
     prettier: "npm:^3.4.2"

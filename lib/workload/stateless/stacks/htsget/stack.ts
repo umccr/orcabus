@@ -3,8 +3,7 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import { Role } from 'aws-cdk-lib/aws-iam';
 import { IVpc, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../components/api-gateway';
-import path from 'path';
-import { HtsgetLambdaConstruct } from 'htsget-lambda';
+import { HtsgetLambda } from 'htsget-lambda';
 
 /**
  * Configurable props for the htsget stack.
@@ -18,6 +17,10 @@ export type HtsgetStackConfigurableProps = {
    * API gateway construct props.
    */
   apiGatewayCognitoProps: ApiGatewayConstructProps;
+  /**
+   * The buckets to configure for htsget access.
+   */
+  buckets: string[];
 };
 
 /**
@@ -43,13 +46,24 @@ export class HtsgetStack extends Stack {
     this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
     this.apiGateway = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
 
-    const configPath = path.join(__dirname, 'deploy.toml');
-    new HtsgetLambdaConstruct(this, 'Htsget', {
-      config: configPath,
+    new HtsgetLambda(this, 'Htsget', {
+      htsgetConfig: {
+        environment_override: {
+          HTSGET_LOCATIONS: props.buckets.map((bucket) => {
+            let regex = `^${bucket}/(?P<key>.*)$`;
+            let substitution_string = '$key';
+            let backend = `{ kind=S3, bucket=${bucket} }`;
+
+            return `{ regex=${regex}, substitution_string=${substitution_string}, backend=${backend} }`;
+          }),
+        },
+      },
+      cargoLambdaFlags: ['--features', 'aws'],
       vpc: this.vpc,
       role: props.role,
       httpApi: this.apiGateway.httpApi,
-      gitReference: 'htsget-lambda-v0.5.2',
+      gitReference: 'htsget-lambda-v0.6.0',
+      gitForceClone: false,
     });
   }
 }

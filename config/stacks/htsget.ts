@@ -6,8 +6,12 @@ import {
   vpcProps,
 } from '../constants';
 import { HtsgetStackConfigurableProps } from '../../lib/workload/stateless/stacks/htsget/stack';
+import { fileManagerBuckets, fileManagerInventoryBuckets } from './fileManager';
 
 export const getHtsgetProps = (stage: AppStage): HtsgetStackConfigurableProps => {
+  const inventorySourceBuckets = fileManagerInventoryBuckets(stage);
+  const eventSourceBuckets = fileManagerBuckets(stage);
+
   return {
     vpcProps,
     apiGatewayCognitoProps: {
@@ -17,5 +21,6 @@ export const getHtsgetProps = (stage: AppStage): HtsgetStackConfigurableProps =>
       apiName: 'Htsget',
       customDomainNamePrefix: 'htsget-file',
     },
+    buckets: [...inventorySourceBuckets, ...eventSourceBuckets],
   };
 };
