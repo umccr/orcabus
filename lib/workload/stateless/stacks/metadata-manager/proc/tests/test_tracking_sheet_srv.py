@@ -1,6 +1,8 @@
 import os
 import json
 import pandas as pd
+from django.db.models import Q
+from django.utils.timezone import override
 from libumccr.aws import libeb
 
 from unittest.mock import MagicMock
@@ -11,6 +13,7 @@ from app.models import Library, Sample, Subject, Project, Contact, Individual
 from proc.service.tracking_sheet_srv import sanitize_lab_metadata_df, persist_lab_metadata, \
     drop_incomplete_tracking_sheet_records
 from .utils import check_put_event_entries_format, check_put_event_value, is_expected_event_in_output
+from ..service.utils import warn_drop_duplicated_library
 
 TEST_EVENT_BUS_NAME = "TEST_BUS"
 
@@ -172,6 +175,50 @@ class TrackingSheetSrvUnitTests(TestCase):
 
             ctc = prj.contact_set.get(contact_id=rec.get("ProjectOwner"))
             self.assertEqual(ctc.contact_id, rec.get("ProjectOwner"), 'incorrect project-contact link')
+
+    def test_rerun_topup_libraries(self) -> None:
+        """
+        python manage.py test proc.tests.test_tracking_sheet_srv.TrackingSheetSrvUnitTests.test_rerun_topup_libraries
+
+        we don't want to treat any topup / rerun libraries as a new record
+        """
+
+        # Prepare the initial data with a topup and rerun libraries
+        final_records = [RECORD_1]
+
+        # topup record
+        topup_record = RECORD_1.copy()
+        topup_record['LibraryID'] = topup_record['LibraryID'] + '_topup'
+        final_records.append(topup_record)
+
+        topup_2_record = RECORD_1.copy()
+        topup_2_record['LibraryID'] = topup_2_record['LibraryID'] + '_topup23'
+        final_records.append(topup_2_record)
+
+        # rerun record
+        rerun_record = RECORD_1.copy()
+        rerun_record['LibraryID'] = rerun_record['LibraryID'] + '_rerun'
+        final_records.append(rerun_record)
+
+        # Change the latest library properties to check if latest record is final stored
+        test_override_cycles = "TEST_123"
+        rerun_2_record = RECORD_1.copy()
+        rerun_2_record['LibraryID'] = rerun_2_record['LibraryID'] + '_rerun2342'
+        rerun_2_record["OverrideCycles"] = test_override_cycles
+        final_records.append(rerun_2_record)
+
+        metadata_pd = pd.json_normalize(final_records)
+        metadata_pd = sanitize_lab_metadata_df(metadata_pd)
+        metadata_pd = warn_drop_duplicated_library(metadata_pd)
+
+        persist_lab_metadata(metadata_pd, SHEET_YEAR)
+
+        original_lib = Library.objects.get(library_id=RECORD_1.get("LibraryID"))
+        self.assertIsNotNone(original_lib, "Original library should be created")
+        self.assertEqual(original_lib.override_cycles, test_override_cycles, "Latest record is expected to be stored")
+
+        dup_libraries = Library.objects.all().filter(Q(library_id__icontains="_rerun") | Q(library_id__icontains="_topup"))
+        self.assertEqual(dup_libraries.count(), 0, "Topup and rerun libraries should NOT exist")
 
     def test_new_df_in_different_year(self) -> None:
         """
