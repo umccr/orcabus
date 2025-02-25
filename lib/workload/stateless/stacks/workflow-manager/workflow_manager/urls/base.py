@@ -22,7 +22,7 @@ api_base = f"{api_namespace}/{api_version}/"
 
 router = OptionalSlashDefaultRouter()
 
-router.register(r"workflowrun/stats", WorkflowRunStatsViewSet, basename="workflowrun_list_all") # put it before workflowrun, as it will match the workflowrun/list_all/ url
+router.register(r"workflowrun/stats", WorkflowRunStatsViewSet, basename="workflowrun_stats") 
 router.register(r"analysis", AnalysisViewSet, basename="analysis")
 router.register(r"analysisrun", AnalysisRunViewSet, basename="analysisrun")
 router.register(r"analysiscontext", AnalysisContextViewSet, basename="analysiscontext")

@@ -7,6 +7,7 @@ from sequence_run_manager.viewsets.sequence import SequenceViewSet
 from sequence_run_manager.viewsets.state import StateViewSet
 from sequence_run_manager.viewsets.comment import CommentViewSet
 from sequence_run_manager.viewsets.sequence_run_stats import SequenceStatsViewSet
+from sequence_run_manager.viewsets.sequence_run_action import SequenceRunActionViewSet
 from sequence_run_manager.settings.base import API_VERSION
 
 api_namespace = "api"
@@ -15,10 +16,11 @@ api_base = f"{api_namespace}/{api_version}/"
 
 router = OptionalSlashDefaultRouter()
 router.register(r"sequence", SequenceViewSet, basename="sequence")
-
+router.register(r"sequence", SequenceRunActionViewSet, basename="sequence-action")
 router.register("sequence/(?P<orcabus_id>[^/]+)/comment", CommentViewSet, basename="sequence-comment")
 router.register("sequence/(?P<orcabus_id>[^/]+)/state", StateViewSet, basename="sequence-states")
 router.register(r"sequence/stats", SequenceStatsViewSet, basename="sequence-stats")
+
 
 urlpatterns = [
     path(f"{api_base}", include(router.urls)),

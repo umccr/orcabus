@@ -6,6 +6,7 @@ import gzip
 import base64
 import json
 from libumccr.aws import libsm
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,12 @@ class BSSHService:
     
     def __init__(self):
         assert os.environ.get("BASESPACE_ACCESS_TOKEN_SECRET_ID", None), "BASESPACE_ACCESS_TOKEN_SECRET_ID is not set"
-        BASESPACE_ACCESS_TOKEN = libsm.get_secret(os.environ.get("BASESPACE_ACCESS_TOKEN_SECRET_ID"))
+        try:
+            BASESPACE_ACCESS_TOKEN = libsm.get_secret(os.environ.get("BASESPACE_ACCESS_TOKEN_SECRET_ID"))
+        except Exception as e:
+            logger.error(f"Error retrieving BSSH token from the Secret Manager: {e}")
+            raise e
+        
         if not BASESPACE_ACCESS_TOKEN:
             raise ValueError("BSSH_TOKEN is not set")
         self.headers = {
@@ -23,6 +29,32 @@ class BSSHService:
             'Content-Type': 'application/json'
         }
         self.base_url = "https://api.aps2.sh.basespace.illumina.com/v2/"
+        
+    
+    def handle_request_error(self, e: Exception, operation: str):
+        """
+        Handles various request exceptions and returns appropriate error
+        
+        Args:
+            e: The caught exception
+            operation: Description of the operation being performed
+        """
+        if isinstance(e, requests.exceptions.HTTPError):
+            logger.error(f"HTTP error occurred: {e.response.status_code} - {e.response.reason}")
+            logger.error(f"Response text: {e.response.text}")
+            raise ValueError(f"Error {operation}: {str(e)}")
+            
+        elif isinstance(e, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
+            logger.error(f"Connection error occurred: {str(e)}")
+            raise ValueError(f"Error connecting to BSSH: {str(e)}")
+            
+        elif isinstance(e, requests.exceptions.RequestException):
+            logger.error(f"Request error occurred: {str(e)}")
+            raise ValueError(f"Error making request to BSSH: {str(e)}")
+            
+        else:
+            logger.error(f"Unexpected error: {str(e)}")
+            raise ValueError(f"Unexpected error {operation}: {str(e)}")
         
     def get_run_details(self, api_url: str) -> Dict[str, Any]:
         """
@@ -146,15 +178,20 @@ class BSSHService:
         }
         """
         
-        response = urllib.request.Request(api_url, headers=self.headers)
-        with urllib.request.urlopen(response) as response:
-            if response.status < 200 or response.status >= 300:
-                raise ValueError(f'Non 20X status code returned')
-
-            logger.info(f'Bssh run details api call successfully.')
-            response_json = json.loads(response.read().decode())
-            return response_json
-    
+        try:
+            response = requests.get(
+                api_url,
+                headers=self.headers
+            )
+            
+            # Raise error for bad status codes
+            response.raise_for_status()
+            
+            logger.info('BSSH run details API call successful.')
+            return response.json()
+            
+        except Exception as e:
+            self.handle_request_error(e, "getting run details")
     
     def get_libraries_from_run_details(self, run_details: Dict[str, Any]) -> List[str]:
         """
@@ -166,7 +203,7 @@ class BSSHService:
                 libraries.extend([lib.get('Name') for lib in item.get('LibraryItems', [])])
         return libraries
 
-    def get_sample_sheet(self, api_url: str, sample_sheet_name: str) -> Optional[Dict[str, Any]]:
+    def get_sample_sheet_from_bssh_run_files(self, api_url: str, sample_sheet_name: str) -> Optional[Dict[str, Any]]:
         """
         Retrieve sample sheet from ICA project
         
@@ -217,6 +254,8 @@ class BSSHService:
         # Construct API URL for files in project
         bssh_run_files_url = f"{api_url}/files"
         
+        logger.info(f'Bssh run files url: {bssh_run_files_url} , sample sheet name: {sample_sheet_name}')
+        
         try:
             file_content_url = None
             offset = 0
@@ -229,15 +268,17 @@ class BSSHService:
                     'offset': offset,
                     'limit': limit
                 }
-                response = urllib.request.Request(bssh_run_files_url, headers=self.headers, params=params)
-                with urllib.request.urlopen(response) as response:
-                    if response.status < 200 or response.status >= 300:
-                        raise ValueError(f'Non 20X status code returned when getting files in bssh run')
-
-                    response_json = json.loads(response.read().decode())                    
+                # Use requests library for the API call
+                response = requests.get(
+                    bssh_run_files_url,
+                    params=params,  # requests will handle query parameter encoding
+                    headers=self.headers
+                )
                 
-                files = response_json.get('items', [])
-                
+                # Raise error for bad status codes
+                response.raise_for_status()
+                response_json = response.json()                   
+                files = response_json.get('Items', [])
                 if not files:
                     break  # No more items to process
                 
@@ -259,27 +300,29 @@ class BSSHService:
             if not file_content_url:
                 raise ValueError("Sample sheet not found")
             
-            # Get file content
-            response = urllib.request.Request(file_content_url, headers=self.headers)
-            with urllib.request.urlopen(response) as response:
-                if response.status < 200 or response.status >= 300:
-                    raise ValueError(f'Non 20X status code returned when getting file content')
-
-                logger.info(f'File content api call successfully.')
-                response_json = json.loads(response.read().decode())
+            logger.info(f'File content url: {file_content_url}')
             
-            # Get the raw content as bytes
-            content = response.read()
-            
-            # Compress with gzip
-            compressed = gzip.compress(content)
-            
-            # Encode to base64 and convert to string
-            b64gz_string = base64.b64encode(compressed).decode('utf-8')
+            try:
+                response = requests.get(
+                    file_content_url,
+                    headers=self.headers,
+                    stream=True  # Important for binary content
+                )
+                response.raise_for_status()
+                content = response.content
                 
-            return b64gz_string
+                if not content:
+                    raise ValueError('Empty content received from BSSH')
+                    
+                logger.info(f'Successfully retrieved file content, size: {len(content)} bytes')
+                
+                # Convert to base64
+                b64gz_string = base64.b64encode(content).decode('utf-8')
+                return b64gz_string
+                    
+            except Exception as e:
+                self.handle_request_error(e, "getting sample sheet content")
             
         except Exception as e:
-            raise ValueError(f"Error getting files in project: {e}")
-    
+            self.handle_request_error(e, "getting sample sheet file")
     
