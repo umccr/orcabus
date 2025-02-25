@@ -12,6 +12,7 @@ import { LambdaAPIConstruct } from './construct/lambda-api';
 import { ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
 import { LambdaLoadCustomCSVConstruct } from './construct/lambda-load-custom-csv';
+import { LambdaDjangoCommandConstruct } from './construct/lambda-django-command';
 
 export type MetadataManagerStackProps = {
   /**
@@ -87,6 +88,11 @@ export class MetadataManagerStack extends Stack {
       basicLambdaConfig: basicLambdaConfig,
       dbConnectionSecret: dbSecret,
       vpc: vpc,
+    });
+
+    new LambdaDjangoCommandConstruct(this, 'DjangoCommandLambda', {
+      basicLambdaConfig: basicLambdaConfig,
+      dbConnectionSecret: dbSecret,
     });
 
     const syncGsheetLambda = new LambdaSyncGsheetConstruct(this, 'SyncGsheetLambda', {
