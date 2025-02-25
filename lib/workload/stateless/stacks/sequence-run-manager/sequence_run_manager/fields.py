@@ -11,6 +11,8 @@ ulid_validator = RegexValidator(regex=ULID_REGEX_STR,
 def get_ulid() -> str:
     return ulid.new().str
 
+def sanitize_orcabus_id(orcabus_id: str) -> str:
+    return orcabus_id[-26:]
 
 class UlidField(models.CharField):
     description = "An OrcaBus internal ID (ULID)"
@@ -62,4 +64,4 @@ class OrcaBusIdField(UlidField):
 
     def get_prep_value(self, value):
         # We just want the last 26 characters which is the ULID (ignoring any prefix) when dealing with the database
-        return value[-26:]
+        return sanitize_orcabus_id(value)

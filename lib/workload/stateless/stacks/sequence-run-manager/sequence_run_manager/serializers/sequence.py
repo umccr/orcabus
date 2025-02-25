@@ -19,9 +19,18 @@ class SequenceMinSerializer(SequenceBaseSerializer):
         fields = ["orcabus_id", "instrument_run_id", "start_time", "end_time", "status"]
 
 class SequenceSerializer(SequenceBaseSerializer):
+    libraries = serializers.ListField(read_only=True, child=serializers.CharField(), help_text="List of libraries associated with the sequence")
+    
     class Meta(OrcabusIdSerializerMetaMixin):
         model = Sequence
         fields = "__all__"
+        include_libraries = True
+    
+    def get_libraries(self, obj):
+        """
+        Get all libraries associated with the sequence
+        """
+        return obj.libraries()
         
 class SequenceRunCountByStatusSerializer(serializers.Serializer):
     all = serializers.IntegerField()

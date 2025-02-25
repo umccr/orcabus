@@ -113,6 +113,8 @@ class Sequence(OrcaBusBaseModel):
     # run_config = models.JSONField(null=True, blank=True)  # TODO could be it's own model
     # sample_sheet_config = models.JSONField(null=True, blank=True)  # TODO could be it's own model
 
+    experiment_name = models.CharField(max_length=255, null=True, blank=True)
+    
     objects = SequenceManager()
 
     def __str__(self):
@@ -123,3 +125,27 @@ class Sequence(OrcaBusBaseModel):
             f"Run Data URI '{self.run_data_uri}', "
             f"Status '{self.status}'"
         )
+    
+    def libraries(self) -> list[str]:
+        """
+        Get all libraries associated with the sequence
+        """
+        return list(LibraryAssociation.objects.filter(sequence=self).values_list('library_id', flat=True))
+
+
+
+class LibraryAssociationManager(OrcaBusBaseManager):
+    pass
+
+
+class LibraryAssociation(OrcaBusBaseModel):
+    orcabus_id = OrcaBusIdField(primary_key=True)
+    sequence = models.ForeignKey(Sequence, on_delete=models.CASCADE)
+    library_id = models.CharField(max_length=255)
+    association_date = models.DateTimeField()
+    status = models.CharField(max_length=255, default="active")
+
+    objects = LibraryAssociationManager()
+
+    def __str__(self):
+        return f"ID: {self.orcabus_id}, sequence: {self.sequence}, library_id: {self.library_id}, status: {self.status}"

@@ -6,7 +6,8 @@ from django.db.models import QuerySet
 from sequence_run_manager.models.sequence import Sequence, SequenceStatus
 from sequence_run_manager.models.state import State
 from sequence_run_manager_proc.domain.sequence import SequenceDomain
-
+from sequence_run_manager_proc.services.sequence_library_srv import create_sequence_run_libraries_linking
+from sequence_run_manager_proc.services.bssh_srv import BSSHService
 # from data_processors.pipeline.tools import liborca
 
 logger = logging.getLogger(__name__)
@@ -104,6 +105,10 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         seq.ica_project_id = ica_project_id
         seq.api_url = api_url
 
+        run_details = BSSHService.get_run_details(api_url)
+        # get experiment name from bssh srv api call
+        seq.experiment_name = run_details.get("ExperimentName", None)
+        
         # seq.sample_sheet_config = liborca.get_samplesheet_json_from_file(
         #     gds_volume=gds_volume_name,
         #     samplesheet_path=f"{gds_folder_path}/{sample_sheet_name}"
@@ -114,6 +119,10 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         # )
 
         seq.save()
+        
+        # create sequence run libraries linking
+        create_sequence_run_libraries_linking(seq, run_details)
+        
         return SequenceDomain(sequence=seq, status_has_changed=True, state_has_changed=True)
     else:
         seq: Sequence = qs.get()
