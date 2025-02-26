@@ -114,7 +114,6 @@ def event_handler(event, context):
     if sequence_domain.status_has_changed:
         try:
             SequenceRule(sequence_domain.sequence).must_not_emergency_stop()
-            sequence_state_srv.create_sequence_state_from_bssh_event(event_details)
             entry = sequence_domain.to_put_events_request_entry(
                     event_bus_name=event_bus_name,
             )
