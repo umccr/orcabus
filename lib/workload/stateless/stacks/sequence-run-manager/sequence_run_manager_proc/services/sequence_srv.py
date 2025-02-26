@@ -114,6 +114,9 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         # )
 
         seq.save()
+        logger.info(
+            f"Created new Sequence (instrument_run_id={instrument_run_id}, status={status.value})"
+        )
         return SequenceDomain(sequence=seq, status_has_changed=True, state_has_changed=True)
     else:
         seq: Sequence = qs.get()
@@ -126,18 +129,26 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
             seq.status = status
             seq.end_time = end_time
             seq.save()
+            logger.info(
+                f"Updated Sequence (instrument_run_id={instrument_run_id}, status={status.value})"
+            )
             seq_domain.status_has_changed = True
         else:
             logger.info(
                 f"[SKIP] Existing Sequence Run Status (instrument_run_id={instrument_run_id}, status={status.value})"
             )
 
-        state = State.objects.filter(sequence=seq).order_by('-timestamp').first() # get latest state
-        if state is not None and state.status != payload["status"]:
-            seq_domain.state_has_changed = True
-        else:
+        # Due to the chaos of event sequence, we check if the State record is already present
+        # rather than checking the latest state
+        isExistSameState = State.objects.filter(sequence=seq, timestamp=payload["dateModified"], status=payload["status"]).exists()
+        if isExistSameState:
             logger.info(
                 f"[SKIP] Existing Sequence Run State (instrument_run_id={instrument_run_id}, status={payload['status']})"
+            )
+        else:
+            seq_domain.state_has_changed = True
+            logger.info(
+                f"Created new Sequence State (instrument_run_id={instrument_run_id}, status={payload['status']})"
             )
 
         return seq_domain
