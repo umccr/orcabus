@@ -21,7 +21,7 @@ class SequenceDomainUnitTests(SequenceRunProcUnitTestCase):
         """
         mock_sequence = SequenceFactory()
         mock_sequence_domain = SequenceDomain(
-            sequence=mock_sequence, state_has_changed=True
+            sequence=mock_sequence, state_has_changed=True, status_has_changed=True
         )
 
         marshalled_object = Marshaller.marshall(mock_sequence_domain.to_event())
@@ -39,7 +39,7 @@ class SequenceDomainUnitTests(SequenceRunProcUnitTestCase):
         """
         mock_sequence = SequenceFactory()
         mock_sequence_domain = SequenceDomain(
-            sequence=mock_sequence, state_has_changed=True
+            sequence=mock_sequence, state_has_changed=True, status_has_changed=True
         )
 
         marshalled_object = Marshaller.marshall(mock_sequence_domain.to_event())
@@ -60,7 +60,7 @@ class SequenceDomainUnitTests(SequenceRunProcUnitTestCase):
         """
         mock_sequence = SequenceFactory()
         mock_sequence_domain = SequenceDomain(
-            sequence=mock_sequence, state_has_changed=True
+            sequence=mock_sequence, state_has_changed=True, status_has_changed=True
         )
 
         aws_event = mock_sequence_domain.to_event_with_envelope()
@@ -76,7 +76,7 @@ class SequenceDomainUnitTests(SequenceRunProcUnitTestCase):
         """
         mock_sequence = SequenceFactory()
         mock_sequence_domain = SequenceDomain(
-            sequence=mock_sequence, state_has_changed=True
+            sequence=mock_sequence, state_has_changed=True, status_has_changed=True
         )
 
         mock_entry = mock_sequence_domain.to_put_events_request_entry(

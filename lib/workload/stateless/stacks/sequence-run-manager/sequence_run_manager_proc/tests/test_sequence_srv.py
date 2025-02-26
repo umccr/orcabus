@@ -37,6 +37,9 @@ class SequenceRunSrvUnitTests(SequenceRunProcUnitTestCase):
             seq_domain.sequence.instrument_run_id, seq_in_db.instrument_run_id
         )
         self.assertTrue(
+            seq_domain.status_has_changed
+        )  # assert Sequence Run Status has changed True
+        self.assertTrue(
             seq_domain.state_has_changed
         )  # assert Sequence Run State has changed True
 
@@ -63,5 +66,5 @@ class SequenceRunSrvUnitTests(SequenceRunProcUnitTestCase):
         self.assertIsNotNone(seq_domain)
         self.assertEqual(1, Sequence.objects.count())
         self.assertFalse(
-            seq_domain.state_has_changed
-        )  # assert Sequence Run State has changed False
+            seq_domain.status_has_changed
+        )  # assert Sequence Run Status has changed False
