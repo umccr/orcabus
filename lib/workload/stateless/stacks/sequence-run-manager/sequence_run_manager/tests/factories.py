@@ -30,3 +30,7 @@ class SequenceFactory(factory.django.DjangoModelFactory):
     sample_sheet_name = "SampleSheet.csv"
     sequence_run_id = "r.ACGTlKjDgEy099ioQOeOWg"
     sequence_run_name = instrument_run_id
+    api_url = "https://bssh.dev/api/v1/runs/r.ACGTlKjDgEy099ioQOeOWg"
+    v1pre3_id = "1234567890"
+    ica_project_id = "12345678-53ba-47a5-854d-e6b53101adb7"
+    experiment_name = "ExperimentName"

@@ -104,9 +104,11 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         seq.v1pre3_id = v1pre3_id
         seq.ica_project_id = ica_project_id
         seq.api_url = api_url
-
-        run_details = BSSHService.get_run_details(api_url)
-        # get experiment name from bssh srv api call
+        
+        # get run details from bssh srv api call
+        bssh_service = BSSHService()
+        run_details = bssh_service.get_run_details(api_url)
+        # get experiment name from bssh run details
         seq.experiment_name = run_details.get("ExperimentName", None)
         
         # seq.sample_sheet_config = liborca.get_samplesheet_json_from_file(

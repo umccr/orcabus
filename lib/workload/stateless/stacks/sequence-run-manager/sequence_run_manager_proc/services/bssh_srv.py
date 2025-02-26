@@ -193,7 +193,8 @@ class BSSHService:
         except Exception as e:
             self.handle_request_error(e, "getting run details")
     
-    def get_libraries_from_run_details(self, run_details: Dict[str, Any]) -> List[str]:
+    @staticmethod
+    def get_libraries_from_run_details(run_details: Dict[str, Any]) -> List[str]:
         """
         Retrieve libraries names from run details
         """
