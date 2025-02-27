@@ -29,12 +29,7 @@ class SequenceRunActionViewSet(ViewSet):
         pk = self.kwargs.get('pk')
         sequence_run = get_object_or_404(self.queryset, pk=pk)
         
-        
-        
-        logger.info(f'Sequence run: {sequence_run}')
-        
-        logger.info(f'Sequence run: {sequence_run.api_url}')
-        logger.info(f'Sequence run: {sequence_run.sample_sheet_name}')
+        logger.info(f'Sequence run api url: {sequence_run.api_url},  sample sheet name: {sequence_run.sample_sheet_name}')
         
         bssh_srv = BSSHService()
         sample_sheet = bssh_srv.get_sample_sheet_from_bssh_run_files(sequence_run.api_url, sequence_run.sample_sheet_name)
@@ -42,7 +37,7 @@ class SequenceRunActionViewSet(ViewSet):
             return Response({"detail": "Sample sheet not found"}, status=status.HTTP_404_NOT_FOUND)
         else:
             response = {
-                "SampleSheetName": sequence_run.sample_sheet_name,
-                "SampleSheetContent": sample_sheet
+                "sampleSheetName": sequence_run.sample_sheet_name,
+                "sampleSheetContent": sample_sheet
             }
             return Response(response, status=status.HTTP_200_OK)

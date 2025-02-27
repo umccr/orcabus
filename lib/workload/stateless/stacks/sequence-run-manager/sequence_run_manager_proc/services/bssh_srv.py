@@ -317,8 +317,9 @@ class BSSHService:
                     
                 logger.info(f'Successfully retrieved file content, size: {len(content)} bytes')
                 
-                # Convert to base64
-                b64gz_string = base64.b64encode(content).decode('utf-8')
+                # Convert to base64gz
+                compressed_content = gzip.compress(content)
+                b64gz_string = base64.b64encode(compressed_content).decode('utf-8')
                 return b64gz_string
                     
             except Exception as e:
