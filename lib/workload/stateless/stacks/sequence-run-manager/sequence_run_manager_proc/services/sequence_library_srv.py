@@ -1,4 +1,5 @@
-import datetime
+from django.db import transaction
+from django.utils import timezone
 import logging
 
 from sequence_run_manager.models.sequence import Sequence, LibraryAssociation
@@ -10,20 +11,42 @@ logger = logging.getLogger(__name__)
 ASSOCIATION_STATUS = "ACTIVE"
 
 
-def create_sequence_run_libraries_linking(sequence_run: Sequence, run_details: dict) -> list[dict]:
+def check_or_create_sequence_run_libraries_linking(payload: dict):
+    """
+    Check if libraries are linked to the sequence run;
+    if not, create the linking
+    """
+    sequence_run = Sequence.objects.get(instrument_run_id=payload["instrumentRunId"])
+    if not sequence_run:
+        logger.error(f"Sequence run {payload['instrumentRunId']} not found when checking or creating sequence run libraries linking")
+        raise ValueError(f"Sequence run {payload['instrumentRunId']} not found")
+    
+    # if libraries are already linked, skip
+    if LibraryAssociation.objects.filter(sequence=sequence_run).exists():
+        return
+    
+    bssh_srv = BSSHService()
+    run_details = bssh_srv.get_run_details(payload["apiUrl"])
+    return create_sequence_run_libraries_linking(sequence_run, run_details)
+
+
+@transaction.atomic
+def create_sequence_run_libraries_linking(sequence_run: Sequence, run_details: dict):
     """
     Create sequence run libraries linking
     """
     linked_libraries = BSSHService.get_libraries_from_run_details(run_details)
+    
     if linked_libraries:
         for library_id in linked_libraries:
                 # create the library association
                 LibraryAssociation.objects.create(
                     sequence=sequence_run,
                     library_id=library_id,
-                    association_date=datetime.datetime.now(),
+                    association_date=timezone.now(),  # Use timezone-aware datetime
                     status=ASSOCIATION_STATUS,
                 )
+        logger.info(f"Library associations created for sequence run {sequence_run.instrument_run_id}, linked libraries: {linked_libraries}")
 
 
 # metadata manager service

@@ -121,8 +121,6 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         # )
 
         seq.save()
-        # create sequence run libraries linking
-        create_sequence_run_libraries_linking(seq, run_details)
         
         logger.info(
             f"Created new Sequence (instrument_run_id={instrument_run_id}, status={status.value})"
@@ -158,7 +156,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         else:
             seq_domain.state_has_changed = True
             logger.info(
-                f"Created new Sequence State (instrument_run_id={instrument_run_id}, status={payload['status']})"
+                f"Received new Sequence State (instrument_run_id={instrument_run_id}, status={payload['status']})"
             )
 
         return seq_domain

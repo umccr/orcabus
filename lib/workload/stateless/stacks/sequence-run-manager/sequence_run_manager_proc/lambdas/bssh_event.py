@@ -13,7 +13,7 @@ from sequence_run_manager_proc.domain.sequence import (
     SequenceRule,
     SequenceRuleError,
 )
-from sequence_run_manager_proc.services import sequence_srv, sequence_state_srv
+from sequence_run_manager_proc.services import sequence_srv, sequence_state_srv, sequence_library_srv
 
 from libumccr import libjson
 from libumccr.aws import libeb
@@ -107,8 +107,10 @@ def event_handler(event, context):
     entry = None
 
     # Create SequenceRunState record from BSSH Run event payload
+    # Check or create sequence run libraries linking when state changes
     if sequence_domain.state_has_changed:
         sequence_state_srv.create_sequence_state_from_bssh_event(event_details)
+        sequence_library_srv.check_or_create_sequence_run_libraries_linking(event_details)
 
     # Detect SequenceRunStatusChange
     if sequence_domain.status_has_changed:

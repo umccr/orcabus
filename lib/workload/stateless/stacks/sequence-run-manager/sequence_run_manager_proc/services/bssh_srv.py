@@ -151,7 +151,7 @@ class BSSHService:
                         "Type": "library[]",
                         "Name": "Input.Libraries",
                         "Description": "",
-                        "LibraryItems": [
+                        "SampleLibraryItems": [
                             {
                                 "Id": "0000000",
                                 "Name": "LXXXXXXX",
@@ -201,7 +201,9 @@ class BSSHService:
         libraries = []
         for item in run_details.get('Properties', {}).get('Items', []):
             if item.get('Type') == 'library[]':
-                libraries.extend([lib.get('Name') for lib in item.get('LibraryItems', [])])
+                libraries.extend([lib.get('Name') for lib in item.get('SampleLibraryItems', [])])
+                break
+        logger.info(f"Retrieved libraries: {libraries} from run details")
         return libraries
 
     def get_sample_sheet_from_bssh_run_files(self, api_url: str, sample_sheet_name: str) -> Optional[Dict[str, Any]]:
