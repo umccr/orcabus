@@ -28,9 +28,12 @@ class SequenceRunSrvUnitTests(SequenceRunProcUnitTestCase):
         when(mock_bssh_service).get_run_details(any).thenReturn(mock_run_details)
     
         # Use patch to replace the BSSHService class with our mock
-        patcher = patch('sequence_run_manager_proc.services.sequence_srv.BSSHService', return_value=mock_bssh_service)
-        self.mock_bssh_class = patcher.start()
-        self.addCleanup(patcher.stop)
+        patcher_lib = patch('sequence_run_manager_proc.services.sequence_library_srv.BSSHService', return_value=mock_bssh_service)
+        patcher_seq = patch('sequence_run_manager_proc.services.sequence_srv.BSSHService', return_value=mock_bssh_service)
+        self.mock_bssh_class_lib = patcher_lib.start()
+        self.mock_bssh_class_seq = patcher_seq.start()
+        self.addCleanup(patcher_lib.stop)
+        self.addCleanup(patcher_seq.stop)
 
     def test_create_or_update_sequence_from_bssh_event(self):
         """
