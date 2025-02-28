@@ -199,8 +199,8 @@ curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/js
 "https://file.dev.umccr.org/api/v1/s3?key=*202405212aecb782*" | jq
 ```
 
-In addition to updating attributes, the PATCH request can also be used to update the `ingestId` for records with a null
-`ingestId`. For example, update the `ingestId` on a single record:
+In addition to updating attributes, the PATCH request can also be used to update the `ingestId`.
+For example, update the `ingestId` on a single record:
 
 ```sh
 curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
@@ -216,7 +216,8 @@ curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/js
 "https://file.dev.umccr.org/api/v1/s3?key=*202405212aecb782*" | jq
 ```
 
-Note the extra `ingestId` key in the JSON body. The operation must be `add`, and the path must be `/`.
+Note the extra `ingestId` key in the JSON body. The operation must be `add`, `replace`, or `remove`, and the path must
+be `/`.
 
 ## Count objects
 

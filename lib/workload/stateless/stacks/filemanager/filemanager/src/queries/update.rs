@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 use crate::database::entities::s3_object;
 use crate::error::Error::{InvalidQuery, QueryError};
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::queries::list::ListQueryBuilder;
 use crate::routes::filter::S3ObjectsFilter;
 use crate::routes::update::PatchBody;
@@ -194,18 +194,7 @@ where
     }
 
     /// Create an update for the ingestId column.
-    fn patch_for_ingest_id(
-        patch_body: Vec<PatchOperation>,
-        update_col: <<M as ModelTrait>::Entity as EntityTrait>::Column,
-        model: M,
-    ) -> Result<Value> {
-        if let Value::Uuid(None) = model.get(update_col) {
-        } else {
-            return Err(QueryError(
-                "cannot update `ingestId` unless it is null".to_string(),
-            ));
-        };
-
+    fn patch_for_ingest_id(patch_body: Vec<PatchOperation>) -> Result<Value> {
         if patch_body.len() != 1 {
             return Err(QueryError(
                 "expected one patch operation for `ingestId` update".to_string(),
@@ -217,8 +206,8 @@ where
             ));
         }
 
-        let uuid = if let PatchOperation::Add(add) = &patch_body[0] {
-            Uuid::from_str(add.value.as_str().ok_or_else(|| {
+        let parse_uuid = |value: &serde_json::Value| {
+            let uuid = Uuid::from_str(value.as_str().ok_or_else(|| {
                 QueryError("expected string value for `ingestId` update".to_string())
             })?)
             .map_err(|err| {
@@ -226,14 +215,24 @@ where
                     "failed to parse UUID for `ingestId` update: {}",
                     err
                 ))
-            })?
-        } else {
-            return Err(QueryError(
-                "expected `add` operation for `ingestId` update".to_string(),
-            ));
+            })?;
+
+            Ok::<_, Error>(Value::Uuid(Some(Box::new(uuid))))
         };
 
-        Ok(Value::Uuid(Some(Box::new(uuid))))
+        let to_update = match &patch_body[0] {
+            PatchOperation::Add(add) => parse_uuid(&add.value)?,
+            PatchOperation::Remove(_) => Value::Uuid(None),
+            PatchOperation::Replace(replace) => parse_uuid(&replace.value)?,
+            _ => {
+                return Err(QueryError(
+                    "expected `add`, `remove` or `replace` operation for `ingestId` update"
+                        .to_string(),
+                ))
+            }
+        };
+
+        Ok(to_update)
     }
 
     /// Update the attributes on an object using the attribute patch. This first queries the
@@ -278,7 +277,7 @@ where
 
                 let update = match patch_body.clone() {
                     PatchBody::NestedIngestId { ingest_id } => {
-                        Self::patch_for_ingest_id(ingest_id.into_inner().0, update_col, model)?
+                        Self::patch_for_ingest_id(ingest_id.into_inner().0)?
                     }
                     PatchBody::UnnestedAttributes(attributes)
                     | PatchBody::NestedAttributes { attributes } => {
@@ -459,12 +458,6 @@ pub(crate) mod tests {
         let client = Client::from_pool(pool);
         let mut entries = EntriesBuilder::default().build(&client).await.unwrap();
 
-        let patch = json!({
-            "ingestId": [
-                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" },
-            ]
-        });
-
         change_many(
             &client,
             &entries,
@@ -473,6 +466,12 @@ pub(crate) mod tests {
         )
         .await;
         update_ingest_ids(&client, &mut entries).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" },
+            ]
+        });
 
         let results = test_s3_builder_result(
             &client,
@@ -492,6 +491,60 @@ pub(crate) mod tests {
         entries.s3_objects[1].ingest_id = Some(Uuid::default());
 
         assert_contains(&results, &entries, 0..2);
+        assert_correct_records(&client, entries.clone()).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "replace", "path": "/", "value": "00000000-0000-0000-0000-000000000001" },
+            ]
+        });
+
+        let results = test_s3_builder_result(
+            &client,
+            Some(json!({
+                "attributeId": "1"
+            })),
+            from_value(patch).unwrap(),
+        )
+        .await
+        .unwrap()
+        .all()
+        .await
+        .unwrap();
+
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "1"}));
+        entries.s3_objects[0].ingest_id =
+            Some("00000000-0000-0000-0000-000000000001".parse().unwrap());
+        entries.s3_objects[1].ingest_id =
+            Some("00000000-0000-0000-0000-000000000001".parse().unwrap());
+
+        assert_contains(&results, &entries, 0..2);
+        assert_correct_records(&client, entries.clone()).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "remove", "path": "/" },
+            ]
+        });
+
+        let results = test_s3_builder_result(
+            &client,
+            Some(json!({
+                "attributeId": "1"
+            })),
+            from_value(patch).unwrap(),
+        )
+        .await
+        .unwrap()
+        .all()
+        .await
+        .unwrap();
+
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "1"}));
+        entries.s3_objects[0].ingest_id = None;
+        entries.s3_objects[1].ingest_id = None;
+
+        assert_contains(&results, &entries, 0..2);
         assert_correct_records(&client, entries).await;
     }
 
@@ -507,13 +560,6 @@ pub(crate) mod tests {
             Some(json!({"attributeId": "1"})),
         )
         .await;
-
-        let patch = json!({
-            "ingestId": [
-                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" },
-            ]
-        });
-        assert_ingest_id_error(&client, patch).await;
 
         update_ingest_ids(&client, &mut entries).await;
 
@@ -533,7 +579,7 @@ pub(crate) mod tests {
 
         let patch = json!({
             "ingestId": [
-                { "op": "replace", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
+                { "op": "test", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
             ]
         });
         assert_ingest_id_error(&client, patch).await;
