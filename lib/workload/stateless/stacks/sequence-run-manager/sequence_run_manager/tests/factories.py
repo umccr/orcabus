@@ -5,9 +5,6 @@ from django.utils import timezone
 
 from sequence_run_manager.models.sequence import Sequence, SequenceStatus
 
-utc_now_ts = int(timezone.now().replace(tzinfo=timezone.utc).timestamp())
-
-
 class TestConstant(Enum):
     sequence_run_id = "r.ACGTlKjDgEy099ioQOeOWg"
     instrument_run_id = "200508_A01052_0001_BH5LY7ACGT"
