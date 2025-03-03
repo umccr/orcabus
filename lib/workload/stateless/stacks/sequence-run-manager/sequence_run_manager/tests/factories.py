@@ -1,7 +1,7 @@
 from enum import Enum
 
 import factory
-from django.utils.timezone import make_aware, timezone
+from django.utils import timezone
 
 from sequence_run_manager.models.sequence import Sequence, SequenceStatus
 
@@ -19,7 +19,7 @@ class SequenceFactory(factory.django.DjangoModelFactory):
     sequence_run_id = TestConstant.sequence_run_id.value # unique key, legacy `run_id`
     #  status is not nullable, so we need to set it to a valid value
     status = SequenceStatus.STARTED
-    start_time = make_aware(timezone.now())
+    start_time = timezone.make_aware(timezone.now())
     end_time = None
     
     instrument_run_id = TestConstant.instrument_run_id.value
