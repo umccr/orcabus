@@ -1,4 +1,5 @@
 import os
+import os
 from sequence_run_manager.models.sequence import Sequence
 from sequence_run_manager.tests.factories import TestConstant, SequenceFactory
 from sequence_run_manager_proc.domain.sequence import SequenceDomain
@@ -9,10 +10,36 @@ from sequence_run_manager_proc.services.bssh_srv import BSSHService
 from mockito import when, mock
 from libumccr.aws import libsm
 from unittest.mock import patch
+from sequence_run_manager_proc.tests.test_bssh_event import mock_bssh_run_details
+from sequence_run_manager_proc.services.bssh_srv import BSSHService
+from mockito import when, mock
+from libumccr.aws import libsm
+from unittest.mock import patch
 
 class SequenceRunSrvUnitTests(SequenceRunProcUnitTestCase):
     def setUp(self) -> None:
         super(SequenceRunSrvUnitTests, self).setUp()
+        os.environ["BASESPACE_ACCESS_TOKEN_SECRET_ID"] = "test"
+        os.environ["AWS_DEFAULT_REGION"] = "ap-southeast-2"  # Add region
+        
+         # Mock the libsm.get_secret function
+        when(libsm).get_secret("test").thenReturn("mock-token")
+    
+        #mock bssh service
+        mock_run_details = mock_bssh_run_details()
+        # Create a mock BSSHService
+        mock_bssh_service = mock(BSSHService)
+    
+        # Mock the get_run_details method with any argument
+        when(mock_bssh_service).get_run_details(any).thenReturn(mock_run_details)
+    
+        # Use patch to replace the BSSHService class with our mock
+        patcher_lib = patch('sequence_run_manager_proc.services.sequence_library_srv.BSSHService', return_value=mock_bssh_service)
+        patcher_seq = patch('sequence_run_manager_proc.services.sequence_srv.BSSHService', return_value=mock_bssh_service)
+        self.mock_bssh_class_lib = patcher_lib.start()
+        self.mock_bssh_class_seq = patcher_seq.start()
+        self.addCleanup(patcher_lib.stop)
+        self.addCleanup(patcher_seq.stop)
         os.environ["BASESPACE_ACCESS_TOKEN_SECRET_ID"] = "test"
         os.environ["AWS_DEFAULT_REGION"] = "ap-southeast-2"  # Add region
         
@@ -93,6 +120,13 @@ class SequenceRunSrvUnitTests(SequenceRunProcUnitTestCase):
                     "gdsFolderPath": mock_seq.run_folder_path,
                     "gdsVolumeName": mock_seq.run_volume_name,
                     "status": "New",
+                    'apiUrl': 'https://bssh.dev/api/v1/runs/r.ACGTlKjDgEy099ioQOeOWg',
+                    'v1pre3Id': '1234567890',
+                    "acl": [
+                        "wid:12345678-debe-3f9f-8b92-21244f46822c",
+                        "tid:Yxmm......"
+                    ],
+                    "icaProjectId": "12345678-53ba-47a5-854d-e6b53101adb7",
                     'apiUrl': 'https://bssh.dev/api/v1/runs/r.ACGTlKjDgEy099ioQOeOWg',
                     'v1pre3Id': '1234567890',
                     "acl": [

@@ -30,7 +30,7 @@ pub mod list;
 pub mod update;
 
 /// Container for generating database entries.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Entries {
     pub s3_objects: Vec<S3Object>,
     pub s3_crawl: Vec<S3Crawl>,

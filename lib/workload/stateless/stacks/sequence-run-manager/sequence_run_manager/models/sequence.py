@@ -100,6 +100,8 @@ class Sequence(OrcaBusBaseModel):
     # run_config = models.JSONField(null=True, blank=True)  # TODO could be it's own model
     # sample_sheet_config = models.JSONField(null=True, blank=True)  # TODO could be it's own model
 
+    experiment_name = models.CharField(max_length=255, null=True, blank=True)
+    
     objects = SequenceManager()
 
     def __str__(self):

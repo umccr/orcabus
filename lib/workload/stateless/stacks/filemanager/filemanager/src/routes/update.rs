@@ -456,14 +456,14 @@ mod tests {
         let client = state.database_client();
         let mut entries = EntriesBuilder::default().build(client).await.unwrap();
 
+        change_many(client, &entries, &[0, 1], Some(json!({"attributeId": "1"}))).await;
+        update_ingest_ids(client, &mut entries).await;
+
         let patch = json!({
             "ingestId": [
                 { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" },
             ]
         });
-
-        change_many(client, &entries, &[0, 1], Some(json!({"attributeId": "1"}))).await;
-        update_ingest_ids(client, &mut entries).await;
 
         let (_, s3_objects) = response_from::<S3>(
             state.clone(),
@@ -478,6 +478,49 @@ mod tests {
         entries.s3_objects[1].ingest_id = None;
 
         assert_contains(&vec![s3_objects], &entries, 0..1);
+        assert_correct_records(client, entries.clone()).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "replace", "path": "/", "value": "00000000-0000-0000-0000-000000000001" },
+            ]
+        });
+
+        let (_, s3_objects) = response_from::<S3>(
+            state.clone(),
+            &format!("/s3/{}", entries.s3_objects[0].s3_object_id),
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "1"}));
+        entries.s3_objects[0].ingest_id =
+            Some("00000000-0000-0000-0000-000000000001".parse().unwrap());
+        entries.s3_objects[1].ingest_id = None;
+
+        assert_contains(&vec![s3_objects], &entries, 0..1);
+        assert_correct_records(client, entries.clone()).await;
+
+        let patch = json!({
+            "ingestId": [
+                { "op": "remove", "path": "/" },
+            ]
+        });
+
+        let (_, s3_objects) = response_from::<S3>(
+            state.clone(),
+            &format!("/s3/{}", entries.s3_objects[0].s3_object_id),
+            Method::PATCH,
+            Body::new(patch.to_string()),
+        )
+        .await;
+
+        entries_many(&mut entries, &[0, 1], json!({"attributeId": "1"}));
+        entries.s3_objects[0].ingest_id = None;
+        entries.s3_objects[1].ingest_id = None;
+
+        assert_contains(&vec![s3_objects], &entries, 0..1);
         assert_correct_records(client, entries).await;
     }
 
@@ -488,13 +531,6 @@ mod tests {
         let mut entries = EntriesBuilder::default().build(client).await.unwrap();
 
         change_many(client, &entries, &[0, 1], Some(json!({"attributeId": "1"}))).await;
-
-        let patch = json!({
-            "ingestId": [
-                { "op": "add", "path": "/", "value": "00000000-0000-0000-0000-000000000000" },
-            ]
-        });
-        assert_ingest_id_error(state.clone(), patch).await;
 
         update_ingest_ids(client, &mut entries).await;
 
@@ -514,7 +550,7 @@ mod tests {
 
         let patch = json!({
             "ingestId": [
-                { "op": "replace", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
+                { "op": "test", "path": "/", "value": "00000000-0000-0000-0000-00000000000" },
             ]
         });
         assert_ingest_id_error(state.clone(), patch).await;
