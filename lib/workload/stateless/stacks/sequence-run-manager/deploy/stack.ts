@@ -23,6 +23,7 @@ export interface SequenceRunManagerStackProps {
   vpcProps: VpcLookupOptions;
   mainBusName: string;
   apiGatewayCognitoProps: ApiGatewayConstructProps;
+  bsshTokenSecretName: string;
 }
 
 export class SequenceRunManagerStack extends Stack {
@@ -71,10 +72,18 @@ export class SequenceRunManagerStack extends Stack {
     const dbSecret = aws_secretsmanager.Secret.fromSecretNameV2(this, 'DbSecret', secretId);
     dbSecret.grantRead(this.lambdaRole);
 
+    const bsshTokenSecret = aws_secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'BsshTokenSecret',
+      props.bsshTokenSecretName
+    );
+    bsshTokenSecret.grantRead(this.lambdaRole);
+
     this.lambdaEnv = {
       DJANGO_SETTINGS_MODULE: 'sequence_run_manager.settings.aws',
       EVENT_BUS_NAME: this.mainBus.eventBusName,
       SECRET_ID: secretId,
+      BASESPACE_ACCESS_TOKEN_SECRET_ID: props.bsshTokenSecretName,
     };
 
     this.baseLayer = new PythonLayerVersion(this, 'BaseLayer', {

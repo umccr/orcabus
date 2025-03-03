@@ -6,7 +6,8 @@ from django.db.models import QuerySet
 from sequence_run_manager.models.sequence import Sequence, SequenceStatus
 from sequence_run_manager.models.state import State
 from sequence_run_manager_proc.domain.sequence import SequenceDomain
-
+from sequence_run_manager_proc.services.sequence_library_srv import create_sequence_run_libraries_linking
+from sequence_run_manager_proc.services.bssh_srv import BSSHService
 # from data_processors.pipeline.tools import liborca
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,13 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         seq.v1pre3_id = v1pre3_id
         seq.ica_project_id = ica_project_id
         seq.api_url = api_url
-
+        
+        # get run details from bssh srv api call
+        bssh_service = BSSHService()
+        run_details = bssh_service.get_run_details(api_url)
+        # get experiment name from bssh run details
+        seq.experiment_name = run_details.get("ExperimentName", None)
+        
         # seq.sample_sheet_config = liborca.get_samplesheet_json_from_file(
         #     gds_volume=gds_volume_name,
         #     samplesheet_path=f"{gds_folder_path}/{sample_sheet_name}"
@@ -114,6 +121,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         # )
 
         seq.save()
+        
         logger.info(
             f"Created new Sequence (instrument_run_id={instrument_run_id}, status={status.value})"
         )
@@ -138,7 +146,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
                 f"[SKIP] Existing Sequence Run Status (instrument_run_id={instrument_run_id}, status={status.value})"
             )
 
-        # Due to the chaos of event sequence, we check if the State record is already present
+        # Due to the chaos of bssh events sequence from event sqs, we check if the State record is already present
         # rather than checking the latest state
         isExistSameState = State.objects.filter(sequence=seq, timestamp=payload["dateModified"], status=payload["status"]).exists()
         if isExistSameState:
@@ -148,7 +156,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         else:
             seq_domain.state_has_changed = True
             logger.info(
-                f"Created new Sequence State (instrument_run_id={instrument_run_id}, status={payload['status']})"
+                f"Received new Sequence State (instrument_run_id={instrument_run_id}, status={payload['status']})"
             )
 
         return seq_domain

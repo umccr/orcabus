@@ -33,3 +33,4 @@ def create_sequence_state_from_bssh_event(payload: dict) -> None:
     comment = None
     
     State.objects.create(status=status, timestamp=timestamp, sequence=sequence, comment=comment)
+    logger.info(f"Created new Sequence State (instrument_run_id={instrument_run_id}, status={status})")

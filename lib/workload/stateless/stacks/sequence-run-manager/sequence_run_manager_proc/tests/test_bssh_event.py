@@ -1,12 +1,14 @@
 import os
 
 from libumccr import libjson
-from libumccr.aws import libssm, libeb
-from mockito import when, verify
+from libumccr.aws import libssm, libeb, libsm
+from mockito import when, verify, mock
+from unittest.mock import patch
 
 from sequence_run_manager.models.sequence import Sequence
 from sequence_run_manager.tests.factories import TestConstant
 from sequence_run_manager_proc.lambdas import bssh_event
+from sequence_run_manager_proc.services.bssh_srv import BSSHService
 from sequence_run_manager_proc.tests.case import logger, SequenceRunProcUnitTestCase
 
 """
@@ -83,17 +85,136 @@ def bssh_event_message():
 
     return orcabus_event_message
 
+def mock_bssh_run_details():
+    mock_run_details = {
+            "Id": "r.ACGTlKjDgEy099ioQOeOWg",
+            "Name": "241024_A00130_0336_00000000",
+            "ExperimentName": "ExperimentName",
+            "DateCreated": "2024-10-29T23:22:32.0000000Z",
+            "DateModified": "2025-02-23T16:13:22.0000000Z",
+            "Status": "Complete",
+            "UserOwnedBy": { # omit other fields here
+                "Id": "0000000", 
+            },
+            "Instrument": { # omit other fields here
+                "Id": 1000000, 
+                "Name": "NovaSeq6000-simulator",
+            },
+            "InstrumentRunStatus": "Completed",
+            "FlowcellBarcode": "BARCODEEE",
+            "FlowcellPosition": "B",
+            "LaneAndQcStatus": "QcPassed",
+            "Workflow": "Generate FASTQ",
+            "SampleSheetName": "SampleSheet.V2.XXXXXX.csv",
+            "TotalSize": 1332913376661,
+            "UserUploadedBy": { # omit other fields here
+                "Id": "0000000",
+                "Name": "Example Name",
+            },
+            "UploadStatus": "Completed",
+            "DateUploadStarted": "2024-10-29T23:22:33.0000000Z",
+            "DateUploadCompleted": "2024-10-30T01:32:18.0000000Z",
+            "IsArchived": False,
+            "IsZipping": False,
+            "IsZipped": False,
+            "IsUnzipping": False,
+            "Href": "https://api.example.com/v2/runs/0000000",
+            "HrefFiles": "https://api.example.com/v2/runs/0000000/files",
+            "HrefIcaUriFiles": "https://example.com/ica/link/project/xxxxx/data/xxxxx",
+            "HasFilesInIca": True,
+            "Properties": {
+                "Items": [
+                    {
+                        "Type": "string[]",
+                        "Name": "BaseSpace.LaneQcThresholds.1.Failed",
+                        "Description": "The list of configured thresholds that were evaluated and failed",
+                        "ContentItems": [],
+                        "ItemsDisplayedCount": 0,
+                        "ItemsTotalCount": 0
+                    },# omit other fields here
+                    
+                    {
+                        "Type": "biosample[]",
+                        "Name": "Input.BioSamples",
+                        "Description": "",
+                        "BioSampleItems": [
+                            { # omit other fields here
+                                "Id": "0000000",
+                                "BioSampleName": "LXXXXXXX",
+                                "Status": "New",
+                                "LabStatus": "Sequencing"
+                            },
+                        ]
+                    },
+                    {
+                        "Type": "library[]",
+                        "Name": "Input.Libraries",
+                        "Description": "",
+                        "LibraryItems": [
+                            { # omit other fields here
+                                "Id": "0000000",
+                                "Name": "L06789ABCD",
+                                "Status": "Active"
+                            },
+                            { # omit other fields here
+                                "Id": "1111111111",
+                                "Name": "L01234ABCD",
+                                "Status": "Active"
+                            }
+                        ]
+                    },
+                    {
+                        "Type": "librarypool[]",
+                        "Name": "Input.LibraryPools",
+                        "Description": "",
+                        "LibraryPoolItems": [
+                            { # omit other fields here
+                                "Id": "0000000",
+                                "UserPoolId": "Pool_XXXXX_000",
+                                "Status": "Active"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "V1Pre3Id": "1234567890"
+        }
+    return mock_run_details
+
 
 class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
     def setUp(self) -> None:
         super(BSSHEventUnitTests, self).setUp()
 
         os.environ["EVENT_BUS_NAME"] = "default"
-
+        os.environ["BASESPACE_ACCESS_TOKEN_SECRET_ID"] = "test"
+        os.environ["AWS_DEFAULT_REGION"] = "ap-southeast-2" 
+        
+        # Mock the libsm.get_secret function
+        when(libsm).get_secret("test").thenReturn("mock-token")
+    
+        mock_run_details = mock_bssh_run_details()
+        mock_bssh_service = mock(BSSHService)
+        
+        when(mock_bssh_service).get_run_details(...).thenReturn(mock_run_details)
+        
+        # Use patch to replace the BSSHService class with our mock
+        patcher_lib = patch('sequence_run_manager_proc.services.sequence_library_srv.BSSHService', return_value=mock_bssh_service)
+        patcher_seq = patch('sequence_run_manager_proc.services.sequence_srv.BSSHService', return_value=mock_bssh_service)
+        
+        self.mock_bssh_class_lib = patcher_lib.start()
+        self.mock_bssh_class_seq = patcher_seq.start()
+        self.addCleanup(patcher_lib.stop)
+        self.addCleanup(patcher_seq.stop)
+        
     def tearDown(self) -> None:
+        # Safely remove environment variables if they exist
+        if "EVENT_BUS_NAME" in os.environ:
+            del os.environ["EVENT_BUS_NAME"]
+        if "BASESPACE_ACCESS_TOKEN_SECRET_ID" in os.environ:
+            del os.environ["BASESPACE_ACCESS_TOKEN_SECRET_ID"]
+        
         super(BSSHEventUnitTests, self).tearDown()
-        del os.environ["EVENT_BUS_NAME"]
-
     #  comment as eventbridge rule will filter out unsupported event type
     # def test_unsupported_ens_event_type(self):
     #     """

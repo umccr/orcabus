@@ -22,6 +22,10 @@ def build_mock():
         sample_sheet_name="SampleSheet.csv",
         sequence_run_id="r.AAAAAA",
         sequence_run_name="190101_A01052_0001_BH5LY7ACGT",
+        api_url="https://bssh.dev/api/v1/runs/r.AAAAAA",
+        v1pre3_id="1234567890",
+        ica_project_id="12345678-53ba-47a5-854d-e6b53101adb7",
+        experiment_name="ExperimentName",
     )
     Sequence.objects.create(
         instrument_run_id="190101_A01052_0002_BH5LY7ACGT",
@@ -33,6 +37,10 @@ def build_mock():
         sample_sheet_name="SampleSheet.csv",
         sequence_run_id="r.BBBBBB",
         sequence_run_name="190101_A01052_0002_BH5LY7ACGT",
+        api_url="https://bssh.dev/api/v1/runs/r.BBBBBB",
+        v1pre3_id="1234567890",
+        ica_project_id="12345678-53ba-47a5-854d-e6b53101adb7",
+        experiment_name="ExperimentName",
     )
 
 

@@ -1,5 +1,6 @@
 import {
   AppStage,
+  basespaceAccessTokenSecretName,
   cognitoApiGatewayConfig,
   computeSecurityGroupName,
   corsAllowOrigins,
@@ -21,5 +22,6 @@ export const getSequenceRunManagerStackProps = (stage: AppStage): SequenceRunMan
       apiName: 'SequenceRunManager',
       customDomainNamePrefix: 'sequence',
     },
+    bsshTokenSecretName: basespaceAccessTokenSecretName,
   };
 };
