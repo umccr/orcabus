@@ -47,7 +47,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
     """
 
     # mandatory
-    instrument_run_id = payload["instrumentRunId"]
+    run_id = payload.get("id")
     gds_folder_path = payload["gdsFolderPath"]
     gds_volume_name = payload["gdsVolumeName"]
     date_modified = payload["dateModified"]
@@ -58,7 +58,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
     v1pre3_id = payload.get("v1pre3Id")
     
     # optional
-    run_id = payload.get("id")
+    instrument_run_id = payload["instrumentRunId"]
     name = payload.get("name")
     sample_sheet_name = payload.get("sampleSheetName")
     reagent_barcode = payload.get("reagentBarcode")
@@ -80,25 +80,26 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         end_time = date_modified
 
     # look up existing Sequence record from db
-    qs: QuerySet = Sequence.objects.filter(instrument_run_id=instrument_run_id)
+    qs: QuerySet = Sequence.objects.filter(sequence_run_id=run_id)
 
     if not qs.exists():
-        logger.info(f"Creating new Sequence (instrument_run_id={instrument_run_id})")
+        logger.info(f"Creating new Sequence (sequence_run_id={run_id})")
 
         seq = Sequence()
-
+        
+        seq.sequence_run_id = run_id
+        seq.status = status
+        seq.start_time = start_time
+        seq.end_time = end_time
+        
         seq.instrument_run_id = instrument_run_id
         seq.run_volume_name = gds_volume_name
         seq.run_folder_path = gds_folder_path
         seq.run_data_uri = f"{GDS_URI_SCHEME}{gds_volume_name}{gds_folder_path}"
-        seq.status = status
-        seq.start_time = start_time
-        seq.end_time = end_time
-
         seq.reagent_barcode = reagent_barcode
         seq.flowcell_barcode = flowcell_barcode
         seq.sample_sheet_name = sample_sheet_name
-        seq.sequence_run_id = run_id
+        
         seq.sequence_run_name = name
         
         seq.v1pre3_id = v1pre3_id
@@ -123,7 +124,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         seq.save()
         
         logger.info(
-            f"Created new Sequence (instrument_run_id={instrument_run_id}, status={status.value})"
+            f"Created new Sequence (sequence_run_id={run_id}, status={status.value})"
         )
         return SequenceDomain(sequence=seq, status_has_changed=True, state_has_changed=True)
     else:
@@ -132,18 +133,18 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
 
         if seq.status != status.value:
             logger.info(
-                f"Updating Sequence (instrument_run_id={instrument_run_id}, status={status.value})"
+                f"Updating Sequence (sequence_run_id={run_id}, status={status.value})"
             )
             seq.status = status
             seq.end_time = end_time
             seq.save()
             logger.info(
-                f"Updated Sequence (instrument_run_id={instrument_run_id}, status={status.value})"
+                f"Updated Sequence (sequence_run_id={run_id}, status={status.value})"
             )
             seq_domain.status_has_changed = True
         else:
             logger.info(
-                f"[SKIP] Existing Sequence Run Status (instrument_run_id={instrument_run_id}, status={status.value})"
+                f"[SKIP] Existing Sequence Run Status (sequence_run_id={run_id}, status={status.value})"
             )
 
         # Due to the chaos of bssh events sequence from event sqs, we check if the State record is already present
@@ -151,12 +152,12 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         isExistSameState = State.objects.filter(sequence=seq, timestamp=payload["dateModified"], status=payload["status"]).exists()
         if isExistSameState:
             logger.info(
-                f"[SKIP] Existing Sequence Run State (instrument_run_id={instrument_run_id}, status={payload['status']})"
+                f"[SKIP] Existing Sequence Run State (sequence_run_id={run_id}, status={payload['status']})"
             )
         else:
             seq_domain.state_has_changed = True
             logger.info(
-                f"Received new Sequence State (instrument_run_id={instrument_run_id}, status={payload['status']})"
+                f"Received new Sequence State (sequence_run_id={run_id}, status={payload['status']})"
             )
 
         return seq_domain

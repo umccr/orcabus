@@ -16,10 +16,10 @@ def check_or_create_sequence_run_libraries_linking(payload: dict):
     Check if libraries are linked to the sequence run;
     if not, create the linking
     """
-    sequence_run = Sequence.objects.get(instrument_run_id=payload["instrumentRunId"])
+    sequence_run = Sequence.objects.get(sequence_run_id=payload["id"])
     if not sequence_run:
-        logger.error(f"Sequence run {payload['instrumentRunId']} not found when checking or creating sequence run libraries linking")
-        raise ValueError(f"Sequence run {payload['instrumentRunId']} not found")
+        logger.error(f"Sequence run {payload['id']} not found when checking or creating sequence run libraries linking")
+        raise ValueError(f"Sequence run {payload['id']} not found")
     
     # if libraries are already linked, skip
     if LibraryAssociation.objects.filter(sequence=sequence_run).exists():
@@ -46,7 +46,7 @@ def create_sequence_run_libraries_linking(sequence_run: Sequence, run_details: d
                     association_date=timezone.now(),  # Use timezone-aware datetime
                     status=ASSOCIATION_STATUS,
                 )
-        logger.info(f"Library associations created for sequence run {sequence_run.instrument_run_id}, linked libraries: {linked_libraries}")
+        logger.info(f"Library associations created for sequence run {sequence_run.sequence_run_id}, linked libraries: {linked_libraries}")
 
 
 # metadata manager service

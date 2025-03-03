@@ -16,7 +16,7 @@ class SequenceListParamSerializer(OptionalFieldsMixin, SequenceBaseSerializer):
 class SequenceMinSerializer(SequenceBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = Sequence
-        fields = ["orcabus_id", "instrument_run_id", "start_time", "end_time", "status"]
+        fields = ["orcabus_id", "instrument_run_id", 'experiment_name', "start_time", "end_time", "status"]
 
 class SequenceSerializer(SequenceBaseSerializer):
     libraries = serializers.ListField(read_only=True, child=serializers.CharField(), help_text="List of libraries associated with the sequence")

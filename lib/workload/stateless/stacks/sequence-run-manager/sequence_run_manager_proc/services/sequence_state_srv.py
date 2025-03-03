@@ -25,12 +25,11 @@ def create_sequence_state_from_bssh_event(payload: dict) -> None:
     status = payload["status"]
     timestamp = payload["dateModified"]
     
-    # get sequence by instrument_run_id
-    instrument_run_id = payload["instrumentRunId"]
-    sequence = Sequence.objects.get(instrument_run_id=instrument_run_id)
+    # get sequence by sequence_run_id
+    sequence = Sequence.objects.get(sequence_run_id=payload["id"])
     
     # None by default
     comment = None
     
     State.objects.create(status=status, timestamp=timestamp, sequence=sequence, comment=comment)
-    logger.info(f"Created new Sequence State (instrument_run_id={instrument_run_id}, status={status})")
+    logger.info(f"Created new Sequence State (sequence_run_id={sequence.sequence_run_id}, status={status})")
