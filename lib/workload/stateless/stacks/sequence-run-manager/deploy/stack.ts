@@ -199,7 +199,7 @@ export class SequenceRunManagerStack extends Stack {
      */
     const eventRule = new Rule(this, this.stackName + 'EventRule', {
       ruleName: this.stackName + 'EventRule',
-      description: 'Rule to send {event_type.value} events to the {handler.function_name} Lambda',
+      description: 'Rule to send BSSH ENS events to the SRM ProcHandler Lambda',
       eventBus: this.mainBus,
     });
     eventRule.addEventPattern({
@@ -228,9 +228,9 @@ export class SequenceRunManagerStack extends Stack {
      * subscribe to the 'SequenceRunStateChange' event, and send the slack notification toptic when the failed event is triggered.
      */
 
-    const eventRule = new Rule(this, this.stackName + 'EventRule', {
-      ruleName: this.stackName + 'EventRule',
-      description: 'Rule to send Failed SequenceRunStateChange events to the SlackTopic',
+    const eventRule = new Rule(this, this.stackName + 'EventSlackNotificationRule', {
+      ruleName: this.stackName + 'EventSlackNotificationRule',
+      description: 'Rule to send SequenceRunStateChange events (failed) to the SlackTopic',
       eventBus: this.mainBus,
     });
     eventRule.addEventPattern({
