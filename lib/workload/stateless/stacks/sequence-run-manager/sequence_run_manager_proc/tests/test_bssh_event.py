@@ -274,12 +274,12 @@ class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
             libjson.dumps([TestConstant.instrument_run_id.value])
         )
 
-        # Test that SequenceRuleError is raised
-        with self.assertRaises(SequenceRuleError) as context:
+        # Test that SequenceRuleError logger is raised
+        with self.assertLogs(logger, level='WARNING') as context:
             bssh_event.event_handler(bssh_event_message('Complete'), None) # change status to complete
 
-        # Verify the error message
-        self.assertIn("marked for emergency stop", str(context.exception))
+        # Verify the logging message
+        self.assertIn("marked for emergency stop", str(context.output))
 
         # Verify sequence was still created
         qs = Sequence.objects.filter(
