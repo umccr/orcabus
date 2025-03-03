@@ -4,7 +4,8 @@ import { aws_lambda, aws_secretsmanager, Duration, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
-import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
+import { Topic } from 'aws-cdk-lib/aws-sns';
+import { LambdaFunction, SnsTopic } from 'aws-cdk-lib/aws-events-targets';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import {
@@ -24,6 +25,7 @@ export interface SequenceRunManagerStackProps {
   mainBusName: string;
   apiGatewayCognitoProps: ApiGatewayConstructProps;
   bsshTokenSecretName: string;
+  slackTopicArn: string;
 }
 
 export class SequenceRunManagerStack extends Stack {
@@ -92,9 +94,12 @@ export class SequenceRunManagerStack extends Stack {
       compatibleArchitectures: [Architecture.ARM_64],
     });
 
+    const topic: Topic = Topic.fromTopicArn(this, 'SlackTopic', props.slackTopicArn) as Topic;
+
     this.createMigrationHandler();
     this.createApiHandlerAndIntegration(props);
     this.createProcSqsHandler();
+    this.createSlackNotificationHandler(topic);
   }
 
   private createPythonFunction(name: string, props: object): PythonFunction {
@@ -216,5 +221,29 @@ export class SequenceRunManagerStack extends Stack {
     });
 
     eventRule.addTarget(new LambdaFunction(fn));
+  }
+
+  private createSlackNotificationHandler(topic: Topic) {
+    /**
+     * subscribe to the 'SequenceRunStateChange' event, and send the slack notification toptic when the failed event is triggered.
+     */
+
+    const eventRule = new Rule(this, this.stackName + 'EventRule', {
+      ruleName: this.stackName + 'EventRule',
+      description: 'Rule to send Failed SequenceRunStateChange events to the SlackTopic',
+      eventBus: this.mainBus,
+    });
+    eventRule.addEventPattern({
+      source: ['orcabus.sequencerunmanager'],
+      detailType: ['SequenceRunStateChange'],
+      detail: {
+        status: ['FAILED'],
+        id: [{ exists: true }],
+        instrumentRunId: [{ exists: true }],
+        sampleSheetName: [{ exists: true }],
+        startTime: [{ exists: true }],
+      },
+    });
+    eventRule.addTarget(new SnsTopic(topic));
   }
 }

@@ -36,6 +36,9 @@ export const vpcProps: VpcLookupOptions = {
   },
 };
 
+// slack topic for event notification
+export const slackTopicName = 'AwsChatBotTopic';
+
 /**
  * The SSM Parameter Name for HTTP Lambda Authorizer ARN defined in authorization stack manager
  */

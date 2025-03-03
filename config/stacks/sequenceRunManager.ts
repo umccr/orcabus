@@ -1,4 +1,5 @@
 import {
+  region,
   AppStage,
   basespaceAccessTokenSecretName,
   cognitoApiGatewayConfig,
@@ -7,10 +8,14 @@ import {
   eventBusName,
   logsApiGatewayConfig,
   vpcProps,
+  slackTopicName,
+  accountIdAlias,
 } from '../constants';
 import { SequenceRunManagerStackProps } from '../../lib/workload/stateless/stacks/sequence-run-manager/deploy/stack';
 
 export const getSequenceRunManagerStackProps = (stage: AppStage): SequenceRunManagerStackProps => {
+  const slackTopicArn =
+    'arn:aws:sns:' + region + ':' + accountIdAlias[stage] + ':' + slackTopicName;
   return {
     vpcProps,
     lambdaSecurityGroupName: computeSecurityGroupName,
@@ -23,5 +28,6 @@ export const getSequenceRunManagerStackProps = (stage: AppStage): SequenceRunMan
       customDomainNamePrefix: 'sequence',
     },
     bsshTokenSecretName: basespaceAccessTokenSecretName,
+    slackTopicArn: slackTopicArn,
   };
 };
