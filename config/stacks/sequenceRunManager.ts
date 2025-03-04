@@ -7,11 +7,20 @@ import {
   eventBusName,
   logsApiGatewayConfig,
   vpcProps,
-  slackTopicName,
 } from '../constants';
 import { SequenceRunManagerStackProps } from '../../lib/workload/stateless/stacks/sequence-run-manager/deploy/stack';
 
 export const getSequenceRunManagerStackProps = (stage: AppStage): SequenceRunManagerStackProps => {
+  const getSlackTopicName = (stage: AppStage) => {
+    if (stage === AppStage.BETA) {
+      return 'AwsChatBotTopic-alerts'; // 'alerts-dev' channel binding topic
+    }
+    if (stage === AppStage.GAMMA) {
+      return 'AwsChatBotTopic-alerts'; // 'alerts-stg' channel binding topic
+    }
+    return 'AwsChatBotTopic'; // 'biobots' channel binding topic -- https://github.com/umccr/orcabus/issues/875
+  };
+
   return {
     vpcProps,
     lambdaSecurityGroupName: computeSecurityGroupName,
@@ -24,6 +33,6 @@ export const getSequenceRunManagerStackProps = (stage: AppStage): SequenceRunMan
       customDomainNamePrefix: 'sequence',
     },
     bsshTokenSecretName: basespaceAccessTokenSecretName,
-    slackTopicName: slackTopicName,
+    slackTopicName: getSlackTopicName(stage),
   };
 };

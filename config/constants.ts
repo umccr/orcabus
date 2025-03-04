@@ -23,9 +23,6 @@ export const accountIdAlias: Record<AppStage, string> = {
 // external ICA constants
 export const icaAwsAccountNumber = '079623148045';
 
-// Name of the Ica Event Pipe stack
-export const icaEventPipeStackName = 'IcaEventPipeStack';
-
 // upstream infra: vpc
 const vpcName = 'main-vpc';
 const vpcStackName = 'networking';
