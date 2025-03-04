@@ -3,7 +3,7 @@ import * as cdk from 'aws-cdk-lib';
 import { aws_lambda, aws_secretsmanager, Duration, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
-import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
+import { EventBus, EventField, Rule, RuleTargetInput } from 'aws-cdk-lib/aws-events';
 import { Topic } from 'aws-cdk-lib/aws-sns';
 import { LambdaFunction, SnsTopic } from 'aws-cdk-lib/aws-events-targets';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
@@ -14,7 +14,13 @@ import {
   HttpRoute,
   HttpRouteKey,
 } from 'aws-cdk-lib/aws-apigatewayv2';
-import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import {
+  ManagedPolicy,
+  PolicyStatement,
+  Role,
+  ServicePrincipal,
+  Effect,
+} from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
@@ -228,17 +234,31 @@ export class SequenceRunManagerStack extends Stack {
     const slackTopicArn = 'arn:aws:sns:' + this.region + ':' + this.account + ':' + topicName;
     const topic: Topic = Topic.fromTopicArn(this, 'SlackTopic', slackTopicArn) as Topic;
 
-    // Add a resource policy to allow EventBridge to publish to this SNS topic.
+    /**
+     * TODO CDK can't modify the resource policy as it is an "imported" resource (manually created).
+     * Need to add a resource policy to allow EventBridge to publish to this SNS topic.
+     * manually added resource policy:
+     * {
+      "Sid": "AWSEvents_OrcaBusBeta-SequenceRunManagerStackSlackNotificationRule_Id85755e27-3dd5-408e-9091-9cbc7315db7e",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "events.amazonaws.com"
+      },
+      "Action": "sns:Publish",
+      "Resource": "arn:aws:sns:ap-southeast-2:843407916570:AwsChatBotTopic-alerts"
+      }
+     */
     topic.addToResourcePolicy(
       new PolicyStatement({
         principals: [new ServicePrincipal('events.amazonaws.com')],
-        actions: ['sns:Publish'],
+        actions: ['SNS:Publish'],
         resources: [topic.topicArn],
+        effect: Effect.ALLOW,
       })
     );
 
-    const eventRule = new Rule(this, this.stackName + 'EventSlackNotificationRule', {
-      ruleName: this.stackName + 'EventSlackNotificationRule',
+    const eventRule = new Rule(this, this.stackName + 'SlackNotificationRule', {
+      ruleName: this.stackName + 'SlackNotificationRule',
       description: 'Rule to send SequenceRunStateChange events (failed) to the SlackTopic',
       eventBus: this.mainBus,
     });
@@ -249,10 +269,42 @@ export class SequenceRunManagerStack extends Stack {
         status: ['FAILED'],
         id: [{ exists: true }],
         instrumentRunId: [{ exists: true }],
-        sampleSheetName: [{ exists: true }],
         startTime: [{ exists: true }],
+        endTime: [{ exists: true }],
       },
     });
-    eventRule.addTarget(new SnsTopic(topic));
+
+    eventRule.addTarget(
+      new SnsTopic(topic, {
+        message: RuleTargetInput.fromObject({
+          // custome chat bot message format here: https://docs.aws.amazon.com/chatbot/latest/adminguide/custom-notifs.html
+          version: '1.0',
+          source: 'custom',
+          content: {
+            textType: 'client-markdown',
+            title:
+              ':bell: Sequence Run Status Alert | RUN ID: ' + EventField.fromPath('$.detail.id'),
+            description: [
+              '*Status:* ' + EventField.fromPath('$.detail.status'),
+              '',
+              ':clipboard: Run Details',
+              '',
+              '*Sequence ID:* `' + EventField.fromPath('$.detail.id') + '`',
+              '*Instrument Run ID:* `' + EventField.fromPath('$.detail.instrumentRunId') + '`',
+              '*Start:* `' + EventField.fromPath('$.detail.startTime') + '`',
+              '*End:* `' + EventField.fromPath('$.detail.endTime') + '`',
+              '',
+              ':link: Links',
+              ':microscope: <https://orcaui.umccr.org/runs/sequence/' +
+                EventField.fromPath('$.detail.id') +
+                '|View in Orcabus UI>',
+              '',
+              '---',
+              '_For support, please contact the orcabus platform team_',
+            ].join('\n'),
+          },
+        }),
+      })
+    );
   }
 }
