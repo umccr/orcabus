@@ -23,6 +23,9 @@ export const accountIdAlias: Record<AppStage, string> = {
 // external ICA constants
 export const icaAwsAccountNumber = '079623148045';
 
+// Name of the Ica Event Pipe stack
+export const icaEventPipeStackName = 'IcaEventPipeStack';
+
 // upstream infra: vpc
 const vpcName = 'main-vpc';
 const vpcStackName = 'networking';
@@ -32,9 +35,6 @@ export const vpcProps: VpcLookupOptions = {
     Stack: vpcStackName,
   },
 };
-
-// slack topic for event notification
-export const slackTopicName = 'AwsChatBotTopic';
 
 /**
  * The SSM Parameter Name for HTTP Lambda Authorizer ARN defined in authorization stack manager
