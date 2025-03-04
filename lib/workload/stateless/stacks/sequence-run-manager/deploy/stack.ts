@@ -3,7 +3,7 @@ import * as cdk from 'aws-cdk-lib';
 import { aws_lambda, aws_secretsmanager, Duration, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
-import { EventBus, EventField, Rule, RuleTargetInput } from 'aws-cdk-lib/aws-events';
+import { EventBus, EventField, IEventBus, Rule, RuleTargetInput } from 'aws-cdk-lib/aws-events';
 import { Topic } from 'aws-cdk-lib/aws-sns';
 import { LambdaFunction, SnsTopic } from 'aws-cdk-lib/aws-events-targets';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
