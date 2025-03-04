@@ -14,7 +14,7 @@ import {
   HttpRoute,
   HttpRouteKey,
 } from 'aws-cdk-lib/aws-apigatewayv2';
-import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
@@ -25,7 +25,7 @@ export interface SequenceRunManagerStackProps {
   mainBusName: string;
   apiGatewayCognitoProps: ApiGatewayConstructProps;
   bsshTokenSecretName: string;
-  slackTopicArn: string;
+  slackTopicName: string;
 }
 
 export class SequenceRunManagerStack extends Stack {
@@ -94,12 +94,10 @@ export class SequenceRunManagerStack extends Stack {
       compatibleArchitectures: [Architecture.ARM_64],
     });
 
-    const topic: Topic = Topic.fromTopicArn(this, 'SlackTopic', props.slackTopicArn) as Topic;
-
     this.createMigrationHandler();
     this.createApiHandlerAndIntegration(props);
     this.createProcSqsHandler();
-    this.createSlackNotificationHandler(topic);
+    this.createSlackNotificationHandler(props.slackTopicName);
   }
 
   private createPythonFunction(name: string, props: object): PythonFunction {
@@ -223,10 +221,21 @@ export class SequenceRunManagerStack extends Stack {
     eventRule.addTarget(new LambdaFunction(fn));
   }
 
-  private createSlackNotificationHandler(topic: Topic) {
+  private createSlackNotificationHandler(topicName: string) {
     /**
      * subscribe to the 'SequenceRunStateChange' event, and send the slack notification toptic when the failed event is triggered.
      */
+    const slackTopicArn = 'arn:aws:sns:' + this.region + ':' + this.account + ':' + topicName;
+    const topic: Topic = Topic.fromTopicArn(this, 'SlackTopic', slackTopicArn) as Topic;
+
+    // Add a resource policy to allow EventBridge to publish to this SNS topic.
+    topic.addToResourcePolicy(
+      new PolicyStatement({
+        principals: [new ServicePrincipal('events.amazonaws.com')],
+        actions: ['sns:Publish'],
+        resources: [topic.topicArn],
+      })
+    );
 
     const eventRule = new Rule(this, this.stackName + 'EventSlackNotificationRule', {
       ruleName: this.stackName + 'EventSlackNotificationRule',
