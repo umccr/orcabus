@@ -21,6 +21,16 @@ export const getSequenceRunManagerStackProps = (stage: AppStage): SequenceRunMan
     return 'AwsChatBotTopic'; // 'biobots' channel binding topic -- https://github.com/umccr/orcabus/issues/875
   };
 
+  const getOrcabusUIBaseUrl = (stage: AppStage) => {
+    if (stage === AppStage.BETA) {
+      return 'https://orcaui.dev.umccr.org';
+    }
+    if (stage === AppStage.GAMMA) {
+      return 'https://orcaui.stg.umccr.org';
+    }
+    return 'https://orcaui.umccr.org';
+  };
+
   return {
     vpcProps,
     lambdaSecurityGroupName: computeSecurityGroupName,
@@ -34,5 +44,6 @@ export const getSequenceRunManagerStackProps = (stage: AppStage): SequenceRunMan
     },
     bsshTokenSecretName: basespaceAccessTokenSecretName,
     slackTopicName: getSlackTopicName(stage),
+    orcabusUIBaseUrl: getOrcabusUIBaseUrl(stage),
   };
 };

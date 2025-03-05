@@ -32,6 +32,7 @@ export interface SequenceRunManagerStackProps {
   apiGatewayCognitoProps: ApiGatewayConstructProps;
   bsshTokenSecretName: string;
   slackTopicName: string;
+  orcabusUIBaseUrl: string;
 }
 
 export class SequenceRunManagerStack extends Stack {
@@ -103,7 +104,7 @@ export class SequenceRunManagerStack extends Stack {
     this.createMigrationHandler();
     this.createApiHandlerAndIntegration(props);
     this.createProcSqsHandler();
-    this.createSlackNotificationHandler(props.slackTopicName);
+    this.createSlackNotificationHandler(props.slackTopicName, props.orcabusUIBaseUrl);
   }
 
   private createPythonFunction(name: string, props: object): PythonFunction {
@@ -227,7 +228,7 @@ export class SequenceRunManagerStack extends Stack {
     eventRule.addTarget(new LambdaFunction(fn));
   }
 
-  private createSlackNotificationHandler(topicName: string) {
+  private createSlackNotificationHandler(topicName: string, orcabusUIBaseUrl: string) {
     /**
      * subscribe to the 'SequenceRunStateChange' event, and send the slack notification toptic when the failed event is triggered.
      */
@@ -294,7 +295,9 @@ export class SequenceRunManagerStack extends Stack {
               '*Start:* `' + EventField.fromPath('$.detail.startTime') + '`',
               '*End:* `' + EventField.fromPath('$.detail.endTime') + '`',
               '',
-              ':microscope: <https://orcaui.umccr.org/runs/sequence/' +
+              ':microscope: <' +
+                orcabusUIBaseUrl +
+                '/runs/sequence/' +
                 EventField.fromPath('$.detail.id') +
                 '|View in Orcabus UI>',
               '',
