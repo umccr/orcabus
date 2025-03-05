@@ -105,6 +105,7 @@ export class SequenceRunManagerStack extends Stack {
     this.createApiHandlerAndIntegration(props);
     this.createProcSqsHandler();
     this.createSlackNotificationHandler(props.slackTopicName, props.orcabusUIBaseUrl);
+    this.createLibraryLinkingHandler();
   }
 
   private createPythonFunction(name: string, props: object): PythonFunction {
@@ -308,5 +309,13 @@ export class SequenceRunManagerStack extends Stack {
         }),
       })
     );
+  }
+
+  private createLibraryLinkingHandler() {
+    this.createPythonFunction('LibraryLinking', {
+      index: 'sequence_run_manager_proc/lambdas/check_and_create_library_linking.py',
+      handler: 'handler',
+      timeout: Duration.minutes(15),
+    });
   }
 }
