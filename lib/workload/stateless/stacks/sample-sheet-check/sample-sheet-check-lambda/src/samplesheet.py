@@ -341,6 +341,12 @@ class SampleSheet:
             index2 = sample_row["index2"] if "index2" in sample_row.keys() else None
             project = sample_row["Sample_Project"] if "Sample_Project" in sample_row.keys() else None
 
+            if not sample_row["Sample_ID"].endswith(sample_row["Sample_Name"]):
+                logger.error(
+                    f"Sample_Name ({sample_row["Sample_Name"]}) is not the libraryID defined in the "
+                    f"Sample_ID ({sample_row["Sample_ID"]}) format")
+                raise SampleNameFormatError
+
             self.samples.append(
                 Sample(
                     lane=lane,
