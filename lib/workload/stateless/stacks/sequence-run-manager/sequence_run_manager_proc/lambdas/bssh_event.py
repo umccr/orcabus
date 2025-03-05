@@ -74,7 +74,7 @@ def event_handler(event, context):
     OrcaBus SRM BSSH Event High Level:
         - through ICA v2 sqs event pipe, we subscribe to Orcabus Eventbridge with specific rule
         - this Lambda is to be hooked to this Eventbridge rule to process the event
-        - now, when `ica-event` event with `instrumentRunId` and `statuschanged` status arrive...
+        - now, when `ica-event` event with run `id` and `statuschanged` status arrive...
             - we parse these `ica-event` payload, transform and persist them into our internal OrcaBus SRM `Sequence` entity model
             - after persisted into database, we again transform into our internal `SequenceRunStateChange` domain event
             - this domain event schema is what we consented and published in our EventBus event schema registry
