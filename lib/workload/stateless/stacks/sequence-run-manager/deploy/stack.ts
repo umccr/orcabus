@@ -294,7 +294,6 @@ export class SequenceRunManagerStack extends Stack {
               '*Start:* `' + EventField.fromPath('$.detail.startTime') + '`',
               '*End:* `' + EventField.fromPath('$.detail.endTime') + '`',
               '',
-              ':link: Links',
               ':microscope: <https://orcaui.umccr.org/runs/sequence/' +
                 EventField.fromPath('$.detail.id') +
                 '|View in Orcabus UI>',
