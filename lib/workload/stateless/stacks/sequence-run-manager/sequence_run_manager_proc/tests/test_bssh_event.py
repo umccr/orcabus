@@ -182,6 +182,36 @@ def mock_bssh_run_details():
         }
     return mock_run_details
 
+def mock_bssh_sample_sheet():
+    """example sample sheet content from 'v2-samplesheet-maker'"""
+    mock_sample_sheet = """[Header]
+        FileFormatVersion,2
+        RunName,my-illumina-sequencing-run
+        RunDescription,A test run
+        InstrumentPlatform,NovaSeq 6000
+        InstrumentType,NovaSeq
+
+        [Reads]
+        Read1Cycles,151
+        Read2Cycles,151
+        Index1Cycles,10
+        Index2Cycles,10
+
+        [BCLConvert_Settings]
+        AdapterBehavior,trim
+        BarcodeMismatchesIndex1,1
+        BarcodeMismatchesIndex2,1
+        MinimumAdapterOverlap,2
+        OverrideCycles,Y151;Y10;Y8N2;Y151
+        CreateFastqForIndexReads,False
+        NoLaneSplitting,False
+        FastqCompressionFormat,gzip
+
+        [BCLConvert_Data]
+        Lane,Sample_ID,index,index2,Sample_Project
+        1,MyFirstSample,AAAAAAAAAA,CCCCCCCC,SampleProject
+        1,MySecondSample,GGGGGGGGGG,TTTTTTTT,SampleProject""".encode('utf-8')
+    return mock_sample_sheet
 
 class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
     def setUp(self) -> None:
@@ -195,9 +225,11 @@ class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
         when(libsm).get_secret("test").thenReturn("mock-token")
     
         mock_run_details = mock_bssh_run_details()
+        mock_sample_sheet = mock_bssh_sample_sheet()
         mock_bssh_service = mock(BSSHService)
         
         when(mock_bssh_service).get_run_details(...).thenReturn(mock_run_details)
+        when(mock_bssh_service).get_sample_sheet(...).thenReturn(mock_sample_sheet)
         
         # Use patch to replace the BSSHService class with our mock
         patcher_lib = patch('sequence_run_manager_proc.services.sequence_library_srv.BSSHService', return_value=mock_bssh_service)
