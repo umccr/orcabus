@@ -108,6 +108,12 @@ class Sample:
             logger.error("Sample ID {} did not have corresponding Sample_Name".format(self.sample_id))
             raise SampleNameFormatError
 
+        # Check if the Sample_Name column is the library_id from the Sample_ID column ignoring the "_topup"
+        if not self.unique_id.replace("_topup", "").endswith(self.sample_name.replace("_topup", "")):
+            logger.error(f"Sample_Name ({self.sample_name}) is not the libraryID defined in the "
+                         f"Sample_ID ({self.unique_id}) format")
+            raise SampleNameFormatError
+
     def check_sample_id_format(self):
         """
         Ensure that the sample id is of the expected format
@@ -340,12 +346,6 @@ class SampleSheet:
 
             index2 = sample_row["index2"] if "index2" in sample_row.keys() else None
             project = sample_row["Sample_Project"] if "Sample_Project" in sample_row.keys() else None
-
-            if not sample_row["Sample_ID"].endswith(sample_row["Sample_Name"]):
-                logger.error(
-                    f"Sample_Name ({sample_row["Sample_Name"]}) is not the libraryID defined in the "
-                    f"Sample_ID ({sample_row["Sample_ID"]}) format")
-                raise SampleNameFormatError
 
             self.samples.append(
                 Sample(
