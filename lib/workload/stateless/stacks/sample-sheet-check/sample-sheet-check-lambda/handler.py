@@ -55,7 +55,7 @@ def lambda_handler(event, context):
             'name', header='content-disposition')] = part.get_payload(decode=True)
 
     key_list = list(multipart_content.keys())
-    if "file"not in key_list or "logLevel" not in key_list:
+    if "file" not in key_list or "logLevel" not in key_list:
 
         body = construct_body(check_status="FAIL", error_message="file or logLevel not found",
                               v2_sample_sheet='')
