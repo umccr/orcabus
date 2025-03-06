@@ -218,7 +218,11 @@ export class SequenceRunManagerStack extends Stack {
           apiUrl: [{ exists: true }],
           sampleSheetName: [{ exists: true }],
           icaProjectId: [{ exists: true }],
-          instrumentRunId: [{ exists: true }],
+
+          // NOTE: instrumentRunId, name, flowcellBarcode are not always present in early stage of the run
+          // instrumentRunId: [{ exists: true }],
+          // name: [{ exists: true }],
+          // flowcellBarcode: [{ exists: true }],
 
           // optional fields (gdsFolderPath, gdsVolumeName, acl, v1pre3Id)
           gdsFolderPath: [{ exists: true }],

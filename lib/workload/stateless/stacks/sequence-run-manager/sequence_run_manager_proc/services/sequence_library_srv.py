@@ -4,7 +4,6 @@ import logging
 
 from sequence_run_manager.models.sequence import Sequence, LibraryAssociation
 from sequence_run_manager_proc.services.bssh_srv import BSSHService
-from sequence_run_manager.fields import sanitize_orcabus_id
 
 logger = logging.getLogger(__name__)
 

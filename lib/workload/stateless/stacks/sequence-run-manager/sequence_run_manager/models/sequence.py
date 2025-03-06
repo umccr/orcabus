@@ -53,6 +53,13 @@ class SequenceStatus(models.TextChoices):
             return cls.ABORTED
         else:
             raise ValueError(f"No matching SequenceStatus found for value: {value}")
+        
+    @classmethod
+    def is_terminal(cls, value):
+        """
+        Check if the status is terminal (i.e. SUCCEEDED, FAILED, ABORTED)
+        """
+        return value in [cls.SUCCEEDED.value, cls.FAILED.value, cls.ABORTED.value]
 
 
 class SequenceManager(OrcaBusBaseManager):

@@ -1,11 +1,7 @@
-import logging
-
 from django.db import models
 
 from sequence_run_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from sequence_run_manager.fields import OrcaBusIdField
-
-logger = logging.getLogger(__name__)
 
 
 class CommentManager(OrcaBusBaseManager):

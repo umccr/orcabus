@@ -1,21 +1,21 @@
 import logging
 
+from typing import Dict, Optional
 from django.db import transaction
-from django.db.models import QuerySet
 
 from sequence_run_manager.models.sequence import Sequence, SequenceStatus
 from sequence_run_manager.models.state import State
 from sequence_run_manager_proc.domain.sequence import SequenceDomain
-from sequence_run_manager_proc.services.sequence_library_srv import create_sequence_run_libraries_linking
 from sequence_run_manager_proc.services.bssh_srv import BSSHService
-from sequence_run_manager_proc.services.sequence_library_srv import create_sequence_run_libraries_linking
-from sequence_run_manager_proc.services.bssh_srv import BSSHService
+
 # from data_processors.pipeline.tools import liborca
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-GDS_URI_SCHEME = "gds://"
+class SequenceConfig:
+    GDS_URI_SCHEME = "gds://"
+    UNKNOWN_VALUE = "UNKNOWN"
 
 
 @transaction.atomic
@@ -48,102 +48,110 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
     }
     """
 
-    # mandatory
-    run_id = payload.get("id")
-    date_modified = payload["dateModified"]
-
-    # status must exist in payload
-    status: SequenceStatus = SequenceStatus.from_seq_run_status(payload["status"])
-
-    # derive start_time and end_time from date_modified and status
-    start_time = date_modified
-    end_time = None
-    if status in [
-        SequenceStatus.SUCCEEDED,
-        SequenceStatus.FAILED,
-        SequenceStatus.ABORTED,
-    ]:
-        end_time = date_modified
-
-    # look up existing Sequence record from db
-    qs: QuerySet = Sequence.objects.filter(sequence_run_id=run_id)
-
-    if not qs.exists():
-        logger.info(f"Creating new Sequence (sequence_run_id={run_id})")
-
-        seq = Sequence()
+    try:
+        # mandatory
+        run_id = payload.get("id")
+        date_modified = payload["dateModified"]
+        status: SequenceStatus = SequenceStatus.from_seq_run_status(payload["status"])
         
-        seq.sequence_run_id = run_id
-        seq.status = status
-        seq.start_time = start_time
-        seq.end_time = end_time
-        
-        seq.instrument_run_id = payload.get("instrumentRunId")
-        seq.run_volume_name = payload.get("gdsVolumeName")
-        seq.run_folder_path = payload.get("gdsFolderPath")
-        seq.run_data_uri = f"{GDS_URI_SCHEME}{payload.get("gdsVolumeName")}{payload.get("gdsFolderPath")}"
-        seq.reagent_barcode = payload.get("reagentBarcode")
-        seq.flowcell_barcode = payload.get("flowcellBarcode")
-        seq.sample_sheet_name = payload.get("sampleSheetName")
-        
-        seq.sequence_run_name = payload.get("name")
-        
-        seq.v1pre3_id = payload.get("v1pre3Id")
-        seq.ica_project_id = payload.get("icaProjectId")
-        seq.api_url = payload.get("apiUrl")
-        
-        # get run details from bssh srv api call
-        bssh_service = BSSHService()
-        run_details = bssh_service.get_run_details(payload.get("apiUrl"))
-        # get experiment name from bssh run details
-        seq.experiment_name = run_details.get("ExperimentName", None)
-        
-        # seq.sample_sheet_config = liborca.get_samplesheet_json_from_file(
-        #     gds_volume=gds_volume_name,
-        #     samplesheet_path=f"{gds_folder_path}/{sample_sheet_name}"
-        # )
-        # seq.run_config = liborca.get_run_config_from_runinfo(
-        #     gds_volume=gds_volume_name,
-        #     runinfo_path=f"{gds_folder_path}/RunInfo.xml"
-        # )
+        # calculate timing info
+        timing_info = calculate_timing_info(date_modified, status)
 
-        seq.save()
-        
-        logger.info(
-            f"Created new Sequence (sequence_run_id={run_id}, status={status.value})"
-        )
-        return SequenceDomain(sequence=seq, status_has_changed=True, state_has_changed=True)
-    else:
-        seq: Sequence = qs.get()
-        seq_domain = SequenceDomain(sequence=seq)
+        # get or create sequence
+        sequence = get_or_create_sequence(run_id, payload, status, timing_info)
 
-        if seq.status != status.value:
-            logger.info(
-                f"Updating Sequence (sequence_run_id={run_id}, status={status.value})"
-            )
-            seq.status = status
-            seq.end_time = end_time
-            seq.save()
-            logger.info(
-                f"Updated Sequence (sequence_run_id={run_id}, status={status.value})"
-            )
-            seq_domain.status_has_changed = True
-        else:
-            logger.info(
-                f"[SKIP] Existing Sequence Run Status (sequence_run_id={run_id}, status={status.value})"
-            )
+        # create sequence domain
+        sequence_domain = create_sequence_domain(sequence, status, timing_info)
+        return sequence_domain  
+    
+    except Exception as e:
+        logger.error(f"Error creating or updating sequence: {e}")
+        raise e
+    
+def calculate_timing_info(date_modified: str, status: SequenceStatus) -> Dict[str, Optional[str]]:
+    """Calculate start and end times based on status"""
+    return {
+        'start_time': date_modified,
+        'end_time': date_modified if SequenceStatus.is_terminal(status) else None
+    }
 
-        # Due to the disorder of bssh events sequence, we check if the State record is already present
-        # rather than checking the latest state
-        has_same_state = State.objects.filter(sequence=seq, timestamp=payload.get("dateModified"), status=payload.get("status")).exists()
-        if has_same_state:
-            logger.info(
-                f"[SKIP] Existing Sequence Run State (sequence_run_id={run_id}, status={payload.get('status')})"
-            )
-        else:
-            seq_domain.state_has_changed = True
-            logger.info(
-                f"Received new Sequence State (sequence_run_id={run_id}, status={payload.get('status')})"
-            )
+def get_or_create_sequence(run_id: str, payload: Dict, status: SequenceStatus, timing_info: Dict) -> Sequence:
+    """Get existing sequence or create new one"""
+    sequence = Sequence.objects.filter(sequence_run_id=run_id).first()
+    
+    if not sequence:
+        return create_new_sequence(run_id, payload, status, timing_info)
+    
+    return update_existing_sequence(sequence, payload)
 
-        return seq_domain
+def create_new_sequence(run_id: str, payload: Dict, status: SequenceStatus, timing_info: Dict) -> Sequence:
+    """Create a new sequence record"""
+    logger.info(f"Creating new Sequence (sequence_run_id={run_id})")
+    
+    sequence = Sequence(
+        sequence_run_id=run_id,
+        status=status,
+        start_time=timing_info['start_time'],
+        end_time=timing_info['end_time'],
+        run_volume_name=payload.get("gdsVolumeName"),
+        run_folder_path=payload.get("gdsFolderPath"),
+        run_data_uri=f"{SequenceConfig.GDS_URI_SCHEME}{payload.get('gdsVolumeName')}{payload.get('gdsFolderPath')}",
+        reagent_barcode=payload.get("reagentBarcode"),
+        sample_sheet_name=payload.get("sampleSheetName"),
+        v1pre3_id=payload.get("v1pre3Id"),
+        ica_project_id=payload.get("icaProjectId"),
+        api_url=payload.get("apiUrl"),
+        # optional fields when 'Uploading' stage
+        instrument_run_id=payload.get("instrumentRunId", SequenceConfig.UNKNOWN_VALUE), 
+        flowcell_barcode=payload.get("flowcellBarcode", SequenceConfig.UNKNOWN_VALUE),
+        sequence_run_name=payload.get("name", SequenceConfig.UNKNOWN_VALUE),
+    )
+    
+    if payload.get("apiUrl"):
+        enrich_sequence_with_run_details(sequence, payload["apiUrl"])
+    
+    sequence.save()
+    logger.info(f"Created new Sequence (sequence_run_id={run_id}, status={status.value})")
+    return sequence
+
+def enrich_sequence_with_run_details(sequence: Sequence, api_url: str) -> None:
+    """
+    Fetch and add run details from BSSH API
+    Note: currently only experiment name is fetched, more details can be added here
+    """
+    bssh_service = BSSHService()
+    run_details = bssh_service.get_run_details(api_url)
+    sequence.experiment_name = run_details.get("ExperimentName")
+    logger.info(f"Enriched Sequence (sequence_run_id={sequence.sequence_run_id}, experiment_name={sequence.experiment_name})")
+    
+def update_existing_sequence(sequence: Sequence, payload: Dict) -> Sequence:
+    """Update an existing sequence record"""
+    # Update basic fields if they were UNKNOWN
+    if sequence.instrument_run_id == SequenceConfig.UNKNOWN_VALUE and payload.get("instrumentRunId"):
+        sequence.instrument_run_id = payload.get("instrumentRunId", SequenceConfig.UNKNOWN_VALUE)
+        sequence.sequence_run_name = payload.get("name", SequenceConfig.UNKNOWN_VALUE)
+        sequence.flowcell_barcode = payload.get("flowcellBarcode", SequenceConfig.UNKNOWN_VALUE)
+    
+    logger.info(f"Updating Sequence successfully (sequence_run_id={sequence.sequence_run_id}, instrument_run_id={sequence.instrument_run_id})")
+    
+    sequence.save()
+    return sequence
+
+def create_sequence_domain(sequence: Sequence, status: SequenceStatus, timing_info: Dict) -> SequenceDomain:
+    """Create SequenceDomain with change tracking"""
+    status_changed = sequence.status != status.value
+    # update status and end time if status has changed
+    if status_changed:
+        logger.info(f"Updating Sequence status (sequence_run_id={sequence.sequence_run_id}, status={status.value})")
+        sequence.status = status
+        sequence.end_time = timing_info['end_time']
+        sequence.save()
+
+    # check if state exists
+    state_exists = State.objects.filter(sequence=sequence,timestamp=timing_info['end_time'],status=status.value).exists()
+    
+    return SequenceDomain(
+        sequence=sequence,
+        status_has_changed=status_changed,
+        state_has_changed=not state_exists
+    )
