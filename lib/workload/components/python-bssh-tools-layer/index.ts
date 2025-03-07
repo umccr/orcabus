@@ -18,9 +18,9 @@ export class BsshToolsPythonLambdaLayer extends Construct {
     // Generate lambda filemanager python layer
     // Get lambda layer object
     this.lambdaLayerVersionObj = new PythonLambdaLayerConstruct(this, 'lambda_layer', {
-      layerName: `${props.layerPrefix}-filemanager-py-layer`,
-      layerDescription: 'Lambda Layer for handling the filemanager api via Python',
-      layerDirectory: path.join(__dirname, 'filemanager_tools_layer'),
+      layerName: `${props.layerPrefix}-bssh-py-layer`,
+      layerDescription: 'Lambda Layer for handling the bssh tools via Python',
+      layerDirectory: path.join(__dirname, 'bssh_manager_tools'),
     }).lambdaLayerVersionObj;
   }
 }
