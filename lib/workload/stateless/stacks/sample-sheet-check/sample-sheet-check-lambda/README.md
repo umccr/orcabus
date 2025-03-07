@@ -33,6 +33,13 @@ options:
 
 ```
 
+Set Environment Variable
+
+```shell
+export JWT_AUTH={JWT_TOKEN_HERE}
+export METADATA_DOMAIN_NAME=metadata.dev.umccr.org
+```
+
 Running example
 
 ```shell

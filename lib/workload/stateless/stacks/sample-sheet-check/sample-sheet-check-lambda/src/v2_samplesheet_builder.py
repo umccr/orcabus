@@ -541,11 +541,15 @@ def v1_to_v2_samplesheet(samplesheet):
     Returns:
     str: A string representation of the version 2 SampleSheet.
     """
-    # Convert to samplesheet json
-    samplesheet_json = v1_samplesheet_to_json(samplesheet)
+    try:
+        # Convert to samplesheet json
+        samplesheet_json = v1_samplesheet_to_json(samplesheet)
 
-    # Build v2 samplesheet and convert to a string
-    v2_samplesheet_str = build_v2_samplesheet(samplesheet_json)
+        # Build v2 samplesheet and convert to a string
+        v2_samplesheet_str = build_v2_samplesheet(samplesheet_json)
+    except Exception as e:
+        logger.error(f"Error converting v1 to v2 samplesheet: {e}")
+        raise e
 
     # Return samplesheet as a string
     return v2_samplesheet_str

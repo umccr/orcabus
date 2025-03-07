@@ -108,6 +108,14 @@ class Sample:
             logger.error("Sample ID {} did not have corresponding Sample_Name".format(self.sample_id))
             raise SampleNameFormatError
 
+        # Check if the Sample_Name column is the library_id from the Sample_ID column ignoring the "_topup" / "_rerun"
+        clean_unique_id = SAMPLE_REGEX_OBJS["topup"].sub('', self.unique_id)
+        clean_sample_name = SAMPLE_REGEX_OBJS["topup"].sub('', self.sample_name)
+        if not clean_unique_id.endswith(clean_sample_name):
+            logger.error(f"Sample_Name ({self.sample_name}) is not the libraryID defined in the "
+                         f"Sample_ID ({self.unique_id}) format")
+            raise SampleNameFormatError
+
     def check_sample_id_format(self):
         """
         Ensure that the sample id is of the expected format
