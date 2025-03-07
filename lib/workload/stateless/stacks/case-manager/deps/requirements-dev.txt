@@ -1,0 +1,4 @@
+-r requirements-test.txt
+django_extensions
+openapi-spec-validator
+boto3-stubs[ssm,secretsmanager]
