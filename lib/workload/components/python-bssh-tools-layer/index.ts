@@ -20,7 +20,7 @@ export class BsshToolsPythonLambdaLayer extends Construct {
     this.lambdaLayerVersionObj = new PythonLambdaLayerConstruct(this, 'lambda_layer', {
       layerName: `${props.layerPrefix}-bssh-py-layer`,
       layerDescription: 'Lambda Layer for handling the bssh tools via Python',
-      layerDirectory: path.join(__dirname, 'bssh_manager_tools'),
+      layerDirectory: path.join(__dirname, 'bssh_manager_tools/src'),
     }).lambdaLayerVersionObj;
   }
 }
