@@ -10,6 +10,7 @@ from sequence_run_manager.tests.factories import TestConstant
 from sequence_run_manager_proc.lambdas import bssh_event
 from sequence_run_manager_proc.services.bssh_srv import BSSHService
 from sequence_run_manager_proc.tests.case import logger, SequenceRunProcUnitTestCase
+from sequence_run_manager_proc.domain.sequence import SequenceRuleError
 
 """
 example event:
@@ -39,18 +40,18 @@ example event:
             "name": "222222_A01052_1234_BHVJJJJJJ",
             "id": "r.4Wz-ABCDEFGHIJKLMN-A",
             "instrumentRunId": "222222_A01052_1234_BHVJJJJJJ",
-            "status": "PendingAnalysis"
+            "status": "New"
             }
         }
     }
 """
 
-def bssh_event_message():
-    mock_instrument_run_id = TestConstant.instrument_run_id.value
-    mock_sequence_run_id = "r.ACGTlKjDgEy099ioQOeOWg"
-    mock_sequence_run_name = mock_instrument_run_id
+def bssh_event_message(mock_run_status: str = "New"):
+    mock_sequence_run_id = TestConstant.sequence_run_id.value
+    mock_sequence_run_name = mock_sequence_run_id
     mock_date_modified = "2020-05-09T22:17:03.1015272Z"
-    mock_status = "PendingAnalysis"
+    mock_status = mock_run_status
+    mock_instrument_run_id = TestConstant.instrument_run_id.value
 
     sequence_run_message = {
         "gdsFolderPath": f"/Runs/{mock_sequence_run_name}_{mock_sequence_run_id}",
@@ -65,7 +66,7 @@ def bssh_event_message():
         "apiUrl": f"https://api.aps2.sh.basespace.illumina.com/v2/runs/{mock_sequence_run_id}",
         "name": mock_sequence_run_name,
         "id": mock_sequence_run_id,
-        "instrumentRunId": mock_sequence_run_name,
+        "instrumentRunId": mock_instrument_run_id,
         "status": mock_status,
     }
 
@@ -181,6 +182,36 @@ def mock_bssh_run_details():
         }
     return mock_run_details
 
+def mock_bssh_sample_sheet():
+    """example sample sheet content from 'v2-samplesheet-maker'"""
+    mock_sample_sheet = """[Header]
+        FileFormatVersion,2
+        RunName,my-illumina-sequencing-run
+        RunDescription,A test run
+        InstrumentPlatform,NovaSeq 6000
+        InstrumentType,NovaSeq
+
+        [Reads]
+        Read1Cycles,151
+        Read2Cycles,151
+        Index1Cycles,10
+        Index2Cycles,10
+
+        [BCLConvert_Settings]
+        AdapterBehavior,trim
+        BarcodeMismatchesIndex1,1
+        BarcodeMismatchesIndex2,1
+        MinimumAdapterOverlap,2
+        OverrideCycles,Y151;Y10;Y8N2;Y151
+        CreateFastqForIndexReads,False
+        NoLaneSplitting,False
+        FastqCompressionFormat,gzip
+
+        [BCLConvert_Data]
+        Lane,Sample_ID,index,index2,Sample_Project
+        1,MyFirstSample,AAAAAAAAAA,CCCCCCCC,SampleProject
+        1,MySecondSample,GGGGGGGGGG,TTTTTTTT,SampleProject""".encode('utf-8')
+    return mock_sample_sheet
 
 class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
     def setUp(self) -> None:
@@ -194,9 +225,11 @@ class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
         when(libsm).get_secret("test").thenReturn("mock-token")
     
         mock_run_details = mock_bssh_run_details()
+        mock_sample_sheet = mock_bssh_sample_sheet()
         mock_bssh_service = mock(BSSHService)
         
         when(mock_bssh_service).get_run_details(...).thenReturn(mock_run_details)
+        when(mock_bssh_service).get_sample_sheet(...).thenReturn(mock_sample_sheet)
         
         # Use patch to replace the BSSHService class with our mock
         patcher_lib = patch('sequence_run_manager_proc.services.sequence_library_srv.BSSHService', return_value=mock_bssh_service)
@@ -257,7 +290,7 @@ class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
         _ = bssh_event.event_handler(bssh_event_message(), None)
 
         qs = Sequence.objects.filter(
-            instrument_run_id=TestConstant.instrument_run_id.value
+            sequence_run_id=TestConstant.sequence_run_id.value
         )
         seq = qs.get()
         logger.info(f"Found SequenceRun record from db: {seq}")
@@ -268,16 +301,25 @@ class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
         """
         python manage.py test sequence_run_manager_proc.tests.test_bssh_event.BSSHEventUnitTests.test_event_handler_emergency_stop
         """
+        # Mock emergency stop list to include our test run ID
         when(libssm).get_ssm_param(...).thenReturn(
             libjson.dumps([TestConstant.instrument_run_id.value])
         )
 
-        _ = bssh_event.event_handler(bssh_event_message(), None)
+        # Test that SequenceRuleError logger is raised
+        with self.assertLogs(logger, level='WARNING') as context:
+            bssh_event.event_handler(bssh_event_message('Complete'), None) # change status to complete
 
+        # Verify the logging message
+        self.assertIn("marked for emergency stop", str(context.output))
+
+        # Verify sequence was still created
         qs = Sequence.objects.filter(
             instrument_run_id=TestConstant.instrument_run_id.value
         )
         sqr = qs.get()
         logger.info(f"Found SequenceRun record from db: {sqr}")
         self.assertEqual(1, qs.count())
+        
+        # Verify no event was emitted
         verify(libeb, times=0).eb_client(...)  # event should not fire

@@ -16,7 +16,7 @@ class SequenceViewSet(BaseViewSet):
         start_time = self.request.query_params.get('start_time', 0)
         end_time = self.request.query_params.get('end_time', 0)
         
-         # exclude the custom query params from the rest of the query params
+        # exclude the custom query params from the rest of the query params
         def exclude_params(params):
             for param in params:
                 self.request.query_params.pop(param) if param in self.request.query_params.keys() else None

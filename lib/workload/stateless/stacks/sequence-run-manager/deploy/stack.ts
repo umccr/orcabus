@@ -211,16 +211,23 @@ export class SequenceRunManagerStack extends Stack {
       detailType: ['Event from aws:sqs'],
       detail: {
         'ica-event': {
-          // mandatory fields (gdsFolderPath, gdsVolumeName(starts with bssh), instrumentRunId, dateModified)
-          gdsFolderPath: [{ exists: true }],
-          gdsVolumeName: [{ prefix: 'bssh' }],
-          instrumentRunId: [{ exists: true }],
-          dateModified: [{ exists: true }],
-
-          // optional fields (flowcell barcode, sample sheet name, reagent barcode, ica project id, api url, name)
-          acl: [{ prefix: 'wid:' }, { prefix: 'tid:' }],
+          // mandatory fields (id, status, dateModified, apiUrl, sampleSheetName, icaProjectId)
           id: [{ exists: true }],
           status: [{ exists: true }],
+          dateModified: [{ exists: true }],
+          apiUrl: [{ exists: true }],
+          sampleSheetName: [{ exists: true }],
+          icaProjectId: [{ exists: true }],
+
+          // NOTE: instrumentRunId, name, flowcellBarcode are not always present in early stage of the run
+          // instrumentRunId: [{ exists: true }],
+          // name: [{ exists: true }],
+          // flowcellBarcode: [{ exists: true }],
+
+          // optional fields (gdsFolderPath, gdsVolumeName, acl, v1pre3Id)
+          gdsFolderPath: [{ exists: true }],
+          gdsVolumeName: [{ prefix: 'bssh' }],
+          acl: [{ prefix: 'wid:' }, { prefix: 'tid:' }],
         },
       },
     });

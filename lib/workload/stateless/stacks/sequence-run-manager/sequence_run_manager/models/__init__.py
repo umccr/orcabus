@@ -3,3 +3,4 @@
 from .sequence import Sequence, SequenceStatus, LibraryAssociation
 from .comment import Comment
 from .state import State
+from .sample_sheet import SampleSheet

@@ -33,7 +33,7 @@ class Command(BaseCommand):
         opt_with_boto_envelope = options["boto"]
 
         qs: QuerySet = Sequence.objects.filter(
-            instrument_run_id=TestConstant.instrument_run_id.value
+            sequence_run_id=TestConstant.sequence_run_id.value
         )
         if not qs.exists():
             mock_sequence: Sequence = SequenceFactory()
@@ -41,7 +41,7 @@ class Command(BaseCommand):
             mock_sequence: Sequence = qs.get()
 
         mock_sequence_domain = SequenceDomain(
-            sequence=mock_sequence, state_has_changed=True
+            sequence=mock_sequence, status_has_changed=True, state_has_changed=True
         )
 
         if opt_domain:
