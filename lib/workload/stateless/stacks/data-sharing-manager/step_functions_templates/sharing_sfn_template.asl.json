@@ -1,0 +1,1260 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "Get s3 vars",
+  "States": {
+    "Get s3 vars": {
+      "Type": "Pass",
+      "Next": "Add sub prefixes",
+      "Assign": {
+        "s3SharingBucket": "${__sharing_bucket__}",
+        "s3SharingPrefix": "{% '${__sharing_prefix__}/' & $now('year=[Y0001]/month=[M01]/day=[D01]') & '/' & $states.context.Execution.Name & '/' %}",
+        "dynamoDbTableName": "{% $dynamoDbTableName %}",
+        "dynamoDbLibrarySortKey": "{% $states.context.Execution.Name + '_library' %}",
+        "dynamoDbLimsRowSortKey": "{% $states.context.Execution.Name + '_limsrow' %}",
+        "dynamoDbFastqSortKey": "{% $states.context.Execution.Name + '_fastq' %}",
+        "dynamoDbFileSortKey": "{% $states.context.Execution.Name + '_file' %}",
+        "dynamoDbWorkflowKey": "{% $states.context.Execution.Name + '_workflow' %}"
+      }
+    },
+    "Add sub prefixes": {
+      "Type": "Pass",
+      "Next": "Get Workflow Inputs",
+      "Assign": {
+        "s3LimsCsvKey": "{% $s3SharingPrefix & 'final/lims.csv' %}",
+        "s3PresignedUrlsScriptKey": "{% $s3SharingPrefix & 'final/download-data.sh' %}"
+      }
+    },
+    "Get Workflow Inputs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__handle_workflow_inputs_lambda_function_arn__}",
+        "Payload": "{% $states.input %}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Get library objects from library id",
+      "Assign": {
+        "libraryOrcabusIdList": "{% $states.result.Payload.libraryOrcabusIdList %}",
+        "instrumentRunIdList": "{% $states.result.Payload.instrumentRunIdList %}",
+        "portalRunIdList": "{% $states.result.Payload.portalRunIdList %}",
+        "portalRunIdExclusionList": "{% $states.result.Payload.portalRunIdExclusionList %}",
+        "shareType": "{% $states.result.Payload.shareType %}",
+        "shareDestination": "{% $states.result.Payload.shareDestination %}",
+        "defrostArchivedFastqs": "{% $states.result.Payload.defrostArchivedFastqs %}",
+        "dryrun": "{% $dryrun %}",
+        "dataTypeList": "{% $states.result.Payload.dataTypeList %}",
+        "secondaryAnalysisList": "{% $states.result.Payload.secondaryAnalysisList %}"
+      }
+    },
+    "Get library objects from library id": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Get Library Object from Library Orcabus Id",
+        "States": {
+          "Get Library Object from Library Orcabus Id": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Output": {
+              "library": "{% states.result.Payload.library %}"
+            },
+            "Arguments": {
+              "FunctionName": "${__get_library_object_from_library_orcabus_id_lambda_function_arn__}",
+              "Payload": {
+                "libraryOrcabusId": "{% $states.input.libraryOrcabusId %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Next": "Put Library"
+          },
+          "Put Library": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:putItem",
+            "Arguments": {
+              "TableName": "{% $dynamoDbTableName %}",
+              "Item": {
+                "id": {
+                  "S": "{% $states.input.library.orcabusId %}"
+                },
+                "id_type": {
+                  "S": "{% $dynamoDbLibrarySortKey %}"
+                },
+                "content": {
+                  "S": "{% $string($states.input.library) %}"
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "Generate LIMS CSV and File Db",
+      "Items": "{% $libraryOrcabusIdList %}",
+      "ItemSelector": {
+        "libraryOrcabusId": "{% $states.context.Map.Item.Value %}"
+      }
+    },
+    "Generate LIMS CSV and File Db": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Get libraries (limsrow)",
+          "States": {
+            "Get libraries (limsrow)": {
+              "Type": "Task",
+              "Arguments": {
+                "TableName": "{% $dynamoDbTableName %}",
+                "KeyConditionExpression": "#id_type = :sfn_library",
+                "ExpressionAttributeNames": {
+                  "#id_type": "id_type"
+                },
+                "ExpressionAttributeValues": {
+                  ":sfn_library": "{% $dynamoDbLibrarySortKey %}"
+                }
+              },
+              "Resource": "arn:aws:states:::aws-sdk:dynamodb:query",
+              "Next": "Map Lims Row (for each library)",
+              "Output": {
+                "libraryOrcabusIds": "{% [\n  $map($states.result.Items, function($item){\n     $item.id\n  }\n] %}"
+              }
+            },
+            "Map Lims Row (for each library)": {
+              "Type": "Map",
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Set Library Map Iter Var (limsrow)",
+                "States": {
+                  "Set Library Map Iter Var (limsrow)": {
+                    "Type": "Pass",
+                    "Next": "Get Library (limsrow)",
+                    "Assign": {
+                      "libraryOrcabusIdMapIter": "{% $states.input.libraryOrcabusId %}"
+                    }
+                  },
+                  "Get Library (limsrow)": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:getItem",
+                    "Arguments": {
+                      "TableName": "{% $dynamoDbTableName %}",
+                      "Key": {
+                        "id": {
+                          "S": "{% $libraryOrcabusIdMapIter %}"
+                        },
+                        "id_type": {
+                          "S": "{% $dynamoDbLibrarySortKey %}"
+                        }
+                      }
+                    },
+                    "Next": "Get LIMS Row from Library ID",
+                    "Output": {
+                      "library": "{% $parse($states.result.Item.content) %}"
+                    }
+                  },
+                  "Get LIMS Row from Library ID": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Arguments": {
+                      "FunctionName": "${__get_lims_from_library_lambda_function_arn__}",
+                      "Payload": {
+                        "libraryObject": "{% $states.input.library %}"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2,
+                        "JitterStrategy": "FULL"
+                      }
+                    ],
+                    "Next": "Put LimsRow",
+                    "Output": {
+                      "limsRows": "{% $states.result.Payload.limsRows %}"
+                    }
+                  },
+                  "Put LimsRow": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:putItem",
+                    "Arguments": {
+                      "TableName": "{% $dynamoDbTableName %}",
+                      "Item": {
+                        "id": {
+                          "S": "{% $libraryOrcabusIdMapIter %}"
+                        },
+                        "id_type": {
+                          "S": "{% $dynamoDbLimsRowSortKey %}"
+                        },
+                        "content": {
+                          "S": "{% $string($states.input.limsRows) %}"
+                        }
+                      }
+                    },
+                    "End": true
+                  }
+                }
+              },
+              "Next": "Convert LIMS JSON to CSV",
+              "Items": "{% $states.input.libraryOrcabusIds %}",
+              "ItemSelector": {
+                "libraryOrcabusId": "{% $states.context.Map.Item.Value %}"
+              }
+            },
+            "Convert LIMS JSON to CSV": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Output": "{% $states.result.Payload %}",
+              "Arguments": {
+                "FunctionName": "${__convert_lims_json_list_to_csv_lambda_function_arn__}",
+                "Payload": {
+                  "dynamoDbTableName": "{% $dynamoDbTableName %}",
+                  "limsRowsortKey": "{% $dynamoDbLimsRowSortKey %}",
+                  "sharingBucket": "{% $s3SharingBucket %}",
+                  "sharingLimsCsvKey": "{% $s3LimsCsvKey %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "Assign": {
+                "contents": "{% $states.result.Payload.contents %}"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get Data",
+          "States": {
+            "Get Data": {
+              "Type": "Parallel",
+              "End": true,
+              "Branches": [
+                {
+                  "StartAt": "Fastq in List",
+                  "States": {
+                    "Fastq in List": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Next": "Library Query (fastq)",
+                          "Comment": "Fastq in DataType List",
+                          "Condition": "{% \"fastq\" in $dataTypeList %}"
+                        }
+                      ],
+                      "Default": "No fastqs to share"
+                    },
+                    "Library Query (fastq)": {
+                      "Type": "Task",
+                      "Arguments": {
+                        "TableName": "{% $dynamoDbTableName %}",
+                        "KeyConditionExpression": "#id_type = :sfn_library",
+                        "ExpressionAttributeNames": {
+                          "#id_type": "id_type"
+                        },
+                        "ExpressionAttributeValues": {
+                          ":sfn_library": "{% $dynamoDbLibrarySortKey %}"
+                        }
+                      },
+                      "Resource": "arn:aws:states:::aws-sdk:dynamodb:query",
+                      "Next": "Fastq Retrieval (for each library)",
+                      "Output": {
+                        "libraryOrcabusIds": "{% [\n  $map($states.result.Items, function($item){\n     $item.id\n  }\n] %}"
+                      }
+                    },
+                    "No fastqs to share": {
+                      "Type": "Pass",
+                      "End": true
+                    },
+                    "Fastq Retrieval (for each library)": {
+                      "Type": "Map",
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Set Library Map Iter Var (fastq)",
+                        "States": {
+                          "Set Library Map Iter Var (fastq)": {
+                            "Type": "Pass",
+                            "Next": "Get Library Obj (fastq)",
+                            "Assign": {
+                              "libraryOrcabusIdMapIter": "{% $states.input.libraryOrcabusId %}"
+                            }
+                          },
+                          "Get Library Obj (fastq)": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:getItem",
+                            "Arguments": {
+                              "TableName": "{% $dynamoDbTableName %}",
+                              "Key": {
+                                "id": {
+                                  "S": "{% $libraryOrcabusIdMapIter %}"
+                                },
+                                "id_type": {
+                                  "S": "{% $dynamoDbLibrarySortKey %}"
+                                }
+                              }
+                            },
+                            "Next": "Get Fastqs from Library ID",
+                            "Output": {
+                              "library": "{% $parse($states.result.Item.content) %}"
+                            }
+                          },
+                          "Get Fastqs from Library ID": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Output": {
+                              "fastqIdList": "{% $states.result.Payload.fastqIdList %}"
+                            },
+                            "Arguments": {
+                              "FunctionName": "${__list_fastqs_in_library_as_file_ids_lambda_function_arn__}",
+                              "Payload": {
+                                "libraryObject": "{% $states.input.library %}",
+                                "instrumentRunIds": "{% $instrumentRunIdList %}"
+                              }
+                            },
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "Lambda.ServiceException",
+                                  "Lambda.AWSLambdaException",
+                                  "Lambda.SdkClientException",
+                                  "Lambda.TooManyRequestsException"
+                                ],
+                                "IntervalSeconds": 1,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2,
+                                "JitterStrategy": "FULL"
+                              }
+                            ],
+                            "Next": "For each fastq id"
+                          },
+                          "For each fastq id": {
+                            "Type": "Map",
+                            "ItemProcessor": {
+                              "ProcessorConfig": {
+                                "Mode": "INLINE"
+                              },
+                              "StartAt": "Set Fastq Map Iter Var",
+                              "States": {
+                                "Set Fastq Map Iter Var": {
+                                  "Type": "Pass",
+                                  "Next": "Get fastq object",
+                                  "Assign": {
+                                    "fastqIdMapIter": "{% $fastqIdMapIter %}"
+                                  }
+                                },
+                                "Get fastq object": {
+                                  "Type": "Task",
+                                  "Resource": "arn:aws:states:::lambda:invoke",
+                                  "Output": {
+                                    "fastqObject": "{% $states.input.payload.fastqObject %}",
+                                    "s3IngestIds": "{% $states.input.payload.s3IngestIds %}"
+                                  },
+                                  "Arguments": {
+                                    "FunctionName": "${__get_file_from_s3_object_id_lambda_function_arn__}",
+                                    "Payload": {
+                                      "fastqId": "{% $fastqId %}"
+                                    }
+                                  },
+                                  "Retry": [
+                                    {
+                                      "ErrorEquals": [
+                                        "Lambda.ServiceException",
+                                        "Lambda.AWSLambdaException",
+                                        "Lambda.SdkClientException",
+                                        "Lambda.TooManyRequestsException"
+                                      ],
+                                      "IntervalSeconds": 1,
+                                      "MaxAttempts": 3,
+                                      "BackoffRate": 2,
+                                      "JitterStrategy": "FULL"
+                                    }
+                                  ],
+                                  "Next": "Put Fastq Object and register file ids"
+                                },
+                                "Put Fastq Object and register file ids": {
+                                  "Type": "Parallel",
+                                  "Branches": [
+                                    {
+                                      "StartAt": "Put Fastq",
+                                      "States": {
+                                        "Put Fastq": {
+                                          "Type": "Task",
+                                          "Resource": "arn:aws:states:::dynamodb:putItem",
+                                          "Arguments": {
+                                            "TableName": "{% $dynamoDbTableName %}",
+                                            "Item": {
+                                              "id": {
+                                                "S": "{% $fastqIdMapIter %}"
+                                              },
+                                              "id_type": {
+                                                "S": "{% $dynamoDbFastqKey %}"
+                                              },
+                                              "content": {
+                                                "S": "{% $string($states.input.fastqObject) %}"
+                                              }
+                                            }
+                                          },
+                                          "End": true
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "StartAt": "For each file in fastq object",
+                                      "States": {
+                                        "For each file in fastq object": {
+                                          "Type": "Map",
+                                          "ItemProcessor": {
+                                            "ProcessorConfig": {
+                                              "Mode": "INLINE"
+                                            },
+                                            "StartAt": "Get s3 Ingest Id Var (fastq)",
+                                            "States": {
+                                              "Get s3 Ingest Id Var (fastq)": {
+                                                "Type": "Pass",
+                                                "Assign": {
+                                                  "s3IngestIdMapIter": "{% $states.input.s3IngestIdMapIter %}"
+                                                },
+                                                "Next": "Get File Object from S3 Ingest Id (fastq)"
+                                              },
+                                              "Get File Object from S3 Ingest Id (fastq)": {
+                                                "Type": "Task",
+                                                "Resource": "arn:aws:states:::lambda:invoke",
+                                                "Output": {
+                                                  "fileObject": "{% $states.result.Payload.fileObject %}"
+                                                },
+                                                "Arguments": {
+                                                  "FunctionName": "${__get_file_from_s3_object_id_lambda_function_arn__}",
+                                                  "Payload": {
+                                                    "s3IngestId": "{% $s3IngestIdIter %}"
+                                                  }
+                                                },
+                                                "Retry": [
+                                                  {
+                                                    "ErrorEquals": [
+                                                      "Lambda.ServiceException",
+                                                      "Lambda.AWSLambdaException",
+                                                      "Lambda.SdkClientException",
+                                                      "Lambda.TooManyRequestsException"
+                                                    ],
+                                                    "IntervalSeconds": 1,
+                                                    "MaxAttempts": 3,
+                                                    "BackoffRate": 2,
+                                                    "JitterStrategy": "FULL"
+                                                  }
+                                                ],
+                                                "Next": "Put File (fastq)"
+                                              },
+                                              "Put File (fastq)": {
+                                                "Type": "Task",
+                                                "Resource": "arn:aws:states:::dynamodb:putItem",
+                                                "Arguments": {
+                                                  "TableName": "{% $dynamoDbTableName %}",
+                                                  "Item": {
+                                                    "id": {
+                                                      "S": "{% $s3IngestIdIter %}"
+                                                    },
+                                                    "id_type": {
+                                                      "S": "{% $dynamoDbFileKey %}"
+                                                    },
+                                                    "content": {
+                                                      "S": "{% $string($states.input.fileObject) %}"
+                                                    }
+                                                  }
+                                                },
+                                                "End": true
+                                              }
+                                            }
+                                          },
+                                          "End": true,
+                                          "Items": "{% $states.input.s3IngestIds %}",
+                                          "ItemSelector": {
+                                            "s3IngestIdMapIter": "{% $states.context.Map.Item.Value %}"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "End": true
+                                }
+                              }
+                            },
+                            "End": true,
+                            "Items": "{% $states.input.fastqIdList %}",
+                            "ItemSelector": {
+                              "fastqIdMapIter": "{% $states.context.Map.Item.Value %}"
+                            }
+                          }
+                        }
+                      },
+                      "Next": "Check fastqs are archived",
+                      "Items": "{% $states.input.libraryOrcabusIds %}",
+                      "ItemSelector": {
+                        "libraryOrcabusId": "{% $states.context.Map.Item.Value %}"
+                      }
+                    },
+                    "Check fastqs are archived": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Output": "{% $states.result.Payload %}",
+                      "Arguments": {
+                        "FunctionName": "${__check_fastqs_are_archived_lambda_function_arn__}",
+                        "Payload": {
+                          "fastqSortKey": "{% $dynamoDbFastqKey %}"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2,
+                          "JitterStrategy": "FULL"
+                        }
+                      ],
+                      "Next": "Fastqs are archived",
+                      "Assign": {
+                        "archivedFileList": "{% $states.result.Payload.archivedFileList %}",
+                        "anyArchived": "{% $states.results.Payload.anyArchived %}"
+                      }
+                    },
+                    "Fastqs are archived": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Next": "Defrost Fastqs",
+                          "Condition": "{% $anyArchived %}",
+                          "Comment": "Fastqs are archived"
+                        }
+                      ],
+                      "Default": "No fastqs are archived"
+                    },
+                    "Defrost Fastqs": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Next": "Is Dryrun (defrost)",
+                          "Condition": "{% $defrostArchivedFastqs %}",
+                          "Comment": "Select to defrost fastqs"
+                        }
+                      ],
+                      "Default": "Update Job API (defrost incomplete)"
+                    },
+                    "Is Dryrun (defrost)": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Next": "Update Job API (defrost incomplete)",
+                          "Condition": "{% $dryrun %}",
+                          "Comment": "Dryrun only"
+                        }
+                      ],
+                      "Default": "Run Unarchiving Process"
+                    },
+                    "Update Job API (defrost incomplete)": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Output": "{% $states.result.Payload %}",
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2,
+                          "JitterStrategy": "FULL"
+                        }
+                      ],
+                      "End": true,
+                      "Arguments": {
+                        "FunctionName": "${__update_job_api_lambda_function_arn__}",
+                        "Payload": {
+                          "dryrun": "{% $dryrun %}",
+                          "defrostFastqs": "{% $defrostArchivedFastqs %}"
+                        }
+                      }
+                    },
+                    "Run Unarchiving Process": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+                      "Arguments": {
+                        "StateMachineArn": "${__unarchive_file_objects_sfn_arn__}",
+                        "Input": {
+                          "archivedFileList": "{% $archivedFileList %}"
+                        }
+                      },
+                      "Next": "Fastq Retrieval (for each library)"
+                    },
+                    "No fastqs are archived": {
+                      "Type": "Pass",
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "SecondaryAnalysis in DataTypes list",
+                  "States": {
+                    "SecondaryAnalysis in DataTypes list": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Next": "Is Portal Run ID list set",
+                          "Condition": "{% \"secondaryAnalysis\" in $dataTypeList %}",
+                          "Comment": "SecondaryAnalysis in List"
+                        }
+                      ],
+                      "Default": "No Secondary Analysis to Share"
+                    },
+                    "Is Portal Run ID list set": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Next": "For each portal run id",
+                          "Condition": "{% $portalRunIdList = null %}",
+                          "Comment": "Portal Run ID List is set"
+                        }
+                      ],
+                      "Default": "Query Library (workflow)"
+                    },
+                    "Query Library (workflow)": {
+                      "Type": "Task",
+                      "Arguments": {
+                        "TableName": "{% $dynamoDbTableName %}",
+                        "KeyConditionExpression": "#id_type = :sfn_library",
+                        "ExpressionAttributeNames": {
+                          "#id_type": "id_type"
+                        },
+                        "ExpressionAttributeValues": {
+                          ":sfn_library": "{% $dynamoDbLibrarySortKey %}"
+                        }
+                      },
+                      "Resource": "arn:aws:states:::aws-sdk:dynamodb:query",
+                      "Next": "Analysis Retrieval (for each library)"
+                    },
+                    "Analysis Retrieval (for each library)": {
+                      "Type": "Map",
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Get Library Map Iter Var (workflow)",
+                        "States": {
+                          "Get Library Map Iter Var (workflow)": {
+                            "Type": "Pass",
+                            "Next": "Get Library (Workflow)",
+                            "Assign": {
+                              "libraryOrcabusIdMapIter": "{% $states.input.libraryOrcabusId %}"
+                            }
+                          },
+                          "Get Library (Workflow)": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:getItem",
+                            "Arguments": {
+                              "TableName": "{% $dynamoDbTableName %}",
+                              "Key": {
+                                "id": {
+                                  "S": "{% $libraryOrcabusIdMapIter %}"
+                                },
+                                "id_type": {
+                                  "S": "{% $dynamoDbLibrarySortKey %}"
+                                }
+                              }
+                            },
+                            "Next": "List portal run id in library",
+                            "Output": {
+                              "library": "{% $parse($states.result.Item.content) %}"
+                            }
+                          },
+                          "List portal run id in library": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Arguments": {
+                              "FunctionName": "${__list_portal_run_ids_in_library_lambda_function_arn__}",
+                              "Payload": {
+                                "libraryObject": "{% $library %}",
+                                "portalRunIdExclusionList": "{% $portalRunIdExclusionList %}"
+                              }
+                            },
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "Lambda.ServiceException",
+                                  "Lambda.AWSLambdaException",
+                                  "Lambda.SdkClientException",
+                                  "Lambda.TooManyRequestsException"
+                                ],
+                                "IntervalSeconds": 1,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2,
+                                "JitterStrategy": "FULL"
+                              }
+                            ],
+                            "End": true,
+                            "Output": {
+                              "portalRunIdList": "{% $states.result.Payload.portalRunIdList %}"
+                            }
+                          }
+                        }
+                      },
+                      "Next": "For each portal run id",
+                      "Assign": {
+                        "portalRunIdList": "{% /* https://stedi.link/bX861Om */\n$reduce(\n  $map(\n    $.states.result, \n    function($item){$item.portalRunIdList}\n  ), \n  $append\n) %}"
+                      },
+                      "Items": "{% $states.input.items %}",
+                      "ItemSelector": {
+                        "bucketIter": "{% $states.context.Map.Item.Value.Bucket %}",
+                        "keyIter": "{% $states.context.Map.Item.Value.Key %}",
+                        "portalRunIdExclusionList": "{% $portalRunIdExclusionList %}"
+                      }
+                    },
+                    "For each portal run id": {
+                      "Type": "Map",
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Get portal run id map iter var (workflow)",
+                        "States": {
+                          "Get portal run id map iter var (workflow)": {
+                            "Type": "Pass",
+                            "Next": "Get workflow run id from portal run id",
+                            "Assign": {
+                              "portalRunIdIter": "{% $states.input.portalRunIdIter %}"
+                            }
+                          },
+                          "Get workflow run id from portal run id": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Arguments": {
+                              "FunctionName": "${__get_workflow_run_id_from_portal_run_id_lambda_function_arn__}",
+                              "Payload": {
+                                "portalRunId": "{% $portalRunIdIter %}"
+                              }
+                            },
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "Lambda.ServiceException",
+                                  "Lambda.AWSLambdaException",
+                                  "Lambda.SdkClientException",
+                                  "Lambda.TooManyRequestsException"
+                                ],
+                                "IntervalSeconds": 1,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2,
+                                "JitterStrategy": "FULL"
+                              }
+                            ],
+                            "Next": "Put Workflow",
+                            "Output": {
+                              "workflowRunObject": "{% $states.result.Payload.workflowRunObject %}"
+                            }
+                          },
+                          "Put Workflow": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:putItem",
+                            "Arguments": {
+                              "TableName": "{% $dynamoDbTableName %}",
+                              "Item": {
+                                "id": {
+                                  "S": "{% $states.input.workflowRunObject.orcabusId %}"
+                                },
+                                "id_type": {
+                                  "S": "{% $dynamoDbWorkflowKey %}"
+                                },
+                                "content": {
+                                  "S": "{% $string($states.input.workflowRunObject) %}"
+                                }
+                              }
+                            },
+                            "End": true
+                          }
+                        }
+                      },
+                      "Next": "Query Workflow",
+                      "Items": "{% $portalRunIdList %}",
+                      "ItemSelector": {
+                        "portalRunIdIter": "{% $states.context.Map.Item.Value %}"
+                      }
+                    },
+                    "Query Workflow": {
+                      "Type": "Task",
+                      "Arguments": {
+                        "TableName": "{% $dynamoDbTableName %}",
+                        "KeyConditionExpression": "#id_type = :sfn_workflow",
+                        "ExpressionAttributeNames": {
+                          "#id_type": "id_type"
+                        },
+                        "ExpressionAttributeValues": {
+                          ":sfn_workflow": "{% $dynamoDbWorkflowKey %}"
+                        }
+                      },
+                      "Resource": "arn:aws:states:::aws-sdk:dynamodb:query",
+                      "Next": "For each workflow run",
+                      "Output": {
+                        "workflowRunIds": "{% [\n  $map($states.result.Items, function($item){\n     $item.id\n  }\n] %}"
+                      }
+                    },
+                    "For each workflow run": {
+                      "Type": "Map",
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Set inputs as vars (map workflows)",
+                        "States": {
+                          "Set inputs as vars (map workflows)": {
+                            "Type": "Pass",
+                            "Next": "Get workflow",
+                            "Assign": {
+                              "workflowRunIdIter": "{% $states.input.workflowRunIdIter %}"
+                            }
+                          },
+                          "Get workflow": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::dynamodb:getItem",
+                            "Arguments": {
+                              "TableName": "{% $dynamoDbTableName %}",
+                              "Key": {
+                                "id": {
+                                  "S": "{% $workflowRunIdIter %}"
+                                },
+                                "id_type": {
+                                  "S": "{% $dynamoDbWorkflowKey %}"
+                                }
+                              }
+                            },
+                            "Next": "Get list of files from portal run ID",
+                            "Output": {
+                              "workflowRunObject": "{% $parse($states.result.Item.content) %}"
+                            }
+                          },
+                          "Get list of files from portal run ID": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Arguments": {
+                              "FunctionName": "${__list_files_with_portal_run_id_attribute_lambda_function_arn__}",
+                              "Payload": {
+                                "workflowRunObject": "{% $states.input.workflowRunObject %}"
+                              }
+                            },
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "Lambda.ServiceException",
+                                  "Lambda.AWSLambdaException",
+                                  "Lambda.SdkClientException",
+                                  "Lambda.TooManyRequestsException"
+                                ],
+                                "IntervalSeconds": 1,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2,
+                                "JitterStrategy": "FULL"
+                              }
+                            ],
+                            "Next": "For each file (secondary)",
+                            "Output": {
+                              "s3IngestIdList": "{% $states.result.Payload.s3IngestIdList %}"
+                            }
+                          },
+                          "For each file (secondary)": {
+                            "Type": "Map",
+                            "ItemProcessor": {
+                              "ProcessorConfig": {
+                                "Mode": "INLINE"
+                              },
+                              "StartAt": "Set inputs as vars (map files secondary)",
+                              "States": {
+                                "Set inputs as vars (map files secondary)": {
+                                  "Type": "Pass",
+                                  "Next": "Get file from object (secondary analysis)",
+                                  "Assign": {
+                                    "s3IngestIdIter": "{% $states.inputs.s3IngestIdIter %}"
+                                  }
+                                },
+                                "Get file from object (secondary analysis)": {
+                                  "Type": "Task",
+                                  "Resource": "arn:aws:states:::lambda:invoke",
+                                  "Arguments": {
+                                    "FunctionName": "${__get_file_from_s3_object_id_lambda_function_arn__}",
+                                    "Payload": {
+                                      "s3IngestId": "{% $s3IngestIdIter %}"
+                                    }
+                                  },
+                                  "Retry": [
+                                    {
+                                      "ErrorEquals": [
+                                        "Lambda.ServiceException",
+                                        "Lambda.AWSLambdaException",
+                                        "Lambda.SdkClientException",
+                                        "Lambda.TooManyRequestsException"
+                                      ],
+                                      "IntervalSeconds": 1,
+                                      "MaxAttempts": 3,
+                                      "BackoffRate": 2,
+                                      "JitterStrategy": "FULL"
+                                    }
+                                  ],
+                                  "Next": "Put File (workflow)",
+                                  "Output": {
+                                    "fileObject": "{% $states.result.Payload.fileObject %}"
+                                  }
+                                },
+                                "Put File (workflow)": {
+                                  "Type": "Task",
+                                  "Resource": "arn:aws:states:::dynamodb:putItem",
+                                  "Arguments": {
+                                    "TableName": "{% $dynamoDbTableName %}",
+                                    "Item": {
+                                      "id": {
+                                        "S": "{% $s3IngestIdIter %}"
+                                      },
+                                      "id_type": {
+                                        "S": "{% $dynamoDbFileKey %}"
+                                      },
+                                      "content": {
+                                        "S": "{% $string($states.input.fileObject) %}"
+                                      }
+                                    }
+                                  },
+                                  "End": true
+                                }
+                              }
+                            },
+                            "End": true,
+                            "Items": "{% $states.input.s3IngestIdList %}",
+                            "ItemSelector": {
+                              "s3IngestIdIter": "{% $states.context.Map.Item.Value %}"
+                            }
+                          }
+                        }
+                      },
+                      "End": true,
+                      "Items": "{% $states.input.workflowRunIds %}",
+                      "ItemSelector": {
+                        "workflowRunIdIter": "{% $states.context.Map.Item.Value %}"
+                      }
+                    },
+                    "No Secondary Analysis to Share": {
+                      "Type": "Pass",
+                      "End": true
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "Next": "Presign or Push"
+    },
+    "Presign or Push": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Is Dryrun (push)",
+          "Condition": "{% $shareType = 'push' %}",
+          "Comment": "Push sharing method"
+        }
+      ],
+      "Default": "Query File (Presign)"
+    },
+    "Query File (Presign)": {
+      "Type": "Task",
+      "Arguments": {
+        "TableName": "{% $dynamoDbTableName %}",
+        "KeyConditionExpression": "#id_type = :sfn_file",
+        "ExpressionAttributeNames": {
+          "#id_type": "id_type"
+        },
+        "ExpressionAttributeValues": {
+          ":sfn_file": "{% $dynamoDbFileSortKey %}"
+        }
+      },
+      "Resource": "arn:aws:states:::aws-sdk:dynamodb:query",
+      "Next": "Generate Presigned Url (for each s3 id)",
+      "Output": {
+        "s3IngestIdList": "{% [\n  $map($states.result.Items, function($item){\n     $item.id\n  }\n] %}"
+      }
+    },
+    "Is Dryrun (push)": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Update API (push complete)",
+          "Condition": "{% $dryrun %}",
+          "Comment": "Is a dryrun"
+        }
+      ],
+      "Default": "Push Option"
+    },
+    "Push Option": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Run ICAv2 Data Push",
+          "Condition": "{% /* https://stedi.link/37Ex8QS */\\n $substring($shareDestination, 0, 8) = \"icav2://\"  %}",
+          "Comment": "share destination begins with icav2://"
+        }
+      ],
+      "Default": "Run S3 Data Push"
+    },
+    "Run ICAv2 Data Push": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Arguments": {
+        "StateMachineArn": "arn:aws:states:REGION:ACCOUNT_ID:stateMachine:STATE_MACHINE_NAME",
+        "Input": {
+          "stepsExecutionNameForDbQuery": "{% $states.context.Execution.Name %}"
+        }
+      },
+      "Next": "Update API (push complete)"
+    },
+    "Update API (push complete)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__update_job_api_lambda_function_arn__}",
+        "Payload": {
+          "dryrun": "{% $dryrun %}",
+          "shareType": "PUSH",
+          "shareDestination": "{% $shareDestination %}",
+          "stepsExecutionName": "{% $states.context.Execution.Name %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true
+    },
+    "Run S3 Data Push": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Arguments": {
+        "StateMachineArn": "arn:aws:states:REGION:ACCOUNT_ID:stateMachine:STATE_MACHINE_NAME",
+        "Input": {
+          "stepsExecutionNameForDbQuery": "{% $states.context.Execution.Name %}"
+        }
+      },
+      "Next": "Update API (push complete)"
+    },
+    "Generate Presigned Url (for each s3 id)": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Set File Map Iter Var (presign)",
+        "States": {
+          "Set File Map Iter Var (presign)": {
+            "Type": "Pass",
+            "Next": "Get File (Presign)",
+            "Assign": {
+              "s3IngestIdMapIter": "{% $states.input.s3IngestIdMapIter %}"
+            }
+          },
+          "Get File (Presign)": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Arguments": {
+              "TableName": "{% $dynamoDbTableName %}",
+              "Key": {
+                "id": {
+                  "S": "{% $workflowRunIdIter %}"
+                },
+                "id_type": {
+                  "S": "{% $dynamoDbFileSortKey %}"
+                }
+              }
+            },
+            "Next": "Generate presigned url",
+            "Output": {
+              "s3FileObject": "{% $parse($states.result.Item.content) %}"
+            }
+          },
+          "Generate presigned url": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Arguments": {
+              "FunctionName": "${__generate_presigned_url_for_data_objects_lambda_function_arn__}",
+              "Payload": {
+                "s3FileObject": "{% $states.input.s3FileObject %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Next": "Update File (Presign)",
+            "Assign": {
+              "s3FileObjectWithPresignedUrl": "{% $states.result.Payload.s3FileObjectWithPresignedUrl %}"
+            },
+            "Output": {
+              "presignedUrl": "$states.result.Payload.presignedUrl"
+            }
+          },
+          "Update File (Presign)": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:updateItem",
+            "Arguments": {
+              "TableName": "{% $dynamoDbTableName %}",
+              "Key": {
+                "id": {
+                  "S": "{% $s3IngestIdMapIter %}"
+                },
+                "id_type": {
+                  "S": "{% $dynamoDbFileSortKey %}"
+                }
+              },
+              "UpdateExpression": "SET presigned_url = :presignedUrl",
+              "ExpressionAttributeValues": {
+                ":presignedUrl": {
+                  "S": "$states.input.presignedUrl"
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "Create script from presigned urls list",
+      "Items": "{% $states.input.s3IngestIdList %}",
+      "ItemSelector": {
+        "s3IngestIdMapIter": "{% $states.context.Map.Item %}"
+      }
+    },
+    "Create script from presigned urls list": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__create_script_from_presigned_urls_list_lambda_function_arn__}",
+        "Payload": {
+          "bucket": "{% $s3SharingBucket %}",
+          "prefix": "{% $s3PresignedUrlsPrefix %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Update API (presigned urls available)"
+    },
+    "Update API (presigned urls available)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__update_job_api_lambda_function_arn__}",
+        "Payload": {
+          "shareType": "PULL",
+          "stepsExecutionName": "{% $states.context.Execution.Name %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true
+    }
+  }
+}
