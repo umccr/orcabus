@@ -1,0 +1,167 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Save variables",
+  "States": {
+    "Save variables": {
+      "Type": "Pass",
+      "Next": "Get fastq list row objects in set",
+      "Assign": {
+        "fastqSetId": "{% $states.input.fastqSetId %}"
+      }
+    },
+    "Get fastq list row objects in set": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__get_fastq_objects_in_fastq_set_lambda_function_arn__}",
+        "Payload": {
+          "fastqSetId": "{% $fastqSetId %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each object in fastq set x (a)",
+      "Assign": {
+        "fastqListRows": "{% $states.result.Payload.fastqListRows %}"
+      }
+    },
+    "For each object in fastq set x (a)": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Set vars inside map",
+        "States": {
+          "Set vars inside map": {
+            "Type": "Pass",
+            "Next": "For each object in fastq set x (b)",
+            "Assign": {
+              "fastqListRowA": "{% $states.input.fastqListRowA %}",
+              "fastqListRowBs": "{% $states.input.fastqListRowBs %}"
+            }
+          },
+          "For each object in fastq set x (b)": {
+            "Type": "Map",
+            "ItemProcessor": {
+              "ProcessorConfig": {
+                "Mode": "INLINE"
+              },
+              "StartAt": "Set vars inside map 2",
+              "States": {
+                "Set vars inside map 2": {
+                  "Type": "Pass",
+                  "Next": "Get ntsm evaluation",
+                  "Assign": {
+                    "fastqListRowIdB": "{% $states.input.fastqListRowB.id %}",
+                    "fastqListRowNtsmA": "{% $states.input.fastqListRowA.ntsm.s3Uri %}",
+                    "fastqListRowNtsmB": "{% $states.input.fastqListRowB.ntsm.s3Uri %}"
+                  }
+                },
+                "Get ntsm evaluation": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "Output": "{% $states.result.Payload %}",
+                  "Arguments": {
+                    "FunctionName": "${__ntsm_evaluation_lambda_function_arn__}",
+                    "Payload": {
+                      "ntsmS3UriA": "{% $fastqListRowNtsmA %}",
+                      "ntsmS3UriB": "{% $fastqListRowNtsmB %}"
+                    }
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "Lambda.TooManyRequestsException"
+                      ],
+                      "IntervalSeconds": 1,
+                      "MaxAttempts": 3,
+                      "BackoffRate": 2,
+                      "JitterStrategy": "FULL"
+                    }
+                  ],
+                  "Next": "Save outputs",
+                  "Assign": {
+                    "relatedness": "{% $states.result.Payload.relatedness %}"
+                  }
+                },
+                "Save outputs": {
+                  "Type": "Pass",
+                  "End": true,
+                  "Output": {
+                    "fastqListRowIdA": "{% $fastqListRowIdA %}",
+                    "fastqListRowIdB": "{% $fastqListRowIdB %}",
+                    "relatedness": "{% $relatedness %}"
+                  }
+                }
+              }
+            },
+            "Items": "{% $fastqListRowBs %}",
+            "ItemSelector": {
+              "fastqListRowA": "{% $fastqListRowA %}",
+              "fastqListRowB": "{% $states.context.Map.Item.Value %}"
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "Flatten outputs",
+      "Items": "{% $fastqListRows %}",
+      "ItemSelector": {
+        "fastqListRowA": "{% $states.context.Map.Item.Value %}",
+        "fastqListRowBs": "{% /* https://try.jsonata.org/4GeNhyuVY */\n[\n  $filter($fastqListRows, function($var, $index){\n    $index > $states.context.Map.Item.Index\n  })\n] %}"
+      }
+    },
+    "Flatten outputs": {
+      "Type": "Pass",
+      "Next": "Summarise outputs",
+      "Output": {
+        "relatednessList": "{% $reduce($reduce($states.input, $append), $append) %}"
+      }
+    },
+    "Summarise outputs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__summarise_outputs_lambda_function_arn__}",
+        "Payload": {
+          "relatednessList": "{% $states.input.relatednessList %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true,
+      "Output": {
+        "related": "{% $states.result.Payload.related %}"
+      }
+    }
+  },
+  "QueryLanguage": "JSONata"
+}
