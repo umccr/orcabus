@@ -6,15 +6,20 @@ Helpers for using the contact API endpoint
 
 # Standard imports
 from typing import List, Dict
-from .globals import CONTACT_ENDPOINT
+
+from requests import HTTPError
+
+from .globals import CONTACT_ENDPOINT, ORCABUS_ULID_REGEX_MATCH
+from .models import Contact
 
 # Local imports
 from .requests_helpers import get_request_response_results
+from .. import ContactNotFoundError
 
 
-def get_contact_from_contact_id(contact_id: str) -> Dict:
+def get_contact_from_contact_id(contact_id: str) -> Contact:
     """
-    Get subject from the subject id
+    Get contact from the contact id
     :param contact_id:
     :return:
     """
@@ -23,8 +28,19 @@ def get_contact_from_contact_id(contact_id: str) -> Dict:
         "contact_id": contact_id
     }
 
-    # Get subject
-    return get_request_response_results(CONTACT_ENDPOINT, params)[0]
+    # Get contact
+    try:
+        query_list = get_request_response_results(CONTACT_ENDPOINT, params)
+        assert len(query_list) == 1
+        return query_list[0]
+    except (HTTPError, AssertionError):
+        raise ContactNotFoundError(
+            contact_id=contact_id,
+        )
+
+
+def get_contact_orcabus_id_from_contact_id(contact_id: str) -> str:
+    return get_contact_from_contact_id(contact_id)['orcabusId']
 
 
 def get_contact_from_contact_orcabus_id(contact_orcabus_id: str) -> Dict:
@@ -38,13 +54,26 @@ def get_contact_from_contact_orcabus_id(contact_orcabus_id: str) -> Dict:
     }
 
     # Get contact
-    return get_request_response_results(CONTACT_ENDPOINT, params)[0]
+    try:
+        query_result = get_request_response_results(CONTACT_ENDPOINT, params)
+        assert len(query_result) == 1
+        return query_result[0]
+    except (HTTPError, AssertionError):
+        raise ContactNotFoundError(
+            contact_orcabus_id=contact_orcabus_id,
+        )
 
 
-def get_all_contacts() -> List[Dict]:
+def coerce_contact_id_or_orcabus_id_to_contact_orcabus_id(id_: str) -> str:
+    if ORCABUS_ULID_REGEX_MATCH.match(id_):
+        return id_
+    else :
+        return get_contact_orcabus_id_from_contact_id(id_)
+
+
+def get_all_contacts() -> List[Contact]:
     """
     Get all subjects
     :return:
     """
-
     return get_request_response_results(CONTACT_ENDPOINT)
