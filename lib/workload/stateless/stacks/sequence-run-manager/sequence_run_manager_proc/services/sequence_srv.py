@@ -57,11 +57,20 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         # calculate timing info
         timing_info = calculate_timing_info(date_modified, status)
 
+        # flag to show if new sequence is created
+        is_new_sequence = False
+
         # get or create sequence
-        sequence = get_or_create_sequence(run_id, payload, status, timing_info)
+        sequence = Sequence.objects.filter(sequence_run_id=run_id).first()
+    
+        if not sequence:
+            is_new_sequence = True
+            sequence = create_new_sequence(run_id, payload, status, timing_info)
+        else:
+            sequence = update_existing_sequence(sequence, payload)
 
         # create sequence domain
-        sequence_domain = create_sequence_domain(sequence, status, timing_info)
+        sequence_domain = create_sequence_domain(sequence, status, timing_info, is_new_sequence)
         return sequence_domain  
     
     except Exception as e:
@@ -74,15 +83,6 @@ def calculate_timing_info(date_modified: str, status: SequenceStatus) -> Dict[st
         'start_time': date_modified,
         'end_time': date_modified if SequenceStatus.is_terminal(status) else None
     }
-
-def get_or_create_sequence(run_id: str, payload: Dict, status: SequenceStatus, timing_info: Dict) -> Sequence:
-    """Get existing sequence or create new one"""
-    sequence = Sequence.objects.filter(sequence_run_id=run_id).first()
-    
-    if not sequence:
-        return create_new_sequence(run_id, payload, status, timing_info)
-    
-    return update_existing_sequence(sequence, payload)
 
 def create_new_sequence(run_id: str, payload: Dict, status: SequenceStatus, timing_info: Dict) -> Sequence:
     """Create a new sequence record"""
@@ -137,9 +137,11 @@ def update_existing_sequence(sequence: Sequence, payload: Dict) -> Sequence:
     sequence.save()
     return sequence
 
-def create_sequence_domain(sequence: Sequence, status: SequenceStatus, timing_info: Dict) -> SequenceDomain:
+def create_sequence_domain(sequence: Sequence, status: SequenceStatus, timing_info: Dict, is_new_sequence: bool) -> SequenceDomain:
     """Create SequenceDomain with change tracking"""
-    status_changed = sequence.status != status.value
+    status_changed = is_new_sequence or sequence.status != status.value
+    
+    logger.info(f"Creating SequenceDomain (sequence_run_id={sequence.sequence_run_id}, status={status.value}, new_sequence_created={is_new_sequence})")
     # update status and end time if status has changed
     if status_changed:
         logger.info(f"Updating Sequence status (sequence_run_id={sequence.sequence_run_id}, status={status.value})")

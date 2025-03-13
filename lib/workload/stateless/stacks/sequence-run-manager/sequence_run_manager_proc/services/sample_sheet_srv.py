@@ -8,7 +8,7 @@ from sequence_run_manager.models.sequence import Sequence
 from sequence_run_manager.models.sample_sheet import SampleSheet
 from sequence_run_manager_proc.services.bssh_srv import BSSHService
 
-from v2_samplesheet_maker.functions.v2_samplesheet_reader import v2_samplesheet_reader
+from sequence_run_manager_proc.services.v2_samplesheet_parser.parser import parse_samplesheet
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +36,10 @@ def create_sequence_sample_sheet(sequence: Sequence, payload: dict  ):
     sample_sheet_content = bssh_srv.get_sample_sheet_from_bssh_run_files(api_url, sample_sheet_name)
     
     # Convert content to JSON format with v2_samplesheet_to_json function
-    content_json = v2_samplesheet_reader(StringIO(sample_sheet_content))
+    content_dict = parse_samplesheet(sample_sheet_content)
     
     SampleSheet.objects.create(
         sequence=sequence,
         sample_sheet_name=sample_sheet_name,
-        sample_sheet_content=json.dumps(content_json),
+        sample_sheet_content=content_dict,
     )

@@ -22,7 +22,7 @@ import {
   Effect,
 } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
-import { Architecture } from 'aws-cdk-lib/aws-lambda';
+import { Architecture, IFunction } from 'aws-cdk-lib/aws-lambda';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
 
 export interface SequenceRunManagerStackProps {
@@ -95,7 +95,7 @@ export class SequenceRunManagerStack extends Stack {
       BASESPACE_ACCESS_TOKEN_SECRET_ID: props.bsshTokenSecretName,
     };
 
-    this.baseLayer = new PythonLayerVersion(this, 'BaseLayer', {
+    this.baseLayer = new PythonLayerVersion(this, this.stackName + 'BaseLayer', {
       entry: path.join(__dirname, '../deps'),
       compatibleRuntimes: [this.lambdaRuntimePythonVersion],
       compatibleArchitectures: [Architecture.ARM_64],
@@ -194,7 +194,7 @@ export class SequenceRunManagerStack extends Stack {
     this.setupEventRule(procSqsFn); // TODO comment this out for now
   }
 
-  private setupEventRule(fn: aws_lambda.Function) {
+  private setupEventRule(fn: IFunction) {
     /**
      * For sequence run manager, we are using orcabus events ( source from BSSH ENS event pipe) to trigger the lambda function.
      * event rule to filter the events that we are interested in.

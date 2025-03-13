@@ -262,7 +262,7 @@ class BSSHService:
             
             logger.info(f'File content url: {file_content_url}')
             
-            return self._fetch_and_encode_file_content(file_content_url)
+            return self._fetch_and_decode_file_content(file_content_url)
             
         except Exception as e:
             logger.error(f'Error getting sample sheet file: {e}')
@@ -311,7 +311,7 @@ class BSSHService:
         except Exception as e:
             self.handle_request_error(e, "when getting sample sheet file content url")
             
-    def _fetch_and_encode_file_content(self, content_url: str) -> Optional[str]:
+    def _fetch_and_decode_file_content(self, content_url: str) -> Optional[str]:
         """Fetch file content and return as Jsonb format to persist in DB"""
         try:
             response = requests.get(content_url, headers=self.headers, stream=True)
