@@ -22,6 +22,9 @@ def check_or_create_sequence_sample_sheet(payload: dict):
         logger.error(f"Sequence run {payload['id']} not found when checking or creating sequence sample sheet")
         raise ValueError(f"Sequence run {payload['id']} not found")
     
+    if SampleSheet.objects.filter(sequence=sequence_run).exists():
+        return
+    
     return create_sequence_sample_sheet(sequence_run, payload)
 
 @transaction.atomic
@@ -52,10 +55,12 @@ def get_sample_sheet_libraries(sample_sheet: SampleSheet):
         sample_sheet (SampleSheet): The sample sheet object containing the sample data
         
     Returns:
-        list[str]: List of sample_ids from the bclconvert_data
+        list[str]: List of unique sample_ids from the bclconvert_data
     """
     bclconvert_data = sample_sheet.sample_sheet_content.get("bclconvert_data", [])
     # return empty list if no bclconvert_data
     if not bclconvert_data:
             return []
-    return [entry["sample_id"] for entry in bclconvert_data]
+    
+    # remove repeated value
+    return list(dict.fromkeys(entry["sample_id"] for entry in bclconvert_data))

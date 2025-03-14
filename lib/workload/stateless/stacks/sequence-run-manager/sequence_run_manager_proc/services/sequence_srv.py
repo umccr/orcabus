@@ -52,6 +52,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
         # mandatory
         run_id = payload.get("id")
         date_modified = payload["dateModified"]
+        state = payload["status"] # for recording state changes
         status: SequenceStatus = SequenceStatus.from_seq_run_status(payload["status"])
         
         # calculate timing info
@@ -70,7 +71,7 @@ def create_or_update_sequence_from_bssh_event(payload: dict) -> SequenceDomain:
             sequence = update_existing_sequence(sequence, payload)
 
         # create sequence domain
-        sequence_domain = create_sequence_domain(sequence, status, timing_info, is_new_sequence)
+        sequence_domain = create_sequence_domain(sequence, status, timing_info, is_new_sequence, state)
         return sequence_domain  
     
     except Exception as e:
@@ -137,7 +138,7 @@ def update_existing_sequence(sequence: Sequence, payload: Dict) -> Sequence:
     sequence.save()
     return sequence
 
-def create_sequence_domain(sequence: Sequence, status: SequenceStatus, timing_info: Dict, is_new_sequence: bool) -> SequenceDomain:
+def create_sequence_domain(sequence: Sequence, status: SequenceStatus, timing_info: Dict, is_new_sequence: bool, state: str) -> SequenceDomain:
     """Create SequenceDomain with change tracking"""
     status_changed = is_new_sequence or sequence.status != status.value
     
@@ -150,7 +151,7 @@ def create_sequence_domain(sequence: Sequence, status: SequenceStatus, timing_in
         sequence.save()
 
     # check if state exists
-    state_exists = State.objects.filter(sequence=sequence,timestamp=timing_info['end_time'],status=status.value).exists()
+    state_exists = State.objects.filter(sequence=sequence,timestamp=timing_info['start_time'],status=state).exists()
     
     return SequenceDomain(
         sequence=sequence,

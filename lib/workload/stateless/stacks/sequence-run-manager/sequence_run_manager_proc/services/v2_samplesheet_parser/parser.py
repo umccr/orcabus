@@ -112,7 +112,8 @@ def parse_samplesheet(samplesheet: str) -> dict:
             
             # Check if line is a header
             if HEADER_REGEX_MATCH.match(line):
-                section_header = pascal_case_to_snake_case(line.strip("[]"))
+                #remove trailing commas and brackets
+                section_header = pascal_case_to_snake_case(line.strip(",").strip("[]"))
                 section_data_dict[section_header] = []
                 continue
             
@@ -134,7 +135,8 @@ def parse_samplesheet(samplesheet: str) -> dict:
             else:
                 sample_sheet_data[section_header] = {}
                 for line in section_data:
-                    key, value = line.split(",")
+                    # just keep first two values to avoid extra commas
+                    key, value = line.split(",")[:2]
                     sanitised_key = pascal_case_to_snake_case(key.strip())
                     sample_sheet_data[section_header][sanitised_key] = value if value != "" else None
         

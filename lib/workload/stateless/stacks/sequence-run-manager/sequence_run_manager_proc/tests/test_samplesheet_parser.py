@@ -40,7 +40,21 @@ class TestSampleSheetParser(TestCase):
             expected_result = json.load(f)
         self.compare_dicts(result, expected_result)
         self.assertEqual(result, expected_result)
-        
+    
+    def test_parse_original_samplesheet(self):
+        """
+        python manage.py test sequence_run_manager_proc.tests.test_samplesheet_parser.TestSampleSheetParser.test_parse_original_samplesheet
+        """
+        # read files from ./examples/original-sheet-from-excel.csv
+        with open(Path(__file__).parent / "examples/original-sheet-from-excel.csv", "r") as f:
+            samplesheet = f.read()
+        result = parse_samplesheet(samplesheet)
+        # read expected result from ./examples/original-sheet-from-excel.json
+        with open(Path(__file__).parent / "examples/original-sheet-from-excel.json", "r") as f:
+            expected_result = json.load(f)
+        self.compare_dicts(result, expected_result)
+        self.assertEqual(result, expected_result)
+
     def compare_dicts(self, actual: dict, expected: dict, path: str = ""):
         """Compare dictionaries and print differences"""
         for key in set(actual.keys()) | set(expected.keys()):
