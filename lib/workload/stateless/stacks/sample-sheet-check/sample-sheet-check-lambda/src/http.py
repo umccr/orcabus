@@ -20,16 +20,19 @@ def construct_body(check_status: Literal["PASS", "FAIL"], error_message: str = '
         any error message that stops the check
     """
 
-    # Get Log Data
-    with open(log_path, 'r') as log_file:
-        log_text = log_file.read()
-
     body = {
         "check_status": check_status,
-        "log_file": log_text,
         "error_message": error_message,
         "v2_sample_sheet": v2_sample_sheet
     }
+
+    if log_path:
+        # Get Log Data
+        with open(log_path, 'r') as log_file:
+            log_text = log_file.read()
+
+        body["log_file"] = log_text
+
     return json.dumps(body)
 
 
