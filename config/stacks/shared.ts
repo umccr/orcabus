@@ -17,6 +17,7 @@ import {
   icav2ArchiveAnalysisBucket,
   icav2ArchiveFastqBucket,
   icav2PipelineCacheBucket,
+  ntsmBucket,
   oncoanalyserBucket,
   rdsMasterSecretName,
   vpcProps,
@@ -113,6 +114,10 @@ const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
         bucket: icav2PipelineCacheBucket[stage],
         eventTypes,
         key: [{ 'anything-but': { wildcard: 'byob-icav2/*/cache/*' } }],
+      },
+      {
+        bucket: ntsmBucket[stage],
+        eventTypes,
       },
     ],
   };
