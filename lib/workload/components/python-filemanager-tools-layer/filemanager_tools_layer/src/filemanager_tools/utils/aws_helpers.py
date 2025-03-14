@@ -6,13 +6,14 @@ from typing import Optional
 import boto3
 import json
 from os import environ
+from urllib.parse import urlparse
+
 
 # Type hinting
 if typing.TYPE_CHECKING:
     from mypy_boto3_secretsmanager import SecretsManagerClient
     from mypy_boto3_ssm import SSMClient
 
-# Set globals
 ORCABUS_TOKEN_STR: Optional[str] = None
 HOSTNAME_STR: Optional[str] = None
 
@@ -69,8 +70,24 @@ def set_hostname():
 
     HOSTNAME_STR = get_ssm_value(environ.get("HOSTNAME_SSM_PARAMETER"))
 
-
 def get_hostname() -> str:
     if HOSTNAME_STR is None:
         set_hostname()
     return HOSTNAME_STR
+
+
+def get_bucket_key_pair_from_uri(s3_uri: str) -> (str, str):
+    """
+    Get the bucket and key from an s3 uri
+    :param s3_uri:
+    :return:
+    """
+    url_obj = urlparse(s3_uri)
+
+    s3_bucket = url_obj.netloc
+    s3_key = url_obj.path.lstrip('/')
+
+    if s3_bucket is None or s3_key is None:
+        raise ValueError(f"Invalid S3 URI: {s3_uri}")
+
+    return s3_bucket, s3_key
