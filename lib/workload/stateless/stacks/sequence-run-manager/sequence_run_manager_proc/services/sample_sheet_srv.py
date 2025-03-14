@@ -43,3 +43,19 @@ def create_sequence_sample_sheet(sequence: Sequence, payload: dict  ):
         sample_sheet_name=sample_sheet_name,
         sample_sheet_content=content_dict,
     )
+
+def get_sample_sheet_libraries(sample_sheet: SampleSheet):
+    """
+    Get the list of libraries (sample_ids) from the sample sheet's bclconvert_data
+    
+    Args:
+        sample_sheet (SampleSheet): The sample sheet object containing the sample data
+        
+    Returns:
+        list[str]: List of sample_ids from the bclconvert_data
+    """
+    bclconvert_data = sample_sheet.sample_sheet_content.get("bclconvert_data", [])
+    # return empty list if no bclconvert_data
+    if not bclconvert_data:
+            return []
+    return [entry["sample_id"] for entry in bclconvert_data]

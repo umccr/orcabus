@@ -4,7 +4,7 @@ from libumccr import libjson
 from libumccr.aws import libssm, libeb
 from mockito import when, verify
 
-from sequence_run_manager.models.sequence import Sequence, SequenceStatus
+from sequence_run_manager.models.sequence import Sequence, SequenceStatus, LibraryAssociation
 from sequence_run_manager.models.state import State
 from sequence_run_manager.models.sample_sheet import SampleSheet
 from sequence_run_manager.tests.factories import TestConstant
@@ -118,6 +118,8 @@ class BSSHEventUnitTests(SequenceRunProcUnitTestCase):
         self.assertEqual(2, qs_states.count())
         qs_sample_sheet = SampleSheet.objects.filter(sequence=seq)
         self.assertEqual(1, qs_sample_sheet.count())
+        qs_libraries = LibraryAssociation.objects.filter(sequence=seq)
+        self.assertEqual(2, qs_libraries.count())
         
         # clear db records
         qs_sample_sheet.delete()

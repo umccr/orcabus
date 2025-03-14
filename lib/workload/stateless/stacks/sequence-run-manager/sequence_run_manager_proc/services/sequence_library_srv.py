@@ -3,8 +3,9 @@ from django.utils import timezone
 import logging
 
 from sequence_run_manager.models.sequence import Sequence, LibraryAssociation
+from sequence_run_manager.models.sample_sheet import SampleSheet
 from sequence_run_manager_proc.services.bssh_srv import BSSHService
-
+from sequence_run_manager_proc.services.sample_sheet_srv import get_sample_sheet_libraries
 logger = logging.getLogger(__name__)
 
 ASSOCIATION_STATUS = "ACTIVE"
@@ -24,17 +25,22 @@ def check_or_create_sequence_run_libraries_linking(payload: dict):
     if LibraryAssociation.objects.filter(sequence=sequence_run).exists():
         return
     
-    bssh_srv = BSSHService()
-    run_details = bssh_srv.get_run_details(payload["apiUrl"])
-    return create_sequence_run_libraries_linking(sequence_run, run_details)
+    return create_sequence_run_libraries_linking(sequence_run)
 
 
 @transaction.atomic
-def create_sequence_run_libraries_linking(sequence_run: Sequence, run_details: dict):
+def create_sequence_run_libraries_linking(sequence_run: Sequence):
     """
     Create sequence run libraries linking
     """
-    linked_libraries = BSSHService.get_libraries_from_run_details(run_details)
+    linked_libraries = []
+    sample_sheet = SampleSheet.objects.get(sequence=sequence_run)
+    if sample_sheet:
+        linked_libraries = get_sample_sheet_libraries(sample_sheet)
+    else:
+        bssh_srv = BSSHService()
+        run_details = bssh_srv.get_run_details(sequence_run.api_url)
+        linked_libraries = BSSHService.get_libraries_from_run_details(run_details)
     
     if linked_libraries:
         for library_id in linked_libraries:
@@ -46,6 +52,8 @@ def create_sequence_run_libraries_linking(sequence_run: Sequence, run_details: d
                     status=ASSOCIATION_STATUS,
                 )
         logger.info(f"Library associations created for sequence run {sequence_run.sequence_run_id}, linked libraries: {linked_libraries}")
+    else:
+        logger.info(f"No libraries found for sequence run {sequence_run.sequence_run_id}")
 
 
 # metadata manager service
