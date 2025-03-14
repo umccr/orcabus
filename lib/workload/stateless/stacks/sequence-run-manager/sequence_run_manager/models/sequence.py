@@ -53,6 +53,13 @@ class SequenceStatus(models.TextChoices):
             return cls.ABORTED
         else:
             raise ValueError(f"No matching SequenceStatus found for value: {value}")
+        
+    @classmethod
+    def is_terminal(cls, value):
+        """
+        Check if the status is terminal (i.e. SUCCEEDED, FAILED, ABORTED)
+        """
+        return value in [cls.SUCCEEDED.value, cls.FAILED.value, cls.ABORTED.value]
 
 
 class SequenceManager(OrcaBusBaseManager):
@@ -76,40 +83,27 @@ class Sequence(OrcaBusBaseModel):
     orcabus_id = OrcaBusIdField(primary_key=True, prefix='seq')
 
     # mandatory non-nullable base fields
-    instrument_run_id = models.CharField(
-        unique=True, max_length=255, null=False, blank=False
-    )  # unique key
-    run_volume_name = models.TextField(
-        null=False, blank=False
-    )  # legacy `gds_volume_name`
-    run_folder_path = models.TextField(
-        null=True, blank=True
-    )  # legacy `gds_folder_path`, nullable as ICAv2 event upgrade
-    run_data_uri = models.TextField(
-        null=False, blank=False
-    )  # must be absolute path, including URI scheme/protocol
-    status = models.CharField(
-        choices=SequenceStatus.choices, max_length=255, null=False, blank=False
-    )
+    sequence_run_id = models.CharField(max_length=255, null=False, blank=False)  # unique key, legacy `run_id`
+    status = models.CharField(choices=SequenceStatus.choices, max_length=255, null=False, blank=False)
     start_time = models.DateTimeField()
+    sample_sheet_name = models.CharField(max_length=255, null=False, blank=False)
 
-    # nullable base fields
-    end_time = models.DateTimeField(null=True, blank=True)
-
-    # optional fields -- business look up keys
-    reagent_barcode = models.CharField(max_length=255, null=True, blank=True)
-    flowcell_barcode = models.CharField(max_length=255, null=True, blank=True)
-    sample_sheet_name = models.CharField(max_length=255, null=True, blank=True)
-    sequence_run_id = models.CharField(
-        max_length=255, null=True, blank=True
-    )  # legacy `run_id`
-    sequence_run_name = models.CharField(
-        max_length=255, null=True, blank=True
-    )  # legacy `name`
-
+    # can be nullable base fields
     v1pre3_id = models.CharField(max_length=255, null=True, blank=True)
     ica_project_id = models.CharField(max_length=255, null=True, blank=True)
     api_url = models.TextField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    run_volume_name = models.TextField(null=False, blank=False)  # legacy `gds_volume_name`
+    run_folder_path = models.TextField(null=True, blank=True)  # legacy `gds_folder_path`, nullable as ICAv2 event upgrade
+    run_data_uri = models.TextField(null=False, blank=False)  # must be absolute path, including URI scheme/protocol
+
+    # optional fields -- business look up keys
+    instrument_run_id = models.CharField(max_length=255, null=True, blank=True)
+    reagent_barcode = models.CharField(max_length=255, null=True, blank=True)
+    flowcell_barcode = models.CharField(max_length=255, null=True, blank=True)
+    sequence_run_name = models.CharField(max_length=255, null=True, blank=True)  # legacy `name`
+    experiment_name = models.CharField(max_length=255, null=True, blank=True)
+    
     # run_config = models.JSONField(null=True, blank=True)  # TODO could be it's own model
     # sample_sheet_config = models.JSONField(null=True, blank=True)  # TODO could be it's own model
 

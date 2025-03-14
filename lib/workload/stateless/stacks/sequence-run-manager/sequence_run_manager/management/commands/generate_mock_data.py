@@ -10,7 +10,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         qs: QuerySet = Sequence.objects.filter(
-            instrument_run_id=TestConstant.instrument_run_id.value
+            sequence_run_id=TestConstant.sequence_run_id.value
         )
         if not qs.exists():
             SequenceFactory()

@@ -12,8 +12,9 @@ from sequence_run_manager_proc.domain.sequence import (
     SequenceDomain,
     SequenceRule,
     SequenceRuleError,
+    SequenceStatus,
 )
-from sequence_run_manager_proc.services import sequence_srv, sequence_state_srv, sequence_library_srv
+from sequence_run_manager_proc.services import sequence_srv, sequence_state_srv, sequence_library_srv, sample_sheet_srv
 
 from libumccr import libjson
 from libumccr.aws import libeb
@@ -74,7 +75,7 @@ def event_handler(event, context):
     OrcaBus SRM BSSH Event High Level:
         - through ICA v2 sqs event pipe, we subscribe to Orcabus Eventbridge with specific rule
         - this Lambda is to be hooked to this Eventbridge rule to process the event
-        - now, when `ica-event` event with `instrumentRunId` and `statuschanged` status arrive...
+        - now, when `ica-event` event with run `id` and `statuschanged` status arrive...
             - we parse these `ica-event` payload, transform and persist them into our internal OrcaBus SRM `Sequence` entity model
             - after persisted into database, we again transform into our internal `SequenceRunStateChange` domain event
             - this domain event schema is what we consented and published in our EventBus event schema registry
@@ -107,10 +108,14 @@ def event_handler(event, context):
     entry = None
 
     # Create SequenceRunState record from BSSH Run event payload
-    # Check or create sequence run libraries linking when state changes
     if sequence_domain.state_has_changed:
         sequence_state_srv.create_sequence_state_from_bssh_event(event_details)
+        
+    # Check or create sequence run libraries linking and sample sheet when events uploaded finished (terminal status)
+    if sequence_domain.status_has_changed and SequenceStatus.is_terminal(sequence_domain.sequence.status):
+        sample_sheet_srv.check_or_create_sequence_sample_sheet(event_details)
         sequence_library_srv.check_or_create_sequence_run_libraries_linking(event_details)
+        
 
     # Detect SequenceRunStatusChange
     if sequence_domain.status_has_changed:
