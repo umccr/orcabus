@@ -10,11 +10,32 @@ Using pandas is overkill but #wheninrome
 We take an
 
 """
+
+import typing
 from typing import List, Dict, Tuple
 
 from fastq_tools import get_fastq
 from urllib.parse import urlparse
 import pandas as pd
+import boto3
+
+# Type hinting
+if typing.TYPE_CHECKING:
+    from mypy_boto3_s3 import S3Client
+
+
+def get_s3_client() -> 'S3Client':
+    return boto3.client('s3')
+
+
+def upload_file_to_s3(bucket: str, key: str, file_contents: str):
+    s3_client = get_s3_client()
+
+    s3_client.put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=file_contents
+    )
 
 
 def get_s3_uris_from_fastq_id(fastq_id: str) -> List[str]:
@@ -64,7 +85,7 @@ def create_csv_for_s3_copy_steps(fastq_ids: List[str]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def handler(event, context) -> Dict[str, str]:
+def handler(event, context):
     """
     Generate the csv for s3 copy steps
     :param event:
@@ -72,9 +93,16 @@ def handler(event, context) -> Dict[str, str]:
     :return:
     """
     fastq_ids = event['fastqIdList']
+    steps_copy_bucket = event['s3StepsCopyBucket']
+    steps_copy_key = event['s3StepsCopyKey']
 
+    # Generate the csv
     copy_data_df = create_csv_for_s3_copy_steps(fastq_ids)
 
-    return {
-        'csvStepsCopyData': copy_data_df.to_csv(header=False, index=False),
-    }
+    # Uploading to s3
+    upload_file_to_s3(
+        steps_copy_bucket,
+        steps_copy_key,
+        copy_data_df.to_csv(header=False, index=False)
+    )
+

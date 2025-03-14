@@ -8,8 +8,6 @@ Use the filemanager tools layer to update the ingest id for a file.
 We have to do this for each file in the ingest.
 
 """
-from functools import reduce
-from operator import concat
 from typing import Dict, List
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse

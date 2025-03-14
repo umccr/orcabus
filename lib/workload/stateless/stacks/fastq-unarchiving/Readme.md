@@ -42,9 +42,9 @@ The jobs use the s3-steps-copy and run 'per instrument run id'.
     "createTime": "string",
     "updateTime": "string",
     "fastqIds": [
-      "fqs.12345"
+      "fqr.12345"
     ]
-  }   
+  }
 }
 ```
 
