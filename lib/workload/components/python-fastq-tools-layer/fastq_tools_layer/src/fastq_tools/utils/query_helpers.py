@@ -21,6 +21,7 @@ get_fastq_by_rgid_and_instrument_run_id
 from typing import List
 
 from .request_helpers import (
+    get_request_response,
     get_request_response_results,
 )
 
@@ -29,7 +30,7 @@ from .models import FastqListRow, FastqSet
 
 
 def get_fastq(fastq_id: str, **kwargs) -> FastqListRow:
-    return get_request_response_results(f"{FASTQ_LIST_ROW_ENDPOINT}/{fastq_id}", params=kwargs)
+    return get_request_response(f"{FASTQ_LIST_ROW_ENDPOINT}/{fastq_id}", params=kwargs)
 
 
 def get_fastq_set(fastq_set_id: str, **kwargs) -> FastqSet:
@@ -39,7 +40,7 @@ def get_fastq_set(fastq_set_id: str, **kwargs) -> FastqSet:
     :param kwargs:
     :return:
     """
-    return get_request_response_results(f"{FASTQ_SET_ENDPOINT}/{fastq_set_id}", params=kwargs)
+    return get_request_response(f"{FASTQ_SET_ENDPOINT}/{fastq_set_id}", params=kwargs)
 
 
 def get_fastqs(*args, **kwargs) -> List[FastqListRow]:

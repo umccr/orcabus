@@ -43,7 +43,7 @@ def get_url(endpoint: str) -> str:
     )
 
 
-def get_request_response_results(endpoint: str, params: Optional[Dict] = None) -> Union[List[Dict], Dict]:
+def get_request_response(endpoint: str, params: Optional[Dict] = None) -> Dict:
     """
     Run get response against the Metadata endpoint
     :param endpoint:
@@ -72,6 +72,19 @@ def get_request_response_results(endpoint: str, params: Optional[Dict] = None) -
     response.raise_for_status()
 
     return response.json()
+
+
+def get_request_response_results(endpoint: str, params: Optional[Dict] = None) -> Union[List[Dict], Dict]:
+    """
+    Run get response against the Metadata endpoint
+    :param endpoint:
+    :param params:
+    :return:
+    """
+    # Get authorization header
+    response_dict = get_request_response(endpoint, params)
+
+    return response_dict['results']
 
 
 def patch_request(endpoint: str, params: Optional[Dict] = None) -> Dict:
