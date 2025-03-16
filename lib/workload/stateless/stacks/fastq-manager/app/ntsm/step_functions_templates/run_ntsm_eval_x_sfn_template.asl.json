@@ -39,6 +39,11 @@
     },
     "For each object in fastq set x (a)": {
       "Type": "Map",
+      "Items": "{% $fastqListRows %}",
+      "ItemSelector": {
+        "fastqListRowAIter": "{% $states.context.Map.Item.Value %}",
+        "fastqListRowBsIter": "{% /* https://try.jsonata.org/4GeNhyuVY */\n[\n  $filter($fastqListRows, function($var, $index){\n    $index > $states.context.Map.Item.Index\n  })\n] %}"
+      },
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
@@ -49,12 +54,18 @@
             "Type": "Pass",
             "Next": "For each object in fastq set x (b)",
             "Assign": {
-              "fastqListRowA": "{% $states.input.fastqListRowA %}",
-              "fastqListRowBs": "{% $states.input.fastqListRowBs %}"
+              "fastqListRowAIter": "{% $states.input.fastqListRowAIter %}",
+              "fastqListRowIdAIter": "{% $states.input.fastqListRowAIter.id %}",
+              "fastqListRowBsIter": "{% $states.input.fastqListRowBsIter %}"
             }
           },
           "For each object in fastq set x (b)": {
             "Type": "Map",
+            "Items": "{% $fastqListRowBsIter %}",
+            "ItemSelector": {
+              "fastqListRowAIter": "{% $fastqListRowAIter %}",
+              "fastqListRowBIter": "{% $states.context.Map.Item.Value %}"
+            },
             "ItemProcessor": {
               "ProcessorConfig": {
                 "Mode": "INLINE"
@@ -65,15 +76,14 @@
                   "Type": "Pass",
                   "Next": "Get ntsm evaluation",
                   "Assign": {
-                    "fastqListRowIdB": "{% $states.input.fastqListRowB.id %}",
-                    "fastqListRowNtsmA": "{% $states.input.fastqListRowA.ntsm.s3Uri %}",
-                    "fastqListRowNtsmB": "{% $states.input.fastqListRowB.ntsm.s3Uri %}"
+                    "fastqListRowIdBIter": "{% $states.input.fastqListRowBIter.id %}",
+                    "fastqListRowNtsmA": "{% $states.input.fastqListRowAIter.ntsm.s3Uri %}",
+                    "fastqListRowNtsmB": "{% $states.input.fastqListRowBIter.ntsm.s3Uri %}"
                   }
                 },
                 "Get ntsm evaluation": {
                   "Type": "Task",
                   "Resource": "arn:aws:states:::lambda:invoke",
-                  "Output": "{% $states.result.Payload %}",
                   "Arguments": {
                     "FunctionName": "${__ntsm_evaluation_lambda_function_arn__}",
                     "Payload": {
@@ -96,42 +106,36 @@
                     }
                   ],
                   "Next": "Save outputs",
-                  "Assign": {
-                    "relatedness": "{% $states.result.Payload.relatedness %}"
+                  "Output": {
+                    "undetermined": "{% $states.result.Payload.undetermined %}",
+                    "relatedness": "{% $states.result.Payload.relatedness %}",
+                    "sameSample": "{% $states.result.Payload.sameSample %}"
                   }
                 },
                 "Save outputs": {
                   "Type": "Pass",
                   "End": true,
                   "Output": {
-                    "fastqListRowIdA": "{% $fastqListRowIdA %}",
-                    "fastqListRowIdB": "{% $fastqListRowIdB %}",
-                    "relatedness": "{% $relatedness %}"
+                    "fastqListRowIdA": "{% $fastqListRowIdAIter %}",
+                    "fastqListRowIdB": "{% $fastqListRowIdBIter %}",
+                    "undetermined": "{% $states.input.undetermined %}",
+                    "relatedness": "{% $states.input.relatedness %}",
+                    "sameSample": "{% $states.input.sameSample %}"
                   }
                 }
               }
-            },
-            "Items": "{% $fastqListRowBs %}",
-            "ItemSelector": {
-              "fastqListRowA": "{% $fastqListRowA %}",
-              "fastqListRowB": "{% $states.context.Map.Item.Value %}"
             },
             "End": true
           }
         }
       },
-      "Next": "Flatten outputs",
-      "Items": "{% $fastqListRows %}",
-      "ItemSelector": {
-        "fastqListRowA": "{% $states.context.Map.Item.Value %}",
-        "fastqListRowBs": "{% /* https://try.jsonata.org/4GeNhyuVY */\n[\n  $filter($fastqListRows, function($var, $index){\n    $index > $states.context.Map.Item.Index\n  })\n] %}"
-      }
+      "Next": "Flatten outputs"
     },
     "Flatten outputs": {
       "Type": "Pass",
       "Next": "Summarise outputs",
       "Output": {
-        "relatednessList": "{% $reduce($reduce($states.input, $append), $append) %}"
+        "relatednessList": "{% /* https://try.jsonata.org/E_k-T0ULX */\n[ $reduce($reduce($states.input, $append), $append) ] %}"
       }
     },
     "Summarise outputs": {
@@ -157,10 +161,10 @@
           "JitterStrategy": "FULL"
         }
       ],
-      "End": true,
       "Output": {
         "related": "{% $states.result.Payload.related %}"
-      }
+      },
+      "End": true
     }
   },
   "QueryLanguage": "JSONata"

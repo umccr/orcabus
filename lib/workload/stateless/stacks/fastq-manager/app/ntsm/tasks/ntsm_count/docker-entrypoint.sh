@@ -126,7 +126,7 @@ eval ntsmCount \
 aws s3 cp \
   --sse="AES256" \
   "${OUTPUT_NTSM_PATH%.ntsm}.summary.txt" \
-  "${OUTPUT_URI}"
+  "${OUTPUT_URI%.ntsm}.summary.txt"
 
 aws s3 cp \
   --sse="AES256" \

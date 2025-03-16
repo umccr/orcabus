@@ -127,7 +127,10 @@ export interface sharedLambdaOutputs {
 }
 
 export interface ntsmEvalLambdaProps {
+  hostnameSsmParameterObj: ssm.IStringParameter;
+  orcabusTokenSecretObj: secretsmanager.ISecret;
   fastqToolsLayer: PythonLayerVersion;
+  ntsmBucket: s3.IBucket;
 }
 
 export interface ntsmEvalLambdaOutputs {

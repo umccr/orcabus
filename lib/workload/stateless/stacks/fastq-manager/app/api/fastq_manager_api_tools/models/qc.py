@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Standard imports
-from typing import Self
+from typing import Self, TypedDict, Optional
 import logging
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -25,6 +25,16 @@ class QcInformationBase(BaseModel):
     r1_gc_fraction: FloatDecimal = Field(default=Decimal(0))
     r2_gc_fraction: FloatDecimal = Field(default=Decimal(0))
     duplication_fraction_estimate: FloatDecimal = Field(default=Decimal(0))
+
+
+class QcInformationResponseDict(TypedDict):
+    insertSizeEstimate: Optional[float]
+    rawWgsCoverageEstimate: Optional[float]
+    r1Q20Fraction: Optional[float]
+    r2Q20Fraction: Optional[float]
+    r1GcFraction: Optional[float]
+    r2GcFraction: Optional[float]
+    duplicationFractionEstimate: Optional[float]
 
 
 class QcInformationResponse(QcInformationBase):

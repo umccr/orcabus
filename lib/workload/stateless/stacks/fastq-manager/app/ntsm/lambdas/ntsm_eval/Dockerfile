@@ -1,4 +1,4 @@
-FROM --platform=${TARGETPLATFORM} public.ecr.aws/lambda/python:3.12
+FROM public.ecr.aws/lambda/python:3.12
 
 ARG TARGETPLATFORM
 ARG NTSM_VERSION="1.2.1"
@@ -15,7 +15,8 @@ RUN \
     make \
     gcc \
     g++ \
-    zlib-devel && \
+    zlib-devel \
+    && \
   ( \
     wget "${NTSM_DOWNLOAD_URL}" && \
     tar -xzf "$(basename "${NTSM_DOWNLOAD_URL}")" && \
@@ -23,7 +24,9 @@ RUN \
     ./configure && \
     make && \
     make install \
-  )
+  ) && \
+  pip install --break-system-packages pandas
+
 
 # Copy the lambda contents
 COPY ${APP_ROOT}/ntsm_eval.py ./

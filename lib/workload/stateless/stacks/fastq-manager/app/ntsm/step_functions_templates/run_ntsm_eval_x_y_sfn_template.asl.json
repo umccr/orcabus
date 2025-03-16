@@ -88,6 +88,11 @@
     },
     "For each object in fastq set x": {
       "Type": "Map",
+      "Items": "{% $fastqListRowsA %}",
+      "ItemSelector": {
+        "fastqListRowAIter": "{% $states.context.Map.Item.Value %}",
+        "fastqListRowBsIter": "{% $fastqListRowsB %}"
+      },
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "INLINE"
@@ -98,12 +103,18 @@
             "Type": "Pass",
             "Next": "For each object in fastq set y",
             "Assign": {
-              "fastqListRowA": "{% $states.input.fastqListRowA %}",
-              "fastqListRowBs": "{% $states.input.fastqListRowBs %}"
+              "fastqListRowAIter": "{% $states.input.fastqListRowAIter %}",
+              "fastqListRowIdA": "{% $states.input.fastqListRowAIter.id %}",
+              "fastqListRowBsIter": "{% $states.input.fastqListRowBsIter %}"
             }
           },
           "For each object in fastq set y": {
             "Type": "Map",
+            "Items": "{% $fastqListRowBsIter %}",
+            "ItemSelector": {
+              "fastqListRowBIter": "{% $states.context.Map.Item.Value %}",
+              "fastqListRowAIter": "{% $fastqListRowAIter %}"
+            },
             "ItemProcessor": {
               "ProcessorConfig": {
                 "Mode": "INLINE"
@@ -114,15 +125,14 @@
                   "Type": "Pass",
                   "Next": "Get ntsm evaluation",
                   "Assign": {
-                    "fastqListRowIdB": "{% $states.input.fastqListRowB.id %}",
-                    "fastqListRowNtsmA": "{% $states.input.fastqListRowA.ntsm.s3Uri %}",
-                    "fastqListRowNtsmB": "{% $states.input.fastqListRowB.ntsm.s3Uri %}"
+                    "fastqListRowIdB": "{% $states.input.fastqListRowBIter.id %}",
+                    "fastqListRowNtsmA": "{% $states.input.fastqListRowAIter.ntsm.s3Uri %}",
+                    "fastqListRowNtsmB": "{% $states.input.fastqListRowBIter.ntsm.s3Uri %}"
                   }
                 },
                 "Get ntsm evaluation": {
                   "Type": "Task",
                   "Resource": "arn:aws:states:::lambda:invoke",
-                  "Output": "{% $states.result.Payload %}",
                   "Arguments": {
                     "FunctionName": "${__ntsm_evaluation_lambda_function_arn__}",
                     "Payload": {
@@ -144,8 +154,10 @@
                       "JitterStrategy": "FULL"
                     }
                   ],
-                  "Assign": {
-                    "relatedness": "{% $states.result.Payload.relatedness %}"
+                  "Output": {
+                    "undetermined": "{% $states.result.Payload.undetermined %}",
+                    "relatedness": "{% $states.result.Payload.relatedness %}",
+                    "sameSample": "{% $states.result.Payload.sameSample %}"
                   },
                   "Next": "Save outputs"
                 },
@@ -155,35 +167,29 @@
                   "Output": {
                     "fastqListRowIdA": "{% $fastqListRowIdA %}",
                     "fastqListRowIdB": "{% $fastqListRowIdB %}",
-                    "relatedness": "{% $relatedness %}"
+                    "undetermined": "{% $states.input.undetermined %}",
+                    "relatedness": "{% $states.input.relatedness %}",
+                    "sameSample": "{% $states.input.sameSample %}"
                   }
                 }
               }
             },
-            "End": true,
-            "Items": "{% $fastqListRowBs %}",
-            "ItemSelector": {
-              "fastqListRowB": "{% $states.context.Map.Item.Value %}"
-            }
+            "End": true
           }
         }
       },
-      "Next": "Flatten Outputs",
-      "Items": "{% $fastqListRowsA %}"
+      "Next": "Flatten Outputs"
     },
     "Flatten Outputs": {
       "Type": "Pass",
       "Next": "Summarise outputs",
       "Output": {
-        "relatednessList": "{% $reduce($reduce($states.input, $append), $append) %}"
+        "relatednessList": "{% /* https://try.jsonata.org/E_k-T0ULX */\n[ $reduce($reduce($states.input, $append), $append) ] %}"
       }
     },
     "Summarise outputs": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "Output": {
-        "related": "{% $states.result.Payload.related %}"
-      },
       "Arguments": {
         "FunctionName": "${__summarise_outputs_lambda_function_arn__}",
         "Payload": {
@@ -204,6 +210,9 @@
           "JitterStrategy": "FULL"
         }
       ],
+      "Output": {
+        "related": "{% $states.result.Payload.related %}"
+      },
       "End": true
     }
   },

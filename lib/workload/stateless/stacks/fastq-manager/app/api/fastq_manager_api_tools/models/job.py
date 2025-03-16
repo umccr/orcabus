@@ -7,7 +7,7 @@ Job model, used to for job management
 # Standard imports
 import typing
 from os import environ
-from typing import Optional, Self, ClassVar
+from typing import Optional, Self, ClassVar, List
 
 from dyntastic import Dyntastic
 from pydantic import Field, BaseModel, model_validator, ConfigDict
@@ -103,6 +103,7 @@ class JobQueryPaginatedResponse(QueryPaginatedResponse):
     Job Query Response, includes a list of jobs, the total
     """
     url_placeholder: ClassVar[str] = get_fastq_endpoint_url() + "/{fastq_id}/jobs"
+    results: List[JobResponse]
 
     @classmethod
     def resolve_url_placeholder(cls, **kwargs) -> str:

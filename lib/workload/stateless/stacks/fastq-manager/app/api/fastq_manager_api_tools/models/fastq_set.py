@@ -7,7 +7,7 @@ from operator import concat
 from dyntastic import Dyntastic, DoesNotExist
 from os import environ
 from pydantic import Field, BaseModel, model_validator, ConfigDict, computed_field
-from typing import Optional, Self, List, Union, ClassVar
+from typing import Optional, Self, List, Union, ClassVar, TypedDict
 
 # Layer imports
 from filemanager_tools import (
@@ -16,15 +16,15 @@ from filemanager_tools import (
 
 # Local imports
 from . import FastqListRowDict, PresignedUrlModel, QueryPaginatedResponse
-from .fastq_list_row import FastqListRowData, FastqListRowResponse, FastqListRowCreate
+from .fastq_list_row import FastqListRowData, FastqListRowResponse, FastqListRowCreate, FastqListRowResponseDict
 from ..cache import update_cache
 from ..globals import FQS_CONTEXT_PREFIX, EVENT_BUS_NAME_ENV_VAR
 from ..utils import (
     get_ulid,
-    to_snake, to_camel, get_fastq_endpoint_url, get_fastq_set_endpoint_url
+    to_snake, to_camel, get_fastq_set_endpoint_url
 )
 
-from .library import LibraryData, LibraryResponse, LibraryCreate
+from .library import LibraryData, LibraryResponse, LibraryCreate, LibraryResponseDict
 
 
 class FastqSetBase(BaseModel):
@@ -49,6 +49,14 @@ class FastqListSetWithId(FastqSetBase, FastqSetOrcabusId):
     pass
 
 
+class FastqSetResponseDict(TypedDict):
+    id: str
+    library: LibraryResponseDict
+    fastqSet: List[FastqListRowResponseDict]
+    allowAdditionalFastq: Optional[bool]
+    isCurrentFastqSet: Optional[bool]
+
+
 class FastqSetResponse(FastqListSetWithId):
     # Identical to the CreateFastqSet model but with the addition of the id field
     # Set the model configuration
@@ -68,21 +76,35 @@ class FastqSetResponse(FastqListSetWithId):
         return {to_camel(k): v for k, v in values.items()}
 
     # Set the model_dump method response
-    def model_dump(self, **kwargs) -> Self:
+    def model_dump(self, **kwargs) -> FastqSetResponseDict:
+        # Grab the special kwargs
+        include_s3_details = False
+        if 'include_s3_details' in kwargs:
+            kwargs = kwargs.copy()
+            include_s3_details = kwargs.pop('include_s3_details')
+
         # Recursively serialize the object
         data = super().model_dump(**kwargs)
 
         # Manually serialize the sub fields
         for field_name in ["library", "fastq_set"]:
             field = getattr(self, field_name)
+            if field is None:
+                continue
             if field is not None:
                 if isinstance(field, list):
-                    data[to_camel(field_name)] = list(map(
-                        lambda field_iter_: field_iter_.model_dump(),
-                        field
-                    ))
+                    if field_name == 'fastq_set':
+                        data[to_camel(field_name)] = list(map(
+                            lambda field_iter_: field_iter_.model_dump(**kwargs, include_s3_details=include_s3_details),
+                            field
+                        ))
+                    else:
+                        data[to_camel(field_name)] = list(map(
+                            lambda field_iter_: field_iter_.model_dump(**kwargs),
+                            field
+                        ))
                 else:
-                    data[to_camel(field_name)] = field.model_dump()
+                    data[to_camel(field_name)] = field.model_dump(**kwargs)
 
         return data
 
@@ -140,7 +162,7 @@ class FastqSetData(FastqListSetWithId, Dyntastic):
             self.fastq_set_ids
         ))
 
-    def to_dict(self, include_s3_details: Optional[bool] = False) -> 'FastqSetResponse':
+    def to_dict(self, include_s3_details: Optional[bool] = False) -> FastqSetResponseDict:
         """
         Alternative serialization path to return objects by camel case
         :return:
@@ -162,7 +184,7 @@ class FastqSetData(FastqListSetWithId, Dyntastic):
             # Get the s3 objects
             s3_objs = get_s3_objs_from_ingest_ids_map(
                 list(map(
-                    lambda read_set_obj_iter_: read_set_obj_iter_.ingest_id,
+                    lambda read_set_obj_iter_: read_set_obj_iter_['ingestId'],
                     list(filter(
                         lambda read_set_obj_iter_: read_set_obj_iter_ is not None,
                         list(reduce(
@@ -185,7 +207,10 @@ class FastqSetData(FastqListSetWithId, Dyntastic):
         # Return as a response
         return FastqSetResponse(
             **fastq_set_dict
-        ).model_dump(by_alias=True)
+        ).model_dump(
+            include_s3_details=include_s3_details,
+            by_alias=True
+        )
 
     def to_fastq_list_rows(self) -> List[FastqListRowDict]:
         """
@@ -225,13 +250,13 @@ class FastqSetData(FastqListSetWithId, Dyntastic):
 class FastqSetListResponse(BaseModel):
     # List response
     fastq_set_list: List[FastqSetData]
-    include_s3_detail: Optional[bool] = False
+    include_s3_details: Optional[bool] = False
 
-    def model_dump(self, **kwargs) -> List[FastqSetResponse]:
+    def model_dump(self, **kwargs) -> List[FastqSetResponseDict]:
         if len(self.fastq_set_list) == 0:
             return []
 
-        if not self.include_s3_detail:
+        if not self.include_s3_details:
             return list(map(lambda fastq_set_iter_: fastq_set_iter_.to_dict(), self.fastq_set_list))
 
         # Collect the s3 ingest ids for the fastq list rows
@@ -259,24 +284,38 @@ class FastqSetListResponse(BaseModel):
             fastqs_with_readsets
         ))
 
-        # Fixme, read2 may not exist
         r2_ingest_ids = list(map(
             lambda fastq_list_row_iter_: fastq_list_row_iter_.read_set.r2.ingest_id,
-            fastqs_with_readsets
+            list(filter(
+                lambda fastq_list_row_iter_: hasattr(fastq_list_row_iter_.read_set, 'r2') and fastq_list_row_iter_.read_set.r2 is not None,
+                fastqs_with_readsets
+            ))
         ))
 
-        # Get the
+        # Get the r1 s3 uris
         r1_s3_list_dict = get_s3_objs_from_ingest_ids_map(r1_ingest_ids)
 
         # Get the r2 s3 uris
         r2_s3_list_dict = get_s3_objs_from_ingest_ids_map(r2_ingest_ids)
 
+        # Get the ntsm ingest ids
+        ntsm_ingest_ids = list(map(
+            lambda fastq_list_row_iter_: fastq_list_row_iter_.ntsm.ingest_id,
+            list(filter(
+                lambda fastq_list_row_iter_: fastq_list_row_iter_.ntsm is not None,
+                fastqs_with_readsets
+            ))
+        ))
+
+        # Get the ntsm s3 uris
+        ntsm_s3_list_dict = get_s3_objs_from_ingest_ids_map(ntsm_ingest_ids)
+
         # Update the cache with the s3 uris
-        for row in (r1_s3_list_dict + r2_s3_list_dict):
+        for row in (r1_s3_list_dict + r2_s3_list_dict + ntsm_s3_list_dict):
             update_cache(row['ingestId'], row['fileObject'])
 
         # Now re-dump the fastq sets
-        return list(map(lambda fastq_set_iter_: fastq_set_iter_.to_dict(), self.fastq_set_list))
+        return list(map(lambda fastq_set_iter_: fastq_set_iter_.to_dict(include_s3_details=True), self.fastq_set_list))
 
 
 class FastqSetQueryPaginatedResponse(QueryPaginatedResponse):
@@ -284,7 +323,7 @@ class FastqSetQueryPaginatedResponse(QueryPaginatedResponse):
     Job Query Response, includes a list of jobs, the total
     """
     url_placeholder: ClassVar[str] = get_fastq_set_endpoint_url()
-    results: List[FastqSetResponse]
+    results: List[FastqSetResponseDict]
 
     @classmethod
     def resolve_url_placeholder(cls, **kwargs) -> str:

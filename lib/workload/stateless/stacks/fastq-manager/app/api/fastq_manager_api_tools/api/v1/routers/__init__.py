@@ -226,8 +226,8 @@ def run_ntsm_eval(fastq_set_id_x: str, fastq_set_id_y: Optional[str] = None) -> 
     else:
         env_var = RUN_NTSM_EVAL_X_Y_AWS_STEP_FUNCTION_ARN_ENV_VAR
         input_dict = {
-            "fastqSetIdX": fastq_set_id_x,
-            "fastqSetIdY": fastq_set_id_y
+            "fastqSetIdA": fastq_set_id_x,
+            "fastqSetIdB": fastq_set_id_y
         }
 
     # Run qc stats through the AWS step function

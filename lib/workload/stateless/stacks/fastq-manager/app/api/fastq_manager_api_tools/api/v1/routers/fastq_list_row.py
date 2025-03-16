@@ -51,8 +51,10 @@ from ....events.events import put_fastq_list_row_create_event, put_fastq_list_ro
 
 # Model imports
 from ....models import BoolQueryEnum, FastqListRowDict, PresignedUrlModel, QueryPagination
-from ....models.fastq_list_row import FastqListRowResponse, FastqListRowData, FastqListRowCreate, \
-    FastqListRowListResponse, FastqListRowQueryPaginatedResponse
+from ....models.fastq_list_row import (
+    FastqListRowResponse, FastqListRowData, FastqListRowCreate,
+    FastqListRowListResponse, FastqListRowQueryPaginatedResponse, FastqListRowResponseDict
+)
 from ....models.fastq_pair import FastqPairStorageObjectPatch, FastqPairStorageObjectData
 from ....models.fastq_set import FastqSetData
 from ....models.file_compression_info import FileCompressionInfoPatch, FileCompressionInfoData
@@ -334,7 +336,7 @@ async def list_fastq(
                     "includeS3Details": include_s3_details,
                 },
                 **pagination
-            )
+            ).items()
         )),
     )
 
@@ -353,9 +355,11 @@ async def get_fastq(
             alias="includeS3Details",
             description="Include the s3 details such as s3 uri and storage class"
         ),
-) -> FastqListRowResponse:
+) -> FastqListRowResponseDict:
     try:
-        return FastqListRowData.get(fastq_id).to_dict(include_s3_details=include_s3_details)
+        return FastqListRowData.get(fastq_id).to_dict(
+            include_s3_details=include_s3_details
+        )
     except DoesNotExist as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -369,7 +373,7 @@ async def get_fastq(
     Please use the fastqSet endpoint if registering multiple fastqs simultaneously to reduce race conditions
     """)
 )
-async def create_fastq(fastq_obj: FastqListRowCreate) -> FastqListRowResponse:
+async def create_fastq(fastq_obj: FastqListRowCreate) -> FastqListRowResponseDict:
     # First convert the CreateFastqListRow to a FastqListRow
     fastq_obj = FastqListRowData(**dict(fastq_obj.model_dump(by_alias=True)))
 
@@ -411,7 +415,7 @@ async def get_fastq_list_row(fastq_id: str = Depends(sanitise_fqr_orcabus_id)) -
     description="Update the library associated with a Fastq List Row Object"
 )
 async def update_library(fastq_id: str = Depends(sanitise_fqr_orcabus_id),
-                         library_obj: LibraryPatch = Depends()) -> FastqListRowResponse:
+                         library_obj: LibraryPatch = Depends()) -> FastqListRowResponseDict:
     fastq_obj = FastqListRowData.get(fastq_id)
 
     library_obj = LibraryData(**dict(library_obj.model_dump(by_alias=True)))
@@ -506,7 +510,7 @@ async def get_jobs(
     description="Add QC Stats to a Fastq List Row Object"
 )
 async def add_qc_stats(fastq_id: str = Depends(sanitise_fqr_orcabus_id),
-                       qc_obj: QcInformationPatch = Depends()) -> FastqListRowResponse:
+                       qc_obj: QcInformationPatch = Depends()) -> FastqListRowResponseDict:
     fastq_obj = FastqListRowData.get(fastq_id)
     fastq_obj.qc = QcInformationData(**dict(qc_obj.model_dump(by_alias=True)))
     fastq_obj.save()
@@ -527,7 +531,7 @@ async def add_qc_stats(fastq_id: str = Depends(sanitise_fqr_orcabus_id),
     description="Add Read Count Information to a Fastq List Row Object"
 )
 async def add_read_count(fastq_id: str = Depends(sanitise_fqr_orcabus_id),
-                         read_count_obj: ReadCountInfoPatch = Depends()) -> FastqListRowResponse:
+                         read_count_obj: ReadCountInfoPatch = Depends()) -> FastqListRowResponseDict:
     fastq = FastqListRowData.get(fastq_id)
 
     # Get read count info
@@ -553,7 +557,7 @@ async def add_read_count(fastq_id: str = Depends(sanitise_fqr_orcabus_id),
     description="Add File Compression Information to a Fastq List Row Object"
 )
 async def add_file_compression(fastq_id: str = Depends(sanitise_fqr_orcabus_id),
-                               file_compression_obj: FileCompressionInfoPatch = Depends()) -> FastqListRowResponse:
+                               file_compression_obj: FileCompressionInfoPatch = Depends()) -> FastqListRowResponseDict:
     # Get fastq object
     fastq = FastqListRowData.get(fastq_id)
 
@@ -591,7 +595,7 @@ async def add_file_compression(fastq_id: str = Depends(sanitise_fqr_orcabus_id),
     description="Add Ntsm Storage Object to a Fastq List Row Object"
 )
 async def add_ntsm_uri(fastq_id: str = Depends(sanitise_fqr_orcabus_id),
-                       ntsm: NtsmUriUpdate = Depends()) -> FastqListRowResponse:
+                       ntsm: NtsmUriUpdate = Depends()) -> FastqListRowResponseDict:
     fastq = FastqListRowData.get(fastq_id)
     fastq.ntsm = NtsmUriData(**dict(ntsm.model_dump())).ntsm
     fastq.save()
@@ -612,7 +616,7 @@ async def add_ntsm_uri(fastq_id: str = Depends(sanitise_fqr_orcabus_id),
     tags=["fastq validate"],
     description="Validate a Fastq List Row Object"
 )
-async def validate_fastq(fastq_id: str = Depends(sanitise_fqr_orcabus_id)) -> FastqListRowResponse:
+async def validate_fastq(fastq_id: str = Depends(sanitise_fqr_orcabus_id)) -> FastqListRowResponseDict:
     fastq = FastqListRowData.get(fastq_id)
     fastq.is_valid = True
     fastq.save()
@@ -632,7 +636,7 @@ async def validate_fastq(fastq_id: str = Depends(sanitise_fqr_orcabus_id)) -> Fa
     tags=["fastq validate"],
     description="Invalidate a Fastq List Row Object, this is useful if an instrument run has failed"
 )
-async def invalidate_fastq(fastq_id: str = Depends(sanitise_fqr_orcabus_id)) -> FastqListRowResponse:
+async def invalidate_fastq(fastq_id: str = Depends(sanitise_fqr_orcabus_id)) -> FastqListRowResponseDict:
     fastq_obj = FastqListRowData.get(fastq_id)
 
     # Check if the fastq is part of a fastq set
@@ -659,7 +663,7 @@ async def invalidate_fastq(fastq_id: str = Depends(sanitise_fqr_orcabus_id)) -> 
     description="Add Fastq Pair Storage Object to a Fastq List Row Object"
 )
 async def add_fastq_pair_storage_object(fastq_id: str = Depends(sanitise_fqr_orcabus_id),
-                                        fastq_pair_storage_obj: FastqPairStorageObjectPatch = Depends()) -> FastqListRowResponse:
+                                        fastq_pair_storage_obj: FastqPairStorageObjectPatch = Depends()) -> FastqListRowResponseDict:
     fastq = FastqListRowData.get(fastq_id)
     # Check that no fastqPairStorageObject exists for this fastq id
     try:
@@ -682,7 +686,7 @@ async def add_fastq_pair_storage_object(fastq_id: str = Depends(sanitise_fqr_orc
     tags=["fastq update"],
     description="Remove Fastq Pair Storage Object from a Fastq List Row Object"
 )
-async def remove_fastq_pair_storage_object(fastq_id: str = Depends(sanitise_fqr_orcabus_id)) -> FastqListRowResponse:
+async def remove_fastq_pair_storage_object(fastq_id: str = Depends(sanitise_fqr_orcabus_id)) -> FastqListRowResponseDict:
     fastq = FastqListRowData.get(fastq_id)
     # Check that the fastqPairStorageObject exists for this fastq id
     try:

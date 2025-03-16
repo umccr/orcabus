@@ -1,19 +1,21 @@
 # Standard imports
-from typing import Self, Optional, ClassVar
+from typing import Optional, TypedDict, Union
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, model_validator, ConfigDict
 
 # Local imports
-from . import CompressionFormatEnum, QueryPaginatedResponse
+from . import CompressionFormatEnum
 from ..utils import (
-    to_snake, to_camel, get_fastq_endpoint_url
+    to_snake, to_camel
 )
 
 # Model imports
 from .file_storage import (
     FileStorageObjectData, FileStorageObjectResponse,
-    FileStorageObjectCreate, FileStorageObjectBase
+    FileStorageObjectCreate, FileStorageObjectBase, FileStorageObjectResponseWithNoS3DetailsDict,
+    FileStorageObjectResponseWithS3DetailsDict,
+
 )
 
 # Create class for a single fastq storage object
@@ -22,14 +24,46 @@ class FastqStorageObjectBase(FileStorageObjectBase):
     raw_md5sum: Optional[str] = None
 
 
-# Define the response, create and data classes
+class FastqStorageObjectResponseDictWithS3DetailsDict(FileStorageObjectResponseWithS3DetailsDict):
+    gzipCompressionSizeInBytes: Optional[int]
+    rawMd5sum: Optional[str]
+
+
+class FastqStorageObjectResponseDictWithNoS3DetailsDict(FileStorageObjectResponseWithNoS3DetailsDict):
+    gzipCompressionSizeInBytes: Optional[int]
+    rawMd5sum: Optional[str]
+
+
+FastqStorageObjectResponseDict = Union[FastqStorageObjectResponseDictWithS3DetailsDict, FastqStorageObjectResponseDictWithNoS3DetailsDict]
+
+
 class FastqStorageObjectResponse(FastqStorageObjectBase, FileStorageObjectResponse):
-    def model_dump(self, **kwargs) -> Self:
-        return jsonable_encoder(super().model_dump(exclude_none=True, **kwargs))
+    def model_dump(self, **kwargs) -> FastqStorageObjectResponseDict:
+        include_s3_details = False
+        if 'include_s3_details' in kwargs:
+            kwargs = kwargs.copy()
+            include_s3_details = kwargs.pop('include_s3_details')
+
+        # Get model dumps from each parent class separately
+        # Only grab the gzip_compression_size_in_bytes and raw_md5sum from the FastqStorageObjectBase
+        fastq_data = dict(filter(
+            lambda kv: to_snake(kv[0]) in ['gzip_compression_size_in_bytes', 'raw_md5sum'],
+            FastqStorageObjectBase.model_dump(self, **kwargs).items()
+        ))
+        file_data = FileStorageObjectResponse.model_dump(
+            self,
+            **kwargs, include_s3_details=include_s3_details
+        )
+
+        return jsonable_encoder(
+            dict(
+                **fastq_data,
+                **file_data
+            )
+        )
 
 class FastqStorageObjectCreate(FastqStorageObjectBase, FileStorageObjectCreate):
     pass
-
 
 class FastqStorageObjectData(FastqStorageObjectBase, FileStorageObjectData):
     pass
@@ -44,7 +78,13 @@ class FastqPairStorageObjectBase(BaseModel):
     compression_format: Optional[CompressionFormatEnum] = None
 
 
-# Response class
+# Response classes
+class FastqPairStorageObjectResponseDict(TypedDict):
+    r1: FastqStorageObjectResponseDict
+    r2: Optional[FastqStorageObjectResponseDict]
+    compressionFormat: Optional[CompressionFormatEnum]
+
+
 class FastqPairStorageObjectResponse(FastqPairStorageObjectBase):
     r1: FastqStorageObjectResponse
     r2: Optional[FastqStorageObjectResponse] = None
@@ -57,14 +97,23 @@ class FastqPairStorageObjectResponse(FastqPairStorageObjectBase):
     def to_camel_case(cls, values):
         return {to_camel(key): value for key, value in values.items()}
 
-    def model_dump(self, **kwargs) -> Self:
+    def model_dump(self, **kwargs) -> FastqPairStorageObjectResponseDict:
+        # Handle specific kwargs
+        include_s3_details = False
+        if 'include_s3_details' in kwargs:
+            kwargs = kwargs.copy()
+            include_s3_details = kwargs.pop('include_s3_details')
+
         # Complete recursive serialization manually
         data = super().model_dump(**kwargs)
 
+        if 'by_alias' not in kwargs:
+            kwargs['by_alias'] = True
+
         # Serialize r1 and r2
-        data['r1'] = self.r1.model_dump(by_alias=True)
+        data['r1'] = self.r1.model_dump(**kwargs, include_s3_details=include_s3_details)
         if self.r2:
-            data['r2'] = self.r2.model_dump(by_alias=True)
+            data['r2'] = self.r2.model_dump(**kwargs, include_s3_details=include_s3_details)
         return data
 
 
@@ -80,7 +129,7 @@ class FastqPairStorageObjectCreate(FastqPairStorageObjectBase):
     def to_camel_case(cls, values):
         return {to_camel(key): value for key, value in values.items()}
 
-    def model_dump(self, **kwargs) -> 'FastqPairStorageObjectResponse':
+    def model_dump(self, **kwargs) -> 'FastqPairStorageObjectResponseDict':
         return (
             FastqPairStorageObjectResponse(**super().model_dump(**kwargs)).
             model_dump(**kwargs)
@@ -90,7 +139,7 @@ class FastqPairStorageObjectCreate(FastqPairStorageObjectBase):
 class FastqPairStorageObjectPatch(BaseModel):
     fastq_pair_storage_obj: FastqPairStorageObjectCreate
 
-    def model_dump(self, **kwargs) -> 'FastqPairStorageObjectResponse':
+    def model_dump(self, **kwargs) -> 'FastqPairStorageObjectResponseDict':
         return (
             FastqPairStorageObjectResponse(
                 **dict(self.fastq_pair_storage_obj.model_dump(**kwargs))
@@ -104,19 +153,6 @@ class FastqPairStorageObjectData(FastqPairStorageObjectBase):
     def convert_keys_to_snake_case(cls, values):
         return {to_snake(k): v for k, v in values.items()}
 
-    def to_dict(self) -> 'FastqPairStorageObjectResponse':
+    def to_dict(self) -> 'FastqPairStorageObjectResponseDict':
         return FastqPairStorageObjectResponse(**self.model_dump()).model_dump()
 
-
-
-class FastqListRowQueryPaginatedResponse(QueryPaginatedResponse):
-    """
-    Job Query Response, includes a list of jobs, the total
-    """
-    fastq_id: str
-    url_placeholder: ClassVar[str] = get_fastq_endpoint_url()
-
-    @classmethod
-    def resolve_url_placeholder(cls, **kwargs) -> str:
-        # Get the url placeholder
-        return cls.url_placeholder

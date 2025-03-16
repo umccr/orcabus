@@ -25,7 +25,7 @@ need to use the model_validator to convert the keys to camel case before validat
 """
 
 # Standard imports
-from typing import Self
+from typing import Self, TypedDict
 from typing import TYPE_CHECKING
 from fastapi.routing import HTTPException
 from pydantic import Field, BaseModel, model_validator, ConfigDict
@@ -40,6 +40,11 @@ from ..utils import to_snake, to_camel
 class LibraryBase(BaseModel):
     orcabus_id: str = Field(default="")
     library_id: str = Field(default="")
+
+
+class LibraryResponseDict(TypedDict):
+    orcabusId: str
+    libraryId: str
 
 
 class LibraryResponse(LibraryBase):

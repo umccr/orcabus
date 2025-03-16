@@ -5,10 +5,14 @@ import { Duration, Stack, StackProps } from 'aws-cdk-lib';
 import * as fs from 'fs';
 import { vpcProps as mainVpcProps } from '../../../../../../config/constants';
 
+// Importing AWS CloudWatch Logs related modules
+import * as awsLogs from 'aws-cdk-lib/aws-logs';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+
 // Importing AWS Lambda related modules
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import { PythonUvFunction } from '../../../../components/uv-python-lambda-image-builder';
 import { DockerImageCode, DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
+import { PythonUvFunction } from '../../../../components/uv-python-lambda-image-builder';
 import { FilemanagerToolsPythonLambdaLayer } from '../../../../components/python-filemanager-tools-layer';
 import { MetadataToolsPythonLambdaLayer } from '../../../../components/python-metadata-tools-layer';
 import { FastqToolsPythonLambdaLayer } from '../../../../components/python-fastq-tools-layer';
@@ -41,7 +45,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 
 // Importing AWS Step Functions related modules
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
-import { IStateMachine } from 'aws-cdk-lib/aws-stepfunctions';
+import { IStateMachine, LogLevel } from 'aws-cdk-lib/aws-stepfunctions';
 
 // Importing AWS ECS related modules
 import * as ecs from 'aws-cdk-lib/aws-ecs';
@@ -50,10 +54,7 @@ import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets';
 
 // Importing AWS EC2 related modules
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { IVpc, Vpc } from 'aws-cdk-lib/aws-ec2';
-
-// Importing AWS CloudWatch Logs related modules
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
 
 // Importing CDK Nag related modules
 import { NagSuppressions } from 'cdk-nag';
@@ -163,7 +164,12 @@ export class FastqManagerStack extends Stack {
     });
 
     const ntsmLambdas = this.build_ntsm_evaluation_lambda_functions({
+      /* Fastq Tools */
       fastqToolsLayer: fastqToolsLayer.lambdaLayerVersionObj,
+      /* SSM and Secrets Manager */
+      hostnameSsmParameterObj: hostnameSsmParameterObj,
+      orcabusTokenSecretObj: orcabusTokenSecretObj,
+      ntsmBucket: ntsmBucket,
     });
 
     // Build the step functions
@@ -267,10 +273,6 @@ export class FastqManagerStack extends Stack {
 
     // Routes for API schemas
     this.add_http_routes(apiGateway, apiIntegration);
-  }
-
-  private get_ora_base_image_uri(ecrRespositoryName: string, imageTag: string): string {
-    return `${cdk.Aws.ACCOUNT_ID}.dkr.ecr.${cdk.Aws.REGION}.amazonaws.com/${ecrRespositoryName}:${imageTag}`;
   }
 
   private set_main_vpc() {
@@ -418,14 +420,30 @@ export class FastqManagerStack extends Stack {
         timeout: Duration.seconds(60),
         memorySize: 2048,
         layers: [props.fastqToolsLayer],
+        environment: {
+          /* SSM and Secrets Manager env vars */
+          HOSTNAME_SSM_PARAMETER: props.hostnameSsmParameterObj.parameterName,
+          ORCABUS_TOKEN_SECRET_ID: props.orcabusTokenSecretObj.secretName,
+        },
       }
     );
+    // Give lambda function permissions to secrets and ssm parameters
+    props.orcabusTokenSecretObj.grantRead(
+      getFastqListRowObjectsInFastqSetLambdaFunction.currentVersion
+    );
+    props.hostnameSsmParameterObj.grantRead(
+      getFastqListRowObjectsInFastqSetLambdaFunction.currentVersion
+    );
+
     const ntsmEvalLambdaFunction = new DockerImageFunction(this, 'ntsmEvalLambdaFunction', {
       code: DockerImageCode.fromImageAsset(path.join(__dirname, '../app/ntsm/lambdas/ntsm_eval')),
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.seconds(60),
       memorySize: 2048,
     });
+    // ntsm bucket will need permissions to download files from the ntsm bucket
+    props.ntsmBucket.grantRead(ntsmEvalLambdaFunction);
+
     const verifyRelatednessLambdaFunction = new PythonUvFunction(
       this,
       'verifyRelatednessLambdaFunction',
@@ -897,6 +915,14 @@ export class FastqManagerStack extends Stack {
       },
       // The evaluation workflows are express workflows
       stateMachineType: sfn.StateMachineType.EXPRESS,
+      // Enable logging on the state machine
+      logs: {
+        level: LogLevel.ALL,
+        // Create a new log group for the state machine
+        destination: new awsLogs.LogGroup(this, 'ntsmEvalXLogGroup', {
+          retention: RetentionDays.ONE_DAY,
+        }),
+      },
     });
 
     // Give the state machine permissions to invoke the lambdas
@@ -936,6 +962,14 @@ export class FastqManagerStack extends Stack {
       },
       // The evaluation workflows are express workflows
       stateMachineType: sfn.StateMachineType.EXPRESS,
+      // Enable logging on the state machine
+      logs: {
+        level: LogLevel.ALL,
+        // Create a new log group for the state machine
+        destination: new awsLogs.LogGroup(this, 'ntsmEvalXYLogGroup', {
+          retention: RetentionDays.ONE_DAY,
+        }),
+      },
     });
 
     // Give the state machine permissions to invoke the lambdas
@@ -992,6 +1026,11 @@ export class FastqManagerStack extends Stack {
         FILE_COMPRESSION_AWS_STEP_FUNCTION_ARN: props.fileCompressionSfn.stateMachineArn,
       },
       layers: [props.metadataLayer, props.fileManagerLayer],
+      bundling: {
+        buildArgs: {
+          TARGETPLATFORM: lambda.Architecture.ARM_64.dockerPlatform,
+        },
+      },
     });
 
     // Give lambda function permissions to put events on the event bus

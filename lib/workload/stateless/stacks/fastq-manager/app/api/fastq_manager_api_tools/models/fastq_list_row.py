@@ -6,7 +6,7 @@ from os import environ
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import Field, BaseModel, model_validator, ConfigDict, computed_field
-from typing import Optional, Self, List, ClassVar
+from typing import Optional, List, ClassVar, TypedDict
 
 # Layer imports
 from filemanager_tools import (
@@ -30,15 +30,15 @@ from ..utils import (
 
 from .fastq_pair import (
     FastqPairStorageObjectData, FastqPairStorageObjectResponse,
-    FastqPairStorageObjectCreate
+    FastqPairStorageObjectCreate, FastqPairStorageObjectResponseDict
 )
 from .file_storage import (
     FileStorageObjectData, FileStorageObjectResponse,
-    FileStorageObjectCreate
+    FileStorageObjectCreate, FileStorageObjectResponseDict
 )
 
-from .library import LibraryData, LibraryResponse
-from .qc import QcInformationData, QcInformationResponse, QcInformationCreate
+from .library import LibraryData, LibraryResponse, LibraryResponseDict
+from .qc import QcInformationData, QcInformationResponse, QcInformationCreate, QcInformationResponseDict
 
 
 class FastqListRowBase(BaseModel):
@@ -97,6 +97,24 @@ class FastqListRowWithId(FastqListRowBase, FastqListRowOrcabusId):
     pass
 
 
+class FastqListRowResponseDict(TypedDict):
+    id: str
+    fastqSetId: Optional[str]
+    index: str
+    lane: int
+    instrumentRunId: str
+    library: LibraryResponseDict
+    platform: Optional[PlatformEnum]
+    center: Optional[CenterEnum]
+    date: Optional[datetime]
+    readSet: Optional[FastqPairStorageObjectResponseDict]
+    qc: Optional[QcInformationResponseDict]
+    ntsm: Optional[FileStorageObjectResponseDict]
+    readCount: Optional[int]
+    baseCountEst: Optional[int]
+    isValid: Optional[bool]
+
+
 class FastqListRowResponse(FastqListRowWithId):
     # Identical to the CreateFastqListRow model but with the addition of the id field
     # Set the model configuration
@@ -119,15 +137,27 @@ class FastqListRowResponse(FastqListRowWithId):
         return {to_camel(k): v for k, v in values.items()}
 
     # Set the model_dump method response
-    def model_dump(self, **kwargs) -> Self:
+    def model_dump(self, **kwargs) -> FastqListRowResponseDict:
+        # Handle specific kwargs
+        include_s3_details = False
+        if 'include_s3_details' in kwargs:
+            kwargs = kwargs.copy()
+            include_s3_details = kwargs.pop('include_s3_details')
+
         # Recursively serialize the object
         data = super().model_dump(**kwargs)
 
         # Manually serialize the sub fields
         for field_name in ["library", "read_set", "qc", "ntsm"]:
             field = getattr(self, field_name)
-            if field is not None:
-                data[to_camel(field_name)] = field.model_dump()
+            if field is None:
+                continue
+            if field_name in ['read_set', 'ntsm']:
+                data[to_camel(field_name)] = field.model_dump(
+                    **kwargs, include_s3_details=include_s3_details
+                )
+            else:
+                data[to_camel(field_name)] = field.model_dump(**kwargs)
 
         return jsonable_encoder(data)
 
@@ -148,7 +178,7 @@ class FastqListRowCreate(FastqListRowBase):
 
     ntsm: Optional[FileStorageObjectCreate] = None
 
-    def model_dump(self, **kwargs) -> 'FastqListRowResponse':
+    def model_dump(self, **kwargs) -> 'FastqListRowResponseDict':
         return (
             FastqListRowResponse(**super().model_dump()).
             model_dump()
@@ -182,7 +212,7 @@ class FastqListRowData(FastqListRowWithId, Dyntastic):
     def library_orcabus_id(self) -> str:
         return self.library.orcabus_id
 
-    def to_dict(self, include_s3_details: Optional[bool] = False) -> 'FastqListRowResponse':
+    def to_dict(self, include_s3_details: Optional[bool] = False) -> 'FastqListRowResponseDict':
         """
         Alternative serialization path to return objects by camel case
         :return:
@@ -199,14 +229,20 @@ class FastqListRowData(FastqListRowWithId, Dyntastic):
                 ))
             )
 
+            # Check if the ntsm object is present
+            if self.ntsm and self.ntsm.ingest_id is not None:
+                s3_objs.extend(get_s3_objs_from_ingest_ids_map([self.ntsm.ingest_id]))
+
             for s3_obj_iter_ in s3_objs:
                 update_cache(s3_obj_iter_['ingestId'], s3_obj_iter_['fileObject'])
 
         return FastqListRowResponse(
             **self.model_dump(
-                exclude={"rgid_ext", "library_orcabus_id"}
+                exclude={"rgid_ext", "library_orcabus_id"},
             )
-        ).model_dump(by_alias=True)
+        ).model_dump(
+            include_s3_details=include_s3_details, by_alias=True
+        )
 
     def to_fastq_list_row(self) -> FastqListRowDict:
         """
@@ -278,7 +314,7 @@ class FastqListRowListResponse(BaseModel):
     fastq_list_rows: List[FastqListRowData]
     include_s3_details: Optional[bool] = False
 
-    def model_dump(self, **kwargs) -> List[FastqListRowResponse]:
+    def model_dump(self, **kwargs) -> List[FastqListRowResponseDict]:
         if len(self.fastq_list_rows) == 0:
             return []
 
@@ -296,10 +332,12 @@ class FastqListRowListResponse(BaseModel):
             fastqs_with_readsets
         ))
 
-        # Fixme, read2 may not exist
         r2_ingest_ids = list(map(
             lambda fastq_list_row_iter_: fastq_list_row_iter_.read_set.r2.ingest_id,
-            fastqs_with_readsets
+            list(filter(
+                lambda fastq_list_row_iter_: fastq_list_row_iter_.read_set.r2 is not None,
+                fastqs_with_readsets
+            ))
         ))
 
         # Get the
@@ -308,28 +346,28 @@ class FastqListRowListResponse(BaseModel):
         # Get the r2 s3 uris
         r2_s3_list_dict = get_s3_objs_from_ingest_ids_map(r2_ingest_ids)
 
+        ntsm_ingest_ids = list(map(
+            lambda fastq_list_row_iter_: fastq_list_row_iter_.ntsm.ingest_id,
+            list(filter(
+                lambda fastq_list_row_iter_: fastq_list_row_iter_.ntsm is not None,
+                fastqs_with_readsets
+            ))
+        ))
+
+        # Get the ntsm s3 uris
+        ntsm_s3_list_dict = get_s3_objs_from_ingest_ids_map(ntsm_ingest_ids)
+
         # Update the cache with the s3 uris
-        for row in (r1_s3_list_dict + r2_s3_list_dict):
+        for row in (r1_s3_list_dict + r2_s3_list_dict + ntsm_s3_list_dict):
             update_cache(row['ingestId'], row['fileObject'])
 
         # Now re-dump the fastq list rows
-        return list(map(lambda fastq_list_row_iter_: fastq_list_row_iter_.to_dict(), self.fastq_list_rows))
-
-
-# class LibraryPatch(BaseModel):
-#     library_obj: LibraryCreate
-#
-#     def model_dump(self, **kwargs) -> 'LibraryResponse':
-#         return (
-#             LibraryResponse(**dict(self.library_obj.model_dump(**kwargs))).
-#             model_dump(**kwargs)
-#         )
-
-
+        return list(map(lambda fastq_list_row_iter_: fastq_list_row_iter_.to_dict(include_s3_details=True), self.fastq_list_rows))
 
 
 class FastqListRowQueryPaginatedResponse(QueryPaginatedResponse):
     url_placeholder: ClassVar[str] = get_fastq_endpoint_url()
+    results: List[FastqListRowResponseDict]
 
     @classmethod
     def resolve_url_placeholder(cls, **kwargs) -> str:

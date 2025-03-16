@@ -48,12 +48,24 @@ async def sanitise_fqr_orcabus_id(fastq_id: str) -> str:
     raise ValueError(f"Invalid fastq list row id '{fastq_id}'")
 
 
-async def sanitise_fqs_orcabus_id(fastq_set_id: str) -> str:
+def sanitise_fqs_orcabus_id_sync(fastq_set_id: str) -> str:
     if ORCABUS_ULID_REGEX_MATCH.match(fastq_set_id):
         return fastq_set_id
     elif ORCABUS_ULID_REGEX_MATCH.match(f"{FQS_CONTEXT_PREFIX}.{fastq_set_id}"):
         return f"{FQS_CONTEXT_PREFIX}.{fastq_set_id}"
     raise ValueError(f"Invalid fastq set id '{fastq_set_id}'")
+
+
+async def sanitise_fqs_orcabus_id(fastq_set_id: str) -> str:
+    return sanitise_fqs_orcabus_id_sync(fastq_set_id)
+
+
+async def sanitise_fqs_orcabus_id_x(fastq_set_id_x: str) -> str:
+    return sanitise_fqs_orcabus_id_sync(fastq_set_id_x)
+
+
+async def sanitise_fqs_orcabus_id_y(fastq_set_id_y: str) -> str:
+    return sanitise_fqs_orcabus_id_sync(fastq_set_id_y)
 
 
 def get_aws_lambda_client() -> 'LambdaClient':

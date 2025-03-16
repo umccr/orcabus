@@ -45,7 +45,7 @@ from ....models import BoolQueryEnum, FastqListRowDict, EmptyDict, QueryPaginati
 from ....models.fastq_list_row import FastqListRowData
 from ....models.fastq_set import (
     FastqSetData, FastqSetResponse, FastqSetListResponse, FastqSetCreate,
-    FastqSetQueryPaginatedResponse
+    FastqSetQueryPaginatedResponse, FastqSetResponseDict
 )
 from ....models.library import LibraryData
 from ....models.merge_fastq_sets import MergePatch
@@ -54,6 +54,8 @@ from ....utils import (
     is_orcabus_ulid,
     sanitise_fqs_orcabus_id,
     sanitise_fqr_orcabus_id,
+    sanitise_fqs_orcabus_id_x,
+    sanitise_fqs_orcabus_id_y
 )
 
 router = APIRouter()
@@ -217,7 +219,7 @@ async def list_fastq_sets(
                     lambda fqs_iter_: FastqSetData.from_response(**fqs_iter_.to_dict()),
                     query_lists[0]
                 )),
-                include_s3_detail=include_s3_details
+                include_s3_details=include_s3_details
             ).model_dump(),
             query_pagination=pagination,
             params_response=dict(filter(
@@ -253,7 +255,7 @@ async def list_fastq_sets(
                     query_lists[0]
                 )
             )),
-            include_s3_detail=include_s3_details
+            include_s3_details=include_s3_details
         ).model_dump(by_alias=True),
         query_pagination=pagination,
         params_response=dict(filter(
@@ -280,11 +282,20 @@ async def list_fastq_sets(
     Please use the fastqSet endpoint if registering multiple fastqs simultaneously to reduce race conditions
     """)
 )
-async def create_fastq(fastq_set_obj_create: FastqSetCreate) -> FastqSetResponse:
+async def create_fastq(fastq_set_obj_create: FastqSetCreate) -> FastqSetResponseDict:
     # Confirm that the library id matches those in the fastq objects
     if len(set(list(map(
         lambda fastq_obj: fastq_obj.library.orcabus_id,
-        fastq_set_obj_create.fastq_set
+        # Iterate over each object in the fastq set, 'get' object if of type 'string'
+        # Otherwise parse the object itself
+        list(map(
+            lambda fastq_obj_iter_: (
+                    FastqListRowData.get(fastq_obj_iter_)
+                    if isinstance(fastq_obj_iter_, str)
+                    else fastq_obj_iter_
+            ),
+            fastq_set_obj_create.fastq_set
+        ))
     )))) > 1:
         raise HTTPException(
             status_code=409,
@@ -292,15 +303,17 @@ async def create_fastq(fastq_set_obj_create: FastqSetCreate) -> FastqSetResponse
         )
 
     # Confirm that the library id matches the library id in the fastq set
-    if fastq_set_obj_create.library.orcabus_id != fastq_set_obj_create.fastq_set[0].library.orcabus_id:
-        raise HTTPException(
-            status_code=409,
-            detail="Fastq set library id does not match those of the fastq objects"
-        )
+    first_fastq_obj = fastq_set_obj_create.fastq_set[0]
+    if isinstance(first_fastq_obj, str):
+        first_fastq_obj = FastqListRowData.get(first_fastq_obj)
 
     # Confirm that all fastq sets are unique
     rgid_exts = list(set(list(map(
-        lambda fastq_obj_iter_: FastqListRowData(**dict(fastq_obj_iter_.model_dump(by_alias=True))).rgid_ext,
+        lambda fastq_obj_iter_: (
+            FastqListRowData.get(fastq_obj_iter_).rgid_ext
+            if isinstance(fastq_obj_iter_, str)
+            else FastqListRowData(**dict(fastq_obj_iter_.model_dump(by_alias=True))).rgid_ext
+        ),
         fastq_set_obj_create.fastq_set
     ))))
     if len(rgid_exts) != len(fastq_set_obj_create.fastq_set):
@@ -398,6 +411,13 @@ async def create_fastq(fastq_set_obj_create: FastqSetCreate) -> FastqSetResponse
             detail="Fastq set contains invalid fastqs"
         )
 
+    # Ensure that the library id matches the library id in the fastq set
+    if fastq_set_data_obj.library.orcabus_id != first_fastq_obj.library.orcabus_id:
+        raise HTTPException(
+            status_code=409,
+            detail="Fastq set library id does not match those of the fastq objects"
+        )
+
     # Add the fastq_set_id to the fastq objects
     for fastq_obj in fastq_data_objs:
         fastq_obj.fastq_set_id = fastq_set_data_obj.id
@@ -430,18 +450,18 @@ async def create_fastq(fastq_set_obj_create: FastqSetCreate) -> FastqSetResponse
 async def get_fastq(
         fastq_set_id: str = Depends(sanitise_fqs_orcabus_id),
         # Include s3 uri - resolve the s3 uri if requested
-        include_s3_detail: Optional[bool] = Query(
+        include_s3_details: Optional[bool] = Query(
             default=False,
-            alias="includeS3Detail",
+            alias="includeS3Details",
             description="Include the s3 uris for the fastq objects"
         )
-) -> FastqSetResponse:
+) -> FastqSetResponseDict:
     try:
         return FastqSetListResponse(
             fastq_set_list=[
                 FastqSetData.get(fastq_set_id)
             ],
-            include_s3_detail=include_s3_detail
+            include_s3_details=include_s3_details
         ).model_dump(by_alias=True)[0]
     except DoesNotExist as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -465,7 +485,7 @@ async def get_fastq_list_row(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id
     tags=["fastqset update"],
     description="Link a fastq object to this fastq set"
 )
-async def link_fastq(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id), fastq_id = Depends(sanitise_fqr_orcabus_id)) -> FastqSetResponse:
+async def link_fastq(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id), fastq_id = Depends(sanitise_fqr_orcabus_id)) -> FastqSetResponseDict:
     fastq_set_obj = FastqSetData.get(fastq_set_id)
     fastq_obj = FastqListRowData.get(fastq_id)
 
@@ -574,7 +594,7 @@ async def unlink_fastq(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id), fas
     tags=["fastqset update"],
     description="Set this fastq set as the current fastq set for this library"
 )
-async def set_current_fastq_set(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id)) -> FastqSetResponse:
+async def set_current_fastq_set(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id)) -> FastqSetResponseDict:
     fastq_set_obj = FastqSetData.get(fastq_set_id)
 
     # Check fastq set exists
@@ -620,7 +640,7 @@ async def set_current_fastq_set(fastq_set_id: str = Depends(sanitise_fqs_orcabus
     tags=["fastqset update"],
     description="Set current fastq set flag to false for this fastq set"
 )
-async def set_current_fastq_set(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id)) -> FastqSetResponse:
+async def set_current_fastq_set(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id)) -> FastqSetResponseDict:
     fastq_set_obj = FastqSetData.get(fastq_set_id)
 
     # Check fastq set exists
@@ -653,7 +673,7 @@ async def set_current_fastq_set(fastq_set_id: str = Depends(sanitise_fqs_orcabus
     tags=["fastqset update"],
     description="Allow additional fastqs to this fastq set"
 )
-async def set_allow_additional_fastqs(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id)) -> FastqSetResponse:
+async def set_allow_additional_fastqs(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id)) -> FastqSetResponseDict:
     fastq_set_obj = FastqSetData.get(fastq_set_id)
 
     # Check fastq set exists
@@ -702,7 +722,7 @@ async def set_allow_additional_fastqs(fastq_set_id: str = Depends(sanitise_fqs_o
     tags=["fastqset update"],
     description="Disallow additional fastqs to this fastq set"
 )
-async def set_allow_additional_fastqs_to_false(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id)) -> FastqSetResponse:
+async def set_allow_additional_fastqs_to_false(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id)) -> FastqSetResponseDict:
     fastq_set_obj = FastqSetData.get(fastq_set_id)
 
     # Check fastq set exists
@@ -736,7 +756,7 @@ async def set_allow_additional_fastqs_to_false(fastq_set_id: str = Depends(sanit
     tags=["fastqset merge"],
     description="Merge multiple fastq sets into a single fastq set"
 )
-async def merge_fastq_sets(fastq_set_ids: MergePatch = Depends()) -> FastqSetResponse:
+async def merge_fastq_sets(fastq_set_ids: MergePatch = Depends()) -> FastqSetResponseDict:
     # Check that the fastq set ids are unique
     fastq_set_ids = fastq_set_ids.fastq_set_ids
     if len(list(set(fastq_set_ids))) != len(fastq_set_ids):
@@ -856,7 +876,7 @@ async def validate_ntsm_internal(fastq_set_id: str = Depends(sanitise_fqs_orcabu
 
     # Get the fastq list rows
     fastq_list_rows = list(map(
-        lambda fastq_obj_iter_: FastqListRowData.get(fastq_obj_iter_.id),
+        lambda fastq_set_id_iter: FastqListRowData.get(fastq_set_id_iter),
         fastq_set_obj.fastq_set_ids
     ))
 
@@ -882,7 +902,7 @@ async def validate_ntsm_internal(fastq_set_id: str = Depends(sanitise_fqs_orcabu
     tags=["fastqset ntsm"],
     description="Validate all fastq list rows in the ntsm match, run all-by-all on the ntsms in the fastq set"
 )
-async def validate_ntsm_internal(fastq_set_id_x: str = Depends(sanitise_fqs_orcabus_id), fastq_set_id_y = Depends(sanitise_fqs_orcabus_id)) -> Dict:
+async def validate_ntsm_internal(fastq_set_id_x: str = Depends(sanitise_fqs_orcabus_id_x), fastq_set_id_y = Depends(sanitise_fqs_orcabus_id_y)) -> Dict:
     # Get the fastq set object
     fastq_set_obj_x = FastqSetData.get(fastq_set_id_x)
     fastq_set_obj_y = FastqSetData.get(fastq_set_id_y)
@@ -896,7 +916,7 @@ async def validate_ntsm_internal(fastq_set_id_x: str = Depends(sanitise_fqs_orca
 
     # Get the fastq list rows
     fastq_list_rows_x = list(map(
-        lambda fastq_obj_iter_: FastqListRowData.get(fastq_obj_iter_.id),
+        lambda fastq_obj_iter_: FastqListRowData.get(fastq_obj_iter_),
         fastq_set_obj_x.fastq_set_ids
     ))
 
@@ -919,7 +939,7 @@ async def validate_ntsm_internal(fastq_set_id_x: str = Depends(sanitise_fqs_orca
 
     # Get the fastq list rows
     fastq_list_rows_y = list(map(
-        lambda fastq_obj_iter_: FastqListRowData.get(fastq_obj_iter_.id),
+        lambda fastq_obj_iter_: FastqListRowData.get(fastq_obj_iter_),
         fastq_set_obj_y.fastq_set_ids
     ))
 

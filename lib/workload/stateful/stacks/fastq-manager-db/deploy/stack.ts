@@ -196,11 +196,14 @@ export class FastqManagerTable extends cdk.Stack {
   }
 
   private add_buckets(props: FastqManagerTableStackProps) {
+    // Add the ntsm bucket with event bridge enabled
     new s3.Bucket(this, 'ntsm_bucket', {
       bucketName: props.ntsmBucketName,
       removalPolicy: props.removalPolicy || RemovalPolicy.RETAIN_ON_UPDATE_OR_DELETE,
+      eventBridgeEnabled: true, // So that the filemanager can listen to events
     });
 
+    // Add fastq manager cache bucket
     new s3.Bucket(this, 'fastq_manager_cache_bucket', {
       bucketName: props.fastqManagerCacheBucketName,
       removalPolicy: props.removalPolicy || RemovalPolicy.RETAIN_ON_UPDATE_OR_DELETE,

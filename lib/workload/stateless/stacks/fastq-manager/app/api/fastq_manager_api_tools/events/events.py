@@ -12,8 +12,8 @@ from ..globals import (
     FastqListRowEventDetailTypeEnum,
     FastqSetEventDetailTypeEnum
 )
-from ..models.fastq_list_row import FastqListRowResponse
-from ..models.fastq_set import FastqSetResponse
+from ..models.fastq_list_row import FastqListRowResponseDict
+from ..models.fastq_set import FastqSetResponse, FastqSetResponseDict
 
 if typing.TYPE_CHECKING:
     from mypy_boto3_events import EventBridgeClient
@@ -43,14 +43,14 @@ def put_event(event_detail_type, event_detail):
 
 
 # CREATE events
-def put_fastq_list_row_create_event(fastq_list_row_response_object: FastqListRowResponse):
+def put_fastq_list_row_create_event(fastq_list_row_response_object: FastqListRowResponseDict):
     """
     Put a create event to the event bus.
     """
     put_event(FastqListRowEventDetailTypeEnum.CREATE.value, fastq_list_row_response_object)
 
 
-def put_fastq_set_create_event(fastq_set_create_event: FastqSetResponse):
+def put_fastq_set_create_event(fastq_set_create_event: FastqSetResponseDict):
     """
     Put a create event to the event bus.
     """
@@ -58,14 +58,14 @@ def put_fastq_set_create_event(fastq_set_create_event: FastqSetResponse):
 
 
 # Update events
-def put_fastq_list_row_update_event(fastq_list_row_response_object: FastqListRowResponse):
+def put_fastq_list_row_update_event(fastq_list_row_response_object: FastqListRowResponseDict):
     """
     Put a update event to the event bus.
     """
     put_event(FastqListRowEventDetailTypeEnum.UPDATE.value, fastq_list_row_response_object)
 
 
-def put_fastq_set_update_event(fastq_set_update_event: FastqSetResponse):
+def put_fastq_set_update_event(fastq_set_update_event: FastqSetResponseDict):
     """
     Put a update event to the event bus.
     """
