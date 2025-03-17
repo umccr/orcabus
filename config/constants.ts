@@ -956,3 +956,14 @@ export const s3CopyStepsBucket: Record<AppStage, string> = {
   [AppStage.GAMMA]: 'stg-stepss3copystack-stepss3copyworking01b34927-szqxpff5lsbx', // pragma: allowlist secret
   [AppStage.PROD]: 'prod-stepss3copystack-stepss3copyworking01b34927-mp9y88d9e1py', // pragma: allowlist secret
 };
+
+/*
+Fastq Unarchiving service
+*/
+export const fastqUnarchivingJobTableName = 'fastqUnarchivingDynamoDBTable';
+export const fastqUnarchivingJobTableIndexes = ['status', 'job_type'];
+export const fastqUnarchivingEventDetailType = {
+  createJob: 'FastqUnarchivingJobCreated',
+  updateJob: 'FastqUnarchivingJobUpdated',
+};
+export const fastqUnarchivingManagerEventSource = 'orcabus.fastqunarchivingmanager';

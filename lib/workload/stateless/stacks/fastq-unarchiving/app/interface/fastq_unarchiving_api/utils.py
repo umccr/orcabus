@@ -3,10 +3,7 @@
 # Imports
 import json
 import re
-from functools import reduce
-from operator import concat
 from os import environ
-from typing import Optional, List
 import ulid
 import boto3
 import typing
@@ -20,6 +17,8 @@ from .globals import (
     ORCABUS_ULID_REGEX_MATCH,
     FQLR_CONTEXT_PREFIX, UNARCHIVE_FASTQ_JOB_PREFIX
 )
+from .models import JobStatus
+
 
 if typing.TYPE_CHECKING:
     from mypy_boto3_lambda import LambdaClient
@@ -48,12 +47,15 @@ async def sanitise_fqr_orcabus_id(fastq_id: str) -> str:
 
 
 async def sanitise_ufr_orcabus_id(job_id: str) -> str:
-    if UNARCHIVE_FASTQ_JOB_PREFIX.match(job_id):
+    if ORCABUS_ULID_REGEX_MATCH.match(job_id):
         return job_id
     elif ORCABUS_ULID_REGEX_MATCH.match(f"{UNARCHIVE_FASTQ_JOB_PREFIX}.{job_id}"):
         return f"{UNARCHIVE_FASTQ_JOB_PREFIX}.{job_id}"
     raise ValueError(f"Invalid job id '{job_id}'")
 
+
+async def sanitise_status(status: JobStatus) -> str:
+    return status
 
 def get_aws_lambda_client() -> 'LambdaClient':
     return boto3.client('lambda')

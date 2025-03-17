@@ -16,7 +16,7 @@ Update helpers for the update script.
 from typing import Optional
 
 # Local imports
-from .globals import FASTQ_UNARCHIVING_SUBDOMAIN_NAME, JobStatus
+from .globals import JobStatus, JOB_ENDPOINT
 from .request_helpers import patch_request
 from .models import Job
 
@@ -29,7 +29,7 @@ def update_status(job_id: str, job_status: JobStatus, error_message: Optional[st
     :param qc_stats: Dictionary of QC stats
     """
     return patch_request(
-        f"{FASTQ_UNARCHIVING_SUBDOMAIN_NAME}/{job_id}",
+        f"{JOB_ENDPOINT}/{job_id}",
         params=dict(filter(
             lambda x: x[1] is not None,
             {

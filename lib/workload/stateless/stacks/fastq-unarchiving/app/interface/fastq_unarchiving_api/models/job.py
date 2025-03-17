@@ -11,6 +11,7 @@ from os import environ
 from typing import Optional, Self, ClassVar
 
 from dyntastic import Dyntastic
+from fastapi.encoders import jsonable_encoder
 from pydantic import Field, BaseModel, model_validator, ConfigDict
 from datetime import datetime
 from enum import Enum
@@ -79,6 +80,10 @@ class JobCreate(JobBase):
         )
 
 
+class JobPatch(BaseModel):
+    status: JobStatus
+
+
 class JobData(JobWithId, Dyntastic):
     """
     The job data object
@@ -93,9 +98,11 @@ class JobData(JobWithId, Dyntastic):
         Alternative serialization path to return objects by camel case
         :return:
         """
-        return JobResponse(
-            **self.model_dump()
-        ).model_dump(by_alias=True)
+        return jsonable_encoder(
+            JobResponse(
+                **self.model_dump()
+            ).model_dump(by_alias=True)
+        )
 
 
 class JobQueryPaginatedResponse(QueryPaginatedResponse):

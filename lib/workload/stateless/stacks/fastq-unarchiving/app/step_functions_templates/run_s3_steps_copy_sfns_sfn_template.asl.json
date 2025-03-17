@@ -1,5 +1,6 @@
 {
   "Comment": "A description of my state machine",
+  "QueryLanguage": "JSONata",
   "StartAt": "Set Vars",
   "States": {
     "Set Vars": {
@@ -9,9 +10,9 @@
         "jobId": "{% $states.input.jobId %}",
         "fastqIdList": "{% $states.input.fastqIdList %}",
         "s3StepsCopyBucket": "${__aws_s3_copy_steps_bucket__}",
-        "s3StepsCopyCsvKey": "{% '${__aws_s3_copy_steps_key_prefix__}' & $states.context.Execution.Id & '.__index__.csv' %}",
+        "s3StepsCopyCsvKey": "{% '${__aws_s3_copy_steps_key_prefix__}' & $states.context.Execution.Name & '.__index__.csv' %}",
         "restoreBucket": "${__aws_s3_pipeline_cache_bucket__}",
-        "restorePrefix": "{% '${__aws_s3_pipeline_cache_restore_prefix__}' & '/' & $now('year=[Y0001]/month=[M01]/day=[D01]') & '/' & $states.context.Execution.Name & '/' %}"
+        "restorePrefix": "{% '${__aws_s3_pipeline_cache_restore_prefix__}' & $now('year=[Y0001]/month=[M01]/day=[D01]') & '/' & $states.context.Execution.Name & '/' %}"
       }
     },
     "Wait": {
@@ -77,17 +78,15 @@
       "Items": "{% $states.input.fastqIdsByInstrumentRunId %}",
       "ItemSelector": {
         "instrumentRunId": "{% $states.context.Map.Item.Value.instrumentRunId %}",
-        "fastqIdList": "{% $states.context.Map.Item.Value.fastqIdList %}",
+        "fastqIdListMapIter": "{% $states.context.Map.Item.Value.fastqIdList %}",
         "s3StepsCopyBucket": "{% $s3StepsCopyBucket %}",
-        "s3StepsCopyKey": "{% $replace($s3StepsCopyCsvKey, '__index__', $states.context.Map.Item.Index %}",
-        "restoreBucket": "{% $restoreBucket %}",
-        "restorePrefix": "{% $restorePrefix & $states.context.Map.Item.Value.instrumentRunId & '/' %}",
-        "indexIter": "{% $states.context.Map.Item.Index %}"
+        "s3StepsCopyKeyMapIter": "{% /* https://try.jsonata.org/mZnjTty1- */ $replace($s3StepsCopyCsvKey, '__index__', $string($states.context.Map.Item.Index)) %}",
+        "restoreBucketMapIter": "{% $restoreBucket %}",
+        "restorePrefixMapIter": "{% $restorePrefix & $states.context.Map.Item.Value.instrumentRunId & '/' %}"
       },
       "ItemProcessor": {
         "ProcessorConfig": {
-          "Mode": "DISTRIBUTED",
-          "ExecutionType": "STANDARD"
+          "Mode": "INLINE"
         },
         "StartAt": "Set vars in map",
         "States": {
@@ -96,11 +95,11 @@
             "Next": "Generate steps function csv and upload to s3",
             "Assign": {
               "instrumentRunIdMapIter": "{% $states.input.instrumentRunId %}",
-              "fastqIdListMapIter": "{% $states.input.fastqIdList %}",
+              "fastqIdListMapIter": "{% $states.input.fastqIdListMapIter %}",
               "s3StepsCopyBucketMapIter": "{% $states.input.s3StepsCopyBucket %}",
-              "s3StepsCopyKeyMapIter": "{% $replace($s3StepsCopyKey, '__index__', $states.input.indexIter) %}",
-              "restoreBucketMapIter": "{% $states.input.restoreBucket %}",
-              "restorePrefixMapIter": "{% $states.input.restorePrefix %}"
+              "s3StepsCopyKeyMapIter": "{% $states.input.s3StepsCopyKeyMapIter %}",
+              "restoreBucketMapIter": "{% $states.input.restoreBucketMapIter %}",
+              "restorePrefixMapIter": "{% $states.input.restorePrefixMapIter %}"
             }
           },
           "Generate steps function csv and upload to s3": {
@@ -110,9 +109,9 @@
             "Arguments": {
               "FunctionName": "${__create_csv_for_s3_steps_copy_lambda_function_arn__}",
               "Payload": {
-                "fastqIdList": "{% $fastqIdList %}",
-                "s3StepsCopyBucket": "{% $s3StepsCopyBucket %}",
-                "s3StepsCopyKey": "{% $s3StepsCopyKey %}"
+                "fastqIdList": "{% $fastqIdListMapIter %}",
+                "s3StepsCopyBucket": "{% $s3StepsCopyBucketMapIter %}",
+                "s3StepsCopyKey": "{% $s3StepsCopyKeyMapIter %}"
               }
             },
             "Retry": [
@@ -138,15 +137,15 @@
               "StateMachineArn": "${__aws_s3_steps_copy_sfn_arn__}",
               "Input": {
                 "sourceFilesCsvKey": "{% $s3StepsCopyKeyMapIter %}",
-                "destinationBucket": "{% $restoreBucket %}",
-                "destinationPrefixKey": "{% $restorePrefix %}",
+                "destinationBucket": "{% $restoreBucketMapIter %}",
+                "destinationPrefixKey": "{% $restorePrefixMapIter %}",
                 "maxItemsPerBatch": 1
               }
             },
             "Next": "For each output file",
             "Catch": [
               {
-                "ErrorEquals": ["Update archiving failure", "States.ALL"],
+                "ErrorEquals": ["States.ALL"],
                 "Next": "Add failed as output",
                 "Comment": "Steps function failure"
               }
@@ -167,6 +166,18 @@
           },
           "For each output file": {
             "Type": "Map",
+            "ItemReader": {
+              "Resource": "arn:aws:states:::s3:listObjectsV2",
+              "Arguments": {
+                "Bucket": "{% $restoreBucketMapIter %}",
+                "Prefix": "{% $restorePrefixMapIter %}"
+              }
+            },
+            "ItemSelector": {
+              "bucketIter": "{% $states.context.Map.Item.Value.Bucket %}",
+              "keyIter": "{% $states.context.Map.Item.Value.Key %}",
+              "fastqIdIter": "{% $fastqIdListMapIter %}"
+            },
             "ItemProcessor": {
               "ProcessorConfig": {
                 "Mode": "DISTRIBUTED",
@@ -178,10 +189,10 @@
                   "Type": "Pass",
                   "Next": "Find Original Ingest ID",
                   "Assign": {
-                    "fastqIdList": "{% $states.input.fastqIds %}",
-                    "bucket": "{% $states.input.bucket %}",
-                    "key": "{% $states.input.key %}",
-                    "s3Uri": "{% 's3://' & $states.input.bucket + '/' + $states.input.key %}"
+                    "fastqIdListIngestMapIter": "{% $states.input.fastqIds %}",
+                    "bucketIngestMapIter": "{% $states.input.bucket %}",
+                    "keyIngestMapIter": "{% $states.input.key %}",
+                    "s3UriIngestMapIter": "{% 's3://' & $states.input.bucket + '/' + $states.input.key %}"
                   }
                 },
                 "Find Original Ingest ID": {
@@ -190,8 +201,8 @@
                   "Arguments": {
                     "FunctionName": "${__get_original_ingest_id_lambda_function_arn__}",
                     "Payload": {
-                      "fastqIdList": "{% $fastqIdList %}",
-                      "s3Uri": "{% $s3Uri %}"
+                      "fastqIdList": "{% $fastqIdListIngestMapIter %}",
+                      "s3Uri": "{% $s3UriIngestMapIter %}"
                     }
                   },
                   "Retry": [
@@ -209,9 +220,9 @@
                     }
                   ],
                   "Next": "Manually update ingest id",
-                  "Assign": {
-                    "fastqIdMapIter": "{% $states.result.Payload.fastqId %}",
-                    "ingestIdMapIter": "{% $states.result.Payload.ingestId %}"
+                  "Output": {
+                    "fastqId": "{% $states.result.Payload.fastqId %}",
+                    "ingestId": "{% $states.result.Payload.ingestId %}"
                   }
                 },
                 "Manually update ingest id": {
@@ -221,10 +232,10 @@
                   "Arguments": {
                     "FunctionName": "${__update_ingest_id_lambda_function_arn__}",
                     "Payload": {
-                      "fastqId": "{% $fastqIdMapIter %}",
-                      "ingestId": "{% $ingestIdMapIter %}",
-                      "bucket": "{% $bucket %}",
-                      "key": "{% $key %}"
+                      "fastqId": "{% $states.input.fastqId %}",
+                      "ingestId": "{% $states.input.ingestId %}",
+                      "bucket": "{% $bucketIngestMapIter %}",
+                      "key": "{% $keyIngestMapIter %}"
                     }
                   },
                   "Retry": [
@@ -254,7 +265,7 @@
                   "Type": "Pass",
                   "End": true,
                   "Output": {
-                    "errorMessage": "{% 'Ingest ID update s3 uri ' & $s3Uri & '  failed to update ingest id ' & $ingestIdMapIter & ' for fastq id ' & $fastqIdMapIter' %}",
+                    "errorMessage": "{% 'Ingest ID update s3 uri ' & $s3UriIngestMapIter %}",
                     "hasError": true
                   }
                 }
@@ -262,28 +273,14 @@
             },
             "End": true,
             "Label": "Foreachoutputfile",
-            "MaxConcurrency": 1000,
-            "ItemReader": {
-              "Resource": "arn:aws:states:::s3:listObjectsV2",
-              "Arguments": {
-                "Bucket": "{% $restoreBucket %}",
-                "Prefix": "{% $restorePrefix %}"
-              }
-            },
-            "ItemSelector": {
-              "bucketIter": "{% $states.context.Map.Item.Value.Bucket %}",
-              "keyIter": "{% $states.context.Map.Item.Value.Key %}",
-              "fastqIds": "{% $fastqIdList %}"
-            }
+            "MaxConcurrency": 1000
           }
         }
       },
-      "Label": "Foreachinstrumentrunid",
-      "MaxConcurrency": 1000,
       "Next": "Update job database",
-      "Assign": {
-        "hasError": "{% /* Check if any iterable of hasError is set to true  -  https://try.jsonata.org/9IqHtAIc0 */\n$sum(\n  [\n    $map($.states.result, function($resultIter){$resultIter.hasError = true ? 1 : 0})\n  ]\n) > 0 ? true : false %}",
-        "errorMessages": "{% /* Check if any iterable of hasError is set to true  -  https://try.jsonata.org/PZX8zUmWZ */\n(\n  $appendMessages := function($i, $j){$i & \" \" & $j};\n  $reduce(\n    [\n      $map($, function($resultIter){$resultIter.errorMessage})      \n    ],\n    $appendMessages\n  )\n)\n %}"
+      "Output": {
+        "hasError": "{% /* Check if any iterable of hasError is set to true  -  https://try.jsonata.org/9IqHtAIc0 */\n$sum(\n  [\n    $map($states.result, function($resultIter){$resultIter.hasError = true ? 1 : 0})\n  ]\n) > 0 ? true : false %}",
+        "errorMessages": "{% /* Check if any iterable of hasError is set to true  -  https://try.jsonata.org/PZX8zUmWZ */\n(\n  $appendMessages := function($i, $j){$i & \" \" & $j};\n  $reduce(\n    [\n      $map($states.result, function($resultIter){$resultIter.errorMessage})      \n    ],\n    $appendMessages\n  )\n)\n %}"
       }
     },
     "Update job database": {
@@ -315,6 +312,5 @@
       ],
       "End": true
     }
-  },
-  "QueryLanguage": "JSONata"
+  }
 }

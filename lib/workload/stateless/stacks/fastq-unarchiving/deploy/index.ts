@@ -55,6 +55,7 @@ import {
   sharedLambdaFunctionObjects,
   sharedLambdaProps,
 } from './interfaces';
+import { FastqUnarchivingToolsPythonLambdaLayer } from '../../../../components/python-fastq-unarchiving-tools-layer';
 
 export type FastqUnarchivingManagerStackProps = FastqUnarchivingManagerStackConfig & cdk.StackProps;
 
@@ -90,7 +91,7 @@ export class FastqUnarchivingManagerStack extends Stack {
     });
 
     // Create the fastq unarchiving tools layer
-    const fastqUnarchivingToolsLayer = new FastqToolsPythonLambdaLayer(
+    const fastqUnarchivingToolsLayer = new FastqUnarchivingToolsPythonLambdaLayer(
       this,
       'fastq-unarchiving-tools-layer',
       {
@@ -320,7 +321,7 @@ export class FastqUnarchivingManagerStack extends Stack {
       definitionSubstitutions: {
         /* S3 Steps copy stuff */
         __aws_s3_copy_steps_bucket__: s3StepsCopyBucket.bucketName,
-        __aws_s3_copy_steps_key_prefix__: 'FASTQ_UNARCHIVING/',
+        __aws_s3_copy_steps_key_prefix__: props.s3StepsCopy.s3StepsCopyPrefix,
         __aws_s3_steps_copy_sfn_arn__: s3StepsCopySfn.stateMachineArn,
         /* Pipeline cache bucket stuff */
         __aws_s3_pipeline_cache_bucket__: props.s3Byob.bucketName,
@@ -370,7 +371,7 @@ export class FastqUnarchivingManagerStack extends Stack {
 
   private build_api_lambda_function(props: LambdaApiFunctionProps) {
     const lambdaApiFunction = new PythonUvFunction(this, 'FastqUnarchivingManagerApi', {
-      entry: path.join(__dirname, '../app/api'),
+      entry: path.join(__dirname, '../app/interface'),
       runtime: lambda.Runtime.PYTHON_3_12,
       architecture: lambda.Architecture.ARM_64,
       index: 'handler.py',
@@ -404,6 +405,8 @@ export class FastqUnarchivingManagerStack extends Stack {
     props.hostnameSsmParameterObj.grantRead(lambdaApiFunction.currentVersion);
 
     // Give lambda execution permissions to the unarchiving sfn
+    // Grant Execution permissions to the state machine gives the lambda ability to both
+    // start and stop the state machine
     props.fastqUnarchivingStateMachine.grantStartExecution(lambdaApiFunction.currentVersion);
 
     // Allow read/write access to the dynamodb table

@@ -21,6 +21,7 @@ export interface EventDetailTypeProps {
 export interface S3StepsCopyProps {
   s3StepsCopyBucketName: string;
   s3StepsFunctionArn: string;
+  s3StepsCopyPrefix: string;
 }
 
 export interface S3ByobProps {

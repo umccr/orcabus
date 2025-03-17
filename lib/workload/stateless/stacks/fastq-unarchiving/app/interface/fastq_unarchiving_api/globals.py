@@ -4,6 +4,11 @@ import re
 from enum import Enum
 from os import environ
 
+import typing
+
+if typing.TYPE_CHECKING:
+    from .models.job import JobPatch
+
 # Add context prefix - fastq list row
 FQLR_CONTEXT_PREFIX = "fqr"  # Fastq List Row
 UNARCHIVE_FASTQ_JOB_PREFIX = "ufj"  # Unarchive Job Prefix
@@ -25,3 +30,9 @@ UNARCHIVING_JOB_STATE_MACHINE_ARN_ENV_VAR = "UNARCHIVING_JOB_STATE_MACHINE_ARN"
 class JobEventDetailTypeEnum(Enum):
     CREATE = environ[EVENT_DETAIL_TYPE_CREATE_JOB_ENV_VAR]
     UPDATE = environ[EVENT_DETAIL_TYPE_UPDATE_JOB_ENV_VAR]
+
+
+def get_default_job_patch_entry() -> 'JobPatch':
+    from .models.job import JobPatch
+    from .models import JobStatus
+    return JobPatch(**dict({"status": JobStatus.RUNNING}))

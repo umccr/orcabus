@@ -63,3 +63,34 @@ def handler(event, context) -> Dict[str, List[Dict[str, Union[str, List[str]]]]]
         "fastqIdsByInstrumentRunId": instrument_run_id_list
     }
 
+
+# if __name__ == "__main__":
+#     import json
+#     from os import environ
+#     environ['AWS_PROFILE'] = 'umccr-development'
+#     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
+#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "fastqIdList": [
+#                         "fqr.01JP12M6BJ041G2VMCKGW4VNNC"
+#                     ]
+#                 },
+#                 None
+#             ),
+#             indent=4
+#         )
+#     )
+#
+#     # {
+#     #     "fastqIdsByInstrumentRunId": [
+#     #         {
+#     #             "instrumentRunId": "240424_A01052_0193_BH7JMMDRX5",
+#     #             "fastqIdList": [
+#     #                 "fqr.01JP12M6BJ041G2VMCKGW4VNNC"
+#     #             ]
+#     #         }
+#     #     ]
+#     # }

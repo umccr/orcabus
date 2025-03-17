@@ -1,37 +1,35 @@
 import {
   AppStage,
-  fastqListRowTableName,
+  /* API Gateway */
   cognitoApiGatewayConfig,
   corsAllowOrigins,
   logsApiGatewayConfig,
+  /* Secrets and ssms */
   jwtSecretName,
   hostedZoneNameParameterPath,
-  fastqListRowManagerIndexes,
-  fastqSetTableName,
-  fastqSetManagerIndexes,
-  fastqJobTableName,
-  fastqJobManagerIndexes,
-  FastqUnarchivingManagerCacheBucket,
-  ntsmBucket,
-  FastqUnarchivingManagerEventSource,
-  FastqUnarchivingManagerEventDetails,
+  /* DyanmoDB */
+  fastqUnarchivingJobTableName,
+  fastqUnarchivingJobTableIndexes,
+  /* S3 */
   icav2PipelineCacheBucket,
   icav2PipelineCachePrefix,
+  s3CopyStepsBucket,
+  s3CopyStepsFunctionArn,
+  /* Events */
   eventBusName,
+  fastqUnarchivingEventDetailType,
+  fastqUnarchivingManagerEventSource,
 } from '../constants';
 
+import { FastqUnarchivingManagerTableConfig } from '../../lib/workload/stateful/stacks/fastq-unarchiving-dynamodb/deploy';
+
+import { FastqUnarchivingManagerStackConfig } from '../../lib/workload/stateless/stacks/fastq-unarchiving/deploy/interfaces';
+
 // Stateful
-export const getFastqUnarchivingManagerTableStackProps = (
-  stage: AppStage
-): FastqUnarchivingManagerTableConfig => {
+export const getFastqUnarchivingManagerTableStackProps = (): FastqUnarchivingManagerTableConfig => {
   return {
     /* DynamoDB table for fastq list rows */
-    fastqListRowDynamodbTableName: fastqListRowTableName,
-    fastqSetDynamodbTableName: fastqSetTableName,
-    fastqJobDynamodbTableName: fastqJobTableName,
-    /* Buckets */
-    FastqUnarchivingManagerCacheBucketName: FastqUnarchivingManagerCacheBucket[stage],
-    ntsmBucketName: ntsmBucket[stage],
+    fastqUnarchivingJobDynamodbTableName: fastqUnarchivingJobTableName,
   };
 };
 
@@ -48,8 +46,15 @@ export const getFastqUnarchivingManagerStackProps = (
       corsAllowOrigins: corsAllowOrigins[stage],
       apiGwLogsConfig: logsApiGatewayConfig[stage],
       apiName: 'FastqUnarchivingManager',
-      customDomainNamePrefix: 'fastq',
+      customDomainNamePrefix: 'fastq-unarchiving',
     },
+
+    /*
+    Events stuff
+    */
+    eventBusName: eventBusName,
+    eventDetailType: fastqUnarchivingEventDetailType,
+    eventSource: fastqUnarchivingManagerEventSource,
 
     /*
     Orcabus token and zone name for external lambda functions
@@ -60,27 +65,21 @@ export const getFastqUnarchivingManagerStackProps = (
     /*
     Data tables
     */
-    fastqListRowDynamodbTableName: fastqListRowTableName,
-    fastqSetDynamodbTableName: fastqSetTableName,
-    fastqJobsDynamodbTableName: fastqJobTableName,
+    fastqUnarchivingJobsDynamodbTableName: fastqUnarchivingJobTableName,
     /* Indexes - need permissions to query indexes */
-    fastqListRowDynamodbIndexes: fastqListRowManagerIndexes,
-    fastqSetDynamodbIndexes: fastqSetManagerIndexes,
-    fastqJobsDynamodbIndexes: fastqJobManagerIndexes,
+    fastqUnarchivingJobsDynamodbIndexes: fastqUnarchivingJobTableIndexes,
 
     /*
     Buckets stuff
     */
-    pipelineCacheBucketName: icav2PipelineCacheBucket[stage],
-    pipelineCachePrefix: icav2PipelineCachePrefix[stage],
-    FastqUnarchivingManagerCacheBucketName: FastqUnarchivingManagerCacheBucket[stage],
-    ntsmBucketName: ntsmBucket[stage],
-
-    /*
-    Event bus stuff
-    */
-    eventBusName: eventBusName,
-    eventSource: FastqUnarchivingManagerEventSource,
-    eventDetailType: FastqUnarchivingManagerEventDetails,
+    s3Byob: {
+      bucketName: icav2PipelineCacheBucket[stage],
+      prefix: `${icav2PipelineCachePrefix[stage]}restored/`,
+    },
+    s3StepsCopy: {
+      s3StepsCopyBucketName: s3CopyStepsBucket[stage],
+      s3StepsCopyPrefix: 'FASTQ_UNARCHIVING/',
+      s3StepsFunctionArn: s3CopyStepsFunctionArn[stage],
+    },
   };
 };

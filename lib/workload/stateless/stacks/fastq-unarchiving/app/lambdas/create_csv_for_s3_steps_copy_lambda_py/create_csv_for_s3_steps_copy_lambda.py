@@ -12,7 +12,7 @@ We take an
 """
 
 import typing
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 
 from fastq_tools import get_fastq
 from urllib.parse import urlparse
@@ -53,7 +53,7 @@ def get_s3_uris_from_fastq_id(fastq_id: str) -> List[str]:
 def split_s3_uri(s3_uri: str) -> Tuple[str, str]:
     s3_obj = urlparse(s3_uri)
 
-    return s3_obj.netloc, s3_obj.path
+    return s3_obj.netloc, s3_obj.path.lstrip("/")
 
 
 def create_csv_for_s3_copy_steps(fastq_ids: List[str]) -> pd.DataFrame:
@@ -106,3 +106,28 @@ def handler(event, context):
         copy_data_df.to_csv(header=False, index=False)
     )
 
+
+# if __name__ == "__main__":
+#     import json
+#     from os import environ
+#     environ['AWS_PROFILE'] = 'umccr-development'
+#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
+#     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
+#     print(
+#         json.dumps(
+#             handler(
+#                 {
+#                     "fastqIdList": [
+#                         "fqr.01JP12M6BJ041G2VMCKGW4VNNC"
+#                     ],
+#                     "s3StepsCopyBucket": "stepss3copy-working66f7dd3f-x4jwbnt6qvxc",  # pragma: allowlist secret
+#                     "s3StepsCopyKey": "FASTQ_UNARCHIVING/6afc7752-fa6c-4f90-b53c-2c67ae56621c.0.csv"
+#                 },
+#                 None
+#             )
+#         )
+#     )
+#
+#     # aws s3 cp s3://stepss3copy-working66f7dd3f-x4jwbnt6qvxc/FASTQ_UNARCHIVING/6afc7752-fa6c-4f90-b53c-2c67ae56621c.0.csv -
+#     # pipeline-dev-cache-503977275616-ap-southeast-2,byob-icav2/development/primary/240424_A01052_0193_BH7JMMDRX5/20240910463b8d5d/Samples/Lane_1/LPRJ240775/LPRJ240775_S1_L001_R1_001.fastq.gz
+#     # pipeline-dev-cache-503977275616-ap-southeast-2,byob-icav2/development/primary/240424_A01052_0193_BH7JMMDRX5/20240910463b8d5d/Samples/Lane_1/LPRJ240775/LPRJ240775_S1_L001_R2_001.fastq.gz

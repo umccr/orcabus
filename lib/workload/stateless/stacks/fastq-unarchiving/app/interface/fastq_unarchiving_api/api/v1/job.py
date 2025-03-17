@@ -11,18 +11,21 @@ This is the list of routes available
 
 # Standard imports
 from datetime import datetime, timezone
+from os import environ
 from textwrap import dedent
-from fastapi import Depends, Query
+from typing import Annotated
+
+from fastapi import Depends, Query, Body
 from fastapi.routing import APIRouter, HTTPException
 from dyntastic import A, DoesNotExist
 
 
 # Model imports
-from ...models.job import JobData, JobQueryPaginatedResponse, JobCreate, JobResponse
+from ...models.job import JobData, JobQueryPaginatedResponse, JobCreate, JobResponse, JobPatch
 from ...models.query import JobQueryParameters
 from ...models import QueryPagination, JobStatus
-from ...globals import UNARCHIVING_JOB_STATE_MACHINE_ARN_ENV_VAR
-from ...utils import sanitise_ufr_orcabus_id, launch_sfn
+from ...globals import UNARCHIVING_JOB_STATE_MACHINE_ARN_ENV_VAR, get_default_job_patch_entry
+from ...utils import sanitise_ufr_orcabus_id, launch_sfn, abort_sfn
 from ...events import put_job_create_event, put_job_update_event
 
 router = APIRouter()
@@ -30,8 +33,8 @@ router = APIRouter()
 
 # Define a dependency function that returns the pagination parameters
 def get_pagination_params(
-    # page must be greater than or equal to 0
-    page: int = Query(0, ge=0),
+    # page must be greater than or equal to 1
+    page: int = Query(1, gt=0),
     # rowsPerPage must be greater than 0
     rows_per_page: int = Query(100, gt=0, alias='rowsPerPage')
 ) -> QueryPagination:
@@ -76,13 +79,14 @@ async def get_jobs(
         # - created_after
         # - completed_before
         # - completed_after
-        job_list = list(JobData.query(
-            A.status.is_in(job_query_parameters.status_list),
-            filter_condition=filter_expression,
-            index="status-index",
-            load_full_item=True
-        ))
-
+        job_list = []
+        for status_iter in job_query_parameters.status_list:
+            job_list += list(JobData.query(
+                A.status == status_iter,
+                filter_condition=filter_expression,
+                index="status-index",
+                load_full_item=True
+            ))
     else:
         job_list = list(JobData.scan(
             filter_condition=filter_expression,
@@ -117,7 +121,7 @@ async def get_jobs(
     tags=["query"],
     description="Get a job object"
 )
-async def get_fastq(job_id: str = Depends(sanitise_ufr_orcabus_id)) -> JobResponse:
+async def get_jobs(job_id: str = Depends(sanitise_ufr_orcabus_id)) -> JobResponse:
     try:
         return JobData.get(job_id).to_dict()
     except DoesNotExist as e:
@@ -139,12 +143,17 @@ async def create_job(job_obj: JobCreate) -> JobResponse:
     job_obj = JobData(**dict(job_obj.model_dump(by_alias=True)))
 
     # Query any PENDING / RUNNING jobs that may contain the same fastq id?
-    try:
-        job_list = list(job_obj.query(
-            A.status.is_in(["PENDING", "RUNNING"]),
-            index="status-index",
-            load_full_item=True
+    job_list = []
+    for status_iter_ in ["PENDING", "RUNNING"]:
+        job_list += list((
+            JobData.query(
+                A.status == status_iter_,
+                index="status-index",
+                load_full_item=True
+            )
         ))
+
+    try:
         for job in job_list:
             if len(set(job.fastq_ids).intersection(set(job_obj.fastq_ids))) > 0:
                 raise AssertionError(f"Job with fastq id '{job_obj.fastq_ids}' already exists")
@@ -156,7 +165,7 @@ async def create_job(job_obj: JobCreate) -> JobResponse:
     job_obj.status = JobStatus.PENDING
     job_obj.start_time = datetime.now(timezone.utc)
     job_obj.steps_execution_arn = launch_sfn(
-        sfn_name=UNARCHIVING_JOB_STATE_MACHINE_ARN_ENV_VAR,
+        sfn_name=environ[UNARCHIVING_JOB_STATE_MACHINE_ARN_ENV_VAR],
         sfn_input={
             "jobId": job_obj.id,
             "fastqIdList": job_obj.fastq_ids,
@@ -185,12 +194,12 @@ async def create_job(job_obj: JobCreate) -> JobResponse:
     This is internal use only and should only be used by the job execution step function.
     """)
 )
-async def update_job(job_id: str = Depends(sanitise_ufr_orcabus_id), status: JobStatus = Depends()) -> JobResponse:
-    if status not in [JobStatus.RUNNING, JobStatus.FAILED, JobStatus.SUCCEEDED]:
+async def update_job(job_id: str = Depends(sanitise_ufr_orcabus_id), job_status_obj: Annotated[JobPatch, Body()] = get_default_job_patch_entry()) -> JobResponse:
+    if job_status_obj.status not in [JobStatus.RUNNING, JobStatus.FAILED, JobStatus.SUCCEEDED]:
         raise HTTPException(status_code=400, detail="Invalid status provided, must be one of RUNNING, FAILED or COMPLETED")
     try:
         job_obj = JobData.get(job_id)
-        job_obj.status = status
+        job_obj.status = job_status_obj.status
         job_obj.save()
         job_dict = job_obj.to_dict()
         put_job_update_event(job_dict)
@@ -218,7 +227,7 @@ async def abort_job(job_id: str = Depends(sanitise_ufr_orcabus_id)) -> JobRespon
         job_obj.status = JobStatus.ABORTED
 
         # Abort the execution arn
-
+        abort_sfn(job_obj.steps_execution_arn)
 
         job_obj.save()
         return job_obj.to_dict()
