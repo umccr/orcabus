@@ -1,163 +1,198 @@
 import os
 import logging
+
 import django
+
+django.setup()
+
 from typing import Dict, List
 import time
-from datetime import datetime
-
+import json
+import boto3
+from django.utils import timezone
 from django.db import transaction
 from sequence_run_manager.models.sequence import Sequence, LibraryAssociation
-from sequence_run_manager_proc.services.bssh_srv import BSSHService
 
 # Configure logging for AWS Lambda
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Constants
-BATCH_SIZE = 10  # Process sequences in smaller batches
-MAX_EXECUTION_TIME = 840  # 14 minutes (Lambda max is 15 minutes)
+# Constants - Optimized for files with <200 records
+BATCH_SIZE = 50  # Keep bulk create batch size for database operations
 ASSOCIATION_STATUS = "ACTIVE"
 
 class LibraryLinkingProcessor:
     def __init__(self):
-        self.bssh_service = BSSHService()
+        self.s3_client = boto3.client('s3')
         self.start_time = time.time()
-        self.processed_count = 0
-        self.error_count = 0
-        self.success_count = 0
+        self.stats = {
+            "processed_count": 0,
+            "error_count": 0,
+            "success_count": 0,
+            "skipped_count": 0,
+            "total_associations_created": 0
+        }
+        self.sequence_cache = {}
         
-    def should_continue_processing(self) -> bool:
-        """Check if we should continue processing based on time constraints"""
-        return (time.time() - self.start_time) < MAX_EXECUTION_TIME
     
-    def process_sequence(self, sequence: Sequence) -> Dict:
-        """Process a single sequence and return results"""
-        try:
-            with transaction.atomic():
-                # Skip if already has associations
-                if LibraryAssociation.objects.filter(sequence=sequence).exists():
-                    return {
-                        "status": "skipped",
-                        "reason": "existing_associations",
-                        "sequence_id": sequence.instrument_run_id
-                    }
-
-                # Skip if no API URL
-                if not sequence.api_url:
-                    return {
-                        "status": "skipped",
-                        "reason": "no_api_url",
-                        "sequence_id": sequence.instrument_run_id
-                    }
-
-                # Get run details and create associations
-                run_details = self.bssh_service.get_run_details(sequence.api_url)
-                libraries = self.bssh_service.get_libraries_from_run_details(run_details)
+        
+    def prefetch_sequences(self, instrument_ids: List[str]):
+        """Prefetch sequences for all instrument IDs"""
+        sequences = Sequence.objects.filter(instrument_run_id__in=instrument_ids)
+        self.sequence_cache = {seq.instrument_run_id: seq for seq in sequences}
+        logger.info(f"Prefetched {len(self.sequence_cache)} sequences")
+        
+    def check_existing_associations(self, sequence_ids: List[str]) -> set:
+        """Get sequences that already have associations"""
+        existing = LibraryAssociation.objects.filter(
+            sequence_id__in=sequence_ids
+        ).values_list('sequence_id', flat=True)
+        return set(existing)
+        
+    def process_batch(self, records: List[Dict], batch_index: int) -> List[Dict]:
+        """Process a batch of records efficiently"""
+        results = []
+        
+        # Prefetch sequences for all records at once
+        instrument_ids = [record['instrument_id'] for record in records]
+        self.prefetch_sequences(instrument_ids)
+        
+        # Check existing associations in one query
+        sequence_ids = [seq.orcabus_id for seq in self.sequence_cache.values()]
+        existing_associations = self.check_existing_associations(sequence_ids)
+        
+        # Process records
+        associations_to_create = []
+        
+        for record in records:
+            instrument_id = record['instrument_id']
+            result = {
+                "instrument_id": instrument_id,
+                "batch_index": batch_index
+            }
+            
+            try:
+                sequence = self.sequence_cache.get(instrument_id)
+                if not sequence:
+                    result.update({
+                        "status": "error",
+                        "error": "Sequence not found"
+                    })
+                    self.stats["error_count"] += 1
+                    results.append(result)
+                    continue
                 
-                if not libraries:
-                    return {
+                if sequence.orcabus_id in existing_associations:
+                    result.update({
                         "status": "skipped",
-                        "reason": "no_libraries",
-                        "sequence_id": sequence.instrument_run_id
-                    }
-
-                # Create associations
-                created_associations = []
-                for library_id in libraries:
-                    assoc = LibraryAssociation.objects.create(
+                        "reason": "existing_associations"
+                    })
+                    self.stats["skipped_count"] += 1
+                    results.append(result)
+                    continue
+                
+                # Collect all associations for bulk create
+                associations_to_create.extend([
+                    LibraryAssociation(
                         library_id=library_id,
                         sequence=sequence,
+                        association_date=timezone.now(),
                         status=ASSOCIATION_STATUS
-                    )
-                    created_associations.append(assoc.library_id)
-
-                return {
-                    "status": "success",
-                    "sequence_id": sequence.instrument_run_id,
-                    "libraries_linked": created_associations
-                }
-
+                    ) for library_id in record['library_ids']
+                ])
+                
+                result.update({
+                    "status": "pending",
+                    "libraries_count": len(record['library_ids'])
+                })
+                results.append(result)
+                
+            except Exception as e:
+                logger.error(f"Error processing {instrument_id}: {str(e)}")
+                result.update({
+                    "status": "error",
+                    "error": str(e)
+                })
+                self.stats["error_count"] += 1
+                results.append(result)
+        
+        # Bulk create all associations in one transaction
+        try:
+            with transaction.atomic():
+                created = LibraryAssociation.objects.bulk_create(
+                    associations_to_create,
+                    batch_size=BATCH_SIZE  # Keep batch size for database efficiency
+                )
+                
+                self.stats["total_associations_created"] += len(created)
+                self.stats["success_count"] += sum(
+                    1 for r in results if r["status"] == "pending"
+                )
+                
+                # Update results status
+                for result in results:
+                    if result["status"] == "pending":
+                        result["status"] = "success"
+                
         except Exception as e:
-            logger.error(f"Error processing sequence {sequence.instrument_run_id}: {str(e)}")
-            return {
-                "status": "error",
-                "sequence_id": sequence.instrument_run_id,
-                "error": str(e)
-            }
-
-    def process_batch(self, sequences: List[Sequence]) -> List[Dict]:
-        """Process a batch of sequences"""
-        results = []
-        for sequence in sequences:
-            if not self.should_continue_processing():
-                logger.warning("Approaching Lambda timeout, stopping batch processing")
-                break
-                
-            result = self.process_sequence(sequence)
-            results.append(result)
-            
-            # Update counters
-            self.processed_count += 1
-            if result["status"] == "success":
-                self.success_count += 1
-            elif result["status"] == "error":
-                self.error_count += 1
-                
+            logger.error(f"Bulk creation error in batch {batch_index}: {str(e)}")
+            for result in results:
+                if result["status"] == "pending":
+                    result["status"] = "error"
+                    result["error"] = "Bulk creation failed"
+                    self.stats["error_count"] += 1
+        
+        self.stats["processed_count"] += len(records)
         return results
+
+    def process_file(self, data: List[Dict]) -> List[Dict]:
+        """Process all records in the file"""
+        logger.info(f"Starting to process {len(data)} records")
+        
+        # Process all records in one batch since file is small
+        return self.process_batch(data, 0)
 
 def handler(event, context) -> Dict:
     """
-    Lambda handler function
+    Lambda handler for processing library linking file
     
     Expected event structure:
     {
-        "start_date": "2024-01-01",  # Optional: Process sequences after this date
-        "end_date": "2024-03-20",    # Optional: Process sequences before this date
-        "batch_size": 10             # Optional: Override default batch size
+        "key": "instrument_library_linkings_1.json"
     }
     """
+    start_time = time.time()
+    processor = LibraryLinkingProcessor()
+    
+    assert os.environ['LIBRARY_LINKING_DATA_BUCKET_NAME'], "LIBRARY_LINKING_DATA_BUCKET_NAME is not set"
+    
     try:
-        # Initialize processor
-        processor = LibraryLinkingProcessor()
+        # Read data from S3
+        response = processor.s3_client.get_object(
+            Bucket=os.environ['LIBRARY_LINKING_DATA_BUCKET_NAME'],
+            Key=event['key']
+        )
+        data = json.loads(response['Body'].read().decode('utf-8'))
         
-        # Get sequences query
-        sequences_query = Sequence.objects.all()
+        # Process the file
+        results = processor.process_file(data)
         
-        # Apply date filters if provided
-        if event.get('start_date'):
-            start_date = datetime.strptime(event['start_date'], '%Y-%m-%d')
-            sequences_query = sequences_query.filter(created_at__gte=start_date)
-        if event.get('end_date'):
-            end_date = datetime.strptime(event['end_date'], '%Y-%m-%d')
-            sequences_query = sequences_query.filter(created_at__lte=end_date)
-            
-        # Get batch size
-        batch_size = event.get('batch_size', BATCH_SIZE)
-        
-        # Process in batches
-        all_results = []
-        for i in range(0, sequences_query.count(), batch_size):
-            if not processor.should_continue_processing():
-                logger.warning("Approaching Lambda timeout, stopping processing")
-                break
-                
-            batch = sequences_query[i:i + batch_size]
-            batch_results = processor.process_batch(batch)
-            all_results.extend(batch_results)
-
         # Prepare summary
+        execution_time = time.time() - start_time
         summary = {
-            "total_processed": processor.processed_count,
-            "successful": processor.success_count,
-            "errors": processor.error_count,
-            "execution_time": time.time() - processor.start_time,
-            "completed": processor.should_continue_processing(),
-            "results": all_results
+            "file_processed": event['key'],
+            "total_records": len(data),
+            **processor.stats,
+            "total_associations": processor.stats["total_associations_created"],
+            "execution_time": execution_time,
+            "completed": processor.stats["processed_count"] == len(data),
+            "results": results
         }
-
+        
         logger.info(f"Processing summary: {summary}")
-        return summary
-
+        
+        
+        
     except Exception as e:
-        logger.error(f"Fatal error in lambda execution: {str(e)}")
+        logger.error(f"Fatal error processing file {event['key']}: {str(e)}")
         raise

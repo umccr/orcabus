@@ -1,6 +1,6 @@
 import path from 'path';
 import * as cdk from 'aws-cdk-lib';
-import { aws_lambda, aws_secretsmanager, Duration, Stack } from 'aws-cdk-lib';
+import { aws_lambda, aws_secretsmanager, Duration, Stack, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { EventBus, EventField, IEventBus, Rule, RuleTargetInput } from 'aws-cdk-lib/aws-events';
@@ -24,6 +24,7 @@ import {
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import { Architecture, IFunction } from 'aws-cdk-lib/aws-lambda';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
 
 export interface SequenceRunManagerStackProps {
   lambdaSecurityGroupName: string;
@@ -319,10 +320,31 @@ export class SequenceRunManagerStack extends Stack {
   }
 
   private createLibraryLinkingHandler() {
-    this.createPythonFunction('LibraryLinking', {
+    // create a s3 bucket to store the library linking data
+    const srmLibraryLinkingDataBucket = new Bucket(this, 'SrmLibraryLinkingDataBucket', {
+      bucketName: 'orcabus-srm-library-linking-data-' + this.account,
+      removalPolicy: RemovalPolicy.DESTROY,
+      enforceSSL: true,
+    });
+
+    // lambda function to check and create the library linking
+    const libraryLinkingFn = this.createPythonFunction('LibraryLinking', {
       index: 'sequence_run_manager_proc/lambdas/check_and_create_library_linking.py',
       handler: 'handler',
       timeout: Duration.minutes(15),
+      environment: {
+        LIBRARY_LINKING_DATA_BUCKET_NAME: srmLibraryLinkingDataBucket.bucketName,
+        ...this.lambdaEnv,
+      },
     });
+
+    // grant the lambda function permission to write to the library linking bucket
+    srmLibraryLinkingDataBucket.grantReadWrite(libraryLinkingFn);
+    libraryLinkingFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+        resources: [srmLibraryLinkingDataBucket.arnForObjects('*')],
+      })
+    );
   }
 }
