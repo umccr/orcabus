@@ -1,9 +1,6 @@
-import urllib.request
 import logging
 import os
 from typing import Dict, Any, Optional, List
-import gzip
-import base64
 import json
 from libumccr.aws import libsm
 import requests
@@ -206,7 +203,7 @@ class BSSHService:
         logger.info(f"Retrieved libraries: {libraries} from run details")
         return libraries
 
-    def get_sample_sheet_from_bssh_run_files(self, api_url: str, sample_sheet_name: str) -> Optional[Dict[str, Any]]:
+    def get_sample_sheet_from_bssh_run_files(self, api_url: str, sample_sheet_name: str) -> Optional[str]:
         """
         Retrieve sample sheet from ICA project
         
@@ -254,16 +251,37 @@ class BSSHService:
         }
         
         """
-        # Construct API URL for files in project
-        bssh_run_files_url = f"{api_url}/files"
-        
-        logger.info(f'Bssh run files url: {bssh_run_files_url} , sample sheet name: {sample_sheet_name}')
-        
+
+        logger.info(f'Bssh run api url: {api_url} , sample sheet name: {sample_sheet_name}')
         try:
-            file_content_url = None
-            offset = 0
-            limit = 100  # Assuming default limit is 100, adjust if different
+            file_content_url = self._find_sample_sheet_url(api_url, sample_sheet_name)
+                
+            if not file_content_url:
+                logger.warning(f'Sample sheet {sample_sheet_name} not found in BSSH run {api_url}')
+                return None 
             
+            logger.info(f'File content url: {file_content_url}')
+            
+            return self._fetch_and_decode_file_content(file_content_url)
+            
+        except Exception as e:
+            logger.error(f'Error getting sample sheet file: {e}')
+            self.handle_request_error(e, "when getting sample sheet file")
+    
+    def _find_sample_sheet_url(self, api_url: str, sample_sheet_name: str) -> Optional[str]:
+        """
+        Find the URL of the sample sheet file in the BSSH run files
+        Args:
+            api_url: BSSH run URL
+            sample_sheet_name: Name of the sample sheet file
+        Returns:
+            URL of the sample sheet file or None if not found
+        """
+        try:
+            bssh_run_files_url = f"{api_url}/files"
+            offset = 0
+            limit = 100
+        
             while True:
                 params = {
                     'extension': 'csv',
@@ -271,62 +289,39 @@ class BSSHService:
                     'offset': offset,
                     'limit': limit
                 }
-                # Use requests library for the API call
-                response = requests.get(
-                    bssh_run_files_url,
-                    params=params,  # requests will handle query parameter encoding
-                    headers=self.headers
-                )
-                
-                # Raise error for bad status codes
+            
+                response = requests.get(bssh_run_files_url, params=params, headers=self.headers)
                 response.raise_for_status()
-                response_json = response.json()                   
-                files = response_json.get('Items', [])
-                if not files:
-                    break  # No more items to process
+            
+                files = response.json().get('Items', [])
                 
-                # search the files for the sample sheet name
+                if not files:
+                    break
+                
                 for file in files:
                     if file['Name'] == sample_sheet_name:
-                        file_content_url = file['HrefContent']
-                        break
-                
-                if file_content_url:
-                    break  # Found the file, exit loop
-                
-                # Check if we've received fewer items than limit (last page)
+                        return file['HrefContent']
+            
                 if len(files) < limit:
                     break
                 
-                offset += limit  # Move to next page
-                
-            if not file_content_url:
-                raise ValueError("Sample sheet not found")
-            
-            logger.info(f'File content url: {file_content_url}')
-            
-            try:
-                response = requests.get(
-                    file_content_url,
-                    headers=self.headers,
-                    stream=True  # Important for binary content
-                )
-                response.raise_for_status()
-                content = response.content
-                
-                if not content:
-                    raise ValueError('Empty content received from BSSH')
-                    
-                logger.info(f'Successfully retrieved file content, size: {len(content)} bytes')
-                
-                # Convert to base64gz
-                compressed_content = gzip.compress(content)
-                b64gz_string = base64.b64encode(compressed_content).decode('utf-8')
-                return b64gz_string
-                    
-            except Exception as e:
-                self.handle_request_error(e, "getting sample sheet content")
-            
+                offset += limit
+        
+            return None
         except Exception as e:
-            self.handle_request_error(e, "getting sample sheet file")
-    
+            self.handle_request_error(e, "when getting sample sheet file content url")
+            
+    def _fetch_and_decode_file_content(self, content_url: str) -> Optional[str]:
+        """Fetch file content and return as Jsonb format to persist in DB"""
+        try:
+            response = requests.get(content_url, headers=self.headers, stream=True)
+            response.raise_for_status()
+
+            content = response.content
+            if not content:
+                raise ValueError('Empty content received from BSSH')
+
+            return content.decode('utf-8')
+
+        except Exception as e:
+            self.handle_request_error(e, "when fetching and encoding file content")

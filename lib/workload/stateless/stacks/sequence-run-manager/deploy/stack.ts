@@ -22,7 +22,7 @@ import {
   Effect,
 } from 'aws-cdk-lib/aws-iam';
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
-import { Architecture } from 'aws-cdk-lib/aws-lambda';
+import { Architecture, IFunction } from 'aws-cdk-lib/aws-lambda';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
 
 export interface SequenceRunManagerStackProps {
@@ -95,7 +95,7 @@ export class SequenceRunManagerStack extends Stack {
       BASESPACE_ACCESS_TOKEN_SECRET_ID: props.bsshTokenSecretName,
     };
 
-    this.baseLayer = new PythonLayerVersion(this, 'BaseLayer', {
+    this.baseLayer = new PythonLayerVersion(this, this.stackName + 'BaseLayer', {
       entry: path.join(__dirname, '../deps'),
       compatibleRuntimes: [this.lambdaRuntimePythonVersion],
       compatibleArchitectures: [Architecture.ARM_64],
@@ -195,7 +195,7 @@ export class SequenceRunManagerStack extends Stack {
     this.setupEventRule(procSqsFn); // TODO comment this out for now
   }
 
-  private setupEventRule(fn: aws_lambda.Function) {
+  private setupEventRule(fn: IFunction) {
     /**
      * For sequence run manager, we are using orcabus events ( source from BSSH ENS event pipe) to trigger the lambda function.
      * event rule to filter the events that we are interested in.
@@ -212,16 +212,23 @@ export class SequenceRunManagerStack extends Stack {
       detailType: ['Event from aws:sqs'],
       detail: {
         'ica-event': {
-          // mandatory fields (gdsFolderPath, gdsVolumeName(starts with bssh), instrumentRunId, dateModified)
-          gdsFolderPath: [{ exists: true }],
-          gdsVolumeName: [{ prefix: 'bssh' }],
-          instrumentRunId: [{ exists: true }],
-          dateModified: [{ exists: true }],
-
-          // optional fields (flowcell barcode, sample sheet name, reagent barcode, ica project id, api url, name)
-          acl: [{ prefix: 'wid:' }, { prefix: 'tid:' }],
+          // mandatory fields (id, status, dateModified, apiUrl, sampleSheetName, icaProjectId)
           id: [{ exists: true }],
           status: [{ exists: true }],
+          dateModified: [{ exists: true }],
+          apiUrl: [{ exists: true }],
+          sampleSheetName: [{ exists: true }],
+          icaProjectId: [{ exists: true }],
+
+          // NOTE: instrumentRunId, name, flowcellBarcode are not always present in early stage of the run
+          // instrumentRunId: [{ exists: true }],
+          // name: [{ exists: true }],
+          // flowcellBarcode: [{ exists: true }],
+
+          // optional fields (gdsFolderPath, gdsVolumeName, acl, v1pre3Id)
+          gdsFolderPath: [{ exists: true }],
+          gdsVolumeName: [{ prefix: 'bssh' }],
+          acl: [{ prefix: 'wid:' }, { prefix: 'tid:' }],
         },
       },
     });

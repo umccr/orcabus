@@ -14,6 +14,9 @@ from sequence_run_manager_proc.tests.case import SequenceRunProcUnitTestCase, lo
 class SequenceDomainUnitTests(SequenceRunProcUnitTestCase):
     def setUp(self) -> None:
         super(SequenceDomainUnitTests, self).setUp()
+    
+    def tearDown(self) -> None:
+        super(SequenceDomainUnitTests, self).tearDown()
 
     def test_marshall(self):
         """

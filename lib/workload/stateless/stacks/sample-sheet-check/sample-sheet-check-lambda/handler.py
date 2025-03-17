@@ -49,11 +49,18 @@ def lambda_handler(event, context):
                               v2_sample_sheet='')
         response = construct_response(status_code=400, body=body, origin=origin)
         return response
-
     multipart_content = {}
     for part in msg.get_payload():
         multipart_content[part.get_param(
             'name', header='content-disposition')] = part.get_payload(decode=True)
+
+    key_list = list(multipart_content.keys())
+    if "file" not in key_list or "logLevel" not in key_list:
+
+        body = construct_body(check_status="FAIL", error_message="file or logLevel not found",
+                              v2_sample_sheet='')
+        response = construct_response(status_code=400, body=body, origin=origin)
+        return response
 
     file_data = multipart_content["file"]
     log_level = multipart_content["logLevel"].decode("utf-8")
