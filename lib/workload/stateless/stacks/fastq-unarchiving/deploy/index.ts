@@ -2,18 +2,11 @@ import path from 'path';
 import { Construct } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
 import { Duration, Stack, StackProps } from 'aws-cdk-lib';
-import * as fs from 'fs';
-import {
-  s3CopyStepsFunctionArn,
-  vpcProps as mainVpcProps,
-} from '../../../../../../config/constants';
 
 // Importing AWS Lambda related modules
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { PythonUvFunction } from '../../../../components/uv-python-lambda-image-builder';
-import { DockerImageCode, DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
 import { FilemanagerToolsPythonLambdaLayer } from '../../../../components/python-filemanager-tools-layer';
-import { MetadataToolsPythonLambdaLayer } from '../../../../components/python-metadata-tools-layer';
 import { FastqToolsPythonLambdaLayer } from '../../../../components/python-fastq-tools-layer';
 
 // Importing AWS DynamoDB related modules
@@ -51,7 +44,6 @@ import {
   FastqUnarchivingManagerStackConfig,
   LambdaApiFunctionProps,
   runUnarchivingSfnProps,
-  S3ByobProps,
   sharedLambdaFunctionObjects,
   sharedLambdaProps,
 } from './interfaces';
@@ -293,9 +285,6 @@ export class FastqUnarchivingManagerStack extends Stack {
   }
 
   private build_unarchiving_sfn(props: runUnarchivingSfnProps): IStateMachine {
-    /* Attributes */
-    const architecture = lambda.Architecture.ARM_64;
-
     /* Get s3 steps copy bucket and sfn as objects */
     /* Get s3 steps copy */
     const s3StepsCopyBucket = s3.Bucket.fromBucketName(

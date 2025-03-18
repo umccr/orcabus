@@ -10,7 +10,7 @@ get_unarchiving_job_list
 """
 from typing import List
 
-from .models import Job
+from .models import Job, JobStatus
 from .request_helpers import (
     get_request_response_results,
 )
@@ -28,3 +28,10 @@ def get_unarchiving_job_list(*args, **kwargs) -> List[Job]:
     """
     return get_request_response_results(JOB_ENDPOINT, params=kwargs)
 
+
+def get_job_list_for_fastq(fastq_id: str, job_status: JobStatus) -> List[Job]:
+    """
+    Check if fastq in job list
+    :return:
+    """
+    return get_unarchiving_job_list(fastq_id=fastq_id, status=job_status.value)
