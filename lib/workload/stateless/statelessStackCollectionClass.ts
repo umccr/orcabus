@@ -88,6 +88,10 @@ import {
   FastqUnarchivingManagerStackProps,
 } from './stacks/fastq-unarchiving/deploy';
 import { FastqSyncManagerStack, FastqSyncManagerStackProps } from './stacks/fastq-sync/deploy';
+import {
+  Icav2DataCopyManagerStack,
+  Icav2DataCopyManagerStackProps,
+} from './stacks/icav2-data-copy-manager/deploy';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -119,6 +123,7 @@ export interface StatelessStackCollectionProps {
   fastqManagerStackProps: FastqManagerStackProps;
   fastqUnarchivingManagerStackProps: FastqUnarchivingManagerStackProps;
   fastqSyncManagerStackProps: FastqSyncManagerStackProps;
+  icav2DataCopyManagerStackProps: Icav2DataCopyManagerStackProps;
 }
 
 export class StatelessStackCollection {
@@ -152,6 +157,7 @@ export class StatelessStackCollection {
   readonly fastqManagerStack: Stack;
   readonly fastqUnarchivingManagerStack: Stack;
   readonly fastqSyncManagerStack: Stack;
+  readonly icav2DataCopyManagerStack: Stack;
 
   constructor(
     scope: Construct,
@@ -311,6 +317,7 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'WorkflowManagerStack'),
       ...statelessConfiguration.workflowManagerStackProps,
     });
+
     this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
       ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
       ...statelessConfiguration.stackyMcStackFaceProps,
@@ -360,6 +367,10 @@ export class StatelessStackCollection {
     this.fastqSyncManagerStack = new FastqSyncManagerStack(scope, 'FastqSyncManagerStack', {
       ...this.createTemplateProps(env, 'FastqSyncManagerStack'),
       ...statelessConfiguration.fastqSyncManagerStackProps,
+    });
+    this.icav2DataCopyManagerStack = new Icav2DataCopyManagerStack(scope, 'Icav2CopyManagerStack', {
+      ...this.createTemplateProps(env, 'Icav2CopyManagerStack'),
+      ...statelessConfiguration.icav2DataCopyManagerStackProps,
     });
   }
 

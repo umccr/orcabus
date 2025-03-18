@@ -78,6 +78,10 @@ import {
   FastqSyncManagerTable,
   FastqSyncManagerTableStackProps,
 } from './stacks/fastq-sync-dynamodb/deploy/stack';
+import {
+  Icav2DataCopyManagerTable,
+  Icav2DataCopyManagerTableStackProps,
+} from './stacks/icav2-data-copy-manager-dynamo-db/deploy';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -103,6 +107,7 @@ export interface StatefulStackCollectionProps {
   fastqManagerTableStackProps: FastqManagerTableStackProps;
   fastqUnarchivingManagerTableStackProps: FastqUnarchivingManagerTableStackProps;
   fastqSyncManagerTableStackProps: FastqSyncManagerTableStackProps;
+  icav2DataCopyTableStackProps: Icav2DataCopyManagerTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -131,6 +136,7 @@ export class StatefulStackCollection {
   readonly fastqManagerTableStack: Stack;
   readonly fastqUnarchivingManagerTableStack: Stack;
   readonly fastqSyncManagerTableStack: Stack;
+  readonly icav2DataCopyTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -305,6 +311,14 @@ export class StatefulStackCollection {
       {
         ...this.createTemplateProps(env, 'FastqSyncManagerTableStack'),
         ...statefulConfiguration.fastqSyncManagerTableStackProps,
+      }
+    );
+    this.icav2DataCopyTableStack = new Icav2DataCopyManagerTable(
+      scope,
+      'Icav2DataCopyManagerTableStack',
+      {
+        ...this.createTemplateProps(env, 'Icav2DataCopyManagerTableStack'),
+        ...statefulConfiguration.icav2DataCopyTableStackProps,
       }
     );
   }

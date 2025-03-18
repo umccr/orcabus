@@ -1,0 +1,174 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "Set variables from inputs",
+  "States": {
+    "Set variables from inputs": {
+      "Type": "Pass",
+      "Next": "Generate copy job list",
+      "Assign": {
+        "sourceUri": "{% $states.input.sourceUri %}",
+        "destinationUri": "{% $states.input.destinationUri %}",
+        "taskToken": "{% $states.input.taskToken ? $states.input.taskToken : null %}"
+      }
+    },
+    "Generate copy job list": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__generate_copy_jobs_lambda_function_arn__}",
+        "Payload": {
+          "sourceUri": "{% $sourceUri %}",
+          "destinationUri": "{% $destinationUri %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each copy job item",
+      "Output": {
+        "copyJobList": "{% $states.result.copyJobList %}"
+      }
+    },
+    "For each copy job item": {
+      "Type": "Map",
+      "ItemSelector": {
+        "sourceDataIdListMapIter": "{% $states.context.Map.Item.Value.sourceDataIdList %}",
+        "sourceProjectIdMapIter": "{% $states.context.Map.Item.Value.sourceProjectId %}",
+        "destinationDataIdMapIter": "{% $states.context.Map.Item.Value.destinationDataId %}",
+        "destinationProjectIdMapIter": "{% $states.context.Map.Item.Value.destinationProjectId %}"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Set map vars",
+        "States": {
+          "Set map vars": {
+            "Type": "Pass",
+            "Next": "Run Copy Job",
+            "Assign": {
+              "retryCounter": 0,
+              "sourceDataIdListMapIter": "{% $states.input.sourceDataIdListMapIter %}",
+              "sourceProjectIdMapIter": "{% $states.input.sourceProjectIdMapIter %}",
+              "destinationDataIdMapIter": "{% $states.input.destinationDataIdMapIter %}",
+              "destinationProjectIdMapIter": "{% $states.input.destinationProjectIdMapIter %}"
+            }
+          },
+          "Run Copy Job": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Arguments": {
+              "FunctionName": "${__launch_copy_job_lambda_function_arn__}",
+              "Payload": {
+                "sourceDataIdList": "{% $sourceDataIdListMapIter %}",
+                "sourceProjectId": "{% $sourceProjectIdMapIter %}",
+                "destinationDataId": "{% $destinationDataIdMapIter %}",
+                "destinationProjectId": "{% $destinationProjectIdMapIter %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Next": "Job ID is empty",
+            "Assign": {
+              "jobId": "{% $states.result.Payload.jobId %}"
+            }
+          },
+          "Job ID is empty": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Next": "Pass",
+                "Condition": "{% $jobId = null ? true : false %}"
+              }
+            ],
+            "Default": "Wait Job Completion"
+          },
+          "Pass": {
+            "Type": "Pass",
+            "End": true
+          },
+          "Wait Job Completion": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+            "Arguments": {
+              "Entries": [
+                {
+                  "Detail": {
+                    "ICAv2CopyJobId": "{% $jobId %}",
+                    "TaskToken": "{% $states.context.Task.Token %}"
+                  },
+                  "DetailType": "${__icav2_copy_job_detail_type__}",
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "${__event_source__}"
+                }
+              ]
+            },
+            "End": true,
+            "Catch": [
+              {
+                "ErrorEquals": ["States.TaskFailed"],
+                "Next": "Retry greater than 3",
+                "Assign": {
+                  "retryCounter": "{% $retryCounter + 1 %}"
+                }
+              }
+            ]
+          },
+          "Retry greater than 3": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Next": "Send External Task Token Failure",
+                "Condition": "{% $retryCounter > 3 %}"
+              }
+            ],
+            "Default": "Run Copy Job"
+          },
+          "Send External Task Token Failure": {
+            "Type": "Task",
+            "Arguments": {
+              "TaskToken": "MyData"
+            },
+            "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskFailure",
+            "End": true
+          }
+        }
+      },
+      "Next": "Send External Task Token Success",
+      "Items": "{% $states.input.copyJobList %}"
+    },
+    "Send External Task Token Success": {
+      "Type": "Task",
+      "Arguments": {
+        "Output": {},
+        "TaskToken": "{% $taskToken %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
+      "End": true
+    }
+  }
+}
