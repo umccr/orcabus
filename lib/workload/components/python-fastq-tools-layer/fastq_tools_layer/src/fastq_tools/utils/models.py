@@ -35,17 +35,34 @@
 }
 """
 
+from enum import Enum
 from typing import (
     TypedDict,
     Optional,
     Dict,
     List
 )
+from datetime import datetime
+
+
+class JobType(Enum):
+    QC = 'QC'
+    FILE_COMPRESSION = 'FILE_COMPRESSION'
+    NTSM = 'NTSM'
+
+
+class JobStatus(Enum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    FAILED = "FAILED"
+    SUCCEEDED = "SUCCEEDED"
 
 
 class FileStorageObject(TypedDict):
     s3IngestId: str
     s3Uri: str
+    storageClass: str
+    sha256: str
 
 
 class FastqStorageObject(FileStorageObject):
@@ -66,10 +83,14 @@ class Library(TypedDict):
 
 class FastqListRow(TypedDict):
     id: str
+    fastqSetId: str
     index: str
     lane: int
     instrumentRunId: str
     library: Library
+    platform: Optional[str]
+    center: Optional[str]
+    date: Optional[datetime]
     readSet: Optional[ReadSet]
     qc: Optional[Dict]
     readCount: Optional[int]
@@ -121,3 +142,13 @@ class CWLDict(TypedDict):
     lane: int
     read_1: CWLFile
     read_2: CWLFile
+
+
+class Job(TypedDict):
+    id: str
+    fastqId: str
+    jobType: JobType
+    stepsExecutionArn: str
+    status: JobStatus
+    startTime: datetime
+    endTime: datetime

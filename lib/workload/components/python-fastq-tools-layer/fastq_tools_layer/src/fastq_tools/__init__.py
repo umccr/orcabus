@@ -8,6 +8,9 @@ from .utils.models import(
     FastqStorageObject,
     FileStorageObject,
     FastqSet,
+    Job,
+    JobStatus,
+    JobType
 )
 
 from .utils.query_helpers import (
@@ -21,7 +24,8 @@ from .utils.query_helpers import (
     get_fastqs_in_subject,
     get_fastqs_in_individual,
     get_fastqs_in_project,
-    get_fastq_set
+    get_fastq_set,
+    get_fastq_jobs
 )
 
 
@@ -40,6 +44,12 @@ from .utils.workflow_helpers import (
     to_cwl
 )
 
+from .utils.job_helpers import (
+    run_qc_stats,
+    run_ntsm,
+    run_file_compression_stats
+)
+
 
 __all__ = [
     # Models
@@ -47,6 +57,9 @@ __all__ = [
     "FastqStorageObject",
     "FileStorageObject",
     "FastqSet",
+    "Job",
+    "JobStatus",
+    "JobType",
 
     # Query helpers
     "get_fastq",
@@ -63,6 +76,9 @@ __all__ = [
     # Fastq Set Query helpers
     "get_fastq_set",
 
+    # Job helpers
+    "get_fastq_jobs",
+
     # Update helpers
     "add_qc_stats",
     "add_read_count",
@@ -75,4 +91,9 @@ __all__ = [
 
     # Workflow helpers
     "to_cwl",
+
+    # Job helpers
+    "run_qc_stats",
+    "run_ntsm",
+    "run_file_compression_stats"
 ]

@@ -26,7 +26,7 @@ from .request_helpers import (
 )
 
 from .globals import FASTQ_LIST_ROW_ENDPOINT, FASTQ_SET_ENDPOINT
-from .models import FastqListRow, FastqSet
+from .models import FastqListRow, FastqSet, Job
 
 
 def get_fastq(fastq_id: str, **kwargs) -> FastqListRow:
@@ -151,3 +151,10 @@ def get_fastq_list_rows_in_fastq_set(fastq_set_id):
             "fastqSet": fastq_set_id
         }
     )
+
+
+def get_fastq_jobs(fastq_id: str) -> List[Job]:
+    """
+    Get all fastqs in a fastq set
+    """
+    return get_request_response_results(f"{FASTQ_LIST_ROW_ENDPOINT}/{fastq_id}/jobs")
