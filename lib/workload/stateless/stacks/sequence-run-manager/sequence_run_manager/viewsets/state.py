@@ -42,13 +42,10 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
         sequence_orcabus_id = self.kwargs.get("orcabus_id")
         sequence = Sequence.objects.get(orcabus_id=sequence_orcabus_id)
         
-        latest_state = sequence.get_latest_state()
-        if not latest_state:
-            return Response({"detail": "No state found for sequence run '{}'".format(sequence_orcabus_id)},
-                            status=status.HTTP_400_BAD_REQUEST)
-        latest_status = latest_state.status
+        latest_status = sequence.status
         request_status = request.data.get('status', '').upper()
         
+        print(f"latest_status: {latest_status}, request_status: {request_status}")
         # check if the state status is valid
         if not self.check_state_status(latest_status, request_status):
             return Response({"detail": "Invalid state request. Can't add state '{}' to '{}'".format(request_status, latest_status)},
@@ -66,6 +63,10 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
             comment=request.data.get('comment'),
             timestamp=timezone.now()
         )
+        
+        # update the sequence status
+        sequence.status = request_status
+        sequence.save()
         
         # return the new state
         serializer = self.get_serializer(new_state)
@@ -105,9 +106,14 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
     def check_state_status(self, current_status, request_status):
         """
         check if the state status is valid: 
-        valid_states_map[request_state] == current_state.status
+        valid_states_map[request_state] in current_state.status
         """
-        return request_status in self.valid_states_map.get(current_status, [])
+        if request_status not in self.valid_states_map:
+            return False
+        if current_status not in self.valid_states_map[request_status]:
+            return False
+        return True
+        
         
         
         
