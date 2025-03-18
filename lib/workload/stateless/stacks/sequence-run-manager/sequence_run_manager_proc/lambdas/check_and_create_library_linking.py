@@ -152,7 +152,7 @@ class LibraryLinkingProcessor:
         # Process all records in one batch since file is small
         return self.process_batch(data, 0)
 
-def handler(event, context) -> Dict:
+def handler(event, context):
     """
     Lambda handler for processing library linking file
     
@@ -164,12 +164,12 @@ def handler(event, context) -> Dict:
     start_time = time.time()
     processor = LibraryLinkingProcessor()
     
-    assert os.environ['LIBRARY_LINKING_DATA_BUCKET_NAME'], "LIBRARY_LINKING_DATA_BUCKET_NAME is not set"
+    assert os.environ['LINKING_DATA_BUCKET_NAME'], "LINKING_DATA_BUCKET_NAME is not set"
     
     try:
         # Read data from S3
         response = processor.s3_client.get_object(
-            Bucket=os.environ['LIBRARY_LINKING_DATA_BUCKET_NAME'],
+            Bucket=os.environ['LINKING_DATA_BUCKET_NAME'],
             Key=event['key']
         )
         data = json.loads(response['Body'].read().decode('utf-8'))
@@ -191,7 +191,10 @@ def handler(event, context) -> Dict:
         
         logger.info(f"Processing summary: {summary}")
         
-        
+        return {
+            "statusCode": 200,
+            "body": json.dumps(summary)
+        }
         
     except Exception as e:
         logger.error(f"Fatal error processing file {event['key']}: {str(e)}")

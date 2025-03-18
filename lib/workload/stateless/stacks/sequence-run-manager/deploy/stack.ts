@@ -321,8 +321,8 @@ export class SequenceRunManagerStack extends Stack {
 
   private createLibraryLinkingHandler() {
     // create a s3 bucket to store the library linking data
-    const srmLibraryLinkingDataBucket = new Bucket(this, 'SrmLibraryLinkingDataBucket', {
-      bucketName: 'orcabus-srm-library-linking-data-' + this.account,
+    const srmTempLinkingDataBucket = new Bucket(this, 'SrmTempLinkingDataBucket', {
+      bucketName: 'orcabus-temp-srm-linking-data-' + this.account + '-ap-southeast-2',
       removalPolicy: RemovalPolicy.DESTROY,
       enforceSSL: true,
     });
@@ -333,17 +333,35 @@ export class SequenceRunManagerStack extends Stack {
       handler: 'handler',
       timeout: Duration.minutes(15),
       environment: {
-        LIBRARY_LINKING_DATA_BUCKET_NAME: srmLibraryLinkingDataBucket.bucketName,
+        LINKING_DATA_BUCKET_NAME: srmTempLinkingDataBucket.bucketName,
+        ...this.lambdaEnv,
+      },
+    });
+
+    // lambda function to check and create the samplesheet
+    const samplesheetFn = this.createPythonFunction('Samplesheet', {
+      index: 'sequence_run_manager_proc/lambdas/check_and_create_samplesheet.py',
+      handler: 'handler',
+      timeout: Duration.minutes(15),
+      environment: {
+        LINKING_DATA_BUCKET_NAME: srmTempLinkingDataBucket.bucketName,
         ...this.lambdaEnv,
       },
     });
 
     // grant the lambda function permission to write to the library linking bucket
-    srmLibraryLinkingDataBucket.grantReadWrite(libraryLinkingFn);
+    srmTempLinkingDataBucket.grantReadWrite(libraryLinkingFn);
+    srmTempLinkingDataBucket.grantReadWrite(samplesheetFn);
     libraryLinkingFn.addToRolePolicy(
       new PolicyStatement({
         actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-        resources: [srmLibraryLinkingDataBucket.arnForObjects('*')],
+        resources: [srmTempLinkingDataBucket.arnForObjects('*')],
+      })
+    );
+    samplesheetFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+        resources: [srmTempLinkingDataBucket.arnForObjects('*')],
       })
     );
   }
