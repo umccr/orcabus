@@ -126,6 +126,11 @@ class Sequence(OrcaBusBaseModel):
         """
         return list(LibraryAssociation.objects.filter(sequence=self).values_list('library_id', flat=True))
 
+    def get_latest_state(self):
+        """
+        Get the latest state for the sequence
+        """
+        return self.states.order_by('-timestamp').first()
 
 
 class LibraryAssociationManager(OrcaBusBaseManager):
