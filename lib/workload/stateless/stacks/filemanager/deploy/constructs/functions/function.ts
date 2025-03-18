@@ -107,6 +107,7 @@ export class Function extends Construct {
         environment: {
           ...props.buildEnvironment,
         },
+        ...(process.arch == 'arm64' && { cargoLambdaFlags: ['--compiler', 'cargo'] }),
         dockerOptions: {
           network: 'host',
         },
