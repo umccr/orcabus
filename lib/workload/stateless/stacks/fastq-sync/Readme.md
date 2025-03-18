@@ -1,7 +1,7 @@
 # Fastq Sync Service
 
-The fastq sync service is a simple service that allows step functions with task tokens to 'hang' 
-until the requirements of either a fastq list row or fastq set have been met. 
+The fastq sync service is a simple service that allows step functions with fastq set ids as inputs to 'hang' 
+until the requirements of the fastq set have been met. 
 
 This is useful for workflow-glue services that have fastq set ids but need to wait for either
 
@@ -9,7 +9,7 @@ This is useful for workflow-glue services that have fastq set ids but need to wa
 2. The fastq set to have been qc'd AND have a fingerprint file and compression information
 3. This is also useful for data sharing services that require the fastqs to be unarchived before they can be shared
 
-The step function will then hang at that step until the task token has been 'unlocked'
+The step function will then hang at that step until the task token has been 'unlocked' by the fastq sync service.
 
 ## Registering task tokens
 
@@ -25,34 +25,38 @@ Workflow glue services can use the fastq sync service by generating the followin
     "fastqSetId": "fqs.123456",
     // Then one or more of the following
     // Requirements can be left out if not needed
-    // Do all fastq list rows in the set contain readsets?
-    "hasReadsets": true,  
-    // Do all fastq list rows in the set contain an ntsm uri?
-    "hasFingerprints": true,  
-    // Do all fastq list rows in the set contain compression information?
-    // Useful if the fastq list rows are in ora format. 
-    // Some pipelines require the gzip file size in bytes in order 
-    // to stream the gzip file from ora back into s3 
-    "hasCompressionInformation": true,  
-    // Do all fastq list rows in the set contain qc information?
-    // We don't use this for anything yet but we may use this in the future
-    // to ensure that a fastq set has met the ideal coverage levels
-    "hasQc": true,
+    "requirements": {
+      // Do all fastq list rows in the set contain readsets?
+      "hasActiveReadSet": true,  
+      // Do all fastq list rows in the set contain an ntsm uri?
+      "hasFingerprint": true,  
+      // Do all fastq list rows in the set contain compression information?
+      // Useful if the fastq list rows are in ora format. 
+      // Some pipelines require the gzip file size in bytes in order 
+      // to stream the gzip file from ora back into s3 
+      "hasFileCompressionInformation": true,  
+      // Do all fastq list rows in the set contain qc information?
+      // We don't use this for anything yet but we may use this in the future
+      // to ensure that a fastq set has met the ideal coverage levels
+      "hasQc": true,
+    }
   }
 }
 ```
 
 The fastq sync service will also trigger the qc, fingerprint or compression information services if they do not exist. 
 
-If any of the fastq list rows are in archive, the fastq sync service will also trigger the archive service to unarchive these fastq list rows.
+If any of the fastq list rows are in archive, the fastq sync service will also trigger the fastq unarchiving service to thaw out these fastq list rows.
+And place them into the 'byob' bucket.  
+
 
 ## Unlocking task tokens
 
-The fastq sync service will listen for the following events:
+The fastq sync service will then also listen for the following event typed:
 
 1. FastqListRowUpdated (from the fastq management service)
 2. FastqSetUpdated (from the fastq management service)
-3. UnarchivingCompleted (from the fastq unarchiving service)
+3. UnarchivingJobUpdated (from the fastq unarchiving service, where the status is 'SUCCEEDED')
 
-The fastq sync service will then check against the requirements of the fastq set or fastq list row for each task token and if so, unlock the task token.
-
+Everytime one of the events is triggered, the fastq sync service will check if the fastq list row or fastq set has met the requirements.
+If all requirements are met for the fastq set, the fastq sync service will unlock the task token.
