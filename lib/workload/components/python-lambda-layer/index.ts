@@ -1,6 +1,7 @@
 import { Construct } from 'constructs';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { getPythonUvDockerImage } from '../uv-python-lambda-image-builder';
 
 export interface PythonLambdaLayerConstructProps {
   layerName: string;
@@ -15,6 +16,7 @@ export class PythonLambdaLayerConstruct extends Construct {
   constructor(scope: Construct, id: string, props: PythonLambdaLayerConstructProps) {
     super(scope, id);
 
+    // Generate the docker image
     this.lambdaLayerVersionObj = new PythonLayerVersion(this, 'python_lambda_layer', {
       layerVersionName: props.layerName,
       entry: props.layerDirectory,
@@ -23,6 +25,7 @@ export class PythonLambdaLayerConstruct extends Construct {
       license: 'GPL3',
       description: props.layerDescription,
       bundling: {
+        image: getPythonUvDockerImage(),
         commandHooks: {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           beforeBundling(inputDir: string, outputDir: string): string[] {
@@ -30,7 +33,7 @@ export class PythonLambdaLayerConstruct extends Construct {
           },
           afterBundling(inputDir: string, outputDir: string): string[] {
             return [
-              `python -m pip install ${inputDir} -t ${outputDir}`,
+              `pip install ${inputDir} --target ${outputDir}`,
               `find ${outputDir} -name 'pandas' -exec rm -rf {}/tests/ \\;`,
             ];
           },
