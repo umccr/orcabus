@@ -16,9 +16,9 @@ api_base = f"{api_namespace}/{api_version}/"
 
 router = OptionalSlashDefaultRouter()
 router.register(r"sequence", SequenceViewSet, basename="sequence")
+router.register(r"sequence", SampleSheetViewSet, basename="sequence-sample-sheet")
 router.register("sequence/(?P<orcabus_id>[^/]+)/comment", CommentViewSet, basename="sequence-comment")
 router.register("sequence/(?P<orcabus_id>[^/]+)/state", StateViewSet, basename="sequence-states")
-router.register("sequence/(?P<orcabus_id>[^/]+)/sample_sheet", SampleSheetViewSet, basename="sequence-sample-sheet")
 router.register(r"sequence/stats", SequenceStatsViewSet, basename="sequence-stats")
 
 
