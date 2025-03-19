@@ -8,6 +8,7 @@ from sequence_run_manager.serializers.sequence import SequenceSerializer, Sequen
 class SequenceViewSet(BaseViewSet):
     serializer_class = SequenceSerializer
     search_fields = Sequence.get_base_fields()
+    queryset = Sequence.objects.all()
     lookup_value_regex = "[^/]+" # to allow id prefix
 
     def get_queryset(self):

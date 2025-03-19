@@ -1,6 +1,6 @@
 import path from 'path';
 import * as cdk from 'aws-cdk-lib';
-import { aws_lambda, aws_secretsmanager, Duration, Stack } from 'aws-cdk-lib';
+import { aws_lambda, aws_secretsmanager, Duration, Stack, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { EventBus, EventField, IEventBus, Rule, RuleTargetInput } from 'aws-cdk-lib/aws-events';
@@ -24,6 +24,7 @@ import {
 import { ApiGatewayConstruct, ApiGatewayConstructProps } from '../../../../components/api-gateway';
 import { Architecture, IFunction } from 'aws-cdk-lib/aws-lambda';
 import { PostgresManagerStack } from '../../../../stateful/stacks/postgres-manager/deploy/stack';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
 
 export interface SequenceRunManagerStackProps {
   lambdaSecurityGroupName: string;
@@ -105,6 +106,7 @@ export class SequenceRunManagerStack extends Stack {
     this.createApiHandlerAndIntegration(props);
     this.createProcSqsHandler();
     this.createSlackNotificationHandler(props.slackTopicName, props.orcabusUIBaseUrl);
+    this.createLibraryLinkingHandler();
   }
 
   private createPythonFunction(name: string, props: object): PythonFunction {
@@ -313,6 +315,53 @@ export class SequenceRunManagerStack extends Stack {
             ].join('\n'),
           },
         }),
+      })
+    );
+  }
+
+  private createLibraryLinkingHandler() {
+    // create a s3 bucket to store the library linking data
+    const srmTempLinkingDataBucket = new Bucket(this, 'SrmTempLinkingDataBucket', {
+      bucketName: 'orcabus-temp-srm-linking-data-' + this.account + '-ap-southeast-2',
+      removalPolicy: RemovalPolicy.DESTROY,
+      enforceSSL: true,
+    });
+
+    // lambda function to check and create the library linking
+    const libraryLinkingFn = this.createPythonFunction('LibraryLinking', {
+      index: 'sequence_run_manager_proc/lambdas/check_and_create_library_linking.py',
+      handler: 'handler',
+      timeout: Duration.minutes(15),
+      environment: {
+        LINKING_DATA_BUCKET_NAME: srmTempLinkingDataBucket.bucketName,
+        ...this.lambdaEnv,
+      },
+    });
+
+    // lambda function to check and create the samplesheet
+    const samplesheetFn = this.createPythonFunction('Samplesheet', {
+      index: 'sequence_run_manager_proc/lambdas/check_and_create_samplesheet.py',
+      handler: 'handler',
+      timeout: Duration.minutes(15),
+      environment: {
+        LINKING_DATA_BUCKET_NAME: srmTempLinkingDataBucket.bucketName,
+        ...this.lambdaEnv,
+      },
+    });
+
+    // grant the lambda function permission to write to the library linking bucket
+    srmTempLinkingDataBucket.grantReadWrite(libraryLinkingFn);
+    srmTempLinkingDataBucket.grantReadWrite(samplesheetFn);
+    libraryLinkingFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+        resources: [srmTempLinkingDataBucket.arnForObjects('*')],
+      })
+    );
+    samplesheetFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+        resources: [srmTempLinkingDataBucket.arnForObjects('*')],
       })
     );
   }

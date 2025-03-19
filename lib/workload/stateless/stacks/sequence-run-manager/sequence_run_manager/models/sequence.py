@@ -15,6 +15,9 @@ class SequenceStatus(models.TextChoices):
     FAILED = "FAILED"
     SUCCEEDED = "SUCCEEDED"
     ABORTED = "ABORTED"
+    
+    # custom status,  resolve issue: https://github.com/umccr/orcabus/issues/879
+    RESOLVED = "RESOLVED"
 
     @classmethod
     def from_value(cls, value):
@@ -24,6 +27,8 @@ class SequenceStatus(models.TextChoices):
             return cls.SUCCEEDED
         elif value == cls.FAILED.value:
             return cls.FAILED
+        elif value == cls.RESOLVED.value:
+            return cls.RESOLVED
         else:
             raise ValueError(f"No matching SequenceStatus found for value: {value}")
 
@@ -126,6 +131,11 @@ class Sequence(OrcaBusBaseModel):
         """
         return list(LibraryAssociation.objects.filter(sequence=self).values_list('library_id', flat=True))
 
+    def get_latest_state(self):
+        """
+        Get the latest state for the sequence
+        """
+        return self.states.order_by('-timestamp').first()
 
 
 class LibraryAssociationManager(OrcaBusBaseManager):

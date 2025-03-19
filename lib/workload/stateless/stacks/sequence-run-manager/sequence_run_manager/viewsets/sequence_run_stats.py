@@ -54,6 +54,7 @@ class SequenceStatsViewSet(GenericViewSet):
             'succeeded': 0,
             'aborted': 0,
             'failed': 0,
+            'resolved': 0,
         }
         
         for item in status_counts:
