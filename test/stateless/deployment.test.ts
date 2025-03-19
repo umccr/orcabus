@@ -302,6 +302,13 @@ function applyNagSuppression(stackId: string, stack: Stack) {
             reason:
               '* is required to access the temporary linking data files by the enrichment lambda function.',
           },
+        ],
+        true
+      );
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/SequenceRunManagerStack/SrmTempLinkingDataBucket/Resource`,
+        [
           {
             id: 'AwsSolutions-S1',
             reason:
