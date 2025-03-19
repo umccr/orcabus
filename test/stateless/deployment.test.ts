@@ -292,6 +292,26 @@ function applyNagSuppression(stackId: string, stack: Stack) {
       );
       break;
 
+    case 'SequenceRunManagerStack':
+      NagSuppressions.addResourceSuppressionsByPath(
+        stack,
+        `/SequenceRunManagerStack/LambdaRole/DefaultPolicy/Resource`,
+        [
+          {
+            id: 'AwsSolutions-IAM5',
+            reason:
+              '* is required to access the temporary linking data files by the enrichment lambda function.',
+          },
+          {
+            id: 'AwsSolutions-S1',
+            reason:
+              'S3 Bucket has server access logs disabled as temporary linking data files are not accessed by the API, only by the enrichment lambda function',
+          },
+        ],
+        true
+      );
+      break;
+
     default:
       break;
   }

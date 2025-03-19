@@ -9,6 +9,7 @@ from sequence_run_manager.serializers.sequence import SequenceSerializer, Sequen
 class SequenceViewSet(BaseViewSet):
     serializer_class = SequenceSerializer
     search_fields = Sequence.get_base_fields()
+    queryset = Sequence.objects.all()
 
     def get_queryset(self):
         """Pick up the start_time and end_time from the query params and exclude them from the rest of the query params"""
