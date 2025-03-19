@@ -27,7 +27,9 @@ export class DynamodbPartitionedPipelineConstruct extends Construct {
       },
       tableName: props.tableName,
       removalPolicy: props.removalPolicy || RemovalPolicy.RETAIN_ON_UPDATE_OR_DELETE,
-      pointInTimeRecovery: true,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: true,
+      },
     });
 
     // Set outputs
