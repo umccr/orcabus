@@ -23,15 +23,16 @@
     "cdk-stateful": "cdk --app 'yarn run -B ts-node --prefer-ts-exts bin/statefulPipeline.ts'"
   },
   "dependencies": {
-    "@aws-cdk/aws-lambda-go-alpha": "2.177.0-alpha.0",
-    "@aws-cdk/aws-lambda-python-alpha": "2.177.0-alpha.0",
-    "@aws-cdk/aws-pipes-alpha": "2.177.0-alpha.0",
-    "@aws-cdk/aws-pipes-sources-alpha": "2.177.0-alpha.0",
-    "aws-cdk-lib": "2.177.0",
+    "@aws-cdk/aws-kinesisfirehose-alpha": "2.182.0-alpha.0",
+    "@aws-cdk/aws-lambda-go-alpha": "^2.182.0-alpha.0",
+    "@aws-cdk/aws-lambda-python-alpha": "^2.182.0-alpha.0",
+    "@aws-cdk/aws-pipes-alpha": "^2.182.0-alpha.0",
+    "@aws-cdk/aws-pipes-sources-alpha": "^2.182.0-alpha.0",
+    "aws-cdk-lib": "^2.182.0",
     "cargo-lambda-cdk": "^0.0.31",
     "cdk-nag": "^2.35.3",
     "constructs": "^10.4.2",
-    "core-js-pure": "^3.40.0",
+    "core-js-pure": "npm:3.41.0",
     "dotenv": "^16.4.7",
     "htsget-lambda": "^0.8.7",
     "source-map-support": "^0.5.21",
@@ -41,8 +42,8 @@
     "@eslint/js": "^9.19.0",
     "@types/eslint__js": "^8.42.3",
     "@types/jest": "^29.5.14",
-    "@types/node": "^22.12.0",
-    "aws-cdk": "2.177.0",
+    "@types/node": "^22.13.10",
+    "aws-cdk": "^2.182.0",
     "eslint": "^9.19.0",
     "eslint-config-prettier": "^10.0.1",
     "globals": "^15.14.0",
@@ -54,5 +55,5 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.22.0"
   },
-  "packageManager": "yarn@4.6.0"
+  "packageManager": "yarn@4.7.0"
 }
