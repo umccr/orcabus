@@ -42,6 +42,9 @@ export const vpcProps: VpcLookupOptions = {
 export const authStackHttpLambdaAuthorizerParameterName =
   '/orcabus/authorization-stack/http-lambda-authorization-arn';
 
+// The hosted zone name ssm parameter path
+export const hostedZoneNameParameterPath = '/hosted_zone/umccr/name';
+
 // upstream infra: cognito
 export const cognitoPortalAppClientIdParameterName =
   '/data_portal/client/data2/cog_app_client_id_stage';
@@ -84,6 +87,12 @@ export const icav2PipelineCacheBucket: Record<AppStage, string> = {
   [AppStage.BETA]: 'pipeline-dev-cache-503977275616-ap-southeast-2',
   [AppStage.GAMMA]: 'pipeline-stg-cache-503977275616-ap-southeast-2',
   [AppStage.PROD]: 'pipeline-prod-cache-503977275616-ap-southeast-2',
+};
+
+export const icav2PipelineCachePrefix: Record<AppStage, string> = {
+  [AppStage.BETA]: 'byob-icav2/development/',
+  [AppStage.GAMMA]: 'byob-icav2/staging/',
+  [AppStage.PROD]: 'byob-icav2/production/',
 };
 
 // The test inventory bucket for dev.
@@ -889,3 +898,77 @@ export const oraDecompressionIcav2ReadyEventSource = 'orcabus.workflowmanager';
 export const oraDecompressionIcav2EventSource = 'orcabus.oradecompression';
 export const oraDecompressionIcav2EventDetailType = 'FastqListRowDecompressed';
 export const oraDecompressionStateMachinePrefix = 'oraDecompressionSfn';
+
+/*
+Fastq Manager
+*/
+
+// Tables
+export const fastqListRowTableName = 'fastqManagerDynamoDBTable';
+export const fastqSetTableName = 'fastqSetDynamoDBTable';
+export const fastqJobTableName = 'fastqJobDynamoDBTable';
+
+// Table indexes
+export const fastqListRowManagerIndexes = [
+  'rgid_ext',
+  'instrument_run_id',
+  'library_orcabus_id',
+  'fastq_set_id',
+];
+export const fastqSetManagerIndexes = ['rgid_ext', 'instrument_run_id', 'library_orcabus_id'];
+export const fastqJobManagerIndexes = ['fastq_id', 'job_type', 'status'];
+
+// S3 Buckets
+export const fastqManagerCacheBucket: Record<AppStage, string> = {
+  [AppStage.BETA]: `fastq-manager-cache-${accountIdAlias.beta}-ap-southeast-2`,
+  [AppStage.GAMMA]: `fastq-manager-cache-${accountIdAlias.gamma}-ap-southeast-2`,
+  [AppStage.PROD]: `fastq-manager-cache-${accountIdAlias.prod}-ap-southeast-2`,
+};
+
+export const ntsmBucket: Record<AppStage, string> = {
+  [AppStage.BETA]: `ntsm-fingerprints-${accountIdAlias.beta}-ap-southeast-2`,
+  [AppStage.GAMMA]: `ntsm-fingerprints-${accountIdAlias.gamma}-ap-southeast-2`,
+  [AppStage.PROD]: `ntsm-fingerprints-${accountIdAlias.prod}-ap-southeast-2`,
+};
+
+// Events
+export const fastqManagerEventSource = 'orcabus.fastqmanager';
+export const fastqManagerEventDetails = {
+  createFastqListRow: 'FastqListRowCreated',
+  updateFastqListRow: 'FastqListRowUpdated',
+  deleteFastqListRow: 'FastqListRowDeleted',
+  createFastqSet: 'FastqListSetCreated',
+  updateFastqSet: 'FastqListSetUpdated',
+  mergeFastqSet: 'FastqListSetMerged',
+  deleteFastqSet: 'FastqListSetDeleted',
+};
+
+/*
+S3 Copy Steps Function ARNs by account id
+*/
+export const s3CopyStepsFunctionArn: Record<AppStage, string> = {
+  [AppStage.BETA]: `arn:aws:states:${region}:${accountIdAlias.beta}:stateMachine:StepsS3CopyStateMachine157A1409-jx4WNxpdckgQ`, // pragma: allowlist secret
+  [AppStage.GAMMA]: `arn:aws:states:${region}:${accountIdAlias.gamma}:stateMachine:StepsS3CopyStateMachine157A1409-ikBos7HzwDtL`, // pragma: allowlist secret
+  [AppStage.PROD]: `arn:aws:states:${region}:${accountIdAlias.prod}:stateMachine:StepsS3CopyStateMachine157A1409-YbCgUX7dCZRm`, // pragma: allowlist secret
+};
+export const s3CopyStepsBucket: Record<AppStage, string> = {
+  [AppStage.BETA]: 'stepss3copy-working66f7dd3f-x4jwbnt6qvxc', // pragma: allowlist secret
+  [AppStage.GAMMA]: 'stg-stepss3copystack-stepss3copyworking01b34927-szqxpff5lsbx', // pragma: allowlist secret
+  [AppStage.PROD]: 'prod-stepss3copystack-stepss3copyworking01b34927-mp9y88d9e1py', // pragma: allowlist secret
+};
+
+/*
+Fastq Unarchiving service
+*/
+export const fastqUnarchivingJobTableName = 'fastqUnarchivingDynamoDBTable';
+export const fastqUnarchivingJobTableIndexes = ['status', 'job_type'];
+export const fastqUnarchivingEventDetailType = {
+  createJob: 'FastqUnarchivingJobCreated',
+  updateJob: 'FastqUnarchivingJobUpdated',
+};
+export const fastqUnarchivingManagerEventSource = 'orcabus.fastqunarchivingmanager';
+
+/*
+Fastq sync service
+*/
+export const fastqSyncEventDetailType = 'fastqSync';
