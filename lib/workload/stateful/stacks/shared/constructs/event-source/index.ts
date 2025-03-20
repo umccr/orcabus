@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { EventPattern, Rule } from 'aws-cdk-lib/aws-events';
+import { Rule } from 'aws-cdk-lib/aws-events';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { SqsQueue } from 'aws-cdk-lib/aws-events-targets';
 import { ServicePrincipal } from 'aws-cdk-lib/aws-iam';
@@ -22,9 +22,9 @@ export type EventSourceRule = {
   eventTypes?: string[];
 
   /**
-   * Rules matching specified fields inside "object" in the S3 event.
+   * Rules matching specified keys in buckets.
    */
-  patterns?: { [key: string]: any };
+  key?: { [key: string]: any }[];
 };
 
 /**
@@ -54,7 +54,6 @@ export type EventSourceProps = {
 export class EventSourceConstruct extends Construct {
   readonly queue: Queue;
   readonly deadLetterQueue: EventDLQConstruct;
-  readonly rules: Rule[] = [];
 
   constructor(scope: Construct, id: string, props: EventSourceProps) {
     super(scope, id);
@@ -74,25 +73,24 @@ export class EventSourceConstruct extends Construct {
 
     let cnt = 1;
     for (const prop of props.rules) {
-      const eventPattern = {
-        source: ['aws.s3'],
-        detailType: prop.eventTypes,
-        detail: {
-          ...(prop.bucket && {
-            bucket: {
-              name: [prop.bucket],
-            },
-          }),
-          ...(prop.patterns && {
-            object: prop.patterns,
-          }),
-        },
-      };
-
       const rule = new Rule(scope, 'Rule' + cnt, {
-        eventPattern,
+        eventPattern: {
+          source: ['aws.s3'],
+          detailType: prop.eventTypes,
+          detail: {
+            ...(prop.bucket && {
+              bucket: {
+                name: [prop.bucket],
+              },
+            }),
+            ...(prop.key && {
+              object: {
+                key: prop.key,
+              },
+            }),
+          },
+        },
       });
-      this.rules.push(rule);
 
       rule.addTarget(new SqsQueue(this.queue));
       cnt += 1;
