@@ -7,7 +7,6 @@ use chrono::Duration;
 use envy::from_env;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
-use serde_with::serde_as;
 use std::result;
 use std::str::FromStr;
 use url::Url;
@@ -16,7 +15,6 @@ use crate::error::Error::ConfigError;
 use crate::error::Result;
 
 /// Configuration environment variables for filemanager.
-#[serde_as]
 #[derive(Debug, Clone, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct Config {
@@ -53,6 +51,8 @@ pub struct Config {
     pub(crate) api_cors_allow_headers: Vec<String>,
     #[serde(rename = "filemanager_access_key_secret_id")]
     pub(crate) access_key_secret_id: Option<String>,
+    #[serde(rename = "filemanager_ignore_directory_objects")]
+    pub(crate) ignore_directory_objects: bool,
 }
 
 /// Default presigned URL expiry time, 7 days.
@@ -103,6 +103,7 @@ impl Default for Config {
             ],
             api_cors_allow_headers: vec![AUTHORIZATION.to_string()],
             access_key_secret_id: None,
+            ignore_directory_objects: false,
         }
     }
 }
@@ -245,6 +246,7 @@ mod tests {
             ("FILEMANAGER_API_CORS_ALLOW_METHODS", "GET,POST"),
             ("FILEMANAGER_API_CORS_ALLOW_HEADERS", "Authorization,Accept"),
             ("FILEMANAGER_ACCESS_KEY_SECRET_ID", "id"),
+            ("FILEMANAGER_IGNORE_DIRECTORY_OBJECTS", "true"),
         ]
         .into_iter()
         .map(|(key, value)| (key.to_string(), value.to_string()));
@@ -272,7 +274,8 @@ mod tests {
                 ]),
                 api_cors_allow_methods: vec!["GET".to_string(), "POST".to_string()],
                 api_cors_allow_headers: vec!["Authorization".to_string(), "Accept".to_string()],
-                access_key_secret_id: Some("id".to_string())
+                access_key_secret_id: Some("id".to_string()),
+                ignore_directory_objects: true,
             }
         )
     }
