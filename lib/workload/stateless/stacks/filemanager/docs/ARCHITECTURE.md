@@ -63,14 +63,19 @@ it could be performed asynchronously in a different process.
 
 #### Paired ingest mode
 
-Ordering events on ingestion can be turned on by setting `PAIRED_INGEST_MODE=true` as an environment variable. This has
-a performance cost on ingestion, but it removes the requirment to order events when querying the database.
+Ordering events on ingestion can be turned on by setting `FILEMANAGER_PAIRED_INGEST_MODE=true` as an environment variable.
+This has a performance cost on ingestion, but it removes the requirment to order events when querying the database.
 
 At the database level, events are processed as they arrive. For each object in the database, the sequencer value is
 recorded. When an event is inserted, it is first checked to see if it belongs to an already existing object, i.e. whether
 there are any objects with sequencer values that are greater (for created events) or lower (for deleted events) than the
 existing sequencer. If this condition is met, then the existing object is updated, and the old event is returned by the
 database to be re-inserted. If it is not met, then the event is inserted normally.
+
+#### Ignoring directory events
+
+Directory events can be ignored by setting `FILEMANAGER_IGNORE_DIRECTORY_OBJECTS=true` as an environment variable. This
+will not ingest objects that have a 0 size and a key that ends with a `/`.
 
 [events]: ../filemanager/src/events
 [s3-events]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventNotifications.html

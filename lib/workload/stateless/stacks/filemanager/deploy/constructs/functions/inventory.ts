@@ -30,6 +30,11 @@ export class InventoryFunction extends fn.Function {
   constructor(scope: Construct, id: string, props: InventoryFunctionProps) {
     super(scope, id, {
       package: 'filemanager-inventory-lambda',
+      environment: {
+        FILEMANAGER_INGESTER_TAG_NAME: 'umccr-org:OrcaBusFileManagerIngestId',
+        FILEMANAGER_IGNORE_DIRECTORY_OBJECTS: 'true',
+        ...props.environment,
+      },
       ...props,
       functionName: INVENTORY_FUNCTION_NAME,
     });

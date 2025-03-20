@@ -325,6 +325,19 @@ impl<'a> Collecter<'a> {
         }
     }
 
+    /// Filters directory objects if the config is set.
+    pub fn filter_directory_objects(config: &Config, event: &FlatS3EventMessage) -> bool {
+        if config.ignore_directory_objects && event.key.ends_with('/') {
+            match event.size {
+                Some(0) => return false,
+                None => return false,
+                _ => {}
+            }
+        }
+
+        true
+    }
+
     /// Process events and add header and datetime fields.
     pub async fn update_events(
         config: &Config,
@@ -333,18 +346,24 @@ impl<'a> Collecter<'a> {
         events: FlatS3EventMessages,
     ) -> Result<FlatS3EventMessages> {
         Ok(FlatS3EventMessages(
-            join_all(events.into_inner().into_iter().map(|event| async move {
-                // No need to run this unnecessarily on removed events.
-                match event.event_type {
-                    EventType::Deleted | EventType::Other => return Ok(event),
-                    _ => {}
-                };
+            join_all(
+                events
+                    .into_inner()
+                    .into_iter()
+                    .filter(|event| Self::filter_directory_objects(config, event))
+                    .map(|event| async move {
+                        // No need to run this unnecessarily on removed events.
+                        match event.event_type {
+                            EventType::Deleted | EventType::Other => return Ok(event),
+                            _ => {}
+                        };
 
-                trace!(key = ?event.key, bucket = ?event.bucket, "updating event");
+                        trace!(key = ?event.key, bucket = ?event.bucket, "updating event");
 
-                let event = Self::head(client, event).await?;
-                Self::tagging(config, client, database_client, event).await
-            }))
+                        let event = Self::head(client, event).await?;
+                        Self::tagging(config, client, database_client, event).await
+                    }),
+            )
             .await
             .into_iter()
             .collect::<Result<Vec<FlatS3EventMessage>>>()?,
@@ -397,8 +416,8 @@ pub(crate) mod tests {
 
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::events::aws::tests::{
-        expected_event_record_simple, expected_flat_events_simple, EXPECTED_SHA256,
-        EXPECTED_VERSION_ID,
+        expected_event_bridge_record_key, expected_event_record_simple,
+        expected_flat_events_simple, EXPECTED_SHA256, EXPECTED_VERSION_ID,
     };
     use crate::events::aws::StorageClass::IntelligentTiering;
 
@@ -418,8 +437,8 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::database::{Client, Ingest};
-    use crate::events::aws::message::default_version_id;
     use crate::events::aws::message::EventType::Created;
+    use crate::events::aws::message::{default_version_id, EventMessage};
     use crate::handlers::aws::tests::s3_object_results;
     use crate::queries::EntriesBuilder;
 
@@ -473,11 +492,60 @@ pub(crate) mod tests {
         assert_eq!(result, Some(DateTime::<Utc>::default()));
     }
 
+    #[test]
+    fn ignore_directory() {
+        let create_event = |key, size| {
+            let events: EventMessage = serde_json::from_str(
+                &expected_event_bridge_record_key(true, key, Some(size)).to_string(),
+            )
+            .unwrap();
+            FlatS3EventMessages::from(events)
+        };
+        let mut config = Default::default();
+
+        // If the config does not enable ignoring directories, then all events should pass
+        assert!(Collecter::filter_directory_objects(
+            &config,
+            &create_event("key", 1).0[0]
+        ));
+        assert!(Collecter::filter_directory_objects(
+            &config,
+            &create_event("key", 0).0[0]
+        ));
+        assert!(Collecter::filter_directory_objects(
+            &config,
+            &create_event("key/", 1).0[0]
+        ));
+        assert!(Collecter::filter_directory_objects(
+            &config,
+            &create_event("key/", 0).0[0]
+        ));
+
+        config.ignore_directory_objects = true;
+        // If the option is set, then directories with zero size should be filtered out.
+        assert!(Collecter::filter_directory_objects(
+            &config,
+            &create_event("key", 1).0[0]
+        ));
+        assert!(Collecter::filter_directory_objects(
+            &config,
+            &create_event("key", 0).0[0]
+        ));
+        assert!(Collecter::filter_directory_objects(
+            &config,
+            &create_event("key/", 1).0[0]
+        ));
+        assert!(!Collecter::filter_directory_objects(
+            &config,
+            &create_event("key/", 0).0[0]
+        ));
+    }
+
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn head(pool: PgPool) {
         let config = Default::default();
         let client = Client::from_pool(pool);
-        let mut collecter = test_collecter(&config, &client).await;
+        let mut collecter = test_collecter(&config, &client);
 
         collecter.client = mock_s3(&[head_expectation(
             default_version_id(),
@@ -503,7 +571,7 @@ pub(crate) mod tests {
     async fn head_not_found(pool: PgPool) {
         let config = Default::default();
         let client = Client::from_pool(pool);
-        let mut collecter = test_collecter(&config, &client).await;
+        let mut collecter = test_collecter(&config, &client);
 
         collecter.client = mock_s3(&[mock!(aws_sdk_s3::Client::head_object)
             .match_requests(move |req| {
@@ -525,7 +593,7 @@ pub(crate) mod tests {
     async fn update_events(pool: PgPool) {
         let config = Default::default();
         let client = Client::from_pool(pool);
-        let mut collecter = test_collecter(&config, &client).await;
+        let mut collecter = test_collecter(&config, &client);
 
         let events = expected_flat_events_simple().sort_and_dedup();
 
@@ -550,7 +618,7 @@ pub(crate) mod tests {
     async fn tagging_without_move(pool: PgPool) {
         let config = Default::default();
         let client = Client::from_pool(pool.clone());
-        let mut collecter = test_collecter(&config, &client).await;
+        let mut collecter = test_collecter(&config, &client);
 
         collecter.raw_events = FlatS3EventMessages(vec![
             expected_s3_event_message().with_version_id(EXPECTED_VERSION_ID.to_string())
@@ -576,7 +644,7 @@ pub(crate) mod tests {
     async fn tagging_with_move(pool: PgPool) {
         let config = Default::default();
         let client = Client::from_pool(pool.clone());
-        let mut collecter = test_collecter(&config, &client).await;
+        let mut collecter = test_collecter(&config, &client);
 
         let ingest_id = UuidGenerator::generate();
         EntriesBuilder::default()
@@ -643,7 +711,7 @@ pub(crate) mod tests {
     async fn tagging_on_fail(pool: PgPool) {
         let config = Default::default();
         let client = Client::from_pool(pool.clone());
-        let mut collecter = test_collecter(&config, &client).await;
+        let mut collecter = test_collecter(&config, &client);
 
         collecter.raw_events = FlatS3EventMessages(vec![
             expected_s3_event_message().with_version_id(default_version_id())
@@ -679,7 +747,7 @@ pub(crate) mod tests {
     async fn collect(pool: PgPool) {
         let config = Default::default();
         let client = Client::from_pool(pool);
-        let mut collecter = test_collecter(&config, &client).await;
+        let mut collecter = test_collecter(&config, &client);
         collecter.client = s3_client_expectations();
 
         let result = collecter.collect().await.unwrap().into_inner().0;
@@ -805,13 +873,16 @@ pub(crate) mod tests {
         HeadObjectError::NotFound(NotFound::builder().build())
     }
 
-    async fn test_collecter<'a>(config: &'a Config, database_client: &'a Client) -> Collecter<'a> {
-        Collecter::new(
-            mock_s3(&[]),
-            database_client,
-            expected_flat_events_simple(),
-            config,
-        )
+    fn test_collecter<'a>(config: &'a Config, database_client: &'a Client) -> Collecter<'a> {
+        test_collecter_events(config, database_client, expected_flat_events_simple())
+    }
+
+    fn test_collecter_events<'a>(
+        config: &'a Config,
+        database_client: &'a Client,
+        events: FlatS3EventMessages,
+    ) -> Collecter<'a> {
+        Collecter::new(mock_s3(&[]), database_client, events, config)
     }
 
     fn expected_receive_message() -> ReceiveMessageOutput {
