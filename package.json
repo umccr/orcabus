@@ -38,6 +38,7 @@
     "sqs-dlq-monitoring": "^1.2.20"
   },
   "devDependencies": {
+    "@aws-sdk/client-eventbridge": "^3.758.0",
     "@eslint/js": "^9.19.0",
     "@types/eslint__js": "^8.42.3",
     "@types/jest": "^29.5.14",
