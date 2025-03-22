@@ -3,7 +3,13 @@ import { Match, Template } from 'aws-cdk-lib/assertions';
 import { EventSourceConstruct } from '../../../lib/workload/stateful/stacks/shared/constructs/event-source';
 import { getEventSourceConstructProps } from '../../../config/stacks/shared';
 import { EventBridge } from '@aws-sdk/client-eventbridge';
-import { AppStage, oncoanalyserBucket } from '../../../config/constants';
+import {
+  AppStage,
+  icav2ArchiveAnalysisBucket,
+  icav2ArchiveFastqBucket,
+  icav2PipelineCacheBucket,
+  oncoanalyserBucket,
+} from '../../../config/constants';
 
 let stack: cdk.Stack;
 let eventbridge: EventBridge;
@@ -83,37 +89,80 @@ beforeEach(() => {
   eventbridge = new EventBridge();
 });
 
-test.only('Test event source event patterns', async () => {
-  new EventSourceConstruct(
-    stack,
-    'TestEventSourceConstruct',
-    getEventSourceConstructProps(AppStage.BETA)
-  );
+async function test_directory_objects(event: any, pattern: any) {
+  event['detail']['object']['key'] = 'example-key/';
+  event['detail']['object']['size'] = 0;
+  expect(await testEventPattern(event, pattern)).toBe(false);
 
-  const template = Template.fromStack(stack);
-
-  const pattern = Object.entries(template.findResources('AWS::Events::Rule'))[0][1]['Properties'][
-    'EventPattern'
-  ];
-  const event = testS3Event(oncoanalyserBucket[AppStage.BETA], 'example-key', 1);
-
-  // Not a directory and size is greater than 0
-  expect(await testEventPattern(event, pattern)).toBe(true);
-
-  // Not a directory and size is 0
   event['detail']['object']['key'] = 'example-key';
   event['detail']['object']['size'] = 0;
   expect(await testEventPattern(event, pattern)).toBe(true);
 
-  // Is a directory but size is greater than 0
+  event['detail']['object']['key'] = '/';
+  event['detail']['object']['size'] = 0;
+  expect(await testEventPattern(event, pattern)).toBe(false);
+
   event['detail']['object']['key'] = 'example-key/';
   event['detail']['object']['size'] = 1;
   expect(await testEventPattern(event, pattern)).toBe(true);
 
-  // Is a directory and size is 0. This should be the only one that gets filtered out.
-  event['detail']['object']['key'] = 'example-key/';
+  event['detail']['object']['key'] = 'example-key';
+  event['detail']['object']['size'] = 1;
+  expect(await testEventPattern(event, pattern)).toBe(true);
+
+  event['detail']['object']['key'] = '/';
+  event['detail']['object']['size'] = 1;
+  expect(await testEventPattern(event, pattern)).toBe(true);
+}
+
+test.only('Test event source event patterns', async () => {
+  new EventSourceConstruct(
+    stack,
+    'TestEventSourceConstruct',
+    getEventSourceConstructProps(AppStage.PROD)
+  );
+
+  const template = Template.fromStack(stack);
+
+  let pattern = Object.entries(template.findResources('AWS::Events::Rule'))[0][1]['Properties'][
+    'EventPattern'
+  ];
+  let event = testS3Event(oncoanalyserBucket[AppStage.PROD], 'example-key', 1);
+  await test_directory_objects(event, pattern);
+
+  pattern = Object.entries(template.findResources('AWS::Events::Rule'))[1][1]['Properties'][
+    'EventPattern'
+  ];
+  event = testS3Event(icav2PipelineCacheBucket[AppStage.PROD], 'example-key', 1);
+  await test_directory_objects(event, pattern);
+  // The cache bucket should additionally ignore cache objects.
+  event['detail']['object']['key'] = 'byob-icav2/123/cache/123';
   event['detail']['object']['size'] = 0;
   expect(await testEventPattern(event, pattern)).toBe(false);
+
+  event['detail']['object']['key'] = 'byob-icav2/123/cache/123/';
+  event['detail']['object']['size'] = 0;
+  expect(await testEventPattern(event, pattern)).toBe(false);
+
+  event['detail']['object']['key'] = 'byob-icav2/123/cache/123';
+  event['detail']['object']['size'] = 1;
+  expect(await testEventPattern(event, pattern)).toBe(false);
+
+  event['detail']['object']['key'] = 'byob-icav2/123/cache/123/';
+  event['detail']['object']['size'] = 1;
+  expect(await testEventPattern(event, pattern)).toBe(false);
+
+  pattern = Object.entries(template.findResources('AWS::Events::Rule'))[2][1]['Properties'][
+    'EventPattern'
+  ];
+  event = testS3Event(icav2ArchiveAnalysisBucket[AppStage.PROD], 'example-key', 1);
+  await test_directory_objects(event, pattern);
+
+  pattern = Object.entries(template.findResources('AWS::Events::Rule'))[3][1]['Properties'][
+    'EventPattern'
+  ];
+  event = testS3Event(icav2ArchiveFastqBucket[AppStage.PROD], 'example-key', 1);
+  await test_directory_objects(event, pattern);
 });
 
 test('Test EventSourceConstruct created props', () => {

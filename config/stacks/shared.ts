@@ -98,7 +98,23 @@ export const eventSourcePattern = () => {
         size: [{ numeric: ['>', 0] }],
       },
       {
-        key: [{ 'anything-but': { suffix: '/' } }],
+        key: [{ 'anything-but': { wildcard: ['*/'] } }],
+      },
+    ],
+  };
+};
+
+export const eventSourcePatternCache = () => {
+  // NOT KEY in cache AND (SIZE > 0 OR NOT KEY ends with "/") expands to
+  // (NOT KEY in cache and SIZE > 0) OR (NOT KEY in cache and NOT KEY ends with "/")\
+  return {
+    $or: [
+      {
+        key: [{ 'anything-but': { wildcard: ['byob-icav2/*/cache/*'] } }],
+        size: [{ numeric: ['>', 0] }],
+      },
+      {
+        key: [{ 'anything-but': { wildcard: ['byob-icav2/*/cache/*', '*/'] } }],
       },
     ],
   };
@@ -126,9 +142,7 @@ export const getEventSourceConstructProps = (stage: AppStage): EventSourceProps 
       {
         bucket: icav2PipelineCacheBucket[stage],
         eventTypes,
-        patterns: {
-          key: [{ 'anything-but': { wildcard: 'byob-icav2/*/cache/*' } }],
-        },
+        patterns: eventSourcePatternCache(),
       },
     ],
   };
