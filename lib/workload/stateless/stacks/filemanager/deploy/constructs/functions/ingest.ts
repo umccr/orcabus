@@ -40,7 +40,6 @@ export class IngestFunction extends fn.Function {
       package: 'filemanager-ingest-lambda',
       environment: {
         FILEMANAGER_INGESTER_TAG_NAME: 'umccr-org:OrcaBusFileManagerIngestId',
-        FILEMANAGER_IGNORE_DIRECTORY_OBJECTS: 'true',
         ...props.environment,
       },
       ...props,

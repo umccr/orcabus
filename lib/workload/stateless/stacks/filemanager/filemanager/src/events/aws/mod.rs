@@ -1095,7 +1095,7 @@ pub(crate) mod tests {
         events.into()
     }
 
-    pub(crate) fn expected_events(records: String) -> TransposedS3EventMessages {
+    fn expected_events(records: String) -> TransposedS3EventMessages {
         let events = expected_flat_events(records).sort_and_dedup();
         events.into()
     }
@@ -1129,11 +1129,8 @@ pub(crate) mod tests {
         records.to_string()
     }
 
-    pub(crate) fn expected_event_bridge_record_key(
-        quote_e_tag: bool,
-        key: &str,
-        size: Option<i64>,
-    ) -> Value {
+    /// https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
+    pub(crate) fn expected_event_bridge_record(quote_e_tag: bool) -> Value {
         json!({
             "version": "0",
             "id": "2ee9cc15-d022-99ea-1fb8-1b1bac4850f9",
@@ -1151,8 +1148,7 @@ pub(crate) mod tests {
                     "name": "bucket"
                 },
                 "object": {
-                    "key": key,
-                    "size": size,
+                    "key": "key",
                     "etag": if quote_e_tag { EXPECTED_QUOTED_E_TAG } else { EXPECTED_E_TAG },
                     "version-id": EXPECTED_VERSION_ID,
                     "sequencer": EXPECTED_SEQUENCER_DELETED_ONE,
@@ -1164,11 +1160,6 @@ pub(crate) mod tests {
                 "deletion-type": "Permanently Deleted"
             }
         })
-    }
-
-    /// https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
-    pub(crate) fn expected_event_bridge_record(quote_e_tag: bool) -> Value {
-        expected_event_bridge_record_key(quote_e_tag, "key", None)
     }
 
     /// https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
