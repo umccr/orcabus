@@ -27,7 +27,11 @@ export class StatelessPipelineStack extends cdk.Stack {
     // the GH repo defined below already configured to allow CB webhook
     // This is actually not part of the pipeline, so I guess we could move this someday.
     const projectName = 'orcabus-codebuild-gh-runner';
-    new codebuild.Project(this, 'GHRunnerCodeBuildProject', {
+    const testEventPolicy = new iam.PolicyStatement({
+      actions: ['events:TestEventPattern'],
+      resources: ['*'],
+    });
+    const project = new codebuild.Project(this, 'GHRunnerCodeBuildProject', {
       projectName,
       description: 'GitHub Action Runner in CodeBuild for `orcabus` repository',
       environment: {
@@ -56,6 +60,7 @@ export class StatelessPipelineStack extends cdk.Stack {
         },
       },
     });
+    project.addToRolePolicy(testEventPolicy);
 
     // A connection where the pipeline get its source code
     const codeStarArn = ssm.StringParameter.valueForStringParameter(this, 'codestar_github_arn');
@@ -88,6 +93,7 @@ export class StatelessPipelineStack extends cdk.Stack {
           },
         },
       },
+      rolePolicyStatements: [testEventPolicy],
       partialBuildSpec: codebuild.BuildSpec.fromObject({
         phases: {
           install: {
