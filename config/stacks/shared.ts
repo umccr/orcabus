@@ -91,7 +91,36 @@ const getComputeConstructProps = (): ComputeProps => {
   };
 };
 
-const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
+export const eventSourcePattern = () => {
+  return {
+    $or: [
+      {
+        size: [{ numeric: ['>', 0] }],
+      },
+      {
+        key: [{ 'anything-but': { wildcard: ['*/'] } }],
+      },
+    ],
+  };
+};
+
+export const eventSourcePatternCache = () => {
+  // NOT KEY in cache AND (SIZE > 0 OR NOT KEY ends with "/") expands to
+  // (NOT KEY in cache and SIZE > 0) OR (NOT KEY in cache and NOT KEY ends with "/")\
+  return {
+    $or: [
+      {
+        key: [{ 'anything-but': { wildcard: ['byob-icav2/*/cache/*'] } }],
+        size: [{ numeric: ['>', 0] }],
+      },
+      {
+        key: [{ 'anything-but': { wildcard: ['byob-icav2/*/cache/*', '*/'] } }],
+      },
+    ],
+  };
+};
+
+export const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
   const eventTypes = [
     'Object Created',
     'Object Deleted',
@@ -108,11 +137,12 @@ const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
       {
         bucket: oncoanalyserBucket[stage],
         eventTypes,
+        patterns: eventSourcePattern(),
       },
       {
         bucket: icav2PipelineCacheBucket[stage],
         eventTypes,
-        key: [{ 'anything-but': { wildcard: 'byob-icav2/*/cache/*' } }],
+        patterns: eventSourcePatternCache(),
       },
     ],
   };
@@ -121,10 +151,12 @@ const getEventSourceConstructProps = (stage: AppStage): EventSourceProps => {
     props.rules.push({
       bucket: icav2ArchiveAnalysisBucket[stage],
       eventTypes,
+      patterns: eventSourcePattern(),
     });
     props.rules.push({
       bucket: icav2ArchiveFastqBucket[stage],
       eventTypes,
+      patterns: eventSourcePattern(),
     });
   }
 
