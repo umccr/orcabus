@@ -32,7 +32,7 @@ db-dump:
 	-v $(shell pwd):/data \
 	-e PGPASSWORD=orcabus \
 	--network=metadata-manager_default \
-	postgres:15.4 \
+	postgres:16 \
 	pg_dump -h orcabus_db -U orcabus -d metadata_manager | gzip > data/mm_dump.sql.gz
 
 s3-dump-upload:
