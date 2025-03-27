@@ -173,7 +173,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_s3_api(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -187,7 +187,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_non_existent(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
 
         let (status_code, _) = response_from::<Value>(
             state,
@@ -209,6 +209,7 @@ mod tests {
 
         let state = AppState::from_pool(pool)
             .await
+            .unwrap()
             .with_s3_client(s3::Client::new(client));
 
         let entries = EntriesBuilder::default()
@@ -247,6 +248,7 @@ mod tests {
 
         let state = AppState::from_pool(pool)
             .await
+            .unwrap()
             .with_s3_client(s3::Client::new(client));
 
         let entries = EntriesBuilder::default()
@@ -284,6 +286,7 @@ mod tests {
         };
         let state = AppState::from_pool(pool)
             .await
+            .unwrap()
             .with_config(config)
             .with_s3_client(s3::Client::new(client));
 
@@ -311,6 +314,7 @@ mod tests {
 
         let state = AppState::from_pool(pool)
             .await
+            .unwrap()
             .with_s3_client(s3::Client::new(client));
 
         let entries = EntriesBuilder::default()
@@ -337,6 +341,7 @@ mod tests {
 
         let state = AppState::from_pool(pool)
             .await
+            .unwrap()
             .with_s3_client(s3::Client::new(client));
 
         let entries = EntriesBuilder::default()
