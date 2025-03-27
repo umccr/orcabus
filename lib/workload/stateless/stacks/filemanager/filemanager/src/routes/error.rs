@@ -189,7 +189,7 @@ impl From<Error> for ErrorStatusCode {
             }
             Error::ExpectedSomeValue(_) => Self::NotFound(err.to_string().into()),
             Error::CrawlError(_) => Self::Conflict(err.to_string().into()),
-            _ => Self::InternalServerError("unexpected error".to_string().into()),
+            _ => Self::InternalServerError(err.to_string().into()),
         }
     }
 }
