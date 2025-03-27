@@ -205,7 +205,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attribute_api_unsupported(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -239,7 +239,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attribute_api_not_found(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -274,7 +274,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_collection_attributes_api_add_nested(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -325,7 +325,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_collection_attributes_api(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -376,7 +376,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_s3_attributes_current_state(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -421,7 +421,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_ingest_id(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let client = state.database_client();
         let mut entries = EntriesBuilder::default().build(client).await.unwrap();
 
@@ -452,7 +452,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_ingest_id_single(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let client = state.database_client();
         let mut entries = EntriesBuilder::default().build(client).await.unwrap();
 
@@ -526,7 +526,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_ingest_id_error(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let client = state.database_client();
         let mut entries = EntriesBuilder::default().build(client).await.unwrap();
 
@@ -577,7 +577,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_collection_attributes_api_no_op(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -618,7 +618,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_wildcard_like(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -656,7 +656,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_wildcard_ilike(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -703,7 +703,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_api_wildcard_like(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -735,7 +735,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn update_attributes_api_wildcard_ilike(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await

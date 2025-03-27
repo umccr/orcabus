@@ -342,7 +342,6 @@ pub(crate) mod tests {
     use axum::body::Body;
     use axum::http::StatusCode;
     use sqlx::PgPool;
-    use tokio::sync::Mutex;
 
     use super::*;
     use crate::clients::aws::s3::Client;
@@ -371,7 +370,7 @@ pub(crate) mod tests {
             Default::default(),
             Arc::new(client),
             Arc::new(sqs::Client::with_defaults().await),
-            Arc::new(Mutex::new(secrets_manager::Client::with_defaults().await)),
+            Arc::new(secrets_manager::Client::with_defaults().await.unwrap()),
             false,
         );
 
@@ -404,7 +403,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn crawl_s3_status_api(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -429,7 +428,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_status_api(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -442,7 +441,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_s3_status_api(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .build(state.database_client())
             .await

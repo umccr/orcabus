@@ -12,7 +12,7 @@ use crate::clients::aws::s3::ResponseHeaders;
 use crate::clients::aws::secrets_manager::SecretsManagerCredentials;
 use crate::clients::aws::{config, s3};
 use crate::database::entities::s3_object;
-use crate::error::Error::{PresignedUrlError, SecretsManagerError};
+use crate::error::Error::PresignedUrlError;
 use crate::error::Result;
 use crate::routes::AppState;
 
@@ -135,17 +135,13 @@ impl<'a> PresignedUrlBuilder<'a> {
 
             // Grab the secret if it is configured.
             let client = if let Some(secret) = access_key_secret_id {
-                let mut client = self.state.secrets_manager_client().lock().await;
-
-                let secret = client.get_secret(secret).await.map_err(|err| {
-                    SecretsManagerError(format!("no {} secret found: {}", secret, err))
-                })?;
-
                 // Construct a new client to use only once-off for pre-signing.
-                let config =
-                    config::Config::from_provider(SecretsManagerCredentials::new(secret).await?)
-                        .await
-                        .load();
+                let config = config::Config::from_provider(
+                    SecretsManagerCredentials::new(secret, self.state.secrets_manager_client())
+                        .await?,
+                )
+                .await
+                .load();
                 &s3::Client::new(aws_sdk_s3::Client::new(&config))
             } else {
                 self.state.s3_client()
@@ -251,7 +247,10 @@ pub(crate) mod tests {
             RuleMode::MatchAny,
             &[&mock_get_object("0", "1", b""),]
         ));
-        let state = AppState::from_pool(pool).await.with_s3_client(client);
+        let state = AppState::from_pool(pool)
+            .await
+            .unwrap()
+            .with_s3_client(client);
 
         let mut builder = PresignedUrlBuilder::new(&state)
             .unwrap()
@@ -299,7 +298,10 @@ pub(crate) mod tests {
             RuleMode::MatchAny,
             &[&mock_get_object("0", "1", b""),]
         ));
-        let state = AppState::from_pool(pool).await.with_s3_client(client);
+        let state = AppState::from_pool(pool)
+            .await
+            .unwrap()
+            .with_s3_client(client);
 
         let mut builder = PresignedUrlBuilder::new(&state)
             .unwrap()
@@ -331,7 +333,10 @@ pub(crate) mod tests {
             RuleMode::Sequential,
             &[&mock_get_object("0", "1", b""),]
         ));
-        let state = AppState::from_pool(pool).await.with_s3_client(client);
+        let state = AppState::from_pool(pool)
+            .await
+            .unwrap()
+            .with_s3_client(client);
 
         let mut builder = PresignedUrlBuilder::new(&state)
             .unwrap()
@@ -366,6 +371,7 @@ pub(crate) mod tests {
         };
         let state = AppState::from_pool(pool)
             .await
+            .unwrap()
             .with_s3_client(client)
             .with_config(config);
 
@@ -398,6 +404,7 @@ pub(crate) mod tests {
         };
         let state = AppState::from_pool(pool)
             .await
+            .unwrap()
             .with_s3_client(client)
             .with_config(config);
 

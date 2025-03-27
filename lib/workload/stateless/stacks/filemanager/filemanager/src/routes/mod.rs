@@ -53,7 +53,7 @@ pub struct AppState {
     config: Arc<Config>,
     s3_client: Arc<s3::Client>,
     sqs_client: Arc<sqs::Client>,
-    secrets_manager_client: Arc<Mutex<secrets_manager::Client>>,
+    secrets_manager_client: Arc<secrets_manager::Client>,
     use_tls_links: bool,
     params_field_names: Arc<HashSet<String>>,
     crawl_task: Arc<Mutex<Option<CrawlTask>>>,
@@ -66,7 +66,7 @@ impl AppState {
         config: Arc<Config>,
         s3_client: Arc<s3::Client>,
         sqs_client: Arc<sqs::Client>,
-        secrets_manager_client: Arc<Mutex<secrets_manager::Client>>,
+        secrets_manager_client: Arc<secrets_manager::Client>,
         use_tls_links: bool,
     ) -> Self {
         Self {
@@ -82,15 +82,15 @@ impl AppState {
     }
 
     /// Create a new state from an existing pool with default config.
-    pub async fn from_pool(pool: PgPool) -> Self {
-        Self::new(
+    pub async fn from_pool(pool: PgPool) -> Result<Self> {
+        Ok(Self::new(
             database::Client::from_pool(pool),
             Default::default(),
             Arc::new(s3::Client::with_defaults().await),
             Arc::new(sqs::Client::with_defaults().await),
-            Arc::new(Mutex::new(secrets_manager::Client::with_defaults().await)),
+            Arc::new(secrets_manager::Client::with_defaults().await?),
             false,
-        )
+        ))
     }
 
     /// Modify the field names for parameters.
@@ -139,7 +139,7 @@ impl AppState {
     }
 
     /// Get the secrets manager client.
-    pub fn secrets_manager_client(&self) -> &Arc<Mutex<secrets_manager::Client>> {
+    pub fn secrets_manager_client(&self) -> &secrets_manager::Client {
         &self.secrets_manager_client
     }
 
@@ -263,7 +263,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_unknown_path(pool: PgPool) {
-        let app = router(AppState::from_pool(pool).await).unwrap();
+        let app = router(AppState::from_pool(pool).await.unwrap()).unwrap();
         let response = app
             .oneshot(
                 Request::builder()
@@ -279,7 +279,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_cors(pool: PgPool) {
-        let mut state = AppState::from_pool(pool).await;
+        let mut state = AppState::from_pool(pool).await.unwrap();
         state.config = Arc::new(Config {
             api_cors_allow_origins: Some(vec![
                 "localhost:8000".to_string(),

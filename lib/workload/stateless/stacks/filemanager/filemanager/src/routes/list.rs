@@ -405,7 +405,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -421,7 +421,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_current_s3_paginate(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_bucket_divisor(4)
             .with_key_divisor(3)
@@ -449,7 +449,10 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_current_s3_paginate_https_links(pool: PgPool) {
-        let state = AppState::from_pool(pool).await.with_use_tls_links(true);
+        let state = AppState::from_pool(pool)
+            .await
+            .unwrap()
+            .with_use_tls_links(true);
         let entries = EntriesBuilder::default()
             .with_bucket_divisor(4)
             .with_key_divisor(3)
@@ -477,10 +480,13 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_current_s3_paginate_alternate_link(pool: PgPool) {
-        let state = AppState::from_pool(pool).await.with_config(Config {
-            api_links_url: Some("https://localhost:8000".parse().unwrap()),
-            ..Default::default()
-        });
+        let state = AppState::from_pool(pool)
+            .await
+            .unwrap()
+            .with_config(Config {
+                api_links_url: Some("https://localhost:8000".parse().unwrap()),
+                ..Default::default()
+            });
         let entries = EntriesBuilder::default()
             .with_bucket_divisor(4)
             .with_key_divisor(3)
@@ -519,6 +525,7 @@ pub(crate) mod tests {
 
         let state = AppState::from_pool(pool)
             .await
+            .unwrap()
             .with_s3_client(s3::Client::new(client));
 
         EntriesBuilder::default()
@@ -546,7 +553,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_api_presign_not_accessible(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
 
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
@@ -575,6 +582,7 @@ pub(crate) mod tests {
 
         let state = AppState::from_pool(pool)
             .await
+            .unwrap()
             .with_s3_client(s3::Client::new(client));
 
         EntriesBuilder::default()
@@ -614,6 +622,7 @@ pub(crate) mod tests {
         };
         let state = AppState::from_pool(pool)
             .await
+            .unwrap()
             .with_config(config)
             .with_s3_client(s3::Client::new(client));
 
@@ -637,7 +646,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_current_s3_filter(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_n(30)
             .with_bucket_divisor(8)
@@ -656,7 +665,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_filter_event_type(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -676,7 +685,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_multiple_and_filters(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -692,7 +701,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_multiple_or_filters(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -711,7 +720,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_multiple_filters_percent_encoded(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -734,7 +743,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_multiple_filters_same_key(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .with_keys(HashMap::from_iter(vec![
@@ -777,7 +786,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_filter_wildcard(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -825,7 +834,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_filter_attributes(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -895,7 +904,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn attributes_s3(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -938,7 +947,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_filter_attributes_wildcard(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -981,7 +990,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_filter_escaped_attributes_wildcard(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let mut entries = EntriesBuilder::default()
             .build(state.database_client())
             .await
@@ -1042,7 +1051,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_api(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -1055,7 +1064,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_api_filter(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -1069,7 +1078,7 @@ pub(crate) mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn count_s3_api_current_state(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         EntriesBuilder::default()
             .with_bucket_divisor(4)
             .with_key_divisor(3)

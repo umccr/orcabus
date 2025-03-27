@@ -6,54 +6,52 @@ use crate::error::Error::{ParseError, SecretsManagerError};
 use crate::error::Result;
 use aws_credential_types::provider::ProvideCredentials;
 use aws_credential_types::{provider, Credentials};
-use aws_sdk_s3::error::SdkError;
 use aws_sdk_secretsmanager as secretsmanager;
-use aws_sdk_secretsmanager::operation::get_secret_value::{
-    GetSecretValueError, GetSecretValueOutput,
-};
+use aws_secretsmanager_caching::output::GetSecretValueOutputDef;
+use aws_secretsmanager_caching::SecretsManagerCachingClient;
 use base64::prelude::Engine;
 use base64::prelude::BASE64_STANDARD;
 use serde::Deserialize;
 use serde_json::{from_slice, from_str};
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use std::num::NonZeroUsize;
+use std::time::Duration;
 use std::{fmt, result};
 
 /// A wrapper around an S3 client which can be mocked.
 pub struct Client {
-    inner: secretsmanager::Client,
-    cache: HashMap<String, GetSecretValueOutput>,
+    inner: SecretsManagerCachingClient,
 }
 
 impl Client {
     /// Create a new S3 client.
-    pub fn new(inner: secretsmanager::Client) -> Self {
-        Self {
-            inner,
-            cache: Default::default(),
-        }
+    pub fn new(inner: SecretsManagerCachingClient) -> Self {
+        Self { inner }
     }
 
     /// Create an S3 client with default config.
-    pub async fn with_defaults() -> Self {
-        Self::new(secretsmanager::Client::new(
-            &Config::with_defaults().await.load(),
-        ))
+    pub async fn with_defaults() -> Result<Self> {
+        let config = Config::with_defaults().await.load();
+
+        let client = SecretsManagerCachingClient::from_builder(
+            secretsmanager::config::Builder::from(&config),
+            NonZeroUsize::new(1).expect("valid non-zero usize"),
+            Duration::from_secs(900),
+            false,
+        )
+        .await
+        .map_err(|err| SecretsManagerError(err.to_string()))?;
+
+        Ok(Self::new(client))
     }
 
     /// Retrieve a secret value.
     pub async fn get_secret(
-        &mut self,
+        &self,
         id: &str,
-    ) -> result::Result<&GetSecretValueOutput, SdkError<GetSecretValueError>> {
-        match self.cache.entry(id.to_string()) {
-            Entry::Occupied(entry) => Ok(entry.into_mut()),
-            Entry::Vacant(entry) => {
-                let secret = self.inner.get_secret_value().secret_id(id).send().await?;
-                Ok(entry.insert(secret))
-            }
-        }
+    ) -> result::Result<GetSecretValueOutputDef, Box<dyn Error>> {
+        self.inner.get_secret_value(id, None, None, false).await
     }
 }
 
@@ -90,11 +88,16 @@ impl ProvideCredentials for SecretsManagerCredentials {
 
 impl SecretsManagerCredentials {
     /// Construct the credentials from the secret.
-    pub async fn new(secret: &GetSecretValueOutput) -> Result<Self> {
-        let secret = if let Some(string) = secret.secret_string.as_ref() {
-            from_str(string)?
-        } else if let Some(blob) = secret.secret_binary.as_ref() {
-            let data = blob.clone().into_inner();
+    pub async fn new(id: &str, client: &Client) -> Result<Self> {
+        let secret = client
+            .get_secret(id)
+            .await
+            .map_err(|err| SecretsManagerError(format!("no valid secret {}: {}", id, err)))?;
+
+        let secret = if let Some(string) = secret.secret_string {
+            from_str(&string)?
+        } else if let Some(blob) = secret.secret_binary {
+            let data = blob.into_inner();
             match from_slice(&data) {
                 Ok(secret) => secret,
                 Err(_) => from_slice(
