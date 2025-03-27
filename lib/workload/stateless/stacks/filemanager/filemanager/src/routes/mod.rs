@@ -18,7 +18,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::trace;
 
-use crate::clients::aws::{s3, sqs};
+use crate::clients::aws::{s3, secrets_manager, sqs};
 use crate::database;
 use crate::env::Config;
 use crate::error::Error::{ApiConfigurationError, CrawlError};
@@ -53,6 +53,7 @@ pub struct AppState {
     config: Arc<Config>,
     s3_client: Arc<s3::Client>,
     sqs_client: Arc<sqs::Client>,
+    secrets_manager_client: Arc<Mutex<secrets_manager::Client>>,
     use_tls_links: bool,
     params_field_names: Arc<HashSet<String>>,
     crawl_task: Arc<Mutex<Option<CrawlTask>>>,
@@ -65,6 +66,7 @@ impl AppState {
         config: Arc<Config>,
         s3_client: Arc<s3::Client>,
         sqs_client: Arc<sqs::Client>,
+        secrets_manager_client: Arc<Mutex<secrets_manager::Client>>,
         use_tls_links: bool,
     ) -> Self {
         Self {
@@ -72,6 +74,7 @@ impl AppState {
             config,
             s3_client,
             sqs_client,
+            secrets_manager_client,
             use_tls_links,
             params_field_names: Arc::new(attributes_s3_field_names()),
             crawl_task: Arc::new(Mutex::new(None)),
@@ -85,6 +88,7 @@ impl AppState {
             Default::default(),
             Arc::new(s3::Client::with_defaults().await),
             Arc::new(sqs::Client::with_defaults().await),
+            Arc::new(Mutex::new(secrets_manager::Client::with_defaults().await)),
             false,
         )
     }
@@ -132,6 +136,11 @@ impl AppState {
     /// Get the s3 client.
     pub fn s3_client(&self) -> &s3::Client {
         &self.s3_client
+    }
+
+    /// Get the secrets manager client.
+    pub fn secrets_manager_client(&self) -> &Arc<Mutex<secrets_manager::Client>> {
+        &self.secrets_manager_client
     }
 
     /// Get the sqs client.

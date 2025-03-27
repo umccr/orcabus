@@ -5,9 +5,10 @@ use axum::middleware::{from_fn_with_state, Next};
 use axum::response::{IntoResponse, Response};
 use lambda_http::run;
 use lambda_http::Error;
+use tokio::sync::Mutex;
 use tracing::debug;
 
-use filemanager::clients::aws::{s3, sqs};
+use filemanager::clients::aws::{s3, secrets_manager, sqs};
 use filemanager::database::Client;
 use filemanager::env::Config;
 use filemanager::handlers::aws::{create_database_pool, update_credentials};
@@ -28,6 +29,7 @@ async fn main() -> Result<(), Error> {
         Arc::new(config),
         Arc::new(s3::Client::with_defaults().await),
         Arc::new(sqs::Client::with_defaults().await),
+        Arc::new(Mutex::new(secrets_manager::Client::with_defaults().await)),
         // API Gateway is always TLS.
         true,
     );

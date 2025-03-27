@@ -12,8 +12,7 @@ use crate::clients::aws::s3::ResponseHeaders;
 use crate::clients::aws::secrets_manager::SecretsManagerCredentials;
 use crate::clients::aws::{config, s3};
 use crate::database::entities::s3_object;
-use crate::env::Config;
-use crate::error::Error::PresignedUrlError;
+use crate::error::Error::{PresignedUrlError, SecretsManagerError};
 use crate::error::Result;
 use crate::routes::AppState;
 
@@ -57,9 +56,8 @@ pub enum ContentDisposition {
 
 /// A builder for presigned urls.
 pub struct PresignedUrlBuilder<'a> {
-    s3_client: &'a s3::Client,
+    state: &'a AppState,
     http_client: reqwest::Client,
-    config: &'a Config,
     object_size: Option<i64>,
 }
 
@@ -88,10 +86,9 @@ impl ResponseHeadersConfig {
 
 impl<'a> PresignedUrlBuilder<'a> {
     /// Create a builder.
-    pub fn new(s3_client: &'a s3::Client, config: &'a Config) -> Result<Self> {
+    pub fn new(state: &'a AppState) -> Result<Self> {
         Ok(Self {
-            s3_client,
-            config,
+            state,
             http_client: ClientBuilder::new()
                 .build()
                 .map_err(|err| PresignedUrlError(err.to_string()))?,
@@ -108,14 +105,14 @@ impl<'a> PresignedUrlBuilder<'a> {
     /// Create a presigned url using the key and bucket. This will not create a URL if the size
     /// is over the limit, and will instead return `None`.
     pub async fn presign_url(
-        &self,
+        &mut self,
         key: &str,
         bucket: &str,
         response_headers: ResponseHeadersConfig,
         access_key_secret_id: Option<&str>,
     ) -> Result<Option<Url>> {
         let less_than_limit = if let Some(size) = self.object_size {
-            if let Some(limit) = self.config.api_presign_limit() {
+            if let Some(limit) = self.state.config().api_presign_limit() {
                 u64::try_from(size).unwrap_or_default() <= limit
             } else {
                 true
@@ -134,10 +131,16 @@ impl<'a> PresignedUrlBuilder<'a> {
                 response_headers.content_type,
                 response_headers.content_encoding,
             );
-            let expires_in = self.config.api_presign_expiry();
+            let expires_in = self.state.config().api_presign_expiry();
 
             // Grab the secret if it is configured.
             let client = if let Some(secret) = access_key_secret_id {
+                let mut client = self.state.secrets_manager_client().lock().await;
+
+                let secret = client.get_secret(secret).await.map_err(|err| {
+                    SecretsManagerError(format!("no {} secret found: {}", secret, err))
+                })?;
+
                 // Construct a new client to use only once-off for pre-signing.
                 let config =
                     config::Config::from_provider(SecretsManagerCredentials::new(secret).await?)
@@ -145,7 +148,7 @@ impl<'a> PresignedUrlBuilder<'a> {
                         .load();
                 &s3::Client::new(aws_sdk_s3::Client::new(&config))
             } else {
-                self.s3_client
+                self.state.s3_client()
             };
 
             let presign =
@@ -156,9 +159,14 @@ impl<'a> PresignedUrlBuilder<'a> {
                 Some(uri) => Some(uri),
                 // Try again with the role if the access key was set and failed.
                 None if access_key_secret_id.is_some() => {
-                    let presign =
-                        Self::presign_with_client(self.s3_client, key, bucket, headers, expires_in)
-                            .await?;
+                    let presign = Self::presign_with_client(
+                        self.state.s3_client(),
+                        key,
+                        bucket,
+                        headers,
+                        expires_in,
+                    )
+                    .await?;
                     self.test_url(presign).await
                 }
                 // Otherwise, it doesn't work.
@@ -204,7 +212,7 @@ impl<'a> PresignedUrlBuilder<'a> {
         response_content_encoding: Option<String>,
         access_key_secret_id: Option<&str>,
     ) -> Result<Option<Url>> {
-        let builder = Self::new(state.s3_client(), state.config())?.set_object_size(model.size);
+        let mut builder = Self::new(state)?.set_object_size(model.size);
 
         if let Some(presigned) = builder
             .presign_url(
@@ -228,24 +236,24 @@ impl<'a> PresignedUrlBuilder<'a> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use aws_smithy_mocks_experimental::{mock_client, RuleMode};
-    use chrono::Duration;
-
     use super::*;
     use crate::clients::aws::s3;
     use crate::env::Config;
     use crate::routes::list::tests::mock_get_object;
+    use aws_smithy_mocks_experimental::{mock_client, RuleMode};
+    use chrono::Duration;
+    use sqlx::PgPool;
 
-    #[tokio::test]
-    async fn presign() {
+    #[sqlx::test]
+    async fn presign(pool: PgPool) {
         let client = s3::Client::new(mock_client!(
             aws_sdk_s3,
             RuleMode::MatchAny,
             &[&mock_get_object("0", "1", b""),]
         ));
-        let config = Default::default();
+        let state = AppState::from_pool(pool).await.with_s3_client(client);
 
-        let builder = PresignedUrlBuilder::new(&client, &config)
+        let mut builder = PresignedUrlBuilder::new(&state)
             .unwrap()
             .set_object_size(None);
         let url = builder
@@ -264,7 +272,7 @@ pub(crate) mod tests {
         assert!(query.contains("response-content-disposition=inline"));
         assert_eq!(url.path(), "/1/0");
 
-        let builder = PresignedUrlBuilder::new(&client, &config)
+        let mut builder = PresignedUrlBuilder::new(&state)
             .unwrap()
             .set_object_size(Some(2));
         let url = builder
@@ -284,16 +292,16 @@ pub(crate) mod tests {
         assert_eq!(url.path(), "/1/0");
     }
 
-    #[tokio::test]
-    async fn presign_mirror_headers() {
+    #[sqlx::test]
+    async fn presign_mirror_headers(pool: PgPool) {
         let client = s3::Client::new(mock_client!(
             aws_sdk_s3,
             RuleMode::MatchAny,
             &[&mock_get_object("0", "1", b""),]
         ));
-        let config = Default::default();
+        let state = AppState::from_pool(pool).await.with_s3_client(client);
 
-        let builder = PresignedUrlBuilder::new(&client, &config)
+        let mut builder = PresignedUrlBuilder::new(&state)
             .unwrap()
             .set_object_size(None);
         let url = builder
@@ -316,16 +324,16 @@ pub(crate) mod tests {
         assert_eq!(url.path(), "/1/0");
     }
 
-    #[tokio::test]
-    async fn presign_attachment() {
+    #[sqlx::test]
+    async fn presign_attachment(pool: PgPool) {
         let client = s3::Client::new(mock_client!(
             aws_sdk_s3,
             RuleMode::Sequential,
             &[&mock_get_object("0", "1", b""),]
         ));
-        let config = Default::default();
+        let state = AppState::from_pool(pool).await.with_s3_client(client);
 
-        let builder = PresignedUrlBuilder::new(&client, &config)
+        let mut builder = PresignedUrlBuilder::new(&state)
             .unwrap()
             .set_object_size(None);
         let url = builder
@@ -345,8 +353,8 @@ pub(crate) mod tests {
         assert_eq!(url.path(), "/1/0");
     }
 
-    #[tokio::test]
-    async fn presign_limit() {
+    #[sqlx::test]
+    async fn presign_limit(pool: PgPool) {
         let client = s3::Client::new(mock_client!(
             aws_sdk_s3,
             RuleMode::Sequential,
@@ -356,8 +364,12 @@ pub(crate) mod tests {
             api_presign_limit: Some(1),
             ..Default::default()
         };
+        let state = AppState::from_pool(pool)
+            .await
+            .with_s3_client(client)
+            .with_config(config);
 
-        let builder = PresignedUrlBuilder::new(&client, &config)
+        let mut builder = PresignedUrlBuilder::new(&state)
             .unwrap()
             .set_object_size(Some(2));
         let url = builder
@@ -373,8 +385,8 @@ pub(crate) mod tests {
         assert!(url.is_none());
     }
 
-    #[tokio::test]
-    async fn presign_expiry() {
+    #[sqlx::test]
+    async fn presign_expiry(pool: PgPool) {
         let client = s3::Client::new(mock_client!(
             aws_sdk_s3,
             RuleMode::Sequential,
@@ -384,8 +396,12 @@ pub(crate) mod tests {
             api_presign_expiry: Duration::seconds(500),
             ..Default::default()
         };
+        let state = AppState::from_pool(pool)
+            .await
+            .with_s3_client(client)
+            .with_config(config);
 
-        let builder = PresignedUrlBuilder::new(&client, &config)
+        let mut builder = PresignedUrlBuilder::new(&state)
             .unwrap()
             .set_object_size(Some(2));
         let url = builder

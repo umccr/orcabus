@@ -342,10 +342,11 @@ pub(crate) mod tests {
     use axum::body::Body;
     use axum::http::StatusCode;
     use sqlx::PgPool;
+    use tokio::sync::Mutex;
 
     use super::*;
     use crate::clients::aws::s3::Client;
-    use crate::clients::aws::sqs;
+    use crate::clients::aws::{secrets_manager, sqs};
     use crate::database;
     use crate::database::entities::sea_orm_active_enums::CrawlStatus::Completed;
     use crate::events::aws::collecter::tests::{
@@ -370,6 +371,7 @@ pub(crate) mod tests {
             Default::default(),
             Arc::new(client),
             Arc::new(sqs::Client::with_defaults().await),
+            Arc::new(Mutex::new(secrets_manager::Client::with_defaults().await)),
             false,
         );
 

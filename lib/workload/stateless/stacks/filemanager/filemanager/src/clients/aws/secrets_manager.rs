@@ -2,7 +2,7 @@
 //!
 
 use crate::clients::aws::config::Config;
-use crate::error::Error::SecretsManagerError;
+use crate::error::Error::{ParseError, SecretsManagerError};
 use crate::error::Result;
 use aws_credential_types::provider::ProvideCredentials;
 use aws_credential_types::{provider, Credentials};
@@ -15,19 +15,24 @@ use base64::prelude::Engine;
 use base64::prelude::BASE64_STANDARD;
 use serde::Deserialize;
 use serde_json::{from_slice, from_str};
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::{fmt, result};
 
 /// A wrapper around an S3 client which can be mocked.
-#[derive(Debug)]
 pub struct Client {
     inner: secretsmanager::Client,
+    cache: HashMap<String, GetSecretValueOutput>,
 }
 
 impl Client {
     /// Create a new S3 client.
     pub fn new(inner: secretsmanager::Client) -> Self {
-        Self { inner }
+        Self {
+            inner,
+            cache: Default::default(),
+        }
     }
 
     /// Create an S3 client with default config.
@@ -39,10 +44,16 @@ impl Client {
 
     /// Retrieve a secret value.
     pub async fn get_secret(
-        &self,
+        &mut self,
         id: &str,
-    ) -> result::Result<GetSecretValueOutput, SdkError<GetSecretValueError>> {
-        self.inner.get_secret_value().secret_id(id).send().await
+    ) -> result::Result<&GetSecretValueOutput, SdkError<GetSecretValueError>> {
+        match self.cache.entry(id.to_string()) {
+            Entry::Occupied(entry) => Ok(entry.into_mut()),
+            Entry::Vacant(entry) => {
+                let secret = self.inner.get_secret_value().secret_id(id).send().await?;
+                Ok(entry.insert(secret))
+            }
+        }
     }
 }
 
@@ -79,25 +90,24 @@ impl ProvideCredentials for SecretsManagerCredentials {
 
 impl SecretsManagerCredentials {
     /// Construct the credentials from the secret.
-    pub async fn new(id: &str) -> Result<Self> {
-        let client = Client::with_defaults().await;
-
-        let err = || SecretsManagerError(format!("no valid secret value found for {}", id));
-        let secret = client
-            .get_secret(id)
-            .await
-            .map_err(|err| SecretsManagerError(err.to_string()))?;
-
-        let secret = if let Some(string) = secret.secret_string {
-            from_str(&string)?
-        } else if let Some(blob) = secret.secret_binary {
-            let data = blob.into_inner();
+    pub async fn new(secret: &GetSecretValueOutput) -> Result<Self> {
+        let secret = if let Some(string) = secret.secret_string.as_ref() {
+            from_str(string)?
+        } else if let Some(blob) = secret.secret_binary.as_ref() {
+            let data = blob.clone().into_inner();
             match from_slice(&data) {
                 Ok(secret) => secret,
-                Err(_) => from_slice(&BASE64_STANDARD.decode(data).map_err(|_| err())?)?,
+                Err(_) => from_slice(
+                    &BASE64_STANDARD
+                        .decode(data)
+                        .map_err(|_| ParseError("failed to parse base64 secret".to_string()))?,
+                )?,
             }
         } else {
-            return Err(err());
+            return Err(SecretsManagerError(format!(
+                "no valid secret value found for {:?}",
+                &secret.name
+            )));
         };
 
         Ok(secret)

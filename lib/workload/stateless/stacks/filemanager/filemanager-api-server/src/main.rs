@@ -9,9 +9,10 @@ use sea_orm::ConnectionTrait;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpListener;
+use tokio::sync::Mutex;
 use tracing::{debug, info};
 
-use filemanager::clients::aws::{s3, sqs};
+use filemanager::clients::aws::{s3, secrets_manager, sqs};
 use filemanager::database::aws::migration::Migration;
 use filemanager::database::{Client, Migrate};
 use filemanager::env::Config;
@@ -82,6 +83,7 @@ async fn main() -> Result<()> {
         config.clone(),
         Arc::new(s3::Client::with_defaults().await),
         Arc::new(sqs::Client::with_defaults().await),
+        Arc::new(Mutex::new(secrets_manager::Client::with_defaults().await)),
         // For now, the local server is always non-TLS.
         false,
     );
