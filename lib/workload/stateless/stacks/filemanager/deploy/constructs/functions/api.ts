@@ -38,10 +38,5 @@ export class ApiFunction extends fn.Function {
         resources: [`${props.accessKeySecretArn}-*`],
       })
     );
-
-    this.addPoliciesForBuckets(props.buckets, [
-      ...fn.Function.getObjectActions(),
-      ...fn.Function.getObjectVersionActions(),
-    ]);
   }
 }
