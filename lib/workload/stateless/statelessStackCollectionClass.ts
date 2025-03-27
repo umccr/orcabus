@@ -316,7 +316,7 @@ export class StatelessStackCollection {
     this.htsgetStack = new HtsgetStack(scope, 'HtsgetStack', {
       ...this.createTemplateProps(env, 'HtsgetStack'),
       ...statelessConfiguration.htsgetProps,
-      role: fileManagerStack.role,
+      role: fileManagerStack.ingestRole,
     });
 
     this.sampleSheetCheckerStack = new SampleSheetCheckerStack(scope, 'SampleSheetCheckerStack', {
