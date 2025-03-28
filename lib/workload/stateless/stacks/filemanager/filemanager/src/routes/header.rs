@@ -4,7 +4,7 @@
 use crate::error::Error::{MissingHostHeader, ParseError};
 use crate::error::{Error, Result};
 use aws_lambda_events::http::header::HOST;
-use axum::extract::Request;
+use axum::extract::{OriginalUri, Request};
 use axum::http::header::AsHeaderName;
 use axum::http::HeaderMap;
 use url::Url;
@@ -50,5 +50,14 @@ impl<'a> HeaderParser<'a> {
         }
 
         Ok(host.parse()?)
+    }
+
+    /// Get the path from the request, including possible nesting.
+    pub fn get_uri_path(request: &Request) -> String {
+        if let Some(path) = request.extensions().get::<OriginalUri>() {
+            path.0.to_string()
+        } else {
+            request.uri().to_string()
+        }
     }
 }

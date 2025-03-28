@@ -252,7 +252,7 @@ pub async fn list_crawl_s3(
         &HeaderParser::parse_host_url(&request, state.use_tls_links())?
     };
 
-    let url = url.join(&request.uri().to_string())?;
+    let url = url.join(&HeaderParser::get_uri_path(&request))?;
 
     let extract::Json(count) = count_crawl_with_connection(
         &txn,
@@ -332,7 +332,7 @@ pub fn crawl_router() -> Router<AppState> {
         .route("/s3/crawl/sync", post(crawl_sync_s3))
         .route("/s3/crawl/status", get(list_crawl_s3))
         .route("/s3/crawl/status/count", get(count_crawl_s3))
-        .route("/s3/crawl/status/:id", get(get_crawl_s3_by_id))
+        .route("/s3/crawl/status/{id}", get(get_crawl_s3_by_id))
 }
 
 #[cfg(test)]

@@ -179,7 +179,7 @@ pub async fn update_s3_collection_attributes(
 /// The router for updating objects.
 pub fn update_router() -> Router<AppState> {
     Router::new()
-        .route("/s3/:id", patch(update_s3_attributes))
+        .route("/s3/{id}", patch(update_s3_attributes))
         .route("/s3", patch(update_s3_collection_attributes))
 }
 
