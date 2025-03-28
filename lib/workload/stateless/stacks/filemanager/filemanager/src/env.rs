@@ -169,7 +169,7 @@ impl Config {
         &self.ingester_tag_name
     }
 
-    /// Get the presigned size limit.
+    /// Get the base URL for generating pagination links.
     pub fn api_links_url(&self) -> Option<&Url> {
         self.api_links_url.as_ref()
     }

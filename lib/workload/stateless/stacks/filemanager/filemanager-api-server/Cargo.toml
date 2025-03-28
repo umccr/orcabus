@@ -8,7 +8,7 @@ authors.workspace = true
 [dependencies]
 tokio = { version = "1", features = ["fs", "rt-multi-thread", "macros"] }
 tracing = "0.1"
-axum = "0.7"
+axum = "0.8"
 dotenvy = "0.15"
 http = "1"
 clap = { version = "4", features = ["derive", "env"] }

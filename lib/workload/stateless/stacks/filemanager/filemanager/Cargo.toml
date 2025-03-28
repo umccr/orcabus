@@ -37,13 +37,13 @@ sea-orm = { version = "1.1", default-features = false, features = [
 strum = { version = "0.26", features = ["derive"] }
 
 # Query server
-axum = "0.7"
-axum-extra = "0.9"
+axum = { version = "0.8", features = ["original-uri"] }
+axum-extra = "0.10"
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid", "url"] }
-utoipa-swagger-ui = { version = "8", features = ["axum", "debug-embed", "url"] }
+utoipa-swagger-ui = { version = "9", features = ["axum", "debug-embed", "url"] }
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = ["trace", "cors"] }
-serde_qs = { version = "0.13", features = ["axum"] }
+serde_qs = { version = "0.14", features = ["axum"] }
 json-patch = "3"
 
 # General

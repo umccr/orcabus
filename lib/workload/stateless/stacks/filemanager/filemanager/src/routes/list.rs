@@ -145,7 +145,7 @@ pub async fn list_s3(
         &HeaderParser::parse_host_url(&request, state.use_tls_links())?
     };
 
-    let url = url.join(&request.uri().to_string())?;
+    let url = url.join(&HeaderParser::get_uri_path(&request))?;
 
     let Json(count) = count_s3_with_connection(
         &txn,
