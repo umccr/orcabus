@@ -14,6 +14,7 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
     pagination_class = None  # No pagination by default
     http_method_names = ['get']
     lookup_value_regex = "[^/]+" # to allow id prefix
+    termination_statuses = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED"]
     
     def get_queryset(self):
         """
@@ -55,7 +56,7 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
         
         # get all workflow runs with rest of the query params
         # add prefetch_related & select_related to reduce the number of queries
-        result_set = WorkflowRun.objects.get_by_keyword(**self.request.query_params)\
+        result_set = WorkflowRun.objects.get_by_keyword(**self.request.query_params).distinct()\
                                         .prefetch_related('states')\
                                         .prefetch_related('libraries')\
                                         .select_related('workflow')
@@ -67,11 +68,7 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
 
         if is_ongoing.lower() == 'true':
             result_set = result_set.filter(
-                ~Q(states__status="FAILED") &
-                ~Q(states__status="ABORTED") &
-                ~Q(states__status="SUCCEEDED") &
-                ~Q(states__status="RESOLVED") &
-                ~Q(states__status="DEPRECATED")
+                ~Q(states__status__in=self.termination_statuses)
             )
         
         if status:
@@ -138,10 +135,9 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
             states__status="DEPRECATED"
         ).count()
         
-        ongoing_count = base_queryset.filter(
-            ~Q(states__status="FAILED") &
-            ~Q(states__status="ABORTED") &
-            ~Q(states__status="SUCCEEDED")
+        ongoing_count = annotate_queryset.filter(
+            Q(states__timestamp=F('latest_state_time')) &
+            ~Q(states__status__in=self.termination_statuses)
         ).count()
         
         return Response({
