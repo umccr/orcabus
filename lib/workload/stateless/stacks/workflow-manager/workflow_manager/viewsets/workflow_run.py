@@ -11,6 +11,7 @@ class WorkflowRunViewSet(BaseViewSet):
     serializer_class = WorkflowRunDetailSerializer
     search_fields = WorkflowRun.get_base_fields()
     queryset = WorkflowRun.objects.prefetch_related("libraries").all()
+    termination_statuses = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED"]
 
     @extend_schema(parameters=[WorkflowRunListParamSerializer])
     def list(self, request, *args, **kwargs):
@@ -57,7 +58,7 @@ class WorkflowRunViewSet(BaseViewSet):
         
         # get all workflow runs with rest of the query params
         # add prefetch_related & select_related to reduce the number of queries
-        result_set = WorkflowRun.objects.get_by_keyword(**self.request.query_params)\
+        result_set = WorkflowRun.objects.get_by_keyword(**self.request.query_params).distinct()\
                                         .prefetch_related('states')\
                                         .prefetch_related('libraries')\
                                         .select_related('workflow')
@@ -69,10 +70,7 @@ class WorkflowRunViewSet(BaseViewSet):
 
         if is_ongoing.lower() == 'true':
             result_set = result_set.filter(
-                ~Q(states__status="FAILED") &
-                ~Q(states__status="ABORTED") &
-                ~Q(states__status="SUCCEEDED") &
-                ~Q(states__status="RESOLVED")
+                ~Q(states__status__in=self.termination_statuses)
             )
         
         if status:
@@ -106,10 +104,7 @@ class WorkflowRunViewSet(BaseViewSet):
             result_set = WorkflowRun.objects.get_by_keyword(**self.request.query_params).order_by(ordering)
 
         result_set = result_set.filter(
-            ~Q(states__status="FAILED") &
-            ~Q(states__status="ABORTED") &
-            ~Q(states__status="SUCCEEDED") &
-            ~Q(states__status="RESOLVED")
+            ~Q(states__status__in=self.termination_statuses)
         )
         pagw_qs = self.paginate_queryset(result_set)
         serializer = self.get_serializer(pagw_qs, many=True)
