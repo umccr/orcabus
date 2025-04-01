@@ -991,3 +991,9 @@ export const dataSharingPushEventsDetailType = {
   createPushJob: 'DataSharingPushJobCreated',
   updatePushJob: 'DataSharingPushJobUpdated',
 };
+
+/*
+Fastq glue
+*/
+export const fastqGlueEventsSource = 'orcabus.fastqglue';
+export const fastqGlueEventsDetailType = 'FastqSetsCreated';

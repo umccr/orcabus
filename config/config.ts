@@ -84,6 +84,7 @@ import {
   getDataSharingS3AndTableStackProps,
   getDataSharingStackProps,
 } from './stacks/dataSharingManager';
+import { getFastqGlueStackProps } from './stacks/fastqGlue';
 
 interface EnvironmentConfig {
   name: string;
@@ -165,6 +166,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       fastqSyncManagerStackProps: getFastqSyncManagerStackProps(stage),
       icav2DataCopyManagerStackProps: getIcav2DataCopyManagerStackProps(stage),
       dataSharingStackProps: getDataSharingStackProps(stage),
+      fastqGlueStackProps: getFastqGlueStackProps(stage),
     },
   };
 
