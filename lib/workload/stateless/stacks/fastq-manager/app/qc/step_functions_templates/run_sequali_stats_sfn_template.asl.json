@@ -1,0 +1,173 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Set vars",
+  "States": {
+    "Set vars": {
+      "Type": "Pass",
+      "Next": "Get fastq object",
+      "Assign": {
+        "jobId": "{% $states.input.jobId %}",
+        "fastqId": "{% $states.input.fastqId %}",
+        "cacheBucket": "${__fastq_manager_cache_bucket__}",
+        "cacheKey": "{% '${__fastq_manager_cache_prefix__}' & $now('year=[Y0001]/month=[M01]/day=[D01]/') & $states.context.Execution.Name & '/' & $states.input.fastqId & '.json' %}"
+      }
+    },
+    "Get fastq object": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__get_fastq_object_with_s3_objs_lambda_function_arn__}",
+        "Payload": {
+          "fastqId": "{% $fastqId %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Run Sequali and upload to s3",
+      "Assign": {
+        "s3Objs": "{% $states.result.Payload.s3Objs %}",
+        "fastqObj": "{% $states.result.Payload.fastqObj %}"
+      }
+    },
+    "Run Sequali and upload to s3": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Arguments": {
+        "LaunchType": "FARGATE",
+        "Cluster": "${__sequali_cluster_arn__}",
+        "TaskDefinition": "${__sequali_task_definition_arn__}",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": "{% $split('${__subnets__}', ',') %}",
+            "SecurityGroups": "{% [ '${__security_group__}' ] %}"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "${__sequali_qc_container_name__}",
+              "Environment": [
+                {
+                  "Name": "R1_INPUT_URI",
+                  "Value": "{% $s3Objs[0].s3Uri %}"
+                },
+                {
+                  "Name": "R2_INPUT_URI",
+                  "Value": "{% $s3Objs[1] != null ? $s3Objs[1].s3Uri : null %}"
+                },
+                {
+                  "Name": "OUTPUT_URI",
+                  "Value": "{% 's3://' & $cacheBucket & '/' & $cacheKey %}"
+                },
+                {
+                  "Name": "READ_COUNT",
+                  "Value": "{% $fastqObj.readCount != null ? $string($fastqObj.readCount) : null %}"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "Next": "Get sequali outputs",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Output": {
+            "jobStatus": "FAILED"
+          },
+          "Next": "Update job object"
+        }
+      ],
+      "Assign": {
+        "jobStatus": "SUCCEEDED"
+      }
+    },
+    "Get sequali outputs": {
+      "Type": "Task",
+      "Arguments": {
+        "Bucket": "{% $cacheBucket %}",
+        "Key": "{% $cacheKey %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:s3:getObject",
+      "Next": "Update job object",
+      "Assign": {
+        "sequaliData": "{% /* https://docs.jsonata.org/string-functions#eval */\n$parse($states.result.Body) %}"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "Update job object",
+          "Assign": {
+            "jobStatus": "FAILED"
+          }
+        }
+      ]
+    },
+    "Update job object": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__update_job_object_lambda_function_arn__}",
+        "Payload": {
+          "jobId": "{% $jobId %}",
+          "jobStatus": "{% $jobStatus %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Update fastq object"
+    },
+    "Update fastq object": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__update_fastq_object_lambda_function_arn__}",
+        "Payload": {
+          "fastqId": "{% $fastqId %}",
+          "qc": "{% $sequaliData  %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}
