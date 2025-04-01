@@ -23,9 +23,9 @@ S3_BUCKETS_BY_ACCOUNT_ID = {
 
 S3_PREFIXES_BY_ACCOUNT_ID = {
     "restore": {
-        "843407916570": "byob-icav2/development/restore",
-        "455634345446": "byob-icav2/staging/restore",
-        "472057503814": "byob-icav2/production/restore",
+        "843407916570": "byob-icav2/development/restored",
+        "455634345446": "byob-icav2/staging/restored",
+        "472057503814": "byob-icav2/production/restored",
     },
 }
 
