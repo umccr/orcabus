@@ -842,6 +842,20 @@ export class FastqManagerStack extends Stack {
     props.pipelineCacheBucket.grantRead(taskDefinition.taskRole, `${props.pipelineCachePrefix}*`);
     props.resultsBucket.grantReadWrite(taskDefinition.taskRole, `${props.resultsPrefix}*`);
 
+    // Add nag suppressions for the task definition
+    // Since we are using a '*' resource for the task definition, we need to add a suppression
+    NagSuppressions.addResourceSuppressions(
+      taskDefinition,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'Needs read access to the pipeline cache bucket and write access to the results bucket',
+        },
+      ],
+      true
+    );
+
     // Set up the step function
     const ntsmStateMachine = new sfn.StateMachine(this, 'ntsmCountStateMachine', {
       stateMachineName: `fastq-manager-ntsm-count-sfn`,
@@ -880,10 +894,6 @@ export class FastqManagerStack extends Stack {
     ].forEach((lambdaFunction) => {
       lambdaFunction.currentVersion.grantInvoke(ntsmStateMachine);
     });
-
-    // Give the state machine permissions to read/write to the fastq manager bucket
-    // Task writes to cache bucket and we need to retrieve the results in a later step
-    props.resultsBucket.grantRead(ntsmStateMachine, `${props.resultsPrefix}*`);
 
     // Give the state machine permissions to run tasks on the cluster
     taskDefinition.grantRun(ntsmStateMachine);
@@ -961,6 +971,18 @@ export class FastqManagerStack extends Stack {
     // This is where the ntsm files are that we read in to compare
     props.ntsmBucket.grantRead(props.ntsmEvalLambdaFunction.currentVersion, `${props.ntsmPrefix}*`);
 
+    // Add CDK Nag suppression for the lambda function
+    NagSuppressions.addResourceSuppressions(
+      props.ntsmEvalLambdaFunction,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Needs to be able to read all files in the ntsm bucket',
+        },
+      ],
+      true
+    );
+
     return ntsmEvalXStateMachine;
   }
 
@@ -1007,6 +1029,18 @@ export class FastqManagerStack extends Stack {
     // Give the lambda function that performs the evaluation read/write access to the ntsm bucket
     // This is where the ntsm files are that we read in to compare
     props.ntsmBucket.grantRead(props.ntsmEvalLambdaFunction.currentVersion, `${props.ntsmPrefix}*`);
+
+    // Add CDK Nag suppression for the lambda function
+    NagSuppressions.addResourceSuppressions(
+      props.ntsmEvalLambdaFunction,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Needs to be able to read all files on the ntsm bucket',
+        },
+      ],
+      true
+    );
 
     return ntsmEvalXYStateMachine;
   }
