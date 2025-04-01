@@ -70,6 +70,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          corepack enable
           make install
 
       - name: Lint and code formatting
@@ -103,6 +104,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          corepack enable
           yarn install --immutable
           pip3 install cargo-lambda
 
@@ -127,6 +129,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          corepack enable
           yarn install --immutable
 
       - run: make test-stateful-iac
@@ -158,6 +161,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          corepack enable
           yarn install --immutable
           pip3 install cargo-lambda
 
