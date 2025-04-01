@@ -1,0 +1,32 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "data_summary_reporting_tools"
+version = "0.0.1"
+description = "Data Summary Reporting Tool"
+license = "GPL-3.0-or-later"
+authors = [
+    "Alexis Lucattini"
+]
+homepage = "https://github.com/umccr/orcabus"
+repository = "https://github.com/umccr/orcabus"
+
+[tool.poetry.dependencies]
+python = "^3.12, <3.13"
+requests = "^2.31.0"
+snakemd = "^2.0.0"
+pandas = "^2.2.3"
+pandera = "^0.23.1"
+boto3 = "^1.37.23"
+humanfriendly = "^10.0"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"  # For testing only
+# For typehinting only, not required at runtime
+mypy-boto3-ssm = "^1.34"
+mypy-boto3-secretsmanager = "^1.34"

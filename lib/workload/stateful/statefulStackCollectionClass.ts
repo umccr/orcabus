@@ -82,6 +82,11 @@ import {
   Icav2DataCopyManagerTable,
   Icav2DataCopyManagerTableStackProps,
 } from './stacks/icav2-data-copy-manager-dynamo-db/deploy';
+import { DataSharingStack } from '../stateless/stacks/data-sharing-manager/deploy/stack';
+import {
+  DataSharingS3AndTableStack,
+  DataSharingS3AndTableStackProps,
+} from './stacks/data-sharing-s3-and-db/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -108,6 +113,7 @@ export interface StatefulStackCollectionProps {
   fastqUnarchivingManagerTableStackProps: FastqUnarchivingManagerTableStackProps;
   fastqSyncManagerTableStackProps: FastqSyncManagerTableStackProps;
   icav2DataCopyTableStackProps: Icav2DataCopyManagerTableStackProps;
+  dataSharingS3AndTableStackProps: DataSharingS3AndTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -137,6 +143,7 @@ export class StatefulStackCollection {
   readonly fastqUnarchivingManagerTableStack: Stack;
   readonly fastqSyncManagerTableStack: Stack;
   readonly icav2DataCopyTableStack: Stack;
+  readonly dataSharingS3AndTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -319,6 +326,14 @@ export class StatefulStackCollection {
       {
         ...this.createTemplateProps(env, 'Icav2DataCopyManagerTableStack'),
         ...statefulConfiguration.icav2DataCopyTableStackProps,
+      }
+    );
+    this.dataSharingS3AndTableStack = new DataSharingS3AndTableStack(
+      scope,
+      'DataSharingS3AndTableStack',
+      {
+        ...this.createTemplateProps(env, 'DataSharingS3AndTableStack'),
+        ...statefulConfiguration.dataSharingS3AndTableStackProps,
       }
     );
   }

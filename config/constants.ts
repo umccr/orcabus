@@ -978,3 +978,16 @@ ICAv2 ProjectData Copy Manager Stack
 export const icav2DataCopyManagerDynamodbTableName = 'icav2DataCopyManagerDynamoDBTable';
 export const icav2DataCopyEventSource = 'orcabus.icav2datacopymanager';
 export const icav2DataCopySyncDetailType = 'ICAv2DataCopySync';
+
+/*
+Data Sharing Stack
+*/
+export const dataSharingEventsSource = 'orcabus.datasharing';
+export const dataSharingPackageEventsDetailType = {
+  createPackageJob: 'DataSharingPackageJobCreated',
+  updatePackageJob: 'DataSharingPackageJobUpdated',
+};
+export const dataSharingPushEventsDetailType = {
+  createPushJob: 'DataSharingPushJobCreated',
+  updatePushJob: 'DataSharingPushJobUpdated',
+};
