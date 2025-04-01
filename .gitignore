@@ -63,3 +63,6 @@ htmlcov/
 target/
 lib/workload/stateful/filemanager/volume
 skel/rust-api/Cargo.lock
+
+# Dockerfile combinations
+Dockerfile.out
