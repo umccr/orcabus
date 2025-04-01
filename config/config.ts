@@ -72,6 +72,10 @@ import {
   getFastqUnarchivingManagerStackProps,
   getFastqUnarchivingManagerTableStackProps,
 } from './stacks/fastqUnarchivingManager';
+import {
+  getFastqSyncManagerStackProps,
+  getFastqSyncManagerTableStackProps,
+} from './stacks/fastqSyncManager';
 
 interface EnvironmentConfig {
   name: string;
@@ -115,6 +119,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       accessKeySecretStackProps: getAccessKeySecretStackProps(stage),
       fastqManagerTableStackProps: getFastqManagerTableStackProps(stage),
       fastqUnarchivingManagerTableStackProps: getFastqUnarchivingManagerTableStackProps(),
+      fastqSyncManagerTableStackProps: getFastqSyncManagerTableStackProps(),
     },
     statelessConfig: {
       metadataManagerStackProps: getMetadataManagerStackProps(stage),
@@ -147,6 +152,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       pgDDProps: getPgDDProps(stage),
       fastqManagerStackProps: getFastqManagerStackProps(stage),
       fastqUnarchivingManagerStackProps: getFastqUnarchivingManagerStackProps(stage),
+      fastqSyncManagerStackProps: getFastqSyncManagerStackProps(stage),
     },
   };
 

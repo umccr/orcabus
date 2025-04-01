@@ -74,6 +74,10 @@ import {
   FastqUnarchivingManagerTable,
   FastqUnarchivingManagerTableStackProps,
 } from './stacks/fastq-unarchiving-dynamodb/deploy';
+import {
+  FastqSyncManagerTable,
+  FastqSyncManagerTableStackProps,
+} from './stacks/fastq-sync-dynamodb/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -98,6 +102,7 @@ export interface StatefulStackCollectionProps {
   accessKeySecretStackProps: AccessKeySecretStackProps;
   fastqManagerTableStackProps: FastqManagerTableStackProps;
   fastqUnarchivingManagerTableStackProps: FastqUnarchivingManagerTableStackProps;
+  fastqSyncManagerTableStackProps: FastqSyncManagerTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -125,6 +130,7 @@ export class StatefulStackCollection {
   readonly accessKeySecretStack: Stack;
   readonly fastqManagerTableStack: Stack;
   readonly fastqUnarchivingManagerTableStack: Stack;
+  readonly fastqSyncManagerTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -290,6 +296,15 @@ export class StatefulStackCollection {
       {
         ...this.createTemplateProps(env, 'FastqUnarchivingManagerTableStack'),
         ...statefulConfiguration.fastqUnarchivingManagerTableStackProps,
+      }
+    );
+
+    this.fastqSyncManagerTableStack = new FastqSyncManagerTable(
+      scope,
+      'FastqSyncManagerTableStack',
+      {
+        ...this.createTemplateProps(env, 'FastqSyncManagerTableStack'),
+        ...statefulConfiguration.fastqSyncManagerTableStackProps,
       }
     );
   }
