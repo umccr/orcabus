@@ -7,6 +7,7 @@ tasks:
     init: |
       pre-commit install
       pre-commit run
+      corepack enable
       yarn install
       find ./lib -name 'requirements.txt' -exec pip install -r {} \;
       pip install -r requirements-dev.txt

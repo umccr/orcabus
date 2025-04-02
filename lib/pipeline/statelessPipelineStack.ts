@@ -77,6 +77,7 @@ export class StatelessPipelineStack extends cdk.Stack {
         `pip3 install cargo-lambda`,
       ],
       commands: [
+        'corepack enable',
         'yarn install --immutable',
         'make test-stateless-iac',
         'make test-stateless-app-suite',
@@ -125,7 +126,7 @@ export class StatelessPipelineStack extends cdk.Stack {
         'rustup component add rustfmt',
         `pip3 install cargo-lambda`,
       ],
-      commands: ['yarn install --immutable', 'yarn run cdk-stateless synth'],
+      commands: ['corepack enable', 'yarn install --immutable', 'yarn run cdk-stateless synth'],
       input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
