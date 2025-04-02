@@ -1,6 +1,7 @@
 .PHONY: test deep scan
 
 install:
+	@corepack enable
 	@yarn install
 	@pre-commit install
 
