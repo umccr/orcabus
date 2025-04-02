@@ -1,6 +1,7 @@
 .PHONY: test
 
 install:
+	@corepack enable
 	@yarn install --immutable
 
 up:
