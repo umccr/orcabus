@@ -139,8 +139,18 @@ def update_existing_sequence(sequence: Sequence, payload: Dict) -> Sequence:
     return sequence
 
 def create_sequence_domain(sequence: Sequence, status: SequenceStatus, timing_info: Dict, is_new_sequence: bool, state: str) -> SequenceDomain:
-    """Create SequenceDomain with change tracking"""
-    status_changed = is_new_sequence or sequence.status != status.value
+    """
+    Create SequenceDomain with change tracking
+    
+    status_changed to be true if:
+    - new sequence is created
+    - sequence status has changed and current sequence status is not SequenceStatus.SUCCEEDED (SequenceStatus.SUCCEEDED means sequence run is succeeded, any failed or aborted state after that is coming from analysis stage which is not relevant to this sequence run)
+    
+    state_changed to be true if:
+    - new state is created (state has unique status, timestamp combination)
+
+    """
+    status_changed = is_new_sequence or (sequence.status != status.value and sequence.status != SequenceStatus.SUCCEEDED.value)
     
     logger.info(f"Creating SequenceDomain (sequence_run_id={sequence.sequence_run_id}, status={status.value}, new_sequence_created={is_new_sequence})")
     # update status and end time if status has changed
