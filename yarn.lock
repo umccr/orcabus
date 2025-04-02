@@ -15,7 +15,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-cdk/asset-awscli-v1@npm:^2.2.227":
+"@aws-cdk/asset-awscli-v1@npm:^2.2.229":
   version: 2.2.230
   resolution: "@aws-cdk/asset-awscli-v1@npm:2.2.230"
   checksum: 10c0/4a43bdaffaabed33f4fba2cca46dfea6dac22e8379b61f15c6d5f2560b54eb5c2b10da123c0bf328292998cd5dc1dcab69a8599a064299384e69d5f8f39afd33
@@ -29,54 +29,54 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-lambda-go-alpha@npm:2.186.0-alpha.0":
-  version: 2.186.0-alpha.0
-  resolution: "@aws-cdk/aws-lambda-go-alpha@npm:2.186.0-alpha.0"
+"@aws-cdk/aws-lambda-go-alpha@npm:2.187.0-alpha.0":
+  version: 2.187.0-alpha.0
+  resolution: "@aws-cdk/aws-lambda-go-alpha@npm:2.187.0-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.186.0
+    aws-cdk-lib: ^2.187.0
     constructs: ^10.0.0
-  checksum: 10c0/2abfce2886235d7f8d1e354430f395b7b7e9a3282ee5a161fc0591cab9ea99d9af592f8b6808b87c9d099baa9032b2b71d7dbf1f92eec868d53c67ef961245b1
+  checksum: 10c0/5228c590a4a815016a6a382d4d13c217643ee76e626a5bac26365da6434703c634186f4a9771e17cd814c8c9cb463a5751fa8619acdec0bb6a10b7cd80d266d6
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-lambda-python-alpha@npm:2.186.0-alpha.0":
-  version: 2.186.0-alpha.0
-  resolution: "@aws-cdk/aws-lambda-python-alpha@npm:2.186.0-alpha.0"
+"@aws-cdk/aws-lambda-python-alpha@npm:2.187.0-alpha.0":
+  version: 2.187.0-alpha.0
+  resolution: "@aws-cdk/aws-lambda-python-alpha@npm:2.187.0-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.186.0
+    aws-cdk-lib: ^2.187.0
     constructs: ^10.0.0
-  checksum: 10c0/5394515681c4e2005e430757cf0491a5cfea9b6d9cd485c226d7d063aaedb8739a2c1d4ce169512154f204fa0939650a2cd07d9b39a6fe7d4fb42a08f3961b9b
+  checksum: 10c0/e0e09181bede2755e02629e07e19a104e4b9f39ea79f428d04e677b876c440c683e26bf83f44a82d50cf9303aa704ae09013ebb7bf981e95281f1e042e29f320
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-pipes-alpha@npm:2.186.0-alpha.0":
-  version: 2.186.0-alpha.0
-  resolution: "@aws-cdk/aws-pipes-alpha@npm:2.186.0-alpha.0"
+"@aws-cdk/aws-pipes-alpha@npm:2.187.0-alpha.0":
+  version: 2.187.0-alpha.0
+  resolution: "@aws-cdk/aws-pipes-alpha@npm:2.187.0-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.186.0
+    aws-cdk-lib: ^2.187.0
     constructs: ^10.0.0
-  checksum: 10c0/4377828662d9afc10cbcda9722787070642874df73c45c78f4c145f7319226396ad3c7d141cdd3d988d5473e0500adcdd842c822b6a880e1dbe9266564fc706a
+  checksum: 10c0/da05ae8f02fa7936cb78baea40d144c457de323ace1abb4f437fcad7a8b29579d357b20682ef8f991b19a39155ec5fdaa2da1bb2da9f853a59bca7c587cdfde7
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-pipes-sources-alpha@npm:2.186.0-alpha.0":
-  version: 2.186.0-alpha.0
-  resolution: "@aws-cdk/aws-pipes-sources-alpha@npm:2.186.0-alpha.0"
+"@aws-cdk/aws-pipes-sources-alpha@npm:2.187.0-alpha.0":
+  version: 2.187.0-alpha.0
+  resolution: "@aws-cdk/aws-pipes-sources-alpha@npm:2.187.0-alpha.0"
   peerDependencies:
-    "@aws-cdk/aws-pipes-alpha": 2.186.0-alpha.0
-    aws-cdk-lib: ^2.186.0
+    "@aws-cdk/aws-pipes-alpha": 2.187.0-alpha.0
+    aws-cdk-lib: ^2.187.0
     constructs: ^10.0.0
-  checksum: 10c0/655df8a0f429e24f3e5ef289cf2b478b7aebad9902a0b14a5b01d8ba0439b7ee2d559b27daa44d0cb79330fe33673230fa0da4bbbab940f82774f73efdb663f8
+  checksum: 10c0/f5c14a80737378fa2b4fbc734973548a077bee7e2727d9b442f6a6f61802d3690c7d204011460c5ea0d68e4404eb6a57255543f5a30ea3f47f2ad75a37dda773
   languageName: node
   linkType: hard
 
-"@aws-cdk/cloud-assembly-schema@npm:^40.7.0":
-  version: 40.7.0
-  resolution: "@aws-cdk/cloud-assembly-schema@npm:40.7.0"
+"@aws-cdk/cloud-assembly-schema@npm:^41.0.0":
+  version: 41.2.0
+  resolution: "@aws-cdk/cloud-assembly-schema@npm:41.2.0"
   dependencies:
     jsonschema: "npm:~1.4.1"
     semver: "npm:^7.7.1"
-  checksum: 10c0/d7bac318e1cb215119d903b885aa3b2cfd1757b1ed6c7b065a873cd0b2e47b66447dd7713a07611a6dfd8f3f3781ec2ce2802c763e7bef1adb99730ea098b4b7
+  checksum: 10c0/b62e580878d7f969f32a74982c6f449372538368180e017312948bd727b53f2c3e909f232b2238cac94190a12cfa098ecbdebeddf29b8119e5a794a9b1754793
   languageName: node
   linkType: hard
 
@@ -2477,13 +2477,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aws-cdk-lib@npm:2.186.0":
-  version: 2.186.0
-  resolution: "aws-cdk-lib@npm:2.186.0"
+"aws-cdk-lib@npm:2.187.0":
+  version: 2.187.0
+  resolution: "aws-cdk-lib@npm:2.187.0"
   dependencies:
-    "@aws-cdk/asset-awscli-v1": "npm:^2.2.227"
+    "@aws-cdk/asset-awscli-v1": "npm:^2.2.229"
     "@aws-cdk/asset-node-proxy-agent-v6": "npm:^2.1.0"
-    "@aws-cdk/cloud-assembly-schema": "npm:^40.7.0"
+    "@aws-cdk/cloud-assembly-schema": "npm:^41.0.0"
     "@balena/dockerignore": "npm:^1.0.2"
     case: "npm:1.6.3"
     fs-extra: "npm:^11.3.0"
@@ -2497,7 +2497,7 @@ __metadata:
     yaml: "npm:1.10.2"
   peerDependencies:
     constructs: ^10.0.0
-  checksum: 10c0/ad478a9b7ca1c50e3d67eb5428e08cb2017c56e501ff5b30fe93d8841e18fe282f35b9595e474e663ed9bd4f2d92c26a597c56ec4f436a7553ecacc2c8a58a15
+  checksum: 10c0/9b2d97e3e21d296ccf73d099512d380bbc9fd464acd5c02e521b869af82a2c74eef7dd70695012759911bf02eb0e77267b4283b2b7b10643b740c59dea727398
   languageName: node
   linkType: hard
 
@@ -5063,17 +5063,17 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "orcabus@workspace:."
   dependencies:
-    "@aws-cdk/aws-lambda-go-alpha": "npm:2.186.0-alpha.0"
-    "@aws-cdk/aws-lambda-python-alpha": "npm:2.186.0-alpha.0"
-    "@aws-cdk/aws-pipes-alpha": "npm:2.186.0-alpha.0"
-    "@aws-cdk/aws-pipes-sources-alpha": "npm:2.186.0-alpha.0"
+    "@aws-cdk/aws-lambda-go-alpha": "npm:2.187.0-alpha.0"
+    "@aws-cdk/aws-lambda-python-alpha": "npm:2.187.0-alpha.0"
+    "@aws-cdk/aws-pipes-alpha": "npm:2.187.0-alpha.0"
+    "@aws-cdk/aws-pipes-sources-alpha": "npm:2.187.0-alpha.0"
     "@aws-sdk/client-eventbridge": "npm:^3.758.0"
     "@eslint/js": "npm:^9.19.0"
     "@types/eslint__js": "npm:^8.42.3"
     "@types/jest": "npm:^29.5.14"
     "@types/node": "npm:^22.13.10"
     aws-cdk: "npm:^2.1006.0"
-    aws-cdk-lib: "npm:2.186.0"
+    aws-cdk-lib: "npm:2.187.0"
     cargo-lambda-cdk: "npm:^0.0.31"
     cdk-nag: "npm:^2.35.3"
     constructs: "npm:^10.4.2"

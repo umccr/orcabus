@@ -26,6 +26,7 @@ export class StatefulPipelineStack extends cdk.Stack {
 
     const unitTest = new pipelines.CodeBuildStep('UnitTest', {
       commands: [
+        'corepack enable',
         'yarn install --immutable',
         'make test-stateful-iac',
         'make test-stateful-app-suite',
@@ -61,7 +62,7 @@ export class StatefulPipelineStack extends cdk.Stack {
     });
 
     const synthAction = new pipelines.CodeBuildStep('Synth', {
-      commands: ['yarn install --immutable', 'yarn run cdk-stateful synth'],
+      commands: ['corepack enable', 'yarn install --immutable', 'yarn run cdk-stateful synth'],
       input: unitTest,
       primaryOutputDirectory: 'cdk.out',
       rolePolicyStatements: [
