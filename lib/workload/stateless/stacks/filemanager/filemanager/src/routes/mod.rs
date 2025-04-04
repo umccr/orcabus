@@ -18,7 +18,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::trace;
 
-use crate::clients::aws::{s3, sqs};
+use crate::clients::aws::{s3, secrets_manager, sqs};
 use crate::database;
 use crate::env::Config;
 use crate::error::Error::{ApiConfigurationError, CrawlError};
@@ -53,6 +53,7 @@ pub struct AppState {
     config: Arc<Config>,
     s3_client: Arc<s3::Client>,
     sqs_client: Arc<sqs::Client>,
+    secrets_manager_client: Arc<secrets_manager::Client>,
     use_tls_links: bool,
     params_field_names: Arc<HashSet<String>>,
     crawl_task: Arc<Mutex<Option<CrawlTask>>>,
@@ -65,6 +66,7 @@ impl AppState {
         config: Arc<Config>,
         s3_client: Arc<s3::Client>,
         sqs_client: Arc<sqs::Client>,
+        secrets_manager_client: Arc<secrets_manager::Client>,
         use_tls_links: bool,
     ) -> Self {
         Self {
@@ -72,6 +74,7 @@ impl AppState {
             config,
             s3_client,
             sqs_client,
+            secrets_manager_client,
             use_tls_links,
             params_field_names: Arc::new(attributes_s3_field_names()),
             crawl_task: Arc::new(Mutex::new(None)),
@@ -79,14 +82,15 @@ impl AppState {
     }
 
     /// Create a new state from an existing pool with default config.
-    pub async fn from_pool(pool: PgPool) -> Self {
-        Self::new(
+    pub async fn from_pool(pool: PgPool) -> Result<Self> {
+        Ok(Self::new(
             database::Client::from_pool(pool),
             Default::default(),
             Arc::new(s3::Client::with_defaults().await),
             Arc::new(sqs::Client::with_defaults().await),
+            Arc::new(secrets_manager::Client::with_defaults().await?),
             false,
-        )
+        ))
     }
 
     /// Modify the field names for parameters.
@@ -132,6 +136,11 @@ impl AppState {
     /// Get the s3 client.
     pub fn s3_client(&self) -> &s3::Client {
         &self.s3_client
+    }
+
+    /// Get the secrets manager client.
+    pub fn secrets_manager_client(&self) -> &secrets_manager::Client {
+        &self.secrets_manager_client
     }
 
     /// Get the sqs client.
@@ -254,7 +263,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn get_unknown_path(pool: PgPool) {
-        let app = router(AppState::from_pool(pool).await).unwrap();
+        let app = router(AppState::from_pool(pool).await.unwrap()).unwrap();
         let response = app
             .oneshot(
                 Request::builder()
@@ -270,7 +279,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_cors(pool: PgPool) {
-        let mut state = AppState::from_pool(pool).await;
+        let mut state = AppState::from_pool(pool).await.unwrap();
         state.config = Arc::new(Config {
             api_cors_allow_origins: Some(vec![
                 "localhost:8000".to_string(),

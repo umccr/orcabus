@@ -945,6 +945,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws_secretsmanager_caching"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf7f78fa7b032a2248c4ea40ca1f9198a5c65c00b9d760b81f370ac6d6763d8d"
+dependencies = [
+ "aws-config",
+ "aws-sdk-secretsmanager",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "linked-hash-map",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "thiserror 2.0.6",
+ "tokio",
+]
+
+[[package]]
 name = "axum"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1783,6 +1801,7 @@ dependencies = [
  "aws-smithy-mocks-experimental",
  "aws-smithy-runtime-api",
  "aws_lambda_events",
+ "aws_secretsmanager_caching",
  "axum",
  "axum-extra",
  "base64 0.22.1",
@@ -2858,6 +2877,12 @@ dependencies = [
  "pkg-config",
  "vcpkg",
 ]
+
+[[package]]
+name = "linked-hash-map"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
 
 [[package]]
 name = "linux-raw-sys"

@@ -64,7 +64,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_from_sqs_api(pool: PgPool) {
-        let mut state = AppState::from_pool(pool).await;
+        let mut state = AppState::from_pool(pool).await.unwrap();
         Arc::get_mut(&mut state.config)
             .unwrap()
             .sqs_url

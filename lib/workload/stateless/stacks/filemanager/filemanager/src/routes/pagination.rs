@@ -232,7 +232,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_paginate(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -304,7 +304,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_paginate_existing_no_page_size(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .with_n(1001)
@@ -332,7 +332,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_paginate_existing_qs(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -366,7 +366,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_paginate_large(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
             .build(state.database_client())
@@ -402,7 +402,7 @@ mod tests {
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn list_s3_api_zero_page_size(pool: PgPool) {
-        let state = AppState::from_pool(pool).await;
+        let state = AppState::from_pool(pool).await.unwrap();
 
         let entries = EntriesBuilder::default()
             .with_shuffle(true)
