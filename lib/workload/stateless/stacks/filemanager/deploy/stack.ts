@@ -21,6 +21,7 @@ import { NamedLambdaRole } from '../../../../components/named-lambda-role';
 import { Role } from 'aws-cdk-lib/aws-iam';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
+export const FILEMANAGER_API_ROLE_NAME = 'orcabus-filemanager-api-role';
 
 /**
  * Stateful config for filemanager.
@@ -52,7 +53,8 @@ export class Filemanager extends Stack {
   private readonly securityGroup: ISecurityGroup;
   private readonly queue: IQueue;
   readonly domainName: string;
-  readonly role: Role;
+  readonly ingestRole: Role;
+  readonly apiRole: Role;
 
   constructor(scope: Construct, id: string, props: FilemanagerProps) {
     super(scope, id, props);
@@ -71,7 +73,9 @@ export class Filemanager extends Stack {
       props.databaseClusterEndpointHostParameter
     );
 
-    this.role = this.createRole(props.fileManagerRoleName);
+    this.ingestRole = this.createRole(props.fileManagerRoleName, 'IngestFunctionRole');
+    this.apiRole = this.createRole(FILEMANAGER_API_ROLE_NAME, 'ApiFunctionRole');
+
     if (props?.migrateDatabase) {
       const migrateFunction = new MigrateFunction(this, 'MigrateFunction', {
         vpc: this.vpc,
@@ -104,8 +108,8 @@ export class Filemanager extends Stack {
     this.domainName = this.createApiFunction(props);
   }
 
-  private createRole(name: string) {
-    return new NamedLambdaRole(this, 'IngestFunctionRole', {
+  private createRole(name: string, id: string) {
+    return new NamedLambdaRole(this, id, {
       name,
       maxSessionDuration: Duration.hours(12),
     });
@@ -121,7 +125,7 @@ export class Filemanager extends Stack {
       securityGroup: this.securityGroup,
       eventSources: [this.queue],
       buckets: props.eventSourceBuckets,
-      role: this.role,
+      role: this.ingestRole,
       ...props,
     });
   }
@@ -136,7 +140,7 @@ export class Filemanager extends Stack {
       securityGroup: this.securityGroup,
       port: props.port,
       buckets: props.inventorySourceBuckets,
-      role: this.role,
+      role: this.ingestRole,
     });
   }
 
@@ -149,7 +153,7 @@ export class Filemanager extends Stack {
       host: this.host,
       securityGroup: this.securityGroup,
       buckets: [...props.eventSourceBuckets, ...props.inventorySourceBuckets],
-      role: this.role,
+      role: this.apiRole,
       ...props,
     });
 
