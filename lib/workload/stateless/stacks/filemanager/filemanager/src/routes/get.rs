@@ -147,8 +147,8 @@ pub async fn presign_s3_by_id(
 /// The router for getting object records.
 pub fn get_router() -> Router<AppState> {
     Router::new()
-        .route("/s3/:id", get(get_s3_by_id))
-        .route("/s3/presign/:id", get(presign_s3_by_id))
+        .route("/s3/{id}", get(get_s3_by_id))
+        .route("/s3/presign/{id}", get(presign_s3_by_id))
 }
 
 #[cfg(test)]
