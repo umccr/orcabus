@@ -17,6 +17,7 @@ import {
   icav2ArchiveAnalysisBucket,
   icav2ArchiveFastqBucket,
   icav2PipelineCacheBucket,
+  ntsmBucket,
   oncoanalyserBucket,
   rdsMasterSecretName,
   vpcProps,
@@ -143,6 +144,10 @@ export const getEventSourceConstructProps = (stage: AppStage): EventSourceProps 
         bucket: icav2PipelineCacheBucket[stage],
         eventTypes,
         patterns: eventSourcePatternCache(),
+      },
+      {
+        bucket: ntsmBucket[stage],
+        eventTypes,
       },
     ],
   };
