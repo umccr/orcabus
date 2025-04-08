@@ -176,8 +176,8 @@ const getDatabaseConstructProps = (stage: AppStage): ConfigurableDatabaseProps =
   const baseConfig = {
     clusterIdentifier: dbClusterIdentifier,
     defaultDatabaseName: 'orcabus',
-    version: AuroraPostgresEngineVersion.VER_15_4,
-    parameterGroupName: 'default.aurora-postgresql15',
+    version: AuroraPostgresEngineVersion.VER_16_6,
+    parameterGroupName: 'default.aurora-postgresql16',
     username: 'postgres',
     dbPort: databasePort,
     masterSecretName: rdsMasterSecretName,

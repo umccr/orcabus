@@ -179,6 +179,7 @@ export class DatabaseConstruct extends Construct {
       backup: {
         retention: props.backupRetention,
       },
+      enableDataApi: true,
     });
 
     new sm.SecretRotation(this, 'MasterDbSecretRotation', {
