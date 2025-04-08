@@ -174,7 +174,7 @@ class Sample:
         """
         library_id_column_var = METADATA_COLUMN_NAMES["library_id"]
         sample_id_column_var = METADATA_COLUMN_NAMES["sample_id"]
-        library_id_var = self.library_id
+        library_id_var = SAMPLE_REGEX_OBJS["topup"].sub('', self.library_id)
         sample_id_var = self.sample_id
 
         # Query for specific dataframe value
@@ -457,27 +457,25 @@ class SampleSheet:
         library_id_array = []
 
         for sample in self:
-            library_id_array.append(sample.library_id)
 
             # check that the primary library for the topup exists
             if SAMPLE_REGEX_OBJS["topup"].search(sample.library_id) is not None:
                 logger.info("{} is a top up sample. Investigating the previous sample".format(sample.unique_id))
                 orig_unique_id = SAMPLE_REGEX_OBJS["topup"].sub('', sample.unique_id)
-
                 unique_id_regex_obj = SAMPLE_REGEX_OBJS["unique_id"].match(orig_unique_id)
 
                 # Sample ID is the first group and the library ID is the second group
                 topup_sample_id = unique_id_regex_obj.group(1)
                 topup_library_id = unique_id_regex_obj.group(2)
-
                 # Appending these original sample/library id to the search query
                 library_id_array.append(topup_library_id)
+            else:
+                library_id_array.append(sample.library_id)
 
         try:
             metadata_response = get_metadata_record_from_array_of_field_name(auth_header=auth_header,
                                                                              field_name='library_id',
                                                                              value_list=library_id_array)
-
         except Exception as e:
             raise ApiCallError("Fail to fetch metadata api for library id in the sample sheet")
 

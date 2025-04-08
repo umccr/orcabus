@@ -21,7 +21,7 @@ from src.globals import (
     V2_SAMPLESHEET_BCLCONVERT_ADAPTER_SETTINGS_BY_ASSAY_TYPE,
     V2_ADAPTER_SETTINGS, V2_DATA_ROWS, V2_SAMPLESHEET_GLOBAL_SETTINGS, V2_SAMPLESHEET_DATA_SETTINGS,
     V2_BCLCONVERT_BASESPACE_URN, V2_BCLCONVERT_BASESPACE_SOFTWARE_VERSION,
-    EXPERIMENT_REGEX_STR
+    EXPERIMENT_REGEX_STR, SAMPLE_REGEX_OBJS
 )
 from v2_samplesheet_maker.functions.v2_samplesheet_writer import v2_samplesheet_writer
 
@@ -46,7 +46,8 @@ def get_bclconvert_adapter_setting_by_type_and_assay(sample_type: str, sample_as
             if setting_value is not None:
                 return setting_value
     else:
-        logger.debug(f"Could not get the bclconvert settings for this type / assay combination '{sample_type}' / '{sample_assay}'")
+        logger.debug(
+            f"Could not get the bclconvert settings for this type / assay combination '{sample_type}' / '{sample_assay}'")
 
 
 def get_bclconvert_settings_by_library_id(library_id: str, samplesheet: SampleSheet) -> Dict:
@@ -259,11 +260,11 @@ def get_bclconvert_data_list(samplesheet: SampleSheet) -> List:
     for index, data_row in samplesheet.data.iterrows():
         # Drop datadict
         data_dict = dict(data_row)
-
+        library_id = SAMPLE_REGEX_OBJS["topup"].sub('', data_dict["Sample_Name"])
         # Add bclconvert settings
         data_dict.update(
             get_bclconvert_settings_by_library_id(
-                library_id=data_dict["Sample_Name"],
+                library_id=library_id,
                 samplesheet=samplesheet
             )
         )
