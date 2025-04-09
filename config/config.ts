@@ -67,6 +67,24 @@ import { getDataMigrateStackProps } from './stacks/dataMigrate';
 import { getHtsgetProps } from './stacks/htsget';
 import { getSampleSheetCheckerProps } from './stacks/sampleSheetChecker';
 import { getAccessKeySecretStackProps } from './stacks/accessKeySecret';
+import { getFastqManagerStackProps, getFastqManagerTableStackProps } from './stacks/fastqManager';
+import {
+  getFastqUnarchivingManagerStackProps,
+  getFastqUnarchivingManagerTableStackProps,
+} from './stacks/fastqUnarchivingManager';
+import {
+  getFastqSyncManagerStackProps,
+  getFastqSyncManagerTableStackProps,
+} from './stacks/fastqSyncManager';
+import {
+  getIcav2DataCopyManagerStackProps,
+  getIcav2DataCopyManagerTableStackProps,
+} from './stacks/icav2DataCopyManager';
+import {
+  getDataSharingS3AndTableStackProps,
+  getDataSharingStackProps,
+} from './stacks/dataSharingManager';
+import { getFastqGlueStackProps } from './stacks/fastqGlue';
 
 interface EnvironmentConfig {
   name: string;
@@ -108,6 +126,11 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       oncoanalyserPipelineTableStackProps: getOncoanalyserPipelineTableStackProps(),
       sashPipelineTableStackProps: getSashPipelineTableStackProps(),
       accessKeySecretStackProps: getAccessKeySecretStackProps(stage),
+      fastqManagerTableStackProps: getFastqManagerTableStackProps(stage),
+      fastqUnarchivingManagerTableStackProps: getFastqUnarchivingManagerTableStackProps(),
+      fastqSyncManagerTableStackProps: getFastqSyncManagerTableStackProps(),
+      icav2DataCopyTableStackProps: getIcav2DataCopyManagerTableStackProps(),
+      dataSharingS3AndTableStackProps: getDataSharingS3AndTableStackProps(stage),
     },
     statelessConfig: {
       metadataManagerStackProps: getMetadataManagerStackProps(stage),
@@ -138,6 +161,12 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       htsgetProps: getHtsgetProps(stage),
       sampleSheetCheckerProps: getSampleSheetCheckerProps(stage),
       pgDDProps: getPgDDProps(stage),
+      fastqManagerStackProps: getFastqManagerStackProps(stage),
+      fastqUnarchivingManagerStackProps: getFastqUnarchivingManagerStackProps(stage),
+      fastqSyncManagerStackProps: getFastqSyncManagerStackProps(stage),
+      icav2DataCopyManagerStackProps: getIcav2DataCopyManagerStackProps(stage),
+      dataSharingStackProps: getDataSharingStackProps(stage),
+      fastqGlueStackProps: getFastqGlueStackProps(stage),
     },
   };
 

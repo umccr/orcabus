@@ -1,0 +1,99 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "Get vars",
+  "States": {
+    "Get vars": {
+      "Type": "Pass",
+      "Next": "Is ICAv2 (push)",
+      "Assign": {
+        "packagingJobId": "{% $states.input.packagingJobId %}",
+        "pushLocation": "{% $states.input.destinationUri %}"
+      }
+    },
+    "Is ICAv2 (push)": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Comment": "Is an ICAv2 Destination",
+          "Next": "Run ICAv2 Data Push",
+          "Condition": "{% ($substring($shareDestination, 0, 8)) = (\"icav2://\") %}"
+        }
+      ],
+      "Default": "Run S3 Data Push"
+    },
+    "Run ICAv2 Data Push": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Arguments": {
+        "StateMachineArn": "${__icav2_data_push_sfn_arn__}",
+        "Input": {
+          "packagingJobId": "{% $states.input.packagingJobId %}",
+          "pushLocation": "{% $states.input.pushLocation %}"
+        }
+      },
+      "Next": "Update API (push complete)",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "Update API (push complete)",
+          "Output": {
+            "errorMessage": "{% $states.errorOutput %}",
+            "executionId": "{% $states.context.Execution.Name %}"
+          }
+        }
+      ]
+    },
+    "Update API (push complete)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__update_push_job_api_lambda_function_arn__}",
+        "Payload": {
+          "pushJobExecutionArn": "{% $states.context.Execution.Id %}",
+          "hasError": "{% $states.input.hasError %}",
+          "errorMessage": "{% $states.input.errorMessage ? $states.input.errorMessage : null %}",
+          "status": "{% $states.input.hasError ? 'FAILED' : 'SUCCEEDED' %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true
+    },
+    "Run S3 Data Push": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Arguments": {
+        "StateMachineArn": "${__s3_data_push_sfn_arn__}",
+        "Input": {
+          "packagingJobId": "{% $states.input.packagingJobId %}",
+          "pushLocation": "{% $states.input.pushLocation %}",
+          "pushJobExecutionArn": "{% $states.context.Execution.Id %}"
+        }
+      },
+      "Next": "Update API (push complete)",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "Update API (push complete)",
+          "Output": {
+            "hasError": true,
+            "errorMessage": "{% $states.errorOutput %}"
+          }
+        }
+      ]
+    }
+  }
+}
