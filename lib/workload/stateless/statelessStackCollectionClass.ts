@@ -319,10 +319,13 @@ export class StatelessStackCollection {
       role: fileManagerStack.ingestRole,
     });
 
-    this.sampleSheetCheckerStack = new SampleSheetCheckerStack(scope, 'SampleSheetCheckerStack', {
-      ...this.createTemplateProps(env, 'SampleSheetCheckerStack'),
-      ...statelessConfiguration.sampleSheetCheckerProps,
-    });
+    /**
+     * Migrated to https://github.com/orcabus
+     */
+    // this.sampleSheetCheckerStack = new SampleSheetCheckerStack(scope, 'SampleSheetCheckerStack', {
+    //   ...this.createTemplateProps(env, 'SampleSheetCheckerStack'),
+    //   ...statelessConfiguration.sampleSheetCheckerProps,
+    // });
 
     if (statelessConfiguration.pgDDProps) {
       this.pgDDStack = new PgDDStack(scope, 'PgDDStack', {
