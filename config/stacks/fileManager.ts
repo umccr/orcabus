@@ -18,10 +18,15 @@ import {
   oncoanalyserBucket,
   region,
   vpcProps,
+  ntsmBucket,
 } from '../constants';
 
 export const fileManagerBuckets = (stage: AppStage): string[] => {
-  const eventSourceBuckets = [oncoanalyserBucket[stage], icav2PipelineCacheBucket[stage]];
+  const eventSourceBuckets = [
+    oncoanalyserBucket[stage],
+    icav2PipelineCacheBucket[stage],
+    ntsmBucket[stage],
+  ];
   // Note, that we only archive production data, so we only need access to the archive buckets in prod.
   if (stage == AppStage.PROD) {
     eventSourceBuckets.push(icav2ArchiveAnalysisBucket[stage]);
