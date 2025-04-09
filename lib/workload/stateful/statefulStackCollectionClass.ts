@@ -66,6 +66,27 @@ import {
   OraCompressionIcav2PipelineTableStackProps,
 } from './stacks/ora-decompression-dynamodb/deploy/stack';
 import { AccessKeySecret, AccessKeySecretStackProps } from './stacks/access-key-secret';
+import {
+  FastqManagerTable,
+  FastqManagerTableStackProps,
+} from './stacks/fastq-manager-db/deploy/stack';
+import {
+  FastqUnarchivingManagerTable,
+  FastqUnarchivingManagerTableStackProps,
+} from './stacks/fastq-unarchiving-dynamodb/deploy';
+import {
+  FastqSyncManagerTable,
+  FastqSyncManagerTableStackProps,
+} from './stacks/fastq-sync-dynamodb/deploy/stack';
+import {
+  Icav2DataCopyManagerTable,
+  Icav2DataCopyManagerTableStackProps,
+} from './stacks/icav2-data-copy-manager-dynamo-db/deploy';
+import { DataSharingStack } from '../stateless/stacks/data-sharing-manager/deploy/stack';
+import {
+  DataSharingS3AndTableStack,
+  DataSharingS3AndTableStackProps,
+} from './stacks/data-sharing-s3-and-db/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -88,6 +109,11 @@ export interface StatefulStackCollectionProps {
   oncoanalyserPipelineTableStackProps: OncoanalyserNfPipelineTableStackProps;
   sashPipelineTableStackProps: SashNfPipelineTableStackProps;
   accessKeySecretStackProps: AccessKeySecretStackProps;
+  fastqManagerTableStackProps: FastqManagerTableStackProps;
+  fastqUnarchivingManagerTableStackProps: FastqUnarchivingManagerTableStackProps;
+  fastqSyncManagerTableStackProps: FastqSyncManagerTableStackProps;
+  icav2DataCopyTableStackProps: Icav2DataCopyManagerTableStackProps;
+  dataSharingS3AndTableStackProps: DataSharingS3AndTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -113,6 +139,11 @@ export class StatefulStackCollection {
   readonly oncoanalyserPipelineTableStack: Stack;
   readonly sashPipelineTableStack: Stack;
   readonly accessKeySecretStack: Stack;
+  readonly fastqManagerTableStack: Stack;
+  readonly fastqUnarchivingManagerTableStack: Stack;
+  readonly fastqSyncManagerTableStack: Stack;
+  readonly icav2DataCopyTableStack: Stack;
+  readonly dataSharingS3AndTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -266,6 +297,45 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'AccessKeySecretStack'),
       ...statefulConfiguration.accessKeySecretStackProps,
     });
+
+    this.fastqManagerTableStack = new FastqManagerTable(scope, 'FastqManagerTableStack', {
+      ...this.createTemplateProps(env, 'FastqManagerTableStack'),
+      ...statefulConfiguration.fastqManagerTableStackProps,
+    });
+
+    this.fastqUnarchivingManagerTableStack = new FastqUnarchivingManagerTable(
+      scope,
+      'FastqUnarchivingManagerTableStack',
+      {
+        ...this.createTemplateProps(env, 'FastqUnarchivingManagerTableStack'),
+        ...statefulConfiguration.fastqUnarchivingManagerTableStackProps,
+      }
+    );
+
+    this.fastqSyncManagerTableStack = new FastqSyncManagerTable(
+      scope,
+      'FastqSyncManagerTableStack',
+      {
+        ...this.createTemplateProps(env, 'FastqSyncManagerTableStack'),
+        ...statefulConfiguration.fastqSyncManagerTableStackProps,
+      }
+    );
+    this.icav2DataCopyTableStack = new Icav2DataCopyManagerTable(
+      scope,
+      'Icav2DataCopyManagerTableStack',
+      {
+        ...this.createTemplateProps(env, 'Icav2DataCopyManagerTableStack'),
+        ...statefulConfiguration.icav2DataCopyTableStackProps,
+      }
+    );
+    this.dataSharingS3AndTableStack = new DataSharingS3AndTableStack(
+      scope,
+      'DataSharingS3AndTableStack',
+      {
+        ...this.createTemplateProps(env, 'DataSharingS3AndTableStack'),
+        ...statefulConfiguration.dataSharingS3AndTableStackProps,
+      }
+    );
   }
 
   /**

@@ -1,0 +1,253 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "Get s3 vars",
+  "States": {
+    "Get s3 vars": {
+      "Type": "Pass",
+      "Next": "Add sub prefixes",
+      "Assign": {
+        "s3SharingBucket": "${__sharing_bucket__}",
+        "s3SharingPrefix": "{% $states.input.packagingS3SharingPrefix %}",
+        "dynamoDbTableName": "${__dynamodb_table_name__}",
+        "packageName": "{% $states.input.packageName %}",
+        "dynamoDbFileGIValue": "{% $states.input.jobId & '__file' %}",
+        "packagingJobId": "{% $states.input.jobId %}",
+        "chunkSizes": "{% 50 %}"
+      }
+    },
+    "Add sub prefixes": {
+      "Type": "Pass",
+      "Next": "Query File (Presign)",
+      "Assign": {
+        "s3PresignedUrlsScriptKey": "{% $s3SharingPrefix & 'final/download-data.' & $packageName & '.sh' %}"
+      }
+    },
+    "Query File (Presign)": {
+      "Type": "Task",
+      "Arguments": {
+        "TableName": "{% $dynamoDbTableName %}",
+        "IndexName": "context-index",
+        "KeyConditionExpression": "#context = :sfn_file_gi",
+        "ExpressionAttributeNames": {
+          "#context": "context"
+        },
+        "ExpressionAttributeValues": {
+          ":sfn_file_gi": {
+            "S": "{% $dynamoDbFileGIValue %}"
+          }
+        }
+      },
+      "Resource": "arn:aws:states:::aws-sdk:dynamodb:query",
+      "Next": "Generate Presigned Url (for each s3 id)",
+      "Output": {
+        "s3IngestIdList": "{% [\n  $map($states.result.Items, function($item){\n     $item.id\n  })\n] %}"
+      }
+    },
+    "Generate Presigned Url (for each s3 id)": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Set File Map Iter Var (presign)",
+        "States": {
+          "Set File Map Iter Var (presign)": {
+            "Type": "Pass",
+            "Next": "Get File (Presign)",
+            "Assign": {
+              "s3IngestIdMapIter": "{% $states.input.s3IngestIdMapIter %}"
+            }
+          },
+          "Get File (Presign)": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Arguments": {
+              "TableName": "{% $dynamoDbTableName %}",
+              "Key": {
+                "id": {
+                  "S": "{% $s3IngestIdMapIter %}"
+                },
+                "job_id": {
+                  "S": "{% $packagingJobId %}"
+                }
+              }
+            },
+            "Next": "Presign expiry okay",
+            "Output": {
+              "s3FileObject": "{% $parse($states.result.Item.content) %}",
+              "presignedExpiry": "{% $parse($states.result.Item.presigned_expiry) %}"
+            }
+          },
+          "Presign expiry okay": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Next": "Pass",
+                "Condition": "{% /* https://try.jsonata.org/zAMPCOvNG */\n(\n    /* Check presignedExpiry is set */\n    ( $states.input.presignedExpiry ? true : false ) \n    and \n    /* That it is at least six days away - 60 * 60 * 24 * 6 * 1000 == 518400000 */\n \n    (\n        $toMillis($states.input.presignedExpiry) > ( $toMillis($now()) + 518400000) \n    )\n) %}"
+              }
+            ],
+            "Default": "Append to list to presign",
+            "Output": {
+              "s3FileObject": "{% $states.input.s3FileObject %}"
+            }
+          },
+          "Append to list to presign": {
+            "Type": "Pass",
+            "End": true,
+            "Output": {
+              "s3IngestId": "{% $s3IngestIdMapIter %}"
+            }
+          },
+          "Pass": {
+            "Type": "Pass",
+            "End": true,
+            "Output": {
+              "s3IngestId": null
+            }
+          }
+        }
+      },
+      "Next": "Batch into 50 list",
+      "Items": "{% $states.input.s3IngestIdList %}",
+      "ItemSelector": {
+        "s3IngestIdMapIter": "{% $states.context.Map.Item %}"
+      },
+      "Output": {
+        "s3IngestIdList": "{% [\n  $map(\n    [\n      $filter(\n        $states.result,\n        function($item){\n          $item.s3IngestId ? true : false\n        }\n      )\n    ],\n    function($item){\n      $item.s3IngestId\n    }\n  )\n] %}"
+      }
+    },
+    "Batch into 50 list": {
+      "Type": "Pass",
+      "Next": "For each batch",
+      "Output": {
+        "s3IngestIdListChunks": "{% (\n    $chunkArray := function ($array, $chunkSize) {(\n        $arrayLength := $count($array);\n        $numChunks := $ceil($arrayLength / $chunkSize) ;\n        [0..$numChunks-1] ~> $map(function($chunkNumber){\n            [\n                $array ~> $filter(function($element, $index){\n                    $chunkNumber*$chunkSize <= $index and $index < ($chunkNumber + 1) * $chunkSize\n                })\n            ]\n        })\n    )};\n    $chunkArray($states.input.s3IngestIdList, $chunkSizes)\n) %}"
+      }
+    },
+    "For each batch": {
+      "Type": "Map",
+      "Items": "{% $states.input.s3IngestIdListChunks %}",
+      "ItemSelector": {
+        "s3IngestIdListMapIter": "{% $states.context.Map.Item.Value %}"
+      },
+      "MaxConcurrency": 5,
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Generate presigned urls",
+        "States": {
+          "Generate presigned urls": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Arguments": {
+              "FunctionName": "${__generate_presigned_urls_for_data_objects_lambda_function_arn__}",
+              "Payload": {
+                "s3IngestIdList": "{% $states.input.s3IngestIdListMapIter %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException",
+                  "States.TaskFailed"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Output": {
+              "s3IngestIdsWithPresignedUrlDataOutputs": "{% $states.result.Payload.s3IngestIdsWithPresignedUrlDataOutputs %}"
+            },
+            "Next": "For each file"
+          },
+          "For each file": {
+            "Type": "Map",
+            "Items": "{% $states.input.s3IngestIdsWithPresignedUrlDataOutputs %}",
+            "ItemSelector": {
+              "s3IngestId": "{% $states.context.Map.Item.Value.s3IngestId %}",
+              "presignedExpiry": "$states.context.Map.Item.Value.presignedExpiry",
+              "presignedUrl": "$states.context.Map.Item.Value.presignedUrl"
+            },
+            "ItemProcessor": {
+              "ProcessorConfig": {
+                "Mode": "INLINE"
+              },
+              "StartAt": "Update File (Presign)",
+              "States": {
+                "Update File (Presign)": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::dynamodb:updateItem",
+                  "Arguments": {
+                    "TableName": "{% $dynamoDbTableName %}",
+                    "Key": {
+                      "id": {
+                        "S": "{% $states.input.s3IngestId %}"
+                      },
+                      "job_id": {
+                        "S": "{% $packagingJobId %}"
+                      }
+                    },
+                    "UpdateExpression": "SET presigned_url = :presignedUrl, presigned_expiry = :presignedExpiry",
+                    "ExpressionAttributeValues": {
+                      ":presignedUrl": {
+                        "S": "$states.input.presignedUrl"
+                      },
+                      ":presignedExpiry": {
+                        "S": "$states.input.presignedExpiry"
+                      }
+                    }
+                  },
+                  "End": true,
+                  "Retry": [
+                    {
+                      "ErrorEquals": ["States.TaskFailed"],
+                      "BackoffRate": 1,
+                      "IntervalSeconds": 1,
+                      "MaxAttempts": 3,
+                      "JitterStrategy": "FULL",
+                      "Comment": "Overload error"
+                    }
+                  ]
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "Create script from presigned urls list"
+    },
+    "Create script from presigned urls list": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__create_script_from_presigned_urls_list_lambda_function_arn__}",
+        "Payload": {
+          "outputUri": "{% 's3://' & $s3SharingBucket & '/' & $s3PresignedUrlsScriptKey %}",
+          "jobId": "{% $packagingJobId %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true
+    }
+  }
+}
