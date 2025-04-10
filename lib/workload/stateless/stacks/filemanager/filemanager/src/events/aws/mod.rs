@@ -121,7 +121,7 @@ pub struct TransposedS3EventMessages {
     pub event_times: Vec<Option<DateTime<Utc>>>,
     pub buckets: Vec<String>,
     pub keys: Vec<String>,
-    pub version_ids: Vec<Option<String>>,
+    pub version_ids: Vec<String>,
     pub sizes: Vec<Option<i64>>,
     pub e_tags: Vec<Option<String>>,
     pub sha256s: Vec<Option<String>>,
@@ -510,7 +510,7 @@ pub struct FlatS3EventMessage {
     pub sequencer: Option<String>,
     pub bucket: String,
     pub key: String,
-    pub version_id: Option<String>,
+    pub version_id: String,
     pub size: Option<i64>,
     pub e_tag: Option<String>,
     pub sha256: Option<String>,
@@ -624,13 +624,13 @@ impl FlatS3EventMessage {
 
     /// Set the version id.
     pub fn with_version_id(mut self, version_id: String) -> Self {
-        self.version_id = Some(version_id);
+        self.version_id = version_id;
         self
     }
 
     /// Set the version id.
     pub fn with_default_version_id(mut self) -> Self {
-        self.version_id = Some(default_version_id());
+        self.version_id = default_version_id();
         self
     }
 
@@ -899,7 +899,7 @@ pub(crate) mod tests {
         assert_eq!(&event.event_type, event_type);
         assert_eq!(event.bucket, "bucket");
         assert_eq!(event.key, "key");
-        assert_eq!(event.version_id, Some(version_id));
+        assert_eq!(event.version_id, version_id);
         assert_eq!(event.size, size);
         assert_eq!(event.e_tag, Some(EXPECTED_QUOTED_E_TAG.to_string()));
         assert_eq!(event.sequencer, sequencer);
@@ -922,7 +922,7 @@ pub(crate) mod tests {
         assert_eq!(events.sizes[position], size);
         assert_eq!(
             events.version_ids[position],
-            Some(EXPECTED_VERSION_ID.to_string())
+            EXPECTED_VERSION_ID.to_string()
         );
         assert_eq!(
             events.e_tags[position],

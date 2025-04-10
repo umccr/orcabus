@@ -245,7 +245,7 @@ impl Entries {
             key: prefix.unwrap_or_default().to_string()
                 + &key.unwrap_or_else(|| (index / divisors.1).to_string())
                 + suffix.unwrap_or_default(),
-            version_id: Some((index / divisors.1).to_string()),
+            version_id: (index / divisors.1).to_string(),
             size: Some(index as i64),
             e_tag: Some(index.to_string()),
             sha256: Some(index.to_string()),

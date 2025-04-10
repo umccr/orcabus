@@ -17,6 +17,7 @@ use aws_sdk_s3::types::Tagging;
 use chrono::Duration;
 
 use crate::clients::aws::config::Config;
+use crate::events::aws::message::default_version_id;
 
 /// Maximum number of iterations for list objects.
 pub const MAX_LIST_ITERATIONS: usize = 1000000;
@@ -134,14 +135,18 @@ impl Client {
         &self,
         key: &str,
         bucket: &str,
-        version_id: Option<String>,
+        version_id: &str,
     ) -> Result<HeadObjectOutput, HeadObjectError> {
         self.inner
             .head_object()
             .checksum_mode(Enabled)
             .key(key)
             .bucket(bucket)
-            .set_version_id(version_id)
+            .set_version_id(if version_id == default_version_id() {
+                None
+            } else {
+                Some(version_id.to_string())
+            })
             .send()
             .await
     }
@@ -158,7 +163,11 @@ impl Client {
             .checksum_mode(Enabled)
             .key(key)
             .bucket(bucket)
-            .version_id(version_id)
+            .set_version_id(if version_id == default_version_id() {
+                None
+            } else {
+                Some(version_id.to_string())
+            })
             .send()
             .await
     }
@@ -168,13 +177,17 @@ impl Client {
         &self,
         key: &str,
         bucket: &str,
-        version_id: Option<String>,
+        version_id: &str,
     ) -> Result<GetObjectTaggingOutput, GetObjectTaggingError> {
         self.inner
             .get_object_tagging()
             .key(key)
             .bucket(bucket)
-            .set_version_id(version_id)
+            .set_version_id(if version_id == default_version_id() {
+                None
+            } else {
+                Some(version_id.to_string())
+            })
             .send()
             .await
     }
@@ -184,14 +197,18 @@ impl Client {
         &self,
         key: &str,
         bucket: &str,
-        version_id: Option<String>,
+        version_id: &str,
         tagging: Tagging,
     ) -> Result<PutObjectTaggingOutput, PutObjectTaggingError> {
         self.inner
             .put_object_tagging()
             .key(key)
             .bucket(bucket)
-            .set_version_id(version_id)
+            .set_version_id(if version_id == default_version_id() {
+                None
+            } else {
+                Some(version_id.to_string())
+            })
             .tagging(tagging)
             .send()
             .await

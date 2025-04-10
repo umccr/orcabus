@@ -18,7 +18,6 @@ use crate::error::Error::ConfigError;
 use crate::error::Result;
 use crate::events::aws::collecter::CollecterBuilder;
 use crate::events::aws::inventory::{DiffMessages, Inventory, Manifest};
-use crate::events::aws::message::default_version_id;
 use crate::events::aws::message::EventType::Created;
 use crate::events::aws::{FlatS3EventMessages, TransposedS3EventMessages};
 use crate::events::{Collect, EventSourceType};
@@ -124,13 +123,7 @@ pub async fn ingest_s3_inventory(
             &mut tx,
             transposed_events.buckets.as_slice(),
             transposed_events.keys.as_slice(),
-            transposed_events
-                .version_ids
-                .clone()
-                .into_iter()
-                .map(|version_id| version_id.unwrap_or(default_version_id()))
-                .collect::<Vec<_>>()
-                .as_slice(),
+            transposed_events.version_ids.as_slice(),
         )
         .await?;
     tx.commit().await?;

@@ -26,6 +26,7 @@ export class ApiFunction extends fn.Function {
         // for more info.
         AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH: 'true',
         FILEMANAGER_ACCESS_KEY_SECRET_ID: props.accessKeySecretArn,
+        FILEMANAGER_INGESTER_TAG_NAME: 'umccr-org:OrcaBusFileManagerIngestId',
         ...props.environment,
       },
       ...props,

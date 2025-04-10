@@ -700,7 +700,7 @@ pub(crate) mod tests {
 
         let event = expected_flat_events_simple().sort_and_dedup().into_inner();
         let mut event = event[0].clone();
-        event.version_id = Some("version_id".to_string());
+        event.version_id = "version_id".to_string();
 
         let mut events = vec![event];
         events.extend(expected_flat_events_simple().sort_and_dedup().into_inner());
@@ -1510,12 +1510,12 @@ pub(crate) mod tests {
             .object_deleted
             .version_ids
             .iter_mut()
-            .for_each(|version_id| *version_id = Some(default_version_id()));
+            .for_each(|version_id| *version_id = default_version_id());
         events
             .object_created
             .version_ids
             .iter_mut()
-            .for_each(|version_id| *version_id = Some(default_version_id()));
+            .for_each(|version_id| *version_id = default_version_id());
 
         events
     }
@@ -1559,7 +1559,7 @@ pub(crate) mod tests {
         assert_eq!(message.key, s3_object_results.get::<String, _>("key"));
         assert_eq!(
             message.version_id,
-            s3_object_results.get::<Option<String>, _>("version_id")
+            s3_object_results.get::<String, _>("version_id")
         );
         assert_eq!(
             created_sequencer,

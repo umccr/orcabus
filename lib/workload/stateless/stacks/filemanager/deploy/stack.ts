@@ -153,7 +153,7 @@ export class Filemanager extends Stack {
       host: this.host,
       securityGroup: this.securityGroup,
       buckets: [...props.eventSourceBuckets, ...props.inventorySourceBuckets],
-      role: this.apiRole,
+      role: this.ingestRole,
       ...props,
     });
 

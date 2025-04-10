@@ -4,7 +4,7 @@
 use crate::clients::aws::s3::Client;
 use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::error::Result;
-use crate::events::aws::message::{quote_e_tag, EventType};
+use crate::events::aws::message::{default_version_id, quote_e_tag, EventType};
 
 use crate::events::aws::{empty_sequencer, FlatS3EventMessage, FlatS3EventMessages};
 use crate::uuid::UuidGenerator;
@@ -75,7 +75,7 @@ impl From<Object> for FlatS3EventMessage {
             // Set this to the empty string so that any deleted events after this can bind to this
             // created event, as they are always greater than this event.
             sequencer: Some(empty_sequencer()),
-            version_id: None,
+            version_id: default_version_id(),
             // Head fields are fetched later.
             storage_class: None,
             last_modified_date: None,
@@ -97,7 +97,6 @@ impl From<Object> for FlatS3EventMessage {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::events::aws::message::default_version_id;
     use crate::events::aws::message::EventType::Created;
     use crate::events::aws::tests::assert_flat_without_time;
     use crate::events::aws::tests::EXPECTED_QUOTED_E_TAG;

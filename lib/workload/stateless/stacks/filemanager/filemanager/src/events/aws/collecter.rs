@@ -29,6 +29,7 @@ use futures::TryFutureExt;
 use std::str::FromStr;
 use tracing::{trace, warn};
 use uuid::Uuid;
+use crate::events::aws::message::default_version_id;
 
 /// Build an AWS collector struct.
 #[derive(Default, Debug)]
@@ -192,7 +193,7 @@ impl<'a> Collecter<'a> {
     /// Gets S3 metadata from HeadObject such as creation/archival timestamps and statuses.
     pub async fn head(client: &S3Client, event: FlatS3EventMessage) -> Result<FlatS3EventMessage> {
         let head = client
-            .head_object(&event.key, &event.bucket, event.version_id.clone())
+            .head_object(&event.key, &event.bucket, &event.version_id)
             .inspect_err(|err| {
                 let err = err.as_service_error();
                 let message = err.and_then(|err| err.message());
@@ -223,6 +224,7 @@ impl<'a> Collecter<'a> {
             checksum_sha256,
             delete_marker,
             archive_status,
+            version_id,
             ..
         } = head;
 
@@ -235,7 +237,7 @@ impl<'a> Collecter<'a> {
             .update_e_tag(e_tag)
             .update_sha256(checksum_sha256)
             .update_delete_marker(delete_marker)
-            .update_archive_status(archive_status.and_then(ArchiveStatus::from_aws)))
+            .update_archive_status(archive_status.and_then(ArchiveStatus::from_aws)).with_version_id(version_id.unwrap_or(default_version_id())))
     }
 
     /// Gets S3 tags from objects.
@@ -246,7 +248,7 @@ impl<'a> Collecter<'a> {
         event: FlatS3EventMessage,
     ) -> Result<FlatS3EventMessage> {
         let tagging = client
-            .get_object_tagging(&event.key, &event.bucket, event.version_id.clone())
+            .get_object_tagging(&event.key, &event.bucket, &event.version_id)
             .inspect_err(|err| {
                 let err = err.as_service_error();
                 let message = err.and_then(|err| err.message());
@@ -288,7 +290,7 @@ impl<'a> Collecter<'a> {
                 .put_object_tagging(
                     &event.key,
                     &event.bucket,
-                    event.version_id.clone(),
+                    &event.version_id,
                     Tagging::builder().set_tag_set(Some(tag_set)).build()?,
                 )
                 .await

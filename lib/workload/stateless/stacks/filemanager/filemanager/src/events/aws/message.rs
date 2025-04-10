@@ -286,7 +286,7 @@ impl From<Record> for FlatS3EventMessage {
             size,
             e_tag: etag.map(quote_e_tag),
             sequencer,
-            version_id: Some(version_id.unwrap_or_else(default_version_id)),
+            version_id: version_id.unwrap_or_else(default_version_id),
             // Head fields are fetched later.
             storage_class: None,
             last_modified_date: None,

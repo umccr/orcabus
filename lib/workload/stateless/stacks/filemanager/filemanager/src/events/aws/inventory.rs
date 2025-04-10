@@ -514,7 +514,7 @@ impl From<Record> for FlatS3EventMessage {
             // Set this to the empty string so that any deleted events after this can bind to this
             // created event, as they are always greater than this event.
             sequencer: Some(empty_sequencer()),
-            version_id: Some(version_id.unwrap_or_else(default_version_id)),
+            version_id: version_id.unwrap_or_else(default_version_id),
             storage_class,
             last_modified_date,
             sha256: None,
@@ -605,7 +605,7 @@ pub(crate) mod tests {
             FlatS3EventMessage {
                 bucket: "bucket".to_string(),
                 key: "key".to_string(),
-                version_id: Some("version".to_string()),
+                version_id: "version".to_string(),
                 // Other fields shouldn't affect this.
                 last_modified_date: Some(DateTime::default()),
                 ..Default::default()
@@ -613,7 +613,7 @@ pub(crate) mod tests {
             FlatS3EventMessage {
                 bucket: "bucket".to_string(),
                 key: "key1".to_string(),
-                version_id: Some("version".to_string()),
+                version_id: "version".to_string(),
                 ..Default::default()
             },
         ];
@@ -621,7 +621,7 @@ pub(crate) mod tests {
             FlatS3EventMessage {
                 bucket: "bucket".to_string(),
                 key: "key".to_string(),
-                version_id: Some("version".to_string()),
+                version_id: "version".to_string(),
                 last_modified_date: Some(
                     DateTime::default().checked_add_days(Days::new(1)).unwrap(),
                 ),
@@ -630,7 +630,7 @@ pub(crate) mod tests {
             FlatS3EventMessage {
                 bucket: "bucket".to_string(),
                 key: "key2".to_string(),
-                version_id: Some("version".to_string()),
+                version_id: "version".to_string(),
                 ..Default::default()
             },
         ];
@@ -646,7 +646,7 @@ pub(crate) mod tests {
         let expected = HashSet::from_iter(vec![DiffMessages(FlatS3EventMessage {
             bucket: "bucket".to_string(),
             key: "key2".to_string(),
-            version_id: Some("version".to_string()),
+            version_id: "version".to_string(),
             ..Default::default()
         })]);
 
