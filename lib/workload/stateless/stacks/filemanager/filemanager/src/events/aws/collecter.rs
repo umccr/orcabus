@@ -17,7 +17,7 @@ use crate::queries::list::ListQueryBuilder;
 use crate::routes::filter::S3ObjectsFilter;
 use crate::uuid::UuidGenerator;
 use async_trait::async_trait;
-use aws_sdk_s3::error::BuildError;
+use aws_sdk_s3::error::{BuildError, ProvideErrorMetadata};
 use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::primitives;
@@ -192,9 +192,16 @@ impl<'a> Collecter<'a> {
     /// Gets S3 metadata from HeadObject such as creation/archival timestamps and statuses.
     pub async fn head(client: &S3Client, event: FlatS3EventMessage) -> Result<FlatS3EventMessage> {
         let head = client
-            .head_object(&event.key, &event.bucket, &event.version_id)
+            .head_object(&event.key, &event.bucket, event.version_id.clone())
             .inspect_err(|err| {
-                warn!("Error received from HeadObject: {}", err);
+                let err = err.as_service_error();
+                let message = err.and_then(|err| err.message());
+                let code = err.and_then(|err| err.code());
+
+                warn!(
+                    "Error received from HeadObject: {:?}, code: {:?}, message: {:?}",
+                    err, code, message
+                );
             })
             .await
             .ok();
@@ -239,9 +246,16 @@ impl<'a> Collecter<'a> {
         event: FlatS3EventMessage,
     ) -> Result<FlatS3EventMessage> {
         let tagging = client
-            .get_object_tagging(&event.key, &event.bucket, &event.version_id)
+            .get_object_tagging(&event.key, &event.bucket, event.version_id.clone())
             .inspect_err(|err| {
-                warn!("Error received from GetObjectTagging: {}", err);
+                let err = err.as_service_error();
+                let message = err.and_then(|err| err.message());
+                let code = err.and_then(|err| err.code());
+
+                warn!(
+                    "Error received from HeadObject: {:?}, code: {:?}, message: {:?}",
+                    err, code, message
+                );
             })
             .await
             .ok();
@@ -274,7 +288,7 @@ impl<'a> Collecter<'a> {
                 .put_object_tagging(
                     &event.key,
                     &event.bucket,
-                    &event.version_id,
+                    event.version_id.clone(),
                     Tagging::builder().set_tag_set(Some(tag_set)).build()?,
                 )
                 .await

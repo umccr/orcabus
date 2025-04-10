@@ -134,14 +134,14 @@ impl Client {
         &self,
         key: &str,
         bucket: &str,
-        version_id: &str,
+        version_id: Option<String>,
     ) -> Result<HeadObjectOutput, HeadObjectError> {
         self.inner
             .head_object()
             .checksum_mode(Enabled)
             .key(key)
             .bucket(bucket)
-            .version_id(version_id)
+            .set_version_id(version_id)
             .send()
             .await
     }
@@ -168,13 +168,13 @@ impl Client {
         &self,
         key: &str,
         bucket: &str,
-        version_id: &str,
+        version_id: Option<String>,
     ) -> Result<GetObjectTaggingOutput, GetObjectTaggingError> {
         self.inner
             .get_object_tagging()
             .key(key)
             .bucket(bucket)
-            .version_id(version_id)
+            .set_version_id(version_id)
             .send()
             .await
     }
@@ -184,14 +184,14 @@ impl Client {
         &self,
         key: &str,
         bucket: &str,
-        version_id: &str,
+        version_id: Option<String>,
         tagging: Tagging,
     ) -> Result<PutObjectTaggingOutput, PutObjectTaggingError> {
         self.inner
             .put_object_tagging()
             .key(key)
             .bucket(bucket)
-            .version_id(version_id)
+            .set_version_id(version_id)
             .tagging(tagging)
             .send()
             .await

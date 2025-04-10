@@ -8,6 +8,7 @@ use crate::database::aws::query::Query;
 use crate::database::{Client, CredentialGenerator};
 use crate::env::Config;
 use crate::error::Result;
+use crate::events::aws::message::default_version_id;
 use crate::events::aws::TransposedS3EventMessages;
 
 /// An ingester for S3 events.
@@ -77,7 +78,12 @@ impl Ingester {
                 &mut tx,
                 &events.buckets,
                 &events.keys,
-                &events.version_ids,
+                events
+                    .version_ids
+                    .into_iter()
+                    .map(|version_id| version_id.unwrap_or(default_version_id()))
+                    .collect::<Vec<_>>()
+                    .as_slice(),
                 &events.sequencers,
             )
             .await?;
@@ -432,7 +438,7 @@ pub(crate) mod tests {
 
         let event = expected_flat_events_simple().sort_and_dedup().into_inner();
         let mut event = event[0].clone();
-        event.version_id = "version_id".to_string();
+        event.version_id = Some("version_id".to_string());
         event.sequencer = Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string());
 
         let mut events = vec![event];
@@ -798,10 +804,10 @@ pub(crate) mod tests {
 
         let mut events_one = test_events(Some(Created));
         events_one.sequencers[0] = Some(EXPECTED_SEQUENCER_CREATED_TWO.to_string());
-        events_one.version_ids[0] = "2".to_string();
+        events_one.version_ids[0] = Some("2".to_string());
         // Previous version of the object.
         let mut events_two = test_events(Some(Created));
-        events_two.version_ids[0] = "1".to_string();
+        events_two.version_ids[0] = Some("1".to_string());
 
         // Out of order.
         ingester.ingest(S3(events_one)).await.unwrap();
@@ -1161,7 +1167,7 @@ pub(crate) mod tests {
         events
             .version_ids
             .iter_mut()
-            .for_each(|version_id| *version_id = default_version_id());
+            .for_each(|version_id| *version_id = Some(default_version_id()));
 
         events
     }
@@ -1213,7 +1219,7 @@ pub(crate) mod tests {
         assert_eq!(message.key, s3_object_results.get::<String, _>("key"));
         assert_eq!(
             message.version_id,
-            s3_object_results.get::<String, _>("version_id")
+            s3_object_results.get::<Option<String>, _>("version_id")
         );
         assert_eq!(
             sequencer,
