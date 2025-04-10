@@ -78,10 +78,7 @@ import {
 import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
 import { HtsgetStack, HtsgetStackConfigurableProps } from './stacks/htsget/stack';
-import {
-  SampleSheetCheckerStack,
-  SampleSheetCheckerStackProps,
-} from './stacks/sample-sheet-check/stack';
+import { SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -319,10 +316,13 @@ export class StatelessStackCollection {
       role: fileManagerStack.ingestRole,
     });
 
-    this.sampleSheetCheckerStack = new SampleSheetCheckerStack(scope, 'SampleSheetCheckerStack', {
-      ...this.createTemplateProps(env, 'SampleSheetCheckerStack'),
-      ...statelessConfiguration.sampleSheetCheckerProps,
-    });
+    /**
+     * Migrated to https://github.com/orcabus
+     */
+    // this.sampleSheetCheckerStack = new SampleSheetCheckerStack(scope, 'SampleSheetCheckerStack', {
+    //   ...this.createTemplateProps(env, 'SampleSheetCheckerStack'),
+    //   ...statelessConfiguration.sampleSheetCheckerProps,
+    // });
 
     if (statelessConfiguration.pgDDProps) {
       this.pgDDStack = new PgDDStack(scope, 'PgDDStack', {
