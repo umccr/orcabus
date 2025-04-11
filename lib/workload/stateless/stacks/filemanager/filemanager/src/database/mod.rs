@@ -10,8 +10,10 @@ use tracing::debug;
 use crate::database::aws::credentials::IamGenerator;
 use crate::database::aws::ingester::Ingester;
 use crate::database::aws::ingester_paired::IngesterPaired;
+use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::env::Config;
 use crate::error::Result;
+use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 use crate::events::EventSourceType;
 
 pub mod aws;
@@ -125,7 +127,35 @@ impl Ingest for Client {
                     .ingest_events(events)
                     .await
             }
-            EventSourceType::S3Paired(events) => {
+            EventSourceType::S3Paired(mut events) => {
+                // Disallow restores and storage class change for paired ingester because
+                // the null sequencer values are not properly supported.
+                let filter_reason = |event: &FlatS3EventMessage| {
+                    !matches!(
+                        event.reason,
+                        Reason::Restored | Reason::StorageClassChanged | Reason::RestoreExpired
+                    )
+                };
+
+                let created: FlatS3EventMessages = events.object_created.clone().into();
+                events.object_created = FlatS3EventMessages(
+                    created
+                        .0
+                        .into_iter()
+                        .filter(filter_reason)
+                        .collect::<Vec<_>>(),
+                )
+                .into();
+                let deleted: FlatS3EventMessages = events.object_deleted.clone().into();
+                events.object_deleted = FlatS3EventMessages(
+                    deleted
+                        .0
+                        .into_iter()
+                        .filter(filter_reason)
+                        .collect::<Vec<_>>(),
+                )
+                .into();
+
                 IngesterPaired::new(Self::new(self.connection()))
                     .ingest_events(events)
                     .await

@@ -1,7 +1,6 @@
 -- Select the most recent s3_objects based on the input bucket, key and version_id values
 -- into FlatS3EventMessage structs. This query effectively fetches the current state of the
--- database objects (for both created and deleted records) in S3 for a set of buckets, keys
--- and version_ids.
+-- database objects in S3 for a set of buckets, keys and version_ids, using `is_current_state`.
 -- TODO, potentially replace this with sea-orm codegen and query builder.
 
 -- Unnest input.
@@ -51,7 +50,7 @@ cross join lateral (
         input.bucket = s3_object.bucket and
         input.key = s3_object.key and
         input.version_id = s3_object.version_id and
-        s3_object.event_type = 'Created'
+        s3_object.is_current_state = true
     order by s3_object.sequencer desc
     limit 1
 )

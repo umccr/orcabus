@@ -6,7 +6,7 @@ use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::error::Result;
 use crate::events::aws::message::{default_version_id, quote_e_tag, EventType};
 
-use crate::events::aws::{empty_sequencer, FlatS3EventMessage, FlatS3EventMessages};
+use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 use crate::uuid::UuidGenerator;
 use aws_sdk_s3::types::Object;
 use chrono::Utc;
@@ -72,9 +72,8 @@ impl From<Object> for FlatS3EventMessage {
             key: key.unwrap_or_default(),
             size,
             e_tag: e_tag.map(quote_e_tag),
-            // Set this to the empty string so that any deleted events after this can bind to this
-            // created event, as they are always greater than this event.
-            sequencer: Some(empty_sequencer()),
+            // Set this to null to generate a sequencer.
+            sequencer: None,
             version_id: default_version_id(),
             // Head fields are fetched later.
             storage_class: None,
@@ -117,7 +116,7 @@ pub(crate) mod tests {
         assert_flat_without_time(
             result[0].clone(),
             &Created,
-            Some(empty_sequencer()),
+            None,
             Some(1),
             default_version_id(),
             false,
@@ -126,7 +125,7 @@ pub(crate) mod tests {
         assert_flat_without_time(
             result[1].clone(),
             &Created,
-            Some(empty_sequencer()),
+            None,
             Some(2),
             default_version_id(),
             false,

@@ -7,8 +7,12 @@ use tracing::debug;
 use crate::database::aws::query::Query;
 use crate::database::{Client, CredentialGenerator};
 use crate::env::Config;
-use crate::error::Result;
-use crate::events::aws::TransposedS3EventMessages;
+use crate::error::Error::ParseError;
+use crate::error::{Error, Result};
+use crate::events::aws::{FlatS3EventMessages, TransposedS3EventMessages};
+
+/// The amount of padding to add to the sequencer when updating null values.
+const SEQUENCER_PADDING_AMOUNT: usize = 30;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
@@ -28,6 +32,110 @@ impl Ingester {
         config: &Config,
     ) -> Result<Self> {
         Ok(Self::new(Client::from_generator(generator, config).await?))
+    }
+
+    /// The default sequencer value, i.e. the lowest possible sequencer.
+    pub(crate) fn default_sequencer() -> String {
+        "0".repeat(SEQUENCER_PADDING_AMOUNT)
+    }
+
+    /// Increment the sequencer to a greater value. Sequencers are padding with enough zeros to
+    /// ensure that the increment doesn't interfere with the ordering of AWS-native sequencer values.
+    ///
+    /// This increments the sequencer using the following logic:
+    /// - If the sequencer is null, starting at `SEQUENCER_PADDING_AMOUNT` zeroes as the sequencer.
+    /// - Then, adding a u64 value to the right side of the sequencer separated by `-` by:
+    ///     1. Padding `SEQUENCER_PADDING_AMOUNT` zeroes right before adding the value if the
+    ///        sequencer hasn't been padded before.
+    ///     2. Incrementing the u64 value on the right if it has been padded.
+    pub(crate) fn increment_sequencer(sequencer: Option<String>) -> Result<String> {
+        // If no sequencer exists, start from the lowest possible value.
+        let sequencer = sequencer.unwrap_or_else(Self::default_sequencer);
+
+        if sequencer.len() > SEQUENCER_PADDING_AMOUNT {
+            // Padding exists, increment the right side of the sequencer.
+            let (left, right) = sequencer.rsplit_once("-").ok_or_else(|| {
+                ParseError(format!(
+                    "failed to parse sequencer for padding: {}",
+                    sequencer
+                ))
+            })?;
+            let decoded = hex::decode(right).map_err(|err| {
+                ParseError(format!("failed to decode right padded sequencer: {}", err))
+            })?;
+
+            let mut number = u64::from_le_bytes(decoded.try_into().map_err(|err| {
+                ParseError(format!(
+                    "failed to convert sequencer to integer: {:x?}",
+                    err
+                ))
+            })?);
+            number += 1;
+
+            let bytes = number.to_le_bytes();
+            let encoded = hex::encode(bytes);
+
+            Ok::<_, Error>(format!("{}-{}", left, encoded))
+        } else {
+            // Padding does not exist, start padding with the first value.
+            let first = hex::encode(1_u64.to_le_bytes());
+
+            Ok(format!(
+                "{:0<SEQUENCER_PADDING_AMOUNT$}-{}",
+                sequencer, first
+            ))
+        }
+    }
+
+    /// Convert null sequencers into proper values. This is required to ensure that events
+    /// maintain the correct ordering between null and non-null sequencers. A new sequencer value
+    /// is assigned for each null sequencer by incrementing the previous most recent sequencer.
+    /// This assumes that the event with the null sequencer is the "most-current" event for the
+    /// bucket, key and version_id.
+    pub(crate) async fn resolve_null_sequencers(
+        query: &Query,
+        events: TransposedS3EventMessages,
+        conn: &mut PgConnection,
+    ) -> Result<TransposedS3EventMessages> {
+        // Get the current state of records to find the most recent sequencer.
+        let current = query
+            .select_existing_by_bucket_key(conn, &events.buckets, &events.keys, &events.version_ids)
+            .await?;
+
+        let mut events = FlatS3EventMessages::from(events);
+        // Then update the sequencers, proceeding in groups of keys, buckets and version_ids.
+        for group in events.0.chunk_by_mut(|a, b| {
+            a.key == b.key && a.bucket == b.bucket && a.version_id == b.version_id
+        }) {
+            let first = group.first();
+
+            // Extract the current_sequencer from the database if it exists.
+            let mut current_sequencer = current
+                .0
+                .iter()
+                .find(|current| {
+                    Some(current.bucket.as_str()) == first.map(|first| first.bucket.as_str())
+                        && Some(current.key.as_str()) == first.map(|first| first.key.as_str())
+                        && Some(current.version_id.as_str())
+                            == first.map(|first| first.version_id.as_str())
+                })
+                .and_then(|current| current.sequencer.clone());
+
+            // Update the sequencer for each consecutive event in the group based on the current.
+            group.iter_mut().try_for_each(|event| {
+                // If this event has an AWS-native sequencer, update it to the current and proceed.
+                if event.sequencer.is_some() {
+                    current_sequencer = event.sequencer.clone();
+                    return Ok::<_, Error>(());
+                }
+
+                event.sequencer = Some(Self::increment_sequencer(current_sequencer.clone())?);
+                current_sequencer = event.sequencer.clone();
+                Ok::<_, Error>(())
+            })?;
+        }
+
+        Ok(events.sort_and_dedup().into())
     }
 
     pub(crate) async fn ingest_query(
@@ -65,14 +173,27 @@ impl Ingester {
     pub async fn ingest_events(self, events: TransposedS3EventMessages) -> Result<()> {
         let mut tx = self.client().pool().begin().await?;
 
+        let query = Query::new(self.client.clone());
+
+        let mut events = events;
+        // If there are any null sequencers, they should be converted to proper sequencers
+        // first to ensure correct event ordering.
+        if events
+            .sequencers
+            .iter()
+            .any(|sequencer| sequencer.is_none())
+        {
+            events = Self::resolve_null_sequencers(&query, events, &mut tx).await?;
+        }
+
         debug!(
-                s3_object_ids = ?events.s3_object_ids,
-                "inserting events into s3_object table"
+            s3_object_ids = ?events.s3_object_ids,
+            "inserting events into s3_object table"
         );
         Self::ingest_query(&events, &mut tx).await?;
 
         // Reset state for records which represent the new state.
-        Query::new(self.client.clone())
+        query
             .reset_current_state(
                 &mut tx,
                 &events.buckets,
@@ -102,6 +223,7 @@ pub(crate) mod tests {
     use tokio::time::Instant;
     use uuid::Uuid;
 
+    use super::*;
     use crate::database::aws::migration::tests::MIGRATOR;
     use crate::database::entities::sea_orm_active_enums::{ArchiveStatus, Reason};
     use crate::database::{Client, Ingest};
@@ -119,6 +241,277 @@ pub(crate) mod tests {
     use crate::events::EventSourceType;
     use crate::events::EventSourceType::S3;
     use crate::uuid::UuidGenerator;
+
+    #[test]
+    fn sequencer_padding() {
+        let sequencer = "123";
+        let padded = Ingester::increment_sequencer(Some(sequencer.to_string())).unwrap();
+        assert_eq!(
+            padded,
+            "123000000000000000000000000000-0100000000000000".to_string()
+        );
+
+        let pad_next = Ingester::increment_sequencer(Some(padded.to_string())).unwrap();
+        assert_eq!(
+            pad_next,
+            "123000000000000000000000000000-0200000000000000".to_string()
+        );
+
+        assert!(*padded > *sequencer);
+        assert!(*pad_next > *sequencer);
+        assert!(pad_next > padded);
+
+        let new_sequencer = "1245";
+
+        assert!(*new_sequencer > *padded);
+        assert!(*new_sequencer > *pad_next);
+
+        let large_sequencer = "123400000000000000000000000000";
+        let padded_large =
+            Ingester::increment_sequencer(Some(large_sequencer.to_string())).unwrap();
+        assert_eq!(
+            padded_large,
+            "123400000000000000000000000000-0100000000000000".to_string()
+        );
+
+        assert!(*padded_large > *large_sequencer);
+
+        let too_large = "1234000000000000000000000000000";
+        let result = Ingester::increment_sequencer(Some(too_large.to_string()));
+        assert!(result.is_err());
+
+        let no_sequencer = Ingester::increment_sequencer(None).unwrap();
+        assert_eq!(
+            no_sequencer,
+            "000000000000000000000000000000-0100000000000000".to_string()
+        );
+        assert!(*sequencer > *no_sequencer);
+        assert!(padded > no_sequencer);
+        assert!(pad_next > no_sequencer);
+        assert!(*too_large > *no_sequencer);
+        assert!(*EXPECTED_SEQUENCER_CREATED_ONE > *no_sequencer);
+        assert!(*EXPECTED_SEQUENCER_CREATED_TWO > *no_sequencer);
+        assert!(*EXPECTED_SEQUENCER_CREATED_ZERO > *no_sequencer);
+        assert!(*EXPECTED_SEQUENCER_DELETED_ONE > *no_sequencer);
+        assert!(*EXPECTED_SEQUENCER_DELETED_TWO > *no_sequencer);
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_padded(pool: PgPool) {
+        let ingester = test_ingester(pool);
+        let mut events_one = test_events(Some(Created));
+
+        // Merge events into same ingestion.
+        let flat_events: FlatS3EventMessages =
+            replace_sequencers(test_events(None), None, None).into();
+        flat_events
+            .into_inner()
+            .into_iter()
+            .for_each(|event| events_one.push(event));
+
+        ingester.ingest(S3(events_one)).await.unwrap();
+
+        let s3_object_results = fetch_results_ordered(&ingester).await;
+
+        assert_eq!(s3_object_results.len(), 3);
+        assert_with(
+            &s3_object_results[0],
+            Some(0),
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            false,
+        );
+        assert_with(
+            &s3_object_results[1],
+            Some(0),
+            Some(format!(
+                "{}000000000000-0100000000000000",
+                EXPECTED_SEQUENCER_CREATED_ONE
+            )),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            false,
+        );
+        assert_with(
+            &s3_object_results[2],
+            None,
+            Some(format!(
+                "{}000000000000-0200000000000000",
+                EXPECTED_SEQUENCER_CREATED_ONE
+            )),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Deleted,
+            false,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_padded_separate(pool: PgPool) {
+        let ingester = test_ingester(pool);
+        let events_one = test_events(Some(Created));
+
+        ingester.ingest(S3(events_one)).await.unwrap();
+
+        let flat_events: FlatS3EventMessages =
+            replace_sequencers(test_events(None), None, None).into();
+
+        ingester.ingest(S3(flat_events.into())).await.unwrap();
+
+        let s3_object_results = fetch_results_ordered(&ingester).await;
+
+        assert_eq!(s3_object_results.len(), 3);
+        assert_with(
+            &s3_object_results[0],
+            Some(0),
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            false,
+        );
+        assert_with(
+            &s3_object_results[1],
+            Some(0),
+            Some(format!(
+                "{}000000000000-0100000000000000",
+                EXPECTED_SEQUENCER_CREATED_ONE
+            )),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            false,
+        );
+        assert_with(
+            &s3_object_results[2],
+            None,
+            Some(format!(
+                "{}000000000000-0200000000000000",
+                EXPECTED_SEQUENCER_CREATED_ONE
+            )),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Deleted,
+            false,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_padded_separate_current_state(pool: PgPool) {
+        let ingester = test_ingester(pool);
+        let events_one = test_events(Some(Created));
+
+        ingester.ingest(S3(events_one)).await.unwrap();
+
+        let mut events = test_events(Some(Created));
+        events.sequencers[0] = None;
+
+        ingester.ingest(S3(events)).await.unwrap();
+
+        let s3_object_results = fetch_results_ordered(&ingester).await;
+
+        assert_eq!(s3_object_results.len(), 2);
+        assert_with(
+            &s3_object_results[0],
+            Some(0),
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            false,
+        );
+        assert_with(
+            &s3_object_results[1],
+            Some(0),
+            Some(format!(
+                "{}000000000000-0100000000000000",
+                EXPECTED_SEQUENCER_CREATED_ONE
+            )),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            true,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_padded_start_null_before(pool: PgPool) {
+        let ingester = test_ingester(pool);
+
+        let flat_events: FlatS3EventMessages =
+            replace_sequencers(test_events(None), None, None).into();
+
+        ingester.ingest(S3(flat_events.into())).await.unwrap();
+
+        let events_one = test_events(Some(Created));
+        ingester.ingest(S3(events_one)).await.unwrap();
+
+        let s3_object_results = fetch_results_ordered(&ingester).await;
+
+        assert_eq!(s3_object_results.len(), 3);
+        assert_with(
+            &s3_object_results[0],
+            Some(0),
+            Some("000000000000000000000000000000-0100000000000000".to_string()),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            false,
+        );
+        assert_with(
+            &s3_object_results[1],
+            None,
+            Some("000000000000000000000000000000-0200000000000000".to_string()),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Deleted,
+            false,
+        );
+        assert_with(
+            &s3_object_results[2],
+            Some(0),
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            true,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_padded_separate_null(pool: PgPool) {
+        let ingester = test_ingester(pool);
+
+        let flat_events: FlatS3EventMessages =
+            replace_sequencers(test_events(None), None, None).into();
+
+        ingester.ingest(S3(flat_events.into())).await.unwrap();
+
+        let s3_object_results = fetch_results_ordered(&ingester).await;
+
+        assert_eq!(s3_object_results.len(), 2);
+        assert_with(
+            &s3_object_results[0],
+            Some(0),
+            Some("000000000000000000000000000000-0100000000000000".to_string()),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            false,
+        );
+        assert_with(
+            &s3_object_results[1],
+            None,
+            Some("000000000000000000000000000000-0200000000000000".to_string()),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Deleted,
+            false,
+        );
+    }
 
     #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_object_created(pool: PgPool) {
@@ -583,106 +976,6 @@ pub(crate) mod tests {
             &s3_object_results[0],
             &s3_object_results[1],
             EXPECTED_VERSION_ID,
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_object_no_sequencer_created(pool: PgPool) {
-        let ingester = test_ingester(pool);
-
-        let mut events_one = test_events(Some(Created));
-        events_one.sequencers[0] = None;
-        let mut events_two = test_events(Some(Created));
-        events_two.sequencers[0] = None;
-
-        ingester.ingest(S3(events_one)).await.unwrap();
-        ingester.ingest(S3(events_two)).await.unwrap();
-
-        let s3_object_results = fetch_results(&ingester).await;
-
-        assert_eq!(s3_object_results.len(), 2);
-        assert_with(
-            &s3_object_results[0],
-            Some(0),
-            None,
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-            Created,
-            true,
-        );
-        assert_with(
-            &s3_object_results[1],
-            Some(0),
-            None,
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-            Created,
-            false,
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_object_no_sequencer_deleted(pool: PgPool) {
-        let ingester = test_ingester(pool);
-
-        let mut events_one = test_events(Some(Deleted));
-        events_one.sequencers[0] = None;
-        let mut events_two = test_events(Some(Deleted));
-        events_two.sequencers[0] = None;
-
-        ingester.ingest(S3(events_one)).await.unwrap();
-        ingester.ingest(S3(events_two)).await.unwrap();
-
-        let s3_object_results = fetch_results(&ingester).await;
-
-        assert_eq!(s3_object_results.len(), 2);
-        assert_with(
-            &s3_object_results[0],
-            None,
-            None,
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-            Deleted,
-            false,
-        );
-        assert_with(
-            &s3_object_results[1],
-            None,
-            None,
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-            Deleted,
-            false,
-        );
-    }
-
-    #[sqlx::test(migrator = "MIGRATOR")]
-    async fn ingest_object_no_sequencer(pool: PgPool) {
-        let ingester = test_ingester(pool);
-
-        let events = replace_sequencers(test_events(None), None, None);
-        ingester.ingest(S3(events)).await.unwrap();
-
-        let s3_object_results = fetch_results(&ingester).await;
-
-        assert_eq!(s3_object_results.len(), 2);
-        assert_with(
-            &s3_object_results[1],
-            Some(0),
-            None,
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-            Created,
-            true,
-        );
-        assert_with(
-            &s3_object_results[0],
-            None,
-            None,
-            EXPECTED_VERSION_ID.to_string(),
-            Some(Default::default()),
-            Deleted,
-            false,
         );
     }
 

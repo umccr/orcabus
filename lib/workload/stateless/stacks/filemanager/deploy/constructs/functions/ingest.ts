@@ -3,7 +3,7 @@ import { IQueue } from 'aws-cdk-lib/aws-sqs';
 import * as fn from './function';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { DatabaseProps } from './function';
-import { FILEMANAGER_SERVICE_NAME } from '../../stack';
+import { FILEMANAGER_INGEST_ID_TAG_NAME, FILEMANAGER_SERVICE_NAME } from '../../stack';
 
 /**
  * Props for controlling access to buckets.
@@ -39,7 +39,7 @@ export class IngestFunction extends fn.Function {
     super(scope, id, {
       package: 'filemanager-ingest-lambda',
       environment: {
-        FILEMANAGER_INGESTER_TAG_NAME: 'umccr-org:OrcaBusFileManagerIngestId',
+        FILEMANAGER_INGESTER_TAG_NAME: FILEMANAGER_INGEST_ID_TAG_NAME,
         ...props.environment,
       },
       ...props,

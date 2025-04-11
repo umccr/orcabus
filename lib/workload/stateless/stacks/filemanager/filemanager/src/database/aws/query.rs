@@ -20,13 +20,11 @@ impl Query {
     /// TODO, ideally this should use some better types. Potentially use sea-orm codegen to simplify queries.
     pub async fn select_existing_by_bucket_key(
         &self,
-        conn: impl Acquire<'_, Database = Postgres>,
+        conn: &mut PgConnection,
         buckets: &[String],
         keys: &[String],
         version_ids: &[String],
     ) -> Result<FlatS3EventMessages> {
-        let mut conn = conn.acquire().await?;
-
         Ok(FlatS3EventMessages(
             query_as::<_, FlatS3EventMessage>(include_str!(
                 "../../../../database/queries/api/select_existing_by_bucket_key.sql"
@@ -34,7 +32,7 @@ impl Query {
             .bind(buckets)
             .bind(keys)
             .bind(version_ids)
-            .fetch_all(&mut *conn)
+            .fetch_all(conn)
             .await?,
         ))
     }
@@ -122,7 +120,7 @@ mod tests {
     async fn query_current_state(
         new_key: &String,
         query: &Query,
-        conn: impl Acquire<'_, Database = Postgres>,
+        conn: &mut PgConnection,
     ) -> Vec<FlatS3EventMessage> {
         query
             .select_existing_by_bucket_key(

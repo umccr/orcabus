@@ -21,7 +21,7 @@ import { NamedLambdaRole } from '../../../../components/named-lambda-role';
 import { Role } from 'aws-cdk-lib/aws-iam';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
-export const FILEMANAGER_API_ROLE_NAME = 'orcabus-filemanager-api-role';
+export const FILEMANAGER_INGEST_ID_TAG_NAME = 'umccr-org:OrcaBusFileManagerIngestId';
 
 /**
  * Stateful config for filemanager.
@@ -54,7 +54,6 @@ export class Filemanager extends Stack {
   private readonly queue: IQueue;
   readonly domainName: string;
   readonly ingestRole: Role;
-  readonly apiRole: Role;
 
   constructor(scope: Construct, id: string, props: FilemanagerProps) {
     super(scope, id, props);
@@ -74,7 +73,6 @@ export class Filemanager extends Stack {
     );
 
     this.ingestRole = this.createRole(props.fileManagerRoleName, 'IngestFunctionRole');
-    this.apiRole = this.createRole(FILEMANAGER_API_ROLE_NAME, 'ApiFunctionRole');
 
     if (props?.migrateDatabase) {
       const migrateFunction = new MigrateFunction(this, 'MigrateFunction', {
@@ -153,7 +151,7 @@ export class Filemanager extends Stack {
       host: this.host,
       securityGroup: this.securityGroup,
       buckets: [...props.eventSourceBuckets, ...props.inventorySourceBuckets],
-      role: this.apiRole,
+      role: this.ingestRole,
       ...props,
     });
 
