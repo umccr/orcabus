@@ -5,15 +5,15 @@ use async_trait::async_trait;
 use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
-use std::future::Future;
-use std::pin::Pin;
 use tracing::debug;
 
 use crate::database::aws::credentials::IamGenerator;
 use crate::database::aws::ingester::Ingester;
 use crate::database::aws::ingester_paired::IngesterPaired;
+use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::env::Config;
 use crate::error::Result;
+use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages};
 use crate::events::EventSourceType;
 
 pub mod aws;
@@ -118,38 +118,62 @@ impl Client {
     }
 }
 
-impl<'a> Ingest<'a> for Client {
-    fn ingest(
-        &'a self,
-        events: EventSourceType,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>
-    where
-        Self: Sync + 'a,
-    {
-        Box::pin(async move {
-            match events {
-                EventSourceType::S3(events) => {
-                    Ingester::new(Self::new(self.connection()))
-                        .ingest_events(events)
-                        .await
-                }
-                EventSourceType::S3Paired(events) => {
-                    IngesterPaired::new(Self::new(self.connection()))
-                        .ingest_events(events)
-                        .await
-                }
+#[async_trait]
+impl Ingest for Client {
+    async fn ingest(&self, events: EventSourceType) -> Result<()> {
+        match events {
+            EventSourceType::S3(events) => {
+                Ingester::new(Self::new(self.connection()))
+                    .ingest_events(events)
+                    .await
             }
-        })
+            EventSourceType::S3Paired(mut events) => {
+                // Disallow crawls, restores and storage class change for paired ingester because
+                // the null sequencer values are not properly supported.
+                let filter_reason = |event: &FlatS3EventMessage| {
+                    matches!(
+                        event.reason,
+                        Reason::CreatedCompleteMultipartUpload
+                            | Reason::CreatedCopy
+                            | Reason::CreatedPost
+                            | Reason::CreatedPut
+                            | Reason::Deleted
+                            | Reason::DeletedLifecycle
+                    )
+                };
+
+                let created: FlatS3EventMessages = events.object_created.clone().into();
+                events.object_created = FlatS3EventMessages(
+                    created
+                        .0
+                        .into_iter()
+                        .filter(filter_reason)
+                        .collect::<Vec<_>>(),
+                )
+                .into();
+                let deleted: FlatS3EventMessages = events.object_deleted.clone().into();
+                events.object_deleted = FlatS3EventMessages(
+                    deleted
+                        .0
+                        .into_iter()
+                        .filter(filter_reason)
+                        .collect::<Vec<_>>(),
+                )
+                .into();
+
+                IngesterPaired::new(Self::new(self.connection()))
+                    .ingest_events(events)
+                    .await
+            }
+        }
     }
 }
 
 /// This trait ingests raw events into the database.
-pub trait Ingest<'a> {
+#[async_trait]
+pub trait Ingest {
     /// Ingest the events.
-    fn ingest(
-        &'a self,
-        events: EventSourceType,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
+    async fn ingest(&self, events: EventSourceType) -> Result<()>;
 }
 
 /// Trait representing database migrations.
