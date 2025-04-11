@@ -669,7 +669,7 @@ pub(crate) mod tests {
                     .match_requests(move |req| {
                         req.key() == Some("manifest.checksum")
                             && req.bucket() == Some(MANIFEST_BUCKET)
-                            && req.version_id() == Some(&default_version_id())
+                            && req.version_id().is_none()
                     })
                     .then_output(move || {
                         GetObjectOutput::builder()
@@ -870,7 +870,7 @@ pub(crate) mod tests {
             .match_requests(move |req| {
                 req.key() == Some("manifest.json")
                     && req.bucket() == Some(MANIFEST_BUCKET)
-                    && req.version_id() == Some(&default_version_id())
+                    && req.version_id().is_none()
             })
             .then_output(move || {
                 GetObjectOutput::builder()
@@ -935,7 +935,7 @@ pub(crate) mod tests {
                     .match_requests(move |req| {
                         req.key() == Some(&format!("{}{}", MANIFEST_KEY, ending))
                             && req.bucket() == Some(MANIFEST_BUCKET)
-                            && req.version_id() == Some(&default_version_id())
+                            && req.version_id().is_none()
                     })
                     .then_output(move || {
                         GetObjectOutput::builder()
