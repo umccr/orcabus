@@ -739,12 +739,6 @@ impl From<Vec<FlatS3EventMessages>> for FlatS3EventMessages {
     }
 }
 
-/// The sequencer value for an inventory event. This is the lowest possible sequencer value
-/// so that any deleted event can bind to the inventory or crawl records.
-pub fn empty_sequencer() -> String {
-    String::new()
-}
-
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::database::entities::sea_orm_active_enums::Reason;

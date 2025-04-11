@@ -28,7 +28,7 @@ use crate::database::entities::sea_orm_active_enums::Reason;
 use crate::error::Error::S3Error;
 use crate::error::{Error, Result};
 use crate::events::aws::message::{default_version_id, quote_e_tag, EventType::Created};
-use crate::events::aws::{empty_sequencer, FlatS3EventMessage, FlatS3EventMessages, StorageClass};
+use crate::events::aws::{FlatS3EventMessage, FlatS3EventMessages, StorageClass};
 use crate::uuid::UuidGenerator;
 
 const DEFAULT_CSV_MANIFEST: &str =
@@ -511,9 +511,8 @@ impl From<Record> for FlatS3EventMessage {
             key,
             size,
             e_tag: e_tag.map(quote_e_tag),
-            // Set this to the empty string so that any deleted events after this can bind to this
-            // created event, as they are always greater than this event.
-            sequencer: Some(empty_sequencer()),
+            // Set this to null to generate a sequencer.
+            sequencer: None,
             version_id: version_id.unwrap_or_else(default_version_id),
             storage_class,
             last_modified_date,

@@ -128,17 +128,12 @@ impl Ingest for Client {
                     .await
             }
             EventSourceType::S3Paired(mut events) => {
-                // Disallow crawls, restores and storage class change for paired ingester because
+                // Disallow restores and storage class change for paired ingester because
                 // the null sequencer values are not properly supported.
                 let filter_reason = |event: &FlatS3EventMessage| {
-                    matches!(
+                    !matches!(
                         event.reason,
-                        Reason::CreatedCompleteMultipartUpload
-                            | Reason::CreatedCopy
-                            | Reason::CreatedPost
-                            | Reason::CreatedPut
-                            | Reason::Deleted
-                            | Reason::DeletedLifecycle
+                        Reason::Restored | Reason::StorageClassChanged | Reason::RestoreExpired
                     )
                 };
 
