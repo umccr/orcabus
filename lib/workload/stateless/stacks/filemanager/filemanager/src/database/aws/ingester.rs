@@ -1,14 +1,19 @@
 //! This module handles logic associated with event ingestion.
 //!
 
+use parquet::data_type::AsBytes;
 use sqlx::{query, PgConnection};
 use tracing::debug;
 
 use crate::database::aws::query::Query;
 use crate::database::{Client, CredentialGenerator};
 use crate::env::Config;
-use crate::error::Result;
-use crate::events::aws::TransposedS3EventMessages;
+use crate::error::Error::ParseError;
+use crate::error::{Error, Result};
+use crate::events::aws::{FlatS3EventMessages, TransposedS3EventMessages};
+
+/// The amount of padding to add to the sequencer when updating null values.
+const SEQUENCER_PADDING_AMOUNT: usize = 30;
 
 /// An ingester for S3 events.
 #[derive(Debug)]
@@ -28,6 +33,95 @@ impl Ingester {
         config: &Config,
     ) -> Result<Self> {
         Ok(Self::new(Client::from_generator(generator, config).await?))
+    }
+
+    /// Increment the sequencer to a greater value. Sequencers are padding with enough zeros to
+    /// ensure that the increment doesn't interfere with the ordering of AWS-native sequencer values.
+    pub(crate) fn increment_sequencer(sequencer: Option<String>) -> Result<Option<String>> {
+        sequencer
+            .map(|sequencer| {
+                if sequencer.len() > SEQUENCER_PADDING_AMOUNT {
+                    // Padding exists, increment the right side of the sequencer.
+                    let (left, right) = sequencer.rsplit_once("0").ok_or_else(|| ParseError("failed to parse padded sequencer".to_string()))?;
+                    let decoded = hex::decode(right).map_err(|err| {
+                        ParseError(format!("failed to decode right padded sequencer: {}", err))
+                    })?;
+
+                    let mut number = u64::from_le_bytes(decoded.try_into().map_err(|err| {
+                        ParseError(format!(
+                            "failed to convert sequencer to integer: {:x?}",
+                            err
+                        ))
+                    })?);
+                    number += 1;
+
+                    let bytes = number.to_le_bytes();
+                    let encoded = hex::encode(bytes);
+
+                    Ok::<_, Error>(format!("{}{}", left, encoded))
+                } else {
+                    // Ensure that the sequencer isn't too large so that padding always occurs.
+                    if sequencer.len() >= SEQUENCER_PADDING_AMOUNT {
+                        return Err(ParseError(format!(
+                            "sequencer is too large: {}",
+                            sequencer
+                        )));
+                    }
+                    
+                    // Padding does not exist, start padding with the first value.
+                    let first = hex::encode(1.as_bytes());
+
+                    Ok(format!(
+                        "{:0<SEQUENCER_PADDING_AMOUNT$}{}",
+                        sequencer, first
+                    ))
+                }
+            })
+            .transpose()
+    }
+
+    /// Convert null sequencers into proper values. This is required to ensure that events
+    /// maintain the correct ordering between null and non-null sequencers. A new sequencer value
+    /// is assigned for each null sequencer by incrementing the previous most recent sequencer.
+    /// This assumes that the event with the null sequencer is the "most-current" event for the
+    /// bucket, key and version_id.
+    pub(crate) async fn resolve_null_sequencers(
+        query: &Query,
+        events: TransposedS3EventMessages,
+        conn: &mut PgConnection,
+    ) -> Result<TransposedS3EventMessages> {
+        // Find events without a sequencer.
+        let (no_sequencer, sequencer) = events.partition_by(|event| event.sequencer.is_none());
+
+        let no_sequencer_transposed = TransposedS3EventMessages::from(no_sequencer);
+        // Get the current state of records to find the most recent sequencer.
+        let current = query
+            .select_existing_by_bucket_key(
+                conn,
+                &no_sequencer_transposed.buckets,
+                &no_sequencer_transposed.keys,
+                &no_sequencer_transposed.version_ids,
+            )
+            .await?;
+
+        let mut no_sequencer = FlatS3EventMessages::from(no_sequencer_transposed);
+        no_sequencer.0.iter_mut().try_for_each(|event| {
+            let sequencer = current
+                .0
+                .iter()
+                .find(|current| {
+                    current.bucket == event.bucket
+                        && current.key == event.key
+                        && current.version_id == event.version_id
+                })
+                .and_then(|current| current.sequencer.clone());
+
+            event.sequencer = Self::increment_sequencer(sequencer)?;
+
+            Ok::<_, Error>(())
+        })?;
+
+        Ok(no_sequencer.merge(sequencer).into())
     }
 
     pub(crate) async fn ingest_query(
@@ -65,14 +159,27 @@ impl Ingester {
     pub async fn ingest_events(self, events: TransposedS3EventMessages) -> Result<()> {
         let mut tx = self.client().pool().begin().await?;
 
+        let query = Query::new(self.client.clone());
+
+        let mut events = events;
+        // If there are any null sequencers, they should be converted to proper sequencers
+        // first to ensure correct event ordering.
+        if events
+            .sequencers
+            .iter()
+            .any(|sequencer| sequencer.is_none())
+        {
+            events = Self::resolve_null_sequencers(&query, events, &mut tx).await?;
+        }
+
         debug!(
-                s3_object_ids = ?events.s3_object_ids,
-                "inserting events into s3_object table"
+            s3_object_ids = ?events.s3_object_ids,
+            "inserting events into s3_object table"
         );
         Self::ingest_query(&events, &mut tx).await?;
 
         // Reset state for records which represent the new state.
-        Query::new(self.client.clone())
+        query
             .reset_current_state(
                 &mut tx,
                 &events.buckets,

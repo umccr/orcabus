@@ -5,6 +5,8 @@ use async_trait::async_trait;
 use sea_orm::{DatabaseConnection, SqlxPostgresConnector};
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
+use std::future::Future;
+use std::pin::Pin;
 use tracing::debug;
 
 use crate::database::aws::credentials::IamGenerator;
@@ -116,29 +118,38 @@ impl Client {
     }
 }
 
-#[async_trait]
-impl Ingest for Client {
-    async fn ingest(&self, events: EventSourceType) -> Result<()> {
-        match events {
-            EventSourceType::S3(events) => {
-                Ingester::new(Self::new(self.connection()))
-                    .ingest_events(events)
-                    .await
+impl<'a> Ingest<'a> for Client {
+    fn ingest(
+        &'a self,
+        events: EventSourceType,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>
+    where
+        Self: Sync + 'a,
+    {
+        Box::pin(async move {
+            match events {
+                EventSourceType::S3(events) => {
+                    Ingester::new(Self::new(self.connection()))
+                        .ingest_events(events)
+                        .await
+                }
+                EventSourceType::S3Paired(events) => {
+                    IngesterPaired::new(Self::new(self.connection()))
+                        .ingest_events(events)
+                        .await
+                }
             }
-            EventSourceType::S3Paired(events) => {
-                IngesterPaired::new(Self::new(self.connection()))
-                    .ingest_events(events)
-                    .await
-            }
-        }
+        })
     }
 }
 
 /// This trait ingests raw events into the database.
-#[async_trait]
-pub trait Ingest {
+pub trait Ingest<'a> {
     /// Ingest the events.
-    async fn ingest(&self, events: EventSourceType) -> Result<()>;
+    fn ingest(
+        &'a self,
+        events: EventSourceType,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
 }
 
 /// Trait representing database migrations.

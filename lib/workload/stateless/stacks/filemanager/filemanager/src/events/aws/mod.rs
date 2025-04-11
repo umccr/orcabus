@@ -205,6 +205,18 @@ impl TransposedS3EventMessages {
         self.is_current_state.push(is_current_state);
         self.attributes.push(attributes);
     }
+
+    /// Partition the events by a given function.
+    pub fn partition_by<F>(self, f: F) -> (FlatS3EventMessages, FlatS3EventMessages)
+    where
+        F: Fn(&FlatS3EventMessage) -> bool,
+    {
+        let events = FlatS3EventMessages::from(self).0;
+        // Find events without a sequencer.
+        let (a, b): (Vec<_>, Vec<_>) = events.into_iter().partition(f);
+
+        (FlatS3EventMessages(a), FlatS3EventMessages(b))
+    }
 }
 
 /// Conversion from flat events to transposed events.
@@ -500,6 +512,14 @@ impl FlatS3EventMessages {
         });
 
         Self(messages)
+    }
+
+    /// Merge two sets of messages together and re-sort and dedup them.
+    pub fn merge(self, other: Self) -> Self {
+        let mut messages = self.into_inner();
+        messages.extend(other.into_inner());
+
+        Self(messages).sort_and_dedup()
     }
 }
 
