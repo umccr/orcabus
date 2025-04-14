@@ -104,6 +104,7 @@ export class BclConvertManagerStack extends Stack {
         ICAV2_ACCESS_TOKEN_SECRET_ID: icav2JwtSecretsManagerObj.secretName,
       },
       architecture: Architecture.ARM_64,
+      reserved_concurrent_executions: 1
     });
 
     dynamoDBTable.grantReadWriteData(EventTranslatorFunction);
