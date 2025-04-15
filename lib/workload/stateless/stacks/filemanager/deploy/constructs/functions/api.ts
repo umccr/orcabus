@@ -3,6 +3,7 @@ import * as fn from './function';
 import { DatabaseProps } from './function';
 import { BucketProps } from './ingest';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { FILEMANAGER_INGEST_ID_TAG_NAME } from '../../stack';
 
 /**
  * Props for the API function.
@@ -26,6 +27,7 @@ export class ApiFunction extends fn.Function {
         // for more info.
         AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH: 'true',
         FILEMANAGER_ACCESS_KEY_SECRET_ID: props.accessKeySecretArn,
+        FILEMANAGER_INGESTER_TAG_NAME: FILEMANAGER_INGEST_ID_TAG_NAME,
         ...props.environment,
       },
       ...props,

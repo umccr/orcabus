@@ -542,7 +542,12 @@ pub(crate) mod tests {
             .with_is_current_state(is_current_state)
             .with_reason(Reason::Crawl);
 
-        assert_row(row, message, Some("".to_string()), None);
+        assert_row(
+            row,
+            message,
+            Some("000000000000000000000000000000-0100000000000000".to_string()),
+            None,
+        );
     }
 
     pub(crate) async fn s3_object_results(pool: &PgPool) -> Vec<PgRow> {

@@ -509,7 +509,7 @@ pub(crate) mod tests {
             .match_requests(move |req| {
                 req.key() == Some("key")
                     && req.bucket() == Some("bucket")
-                    && req.version_id() == Some(&default_version_id())
+                    && req.version_id().is_none()
             })
             .then_error(expected_head_object_not_found)]);
 
@@ -655,7 +655,7 @@ pub(crate) mod tests {
                 .match_requests(move |req| {
                     req.key() == Some("key")
                         && req.bucket() == Some("bucket")
-                        && req.version_id() == Some(&default_version_id())
+                        && req.version_id().is_none()
                 })
                 .then_error(move || GetObjectTaggingError::unhandled("unhandled")),
         ]);
@@ -712,7 +712,9 @@ pub(crate) mod tests {
             .match_requests(move |req| {
                 req.key() == Some("key")
                     && req.bucket() == Some("bucket")
-                    && req.version_id() == Some(&version_id.to_string())
+                    && ((version_id != default_version_id()
+                        && req.version_id() == Some(&version_id.to_string()))
+                        || (version_id == default_version_id() && req.version_id().is_none()))
             })
             .then_output(move || output.clone())
     }
@@ -725,7 +727,9 @@ pub(crate) mod tests {
             .match_requests(move |req| {
                 req.key() == Some("key")
                     && req.bucket() == Some("bucket")
-                    && req.version_id() == Some(&version_id)
+                    && ((version_id != default_version_id()
+                        && req.version_id() == Some(&version_id.to_string()))
+                        || (version_id == default_version_id() && req.version_id().is_none()))
                     && req
                         .tagging()
                         .is_some_and(|t| t.tag_set().first().unwrap().key() == "ingest_id")
@@ -741,7 +745,9 @@ pub(crate) mod tests {
             .match_requests(move |req| {
                 req.key() == Some("key")
                     && req.bucket() == Some("bucket")
-                    && req.version_id() == Some(&version_id)
+                    && ((version_id != default_version_id()
+                        && req.version_id() == Some(&version_id.to_string()))
+                        || (version_id == default_version_id() && req.version_id().is_none()))
             })
             .then_output(move || output.clone())
     }

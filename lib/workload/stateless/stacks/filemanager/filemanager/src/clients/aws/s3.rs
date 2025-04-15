@@ -17,6 +17,7 @@ use aws_sdk_s3::types::Tagging;
 use chrono::Duration;
 
 use crate::clients::aws::config::Config;
+use crate::events::aws::message::default_version_id;
 
 /// Maximum number of iterations for list objects.
 pub const MAX_LIST_ITERATIONS: usize = 1000000;
@@ -129,6 +130,14 @@ impl Client {
         Ok(result)
     }
 
+    fn get_version_id(version_id: &str) -> Option<String> {
+        if version_id == default_version_id() {
+            None
+        } else {
+            Some(version_id.to_string())
+        }
+    }
+
     /// Execute the `HeadObject` operation.
     pub async fn head_object(
         &self,
@@ -141,7 +150,7 @@ impl Client {
             .checksum_mode(Enabled)
             .key(key)
             .bucket(bucket)
-            .version_id(version_id)
+            .set_version_id(Self::get_version_id(version_id))
             .send()
             .await
     }
@@ -158,7 +167,7 @@ impl Client {
             .checksum_mode(Enabled)
             .key(key)
             .bucket(bucket)
-            .version_id(version_id)
+            .set_version_id(Self::get_version_id(version_id))
             .send()
             .await
     }
@@ -174,7 +183,7 @@ impl Client {
             .get_object_tagging()
             .key(key)
             .bucket(bucket)
-            .version_id(version_id)
+            .set_version_id(Self::get_version_id(version_id))
             .send()
             .await
     }
@@ -191,7 +200,7 @@ impl Client {
             .put_object_tagging()
             .key(key)
             .bucket(bucket)
-            .version_id(version_id)
+            .set_version_id(Self::get_version_id(version_id))
             .tagging(tagging)
             .send()
             .await
