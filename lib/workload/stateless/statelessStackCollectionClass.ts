@@ -80,6 +80,10 @@ import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/d
 import { HtsgetStack, HtsgetStackConfigurableProps } from './stacks/htsget/stack';
 import { SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
 import { FastqManagerStack, FastqManagerStackProps } from './stacks/fastq-manager/deploy/stack';
+import {
+  FastqUnarchivingManagerStack,
+  FastqUnarchivingManagerStackProps,
+} from './stacks/fastq-unarchiving/deploy';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -109,6 +113,7 @@ export interface StatelessStackCollectionProps {
   sampleSheetCheckerProps: SampleSheetCheckerStackProps;
   pgDDProps?: PgDDStackProps;
   fastqManagerStackProps: FastqManagerStackProps;
+  fastqUnarchivingManagerStackProps: FastqUnarchivingManagerStackProps;
 }
 
 export class StatelessStackCollection {
@@ -140,6 +145,7 @@ export class StatelessStackCollection {
   readonly pgDDStack: Stack;
   readonly sampleSheetCheckerStack: Stack;
   readonly fastqManagerStack: Stack;
+  readonly fastqUnarchivingManagerStack: Stack;
 
   constructor(
     scope: Construct,
@@ -339,6 +345,15 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'FastqManagerStack'),
       ...statelessConfiguration.fastqManagerStackProps,
     });
+
+    this.fastqUnarchivingManagerStack = new FastqUnarchivingManagerStack(
+      scope,
+      'FastqUnarchivingManagerStack',
+      {
+        ...this.createTemplateProps(env, 'FastqUnarchivingManagerStack'),
+        ...statelessConfiguration.fastqUnarchivingManagerStackProps,
+      }
+    );
   }
 
   /**

@@ -936,3 +936,28 @@ export const fastqManagerEventDetails = {
   updateFastqListRow: 'FastqListRowStateChange',
   updateFastqSet: 'FastqSetStateChange',
 };
+
+/*
+S3 Copy Steps Function ARNs by account id
+*/
+export const s3CopyStepsFunctionArn: Record<AppStage, string> = {
+  [AppStage.BETA]: `arn:aws:states:${region}:${accountIdAlias.beta}:stateMachine:StepsS3CopyStateMachine157A1409-jx4WNxpdckgQ`, // pragma: allowlist secret
+  [AppStage.GAMMA]: `arn:aws:states:${region}:${accountIdAlias.gamma}:stateMachine:StepsS3CopyStateMachine157A1409-ikBos7HzwDtL`, // pragma: allowlist secret
+  [AppStage.PROD]: `arn:aws:states:${region}:${accountIdAlias.prod}:stateMachine:StepsS3CopyStateMachine157A1409-YbCgUX7dCZRm`, // pragma: allowlist secret
+};
+export const s3CopyStepsBucket: Record<AppStage, string> = {
+  [AppStage.BETA]: 'stepss3copy-working66f7dd3f-x4jwbnt6qvxc', // pragma: allowlist secret
+  [AppStage.GAMMA]: 'stg-stepss3copystack-stepss3copyworking01b34927-szqxpff5lsbx', // pragma: allowlist secret
+  [AppStage.PROD]: 'prod-stepss3copystack-stepss3copyworking01b34927-mp9y88d9e1py', // pragma: allowlist secret
+};
+
+/*
+Fastq Unarchiving service
+*/
+export const fastqUnarchivingJobTableName = 'fastqUnarchivingDynamoDBTable';
+export const fastqUnarchivingJobTableIndexes = ['status', 'job_type'];
+export const fastqUnarchivingEventDetailType = {
+  createJob: 'FastqUnarchivingJobCreated',
+  updateJob: 'FastqUnarchivingJobUpdated',
+};
+export const fastqUnarchivingManagerEventSource = 'orcabus.fastqunarchivingmanager';
