@@ -42,6 +42,7 @@ pub mod openapi;
 pub mod pagination;
 pub mod presign;
 pub mod update;
+mod crawl_async;
 
 /// The join handle crawl task.
 pub type CrawlTask = JoinHandle<Result<Json<Crawl>>>;

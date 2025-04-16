@@ -1,0 +1,12 @@
+[package]
+name = "filemanager-api-oneshot"
+version = "0.1.0"
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+tokio = { version = "1", features = ["fs", "rt-multi-thread", "macros"] }
+tracing = "0.1"
+
+#filemanager = { path = "../filemanager", features = ["migrate"] }

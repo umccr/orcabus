@@ -1,6 +1,7 @@
 import { Construct } from 'constructs';
 import * as fn from './function';
 import { DatabaseProps } from './function';
+import { Role } from './role';
 
 /**
  * The name of the inventory Lambda function.
@@ -34,10 +35,10 @@ export class InventoryFunction extends fn.Function {
       functionName: INVENTORY_FUNCTION_NAME,
     });
 
-    this.addPoliciesForBuckets(props.buckets, [
-      ...fn.Function.getObjectActions(),
-      ...fn.Function.getObjectVersionActions(),
-      ...fn.Function.objectTaggingActions(),
+    this.role.addPoliciesForBuckets(props.buckets, [
+      ...Role.getObjectActions(),
+      ...Role.getObjectVersionActions(),
+      ...Role.objectTaggingActions(),
     ]);
   }
 }

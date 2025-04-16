@@ -19,6 +19,8 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 import { InventoryFunction } from './constructs/functions/inventory';
 import { NamedLambdaRole } from '../../../../components/named-lambda-role';
 import { Role } from 'aws-cdk-lib/aws-iam';
+import { LogRetention, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { OneShotApiTask } from './constructs/functions/oneshot';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 export const FILEMANAGER_INGEST_ID_TAG_NAME = 'umccr-org:OrcaBusFileManagerIngestId';
@@ -37,6 +39,7 @@ export type FilemanagerConfig = Omit<DatabaseProps, 'host' | 'securityGroup'> & 
   fileManagerRoleName: string;
   accessKeySecretArn: string;
   apiGatewayCognitoProps: ApiGatewayConstructProps;
+  logsRetention?: RetentionDays;
 };
 
 /**
@@ -80,6 +83,7 @@ export class Filemanager extends Stack {
         host: this.host,
         port: props.port,
         securityGroup: this.securityGroup,
+        logRetention: props.logsRetention,
       });
 
       new ProviderFunction(this, 'MigrateProviderFunction', {
@@ -102,6 +106,7 @@ export class Filemanager extends Stack {
 
     this.createIngestFunction(props);
     this.createInventoryFunction(props);
+    this.createOneShotApi(props);
 
     this.domainName = this.createApiFunction(props);
   }
@@ -124,6 +129,7 @@ export class Filemanager extends Stack {
       eventSources: [this.queue],
       buckets: props.eventSourceBuckets,
       role: this.ingestRole,
+      logRetention: props.logsRetention,
       ...props,
     });
   }
@@ -139,6 +145,7 @@ export class Filemanager extends Stack {
       port: props.port,
       buckets: props.inventorySourceBuckets,
       role: this.ingestRole,
+      logRetention: props.logsRetention,
     });
   }
 
@@ -152,6 +159,7 @@ export class Filemanager extends Stack {
       securityGroup: this.securityGroup,
       buckets: [...props.eventSourceBuckets, ...props.inventorySourceBuckets],
       role: this.ingestRole,
+      logRetention: props.logsRetention,
       ...props,
     });
 
@@ -188,5 +196,18 @@ export class Filemanager extends Stack {
     });
 
     return apiGateway.domainName;
+  }
+
+  /**
+   * Create the oneshot API fargate task.
+   */
+  private createOneShotApi(props: FilemanagerProps): OneShotApiTask {
+    return new OneShotApiTask(this, 'OneShotApiTask', {
+      vpc: this.vpc,
+      buckets: props.eventSourceBuckets,
+      role: this.ingestRole,
+      logRetention: props.logsRetention,
+      ...props,
+    });
   }
 }

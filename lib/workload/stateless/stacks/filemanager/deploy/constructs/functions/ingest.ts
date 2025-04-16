@@ -4,6 +4,7 @@ import * as fn from './function';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { DatabaseProps } from './function';
 import { FILEMANAGER_INGEST_ID_TAG_NAME, FILEMANAGER_SERVICE_NAME } from '../../stack';
+import { Role } from './role';
 
 /**
  * Props for controlling access to buckets.
@@ -45,16 +46,16 @@ export class IngestFunction extends fn.Function {
       ...props,
     });
 
-    this.addAwsManagedPolicy('service-role/AWSLambdaSQSQueueExecutionRole');
+    this.role.addAwsManagedPolicy('service-role/AWSLambdaSQSQueueExecutionRole');
 
     props.eventSources.forEach((source) => {
       const eventSource = new SqsEventSource(source);
       this.function.addEventSource(eventSource);
     });
-    this.addPoliciesForBuckets(props.buckets, [
-      ...fn.Function.getObjectActions(),
-      ...fn.Function.getObjectVersionActions(),
-      ...fn.Function.objectTaggingActions(),
+    this.role.addPoliciesForBuckets(props.buckets, [
+      ...Role.getObjectActions(),
+      ...Role.getObjectVersionActions(),
+      ...Role.objectTaggingActions(),
     ]);
   }
 }

@@ -2,12 +2,15 @@ import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
 import { ISecurityGroup, IVpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Architecture, Version } from 'aws-cdk-lib/aws-lambda';
-import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
+import { ManagedPolicy, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { RustFunction } from 'cargo-lambda-cdk';
 import path from 'path';
 import { PostgresManagerStack } from '../../../../../../stateful/stacks/postgres-manager/deploy/stack';
 import { FILEMANAGER_SERVICE_NAME } from '../../stack';
 import { NamedLambdaRole } from '../../../../../../components/named-lambda-role';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import { Role } from './role';
+import { LogRetention, RetentionDays } from 'aws-cdk-lib/aws-logs';
 
 /**
  * Properties for the database.
@@ -46,11 +49,15 @@ export type FunctionPropsConfigurable = {
   /**
    * The role which the Function assumes.
    */
-  readonly role?: Role;
+  readonly role?: iam.Role;
   /**
    * Vpc for the function.
    */
   readonly vpc: IVpc;
+  /**
+   * The log retention for the Lambda function.
+   */
+  readonly logRetention?: RetentionDays;
 };
 
 /**
@@ -83,11 +90,13 @@ export class Function extends Construct {
     super(scope, id);
 
     // Lambda role needs SQS execution role.
-    this._role = props.role ?? new NamedLambdaRole(this, 'Role');
+    this._role = new Role(this, 'FileManagerRole', {
+      role: props.role ?? new NamedLambdaRole(this, 'Role')
+    });
     // Lambda needs VPC access if it is created in a VPC.
-    this.addAwsManagedPolicy('service-role/AWSLambdaVPCAccessExecutionRole');
+    this._role.addAwsManagedPolicy('service-role/AWSLambdaVPCAccessExecutionRole');
     // Using RDS IAM credentials, so we add the managed policy created by the postgres manager.
-    this.addCustomerManagedPolicy(
+    this._role.addCustomerManagedPolicy(
       PostgresManagerStack.formatRdsPolicyName(FILEMANAGER_SERVICE_NAME)
     );
 
@@ -112,6 +121,7 @@ export class Function extends Construct {
           network: 'host',
         },
       },
+      logRetention: props.logRetention,
       memorySize: 128,
       timeout: props.timeout ?? Duration.seconds(28),
       environment: {
@@ -125,7 +135,7 @@ export class Function extends Construct {
         ...props.environment,
       },
       architecture: Architecture.ARM_64,
-      role: this._role,
+      role: this._role.role,
       vpc: props.vpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [
@@ -137,74 +147,6 @@ export class Function extends Construct {
     });
 
     // TODO: this should probably connect to an RDS proxy rather than directly to the database.
-  }
-
-  /**
-   * Add an AWS managed policy to the function's role.
-   */
-  addAwsManagedPolicy(policyName: string) {
-    this._role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName(policyName));
-  }
-
-  /**
-   * Add a customer managed policy to the function's role.
-   */
-  addCustomerManagedPolicy(policyName: string) {
-    this._role.addManagedPolicy(ManagedPolicy.fromManagedPolicyName(this, 'Policy', policyName));
-  }
-
-  /**
-   * Add a policy statement to this function's role.
-   */
-  addToPolicy(policyStatement: PolicyStatement) {
-    this._role.addToPolicy(policyStatement);
-  }
-
-  /**
-   * Add policies for 's3:List*' and 's3:Get*' on the buckets to this function's role.
-   */
-  addPoliciesForBuckets(buckets: string[], actions: string[]) {
-    Function.formatPoliciesForBucket(buckets, actions).forEach((policy) => {
-      this.addToPolicy(policy);
-    });
-  }
-
-  /**
-   * Get policy actions for fetching objects.
-   */
-  static getObjectVersionActions(): string[] {
-    return ['s3:GetObjectVersion'];
-  }
-
-  /**
-   * Get policy actions for versioned objects.
-   */
-  static getObjectActions(): string[] {
-    return ['s3:ListBucket', 's3:GetObject'];
-  }
-
-  /**
-   * Format a set of buckets and actions into policy statements.
-   */
-  static formatPoliciesForBucket(buckets: string[], actions: string[]): PolicyStatement[] {
-    return buckets.map((bucket) => {
-      return new PolicyStatement({
-        actions,
-        resources: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
-      });
-    });
-  }
-
-  /**
-   * Get policy actions for using object tags.
-   */
-  static objectTaggingActions(): string[] {
-    return [
-      's3:GetObjectTagging',
-      's3:GetObjectVersionTagging',
-      's3:PutObjectTagging',
-      's3:PutObjectVersionTagging',
-    ];
   }
 
   /**

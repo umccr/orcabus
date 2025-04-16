@@ -22,7 +22,7 @@ export class MigrateFunction extends fn.Function {
     });
 
     // Need to be able to determine if the stack is in rollback state.
-    this.addToPolicy(
+    this.role.addToPolicy(
       new PolicyStatement({
         actions: ['cloudformation:DescribeStacks'],
         resources: [Stack.of(this).stackId],

@@ -1,6 +1,6 @@
 import { fileManagerPresignUserSecret, fileManagerPresignUser, AppStage } from '../constants';
 import { AccessKeySecretStackProps } from '../../lib/workload/stateful/stacks/access-key-secret';
-import { Function as FMFunction } from '../../lib/workload/stateless/stacks/filemanager/deploy/constructs/functions/function';
+import { Role as FMRole } from '../../lib/workload/stateless/stacks/filemanager/deploy/constructs/functions/role';
 import { fileManagerBuckets, fileManagerInventoryBuckets } from './fileManager';
 
 export const getAccessKeySecretStackProps = (stage: AppStage): AccessKeySecretStackProps => {
@@ -10,11 +10,11 @@ export const getAccessKeySecretStackProps = (stage: AppStage): AccessKeySecretSt
   return {
     userName: fileManagerPresignUser,
     secretName: fileManagerPresignUserSecret,
-    policies: FMFunction.formatPoliciesForBucket(
+    policies: FMRole.formatPoliciesForBucket(
       // Only need read only access to the buckets. The filemanager will only use this access key for pre-signing URLs.
       // All regular actions will use the role.
       [...eventSourceBuckets, ...inventorySourceBuckets],
-      [...FMFunction.getObjectActions()]
+      [...FMRole.getObjectActions()]
     ),
   };
 };

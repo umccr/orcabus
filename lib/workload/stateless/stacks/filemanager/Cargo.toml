@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
     "filemanager",
+    "filemanager-api-oneshot",
     "filemanager-api-server",
     "filemanager-build",
     "filemanager-api-lambda",
