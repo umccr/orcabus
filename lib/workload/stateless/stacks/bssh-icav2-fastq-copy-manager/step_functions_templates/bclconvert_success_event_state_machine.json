@@ -1,33 +1,18 @@
 {
+  "QueryLanguage": "JSONata",
   "Comment": "Generate an icav2 manifest file for copying data out from a bclconvert workflow session, then deploy and wait for the copy jobs to complete",
   "StartAt": "Move inputs",
   "States": {
     "Move inputs": {
       "Type": "Pass",
-      "Next": "Initialise Step Functions Complete Parameter",
-      "Parameters": {
-        "workflow_inputs.$": "$"
-      }
-    },
-    "Initialise Step Functions Complete Parameter": {
-      "Type": "Pass",
       "Next": "Get Manifest",
-      "ResultPath": "$.step_functions_complete",
-      "Result": {
-        "is_complete": null
+      "Assign": {
+        "workflowInputs": "{% $states.input %}"
       }
     },
     "Get Manifest": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "${__bclconvert_success_event_lambda_arn__}",
-        "Payload": {
-          "project_id.$": "$.workflow_inputs.payload.data.inputs.bsshProjectId",
-          "analysis_id.$": "$.workflow_inputs.payload.data.inputs.bsshAnalysisId",
-          "output_uri.$": "$.workflow_inputs.payload.data.engineParameters.outputUri"
-        }
-      },
       "Retry": [
         {
           "ErrorEquals": [
@@ -41,72 +26,89 @@
           "BackoffRate": 2
         }
       ],
-      "ResultSelector": {
-        "fastq_list_rows_b64gz.$": "$.Payload.fastq_list_rows_b64gz",
-        "manifest_b64gz.$": "$.Payload.manifest_b64gz"
-      },
-      "ResultPath": "$.bclconvert_success_event_handler_step",
-      "Next": "Launch Copy Job StateMachine"
-    },
-    "Launch Copy Job StateMachine": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::states:startExecution.sync:2",
-      "Parameters": {
-        "StateMachineArn": "${__copy_batch_data_state_machine_arn__}",
-        "Input": {
-          "manifest_b64gz.$": "$.bclconvert_success_event_handler_step.manifest_b64gz"
+      "Next": "For each copy job request",
+      "Arguments": {
+        "FunctionName": "${__bclconvert_success_event_lambda_arn__}",
+        "Payload": {
+          "projectId": "{% $workflowInputs.payload.data.inputs.bsshProjectId %}",
+          "analysisId": "{% $workflowInputs.payload.data.inputs.bsshAnalysisId %}",
+          "outputUri": "{% $workflowInputs.payload.data.engineParameters.outputUri %}"
         }
       },
-      "ResultSelector": {
-        "execution_id.$": "$.ExecutionArn"
-      },
-      "ResultPath": "$.state_machine_parameter",
-      "Next": "Set Workflow Output Detail"
+      "Assign": {
+        "fastqListRowsB64gz": "{% $states.result.Payload.fastqListRowsB64gz %}",
+        "icav2CopyJobList": "{% $states.result.Payload.icav2CopyJobList %}"
+      }
     },
-    "Set Workflow Output Detail": {
-      "Type": "Pass",
-      "Next": "Submit Completion Event",
-      "Parameters": {
-        "workflow_detail": {
-          "status": "SUCCEEDED",
-          "timestamp.$": "$$.State.EnteredTime",
-          "portalRunId.$": "$.workflow_inputs.portalRunId",
-          "workflowName": "${__workflow_name__}",
-          "workflowVersion": "${__workflow_version__}",
-          "workflowRunName.$": "$.workflow_inputs.workflowRunName",
-          "linkedLibraries.$": "$.workflow_inputs.linkedLibraries",
-          "payload": {
-            "version": "${__payload_version__}",
-            "data": {
-              "inputs.$": "$.workflow_inputs.payload.data.inputs",
-              "engineParameters.$": "$.workflow_inputs.payload.data.engineParameters",
-              "outputs": {
-                "outputUri.$": "$.workflow_inputs.payload.data.engineParameters.outputUri",
-                "instrumentRunId.$": "$.workflow_inputs.payload.data.inputs.instrumentRunId",
-                "fastqListRowsB64gz.$": "$.bclconvert_success_event_handler_step.fastq_list_rows_b64gz"
-              }
-            },
-            "tags": {
-              "instrumentRunId.$": "$.workflow_inputs.payload.data.inputs.instrumentRunId"
+    "For each copy job request": {
+      "Type": "Map",
+      "Items": "{% $icav2CopyJobList %}",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Launch Copy Job",
+        "States": {
+          "Launch Copy Job": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+            "End": true,
+            "Arguments": {
+              "Entries": [
+                {
+                  "Detail": {
+                    "sourceUriList": "{% $states.input.sourceUriList %}",
+                    "destinationUri": "{% $states.input.destinationUri %}",
+                    "taskToken": "{% $states.context.Task.Token %}"
+                  },
+                  "DetailType": "${__icav2_copy_detail_type__}",
+                  "EventBusName": "${__eventbus_name__}",
+                  "Source": "${__event_source__}"
+                }
+              ]
             }
           }
         }
-      }
+      },
+      "Next": "Submit Completion Event"
     },
     "Submit Completion Event": {
       "Type": "Task",
       "Resource": "arn:aws:states:::events:putEvents",
-      "Parameters": {
+      "Next": "Succeed",
+      "Arguments": {
         "Entries": [
           {
-            "Detail.$": "$.workflow_detail",
+            "Detail": {
+              "status": "SUCCEEDED",
+              "timestamp": "{% $states.context.State.EnteredTime %}",
+              "portalRunId": "{% $workflowInputs.portalRunId %}",
+              "workflowName": "${__workflow_name__}",
+              "workflowVersion": "${__workflow_version__}",
+              "workflowRunName": "{% $workflowInputs.workflowRunName %}",
+              "linkedLibraries": "{% $workflowInputs.linkedLibraries %}",
+              "payload": {
+                "version": "${__payload_version__}",
+                "data": {
+                  "inputs": "{% $workflowInputs.payload.data.inputs %}",
+                  "engineParameters": "{% $workflowInputs.payload.data.engineParameters %}",
+                  "outputs": {
+                    "outputUri": "{% $workflowInputs.payload.data.engineParameters.outputUri %}",
+                    "instrumentRunId": "{% $workflowInputs.payload.data.inputs.instrumentRunId %}",
+                    "fastqListRowsB64gz": "{% $fastqListRowsB64gz %}"
+                  }
+                },
+                "tags": {
+                  "instrumentRunId": "{% $workflowInputs.payload.data.inputs.instrumentRunId %}"
+                }
+              }
+            },
             "DetailType": "${__detail_type__}",
             "EventBusName": "${__eventbus_name__}",
             "Source": "${__event_source__}"
           }
         ]
-      },
-      "Next": "Succeed"
+      }
     },
     "Succeed": {
       "Type": "Succeed"
