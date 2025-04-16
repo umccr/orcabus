@@ -1,0 +1,299 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "Set variables from inputs",
+  "States": {
+    "Set variables from inputs": {
+      "Type": "Pass",
+      "Next": "Generate copy job list",
+      "Assign": {
+        "sourceUriList": "{% $states.input.sourceUriList %}",
+        "destinationUri": "{% $states.input.destinationUri %}",
+        "taskToken": "{% $states.input.taskToken ? $states.input.taskToken : null %}"
+      }
+    },
+    "Generate copy job list": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__generate_copy_jobs_lambda_function_arn__}",
+        "Payload": {
+          "sourceUriList": "{% $sourceUriList %}",
+          "destinationUri": "{% $destinationUri %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Run top level and recursive in parallel",
+      "Assign": {
+        "sourceDataList": "{% $states.result.Payload.sourceDataList %}",
+        "destinationData": "{% $states.result.Payload.destinationData %}",
+        "recursiveCopyJobsUriList": "{% $states.result.Payload.recursiveCopyJobsUriList %}"
+      }
+    },
+    "Run top level and recursive in parallel": {
+      "Type": "Parallel",
+      "Next": "Send External Task Token Success",
+      "Branches": [
+        {
+          "StartAt": "Find files with single multipart uploads",
+          "States": {
+            "Find files with single multipart uploads": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Arguments": {
+                "FunctionName": "${__find_files_with_single_multipart_uploads_lambda_function_arn__}",
+                "Payload": {
+                  "dataList": "{% $sourceDataList %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "Next": "Parallel",
+              "Assign": {
+                "multiPartDataList": "{% $states.result.Payload.multiPartDataList %}",
+                "singlePartDataList": "{% $states.result.Payload.singlePartDataList %}"
+              }
+            },
+            "Parallel": {
+              "Type": "Parallel",
+              "Next": "Pass",
+              "Branches": [
+                {
+                  "StartAt": "Upload single file",
+                  "States": {
+                    "Upload single file": {
+                      "Type": "Map",
+                      "ItemProcessor": {
+                        "ProcessorConfig": {
+                          "Mode": "INLINE"
+                        },
+                        "StartAt": "Upload Single File",
+                        "States": {
+                          "Upload Single File": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Output": "{% $states.result.Payload %}",
+                            "Arguments": {
+                              "FunctionName": "${__upload_single_file_lambda_function_arn__}",
+                              "Payload": {
+                                "sourceData": "{% $states.input.sourceDataIter %}",
+                                "destinationData": "{% $states.input.destinationDataIter %}"
+                              }
+                            },
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "Lambda.ServiceException",
+                                  "Lambda.AWSLambdaException",
+                                  "Lambda.SdkClientException",
+                                  "Lambda.TooManyRequestsException"
+                                ],
+                                "IntervalSeconds": 1,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2,
+                                "JitterStrategy": "FULL"
+                              }
+                            ],
+                            "End": true
+                          }
+                        }
+                      },
+                      "End": true,
+                      "Items": "{% $singlePartDataList %}",
+                      "ItemSelector": {
+                        "sourceDataIter": "{% $states.context.Map.Item.Value %}",
+                        "destinationDataIter": "{% $destinationData %}"
+                      }
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Source List > 0",
+                  "States": {
+                    "Source List > 0": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Next": "No files to copy",
+                          "Condition": "{% $count($multiPartDataList) = 0 %}"
+                        }
+                      ],
+                      "Default": "Run Copy Job",
+                      "Assign": {
+                        "retryCounter": 0
+                      }
+                    },
+                    "No files to copy": {
+                      "Type": "Pass",
+                      "End": true
+                    },
+                    "Run Copy Job": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Arguments": {
+                        "FunctionName": "${__launch_copy_job_lambda_function_arn__}",
+                        "Payload": {
+                          "sourceDataList": "{% $multiPartDataList %}",
+                          "destinationData": "{% $destinationData %}"
+                        }
+                      },
+                      "Retry": [
+                        {
+                          "ErrorEquals": [
+                            "Lambda.ServiceException",
+                            "Lambda.AWSLambdaException",
+                            "Lambda.SdkClientException",
+                            "Lambda.TooManyRequestsException"
+                          ],
+                          "IntervalSeconds": 1,
+                          "MaxAttempts": 3,
+                          "BackoffRate": 2,
+                          "JitterStrategy": "FULL"
+                        }
+                      ],
+                      "Assign": {
+                        "jobId": "{% $states.result.Payload.jobId %}"
+                      },
+                      "Next": "Wait Job Completion"
+                    },
+                    "Wait Job Completion": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+                      "Arguments": {
+                        "Entries": [
+                          {
+                            "Detail": {
+                              "jobId": "{% $jobId %}",
+                              "taskToken": "{% $states.context.Task.Token %}"
+                            },
+                            "DetailType": "${__icav2_copy_job_internal_detail_type__}",
+                            "EventBusName": "${__event_bus_name__}",
+                            "Source": "${__event_source__}"
+                          }
+                        ]
+                      },
+                      "Catch": [
+                        {
+                          "ErrorEquals": ["States.TaskFailed"],
+                          "Assign": {
+                            "retryCounter": "{% $retryCounter + 1 %}"
+                          },
+                          "Next": "Failed with retryCounter > 3"
+                        }
+                      ],
+                      "End": true
+                    },
+                    "Failed with retryCounter > 3": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Next": "Update retry counter",
+                          "Condition": "{% $retryCounter < 3 %}"
+                        }
+                      ],
+                      "Default": "Send External Task Token Failure"
+                    },
+                    "Update retry counter": {
+                      "Type": "Pass",
+                      "Next": "Run Copy Job",
+                      "Assign": {
+                        "retryCounter": "{% $retryCounter + 1 %}"
+                      }
+                    },
+                    "Send External Task Token Failure": {
+                      "Type": "Task",
+                      "Arguments": {
+                        "TaskToken": "{% $taskToken %}"
+                      },
+                      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskFailure",
+                      "End": true
+                    }
+                  }
+                }
+              ]
+            },
+            "Pass": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "For each subfolder",
+          "States": {
+            "For each subfolder": {
+              "Type": "Map",
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "Launch copy job sync",
+                "States": {
+                  "Launch copy job sync": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+                    "Arguments": {
+                      "Entries": [
+                        {
+                          "Detail": {
+                            "sourceUriList": "{% $states.input.sourceUriListIter %}",
+                            "destinationUri": "{% $states.input.destinationUriIter %}",
+                            "taskToken": "{% $states.context.Task.Token %}"
+                          },
+                          "DetailType": "${__icav2_copy_job_external_detail_type__}",
+                          "EventBusName": "${__event_bus_name__}",
+                          "Source": "${__event_source__}"
+                        }
+                      ]
+                    },
+                    "End": true
+                  }
+                }
+              },
+              "End": true,
+              "Items": "{% $recursiveCopyJobsUriList %}",
+              "ItemSelector": {
+                "destinationUriIter": "{% $states.context.Map.Item.Value.destinationUri %}",
+                "sourceUriListIter": "{% $states.context.Map.Item.Value.sourceUriList %}"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Send External Task Token Success": {
+      "Type": "Task",
+      "Arguments": {
+        "Output": {},
+        "TaskToken": "{% $taskToken %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
+      "End": true
+    }
+  }
+}
