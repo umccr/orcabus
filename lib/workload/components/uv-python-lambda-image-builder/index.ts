@@ -30,6 +30,7 @@ export class PythonUvFunction extends PythonFunction {
         },
         image: getPythonUvDockerImage(),
         commandHooks: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           beforeBundling(inputDir: string, outputDir: string): string[] {
             return [];
           },
