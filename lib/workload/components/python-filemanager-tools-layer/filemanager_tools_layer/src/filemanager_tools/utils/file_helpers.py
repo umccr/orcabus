@@ -10,7 +10,12 @@ from .errors import S3FileNotFoundError, S3DuplicateFileCopyError
 from .models import FileObject
 from .aws_helpers import get_bucket_key_pair_from_uri
 from .request_helpers import get_request_response_results, get_response, patch_response
-from .globals import S3_LIST_ENDPOINT, S3_BUCKETS_BY_ACCOUNT_ID, S3_PREFIXES_BY_ACCOUNT_ID, STORAGE_ENUM, STORAGE_PRIORITY
+from .globals import (
+    S3_LIST_ENDPOINT,
+    S3_BUCKETS_BY_ACCOUNT_ID,
+    S3_PREFIXES_BY_ACCOUNT_ID,
+    STORAGE_ENUM, STORAGE_PRIORITY,
+)
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 from itertools import batched
@@ -72,9 +77,10 @@ def get_file_object_from_id(s3_object_id: str) -> FileObject:
     return FileObject(**response[0])
 
 
-def get_file_object_from_ingest_id(ingest_id: str) -> FileObject:
+def get_file_object_from_ingest_id(ingest_id: str, **kwargs) -> FileObject:
     response = get_request_response_results(S3_LIST_ENDPOINT, {
-        "ingestId": ingest_id
+        "ingestId": ingest_id,
+        **kwargs
     })
 
     if len(response) == 0:
@@ -94,13 +100,29 @@ def get_file_object_from_ingest_id(ingest_id: str) -> FileObject:
     return file_objects_list[0]
 
 
-def list_files_from_portal_run_id(portal_run_id: str) -> List[FileObject]:
-    response = get_request_response_results(S3_LIST_ENDPOINT, {
-        "key": f"*/{portal_run_id}/*"
+def list_files_from_portal_run_id(
+        portal_run_id: str,
+        workflow_name: str,
+        **kwargs
+) -> List[FileObject]:
+    portal_run_id_date_str = datetime.strptime(portal_run_id[:8], "%Y%m%d")
+
+    # Get files from cache
+    cache_response = get_request_response_results(S3_LIST_ENDPOINT, {
+        "bucket": get_cache_bucket_from_account_id(),
+        "key": f"{get_analysis_cache_prefix_from_account_id()}/{workflow_name}/{portal_run_id}/*",
+        **kwargs
+    })
+
+    # Get files from archive
+    archive_response = get_request_response_results(S3_LIST_ENDPOINT, {
+        "bucket": get_archive_analysis_bucket_from_account_id(),
+        "key": f"v1/year={portal_run_id_date_str.year}/month={str(portal_run_id_date_str.month).zfill(2)}/{portal_run_id}/*",
+        **kwargs
     })
 
     # Return as a list of FileObject models
-    return [FileObject(**file) for file in response]
+    return [FileObject(**file) for file in cache_response + archive_response]
 
 
 def get_presigned_url(s3_object_id: str) -> str:
@@ -154,12 +176,11 @@ def get_presigned_urls_from_ingest_ids(ingest_ids: List[str]) -> List[Dict[str, 
     presigned_url_list: List[str] = list(reduce(
         concat,
         list(map(
-            lambda ingest_id_batch_:
-                (
-                    get_request_response_results(S3_LIST_ENDPOINT + "/presign", {
-                        "ingestId[]": list(ingest_id_batch_)
-                    }),
-                ),
+            lambda ingest_id_batch_: (
+                get_request_response_results(S3_LIST_ENDPOINT + "/presign", {
+                    "ingestId[]": list(ingest_id_batch_)
+                })
+            ),
             ingest_id_batches
         ))
     ))
@@ -170,7 +191,7 @@ def get_presigned_urls_from_ingest_ids(ingest_ids: List[str]) -> List[Dict[str, 
     return list(map(
         lambda presigned_url_iter_: {
             "ingestId": next(filter(
-                lambda s3_object_iter_: urlparse(s3_object_iter_['key']).path == urlparse(presigned_url_iter_).path,
+                lambda s3_object_iter_: s3_object_iter_['fileObject']['key'] == urlparse(presigned_url_iter_).path.lstrip("/"),
                 s3_object_list
             ))['ingestId'],
             "presignedUrl": presigned_url_iter_
@@ -199,13 +220,17 @@ def get_presigned_url_expiry(s3_presigned_url: str) -> datetime:
     return (creation_time + expiry_ext).astimezone(tz=timezone.utc)
 
 
-def get_s3_objs_from_ingest_ids_map(ingest_ids: List[str]) -> List[Dict[str, Union[FileObject, str]]]:
+def get_s3_objs_from_ingest_ids_map(ingest_ids: List[str], **kwargs) -> List[Dict[str, Union[FileObject, str]]]:
+    # Check if the list is empty
+    if len(ingest_ids) == 0:
+        return []
+
     # Split by groups of 100
     ingest_id_batches = batched(ingest_ids, 100)
 
     # Get the s3 objects
     try:
-        return list(map(
+        s3_objects_by_ingest_id = list(map(
             lambda s3_obj_iter: {
                 "ingestId": s3_obj_iter['ingestId'],
                 "fileObject": s3_obj_iter
@@ -215,7 +240,8 @@ def get_s3_objs_from_ingest_ids_map(ingest_ids: List[str]) -> List[Dict[str, Uni
                 list(map(
                     lambda ingest_id_batch_:
                         get_request_response_results(S3_LIST_ENDPOINT, {
-                            "ingestId[]": list(ingest_id_batch_)
+                            "ingestId[]": list(ingest_id_batch_),
+                            **kwargs
                         }),
                     ingest_id_batches
                 ))
@@ -224,6 +250,28 @@ def get_s3_objs_from_ingest_ids_map(ingest_ids: List[str]) -> List[Dict[str, Uni
     except TypeError as e:
         # TypeError: reduce() of empty iterable with no initial value
         return []
+
+    # Filter out duplicates, select ranked by storage class
+    s3_objects_by_ingest_id_filtered = []
+    for ingest_id in ingest_ids:
+        s3_objects_match = list(filter(
+            lambda s3_object_iter_: s3_object_iter_['ingestId'] == ingest_id,
+            s3_objects_by_ingest_id
+        ))
+
+        if len(s3_objects_match) == 0:
+            continue
+
+        s3_objects_match.sort(
+            key=lambda s3_object_iter_: STORAGE_PRIORITY[
+                STORAGE_ENUM(s3_object_iter_['fileObject']['storageClass']).name].value
+        )
+
+        s3_objects_by_ingest_id_filtered.append(
+            s3_objects_match[0]
+        )
+
+    return s3_objects_by_ingest_id_filtered
 
 
 def file_search(bucket: str, key: str) -> List[FileObject]:
@@ -268,9 +316,14 @@ def get_cache_bucket_from_account_id() -> str:
 def get_archive_fastq_bucket_from_account_id():
     return S3_BUCKETS_BY_ACCOUNT_ID["archive_fastq"][get_sts_client().get_caller_identity()['Account']]
 
+def get_archive_analysis_bucket_from_account_id():
+    return S3_BUCKETS_BY_ACCOUNT_ID["archive_analysis"][get_sts_client().get_caller_identity()['Account']]
+
 def get_restore_prefix_from_account_id():
     return S3_PREFIXES_BY_ACCOUNT_ID["restore"][get_sts_client().get_caller_identity()['Account']]
 
+def get_analysis_cache_prefix_from_account_id():
+    return S3_PREFIXES_BY_ACCOUNT_ID["analysis"][get_sts_client().get_caller_identity()['Account']]
 
 def update_ingest_id(s3_object_id: str, new_ingest_id: str) -> Dict:
     json_data = {

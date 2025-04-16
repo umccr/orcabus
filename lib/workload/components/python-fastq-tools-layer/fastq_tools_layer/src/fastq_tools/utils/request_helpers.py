@@ -84,9 +84,37 @@ def get_request_response_results(endpoint: str, params: Optional[Dict] = None) -
     :return:
     """
     # Get authorization header
-    response_dict = get_request_response(endpoint, params)
+    headers = {
+        "Authorization": f"Bearer {get_orcabus_token()}"
+    }
 
-    return response_dict['results']
+    req_params = deepcopy(DEFAULT_REQUEST_PARAMS)
+
+    req_params.update(
+        params if params is not None else {}
+    )
+
+    # Make the request
+    response = requests.get(
+        get_url(endpoint) if not urlparse(endpoint).scheme else endpoint,
+        headers=headers,
+        params=req_params
+    )
+
+    response.raise_for_status()
+
+    response_json = response.json()
+
+    if 'links' not in response_json.keys():
+        return [response_json]
+
+    if 'next' in response_json['links'].keys() and response_json['links']['next'] is not None:
+        # Recursively return the results
+        return response_json['results'] + get_request_response_results(response_json['links']['next'])
+
+    # If there are no more links, return the results
+    return response_json['results']
+
 
 
 def patch_request(endpoint: str, params: Optional[Dict] = None) -> Dict:

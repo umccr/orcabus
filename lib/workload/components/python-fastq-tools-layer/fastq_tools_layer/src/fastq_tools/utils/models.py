@@ -40,7 +40,7 @@ from typing import (
     TypedDict,
     Optional,
     Dict,
-    List
+    List, NotRequired
 )
 from datetime import datetime
 
@@ -176,3 +176,41 @@ class Job(TypedDict):
     status: JobStatus
     startTime: datetime
     endTime: datetime
+
+
+class BoolAllEnum(Enum):
+    ALL = "ALL"
+    true = True
+    false = False
+
+
+class FastqListRowQueryParameters(TypedDict):
+    valid: NotRequired[BoolAllEnum]
+    includeS3Details: NotRequired[BoolAllEnum]
+    library: NotRequired[str]
+    sample: NotRequired[str]
+    subject: NotRequired[str]
+    individual: NotRequired[str]
+    project: NotRequired[str]
+    instrumentRunId: NotRequired[str]
+    index: NotRequired[str]
+    lane: NotRequired[int]
+    fastqSetId: NotRequired[str]
+    page: NotRequired[int]
+    rowsPerPage: NotRequired[int]
+
+
+class FastqSetQueryParameters(TypedDict):
+    currentFastqSet: NotRequired[BoolAllEnum]
+    allowAdditionalFastq: NotRequired[BoolAllEnum]
+    includeS3Details: NotRequired[BoolAllEnum]
+    library: NotRequired[str]
+    sample: NotRequired[str]
+    subject: NotRequired[str]
+    individual: NotRequired[str]
+    project: NotRequired[str]
+    instrumentRunId: NotRequired[str]
+    index: NotRequired[str]
+    lane: NotRequired[int]
+    page: NotRequired[int]
+    rowsPerPage: NotRequired[int]
