@@ -215,8 +215,8 @@ export const bclconvertInteropQcStateMachinePrefix = 'bclconvertInteropQcSfn';
 Resources used by the bclConvert InteropQc Pipeline
 */
 
-// Release can be found here: https://github.com/umccr/cwl-ica/releases/tag/bclconvert-interop-qc%2F1.3.1--1.21__20241119001529
-// Pipeline ID is: a147ad9f-af8f-409d-95b7-49018782ab4d
+// Release can be found here: https://github.com/umccr/cwl-ica/releases/tag/bclconvert-interop-qc/1.3.1--1.25.2__20250414112602
+// Pipeline ID is: 355dc03f-31a3-4162-a96f-f8f954b1f63e
 export const bclconvertInteropQcIcav2PipelineIdSSMParameterPath =
   '/icav2/umccr-prod/bclconvert_interop_qc_pipeline_id';
 
@@ -252,6 +252,7 @@ External resources required by the ctTSO v2 Stack
 */
 
 // Deployed under dev/stg/prod
+// c2dfdbaa-2074-44c7-8078-d33e13607061
 export const cttsov2Icav2PipelineIdSSMParameterPath =
   '/icav2/umccr-prod/tso500_ctdna_2.6_pipeline_id';
 
