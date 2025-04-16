@@ -492,6 +492,7 @@
     "allowAllOutbound": false
   },
   "acknowledged-issue-numbers": [
-     32775
+    32775,
+    31885
   ]
 }
