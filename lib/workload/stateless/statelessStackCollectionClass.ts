@@ -89,6 +89,10 @@ import {
   Icav2DataCopyManagerStack,
   Icav2DataCopyManagerStackProps,
 } from './stacks/icav2-data-copy-manager/deploy';
+import {
+  DataSharingStack,
+  DataSharingStackProps,
+} from './stacks/data-sharing-manager/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -121,6 +125,7 @@ export interface StatelessStackCollectionProps {
   fastqUnarchivingManagerStackProps: FastqUnarchivingManagerStackProps;
   fastqSyncManagerStackProps: FastqSyncManagerStackProps;
   icav2DataCopyManagerStackProps: Icav2DataCopyManagerStackProps;
+  dataSharingStackProps: DataSharingStackProps;
 }
 
 export class StatelessStackCollection {
@@ -155,6 +160,7 @@ export class StatelessStackCollection {
   readonly fastqUnarchivingManagerStack: Stack;
   readonly fastqSyncManagerStack: Stack;
   readonly icav2DataCopyManagerStack: Stack;
+  readonly dataSharingStack: Stack;
 
   constructor(
     scope: Construct,
@@ -371,6 +377,10 @@ export class StatelessStackCollection {
     this.icav2DataCopyManagerStack = new Icav2DataCopyManagerStack(scope, 'Icav2CopyManagerStack', {
       ...this.createTemplateProps(env, 'Icav2CopyManagerStack'),
       ...statelessConfiguration.icav2DataCopyManagerStackProps,
+    });
+    this.dataSharingStack = new DataSharingStack(scope, 'DataSharingStack', {
+      ...this.createTemplateProps(env, 'DataSharingStack'),
+      ...statelessConfiguration.dataSharingStackProps,
     });
   }
 

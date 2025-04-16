@@ -7,6 +7,7 @@ import {
   computeSecurityGroupName,
   databasePort,
   dataSchemaRegistryName,
+  dataSharingCacheBucket,
   dbClusterEndpointHostParameterName,
   dbClusterIdentifier,
   dbClusterResourceIdParameterName,
@@ -164,6 +165,12 @@ export const getEventSourceConstructProps = (stage: AppStage): EventSourceProps 
   // Add the ntsm bucket rule
   props.rules.push({
     bucket: ntsmBucket[stage],
+    eventTypes,
+    patterns: eventSourcePattern(),
+  });
+
+  props.rules.push({
+    bucket: dataSharingCacheBucket[stage],
     eventTypes,
     patterns: eventSourcePattern(),
   });

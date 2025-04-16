@@ -1,0 +1,160 @@
+{
+  "Comment": "A description of my state machine",
+  "QueryLanguage": "JSONata",
+  "StartAt": "Set Vars",
+  "States": {
+    "Set Vars": {
+      "Type": "Pass",
+      "Next": "Query and collect prefixes",
+      "Assign": {
+        "packagingJobId": "{% $states.input.packagingJobId %}",
+        "pushLocation": "{% $states.input.pushLocation %}",
+        "pushJobExecutionArn": "{% $states.input.pushJobExecutionArn %}",
+        "s3StepsCopyBucket": "${__aws_s3_copy_steps_bucket__}",
+        "s3StepsCopyCsvKey": "{% '${__aws_s3_copy_steps_prefix__}' & $states.context.Execution.Name & '.__index__.csv' %}"
+      }
+    },
+    "Query and collect prefixes": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": {
+        "destinationAndSourceUriMappingsList": "{% $states.result.Payload.destinationAndSourceUriMappingsList %}"
+      },
+      "Arguments": {
+        "FunctionName": "${__get_s3_destination_and_source_uri_mappings_lambda_function_arn__}",
+        "Payload": {
+          "packagingJobId": "{% $packagingJobId %}",
+          "pushLocation": "{% $pushLocation %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each destination and source mapping uri"
+    },
+    "For each destination and source mapping uri": {
+      "Type": "Map",
+      "Items": "{% $states.input.destinationAndSourceUriMappingsList %}",
+      "ItemSelector": {
+        "destinationUriMapIter": "{% $states.context.Map.Item.Value.destinationUri %}",
+        "sourceUrisListMapIter": "{% $states.context.Map.Item.Value.sourceUrisList %}",
+        "s3StepsCopyBucket": "{% $s3StepsCopyBucket %}",
+        "s3StepsCopyKeyMapIter": "{% /* https://try.jsonata.org/mZnjTty1- */ $replace($s3StepsCopyCsvKey, '__index__', $string($states.context.Map.Item.Index)) %}"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Set vars in map",
+        "States": {
+          "Set vars in map": {
+            "Type": "Pass",
+            "Next": "Generate steps function csv and upload to s3",
+            "Assign": {
+              "destinationBucketMapIter": "{% $replace($states.input.destinationUriMapIter, /^s3:\\/\\/(.*?)\\/(?:.*)/, \"$1\") %}",
+              "destinationKeyMapIter": "{% $replace($states.input.destinationUriMapIter, /^s3:\\/\\/(?:.*?)\\/(.*)/, \"$1\") & '/' %}",
+              "sourceUrisListMapIter": "{% $states.input.sourceUrisListMapIter %}",
+              "s3StepsCopyBucketMapIter": "{% $states.input.s3StepsCopyBucket %}",
+              "s3StepsCopyKeyMapIter": "{% $states.input.s3StepsCopyKeyMapIter %}"
+            }
+          },
+          "Generate steps function csv and upload to s3": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Output": "{% $states.result.Payload %}",
+            "Arguments": {
+              "FunctionName": "${__create_csv_for_s3_steps_copy_lambda_function_arn__}",
+              "Payload": {
+                "sourceUrisList": "{% $sourceUrisListMapIter %}",
+                "s3StepsCopyBucket": "{% $s3StepsCopyBucketMapIter %}",
+                "s3StepsCopyKey": "{% $s3StepsCopyKeyMapIter %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Next": "Run s3 copy"
+          },
+          "Run s3 copy": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::states:startExecution.sync:2",
+            "Arguments": {
+              "StateMachineArn": "${__aws_s3_steps_copy_sfn_arn__}",
+              "Input": {
+                "sourceFilesCsvKey": "{% $s3StepsCopyKeyMapIter %}",
+                "destinationBucket": "{% $destinationBucketMapIter %}",
+                "destinationPrefixKey": "{% $destinationKeyMapIter %}",
+                "maxItemsPerBatch": 1
+              }
+            },
+            "Output": {
+              "stepsExecutionId": "{% $states.result.ExecutionArn %}",
+              "output": "{% $states.result.Output ? $states.result.Output : null %}",
+              "error": "{% $states.result.Error ? $states.result.Error : null %}",
+              "hasError": "{% $states.result.Error ? true : false %}",
+              "errorMessage": "{% $states.result.Cause ? $states.result.Cause : null %}"
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "Update job database",
+      "Output": {
+        "hasError": "{% /* Check if any iterable of hasError is set to true  -  https://try.jsonata.org/9IqHtAIc0 */\n$sum(\n  [\n    $map($states.result, function($resultIter){$resultIter.hasError = true ? 1 : 0})\n  ]\n) > 0 ? true : false %}",
+        "errorMessages": "{% /* Check if any iterable of errorMessages exist  -  https://try.jsonata.org/rXO5p_8bH */\n(\n  $appendMessages := function($i, $j){$i & \" \" & $j};\n  $errorMessages := [\n    $filter(\n      [\n        $map($states.result, function($resultIter){\n            $resultIter.errorMessage ? $resultIter.errorMessage : null\n        })\n      ],\n      function($errorMessageIter){\n        $errorMessageIter ? $errorMessageIter : null\n      }\n    )\n  ];\n  $reduce(\n    $errorMessages,\n    $appendMessages\n  ) ? $errorMessages : null\n)\n\n %}"
+      }
+    },
+    "Update job database": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__update_push_job_api_lambda_function_arn__}",
+        "Payload": {
+          "packagingJobId": "{% $packagingJobId %}",
+          "pushJobExecutionArn": "{% $pushJobExecutionArn %}",
+          "hasError": "{% $states.input.hasError %}",
+          "errorMessages": "{% $states.input.errorMessages %}",
+          "status": "{% $states.input.hasError ? 'FAILED' : 'SUCCEEDED' %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true
+    }
+  }
+}

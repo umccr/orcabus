@@ -19,6 +19,7 @@ import {
   region,
   vpcProps,
   ntsmBucket,
+  dataSharingCacheBucket,
 } from '../constants';
 
 export const fileManagerBuckets = (stage: AppStage): string[] => {
@@ -29,6 +30,7 @@ export const fileManagerBuckets = (stage: AppStage): string[] => {
     eventSourceBuckets.push(icav2ArchiveFastqBucket[stage]);
   }
   eventSourceBuckets.push(ntsmBucket[stage]);
+  eventSourceBuckets.push(dataSharingCacheBucket[stage]);
 
   return eventSourceBuckets;
 };
