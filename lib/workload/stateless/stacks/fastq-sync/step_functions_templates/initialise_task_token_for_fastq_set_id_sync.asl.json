@@ -1,0 +1,254 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Save input vars",
+  "States": {
+    "Save input vars": {
+      "Type": "Pass",
+      "Next": "Check fastq set id against requirements",
+      "Assign": {
+        "taskToken": "{% $states.input.taskToken %}",
+        "fastqSetId": "{% $states.input.fastqSetId %}",
+        "requirements": "{% $states.input.requirements %}",
+        "isUnarchivingAllowed": "{% $states.input.forceUnarchiving ? true : false %}",
+        "dynamoDbTableName": "${__dynamodb_table_name__}",
+        "dynamoDbIdTypeKeys": {
+          "fastqSetId": "FASTQ_SET_ID",
+          "taskToken": "TASK_TOKEN"
+        }
+      }
+    },
+    "Check fastq set id against requirements": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__check_fastq_set_id_against_requirements_lambda_function_arn__}",
+        "Payload": {
+          "fastqSetId": "{% $fastqSetId %}",
+          "requirements": "{% $requirements %}",
+          "isUnarchivingAllowed": "{% $isUnarchivingAllowed %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Meets requirements",
+      "Output": {
+        "hasAllRequirements": "{% $states.result.Payload.hasAllRequirements %}"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "Send Immediate Task Failure",
+          "Output": {
+            "error": "{% $states.errorOutput %}"
+          }
+        }
+      ]
+    },
+    "Send Immediate Task Failure": {
+      "Type": "Task",
+      "Arguments": {
+        "TaskToken": "{% $taskToken %}",
+        "Error": "FastqArchivedError",
+        "Cause": "{% $parse($states.input.error.Cause).errorMessage %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskFailure",
+      "End": true
+    },
+    "Meets requirements": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Send Immediate Task Success",
+          "Condition": "{% $states.input.hasAllRequirements  %}",
+          "Comment": "Fastq Set Id already satisfies all requirements"
+        }
+      ],
+      "Default": "Register Task Token in Database"
+    },
+    "Register Task Token in Database": {
+      "Type": "Parallel",
+      "Next": "Get fastq list rows from fastq set id",
+      "Branches": [
+        {
+          "StartAt": "Register Fastq Sync Event (token)",
+          "States": {
+            "Register Fastq Sync Event (token)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Arguments": {
+                "TableName": "{% $dynamoDbTableName %}",
+                "Item": {
+                  "id": {
+                    "S": "{% $taskToken %}"
+                  },
+                  "id_type": {
+                    "S": "{% $dynamoDbIdTypeKeys.taskToken %}"
+                  },
+                  "fastq_set_id": {
+                    "S": "{% $fastqSetId %}"
+                  },
+                  "requirements_set": {
+                    "SS": "{% /* https://try.jsonata.org/slAM0Vym- */ [$keys($sift($requirements, function($v){$v = true}))] %}"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Get fastq set id in db",
+          "States": {
+            "Get fastq set id in db": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:getItem",
+              "Arguments": {
+                "TableName": "{% $dynamoDbTableName %}",
+                "Key": {
+                  "id": {
+                    "S": "{% $fastqSetId %}"
+                  },
+                  "id_type": {
+                    "S": "{% $dynamoDbIdTypeKeys.fastqSetId %}"
+                  }
+                }
+              },
+              "Next": "Fastq Set Id in Sync DB"
+            },
+            "Fastq Set Id in Sync DB": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Next": "Add task token to fastq set id",
+                  "Condition": "{% $states.input.Item ? true : false %}",
+                  "Comment": "Fastq Set ID in DB"
+                }
+              ],
+              "Default": "Register Fastq Sync Event (fastq id)"
+            },
+            "Add task token to fastq set id": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Arguments": {
+                "TableName": "{% $dynamoDbTableName %}",
+                "Key": {
+                  "id": {
+                    "S": "{% $fastqSetId %}"
+                  },
+                  "id_type": {
+                    "S": "{% $dynamoDbIdTypeKeys.fastqSetId %}"
+                  }
+                },
+                "UpdateExpression": "ADD task_token_set :task_token",
+                "ExpressionAttributeValues": {
+                  ":task_token": {
+                    "SS": "{% [ $taskToken ] %}"
+                  }
+                }
+              },
+              "End": true
+            },
+            "Register Fastq Sync Event (fastq id)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:putItem",
+              "Arguments": {
+                "TableName": "{% $dynamoDbTableName %}",
+                "Item": {
+                  "id": {
+                    "S": "{% $fastqSetId %}"
+                  },
+                  "id_type": {
+                    "S": "{% $dynamoDbIdTypeKeys.fastqSetId %}"
+                  },
+                  "task_token_set": {
+                    "SS": "{% [ $taskToken ] %}"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    },
+    "Get fastq list rows from fastq set id": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__get_fastq_list_row_from_fastq_set_id_lambda_function_arn__}",
+        "Payload": {
+          "fastqSetId": "{% $fastqSetId %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each fastq list row id",
+      "Output": {
+        "fastqListRowIdList": "{% $states.result.Payload.fastqListRowIdList %}"
+      }
+    },
+    "Send Immediate Task Success": {
+      "Type": "Task",
+      "Arguments": {
+        "Output": {},
+        "TaskToken": "{% $taskToken %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
+      "End": true
+    },
+    "For each fastq list row id": {
+      "Type": "Map",
+      "Items": "{% $states.input.fastqListRowIdList %}",
+      "ItemSelector": {
+        "fastqListRowIdMapIter": "{% $states.context.Map.Item.Value %}",
+        "requirementsListMapIter": "{% /* https://try.jsonata.org/slAM0Vym- */ [$keys($sift($requirements, function($v){$v = true}))] %}"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Launch Requirements for fastq list row id",
+        "States": {
+          "Launch Requirements for fastq list row id": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::states:startExecution.sync:2",
+            "Arguments": {
+              "StateMachineArn": "${__launch_requirements_sfn_arn__}",
+              "Input": {
+                "fastqListRowId": "{% $states.input.fastqListRowIdMapIter %}",
+                "requirements": "{% $states.input.requirementsListMapIter %}"
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

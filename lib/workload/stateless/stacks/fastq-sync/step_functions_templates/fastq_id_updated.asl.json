@@ -1,0 +1,62 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Get fastq set ids from fastq list row ids",
+  "States": {
+    "Get fastq set ids from fastq list row ids": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__get_fastq_set_ids_from_fastq_list_row_ids_lambda_function_arn__}",
+        "Payload": {
+          "fastqListRowIdList": "{% $states.input.fastqListRowIdList %}"
+        }
+      },
+      "Output": {
+        "fastqSetIds": "{% $states.result.Payload.fastqSetIds %}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each fastq set id"
+    },
+    "For each fastq set id": {
+      "Type": "Map",
+      "Items": "{% $states.input.fastqSetIds %}",
+      "ItemSelector": {
+        "fastqSetId": "{% $states.context.Map.Item.Value %}"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Run fastq set updated sfn",
+        "States": {
+          "Run fastq set updated sfn": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::states:startExecution.sync:2",
+            "Arguments": {
+              "StateMachineArn": "${__run_fastq_set_id_updated_sfn_arn__}",
+              "Input": {
+                "fastqSetId": "{% $states.input.fastqSetId %}"
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}
